@@ -35,18 +35,10 @@
 #define MAXLINELEN 1024   /**< limit for line length */
 #define DEFAULT_ENABLED FALSE /**< should the event handler be executed? */
 #define DEFAULT_SOLUFILENAME "short.solu" /**< default filename to read solution value from */
-#define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//results//"
+#define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//testset//"
+#define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"
+#define DEFAULT_SETNAME "default.set"
 #define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND /**< the actual event to be caught */
-
-#define DEFAULT_NODESELNOSOLUTION "restartdfs"   /**< node selector for no solution solving stage */
-#define DEFAULT_NODESELSUBOPTIMAL "estimate"   /**< node selector for suboptimal solving stage */
-#define DEFAULT_NODESELOPTIMAL "dfs"   /**< node selector for optimal solving stage */
-#define DEFAULT_NODESELINFEASIBLE "dfs"   /**< node selector for infeasible solving stage */
-
-#define DEFAULT_BRANCHRULENOSOLUTION "relpscost"   /**< branching rule for no solution solving stage */
-#define DEFAULT_BRANCHRULESUBOPTIMAL "relpscost"   /**< branching rule for suboptimal solving stage */
-#define DEFAULT_BRANCHRULEOPTIMAL "relpscost"   /**< branching rule for optimal solving stage */
-#define DEFAULT_BRANCHRULEINFEASIBLE "relpscost"   /**< branching rule for infeasible solving stage */
 
 /** enumerator to represent the event handler solving stage */
 enum SolvingStage
@@ -64,15 +56,14 @@ struct SCIP_EventhdlrData
 {
    SCIP_Bool            enabled;             /**< should the event handler be executed? */
    char*                solufilename;        /**< file to parse solution information from */
-   char*                nodeselnosolution;   /**< node selector for no solution solving stage */
-   char*                nodeselsuboptimal;   /**< node selector for suboptimal solving stage */
-   char*                nodeseloptimal;      /**< node selector for optimal solving stage */
-   char*                nodeselinfeasible;   /**< node selector for infeasible problems */
-
-   char*                branchrulenosolution; /**< branching rule for no solution solving stage */
-   char*                branchrulesuboptimal; /**< branching rule for suboptimal solving stage */
-   char*                branchruleoptimal;    /**< branching rule for optimal solving stage */
-   char*                branchruleinfeasible; /**< branching rule for infeasible problems */
+   char*                nosolsetnameparam;
+   char*                suboptsetnameparam;
+   char*                optsetnameparam;
+   char*                infeasiblesetnameparam;
+   char*                nosolsetname;
+   char*                suboptsetname;
+   char*                optsetname;
+   char*                infeasiblesetname;
    SCIP_Real            optimalvalue;        /**< value of optimal solution of the problem */
    SOLVINGSTAGE         solvingstage;        /**< the current solving stage */
 };
@@ -93,7 +84,7 @@ SCIP_RETCODE searchSolufileForProbname(
    char solufilename[256];
    sprintf(solufilename, "/optimi/kombadon/bzfhende/projects/scip-git/check/testset/%s", eventhdlrdata->solufilename);
    file = NULL;
-   SCIPdebugMessage("Trying to open %s\n", solufilename);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Trying to open %s\n", solufilename);
    file = SCIPfopen(solufilename, "r");
 
    if( file == NULL )
@@ -114,7 +105,7 @@ SCIP_RETCODE searchSolufileForProbname(
 
       if( strcmp(status, "=opt=") != 0 )
       {
-         SCIPdebugMessage("No optimal solution value known for this problem!\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "No optimal solution value known for this problem!\n");
          break;
       }
       else
@@ -124,7 +115,7 @@ SCIP_RETCODE searchSolufileForProbname(
          obj = strtok(NULL, " ");
          val = strtod(obj, &endofptr);
          eventhdlrdata->optimalvalue = val;
-         SCIPdebugMessage("Optimal value for problem: %16.9g\n", eventhdlrdata->optimalvalue);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Optimal value for problem: %16.9g\n", eventhdlrdata->optimalvalue);
          break;
       }
    }
@@ -155,9 +146,8 @@ SCIP_RETCODE applySolvingStage(
    SCIP_EVENTHDLRDATA* eventhdlrdata
    )
 {
-   SCIP_NODESEL* nodesel;
-   SCIP_BRANCHRULE* branchrule;
    SOLVINGSTAGE stagebefore;
+   char paramfilename[256];
 
    stagebefore = eventhdlrdata->solvingstage;
    determineSolvingStage(scip, eventhdlrdata);
@@ -168,31 +158,28 @@ SCIP_RETCODE applySolvingStage(
    switch (eventhdlrdata->solvingstage)
    {
    case SOLVINGSTAGE_NOSOLUTION:
-      nodesel = SCIPfindNodesel(scip, eventhdlrdata->nodeselnosolution);
-      branchrule = SCIPfindBranchrule(scip, eventhdlrdata->branchrulenosolution);
+      sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->nosolsetname);
       break;
    case SOLVINGSTAGE_SUBOPTIMAL:
-      nodesel = SCIPfindNodesel(scip, eventhdlrdata->nodeselsuboptimal);
-      branchrule = SCIPfindBranchrule(scip, eventhdlrdata->branchrulesuboptimal);
+      sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->suboptsetname);
       break;
    case SOLVINGSTAGE_OPTIMAL:
-      SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, FALSE);
-      nodesel = SCIPfindNodesel(scip, eventhdlrdata->nodeseloptimal);
-      branchrule = SCIPfindBranchrule(scip, eventhdlrdata->branchruleoptimal);
+      sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->optsetname);
       break;
    case SOLVINGSTAGE_INFEASIBLE:
-      SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, FALSE);
-      nodesel = SCIPfindNodesel(scip, eventhdlrdata->nodeselinfeasible);
-      branchrule = SCIPfindBranchrule(scip, eventhdlrdata->branchruleinfeasible);
+      sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->infeasiblesetname);
       break;
    default:
       SCIPdebugMessage("Unknown solving stage: %d -> ABORT!\n ", eventhdlrdata->solvingstage);
       SCIPABORT();
       break;
    }
-   SCIPdebugMessage("Changed solving stage to %d\n", eventhdlrdata->solvingstage);
-   SCIP_CALL( SCIPsetNodeselStdPriority(scip, nodesel, ((int)eventhdlrdata->solvingstage + 1) * 1000000) );
-   SCIP_CALL( SCIPsetBranchrulePriority(scip, branchrule, ((int)eventhdlrdata->solvingstage + 1) *1000000) );
+   assert(paramfilename != NULL);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d -- Resetting parameters\n", eventhdlrdata->solvingstage);
+   SCIP_CALL( SCIPresetParams(scip) );
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file %s\n", paramfilename);
+   SCIP_CALL( SCIPreadParams(scip, paramfilename) );
+   eventhdlrdata->enabled = TRUE;
 
    return SCIP_OKAY;
 }
@@ -227,6 +214,13 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingstage)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
+   if( eventhdlrdata->nosolsetname != NULL )
+   {
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->nosolsetname);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->suboptsetname);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->optsetname);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->infeasiblesetname);
+   }
    SCIPfreeMemory(scip, &eventhdlrdata);
    eventhdlrdata = NULL;
 
@@ -250,16 +244,22 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
 
    eventhdlrdata->solvingstage = SOLVINGSTAGE_UNINITIALIZED;
 
+   SCIPduplicateMemoryArray(scip, &eventhdlrdata->nosolsetname, eventhdlrdata->nosolsetnameparam, strlen(eventhdlrdata->nosolsetnameparam) + 1);
+   SCIPduplicateMemoryArray(scip, &eventhdlrdata->suboptsetname, eventhdlrdata->suboptsetnameparam, strlen(eventhdlrdata->suboptsetnameparam) + 1);
+   SCIPduplicateMemoryArray(scip, &eventhdlrdata->optsetname, eventhdlrdata->optsetnameparam, strlen(eventhdlrdata->optsetnameparam) + 1);
+   SCIPduplicateMemoryArray(scip, &eventhdlrdata->infeasiblesetname, eventhdlrdata->infeasiblesetnameparam, strlen(eventhdlrdata->infeasiblesetnameparam) + 1);
+
    if( eventhdlrdata->enabled )
    {
       const char* probname;
 
       probname = SCIPgetProbName(scip);
-      SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
-      SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
       eventhdlrdata->optimalvalue = SCIPinfinity(scip);
       SCIP_CALL( searchSolufileForProbname(scip, probname, eventhdlrdata) );
-      SCIPdebugMessage("Optimal value for problem %s from solufile %s: %16.9g\n", probname, eventhdlrdata->solufilename, eventhdlrdata->optimalvalue);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Optimal value for problem %s from solufile %s: %16.9g\n", probname, eventhdlrdata->solufilename, eventhdlrdata->optimalvalue);
+
+      SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
+      SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
    }
    return SCIP_OKAY;
 }
@@ -291,33 +291,7 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
 
    return SCIP_OKAY;
 }
-#if 0
-static
-SCIP_DECL_PARAMCHGD(paramChgdEnabledSolvingstage)
-{
-   SCIP_EVENTHDLR* eventhdlr;
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-   assert(scip != NULL);
 
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITSOLVE )
-      return SCIP_OKAY;
-
-   eventhdlr = NULL;
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   assert(eventhdlr != NULL);
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   if( eventhdlrdata->enabled )
-      SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
-   else
-      SCIP_CALL( SCIPdropEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, -1) );
-
-   return SCIP_OKAY;
-}
-#else
-#define paramChgdEnabledSolvingstage NULL
-#endif
 /** creates event handler for Solvingstage event */
 SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    SCIP*                 scip                /**< SCIP data structure */
@@ -332,17 +306,19 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->solufilename = NULL;
-   eventhdlrdata->nodeselinfeasible = NULL;
-   eventhdlrdata->nodeselnosolution = NULL;
-   eventhdlrdata->nodeselsuboptimal = NULL;
-   eventhdlrdata->nodeseloptimal = NULL;
+   eventhdlrdata->nosolsetnameparam = NULL;
+   eventhdlrdata->suboptsetnameparam = NULL;
+   eventhdlrdata->optsetnameparam = NULL;
+   eventhdlrdata->infeasiblesetnameparam = NULL;
 
-   eventhdlrdata->branchruleinfeasible = NULL;
-   eventhdlrdata->branchrulenosolution = NULL;
-   eventhdlrdata->branchruleoptimal = NULL;
-   eventhdlrdata->branchrulesuboptimal = NULL;
+   eventhdlrdata->nosolsetname = NULL;
+   eventhdlrdata->suboptsetname= NULL;
+   eventhdlrdata->optsetname= NULL;
+   eventhdlrdata->infeasiblesetname= NULL;
 
    eventhdlr = NULL;
+
+
    /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecSolvingstage, eventhdlrdata) );
@@ -356,33 +332,21 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
 
    /* add Solvingstage event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
-         &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, paramChgdEnabledSolvingstage, NULL) );
+         &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/solufilename","file to parse solution information from",
          &eventhdlrdata->solufilename, FALSE, DEFAULT_SOLUFILENAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nodeselnosolution", "bla",
-            &eventhdlrdata->nodeselnosolution, FALSE, DEFAULT_NODESELNOSOLUTION, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nosolsetname", "bla",
+            &eventhdlrdata->nosolsetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nodeselsuboptimal", "node selector for suboptimal solving stage",
-               &eventhdlrdata->nodeselsuboptimal, FALSE, DEFAULT_NODESELSUBOPTIMAL, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/suboptsetname", "settings file for suboptimal solving stage",
+               &eventhdlrdata->suboptsetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nodeseloptimal", "node selector for optimal solving stage",
-               &eventhdlrdata->nodeseloptimal, FALSE, DEFAULT_NODESELOPTIMAL, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/optsetname", "settings file for optimal solving stage",
+               &eventhdlrdata->optsetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nodeselinfeasible", "node selector for infeasible solving stage",
-               &eventhdlrdata->nodeselinfeasible, FALSE, DEFAULT_NODESELINFEASIBLE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/branchrulenosolution", "branching rule for no solution solving stage",
-                  &eventhdlrdata->branchrulenosolution, FALSE, DEFAULT_BRANCHRULENOSOLUTION, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/branchrulesuboptimal", "branching rule for suboptimal solving stage",
-                  &eventhdlrdata->branchrulesuboptimal, FALSE, DEFAULT_BRANCHRULESUBOPTIMAL, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/branchruleoptimal", "branching rule for optimal solving stage",
-                     &eventhdlrdata->branchruleoptimal, FALSE, DEFAULT_BRANCHRULEOPTIMAL, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/branchruleinfeasible", "branching rule for infeasible solving stage",
-                     &eventhdlrdata->branchruleinfeasible, FALSE, DEFAULT_BRANCHRULEINFEASIBLE, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/infeasiblesetname", "settings file for infeasible solving stage",
+               &eventhdlrdata->infeasiblesetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
    return SCIP_OKAY;
 }
