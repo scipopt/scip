@@ -1869,7 +1869,7 @@ SCIP_RETCODE SCIPprobSetName(
 /** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
  *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
  *
- *  @note this number needs to be computed, because it cannot be update like the othe counters for binary and interger
+ *  @note this number needs to be computed, because it cannot be updated like the other counters for binary and integer
  *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
  *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
  *        implicit binary status
