@@ -90,6 +90,7 @@ features:
 - strong branching with propagation can be enabled in fullstrong and relpscost branching rule
 - added possibility to store pricing norms of the LP solver (in addition to basis information) to speed up LP solving
   after a backtrack, e.g. in probing or strong branching with domain propagation
+- probing supports implicit binary variables
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

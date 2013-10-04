@@ -42,14 +42,10 @@
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
-/* @todo probing should also consider implicit binary variables; especially test this on pseudo-boolean instances, as
- *       one special instance also use the instance of bug 546
- *
- * @todo check for restricting the maximal number of implications that can be added by probing
- */
+/* @todo check for restricting the maximal number of implications that can be added by probing */
 
 /* sorting of probing variables, two different variants are implemeneted */
-/*#define VARIANT_B*/
+/* #define VARIANT_B */
 
 
 /*
@@ -293,8 +289,8 @@ SCIP_RETCODE sortVariables(
 #else
 	    scores[i] = - ABS(nlocksdown - nlocksup)
 	       + MIN(nlocksdown, nlocksup)
-	       + 500 * nimplzero + 50 * nimplone
-	       + 50000 * nclqzero + 5000 * nclqone
+	       + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
+	       + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
 	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #endif
 
@@ -311,8 +307,8 @@ SCIP_RETCODE sortVariables(
 	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
 	       - ABS(nlocksdown - nlocksup)
 	       + MIN(nlocksdown, nlocksup)
-	       + 500 * nimplzero + 50 * nimplone
-	       + 50000 * nclqzero + 5000 * nclqone
+	       + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
+	       + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
 	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #endif
 	 }
@@ -583,6 +579,7 @@ SCIP_RETCODE applyProbing(
 
          if( localnfixedvars > 0 || localnaggrvars > 0 )
          {
+            SCIPdebugMessage("probing on <%s> led to %d fixed and %d aggregated variables\n", SCIPvarGetName(vars[i]), localnfixedvars, localnaggrvars);
             propdata->nuseless = 0;
             propdata->ntotaluseless = 0;
          }
@@ -599,18 +596,20 @@ SCIP_RETCODE applyProbing(
             "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
          i = 0;
 
-         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPgetNBinVars(scip) != nbinvars )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
-            SCIP_VAR** probvars;
             int nnewvars;
             int nnewbinvars;
+            int nnewintvars;
+            int nnewimplvars;
+            int lastidx;
             int v;
 
             assert(vars == propdata->sortedvars);
             assert(nbinvars == propdata->nsortedbinvars);
 
             /* release old variables and free memory */
-            for( v = 0; v < propdata->nsortedvars; ++v )
+            for( v = propdata->nsortedvars - 1; v >= 0; --v )
             {
                SCIP_CALL( SCIPreleaseVar(scip, &propdata->sortedvars[v]) );
             }
@@ -618,21 +617,27 @@ SCIP_RETCODE applyProbing(
             propdata->nsortedvars = 0;
             propdata->nsortedbinvars = 0;
 
-            SCIP_CALL( SCIPgetVarsData(scip, &probvars, &nnewvars, &nnewbinvars, NULL, NULL, NULL) );
-            if( nnewbinvars == 0 )
-            {
-               *startidx = 0;
-               propdata->lastsortstartidx = -1;
-               propdata->nuseless = 0;
-               propdata->ntotaluseless = 0;
-
-               goto TERMINATE;
-            }
-
             /* get new variables */
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->sortedvars, probvars, nnewvars) );
+            nnewvars = SCIPgetNVars(scip);
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &(propdata->sortedvars), SCIPgetVars(scip), nnewvars) );
             propdata->nsortedvars = nnewvars;
+
+            nnewbinvars = SCIPgetNBinVars(scip);
+            nnewintvars = SCIPgetNIntVars(scip);
+            nnewimplvars = SCIPgetNImplVars(scip);
+
+            /* determine implicit binary variables */
+            lastidx = nnewbinvars + nnewintvars + nnewimplvars;
+            for( v = nnewbinvars; v < lastidx; ++v )
+            {
+               if( SCIPvarIsBinary(propdata->sortedvars[v]) )
+               {
+                  SCIPswapPointers((void**) &(propdata->sortedvars[nnewbinvars]), (void**) &(propdata->sortedvars[v]));
+                  ++nnewbinvars;
+               }
+            }
             propdata->nsortedbinvars = nnewbinvars;
+
             nbinvars = nnewbinvars;
             vars = propdata->sortedvars;
             nvars = propdata->nsortedvars;
@@ -651,14 +656,21 @@ SCIP_RETCODE applyProbing(
                oldstartidx = nbinvars - 1;
 
             /* capture variables to make sure, the variables are not deleted */
-            for( v = 0; v < propdata->nsortedvars; ++v )
+            for( v = propdata->nsortedvars - 1; v >= 0; --v )
             {
                SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[v]) );
             }
-         }
 
-         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
-         {
+            if( nnewbinvars == 0 )
+            {
+               *startidx = 0;
+               propdata->lastsortstartidx = -1;
+               propdata->nuseless = 0;
+               propdata->ntotaluseless = 0;
+
+               goto TERMINATE;
+            }
+
             /* resorting here might lead to probing a second time on the same variable */
             SCIP_CALL( sortVariables(scip, propdata, propdata->sortedvars, propdata->nsortedbinvars, 0) );
             propdata->lastsortstartidx = 0;
@@ -826,6 +838,8 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    SCIP_PROPDATA* propdata;
    int nvars;
    int nbinvars;
+   int nintvars;
+   int nimplvars;
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
@@ -838,8 +852,12 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
 
    *result = SCIP_DIDNOTRUN;
 
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
+   nimplvars = SCIPgetNImplVars(scip);
+
    /* if we have no binary variable anymore, we stop probing */
-   if( SCIPgetNBinVars(scip) == 0 )
+   if( nbinvars + nintvars + nimplvars == 0 )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -854,10 +872,6 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    if( propdata->lastnode == -1 && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0 )
       return SCIP_OKAY;
 
-   /**@todo currently we only perform probing on variables which are of binary type; there are, however, more
-    *       implicit binary variables which can be found with the method SCIPvarIsBinary(); for these variable we could
-    *       also perform probing */
-
    SCIPdebugMessage("executing probing (used %.1f sec)\n", SCIPpropGetTime(prop));
 
    *result = SCIP_DIDNOTFIND;
@@ -869,27 +883,37 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    /* get variable data */
    if( propdata->sortedvars == NULL )
    {
-      SCIP_VAR** probvars;
-      int i;
+      int lastidx;
+      int v;
 
       assert(propdata->startidx == 0);
 
-      SCIP_CALL( SCIPgetVarsData(scip, &probvars, &nvars, &nbinvars, NULL, NULL, NULL) );
-      if( nbinvars == 0 )
-         return SCIP_OKAY;
+      nvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->sortedvars, probvars, nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(propdata->sortedvars), SCIPgetVars(scip), nvars) );
       propdata->nsortedvars = nvars;
+
+      /* determine implicit binary variables */
+      lastidx = nbinvars + nintvars + nimplvars;
+      for( v = nbinvars; v < lastidx; ++v )
+      {
+         if( SCIPvarIsBinary(propdata->sortedvars[v]) )
+         {
+            SCIPswapPointers((void**) &(propdata->sortedvars[nbinvars]), (void**) &(propdata->sortedvars[v]));
+            ++nbinvars;
+         }
+      }
       propdata->nsortedbinvars = nbinvars;
 
       /* capture variables to make sure, the variables are not deleted */
-      for( i = 0; i < propdata->nsortedvars; ++i )
+      for( v = propdata->nsortedvars - 1; v >= 0 ; --v )
       {
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[i]) );
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[v]) );
       }
    }
-   else
-      nbinvars = SCIPgetNBinVars(scip);
+
+   if( propdata->nsortedbinvars == 0 )
+      return SCIP_OKAY;
 
    /* number of total variables is not decreasing, and we can identify every variable by their index, so allocate
     * enough space
@@ -902,51 +926,6 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       propdata->noldtotalvars = ntotalvars;
    }
 
-   /* if we probed all binary variables in previous runs, start again with the first one */
-   if( propdata->lastnode != -1 && propdata->startidx >= nbinvars )
-   {
-      SCIP_VAR** probvars;
-      int i;
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
-
-      /* release old variables and free memory */
-      for( i = 0; i < propdata->nsortedvars; ++i )
-      {
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->sortedvars[i]) );
-      }
-      SCIPfreeMemoryArray(scip, &propdata->sortedvars);
-      propdata->nsortedvars = 0;
-      propdata->nsortedbinvars = 0;
-
-      SCIP_CALL( SCIPgetVarsData(scip, &probvars, &nvars, &nbinvars, NULL, NULL, NULL) );
-      if( nbinvars == 0 )
-      {
-         propdata->startidx = 0;
-         propdata->lastsortstartidx = -1;
-         propdata->nuseless = 0;
-         propdata->ntotaluseless = 0;
-
-         return SCIP_OKAY;
-      }
-
-      /* get new variables */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->sortedvars, probvars, nvars) );
-      propdata->nsortedvars = nvars;
-      propdata->nsortedbinvars = nbinvars;
-
-      /* capture variables to make sure, the variables are not deleted */
-      for( i = 0; i < propdata->nsortedvars; ++i )
-      {
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[i]) );
-      }
-
-      propdata->startidx = 0;
-      propdata->lastsortstartidx = -1;
-      propdata->nuseless = 0;
-      propdata->ntotaluseless = 0;
-   }
    propdata->lastnode = -1;
 
    /* sort the binary variables by number of rounding locks, if at least 100 variables were probed since last sort */
