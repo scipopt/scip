@@ -163,7 +163,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyRelax is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjRelax*  objrelax,           /**< relaxator object */
@@ -171,14 +171,14 @@ SCIP_RETCODE SCIPincludeObjRelax(
    );
 
 /** returns the relax object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjRelax* SCIPfindObjRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of relaxator */
    );
 
 /** returns the relax object for the given relaxator */
-extern
+EXTERN
 scip::ObjRelax* SCIPgetObjRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax               /**< relaxator */

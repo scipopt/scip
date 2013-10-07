@@ -169,7 +169,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyPresol is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjPresol*      objpresol,          /**< presolver object */
@@ -177,14 +177,14 @@ SCIP_RETCODE SCIPincludeObjPresol(
    );
 
 /** returns the presol object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjPresol* SCIPfindObjPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of presolver */
    );
 
 /** returns the presol object for the given presolver */
-extern
+EXTERN
 scip::ObjPresol* SCIPgetObjPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol              /**< presolver */
