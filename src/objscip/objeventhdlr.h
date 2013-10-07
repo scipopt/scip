@@ -162,7 +162,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyEventhdlr is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjEventhdlr*   objeventhdlr,       /**< event handler object */
@@ -170,14 +170,14 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    );
 
 /** returns the eventhdlr object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjEventhdlr* SCIPfindObjEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of event handler */
    );
 
 /** returns the eventhdlr object for the given event handler */
-extern
+EXTERN
 scip::ObjEventhdlr* SCIPgetObjEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */

@@ -148,7 +148,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyReader is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjReader(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjReader*      objreader,          /**< file reader object */
@@ -156,14 +156,14 @@ SCIP_RETCODE SCIPincludeObjReader(
    );
 
 /** returns the reader object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjReader* SCIPfindObjReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of file reader */
    );
 
 /** returns the reader object for the given file reader */
-extern
+EXTERN
 scip::ObjReader* SCIPgetObjReader(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader              /**< file reader */

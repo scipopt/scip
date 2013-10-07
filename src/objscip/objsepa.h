@@ -197,7 +197,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MySepa is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjSepa*        objsepa,            /**< cut separator object */
@@ -205,14 +205,14 @@ SCIP_RETCODE SCIPincludeObjSepa(
    );
 
 /** returns the sepa object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjSepa* SCIPfindObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of cut separator */
    );
 
 /** returns the sepa object for the given cut separator */
-extern
+EXTERN
 scip::ObjSepa* SCIPgetObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa                /**< cut separator */
