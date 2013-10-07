@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz display column and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeDispXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
