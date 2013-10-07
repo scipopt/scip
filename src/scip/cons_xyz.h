@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the handler for xyz constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -41,7 +41,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPcreateConsXyz(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
