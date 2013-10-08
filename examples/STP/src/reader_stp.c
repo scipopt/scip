@@ -80,6 +80,9 @@ SCIP_DECL_READERREAD(readerReadStp)
    else if(SCIPprobdataGetGraph(probdata) != NULL && mode == 'p'){
       printf("activate pricer \n");
       SCIP_CALL( SCIPsetBoolParam(scip, "lp/disablecutoff", TRUE) );
+#if 0
+      SCIP_CALL( SCIPsetBoolParam(scip, "propagating/pseudoobj/force", TRUE) );
+#endif
       SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "stp")) );
    }
 

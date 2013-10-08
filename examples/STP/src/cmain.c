@@ -68,8 +68,8 @@ SCIP_RETCODE runShell(
    /* include Takahashi Matsuyama heuristic */
 
    SCIP_CALL( SCIPincludeHeurTM(scip) );
-
 #if 0
+
    /* include Rayward-Smith heuristic */
     SCIP_CALL( SCIPincludeHeurRS(scip) );
 #endif
