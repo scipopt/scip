@@ -25,6 +25,7 @@
 #define __SCIP_PUB_FILEIO_H__
 
 #include <stddef.h>
+#include "scip/def.h"
 
 #ifdef __cplusplus
 extern "C" {
