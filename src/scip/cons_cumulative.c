@@ -7463,6 +7463,7 @@ SCIP_RETCODE applyProbingVar(
    int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
    int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
    int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   SCIP_Bool*            success,            /**< buffer to store whether a probing succeed to dual fix the variable */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
 {
@@ -7471,6 +7472,8 @@ SCIP_RETCODE applyProbingVar(
 
    assert(probingpos >= 0);
    assert(probingpos < nvars);
+   assert(success != NULL);
+   assert(cutoff != NULL);
 
    var = vars[probingpos];
    assert(var != NULL);
@@ -7488,7 +7491,10 @@ SCIP_RETCODE applyProbingVar(
       assert(!(*cutoff));
 
       if( tightened )
+      {
+         (*success) =TRUE;
          (*nfixedvars)++;
+      }
 
       return SCIP_OKAY;
    }
@@ -7503,7 +7509,10 @@ SCIP_RETCODE applyProbingVar(
       assert(!(*cutoff));
 
       if( tightened )
+      {
+         (*success) =TRUE;
          (*nfixedvars)++;
+      }
 
       return SCIP_OKAY;
    }
@@ -7513,6 +7522,8 @@ SCIP_RETCODE applyProbingVar(
          leftimpllbs, leftimplubs, leftproplbs, leftpropubs,
          rightimpllbs, rightimplubs, rightproplbs, rightpropubs,
          nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+
+   (*success) = FALSE;
 
    return SCIP_OKAY;
 }
@@ -7818,9 +7829,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
          }
          else
          {
-            int oldnfixedvars;
-
-            oldnfixedvars = *nfixedvars;
+            SCIP_Bool success;
 
             /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
              * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
@@ -7828,9 +7837,9 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
              */
             SCIP_CALL( applyProbingVar(scip, vars, nvars, v, lb, alternativelbs[v],
                   downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                  nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+                  nfixedvars, naggrvars, nimplications, nchgbds, &success, cutoff) );
 
-            if( oldnfixedvars < *nchgbds )
+            if( success )
             {
                SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
             }
@@ -7862,9 +7871,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
          }
          else
          {
-            int oldnfixedvars;
-
-            oldnfixedvars = *nfixedvars;
+            SCIP_Bool success;
 
             /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
              * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
@@ -7872,9 +7879,9 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
              */
             SCIP_CALL( applyProbingVar(scip, vars, nvars, v, alternativeubs[v], ub,
                   downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                  nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+                  nfixedvars, naggrvars, nimplications, nchgbds, &success, cutoff) );
 
-            if( oldnfixedvars < *nfixedvars )
+            if( success )
             {
                SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
             }
@@ -9988,9 +9995,7 @@ SCIP_RETCODE presolveConsEst(
             }
             else
             {
-               int oldnfixedvars;
-
-               oldnfixedvars = *nfixedvars;
+               SCIP_Bool success;
 
                /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
                 * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
@@ -9998,9 +10003,9 @@ SCIP_RETCODE presolveConsEst(
                 */
                SCIP_CALL( applyProbingVar(scip, vars, nvars, v, est, alternativelb,
                      downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                     nfixedvars, naggrvars, &nimplications, nchgbds, cutoff) );
+                     nfixedvars, naggrvars, &nimplications, nchgbds, &success, cutoff) );
 
-               if( oldnfixedvars < *nfixedvars )
+               if( success )
                {
                   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
                }
@@ -10266,9 +10271,7 @@ SCIP_RETCODE presolveConsLct(
             }
             else
             {
-               int oldnfixedvars;
-
-               oldnfixedvars = *nfixedvars;
+               SCIP_Bool success;
 
                /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
                 * representable. To retrieve a potential dual reduction we using probing to check both branches. If one
@@ -10276,9 +10279,9 @@ SCIP_RETCODE presolveConsLct(
                 */
                SCIP_CALL( applyProbingVar(scip, vars, nvars, v, alternativeub, lst,
                      downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                     nfixedvars, naggrvars, &nimplications, nchgbds, cutoff) );
+                     nfixedvars, naggrvars, &nimplications, nchgbds, &success, cutoff) );
 
-               if( oldnfixedvars < *nfixedvars )
+               if( success )
                {
                   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
                }
