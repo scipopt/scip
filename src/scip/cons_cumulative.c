@@ -11906,12 +11906,12 @@ SCIP_RETCODE findPrecedenceConss(
    {
       int j;
 
-      for( j = 0; j < nsources; ++j )
+      for( j = 0; j < nsources && !SCIPisStopped(scip); ++j )
       {
          SCIP_CALL( computeMinDistance(scip, tcliquegraph, sources[j], i, &nconss) );
       }
 
-      for( j = 0; j < nsinks; ++j )
+      for( j = 0; j < nsinks && !SCIPisStopped(scip); ++j )
       {
          SCIP_CALL( computeMinDistance(scip, tcliquegraph, i, sinks[j], &nconss) );
       }
