@@ -12933,8 +12933,8 @@ SCIP_RETCODE freeTransform(
    }
    else
    {
-      /* even if statistics are not completely reset, a partial integral reset is necessary */
-      SCIPstatResetPrimalIntegral(scip->stat, scip->set, TRUE);
+      /* even if statistics are not completely reset, a partial reset of the primal-dual intgeral is necessary */
+      SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
    }
 
    /* switch stage to PROBLEM */
@@ -36106,12 +36106,23 @@ void printSolutionStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
 
    if( scip->set->misc_calcintegral )
+   {
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
       else
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal integral)\n",
-            SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) ? 0.0 : scip->stat->primalintegralval/SCIPgetSolvingTime(scip),
-               scip->stat->primalintegralval);
+      {
+         SCIP_Real avggap;
+
+         avggap = 0.0;
+         if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
+            avggap = scip->stat->primaldualintegral/SCIPgetSolvingTime(scip);
+         /* caution: this assert is non-deterministic since it depends on the solving time */
+         assert(0.0 <= avggap && avggap <= 100.0);
+
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal-dual integral)\n",
+            avggap, scip->stat->primaldualintegral);
+      }
+   }
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
 }
