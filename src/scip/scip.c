@@ -16278,7 +16278,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          SCIPdebugMessage("probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-         if( SCIPlpiWasSolved(lpi) && (SCIPlpiIsPrimalFeasible(lpi) || SCIPlpiIsDualFeasible(lpi)) )
+
+         if( SCIPlpiWasSolved(lpi) )
          {
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
             looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
