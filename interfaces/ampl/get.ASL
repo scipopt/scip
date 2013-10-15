@@ -44,7 +44,7 @@ else
         doit=y
         echo y
       else
-        read -n 1 doit
+        read doit
         echo
       fi
       if test "$doit" = y ;
