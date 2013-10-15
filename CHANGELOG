@@ -59,6 +59,7 @@ fixed bugs:
   transformed problem to be infeasible in the original problem
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
+- fixed bug in handling max-functions in ampl interface
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
