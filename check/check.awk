@@ -235,9 +235,9 @@ BEGIN {
 # get objective sense
 #
 /^  Objective sense  :/ {
-   if ( $4 == "minimize" )
+   if ( $4 == "minimize" || $4 == "minimize\r")
       objsense = 1;
-   if ( $4 == "maximize" )
+   if ( $4 == "maximize" || $4 == "maximize\r" )
       objsense = -1;
 
    # objsense is 0 otherwise
@@ -400,7 +400,7 @@ BEGIN {
       dbset = 1;
       feasible = 0;
    }
-   else if( $4 == "-" ) {
+   else if( $4 == "-"  || $4 == "-\r") {
       pb = +infty;
       feasible = 0;
    }
@@ -411,13 +411,13 @@ BEGIN {
    }
 }
 /^Dual Bound         :/ { 
-   if( $4 != "-" ) {
+   if( $4 != "-" && $4 != "-\r" ) {
       db = $4;
       dbset = 1;
    }
 }
 /^  Root Dual Bound  :/ {
-   if( $5 != "-" )
+   if( $5 != "-" && $5 != "-\r" )
       rootdb = $5;
    else
        rootdb = db;  # SCIP most likely finished during root node, perhaps due to a solution limit. the rootdb is NOT printed then, but needed later
