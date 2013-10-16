@@ -46,7 +46,7 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=	unittest-slack unittest-depthlevel unittest-boundchg
+UNITTESTS	=	unittest-slack unittest-depthlevel unittest-boundchg unittest-setters
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
