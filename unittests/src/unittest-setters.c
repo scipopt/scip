@@ -21,6 +21,7 @@
  * SCIP_RETCODE SCIPsetProbName
  * SCIP_RETCODE SCIPsetObjsense
  * SCIP_RETCODE SCIPsetConflicthdlrPriority
+ * SCIP_RETCODE SCIPsetPresolPriority
  *
  * @todo
  * SCIP_RETCODE SCIPsetMessagehdlr
@@ -223,6 +224,52 @@ SCIP_RETCODE setConflicthdlrPriorityTest(void)
    return SCIP_OKAY;
 }
 
+/** test setConflicthdlrPriority */
+static
+SCIP_RETCODE setPresolPriorityTest(void)
+{
+
+   int i;
+   int priority = 11;
+   SCIP* scip;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include default plugins */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
+
+   SCIP_PRESOL** presols = SCIPgetPresols(scip);
+   int npresols = SCIPgetNPresols(scip);
+
+   /* set and test priorities */
+   for( i=0; i < npresols; ++i)
+   {
+      SCIP_CALL( SCIPsetPresolPriority(scip, presols[i], priority) );
+      if( priority != SCIPpresolGetPriority(presols[i]) )
+      {
+         return SCIP_ERROR;
+      }
+   }
+
+   /* add some vars and test priorities again */
+   SCIP_CALL( initProb(scip) );
+
+   for( i=0; i < npresols; ++i)
+   {
+      SCIP_CALL( SCIPsetPresolPriority(scip, presols[i], priority) );
+      if( priority != SCIPpresolGetPriority(presols[i]) )
+      {
+         return SCIP_ERROR;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** main function */
 int
 main(
@@ -235,6 +282,7 @@ main(
    CHECK_TEST( setProbNameTest() );
    CHECK_TEST( setObjsenseTest() );
    CHECK_TEST( setConflicthdlrPriorityTest() );
+   CHECK_TEST( setPresolPriorityTest() );
 
    printf("All tests passed\n");
    return 0;
