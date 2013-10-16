@@ -186,8 +186,10 @@ SCIP_RETCODE setConflicthdlrPriorityTest(void)
 {
 
    int i;
-   int priority = 11;
+   int priority;
+   int nconfhdlrs;
    SCIP* scip;
+   SCIP_CONFLICTHDLR** conflicthdlrs;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -197,11 +199,12 @@ SCIP_RETCODE setConflicthdlrPriorityTest(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
-   SCIP_CONFLICTHDLR** conflicthdlrs = SCIPgetConflicthdlrs(scip);
-   int nconfhdlrs = SCIPgetNConflicthdlrs(scip);
+   conflicthdlrs = SCIPgetConflicthdlrs(scip);
+   nconfhdlrs = SCIPgetNConflicthdlrs(scip);
 
    /* set and test priorities */
-   for( i=0; i < nconfhdlrs; ++i)
+   priority = 11;
+   for( i = 0; i < nconfhdlrs; ++i )
    {
       SCIP_CALL( SCIPsetConflicthdlrPriority(scip, conflicthdlrs[i], priority) );
       if( priority != SCIPconflicthdlrGetPriority(conflicthdlrs[i]) )
@@ -224,14 +227,16 @@ SCIP_RETCODE setConflicthdlrPriorityTest(void)
    return SCIP_OKAY;
 }
 
-/** test setConflicthdlrPriority */
+/** test setPresolPriority */
 static
 SCIP_RETCODE setPresolPriorityTest(void)
 {
 
    int i;
-   int priority = 11;
+   int priority;
    SCIP* scip;
+   SCIP_PRESOL** presols;
+   int npresols;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -241,11 +246,12 @@ SCIP_RETCODE setPresolPriorityTest(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
-   SCIP_PRESOL** presols = SCIPgetPresols(scip);
-   int npresols = SCIPgetNPresols(scip);
+   presols = SCIPgetPresols(scip);
+   npresols = SCIPgetNPresols(scip);
 
    /* set and test priorities */
-   for( i=0; i < npresols; ++i)
+   priority = 11;
+   for( i = 0; i < npresols; ++i )
    {
       SCIP_CALL( SCIPsetPresolPriority(scip, presols[i], priority) );
       if( priority != SCIPpresolGetPriority(presols[i]) )
@@ -257,7 +263,7 @@ SCIP_RETCODE setPresolPriorityTest(void)
    /* add some vars and test priorities again */
    SCIP_CALL( initProb(scip) );
 
-   for( i=0; i < npresols; ++i)
+   for( i = 0; i < npresols; ++i )
    {
       SCIP_CALL( SCIPsetPresolPriority(scip, presols[i], priority) );
       if( priority != SCIPpresolGetPriority(presols[i]) )
