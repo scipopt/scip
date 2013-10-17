@@ -20007,8 +20007,18 @@ SCIP_RETCODE SCIPchgVarBranchPriority(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* inform the pseudo branch candidates that the branch priority changes and change the branch priority */
-   SCIP_CALL( SCIPbranchcandUpdateVarBranchPriority(scip->branchcand, scip->set, var, branchpriority) );
+   if( SCIPisTransformed(scip)  )
+   {
+      assert(scip->branchcand != NULL);
+
+      /* inform the pseudo branch candidates that the branch priority changes and change the branch priority */
+      SCIP_CALL( SCIPbranchcandUpdateVarBranchPriority(scip->branchcand, scip->set, var, branchpriority) );
+   }
+   else
+   {
+      /* change the branching priority of the variable */
+      SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
+   }
 
    return SCIP_OKAY;
 }
