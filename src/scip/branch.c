@@ -1128,6 +1128,8 @@ SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    int oldbranchpriority;
    int pseudomaxpriority;
 
+   assert(branchcand != NULL);
+
    oldbranchpriority = SCIPvarGetBranchPriority(var);
 
    if( oldbranchpriority == branchpriority )
