@@ -1117,6 +1117,43 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    return SCIP_OKAY;
 }
 
+/** updates branching priority of the given variable and update the pseude candidate array if needed */
+SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable that changed its bounds */
+   int                   branchpriority      /**< branch priority of the variable */
+   )
+{
+   int oldbranchpriority;
+   int pseudomaxpriority;
+
+   oldbranchpriority = SCIPvarGetBranchPriority(var);
+
+   if( oldbranchpriority == branchpriority )
+      return SCIP_OKAY;
+
+   pseudomaxpriority = branchcand->pseudomaxpriority;
+
+   /* if the variable currently belongs to priority set or the new branching priority is larger than the current one,
+    * renmove it from the pseudo branch candidate array temporary
+    */
+   if( oldbranchpriority == pseudomaxpriority || branchpriority > pseudomaxpriority )
+   {
+      SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
+      assert(var->pseudocandindex == -1);
+   }
+
+   /* change the branching priority of the variable */
+   SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
+
+   /* of the variable is not part of the pseudo branching candidate array; check if it is a pseudo branching candidate
+    * and add it if so
+    */
+   SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
+
+   return SCIP_OKAY;
+}
 
 
 
