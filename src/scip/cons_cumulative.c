@@ -1929,6 +1929,14 @@ SCIP_RETCODE consdataCreate(
          /* get transformed variables and do NOT captures these */
          SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
+         /* multi-aggregated variables cannot be replaced by active variable; therefore we mark all variables for not
+          * been multi-aggregated
+          */
+         for( v = 0; v < nvars; ++v )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[v]) );
+         }
+
          if( linkingconss != NULL )
          {
             /* get transformed constraints and captures these */
@@ -7672,13 +7680,13 @@ SCIP_RETCODE computeAlternativeBounds(
          var = consdata->vars[v];
          assert(var != NULL);
 
+         /* multi-aggregated variables should appear here since we mark the variables to be not mutlt-aggregated */
+         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+
          /* ignore variable locally fixed variables */
          if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.5 )
             continue;
 
-         /* ignore multi-aggregated variables */
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-            continue;
 
          SCIP_CALL( getActiveVar(scip, &var, &scalar, &constant) );
          idx = SCIPvarGetProbindex(var);
