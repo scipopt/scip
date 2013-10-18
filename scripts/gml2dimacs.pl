@@ -18,6 +18,7 @@ open FILE, $ARGV[0] or die $!;
 my $nnodes = 0;
 my $nedges = 0;
 my $nedgeskip = 0;
+my $maxnode = -1;
 
 my $foundnode = 0;
 my $foundedge = 0;
@@ -72,6 +73,11 @@ while(<FILE>)
       if ( $innode == 1 )
       {
 	 $V{$nodeid} = $nodeweight;
+	 if ( $nodeid > $maxnode )
+	 {
+	    $maxnode = $nodeid;
+	 }
+
 	 $innode = 0;
 	 ++$nnodes;
 
@@ -154,7 +160,7 @@ $inedge = 0;
 $innode = 0;
 
 # output header
-printf("p edge %d %d\n", $nnodes, $nedges);
+printf("p edge %d %d\n", $maxnode, $nedges);
 printf("c %d skipped parallel edges.\n", $nedgeskip);
 
 # output nodes
