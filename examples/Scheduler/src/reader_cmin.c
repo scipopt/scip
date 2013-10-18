@@ -43,7 +43,6 @@
 
 #define DEFAULT_FILENAME           "-"  /**< name of the file including best known solutions */
 #define DEFAULT_DUALREDUCTION     TRUE  /**< add locks to avoid dual reductions */
-#define DEFAULT_BRANCHPRIORITY       1  /**< branching priority for the binary choice variables */
 #define DEFAULT_MIP              FALSE  /**< create a MIP formulation */
 #define DEFAULT_INITIAL           TRUE  /**< should model constraints be in initial LP? */
 #define DEFAULT_CIP               TRUE  /**< create a CIP formulation */
@@ -1005,7 +1004,6 @@ SCIP_RETCODE createCipFormulation(
    SCIP_VAR*** binvars;
    SCIP_VAR* var;
    int* machines;
-   int branchpriority;
 
    char name[SCIP_MAXSTRLEN];
 
@@ -1018,7 +1016,6 @@ SCIP_RETCODE createCipFormulation(
 
    SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/relaxation", &relaxation) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dualreduction", &dualreduction) );
-   SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/branchpriority", &branchpriority) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, njobs) );
 
@@ -1061,7 +1058,6 @@ SCIP_RETCODE createCipFormulation(
 
          SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(scip, var) );
-         SCIP_CALL( SCIPchgVarBranchPriority(scip, var, branchpriority) );
          binvars[i][nvars] = var;
          SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
@@ -1390,10 +1386,6 @@ SCIP_RETCODE SCIPincludeReaderCmin(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/dualreduction", "add locks to avoid dual reductions?",
          NULL, FALSE, DEFAULT_DUALREDUCTION, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "reading/"READER_NAME"/branchpriority", "branching priority for the binary choice variables",
-         NULL, FALSE, DEFAULT_BRANCHPRIORITY, -INT_MAX/4, INT_MAX/4, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/mip", "create a MIP formulation?",
