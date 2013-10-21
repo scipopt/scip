@@ -26,6 +26,9 @@
  * SCIP_RETCODE SCIPsetRelaxPriority  @todo add a relax
  * SCIP_RETCODE SCIPsetPropPriority
  * SCIP_RETCODE SCIPsetHeurPriority
+ * SCIP_RETCODE SCIPsetNodeselStdPriority
+ * SCIP_RETCODE SCIPsetNodeselMemsavePriority
+ * SCIP_RETCODE SCIPsetBranchrulePriority
  *
  * @todo
  * SCIP_RETCODE SCIPsetMessagehdlr
@@ -48,7 +51,7 @@
  * SCIP_RETCODE SCIPsetReaderRead
  * SCIP_RETCODE SCIPsetReaderWrite
  *
- * EASY
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -313,6 +316,33 @@ SCIP_RETCODE setHeurPriorityTest(void)
 
 
 
+/** test setNodeselStdPriority */
+static
+SCIP_RETCODE setNodeselStdPriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_NODESEL**, SCIPgetNodesels, SCIPgetNNodesels, SCIPsetNodeselStdPriority, SCIPnodeselGetStdPriority );
+
+   return SCIP_OKAY;
+}
+
+/** test setNodeselMemsavePriority */
+static
+SCIP_RETCODE setNodeselMemsavePriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_NODESEL**, SCIPgetNodesels, SCIPgetNNodesels, SCIPsetNodeselMemsavePriority, SCIPnodeselGetMemsavePriority );
+
+   return SCIP_OKAY;
+}
+
+/** test setNodeselMemsavePriority */
+static
+SCIP_RETCODE setBranchrulePriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_BRANCHRULE**, SCIPgetBranchrules, SCIPgetNBranchrules, SCIPsetBranchrulePriority, SCIPbranchruleGetPriority );
+
+   return SCIP_OKAY;
+}
+
 
 
 /** main function */
@@ -333,6 +363,9 @@ main(
    CHECK_TEST( setSepaPriorityTest() );
    CHECK_TEST( setPropPriorityTest() );
    CHECK_TEST( setHeurPriorityTest()  );
+   CHECK_TEST( setNodeselStdPriorityTest() );
+   CHECK_TEST( setNodeselMemsavePriorityTest() );
+   CHECK_TEST( setBranchrulePriorityTest() );
    printf("All tests passed\n");
    return 0;
 }
