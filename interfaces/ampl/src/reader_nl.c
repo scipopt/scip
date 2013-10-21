@@ -548,24 +548,17 @@ SCIP_RETCODE walkExpression(
       {
          int nchildren;
 
-         if( (amplexpr->L.ep == NULL) != (amplexpr->R.ep == NULL) )
-         {
-            /* what the ...? this seems to be possible, but the non-NULL operand seems to point to garbage
-             * so assume that we have no operand
-             */
-            nchildren = 0;
-         }
-         else
-         {
-            nchildren = amplexpr->R.ep - amplexpr->L.ep;
-         }
+         /* either both are NULL (which would be strange), or both are not NULL */
+         assert((amplexpr->L.ep == NULL) == (amplexpr->R.ep == NULL));
 
+         nchildren = amplexpr->R.ep - amplexpr->L.ep;
          assert(nchildren >= 0);
+
          switch( nchildren )
          {
             case 0:
             {
-               SCIPwarningMessage(scip, NULL, "MAXLIST with 0 operands. Assuming max(empty list) = 0.\n");
+               SCIPwarningMessage(scip, "MAXLIST with 0 operands. Assuming max(empty list) = 0.\n");
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_CONST, 0.0) );
                break;
             }
