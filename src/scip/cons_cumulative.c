@@ -3637,33 +3637,6 @@ SCIP_Bool isConsIndependently(
    return TRUE;
 }
 
-/** computes the number of check constraints */
-static
-int getNCheckConss(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CONSHDLR** conshdlrs;
-   int nconshdlrs;
-   int ncheckconss;
-   int c;
-
-   nconshdlrs = SCIPgetNConshdlrs(scip);
-   conshdlrs = SCIPgetConshdlrs(scip);
-   assert(conshdlrs != NULL);
-
-   ncheckconss = 0;
-
-   /* loop over all constraint handler and collect the number of constraints which need to be checked */
-   for( c = 0; c < nconshdlrs; ++c )
-   {
-      assert(conshdlrs[c] != NULL);
-      ncheckconss += SCIPconshdlrGetNCheckConss(conshdlrs[c]);
-   }
-
-   return ncheckconss;
-}
-
 /** in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the fixings
  *  (dual reductions)
  */
@@ -3707,7 +3680,7 @@ SCIP_RETCODE solveIndependentCons(
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
 
-   ncheckconss = getNCheckConss(scip);
+   ncheckconss = SCIPgetNCheckConss(scip);
 
    /* if the cumulative constraint is the only constraint of the original problem or the only check constraint in the
     * presolved problem do nothing execpt to change the parameter settings

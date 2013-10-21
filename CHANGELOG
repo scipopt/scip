@@ -162,6 +162,7 @@ interface
 - SCIPstartStrongbranch() has a new parameter "propagate" to enable or disable propagation support for strong branching
 - new methods SCIPlpiGetNorms(), SCIPlpiSetNorms(), and SCIPlpiFreeNorms() for getting the LP pricing norms from the LP
   solver, loading them back into the solver, and freeing the data
+- add method SCIPgetNCheckConss() in scip.{c,h}
 
 parameters:
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral
