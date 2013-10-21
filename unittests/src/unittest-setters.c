@@ -137,6 +137,21 @@
    }                                                                                      \
    while(FALSE)
 
+/** macro to set and check parameters on the constraints
+ * @note assumes the existence of SCIP_CONS* cons and SCIP* scip
+ */
+#define CONS_TEST(consset, iscons)        \
+   do{                                    \
+      conset(scip, cons, true);           \
+      if( iscons(scip, cons) == FALSE )   \
+         return SCIP_ERROR;               \
+                                          \
+      conset(scip, cons, false);          \
+      if( iscons(scip,cons) == TRUE )     \
+         return SCIP_ERROR;               \
+   }                                      \
+   while(FALSE)
+
 /*
  * Local methods for tests
  */
@@ -343,7 +358,7 @@ SCIP_RETCODE setBranchrulePriorityTest(void)
    return SCIP_OKAY;
 }
 
-
+/** test setConsInitial */
 
 /** main function */
 int
