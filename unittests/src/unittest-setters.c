@@ -22,6 +22,10 @@
  * SCIP_RETCODE SCIPsetObjsense
  * SCIP_RETCODE SCIPsetConflicthdlrPriority
  * SCIP_RETCODE SCIPsetPresolPriority
+ * SCIP_RETCODE SCIPsetPricerPriority  @todo add a pricer
+ * SCIP_RETCODE SCIPsetRelaxPriority  @todo add a relax
+ * SCIP_RETCODE SCIPsetPropPriority
+ * SCIP_RETCODE SCIPsetHeurPriority
  *
  * @todo
  * SCIP_RETCODE SCIPsetMessagehdlr
@@ -69,6 +73,66 @@
       }                                          \
    }                                             \
    while( FALSE )
+
+/** macro to check the set methods for priorities
+ *
+ *
+ */
+#define TEST_PRIORITY(pointertype, getobjs, getnobjs, setpriority, getpriority)           \
+   do                                                                                     \
+   {                                                                                      \
+      int i;                                                                              \
+      int priority;                                                                       \
+      SCIP* scip;                                                                         \
+      pointertype objs;                                                                   \
+      int nobjs;                                                                          \
+                                                                                          \
+      SCIP_CALL( SCIPcreate(&scip) );                                                     \
+                                                                                          \
+      /* include default plugins */                                                       \
+      SCIP_CALL( SCIPincludeDefaultPlugins(scip) );                                       \
+                                                                                          \
+      /* create problem */                                                                \
+      SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );                                  \
+                                                                                          \
+      objs = getobjs(scip);                                                               \
+      nobjs = getnobjs(scip);                                                             \
+                                                                                          \
+      /* set and test priorities */                                                       \
+      priority = 11;                                                                      \
+      for( i = 0; i < nobjs; ++i )                                                        \
+      {                                                                                   \
+         SCIP_CALL( setpriority(scip, objs[i], priority) );                               \
+         if( priority != getpriority(objs[i]) )                                           \
+         {                                                                                \
+            return SCIP_ERROR;                                                            \
+         }                                                                                \
+      }                                                                                   \
+                                                                                          \
+      /* add some vars and test priorities again */                                       \
+      SCIP_CALL( initProb(scip) );                                                        \
+                                                                                          \
+      for( i=0; i < nobjs; ++i)                                                           \
+      {                                                                                   \
+         if( priority != getpriority(objs[i]) )                                           \
+         {                                                                                \
+            return SCIP_ERROR;                                                            \
+         }                                                                                \
+      }                                                                                   \
+                                                                                          \
+                                                                                          \
+      /* set and test priorities */                                                       \
+      priority = 12;                                                                      \
+      for( i = 0; i < nobjs; ++i )                                                        \
+      {                                                                                   \
+         SCIP_CALL( setpriority(scip, objs[i], priority) );                               \
+         if( priority != getpriority(objs[i]) )                                           \
+         {                                                                                \
+            return SCIP_ERROR;                                                            \
+         }                                                                                \
+      }                                                                                   \
+   }                                                                                      \
+   while(FALSE)
 
 /*
  * Local methods for tests
@@ -127,6 +191,7 @@ SCIP_RETCODE setAndTestObjsense(SCIP* scip, SCIP_OBJSENSE sense)
  * TESTS
  */
 
+
 /** test setProbName */
 static
 SCIP_RETCODE setProbNameTest(void)
@@ -184,96 +249,70 @@ SCIP_RETCODE setObjsenseTest(void)
 static
 SCIP_RETCODE setConflicthdlrPriorityTest(void)
 {
-
-   int i;
-   int priority;
-   int nconfhdlrs;
-   SCIP* scip;
-   SCIP_CONFLICTHDLR** conflicthdlrs;
-
-   SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include default plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
-
-   conflicthdlrs = SCIPgetConflicthdlrs(scip);
-   nconfhdlrs = SCIPgetNConflicthdlrs(scip);
-
-   /* set and test priorities */
-   priority = 11;
-   for( i = 0; i < nconfhdlrs; ++i )
-   {
-      SCIP_CALL( SCIPsetConflicthdlrPriority(scip, conflicthdlrs[i], priority) );
-      if( priority != SCIPconflicthdlrGetPriority(conflicthdlrs[i]) )
-      {
-         return SCIP_ERROR;
-      }
-   }
-
-   /* add some vars and test priorities again */
-   SCIP_CALL( initProb(scip) );
-
-   for( i=0; i < nconfhdlrs; ++i)
-   {
-      if( priority != SCIPconflicthdlrGetPriority(conflicthdlrs[i]) )
-      {
-         return SCIP_ERROR;
-      }
-   }
+   TEST_PRIORITY( SCIP_CONFLICTHDLR**, SCIPgetConflicthdlrs, SCIPgetNConflicthdlrs, SCIPsetConflicthdlrPriority, SCIPconflicthdlrGetPriority );
 
    return SCIP_OKAY;
 }
+
 
 /** test setPresolPriority */
 static
 SCIP_RETCODE setPresolPriorityTest(void)
 {
-
-   int i;
-   int priority;
-   SCIP* scip;
-   SCIP_PRESOL** presols;
-   int npresols;
-
-   SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include default plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
-
-   presols = SCIPgetPresols(scip);
-   npresols = SCIPgetNPresols(scip);
-
-   /* set and test priorities */
-   priority = 11;
-   for( i = 0; i < npresols; ++i )
-   {
-      SCIP_CALL( SCIPsetPresolPriority(scip, presols[i], priority) );
-      if( priority != SCIPpresolGetPriority(presols[i]) )
-      {
-         return SCIP_ERROR;
-      }
-   }
-
-   /* add some vars and test priorities again */
-   SCIP_CALL( initProb(scip) );
-
-   for( i = 0; i < npresols; ++i )
-   {
-      SCIP_CALL( SCIPsetPresolPriority(scip, presols[i], priority) );
-      if( priority != SCIPpresolGetPriority(presols[i]) )
-      {
-         return SCIP_ERROR;
-      }
-   }
+   TEST_PRIORITY( SCIP_PRESOL**, SCIPgetPresols, SCIPgetNPresols, SCIPsetPresolPriority, SCIPpresolGetPriority );
 
    return SCIP_OKAY;
 }
+
+/** test setPricerPriority */
+static
+SCIP_RETCODE setPricerPriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_PRICER**, SCIPgetPricers, SCIPgetNPricers, SCIPsetPricerPriority, SCIPpricerGetPriority );
+
+   return SCIP_OKAY;
+}
+
+/** test setRelaxPriority */
+static
+SCIP_RETCODE setRelaxPriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_RELAX**, SCIPgetRelaxs, SCIPgetNRelaxs, SCIPsetRelaxPriority, SCIPrelaxGetPriority );
+
+   return SCIP_OKAY;
+}
+
+
+/** test setSepaPriority */
+static
+SCIP_RETCODE setSepaPriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_SEPA**, SCIPgetSepas, SCIPgetNSepas, SCIPsetSepaPriority, SCIPsepaGetPriority );
+
+   return SCIP_OKAY;
+}
+
+/** test setPropPriority */
+static
+SCIP_RETCODE setPropPriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_PROP**, SCIPgetProps, SCIPgetNProps, SCIPsetPropPriority, SCIPpropGetPriority );
+
+   return SCIP_OKAY;
+}
+
+
+/** test setHeurPriority */
+static
+SCIP_RETCODE setHeurPriorityTest(void)
+{
+   TEST_PRIORITY( SCIP_HEUR**, SCIPgetHeurs, SCIPgetNHeurs, SCIPsetHeurPriority, SCIPheurGetPriority );
+
+   return SCIP_OKAY;
+}
+
+
+
 
 
 /** main function */
@@ -289,7 +328,11 @@ main(
    CHECK_TEST( setObjsenseTest() );
    CHECK_TEST( setConflicthdlrPriorityTest() );
    CHECK_TEST( setPresolPriorityTest() );
-
+   CHECK_TEST( setPricerPriorityTest() );
+   CHECK_TEST( setRelaxPriorityTest() );
+   CHECK_TEST( setSepaPriorityTest() );
+   CHECK_TEST( setPropPriorityTest() );
+   CHECK_TEST( setHeurPriorityTest()  );
    printf("All tests passed\n");
    return 0;
 }
