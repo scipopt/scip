@@ -24,7 +24,7 @@
 #
 
 QUEUETYPE	=	srun
-QUEUE		=	gas
+QUEUE		=	mip-dbg
 PPN 		=	-1
 CLIENTTMPDIR	=	/usr/local/tmp
 NOWAITCLUSTER   =       1
