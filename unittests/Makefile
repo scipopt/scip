@@ -54,7 +54,7 @@ EXECCOMMANDS    =       testslack NOEXEC NOEXEC
 # testsets or NOTEST if there is no testset
 TESTCASES       =       short nofile nofile
 
-UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(addsuffix .c, $(UNITTESTS)))
+UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(join $(addsuffix /,$(UNITTESTS)), $(addsuffix .c, $(UNITTESTS))))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
 UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
 UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
@@ -131,7 +131,8 @@ $(UNITTESTSEXECS): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFIL
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$(BINDIR)/$@
 
-$(OBJDIR)/%.o:	$(SRCDIR)/%.c
+VPATH = $(addprefix $(SRCDIR)/, $(UNITTESTS))
+$(OBJDIR)/%.o:	%.c
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
