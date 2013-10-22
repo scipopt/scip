@@ -1,3 +1,10 @@
+SCIP version 3.0.3
+==================
+
+fixed bugs:
+- fixed bug in handling max-functions in ampl interface
+
+
 SCIP version 3.0.2
 ==================
 
@@ -59,7 +66,6 @@ fixed bugs:
   transformed problem to be infeasible in the original problem
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
-- fixed bug in handling max-functions in ampl interface
 - updated get.ASL script to cope with broken ftp access to netlib server
 
 features:

@@ -546,61 +546,37 @@ SCIP_RETCODE walkExpression(
 
       case MAXLIST:
       {
-         int nchildren;
+         expr_va* amplexpr_va;
+         const de* d;
+         SCIP_EXPR* arg;
 
-         /* either both are NULL (which would be strange), or both are not NULL */
-         assert((amplexpr->L.ep == NULL) == (amplexpr->R.ep == NULL));
+         amplexpr_va = (expr_va*)amplexpr;
 
-         nchildren = amplexpr->R.ep - amplexpr->L.ep;
-         assert(nchildren >= 0);
-
-         switch( nchildren )
+         arg = NULL;
+         *scipexpr = NULL;
+         for( d = amplexpr_va->L.d; d->e; ++d )
          {
-            case 0:
+            if( *scipexpr == NULL )
             {
-               SCIPwarningMessage(scip, "MAXLIST with 0 operands. Assuming max(empty list) = 0.\n");
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_CONST, 0.0) );
-               break;
-            }
-
-            case 1:
-            {
-               SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->L.ep != NULL ? amplexpr->L.ep[0] : amplexpr->R.ep[0], exprvaridx, nexprvars, nvars, doingfine) );
-               break;
-            }
-
-            default:
-            {
-               SCIP_EXPR* arg1;
-               SCIP_EXPR* arg2;
-
-               SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[0], exprvaridx, nexprvars, nvars, doingfine) );
-               if( !*doingfine )
-                  break;
-
-               SCIP_CALL( walkExpression(scip, &arg2, asl, amplexpr->L.ep[1], exprvaridx, nexprvars, nvars, doingfine) );
+               SCIP_CALL( walkExpression(scip, scipexpr, asl, d->e, exprvaridx, nexprvars, nvars, doingfine) );
                if( !*doingfine )
                {
-                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+                  SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
                   break;
                }
-
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, arg1, arg2) );
-
-               for( i = 2; i < nchildren; ++i )
+            }
+            else
+            {
+               SCIP_CALL( walkExpression(scip, &arg, asl, d->e, exprvaridx, nexprvars, nvars, doingfine) );
+               if( !*doingfine )
                {
-                  SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
-                  if( !*doingfine )
-                  {
-                     SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
-                     break;
-                  }
-
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg1) );
+                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg);
+                  break;
                }
-               break;
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg) );
             }
          }
+         assert(*scipexpr != NULL); /* empty list?? */
 
          break;
       }
