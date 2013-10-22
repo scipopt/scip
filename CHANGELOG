@@ -163,6 +163,7 @@ interface
 - new methods SCIPlpiGetNorms(), SCIPlpiSetNorms(), and SCIPlpiFreeNorms() for getting the LP pricing norms from the LP
   solver, loading them back into the solver, and freeing the data
 - add method SCIPgetNCheckConss() in scip.{c,h}
+- removed parameter "normtype" from function SCIPcomputeLPRelIntPoint()
 
 parameters:
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral
@@ -217,6 +218,7 @@ parameters:
 - new parameter "separating/oddcycle/cutthreshold" to run odd cycle separation if not enough cuts have been found
 - new parameter "write/genericnamesoffset" when writing a generic problem now it is possible to define an offset on the
   variable name, that normally starts with "0"
+- remove parameter "separating/closecuts/relintnormtype"
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
