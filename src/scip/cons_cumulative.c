@@ -3684,7 +3684,9 @@ SCIP_RETCODE solveIndependentCons(
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
-   /* if constraint is not check constraint skip it */
+   /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
+    * use the locks to decide for a dual reduction using this constraint;
+    */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
 
@@ -3737,11 +3739,6 @@ SCIP_RETCODE solveIndependentCons(
       return SCIP_OKAY;
    }
 
-   /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
-    * use the locks to decide for a dual reduction using this constraint;
-    */
-   if( !SCIPconsIsChecked(cons) )
-      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
