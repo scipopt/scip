@@ -17,6 +17,7 @@
 #@brief   Makefile for unit tests
 #@author  Ambros Gleixner
 #@author  Marc Pfetsch
+#@todo    check why everytime it links everything
 
 
 #-----------------------------------------------------------------------------
@@ -46,7 +47,9 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=	unittest-slack unittest-depthlevel unittest-boundchg unittest-setters
+UNITTESTS	=	unittest-slack unittest-depthlevel unittest-boundchg unittest-setters unittest-relax
+EXTRASRC		=  unittest-relax/relax_unittest
+
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
@@ -56,11 +59,15 @@ TESTCASES       =       short nofile nofile
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(join $(addsuffix /,$(UNITTESTS)), $(addsuffix .c, $(UNITTESTS))))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
+UNITTESTSOBJ	+=	$(addprefix $(OBJDIR)/, $(notdir $(addsuffix .o, $(EXTRASRC))))
 UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
 UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
 # number of test cases in the whole unittest
 NUMBERS        :=       $(shell seq 1 $(words $(UNITTESTSEXECS)))
+
+# where files should be looked in
+VPATH = $(addprefix $(SRCDIR)/, $(UNITTESTS))
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -126,17 +133,18 @@ depend:		$(SCIPDIR)
 $(UNITTESTSEXECS): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ)
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/$(notdir $(patsubst %$(BASESUFFIX),%,$@)).o \
+		$(addprefix $(OBJDIR)/, $(addsuffix .o, $(notdir $(filter $(notdir $(patsubst %$(BASESUFFIX),%,$@))/%, $(EXTRASRC))))) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$(BINDIR)/$@
 
-VPATH = $(addprefix $(SRCDIR)/, $(UNITTESTS))
+
 $(OBJDIR)/%.o:	%.c
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
-$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
+$(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 

@@ -1,0 +1,19 @@
+Adding new tests
+----------------
+
+When adding a new unittest, this should be called unittest-<name>
+For example, unittest-new. You should create a folder called
+unittest-new
+and inside put the unittest-new.c/cpp (which should contain the main)
+and all the extra files (without restriction on the name)
+
+Modifying the Makefile
+----------------------
+
+Suppose you created your new unittest, unittest-new, and assume
+the folder src/unittest-new contains the following files
+unittest-new.c misc.c misc.h more_misc.c
+
+Then you should add unittest-new to the list on UNITTESTS
+and add unittest-new/misc unittest-new/more_misc to the list
+on EXTRASRC.
