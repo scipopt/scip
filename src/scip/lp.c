@@ -18834,40 +18834,34 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          assert( !SCIPsetIsInfinity(set, REALABS(row->lhs)) );
          assert( !SCIPsetIsInfinity(set, REALABS(row->rhs)) );
       }
-      else
+      else if( relaxrows )
       {
-         if( relaxrows )
+         /* otherwise add slacks for each side if necessary */
+         if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
          {
-            /* otherwise add slacks for each side if necessary */
-            if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
-            {
-               obj[nnewcols] = 1.0;
-               lb[nnewcols] = 0.0;
-               ub[nnewcols] = 1.0;
-               ++nnewcols;
-            }
-            if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
-            {
-               obj[nnewcols] = 1.0;
-               lb[nnewcols] = 0.0;
-               ub[nnewcols] = 1.0;
-               ++nnewcols;
-            }
+            obj[nnewcols] = 1.0;
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            ++nnewcols;
+         }
+         if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
+         {
+            obj[nnewcols] = 1.0;
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            ++nnewcols;
          }
       }
    }
 
    /* create slacks for objective cutoff row */
-   if( inclobjcutoff )
+   if( inclobjcutoff && relaxrows )
    {
-      if( relaxrows )
-      {
-         /* add slacks for right hand side */
-         obj[nnewcols] = 1.0;
-         lb[nnewcols] = 0.0;
-         ub[nnewcols] = 1.0;
-         ++nnewcols;
-      }
+      /* add slacks for right hand side */
+      obj[nnewcols] = 1.0;
+      lb[nnewcols] = 0.0;
+      ub[nnewcols] = 1.0;
+      ++nnewcols;
    }
 
    /* create slacks for bounds */
@@ -19050,7 +19044,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       {
          /* add slack variable */
          colinds[nnonz] = lp->ncols + 1 + cnt;
-         colvals[nnonz] = 1.0;
+         colvals[nnonz] = MAX(1.0, REALABS(rhs));
          ++cnt;
          ++nnonz;
       }
