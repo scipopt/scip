@@ -3739,7 +3739,6 @@ SCIP_RETCODE solveIndependentCons(
       return SCIP_OKAY;
    }
 
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -7456,6 +7455,8 @@ SCIP_RETCODE applyProbingVar(
    var = vars[probingpos];
    assert(var != NULL);
 
+   (*success) = FALSE;
+
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
@@ -7494,14 +7495,6 @@ SCIP_RETCODE applyProbingVar(
 
       return SCIP_OKAY;
    }
-
-   /* analyze both probings */
-   SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, var, leftub, rightlb, nvars, vars,
-         leftimpllbs, leftimplubs, leftproplbs, leftpropubs,
-         rightimpllbs, rightimplubs, rightproplbs, rightpropubs,
-         nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
-
-   (*success) = FALSE;
 
    return SCIP_OKAY;
 }
@@ -12762,7 +12755,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("LP enforcing %d useful resource constraints of %d constraints\n", nusefulconss, nconss);
+   SCIPdebugMessage("LP enforcing %d useful cumulative constraints of %d constraints\n", nusefulconss, nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
