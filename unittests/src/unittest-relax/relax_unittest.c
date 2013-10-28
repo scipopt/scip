@@ -25,10 +25,10 @@
 #include "relax_unittest.h"
 
 
-#define RELAX_NAME             "unittest"
+#define RELAX_NAME             "relax-unittest"
 #define RELAX_DESC             "relaxator template"
-#define RELAX_PRIORITY         0
-#define RELAX_FREQ             1
+#define RELAX_PRIORITY         101
+#define RELAX_FREQ             2
 
 
 
@@ -81,8 +81,7 @@ SCIP_DECL_RELAXCOPY(relaxCopyUnittest)
 static
 SCIP_DECL_RELAXFREE(relaxFreeUnittest)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest relaxator not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   /* call destructor of relaxation handler */
 
    return SCIP_OKAY;
 }
@@ -176,13 +175,11 @@ SCIP_RETCODE SCIPincludeRelaxUnittest(
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP_RELAX* relax;
-
    /* create unittest relaxator data */
    relaxdata = NULL;
    /* TODO: (optional) create relaxator specific data here */
 
    relax = NULL;
-   SCIPerrorMessage("Call include\n");
 
    /* include relaxator */
 #if 0
