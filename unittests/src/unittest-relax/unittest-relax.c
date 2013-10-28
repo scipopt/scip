@@ -55,42 +55,6 @@
 
 
 
-/* help methods */
-static
-SCIP_RETCODE initProb(
-   SCIP*                 scip                /**< SCIP instance */
-   )
-{
-   SCIP_CONS* cons;
-   SCIP_VAR* xvar;
-   SCIP_VAR* yvar;
-   SCIP_VAR* vars[2];
-   SCIP_Real vals[2];
-
-   /* create variables */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &xvar, "x", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_INTEGER) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &yvar, "y", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_INTEGER) );
-
-   SCIP_CALL( SCIPaddVar(scip, xvar) );
-   SCIP_CALL( SCIPaddVar(scip, yvar) );
-
-   /* create inequalities */
-   vars[0] = xvar;
-   vars[1] = yvar;
-
-   vals[0] = 1.0;
-   vals[1] = -1.0;
-
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "lower", 2, vars, vals, 0.25, 0.75) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
-   SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
-
-   return SCIP_OKAY;
-}
-
 
 /* Check methods */
 static
@@ -156,6 +120,20 @@ SCIP_RETCODE relaxCheckNCalls(SCIP_RELAX* relax)
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE relaxCheckInitialized(SCIP_RELAX* relax, SCIP_Bool val)
+{
+   CHECK_GET( SCIPrelaxIsInitialized(relax), val );
+
+   return SCIP_OKAY;
+}
+
+/*@todo how to check this? */
+static
+SCIP_RETCODE relaxCheckMarkedUnsolved(SCIP_RELAX* relax)
+{
+   return SCIP_OKAY;
+}
 
 /** main function */
 int
@@ -188,6 +166,8 @@ main(
    /* create a problem and disable the presolver */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
+   /* solve empty problem */
+   SCIPsetMessagehdlrQuiet(scip, TRUE);
 
    /*********
     * Tests *
@@ -199,6 +179,12 @@ main(
    CHECK_TEST( relaxCheckSetupTime(relax) );
    CHECK_TEST( relaxCheckTime(relax) );
    CHECK_TEST( relaxCheckNCalls(relax) );
+
+   CHECK_TEST( relaxCheckInitialized(relax, FALSE) ); /* before solving this should be false  */
+   SCIP_CALL( SCIPsolve(scip));
+   CHECK_TEST( relaxCheckInitialized(relax, TRUE) ); /* after solving this should be true */
+
+   CHECK_TEST( relaxCheckMarkedUnsolved(relax) );
    /********************
     * Deinitialization *
     ********************/
