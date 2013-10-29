@@ -166,7 +166,7 @@ main(
    /* create a problem and disable the presolver */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
-   /* solve empty problem */
+   /* set the msghdlr off */
    SCIPsetMessagehdlrQuiet(scip, TRUE);
 
    /*********
