@@ -67,6 +67,7 @@ fixed bugs:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
 - updated get.ASL script to cope with broken ftp access to netlib server
+- fixed bug in cons_indicator with trying to create solution in problem stage
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
