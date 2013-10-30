@@ -16260,22 +16260,23 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          /* check the strong branching LP solution for feasibility */
          if( scip->set->branch_checksbsol )
          {
+            SCIP_SOL* sol;
+            SCIP_Bool rounded = TRUE;
+
             /* start clock for strong branching solutions */
             SCIPclockStart(scip->stat->sbsoltime, scip->set);
 
-            /* run DURINGPRICINGLOOP heuristics */
-            if( scip->set->branch_heursbsol )
-            {
-               /* call primal heuristics */
-               SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, NULL,
-                     SCIP_HEURTIMING_DURINGPRICINGLOOP, foundsol) );
-            }
-            /* just check the LP solution */
-            else
-            {
-               SCIP_SOL* sol;
+            SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
 
-               SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+            /* try to round the strong branching solution */
+            if( scip->set->branch_roundsbsol )
+            {
+               SCIP_CALL( SCIProundSol(scip, sol, &rounded) );
+            }
+
+            /* check the solution for feasibility if rounding worked well (or was not tried) */
+            if( rounded )
+            {
                SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
             }
 

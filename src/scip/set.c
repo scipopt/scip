@@ -70,7 +70,7 @@
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'u' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
-#define SCIP_DEFAULT_BRANCH_HEURSBSOL      TRUE /**< should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE) */
+#define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
 
 /* Conflict Analysis */
 
@@ -823,9 +823,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->branch_checksbsol, TRUE, SCIP_DEFAULT_BRANCH_CHECKSBSOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "branching/heursbsol",
-         "should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE)",
-         &(*set)->branch_heursbsol, TRUE, SCIP_DEFAULT_BRANCH_HEURSBSOL,
+         "branching/roundsbsol",
+         "should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE)",
+         &(*set)->branch_roundsbsol, TRUE, SCIP_DEFAULT_BRANCH_ROUNDSBSOL,
          NULL, NULL) );
 
    /* conflict analysis parameters */
