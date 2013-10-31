@@ -72,7 +72,7 @@
 #include <vector>
 #include <string>
 
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
 
@@ -2302,9 +2302,9 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
       *dualfeasible = FALSE;
 
    // say feasible if deviation is small
-   if (lpi->clp->status()==0 && ( ! (*primalfeasible) || ! (*dualfeasible)) ) 
+   if (lpi->clp->status()==0 && ( ! (*primalfeasible) || ! (*dualfeasible)) )
    {
-      if ( !(*primalfeasible) && lpi->clp->sumPrimalInfeasibilities() < SUMINFEASBOUND ) 
+      if ( !(*primalfeasible) && lpi->clp->sumPrimalInfeasibilities() < SUMINFEASBOUND )
       {
          lpi->clp->setNumberPrimalInfeasibilities(0);
          *primalfeasible = TRUE;
@@ -2439,13 +2439,13 @@ SCIP_Bool SCIPlpiHasDualRay(
    {
       if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0)
          return TRUE;
-      else 
+      else
       {
-         if ( lpi->clp->status() != 2 || lpi->clp->algorithm() <= 0 ) 
+         if ( lpi->clp->status() != 2 || lpi->clp->algorithm() <= 0 )
             lpi->clp->deleteRay();
          return FALSE;
       }
-   } 
+   }
    else
       return FALSE;
 }

@@ -64,7 +64,7 @@ const char* SCIPlpiGetSolverDesc(
    void
    );
 
-/** gets pointer for LP solver - use only with great care 
+/** gets pointer for LP solver - use only with great care
  *
  *  The behavior of this function depends on the solver and its use is
  *  therefore only recommended if you really know what you are

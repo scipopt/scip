@@ -41,7 +41,6 @@
 #include "scip/stat.h"
 #include "scip/intervalarith.h"
 #include "scip/clock.h"
-#include "scip/lpi.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -49,6 +48,7 @@
 #include "scip/sol.h"
 #include "scip/event.h"
 #include "scip/pub_message.h"
+#include "lpi/lpi.h"
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 

@@ -36,7 +36,7 @@ reader_gmo.o: src/reader_gmo.c src/reader_gmo.h ../../src/scip/scip.h \
  ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
  ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
  ../../src/scip/struct_var.h ../../src/scip/implics.h \
- ../../src/scip/history.h ../../src/scip/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/scip/history.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/nlpi/struct_expr.h ../../src/scip/presolve.h \
  ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
@@ -95,7 +95,7 @@ event_solvetrace.o: src/event_solvetrace.c src/event_solvetrace.h \
  ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
  ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
  ../../src/scip/struct_var.h ../../src/scip/implics.h \
- ../../src/scip/history.h ../../src/scip/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/scip/history.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/nlpi/struct_expr.h ../../src/scip/presolve.h \
  ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
@@ -151,7 +151,7 @@ $(OBJDIR)/GamsScip.o: src/GamsScip.cpp src/GamsScip.hpp src/GamsSolver.hpp \
  ../../src/scip/pub_sol.h ../../src/scip/struct_sol.h \
  ../../src/scip/pub_tree.h ../../src/scip/struct_tree.h \
  ../../src/scip/pub_var.h ../../src/scip/struct_var.h \
- ../../src/scip/implics.h ../../src/scip/history.h ../../src/scip/lpi.h \
+ ../../src/scip/implics.h ../../src/scip/history.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
  ../../src/nlpi/type_exprinterpret.h ../../src/nlpi/struct_expr.h \
  ../../src/scip/presolve.h ../../src/scip/struct_scip.h \

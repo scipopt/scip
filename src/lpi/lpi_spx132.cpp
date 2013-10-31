@@ -263,7 +263,7 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "scip/bitencode.h"
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -1782,7 +1782,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 {
    /* pass call on to lpiStrongbranch() */
    SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
-   
+
    return SCIP_OKAY;
 }
 

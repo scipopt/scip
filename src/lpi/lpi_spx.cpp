@@ -1063,7 +1063,7 @@ public:
       if( m_stat == OPTIMAL )
       {
          Real objval = value();
-         
+
          if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
       }
@@ -1294,7 +1294,7 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "scip/bitencode.h"
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -1387,7 +1387,7 @@ SCIP_RETCODE ensureRstatMem(
  */
 
 /** returns the number of packets needed to store column packet information */
-static 
+static
 int colpacketNum(
    int                   ncols               /**< number of columns to store */
    )
@@ -1396,7 +1396,7 @@ int colpacketNum(
 }
 
 /** returns the number of packets needed to store row packet information */
-static 
+static
 int rowpacketNum(
    int                   nrows               /**< number of rows to store */
    )
@@ -1692,7 +1692,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       for( i = 0; i < nrows; ++i )
          rows.add(lhs[i], emptyVector, rhs[i]);
       spx->addRows(rows);
-   
+
       /* create column vectors with coefficients and bounds */
       SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
    }
@@ -1763,12 +1763,12 @@ SCIP_RETCODE SCIPlpiAddCols(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
    }
- 
+
    return SCIP_OKAY;
 }
 
@@ -1878,7 +1878,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -1993,7 +1993,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -2037,7 +2037,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -2122,7 +2122,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -2147,7 +2147,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi->spx != NULL);
    assert(scaleval != 0.0);
 
-   try 
+   try
    {
       invalidateSolution(lpi);
 
@@ -2187,7 +2187,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -2259,7 +2259,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -2559,7 +2559,7 @@ SCIP_RETCODE SCIPlpiGetObj(
    assert(lpi->spx != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
    assert(vals != NULL);
-   
+
    for( i = firstcol; i <= lastcol; ++i )
       vals[i-firstcol] = lpi->spx->obj(i);
 
@@ -2582,7 +2582,7 @@ SCIP_RETCODE SCIPlpiGetBounds(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
-   
+
    for( i = firstcol; i <= lastcol; ++i )
    {
       if( lbs != NULL )
@@ -2610,7 +2610,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
-   
+
    for( i = firstrow; i <= lastrow; ++i )
    {
       if( lhss != NULL )
@@ -2733,11 +2733,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
     * If the representation is COLUMN:
-    * - ENTER = PRIMAL 
+    * - ENTER = PRIMAL
     * - LEAVE = DUAL
     *
     * If the representation is ROW:
-    * - ENTER = DUAL 
+    * - ENTER = DUAL
     * - LEAVE = PRIMAL
     */
    retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::LEAVE) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::ENTER);
@@ -2777,11 +2777,11 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
     * If the representation is COLUMN:
-    * - ENTER = PRIMAL 
+    * - ENTER = PRIMAL
     * - LEAVE = DUAL
     *
     * If the representation is ROW:
-    * - ENTER = DUAL 
+    * - ENTER = DUAL
     * - LEAVE = PRIMAL
     */
    retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::ENTER) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::LEAVE);
@@ -2798,7 +2798,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    )
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
-   
+
    /* Since SoPlex does not support barrier we switch to DUAL */
    return SCIPlpiSolveDual(lpi);
 }
@@ -2862,9 +2862,9 @@ SCIP_RETCODE lpiStrongbranch(
    assert(upvalid != NULL);
 
    spx = lpi->spx;
-   status = SPxSolver::UNKNOWN;                      
+   status = SPxSolver::UNKNOWN;
    fromparentbasis = false;
-   error = false;                                 
+   error = false;
    oldItlim = spx->getIterationLimit();
 
    /* get current bounds of column */
@@ -3562,7 +3562,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -3591,7 +3591,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -3623,7 +3623,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_LPERROR;
@@ -4420,7 +4420,7 @@ SCIP_RETCODE SCIPlpiGetState(
    nrows = lpi->spx->nRows();
    assert(ncols >= 0);
    assert(nrows >= 0);
-   
+
    /* allocate lpistate data */
    SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows) );
 
@@ -4932,12 +4932,12 @@ SCIP_RETCODE SCIPlpiReadLP(
    catch(SPxException x)
    {
 #ifndef NDEBUG
-      std::string s = x.what();      
+      std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
       return SCIP_READERROR;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -4969,4 +4969,3 @@ SCIP_RETCODE SCIPlpiWriteLP(
 }
 
 /**@} */
-

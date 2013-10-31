@@ -35,7 +35,7 @@ cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
  ../../src/scip/type_history.h ../../src/scip/struct_var.h \
  ../../src/scip/implics.h ../../src/scip/history.h \
- ../../src/scip/struct_history.h ../../src/scip/lpi.h \
+ ../../src/scip/struct_history.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
  ../../src/nlpi/type_exprinterpret.h ../../src/nlpi/struct_expr.h \
  ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
@@ -146,7 +146,7 @@ reader_nl.o: src/reader_nl.c src/reader_nl.h ../../src/scip/scip.h \
  ../../src/scip/pub_var.h ../../src/scip/type_history.h \
  ../../src/scip/struct_var.h ../../src/scip/implics.h \
  ../../src/scip/history.h ../../src/scip/struct_history.h \
- ../../src/scip/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/nlpi/struct_expr.h ../../src/scip/struct_scip.h \
  ../../src/scip/type_interrupt.h ../../src/scip/type_mem.h \

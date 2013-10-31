@@ -31,11 +31,11 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -73,17 +73,19 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \
  ../../src/scip/heur_pscostdiving.h ../../src/scip/heur_proximity.h \
- ../../src/scip/heur_rens.h ../../src/scip/heur_rins.h \
- ../../src/scip/heur_rootsoldiving.h ../../src/scip/heur_rounding.h \
- ../../src/scip/heur_shiftandpropagate.h ../../src/scip/heur_shifting.h \
- ../../src/scip/heur_simplerounding.h ../../src/scip/heur_subnlp.h \
- ../../src/scip/heur_trivial.h ../../src/scip/heur_trysol.h \
- ../../src/scip/heur_twoopt.h ../../src/scip/heur_undercover.h \
- ../../src/scip/heur_vbounds.h ../../src/scip/heur_veclendiving.h \
- ../../src/scip/heur_zirounding.h ../../src/scip/nodesel_bfs.h \
+ ../../src/scip/heur_randrounding.h ../../src/scip/heur_rens.h \
+ ../../src/scip/heur_rins.h ../../src/scip/heur_rootsoldiving.h \
+ ../../src/scip/heur_rounding.h ../../src/scip/heur_shiftandpropagate.h \
+ ../../src/scip/heur_shifting.h ../../src/scip/heur_simplerounding.h \
+ ../../src/scip/heur_subnlp.h ../../src/scip/heur_trivial.h \
+ ../../src/scip/heur_trysol.h ../../src/scip/heur_twoopt.h \
+ ../../src/scip/heur_undercover.h ../../src/scip/heur_vbounds.h \
+ ../../src/scip/heur_veclendiving.h ../../src/scip/heur_zirounding.h \
+ ../../src/scip/nodesel_bfs.h ../../src/scip/nodesel_breadthfirst.h \
  ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
- ../../src/scip/nodesel_hybridestim.h ../../src/scip/nodesel_restartdfs.h \
- ../../src/scip/presol_boundshift.h ../../src/scip/presol_components.h \
+ ../../src/scip/nodesel_hybridestim.h ../../src/scip/nodesel_uct.h \
+ ../../src/scip/nodesel_restartdfs.h ../../src/scip/presol_boundshift.h \
+ ../../src/scip/presol_components.h \
  ../../src/scip/presol_convertinttobin.h ../../src/scip/presol_domcol.h \
  ../../src/scip/presol_dualinfer.h ../../src/scip/presol_gateextraction.h \
  ../../src/scip/presol_implics.h ../../src/scip/presol_inttobinary.h \
@@ -144,11 +146,11 @@ $(OBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -191,11 +193,11 @@ $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -237,11 +239,11 @@ $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -285,11 +287,11 @@ $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -331,11 +333,11 @@ $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -378,11 +380,11 @@ $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
@@ -425,12 +427,12 @@ $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
  ../../src/scip/pub_reader.h ../../src/scip/pub_relax.h \
  ../../src/scip/pub_sepa.h ../../src/scip/pub_prop.h \
  ../../src/scip/pub_sol.h ../../src/scip/pub_tree.h \
- ../../src/scip/pub_var.h ../../src/scip/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/scip/pub_var.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
- ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
- src/GomoryHuTree.h ../../src/objscip/objscip.h \
- ../../src/objscip/objbranchrule.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/scip/presolve.h ../../src/objscip/objcloneable.h \
+ ../../src/objscip/type_objcloneable.h src/GomoryHuTree.h \
+ ../../src/objscip/objscip.h ../../src/objscip/objbranchrule.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
@@ -472,11 +474,11 @@ $(OBJDIR)/Heur2opt.o: src/Heur2opt.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/scip/lpi.h \
+ ../../src/scip/pub_tree.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/objscip/objcloneable.h \
- ../../src/objscip/type_objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objprobcloneable.h \
+ ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
+ ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
