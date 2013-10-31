@@ -4176,8 +4176,12 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    assert( conshdlrdata->lbhash == NULL );
    assert( conshdlrdata->ubhash == NULL );
    assert( conshdlrdata->slackhash == NULL );
-   assert(conshdlrdata->addlincons == NULL);
 
+   /* we might have filled the addlincons array in problem stage, thus possibly free storage here */
+   if ( conshdlrdata->addlincons != NULL )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
+   }
    SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
