@@ -36178,10 +36178,12 @@ void printSolutionStatistics(
          SCIP_Real avggap;
 
          avggap = 0.0;
+
          if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
             avggap = scip->stat->primaldualintegral/SCIPgetSolvingTime(scip);
+
          /* caution: this assert is non-deterministic since it depends on the solving time */
-         assert(0.0 <= avggap && avggap <= 100.0);
+         assert(0.0 <= avggap && SCIPisLE(scip, avggap, 100.0));
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal-dual integral)\n",
             avggap, scip->stat->primaldualintegral);
