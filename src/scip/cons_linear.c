@@ -9332,6 +9332,10 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Longint oldgcd;
    SCIP_Longint rest;
    SCIP_Longint gcd;
+   SCIP_Bool isminsettoinfinity;
+   SCIP_Bool ismaxsettoinfinity;
+   SCIP_Bool isminrelax;
+   SCIP_Bool ismaxrelax;
    SCIP_Bool allcoefintegral;
    SCIP_Bool onlybin;
    SCIP_Bool hasrhs;
@@ -9457,23 +9461,19 @@ SCIP_RETCODE simplifyInequalities(
    SCIPdebugMessage("starting simplification of coeffcients\n");
    SCIPdebugPrintCons(scip, cons, NULL);
 
-   /* check for a valid (global) min-activity */
-   if( !consdata->validglbminact )
-      consdataRecomputeGlbMinactivity(scip, consdata);
-   assert(consdata->validglbminact);
+   /* get global activities */
+   consdataGetGlbActivityBounds(scip, consdata, FALSE, &minactsub, &maxactsub,
+      &isminrelax, &ismaxrelax, &isminsettoinfinity, &ismaxsettoinfinity);
 
-   /* check for a valid (global) max-activity */
-   if( !consdata->validglbmaxact )
-      consdataRecomputeGlbMaxactivity(scip, consdata);
-   assert(consdata->validglbmaxact);
-
-   minactsub = consdata->glbminactivity;
-   maxactsub = consdata->glbmaxactivity;
-   assert(maxactsub > minactsub);
-
-   /* for now, we do not work with infinite activities */
-   if( SCIPisInfinity(scip, -minactsub) || SCIPisInfinity(scip, maxactsub) )
+   /* cannot work with infinite activities */
+   if( isminsettoinfinity || ismaxsettoinfinity )
       return SCIP_OKAY;
+
+   assert(!isminrelax);
+   assert(!ismaxrelax);
+   assert(maxactsub > minactsub);
+   assert(!SCIPisInfinity(scip, -minactsub));
+   assert(!SCIPisInfinity(scip, maxactsub));
 
    v = 0;
    offsetv = -1;
