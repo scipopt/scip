@@ -529,8 +529,7 @@
  * developer-versions of gmp/zlib/readline, in order to also have the
  * header-files available.
  *
- @section DETAILEDINSTALL Detailed
- * installation description
+ @section DETAILEDINSTALL Detailed installation description
  *
  * In this section we describe the use, and a few features, of the SCIP Makefile. We also give two examples for how to install
  * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
