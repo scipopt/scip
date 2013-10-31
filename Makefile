@@ -141,19 +141,6 @@ LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPL
 endif
 endif
 
-LPSOPTIONS	+=	spx132
-ifeq ($(LPS),spx132)
-LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/spx132inc
-LPILIBOBJ	=	lpi/lpi_spx132.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx132.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/spx132inc
-SOFTLINKS	+=	$(LIBDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
-LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex 1.3.2 \"src\" directory, e.g., \"../../soplex-132/src\".\n"
-LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex-1.3.2.linux.x86.gnu.opt.a\""
-endif
-
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
