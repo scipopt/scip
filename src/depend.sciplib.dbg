@@ -1277,7 +1277,7 @@ $(LIBOBJDIR)/scip/heur_dualval.o: src/scip/heur_dualval.c src/scip/heur_dualval.
  src/scip/pub_misc.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
  src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
- src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h src/scip/lpi.h \
+ src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h src/lpi/lpi.h \
  src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cons_linear.h \
  src/scip/cons_indicator.h src/nlpi/nlpi.h src/nlpi/nlpioracle.h \
