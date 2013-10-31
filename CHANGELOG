@@ -231,6 +231,13 @@ core:
 - changed all calls to SCIPaddCut() to take infeasibility parameter
 
 
+SCIP version 3.0.3
+==================
+
+fixed bugs:
+- fixed bug in handling max-functions in ampl interface
+
+
 SCIP version 3.0.2
 ==================
 
@@ -290,6 +297,10 @@ fixed bugs:
 - fixed 'bug' when reading a mps formated file with a missing bound in the bound section
 - unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
   transformed problem to be infeasible in the original problem
+- allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
+- fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
+- updated get.ASL script to cope with broken ftp access to netlib server
+- fixed bug in cons_indicator with trying to create solution in problem stage
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -303,7 +314,6 @@ performance improvements:
 - improved SCIPlpiAdd{Cols,Rows}() in SoPlex LPi
 
 interface:
-- allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 - added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
   from the LP in the current node

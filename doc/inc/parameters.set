@@ -1,4 +1,4 @@
-# SCIP version 3.0.1
+# SCIP version 3.0.2
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -388,7 +388,7 @@ misc/usesmalltables = FALSE
 # [type: int, range: [-1,2147483647], default: -1]
 misc/permutationseed = -1
 
-# should the statistics be reseted if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)
+# should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/resetstat = TRUE
 
@@ -696,6 +696,10 @@ constraints/nonlinear/maxexpansionexponent = 2
 # [type: real, range: [0,2], default: 1]
 constraints/nonlinear/sepanlpmincont = 1
 
+# are cuts added during enforcement removable from the LP in the same node?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/nonlinear/enfocutsremovable = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/quadratic/sepafreq = 1
@@ -787,6 +791,10 @@ constraints/quadratic/maxproproundspresolve = 10
 # minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation
 # [type: real, range: [0,2], default: 1]
 constraints/quadratic/sepanlpmincont = 1
+
+# are cuts added during enforcement removable from the LP in the same node?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/enfocutsremovable = FALSE
 
 # enable nonlinear upgrading for constraint handler <quadratic>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -984,6 +992,10 @@ constraints/abspower/sepainboundsonly = FALSE
 # [type: real, range: [0,2], default: 1]
 constraints/abspower/sepanlpmincont = 1
 
+# are cuts added during enforcement removable from the LP in the same node?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/abspower/enfocutsremovable = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 1
@@ -1107,6 +1119,14 @@ constraints/bivariate/maxproprounds = 1
 # number of reference points in each direction where to compute linear support for envelope in LP initialization
 # [type: int, range: [0,2147483647], default: 3]
 constraints/bivariate/ninitlprefpoints = 3
+
+# are cuts added during enforcement removable from the LP in the same node?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/bivariate/enfocutsremovable = FALSE
+
+# whether a constraint should be scaled w.r.t. the current gradient sup.norm when checking for feasibility
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/bivariate/scaling = TRUE
 
 # maximal percantage of continuous variables within a conflict
 # [type: real, range: [0,1], default: 0.4]
@@ -1967,6 +1987,10 @@ constraints/soc/nlpform = a
 # minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation
 # [type: real, range: [0,2], default: 1]
 constraints/soc/sepanlpmincont = 1
+
+# are cuts added during enforcement removable from the LP in the same node?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/soc/enfocutsremovable = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -5029,8 +5053,8 @@ separating/closecuts/relintnormtype = o
 separating/closecuts/maxunsuccessful = 0
 
 # factor for maximal LP iterations in relative interior computation compared to node LP iterations (negative for no limit)
-# [type: real, range: [-1,1.79769313486232e+308], default: 2]
-separating/closecuts/maxlpiterfactor = 2
+# [type: real, range: [-1,1.79769313486232e+308], default: 10]
+separating/closecuts/maxlpiterfactor = 10
 
 # priority of separator <cmir>
 # [type: int, range: [-536870912,536870911], default: -3000]
@@ -5658,12 +5682,12 @@ separating/zerohalf/dynamiccuts = TRUE
 
 # maximal number of {0,1/2}-cuts determined per separation round
    #                      (this includes separated but inefficacious cuts)
-# [type: int, range: [0,2147483647], default: 100]
+# [type: int, range: [0,1000000], default: 100]
 separating/zerohalf/maxcutsfound = 100
 
 # maximal number of {0,1/2}-cuts determined per separation round in the root node
    #                      (this includes separated but inefficacious cuts)
-# [type: int, range: [0,2147483647], default: 1000]
+# [type: int, range: [0,1000000], default: 1000]
 separating/zerohalf/maxcutsfoundroot = 1000
 
 # separating cuts only if depth <= maxdepth (-1: unlimited)

@@ -546,80 +546,37 @@ SCIP_RETCODE walkExpression(
 
       case MAXLIST:
       {
-         SCIP_EXPR** children;
-         int nchildren;
+         expr_va* amplexpr_va;
+         const de* d;
+         SCIP_EXPR* arg;
 
-         nchildren = amplexpr->R.ep - amplexpr->L.ep;
+         amplexpr_va = (expr_va*)amplexpr;
 
-         switch( nchildren )
+         arg = NULL;
+         *scipexpr = NULL;
+         for( d = amplexpr_va->L.d; d->e; ++d )
          {
-            case 0:
+            if( *scipexpr == NULL )
             {
-               SCIPerrorMessage("MAXLIST operand with 0 children not allowed\n");
-               *doingfine = FALSE;
-               break;
-            }
-
-            case 1:
-            {
-               SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->L.ep[0], exprvaridx, nexprvars, nvars, doingfine) );
-               break;
-            }
-
-            default:
-            {
-               SCIP_EXPR* arg1;
-               SCIP_EXPR* arg2;
-
-               SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[0], exprvaridx, nexprvars, nvars, doingfine) );
-               if( !*doingfine )
-                  break;
-
-               SCIP_CALL( walkExpression(scip, &arg2, asl, amplexpr->L.ep[1], exprvaridx, nexprvars, nvars, doingfine) );
+               SCIP_CALL( walkExpression(scip, scipexpr, asl, d->e, exprvaridx, nexprvars, nvars, doingfine) );
                if( !*doingfine )
                {
-                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+                  SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
                   break;
                }
-
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, arg1, arg2) );
-
-               for( i = 2; i < nchildren; ++i )
-               {
-                  SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
-                  if( !*doingfine )
-                  {
-                     SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
-                     break;
-                  }
-
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg1) );
-               }
             }
-
-            break;
+            else
+            {
+               SCIP_CALL( walkExpression(scip, &arg, asl, d->e, exprvaridx, nexprvars, nvars, doingfine) );
+               if( !*doingfine )
+               {
+                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg);
+                  break;
+               }
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg) );
+            }
          }
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &children, nchildren) );
-
-         for( i = 0; i < nchildren; ++i )
-         {
-            SCIP_CALL( walkExpression(scip, &children[i], asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
-            if( !*doingfine )
-               break;
-         }
-         if( !*doingfine )
-         {
-            for( --i; i >= 0; --i )
-               SCIPexprFreeDeep(SCIPblkmem(scip), &children[i]);
-
-            SCIPfreeBufferArray(scip, &children);
-            break;
-         }
-
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_SUM, nchildren, children) );
-
-         SCIPfreeBufferArray(scip, &children);
+         assert(*scipexpr != NULL); /* empty list?? */
 
          break;
       }
@@ -953,14 +910,44 @@ SCIP_RETCODE setupConstraints(
          SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, consexpr, nexprvars, 0, NULL) );
          SCIP_CALL( SCIPexprtreeSetVars(exprtree, nexprvars, exprvars) );
 
-         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+         /* expression trees without variables raise assertions in CppAD, workaround here for now */
+         if( nexprvars > 0 )
+         {
+            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
 
-         /* add linear part of constraint */
-         for( cg = Cgrad[c]; cg; cg = cg->next )
-            if( !SCIPisZero(scip, cg->coef) )
+            /* add linear part of constraint */
+            for( cg = Cgrad[c]; cg; cg = cg->next )
+               if( !SCIPisZero(scip, cg->coef) )
+               {
+                  SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
+               }
+         }
+         else
+         {
+            SCIP_Real val;
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+
+            SCIP_CALL( SCIPexprtreeEval(exprtree, NULL, &val) );
+
+            if( !SCIPisInfinity(scip, -LUrhs[2*c]) )
+               lhs = LUrhs[2*c] - val;
+            else
+               lhs = -SCIPinfinity(scip);
+
+            if( !SCIPisInfinity(scip, LUrhs[2*c+1]) )
+               rhs = LUrhs[2*c+1] - val;
+            else
+               rhs = SCIPinfinity(scip);
+
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
+
+            /* add linear part of constraint */
+            for( cg = Cgrad[c]; cg; cg = cg->next )
             {
-               SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
             }
+         }
 
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
       }

@@ -700,6 +700,7 @@ FILE_PATTERNS          = scip*.h \
                          *_*.h \
                          lpi* \
                          exprinterpret* \
+                         intervalarithext* \
                          obj*.h \
                          def.h \
                          xternal.c \
