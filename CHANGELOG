@@ -17,6 +17,8 @@ fixed bugs:
 - fixed bug when bound change contradicts local bound and is stored as pending, but the contradicting local
   bound becomes global afterwards (--> node where pending bound change is valid can be cut off)
 - fixed bug w.r.t. changing the variable branching priority beyond the problem stage
+- fixed statistics bug: externally given solutions and new solutions found while transforming existing ones
+  are now listed in line "other solutions" of Primal Heuristics statistics
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)

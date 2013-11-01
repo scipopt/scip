@@ -209,6 +209,7 @@ void SCIPstatReset(
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
    stat->nsbsolsfound = 0;
+   stat->nexternalsolsfound = 0;
    stat->domchgcount = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;

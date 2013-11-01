@@ -11707,6 +11707,7 @@ SCIP_RETCODE SCIPtransformProb(
 {
    int nfeassols;
    int ncandsols;
+   int oldnsolsfound;
    int h;
    int s;
 
@@ -11769,6 +11770,8 @@ SCIP_RETCODE SCIPtransformProb(
    /* check solution of solution candidate storage */
    nfeassols = 0;
    ncandsols = scip->origprimal->nsols;
+   oldnsolsfound = scip->primal->nsolsfound;
+
    for( s = scip->origprimal->nsols - 1; s >= 0; --s )
    {
       SCIP_Bool feasible;
@@ -11816,6 +11819,8 @@ SCIP_RETCODE SCIPtransformProb(
    }
 
    assert(scip->origprimal->nsols == 0);
+
+   scip->stat->nexternalsolsfound += scip->primal->nsolsfound - oldnsolsfound;
 
    if( nfeassols > 0 )
    {
@@ -12618,12 +12623,14 @@ SCIP_RETCODE transformSols(
    SCIP_Real* solvals;
    SCIP_Bool* solvalset;
    SCIP_Bool added;
+   int oldnsolsfound;
    int nsols;
    int ntransvars;
    int naddedsols;
    int s;
 
    nsols = SCIPgetNSols(scip);
+   oldnsolsfound = scip->primal->nsolsfound;
 
    /* no solution to transform */
    if( nsols == 0 )
@@ -12667,6 +12674,8 @@ SCIP_RETCODE transformSols(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "transformed %d/%d original solutions to the transformed problem space\n",
          naddedsols, nsols);
+
+      scip->stat->nexternalsolsfound += scip->primal->nsolsfound - oldnsolsfound;
    }
 
    SCIPfreeBufferArray(scip, &solvals);
@@ -35875,6 +35884,10 @@ void printHeuristicStatistics(
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]));
    }
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  other solutions  :          -          -          - %10"SCIP_LONGINT_FORMAT"\n",
+      scip->stat->nexternalsolsfound);
+
 }
 
 static
