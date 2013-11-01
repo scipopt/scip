@@ -2360,6 +2360,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    )
 {
    int i;
+   int nalllpcands;  /* sum of binary, integer, and implicit branching candidates */
 
    assert(branchcand != NULL);
    assert(result != NULL);
@@ -2371,11 +2372,12 @@ SCIP_RETCODE SCIPbranchExecLP(
    assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
    assert((branchcand->npriolpcands == 0) == (branchcand->nlpcands == 0));
 
-   SCIPdebugMessage("branching on LP solution with %d fractional variables (%d of maximal priority)\n",
-      branchcand->nlpcands, branchcand->npriolpcands);
+   SCIPdebugMessage("branching on LP solution with %d (+%d) fractional (+implicit fractional) variables (%d of maximal priority)\n",
+      branchcand->nlpcands, branchcand->nimpllpfracs, branchcand->npriolpcands);
 
+   nalllpcands = branchcand->nlpcands + branchcand->nimpllpfracs;
    /* do nothing, if no fractional variables exist */
-   if( branchcand->nlpcands == 0 )
+   if( nalllpcands == 0 )
       return SCIP_OKAY;
 
    /* if there is a non-fixed variable with higher priority than the maximal priority of the fractional candidates,
@@ -2413,7 +2415,7 @@ SCIP_RETCODE SCIPbranchExecLP(
       bestcand = -1;
       bestpriority = INT_MIN;
       bestfactor = SCIP_REAL_MIN;
-      for( i = 0; i < branchcand->nlpcands; ++i )
+      for( i = 0; i < nalllpcands; ++i )
       {
          priority = SCIPvarGetBranchPriority(branchcand->lpcands[i]);
          factor = SCIPvarGetBranchFactor(branchcand->lpcands[i]);
@@ -2424,10 +2426,12 @@ SCIP_RETCODE SCIPbranchExecLP(
             bestfactor = factor;
          }
       }
-      assert(0 <= bestcand && bestcand < branchcand->nlpcands);
+      assert(0 <= bestcand && bestcand < nalllpcands);
 
       var = branchcand->lpcands[bestcand];
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+      assert(branchcand->nlpcands == 0 || SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT);
+
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
       SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
