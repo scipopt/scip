@@ -1349,6 +1349,10 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    assert(scip != NULL);
    assert(heur != NULL);
 
+   /* dio not run without nlp solver */
+   if( SCIPgetNNlpis(scip) <= 0 )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
