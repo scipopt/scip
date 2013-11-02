@@ -3846,14 +3846,25 @@ SCIP_RETCODE SCIPlpiReadState(
    const char*           fname               /**< file name */
    )
 {
+   size_t l;
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("reading LP state from file <%s>\n", fname);
 
-   SCIPerrorMessage("SCIPlpiReadState() not supported by Gurobi\n");
+   /* gurobi reads a basis if the extension is ".bas" */
+   l = strlen(fname);
+   if ( l > 4 && fname[l-4] == '.' && fname[l-3] == 'b' && fname[l-2] == 'a' && fname[l-1] == 's' )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBread(lpi->grbmodel, fname) );
+   }
+   else
+   {
+      SCIPerrorMessage("To read a basis with gurobi, the extension has to be '.bas'.\n");
+      return SCIP_LPERROR;
+   }
 
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /** writes LP state (like basis information) to a file */
@@ -3862,14 +3873,28 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname               /**< file name */
    )
 {
+   size_t l;
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
-   SCIPdebugMessage("writing LP state to file <%s>\n", fname);
+   SCIPdebugMessage("writing basis state to file <%s>\n", fname);
 
-   SCIPerrorMessage("SCIPlpiWriteState() not supported by Gurobi\n");
+   /* gurobi writes the basis if the extension is ".bas" */
+   l = strlen(fname);
+   if ( l > 4 && fname[l-4] == '.' && fname[l-3] == 'b' && fname[l-2] == 'a' && fname[l-1] == 's' )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+   }
+   else
+   {
+      char name[SCIP_MAXSTRLEN];
 
-   return SCIP_LPERROR;
+      /* force extension to be ".bas" */
+      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+      CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /**@} */
