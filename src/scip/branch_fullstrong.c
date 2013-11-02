@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                      SCIPdebugMessage("better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(lpcands[c]));
 
-                     SCIPchgVarLb(scip, vars[v], newlbs[v]);
+                     SCIP_CALL( SCIPchgVarLb(scip, vars[v], newlbs[v]) );
                      ++nboundchgs;
                   }
                   if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
@@ -448,7 +448,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                      SCIPdebugMessage("better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(lpcands[c]));
 
-                     SCIPchgVarUb(scip, vars[v], newubs[v]);
+                     SCIP_CALL( SCIPchgVarUb(scip, vars[v], newubs[v]) );
                      ++nboundchgs;
                   }
                }
