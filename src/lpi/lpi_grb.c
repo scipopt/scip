@@ -1004,7 +1004,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&major, &minor, &technical);
-   sprintf(grbname, "Gurobi %d.%d.%d", major, minor, technical);
+   snprintf(grbname, 100, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
 }
 
