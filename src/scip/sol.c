@@ -531,19 +531,14 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
       /* round the variable up or down */
       if( roundup )
       {
-         SCIP_Real varub;
          newsolval = SCIPsetCeil(set, solval);
-
-         varub = SCIPvarGetUbGlobal(var);
-         assert(SCIPsetIsFeasLE(set, newsolval, varub));
+         assert(SCIPsetIsFeasLE(set, newsolval, SCIPvarGetUbGlobal(var)));
       }
-      else if( rounddown )
+      else
       {
-         SCIP_Real varlb;
-
+         assert( rounddown ); /* should be true because of the code above */
          newsolval = SCIPsetFloor(set, solval);
-         varlb = SCIPvarGetLbGlobal(var);
-         assert(SCIPsetIsFeasGE(set, newsolval, varlb));
+         assert(SCIPsetIsFeasGE(set, newsolval, SCIPvarGetLbGlobal(var)));
       }
 
       SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, newsolval) );
