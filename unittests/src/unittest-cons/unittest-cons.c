@@ -253,17 +253,19 @@ main(
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
    SCIP_CALL( initProb(scip) );
 
+   /* set the msghdlr off */
+   SCIPsetMessagehdlrQuiet(scip, TRUE);
+
    /* create a constraint of the unittesthandler */
    /* the constraint handler just add the constraint: x+y <=2 */
    SCIP_CALL( SCIPcreateConsUnittest(scip, &cons, "UC", 2, NULL, NULL, 0, 2, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
          FALSE, FALSE, FALSE, FALSE));
+
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* get the constraint handler */
    hdler = SCIPfindConshdlr(scip,"unittest");
-
-
 
 
    /*********
