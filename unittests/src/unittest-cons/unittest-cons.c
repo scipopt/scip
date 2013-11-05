@@ -54,6 +54,30 @@
    while(FALSE)
 
 
+/* local methods */
+
+/** create bounded problem */
+static
+SCIP_RETCODE initProb(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR* xvar;
+   SCIP_VAR* yvar;
+
+   /* create variables */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &xvar, "x", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &yvar, "y", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
+
+   SCIP_CALL( SCIPaddVar(scip, xvar) );
+   SCIP_CALL( SCIPaddVar(scip, yvar) );
+
+   SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
+
+   return SCIP_OKAY;
+}
 
 
 /* Check methods */
@@ -209,6 +233,8 @@ main(
    SCIP_RETCODE retcode;
    SCIP* scip;
    SCIP_CONSHDLR* hdler;
+   SCIP_CONS* cons;
+
    /*********
     * Setup *
     *********/
@@ -225,14 +251,26 @@ main(
 
    /* create a problem and disable the presolver */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
+   SCIP_CALL( initProb(scip) );
+
+   /* create a constraint of the unittesthandler */
+   /* the constraint handler just add the constraint: x+y <=2 */
+   SCIP_CALL( SCIPcreateConsUnittest(scip, &cons, "UC", 2, NULL, NULL, 0, 2, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+         FALSE, FALSE, FALSE, FALSE));
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* get the constraint handler */
    hdler = SCIPfindConshdlr(scip,"unittest");
+
+
+
 
    /*********
     * Tests *
     *********/
 
+   /* tests before solving */
    consCheckName(scip, hdler);
    consCheckDesc(scip, hdler);
    consCheckSepaPriority(scip, hdler);
@@ -245,6 +283,12 @@ main(
    consCheckIsPropagationDelayed(scip, hdler);
    consCheckIsPresolvingDelayed(scip, hdler);
    consCheckGetPropTimingmask(scip, hdler);
+
+   /* solve */
+   SCIP_CALL( SCIPsolve(scip) );
+
+
+   /* tests after solving */
 
 
 
