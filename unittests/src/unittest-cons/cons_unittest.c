@@ -320,9 +320,28 @@ SCIP_DECL_CONSSEPASOL(consSepasolUnittest)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   /* now add a cutting plane: x+y <= 2 */
+
+
+   SCIP_VAR** vars;
+   SCIP_ROW *row;
+   SCIP_Bool infeasible;
+   char s[SCIP_MAXSTRLEN];
+
+   vars = SCIPgetVars(scip);
+
+
+   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "MyCut");
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 0.0, 2.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], 1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], 1.0) );
+   SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+   SCIP_CALL( SCIPreleaseRow(scip, &row));
+
+   *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -342,9 +361,24 @@ SCIP_DECL_CONSENFOPS(consEnfopsUnittest)
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+
+   SCIP_Real val;
+
+   SCIP_VAR** vars = SCIPgetVars(scip);
+
+
+   assert(vars[0] != NULL);
+   assert(vars[1] != NULL);
+
+   val = SCIPgetSolVal(scip, sol, vars[0]) + SCIPgetSolVal(scip, sol, vars[1]);
+
+
+   if( val > 2)
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
 
    return SCIP_OKAY;
 }
@@ -398,10 +432,7 @@ SCIP_DECL_CONSRESPROP(consRespropUnittest)
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
+{
    return SCIP_OKAY;
 }
 
