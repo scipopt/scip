@@ -633,6 +633,22 @@ int sep_2cut(
  * @{
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyStp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrStp(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeStp)
@@ -835,6 +851,31 @@ SCIP_DECL_CONSLOCK(consLockStp)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyStp)
+{  /*lint --e{715}*/
+   const char* consname;
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   consname = SCIPconsGetName(sourcecons);
+
+   /* creates and captures a and constraint */
+   SCIP_CALL( SCIPcreateConsStp(scip, cons, consname, graph) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /**@} */
 
 /**@name Interface methods
@@ -862,6 +903,7 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
          conshdlrdata) );
    assert(conshdlr != NULL);
 
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyStp, consCopyStp) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteStp) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransStp) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropStp, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,

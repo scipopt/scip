@@ -76,7 +76,7 @@ struct SCIP_ProbData
    double*               xval;               /**< values of the edge variables */
    int                   nvars;              /**< number of variables */
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
-
+   SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
 };
 
 /**@name Local methods
@@ -233,6 +233,7 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->graph = graph;
    (*probdata)->xval = NULL;
    (*probdata)->lastlpiters = -1;
+   (*probdata)->copy = FALSE;
 
    return SCIP_OKAY;
 }
@@ -721,6 +722,229 @@ SCIP_RETCODE createVariables(
  * @{
  */
 
+/** copies user data of source SCIP for the target SCIP */
+static
+SCIP_DECL_PROBCOPY(probcopyStp)
+{
+   GRAPH* graphcopy;
+
+   printf("########################## probcopy ###########################\n");
+
+   graphcopy = graph_copy(sourcedata->graph);
+
+   SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
+
+   (*targetdata)->mode = sourcedata->mode;
+   (*targetdata)->bigt = sourcedata->bigt;
+   (*targetdata)->nlayers = sourcedata->nlayers;
+   (*targetdata)->nedges = sourcedata->nedges;
+   (*targetdata)->nnodes = sourcedata->nnodes;
+   (*targetdata)->nterms = sourcedata->nterms;
+   (*targetdata)->realnterms = sourcedata->realnterms;
+   (*targetdata)->emitgraph = sourcedata->emitgraph;
+   (*targetdata)->nvars = sourcedata->nvars;
+   (*targetdata)->copy = TRUE;
+
+   if( sourcedata->nedges > 0 )
+   {
+      SCIP_Bool success;
+      int v;
+      int c;
+      int i;
+
+      /* transform variables */
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->xval, sourcedata->nvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgevars, sourcedata->nvars) );
+
+      for( v = sourcedata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcedata->edgevars[v], &((*targetdata)->edgevars[v]), varmap, consmap, global, &success) );
+         assert(success);
+
+         SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->edgevars[v]) );
+      }
+
+      /* Cut mode */
+      if( sourcedata->mode == MODE_CUT )
+      {
+         (*targetdata)->edgecons = NULL;
+         (*targetdata)->pathcons = NULL;
+      }
+      /* Price or Flow mode */
+      else
+      {
+         /* transform edge constraints */
+	 if( sourcedata->bigt )
+	 {
+	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->nedges) );
+
+            for( c = sourcedata->nedges - 1; c >= 0; --c )
+            {
+               SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->edgecons[c], &((*targetdata)->edgecons[c]),
+                     SCIPconsGetHdlr(sourcedata->edgecons[c]), varmap, consmap,
+                     SCIPconsGetName(sourcedata->edgecons[c]),
+                     SCIPconsIsInitial(sourcedata->edgecons[c]),
+                     SCIPconsIsSeparated(sourcedata->edgecons[c]),
+                     SCIPconsIsEnforced(sourcedata->edgecons[c]),
+                     SCIPconsIsChecked(sourcedata->edgecons[c]),
+                     SCIPconsIsPropagated(sourcedata->edgecons[c]),
+                     SCIPconsIsLocal(sourcedata->edgecons[c]),
+                     SCIPconsIsModifiable(sourcedata->edgecons[c]),
+                     SCIPconsIsDynamic(sourcedata->edgecons[c]),
+                     SCIPconsIsRemovable(sourcedata->edgecons[c]),
+                     SCIPconsIsStickingAtNode(sourcedata->edgecons[c]),
+                     global, &success) );
+               assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->edgecons[c]) );
+            }
+	 }
+	 else
+	 {
+            SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->realnterms * sourcedata->nedges) );
+            for( c = sourcedata->realnterms * sourcedata->nedges - 1; c >= 0; --c )
+            {
+               SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->edgecons[c], &((*targetdata)->edgecons[c]),
+                     SCIPconsGetHdlr(sourcedata->edgecons[c]), varmap, consmap,
+                     SCIPconsGetName(sourcedata->edgecons[c]),
+                     SCIPconsIsInitial(sourcedata->edgecons[c]),
+                     SCIPconsIsSeparated(sourcedata->edgecons[c]),
+                     SCIPconsIsEnforced(sourcedata->edgecons[c]),
+                     SCIPconsIsChecked(sourcedata->edgecons[c]),
+                     SCIPconsIsPropagated(sourcedata->edgecons[c]),
+                     SCIPconsIsLocal(sourcedata->edgecons[c]),
+                     SCIPconsIsModifiable(sourcedata->edgecons[c]),
+                     SCIPconsIsDynamic(sourcedata->edgecons[c]),
+                     SCIPconsIsRemovable(sourcedata->edgecons[c]),
+                     SCIPconsIsStickingAtNode(sourcedata->edgecons[c]),
+                     global, &success) );
+               assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->edgecons[c]) );
+            }
+	 }
+
+	 /* transform constraints */
+         if( sourcedata->mode == MODE_PRICE )
+         {
+	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms) );
+            for( c = sourcedata->realnterms - 1; c >= 0; --c )
+            {
+               SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->pathcons[c], &((*targetdata)->pathcons[c]),
+                     SCIPconsGetHdlr(sourcedata->pathcons[c]), varmap, consmap,
+                     SCIPconsGetName(sourcedata->pathcons[c]),
+                     SCIPconsIsInitial(sourcedata->pathcons[c]),
+                     SCIPconsIsSeparated(sourcedata->pathcons[c]),
+                     SCIPconsIsEnforced(sourcedata->pathcons[c]),
+                     SCIPconsIsChecked(sourcedata->pathcons[c]),
+                     SCIPconsIsPropagated(sourcedata->pathcons[c]),
+                     SCIPconsIsLocal(sourcedata->pathcons[c]),
+                     SCIPconsIsModifiable(sourcedata->pathcons[c]),
+                     SCIPconsIsDynamic(sourcedata->pathcons[c]),
+                     SCIPconsIsRemovable(sourcedata->pathcons[c]),
+                     SCIPconsIsStickingAtNode(sourcedata->pathcons[c]),
+                     global, &success) );
+               assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
+            }
+         }
+         /* transform constraints and variables*/
+         else if( sourcedata->mode == MODE_FLOW )
+         {
+	    if( sourcedata->bigt )
+	    {
+	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->nedges) );
+	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, (sourcedata->nnodes - 1)) );
+               for( c = sourcedata->nnodes - 2; c >= 0; --c )
+               {
+                  SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->pathcons[c], &((*targetdata)->pathcons[c]),
+                        SCIPconsGetHdlr(sourcedata->pathcons[c]), varmap, consmap,
+                        SCIPconsGetName(sourcedata->pathcons[c]),
+                        SCIPconsIsInitial(sourcedata->pathcons[c]),
+                        SCIPconsIsSeparated(sourcedata->pathcons[c]),
+                        SCIPconsIsEnforced(sourcedata->pathcons[c]),
+                        SCIPconsIsChecked(sourcedata->pathcons[c]),
+                        SCIPconsIsPropagated(sourcedata->pathcons[c]),
+                        SCIPconsIsLocal(sourcedata->pathcons[c]),
+                        SCIPconsIsModifiable(sourcedata->pathcons[c]),
+                        SCIPconsIsDynamic(sourcedata->pathcons[c]),
+                        SCIPconsIsRemovable(sourcedata->pathcons[c]),
+                        SCIPconsIsStickingAtNode(sourcedata->pathcons[c]),
+                        global, &success) );
+                  assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
+               }
+
+               for( v = (*targetdata)->nedges - 1; v >= 0; --v )
+               {
+                  SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcedata->flowvars[v], &((*targetdata)->flowvars[v]), varmap, consmap, global, &success) );
+                  assert(success);
+
+                  SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->flowvars[v]) );
+               }
+	    }
+	    else
+	    {
+	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->realnterms * sourcedata->nedges) );
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons,  sourcedata->realnterms * (sourcedata->nnodes - 1)) );
+               for( c = sourcedata->realnterms * (sourcedata->nnodes - 1) - 1; c >= 0; --c )
+               {
+                  SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->pathcons[c], &((*targetdata)->pathcons[c]),
+                        SCIPconsGetHdlr(sourcedata->pathcons[c]), varmap, consmap,
+                        SCIPconsGetName(sourcedata->pathcons[c]),
+                        SCIPconsIsInitial(sourcedata->pathcons[c]),
+                        SCIPconsIsSeparated(sourcedata->pathcons[c]),
+                        SCIPconsIsEnforced(sourcedata->pathcons[c]),
+                        SCIPconsIsChecked(sourcedata->pathcons[c]),
+                        SCIPconsIsPropagated(sourcedata->pathcons[c]),
+                        SCIPconsIsLocal(sourcedata->pathcons[c]),
+                        SCIPconsIsModifiable(sourcedata->pathcons[c]),
+                        SCIPconsIsDynamic(sourcedata->pathcons[c]),
+                        SCIPconsIsRemovable(sourcedata->pathcons[c]),
+                        SCIPconsIsStickingAtNode(sourcedata->pathcons[c]),
+                        global, &success) );
+                  assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
+               }
+
+               for( v = sourcedata->nedges * sourcedata->realnterms - 1; v >= 0; --v )
+               {
+                  SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcedata->flowvars[v], &((*targetdata)->flowvars[v]), varmap, consmap, global, &success) );
+                  assert(success);
+
+                  SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->flowvars[v]) );
+               }
+
+	    }
+         }
+      }
+
+      /* transform array of (real) terminals */
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->realterms, sourcedata->realnterms) );
+      for( i = 0; i < sourcedata->realnterms; ++i )
+      {
+         (*targetdata)->realterms[i] = sourcedata->realterms[i];
+      }
+   }
+   else
+   {
+      (*targetdata)->edgevars = NULL;
+      (*targetdata)->xval = NULL;
+      (*targetdata)->realterms = NULL;
+      (*targetdata)->edgecons = NULL;
+      (*targetdata)->pathcons = NULL;
+      (*targetdata)->flowvars = NULL;
+   }
+
+   *result = SCIP_SUCCESS;
+
+   return SCIP_OKAY;
+}
+
+
 /** frees user data of original problem (called when the original problem is freed) */
 static
 SCIP_DECL_PROBDELORIG(probdelorigStp)
@@ -729,10 +953,14 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
    SCIPdebugMessage("free original problem data\n");
 
-   if ( (*probdata)->mode == MODE_CUT )
-      graph_mincut_exit();
 
-   graph_path_exit();
+   if( !(*probdata)->copy )
+   {
+      if ( (*probdata)->mode == MODE_CUT )
+         graph_mincut_exit();
+
+      graph_path_exit();
+   }
 
    if( (*probdata)->graph != NULL )
       graph_free((*probdata)->graph);
@@ -834,6 +1062,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
       (*targetdata)->pathcons = NULL;
       (*targetdata)->flowvars = NULL;
    }
+
    return SCIP_OKAY;
 }
 
@@ -909,6 +1138,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
+   SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
