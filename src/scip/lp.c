@@ -41,7 +41,6 @@
 #include "scip/stat.h"
 #include "scip/intervalarith.h"
 #include "scip/clock.h"
-#include "scip/lpi.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -49,6 +48,7 @@
 #include "scip/sol.h"
 #include "scip/event.h"
 #include "scip/pub_message.h"
+#include "lpi/lpi.h"
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 
@@ -18688,7 +18688,7 @@ void SCIPlpMarkDivingObjChanged(
  *  \f]
  *  Note that bounds should be included in the system.
  *
- *  To find an interior point that maxmizes the slacks with respect to one-norm, the following LP does the job:
+ *  To find an interior point the following LP does the job:
  *  \f[
  *     \begin{array}{rrl}
  *        \max & 1^T y &\\
@@ -18699,22 +18699,9 @@ void SCIPlpMarkDivingObjChanged(
  *             & \alpha & \geq 1.
  *     \end{array}
  *  \f]
- *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the
- *  relative interior point \f$x^*_j/\alpha^*\f$.
- *
- *  To find an interior point that maxmizes the (scaled) slacks with respect to inf-norm, the following LP does the job:
- *  \f[
- *     \begin{array}{rrl}
- *        \max & y &\\
- *             & <A_i, x> - y ||A_i|| - \alpha a_i \geq 0 \\
- *             & <B_i, x> + y ||B_i|| - \alpha b_i \leq 0 \\
- *             & D x - \alpha d & = 0\\
- *             & 0 \leq y & \leq 1\\
- *             & \alpha & \geq 1.
- *     \end{array}
- *  \f]
- *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the
- *  relative interior point \f$x^*_j/\alpha^*\f$.
+ *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the relative interior point
+ *  \f$x^*_j/\alpha^*\f$. Note that this will just produce some relative interior point. It does not produce a
+ *  particular relative interior point, e.g., one that maximizes the distance to the boundary in some norm.
  */
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -18723,7 +18710,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
-   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
    SCIP_Real             timelimit,          /**< time limit for LP solver */
    int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_Real*            point,              /**< array to store relative interior point on exit */
@@ -18754,7 +18740,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    assert(set != NULL);
    assert(lp  != NULL);
-   assert(normtype == 'o' || normtype == 's');
    assert(point != NULL);
    assert(success != NULL);
 
@@ -18802,10 +18787,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    }
 
    /* get storage */
-   if( normtype == 'o' )
-      nnewcols = 3*lp->ncols + 2*lp->nrows + (inclobjcutoff ? 1 : 0) + 1;
-   else
-      nnewcols = lp->ncols + 2;
+   nnewcols = 3*lp->ncols + 2*lp->nrows + (inclobjcutoff ? 1 : 0) + 1;
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lb, nnewcols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ub, nnewcols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &obj, nnewcols) );
@@ -18831,116 +18813,90 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    ub[nnewcols] = SCIPlpiInfinity(lpi);
    ++nnewcols;
 
-   /* add slack variables */
-   if( normtype == 's' )
+   /* create slacks for rows */
+   for( i = 0; i < lp->nrows; ++i )
    {
-      /* for supremum-norm, we need only one slack variable */
+      SCIP_ROW* row;
+
+      row = lp->rows[i];
+      assert( row != NULL );
+
+      if( SCIProwIsModifiable(row) )
+         continue;
+
+      /* make sure row is sorted */
+      rowSortLP(row);
+      assert( row->lpcolssorted );
+
+      /* check whether we have an equation */
+      if( SCIPsetIsEQ(set, row->lhs, row->rhs) )
+      {
+         assert( !SCIPsetIsInfinity(set, REALABS(row->lhs)) );
+         assert( !SCIPsetIsInfinity(set, REALABS(row->rhs)) );
+      }
+      else if( relaxrows )
+      {
+         /* otherwise add slacks for each side if necessary */
+         if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
+         {
+            obj[nnewcols] = 1.0;
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            ++nnewcols;
+         }
+         if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
+         {
+            obj[nnewcols] = 1.0;
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            ++nnewcols;
+         }
+      }
+   }
+
+   /* create slacks for objective cutoff row */
+   if( inclobjcutoff && relaxrows )
+   {
+      /* add slacks for right hand side */
       obj[nnewcols] = 1.0;
       lb[nnewcols] = 0.0;
       ub[nnewcols] = 1.0;
       ++nnewcols;
-
-#ifndef NDEBUG
-      nslacks = 1;
-      assert( nslacks >= 0 );
-      assert( nnewcols == lp->ncols + 2 );
-#endif
    }
-   else
+
+   /* create slacks for bounds */
+   for( j = 0; j < lp->ncols; ++j )
    {
-      /* for one-norm, we need one slack variable for every inequality */
+      SCIP_COL* col;
 
-      /* create slacks for rows */
-      for( i = 0; i < lp->nrows; ++i )
+      col = lp->cols[j];
+      assert( col != NULL );
+
+      /* no slacks for fixed variables */
+      if( SCIPsetIsEQ(set, col->lb, col->ub) )
+         continue;
+
+      /* add slacks for each bound if necessary */
+      if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
       {
-         SCIP_ROW* row;
-
-         row = lp->rows[i];
-         assert( row != NULL );
-
-         if( SCIProwIsModifiable(row) )
-            continue;
-
-         /* make sure row is sorted */
-         rowSortLP(row);
-         assert( row->lpcolssorted );
-
-         /* check whether we have an equation */
-         if( SCIPsetIsEQ(set, row->lhs, row->rhs) )
-         {
-            assert( !SCIPsetIsInfinity(set, REALABS(row->lhs)) );
-            assert( !SCIPsetIsInfinity(set, REALABS(row->rhs)) );
-         }
-         else
-         {
-            if( relaxrows )
-            {
-               /* otherwise add slacks for each side if necessary */
-               if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
-               {
-                  obj[nnewcols] = 1.0;
-                  lb[nnewcols] = 0.0;
-                  ub[nnewcols] = 1.0;
-                  ++nnewcols;
-               }
-               if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
-               {
-                  obj[nnewcols] = 1.0;
-                  lb[nnewcols] = 0.0;
-                  ub[nnewcols] = 1.0;
-                  ++nnewcols;
-               }
-            }
-         }
+         obj[nnewcols] = 1.0;
+         lb[nnewcols] = 0.0;
+         ub[nnewcols] = 1.0;
+         ++nnewcols;
       }
-
-      /* create slacks for objective cutoff row */
-      if( inclobjcutoff )
+      if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
       {
-         if( relaxrows )
-         {
-            /* add slacks for right hand side */
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
-         }
+         obj[nnewcols] = 1.0;
+         lb[nnewcols] = 0.0;
+         ub[nnewcols] = 1.0;
+         ++nnewcols;
       }
-
-      /* create slacks for bounds */
-      for( j = 0; j < lp->ncols; ++j )
-      {
-         SCIP_COL* col;
-
-         col = lp->cols[j];
-         assert( col != NULL );
-
-         /* no slacks for fixed variables */
-         if( SCIPsetIsEQ(set, col->lb, col->ub) )
-            continue;
-
-         /* add slacks for each bound if necessary */
-         if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
-         {
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
-         }
-         if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
-         {
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
-         }
-      }
-#ifndef NDEBUG
-      nslacks = nnewcols - lp->ncols - 1;
-      assert( nslacks >= 0 );
-      assert( nnewcols <= 3*lp->ncols + 2*lp->nrows + (inclobjcutoff ? 1 : 0) + 1 );
-#endif
    }
+#ifndef NDEBUG
+   nslacks = nnewcols - lp->ncols - 1;
+   assert( nslacks >= 0 );
+   assert( nnewcols <= 3*lp->ncols + 2*lp->nrows + (inclobjcutoff ? 1 : 0) + 1 );
+#endif
 
    /* add columns */
    SCIP_CALL( SCIPlpiAddCols(lpi, nnewcols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
@@ -19018,17 +18974,9 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             if( relaxrows )
             {
                /* add slack variable */
-               if( normtype == 'o' )
-               {
-                  colinds[nnonz+1] = lp->ncols + 1 + cnt;
-                  colvals[nnonz+1] = -1.0;
-                  ++cnt;
-               }
-               else
-               {
-                  colinds[nnonz+1] = lp->ncols + 1;
-                  colvals[nnonz+1] = -SCIProwGetNorm(row);
-               }
+               colinds[nnonz+1] = lp->ncols + 1 + cnt;
+               colvals[nnonz+1] = -MAX(1.0, REALABS(lhs));
+               ++cnt;
                SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+2, &beg, colinds, colvals) );
             }
             else
@@ -19049,17 +18997,9 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             if( relaxrows )
             {
                /* add slack variable */
-               if( normtype == 'o' )
-               {
-                  colinds[nnonz+1] = lp->ncols + 1 + cnt;
-                  colvals[nnonz+1] = 1.0;
-                  ++cnt;
-               }
-               else
-               {
-                  colinds[nnonz+1] = lp->ncols + 1;
-                  colvals[nnonz+1] = SCIProwGetNorm(row);
-               }
+               colinds[nnonz+1] = lp->ncols + 1 + cnt;
+               colvals[nnonz+1] = MAX(1.0, REALABS(rhs));
+               ++cnt;
                SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+2, &beg, colinds, colvals) );
             }
             else
@@ -19103,17 +19043,9 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       if( relaxrows )
       {
          /* add slack variable */
-         if( normtype == 'o' )
-         {
-            colinds[nnonz] = lp->ncols + 1 + cnt;
-            colvals[nnonz] = 1.0;
-            ++cnt;
-         }
-         else
-         {
-            colinds[nnonz] = lp->ncols + 1;
-            colvals[nnonz] = sqrt(lp->objsqrnorm);
-         }
+         colinds[nnonz] = lp->ncols + 1 + cnt;
+         colvals[nnonz] = MAX(1.0, REALABS(rhs));
+         ++cnt;
          ++nnonz;
       }
       SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz, &beg, colinds, colvals) );
@@ -19153,17 +19085,9 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          colvals[1] = -col->lb;
 
          /* add slack variable */
-         if( normtype == 'o' )
-         {
-            colinds[2] = lp->ncols + 1 + cnt;
-            colvals[2] = -1.0;
-            ++cnt;
-         }
-         else
-         {
-            colinds[2] = lp->ncols + 1;
-            colvals[2] = -1.0;
-         }
+         colinds[2] = lp->ncols + 1 + cnt;
+         colvals[2] = -MAX(1.0, REALABS(col->lb));
+         ++cnt;
          SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, 3, &beg, colinds, colvals) );
       }
 
@@ -19175,21 +19099,13 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          colvals[1] = -col->ub;
 
          /* add slack variable */
-         if( normtype == 'o' )
-         {
-            colinds[2] = lp->ncols + 1 + cnt;
-            colvals[2] = 1.0;
-            ++cnt;
-         }
-         else
-         {
-            colinds[2] = lp->ncols + 1;
-            colvals[2] = 1.0;
-         }
+         colinds[2] = lp->ncols + 1 + cnt;
+         colvals[2] = MAX(1.0, REALABS(col->ub));
+         ++cnt;
          SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, 3, &beg, colinds, colvals) );
       }
    }
-   assert( (normtype == 'o' && cnt == nslacks) || (normtype == 's' && cnt == 0) );  /* we did not count slacks if sup-norm */
+   assert( cnt == nslacks );
 
    SCIPsetFreeBufferArray(set, &colvals);
    SCIPsetFreeBufferArray(set, &colinds);
@@ -19293,24 +19209,14 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
                /* treat lhs */
                if( !SCIPsetIsInfinity(set, REALABS(lhs)) )
                {
-                  if( normtype == 'o' )
-                  {
-                     assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasGT(set, sum, lhs) );
-                     ++cnt;
-                  }
-                  else
-                     assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasGT(set, sum, lhs) );
+                  assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasGT(set, sum, lhs) );
+                  ++cnt;
                }
                /* treat rhs */
                if( !SCIPsetIsInfinity(set, REALABS(rhs)) )
                {
-                  if( normtype == 'o' )
-                  {
-                     assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, sum, rhs) );
-                     ++cnt;
-                  }
-                  else
-                     assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasLT(set, sum, rhs) );
+                  assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, sum, rhs) );
+                  ++cnt;
                }
             }
          }
@@ -19327,13 +19233,8 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
                sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
             sum /= alpha;
 
-            if( normtype == 'o' )
-            {
-               assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, sum, rhs) );
-               ++cnt;
-            }
-            else
-               assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasLT(set, sum, rhs) );
+            assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, sum, rhs) );
+            ++cnt;
          }
       }
       /* check bounds */
@@ -19355,24 +19256,14 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             /* treat lb */
             if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
             {
-               if( normtype == 'o' )
-               {
-                  assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasGT(set, val, col->lb) );
-                  ++cnt;
-               }
-               else
-                  assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasGT(set, val, col->lb) );
+               assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasGT(set, val, col->lb) );
+               ++cnt;
             }
             /* treat rhs */
             if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
             {
-               if( normtype == 'o' )
-               {
-                  assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, val, col->ub) );
-                  ++cnt;
-               }
-               else
-                  assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasLT(set, val, col->ub) );
+               assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, val, col->ub) );
+               ++cnt;
             }
          }
       }

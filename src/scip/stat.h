@@ -92,16 +92,16 @@ void SCIPstatResetPresolving(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
-/* reset primal integral */
+/* reset primal-dual integral */
 extern
-void SCIPstatResetPrimalIntegral(
+void SCIPstatResetPrimalDualIntegral(
    SCIP_STAT*           stat,                /**< problem statistics data */
    SCIP_SET*            set,                 /**< global SCIP settings */
    SCIP_Bool            partialreset         /**< should time and integral value be kept? (in combination with no statistical
                                                *  reset, integrals are added for each problem to be solved) */
    );
 
-/** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
+/** update the primal-dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
  *  upper and lower bound, respectively
  */
 extern

@@ -23,7 +23,7 @@
 
 #include <assert.h>
 
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "scip/pub_message.h"
 
 #define LPINAME          "NONE"              /**< name of the LPI interface */
@@ -1376,4 +1376,3 @@ SCIP_RETCODE SCIPlpiWriteLP(
 }
 
 /**@} */
-

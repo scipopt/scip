@@ -46,8 +46,8 @@ int XPRS_CC XPRSstrongbranch( XPRSprob prob, const int _nbnd, const int *_mbndin
 /* scaled infeasibilities. */
 #define XPRS_LP_OPTIMAL_SCALEDINFEAS 16
 
+#include "lpi/lpi.h"
 #include "scip/bitencode.h"
-#include "scip/lpi.h"
 #include "scip/pub_message.h"
 
 
@@ -870,7 +870,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    /* get the longest name since we need to ask Xpress to make enough space before loading the LP. */
    namelength = 0;
    cnamesize = 16;
-   if (colnames) 
+   if (colnames)
    {
       for (c = 0; c < ncols; c++)
       {
@@ -883,7 +883,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    rnamesize = 16;
    if (rownames)
    {
-      for (r = 0; r < nrows; r++) 
+      for (r = 0; r < nrows; r++)
       {
          int isize = strlen(rownames[r]);
          rnamesize += isize+1;
@@ -891,7 +891,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
             namelength = isize;
       }
    }
-   if (namelength) 
+   if (namelength)
    {
       CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_MPSNAMELENGTH, namelength) );
    }
@@ -909,12 +909,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    /* copy data into Xpress */
    CHECK_ZERO( XPRSloadlp(lpi->xprslp, lpi->name, ncols, nrows, lpi->senarray, lpi->rhsarray,
          lpi->rngarray, obj, beg, cnt, ind, val, lb, ub) );
-   if (colnames) 
+   if (colnames)
    {
       /* We need all names stored consecutively in a single array. */
       int isize = 0;
       SCIP_ALLOC( BMSallocMemoryArray(&cnamestore, cnamesize) );
-      for (c = 0; c < ncols; c++) 
+      for (c = 0; c < ncols; c++)
       {
          strcpy(cnamestore+isize, colnames[c]);
          isize += strlen(colnames[c])+1;
@@ -922,12 +922,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       CHECK_ZEROLPIW( XPRSaddnames(lpi->xprslp, 2, cnamestore, 0, ncols-1) );
       BMSfreeMemoryArray(&cnamestore);
    }
-   if (rownames) 
+   if (rownames)
    {
       /* We need all names stored consecutively in a single array. */
       int isize = 0;
       SCIP_ALLOC( BMSallocMemoryArray(&rnamestore, rnamesize) );
-      for (c = 0; c < nrows; c++) 
+      for (c = 0; c < nrows; c++)
       {
          strcpy(rnamestore+isize, rownames[c]);
          isize += strlen(rownames[c])+1;
@@ -989,7 +989,7 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_NAMELENGTH, &imaxnamelength) );
    imaxnamelength *= 8;
-   if (colnames) 
+   if (colnames)
    {
       int lp_ncols;
       char *cnamestore;
@@ -1001,20 +1001,20 @@ SCIP_RETCODE SCIPlpiAddCols(
          isize = strlen(colnames[c]);
 #if (XPVERSION < 19)
          /* Xpress versions older than 19 does not allow names of arbitrary length. */
-         if (isize > imaxnamelength) 
+         if (isize > imaxnamelength)
             isize = imaxnamelength;
 #endif
          cnamesize += isize+1;
       }
       SCIP_ALLOC( BMSallocMemoryArray(&cnamestore, cnamesize) );
       isize = 0;
-      for (c = 0; c < ncols; c++) 
+      for (c = 0; c < ncols; c++)
       {
          int i;
          for (i = 0; colnames[c][i]; i++)
          {
 #if (XPVERSION < 19)
-            if (i >= imaxnamelength) 
+            if (i >= imaxnamelength)
                break;
 #endif
             cnamestore[isize++] = colnames[c][i];
@@ -1081,9 +1081,9 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
    ndel = 0;
-   for (c = 0; c < ncols; c++) 
+   for (c = 0; c < ncols; c++)
    {
-      if (dstat[c]) 
+      if (dstat[c])
          ndel++;
    }
    SCIP_ALLOC( BMSallocMemoryArray(&mind, ndel) );
@@ -1095,8 +1095,8 @@ SCIP_RETCODE SCIPlpiDelColset(
       {
          mind[ndel++] = c;
          dstat[c] = -1;
-      } 
-      else 
+      }
+      else
       {
          dstat[c] = c_new++;
       }
@@ -2272,7 +2272,7 @@ SCIP_RETCODE lpiStrongbranches(
       SCIP_ALLOC( BMSallocMemoryArray(&cbndtype, 2*ncols) );
       SCIP_ALLOC( BMSallocMemoryArray(&dobjval, 2*ncols) );
       SCIP_ALLOC( BMSallocMemoryArray(&mstatus, 2*ncols) );
-      
+
       for (j = 0; j < ncols; ++j)
       {
          mbndind[2*j]  = cols[j];

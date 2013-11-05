@@ -170,7 +170,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyNodesel is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjNodesel*     objnodesel,         /**< node selector object */
@@ -178,14 +178,14 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    );
 
 /** returns the nodesel object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjNodesel* SCIPfindObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of node selector */
    );
 
 /** returns the nodesel object for the given node selector */
-extern
+EXTERN
 scip::ObjNodesel* SCIPgetObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel             /**< node selector */

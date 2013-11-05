@@ -91,7 +91,7 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "nlpi/pub_expr.h"
 
 /* include global presolving methods */
@@ -5440,6 +5440,25 @@ SCIP_CONS** SCIPgetOrigConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** computes the number of check constraint in the current node (loop over all constraint handler and cumulates the
+ *  number of check constraints)
+ *
+ *  @return returns the number of check constraints
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetNCheckConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -8527,6 +8546,9 @@ SCIP_Bool SCIPdoNotMultaggrVar(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *
+ *  @note There exists no "unmark" method since it has to be ensured that if a plugin requires that a variable is not
+ *        multi-aggregated that this is will be the case.
  */
 EXTERN
 SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
@@ -11201,7 +11223,7 @@ SCIP_RETCODE SCIPwriteMIP(
    );
 
 /** gets the LP interface of SCIP;
- *  with the LPI you can use all of the methods defined in scip/lpi.h;
+ *  with the LPI you can use all of the methods defined in lpi/lpi.h;
  *
  *  @warning You have to make sure, that the full internal state of the LPI does not change or is recovered completely
  *           after the end of the method that uses the LPI. In particular, if you manipulate the LP or its solution
@@ -11286,7 +11308,6 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
-   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
    SCIP_Real             timelimit,          /**< time limit for LP solver */
    int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_SOL**            point               /**< relative interior point on exit */
@@ -11567,6 +11588,7 @@ SCIP_RETCODE SCIPcaptureRow(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
 SCIP_RETCODE SCIPreleaseRow(
@@ -15454,6 +15476,9 @@ SCIP_Bool SCIPareSolsEqual(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPadjustImplicitSolVals(
@@ -15745,6 +15770,8 @@ SCIP_RETCODE SCIPreadSol(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
 SCIP_RETCODE SCIPaddSol(
@@ -15767,6 +15794,8 @@ SCIP_RETCODE SCIPaddSol(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
 SCIP_RETCODE SCIPaddSolFree(
@@ -15803,6 +15832,8 @@ SCIP_RETCODE SCIPaddCurrentSol(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
 SCIP_RETCODE SCIPtrySol(
@@ -15827,6 +15858,8 @@ SCIP_RETCODE SCIPtrySol(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
 SCIP_RETCODE SCIPtrySolFree(

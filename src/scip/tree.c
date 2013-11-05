@@ -31,7 +31,6 @@
 #include "scip/vbc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/lpi.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
@@ -44,6 +43,7 @@
 #include "scip/prob.h"
 #include "scip/scip.h"
 #include "scip/pub_message.h"
+#include "lpi/lpi.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */

@@ -165,7 +165,7 @@ void SCIPstatReset(
    assert(stat->marked_nvaridx >= 0);
    assert(stat->marked_ncolidx >= 0);
    assert(stat->marked_nrowidx >= 0);
-   
+
    SCIPclockReset(stat->solvingtime);
    SCIPclockReset(stat->presolvingtime);
    SCIPclockReset(stat->primallptime);
@@ -209,6 +209,7 @@ void SCIPstatReset(
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
    stat->nsbsolsfound = 0;
+   stat->nexternalsolsfound = 0;
    stat->domchgcount = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;
@@ -271,7 +272,7 @@ void SCIPstatReset(
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
-   SCIPstatResetPrimalIntegral(stat, set, FALSE);
+   SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
 }
 
 /** reset implication counter */
@@ -306,8 +307,8 @@ void SCIPstatResetPresolving(
    SCIPstatResetCurrentRun(stat);
 }
 
-/** reset primal integral */
-void SCIPstatResetPrimalIntegral(
+/** reset primal-dual integral */
+void SCIPstatResetPrimalDualIntegral(
    SCIP_STAT*           stat,                /**< problem statistics data */
    SCIP_SET*            set,                 /**< global SCIP settings */
    SCIP_Bool            partialreset         /**< should time and integral value be kept? (in combination with no statistical
@@ -326,11 +327,11 @@ void SCIPstatResetPrimalIntegral(
    if( !partialreset )
    {
       stat->previntegralevaltime = 0.0;
-      stat->primalintegralval = 0.0;
+      stat->primaldualintegral = 0.0;
    }
 }
 
-/** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
+/** update the primal-dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
  *  upper and lower bound, respectively
  */
 void SCIPstatUpdatePrimalDualIntegral(
@@ -385,24 +386,21 @@ void SCIPstatUpdatePrimalDualIntegral(
       assert(SCIPsetIsZero(set, dualbound) == (dualbound == 0.0)); /*lint !e777*/
    }
 
+   /* computation of the gap, special cases are handled first */
    if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN ) /*lint !e777*/
       currentgap = 100.0;
-   /* the gap is 0.0 if the lower bound is greater-equal the upper bound or if primal and dualbound are equal */
+   /* the gap is 0.0 if bounds coincide */
    else if( SCIPsetIsGE(set, lowerbound, upperbound) || SCIPsetIsEQ(set, primalbound, dualbound) )
-   {
       currentgap = 0.0;
-   }
-   /* the gap is 100.0 if primal and dualbound have different signs */
-   else if( primalbound * dualbound < 0 || primalbound == 0.0 || dualbound == 0.0 ) /*lint !e777*/
-   {
+   /* the gap is 100.0 if bounds have different signs */
+   else if( primalbound * dualbound <= 0.0 ) /*lint !e777*/
       currentgap = 100.0;
-   }
    else if( !SCIPsetIsInfinity(set, REALABS(primalbound)) && !SCIPsetIsInfinity(set, REALABS(dualbound)) )
    {
       SCIP_Real absprim = REALABS(primalbound);
       SCIP_Real absdual = REALABS(dualbound);
 
-      /* The gap in the definition of the primal-dual integral differs from the default SCIP gap function.
+      /** The gap in the definition of the primal-dual integral differs from the default SCIP gap function.
        * Here, the MAX(primalbound, dualbound) is taken for gap quotient in order to ensure a gap <= 100.
        */
       currentgap = 100.0 * REALABS(primalbound - dualbound) / MAX(absprim, absdual);
@@ -416,8 +414,8 @@ void SCIPstatUpdatePrimalDualIntegral(
    assert(SCIPsetIsGE(set, stat->previousgap, currentgap) || (set->stage == SCIP_STAGE_EXITPRESOLVE
          && SCIPsetIsFeasGE(set, stat->previousgap, currentgap)));
 
-   /* update the integral based on information based on previous information */
-   stat->primalintegralval += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
+   /* update the integral based on previous information */
+   stat->primaldualintegral += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
 
    /* update all relevant information for next evaluation */
    stat->previousgap = currentgap;

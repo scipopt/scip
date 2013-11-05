@@ -76,6 +76,7 @@ struct SCIP_Stat
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          nsbsolsfound;       /**< number of CIP-feasible solutions found during strong branching so far */
+   SCIP_Longint          nexternalsolsfound; /**< number of externally given CIP-feasible solutions (or new solutions found when transforming old ones) */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
    SCIP_Longint          lastconflictnode;   /**< last node where conflict analysis was applied */
@@ -102,7 +103,7 @@ struct SCIP_Stat
    SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
    SCIP_Real             firstlptime;        /**< time needed to solve the very first LP in the root node */
    SCIP_Real             lastbranchvalue;    /**< domain value of the last branching */
-   SCIP_Real             primalintegralval;  /**< current primal-dual integral value */
+   SCIP_Real             primaldualintegral; /**< current primal-dual integral value */
    SCIP_Real             previousgap;        /**< primal dual gap preceding the current gap */
    SCIP_Real             previntegralevaltime;/**< last time of primal-dual integral evaluation */
    SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */

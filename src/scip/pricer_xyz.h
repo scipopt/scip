@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz variable pricer and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePricerXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

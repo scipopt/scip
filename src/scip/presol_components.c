@@ -527,7 +527,11 @@ SCIP_RETCODE copyAndSolveComponent(
              */
             if( !feasible )
             {
-               SCIPdebugMessage("solution violated bounds by more than epsilon, check the corrected solution...\n");
+               SCIP_Real origobj;
+
+               SCIPdebugMessage("solution violates bounds by more than epsilon, check the corrected solution...\n");
+
+               origobj = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
 
                SCIP_CALL( SCIPfreeTransform(subscip) );
 
@@ -554,6 +558,14 @@ SCIP_RETCODE copyAndSolveComponent(
 #endif
 
                SCIPdebugMessage("--> corrected solution is%s feasible\n", feasible ? "" : " not");
+
+               if( !SCIPisFeasEQ(subscip, SCIPsolGetOrigObj(sol), origobj) )
+               {
+                  SCIPdebugMessage("--> corrected solution has a different objective value (old=%16.9g, corrected=%16.9g)\n",
+                     origobj, SCIPsolGetOrigObj(sol));
+
+                  feasible = FALSE;
+               }
 
                SCIP_CALL( SCIPfreeSol(subscip, &sol) );
             }

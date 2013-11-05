@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.0.1.4
+ * @version  3.0.2.1
  *
  * \image html scippy.png
  *
@@ -529,8 +529,7 @@
  * developer-versions of gmp/zlib/readline, in order to also have the
  * header-files available.
  *
- @section DETAILEDINSTALL Detailed
- * installation description
+ @section DETAILEDINSTALL Detailed installation description
  *
  * In this section we describe the use, and a few features, of the SCIP Makefile. We also give two examples for how to install
  * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
@@ -859,7 +858,7 @@
  *  - Open the <code>Makefile</code>  via
  *    \verbatim
  > kate Makefile
- *    \endverbatim
+     \endverbatim
  *
  *    and edit the following variables at the top to have a compilable code:
  *
@@ -869,6 +868,7 @@
  *
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
+ *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
  *
  *
  *
@@ -6681,6 +6681,8 @@ SCIP_RETCODE consdataCatchEvent(
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.0.2
  *
  * \verbinclude SCIP-release-notes-3.0.1
  *

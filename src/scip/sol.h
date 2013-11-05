@@ -93,6 +93,19 @@ SCIP_RETCODE SCIPsolTransform(
    SCIP_PRIMAL*          primal              /**< primal data */
    );
 
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ */
+EXTERN
+SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< either original or transformed problem, depending on sol origin */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             uselprows           /**< should LP row information be considered for none-objective variables */
+   );
+
 /** creates primal CIP solution, initialized to the current LP solution */
 extern
 SCIP_RETCODE SCIPsolCreateLPSol(

@@ -40,7 +40,7 @@
 #define CPX_SUBVERSION 0
 #endif
 #include "scip/bitencode.h"
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "scip/pub_message.h"
 
 
@@ -159,7 +159,7 @@ struct SCIP_LPi
    SCIP_Bool             clearstate;         /**< shall next solve be performed with CPX_PARAM_ADVIND turned off? */
    SCIP_Real             feastol;            /**< feasibility tolerance for integrality */
 #if (CPX_VERSION <= 1100)
-   SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
+   SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug
                                               *   in the scaling algorithm for ranged rows in CPLEX up to version 11.0 */
 #endif
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
@@ -371,7 +371,7 @@ SCIP_RETCODE setBase(
  */
 
 /** returns the number of packets needed to store column packet information */
-static 
+static
 int colpacketNum(
    int                   ncols               /**< number of columns to store */
    )
@@ -380,7 +380,7 @@ int colpacketNum(
 }
 
 /** returns the number of packets needed to store row packet information */
-static 
+static
 int rowpacketNum(
    int                   nrows               /**< number of rows to store */
    )
@@ -532,7 +532,7 @@ SCIP_RETCODE setParameterValues(
    {
       if( lpi->curparam.intparval[i] != cpxparam->intparval[i] )
       {
-         SCIPdebugMessage("setting CPLEX int parameter %d from %d to %d\n", 
+         SCIPdebugMessage("setting CPLEX int parameter %d from %d to %d\n",
             intparam[i], lpi->curparam.intparval[i], cpxparam->intparval[i]);
          lpi->curparam.intparval[i] = cpxparam->intparval[i];
          CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
@@ -542,7 +542,7 @@ SCIP_RETCODE setParameterValues(
    {
       if( lpi->curparam.dblparval[i] != cpxparam->dblparval[i] ) /*lint !e777*/
       {
-         SCIPdebugMessage("setting CPLEX dbl parameter %d from %g to %g\n", 
+         SCIPdebugMessage("setting CPLEX dbl parameter %d from %g to %g\n",
             dblparam[i], lpi->curparam.dblparval[i], MAX(cpxparam->dblparval[i], dblparammin[i]));
          lpi->curparam.dblparval[i] = MAX(cpxparam->dblparval[i], dblparammin[i]);
          CHECK_ZERO( lpi->messagehdlr, CPXsetdblparam(lpi->cpxenv, dblparam[i], lpi->curparam.dblparval[i]) );
@@ -755,9 +755,9 @@ void convertSides(
           * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rhs,
           *    but there seems to be a bug in CPLEX's presolve with negative range values:
           *    the ranged row
-          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
+          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000)
           *    would lead to the CPLEX row
-          *              -x -Rg = 100000 
+          *              -x -Rg = 100000
           *                  Rg = 0
           *    instead of the correct presolving implication  Rg = -100000.
           * -> Because of this bug, we have to use an additional rhsarray[] for the converted right hand sides and
@@ -1005,7 +1005,7 @@ const char* SCIPlpiGetSolverDesc(
    return "Linear Programming Solver developed by IBM (www.cplex.com)";
 }
 
-/** gets pointer for LP solver - use only with great care 
+/** gets pointer for LP solver - use only with great care
  *
  *  Here we return the pointer to the LP environment.
  */
@@ -2153,7 +2153,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
-    * also for some pathological cases of infeasibility, e.g., contradictory bounds 
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds
     */
    if( lpi->solstat == CPX_STAT_OPTIMAL )
    {
@@ -2188,7 +2188,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
 
-   SCIPdebugMessage("calling CPLEX dual simplex: %d cols, %d rows\n", 
+   SCIPdebugMessage("calling CPLEX dual simplex: %d cols, %d rows\n",
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
    invalidateSolution(lpi);
@@ -2261,7 +2261,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
-    * also for some pathological cases of infeasibility, e.g., contradictory bounds 
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds
     */
    if( lpi->solstat == CPX_STAT_OPTIMAL )
    {
@@ -3696,7 +3696,7 @@ SCIP_RETCODE SCIPlpiSetState(
       (void *) lpistate, lpistate->ncols, lpistate->nrows, lpncols, lpnrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
-      return SCIP_OKAY;   
+      return SCIP_OKAY;
 
    /* allocate enough memory for storing uncompressed basis information */
    SCIP_CALL( ensureCstatMem(lpi, lpncols) );
@@ -4103,7 +4103,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       if( ival )
          setIntParam(lpi, CPX_PARAM_SCRIND, CPX_ON);
-      else 
+      else
          setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
       break;
    case SCIP_LPPAR_LPITLIM:
@@ -4306,4 +4306,3 @@ SCIP_RETCODE SCIPlpiWriteLP(
 }
 
 /**@} */
-

@@ -16,6 +16,9 @@ fixed bugs:
 - fixed wrong bound calculation in sepa_rapidlearning
 - fixed bug when bound change contradicts local bound and is stored as pending, but the contradicting local
   bound becomes global afterwards (--> node where pending bound change is valid can be cut off)
+- fixed bug w.r.t. changing the variable branching priority beyond the problem stage
+- fixed statistics bug: externally given solutions and new solutions found while transforming existing ones
+  are now listed in line "other solutions" of Primal Heuristics statistics
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -90,6 +93,8 @@ features:
 - strong branching with propagation can be enabled in fullstrong and relpscost branching rule
 - added possibility to store pricing norms of the LP solver (in addition to basis information) to speed up LP solving
   after a backtrack, e.g. in probing or strong branching with domain propagation
+- probing supports implicit binary variables
+- added scaling to computation of relative interior point in SCIPcomputeLPRelIntPoint()
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -160,6 +165,8 @@ interface
 - SCIPstartStrongbranch() has a new parameter "propagate" to enable or disable propagation support for strong branching
 - new methods SCIPlpiGetNorms(), SCIPlpiSetNorms(), and SCIPlpiFreeNorms() for getting the LP pricing norms from the LP
   solver, loading them back into the solver, and freeing the data
+- add method SCIPgetNCheckConss() in scip.{c,h}
+- removed parameter "normtype" from function SCIPcomputeLPRelIntPoint()
 
 parameters:
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral
@@ -214,6 +221,7 @@ parameters:
 - new parameter "separating/oddcycle/cutthreshold" to run odd cycle separation if not enough cuts have been found
 - new parameter "write/genericnamesoffset" when writing a generic problem now it is possible to define an offset on the
   variable name, that normally starts with "0"
+- remove parameter "separating/closecuts/relintnormtype"
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -223,6 +231,13 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
+
+
+SCIP version 3.0.3
+==================
+
+fixed bugs:
+- fixed bug in handling max-functions in ampl interface
 
 
 SCIP version 3.0.2
@@ -284,6 +299,10 @@ fixed bugs:
 - fixed 'bug' when reading a mps formated file with a missing bound in the bound section
 - unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
   transformed problem to be infeasible in the original problem
+- allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
+- fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
+- updated get.ASL script to cope with broken ftp access to netlib server
+- fixed bug in cons_indicator with trying to create solution in problem stage
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -297,7 +316,6 @@ performance improvements:
 - improved SCIPlpiAdd{Cols,Rows}() in SoPlex LPi
 
 interface:
-- allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 - added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
   from the LP in the current node

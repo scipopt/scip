@@ -133,7 +133,7 @@ void collectNonBinaryVBoundData(
 
          /* do not use inactive variables */
          /* @todo if implvars[x] is aggregated, we could transform the variable into the active representation */
-         if( idx < 0 )
+         if( idx < 0 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(implvars[w]), SCIPvarGetUbGlobal(implvars[w])) )
             continue;
 
          /* the upper bound of implvars[w] is bounding upper bound of var */
@@ -331,7 +331,7 @@ void collectNonBinaryVBoundData(
 
          /* do not use inactive variables */
          /* @todo if implvars[x] is aggregated, we could transform the variable into the active representation */
-         if( idx < 0 )
+         if( idx < 0 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(implvars[w]), SCIPvarGetUbGlobal(implvars[w])) )
             continue;
 
          /* the lower bound of implvars[w] is bounding lower bound of var */
@@ -578,7 +578,7 @@ void collectNonBinaryImplicationData(
 
          /* do not use inactive variables */
          /* @todo if implvars[x] is aggregated, we could transform the variable into the active representation */
-         if( idx < 0 )
+         if( idx < 0 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(implvars[w]), SCIPvarGetUbGlobal(implvars[w])) )
             continue;
 
          if( implboundtypes[w] == SCIP_BOUNDTYPE_UPPER )

@@ -1117,6 +1117,45 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    return SCIP_OKAY;
 }
 
+/** updates branching priority of the given variable and update the pseude candidate array if needed */
+SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable that changed its bounds */
+   int                   branchpriority      /**< branch priority of the variable */
+   )
+{
+   int oldbranchpriority;
+   int pseudomaxpriority;
+
+   assert(branchcand != NULL);
+
+   oldbranchpriority = SCIPvarGetBranchPriority(var);
+
+   if( oldbranchpriority == branchpriority )
+      return SCIP_OKAY;
+
+   pseudomaxpriority = branchcand->pseudomaxpriority;
+
+   /* if the variable currently belongs to priority set or the new branching priority is larger than the current one,
+    * renmove it from the pseudo branch candidate array temporary
+    */
+   if( oldbranchpriority == pseudomaxpriority || branchpriority > pseudomaxpriority )
+   {
+      SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
+      assert(var->pseudocandindex == -1);
+   }
+
+   /* change the branching priority of the variable */
+   SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
+
+   /* of the variable is not part of the pseudo branching candidate array; check if it is a pseudo branching candidate
+    * and add it if so
+    */
+   SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -2321,6 +2360,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    )
 {
    int i;
+   int nalllpcands;  /* sum of binary, integer, and implicit branching candidates */
 
    assert(branchcand != NULL);
    assert(result != NULL);
@@ -2332,11 +2372,12 @@ SCIP_RETCODE SCIPbranchExecLP(
    assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
    assert((branchcand->npriolpcands == 0) == (branchcand->nlpcands == 0));
 
-   SCIPdebugMessage("branching on LP solution with %d fractional variables (%d of maximal priority)\n",
-      branchcand->nlpcands, branchcand->npriolpcands);
+   SCIPdebugMessage("branching on LP solution with %d (+%d) fractional (+implicit fractional) variables (%d of maximal priority)\n",
+      branchcand->nlpcands, branchcand->nimpllpfracs, branchcand->npriolpcands);
 
+   nalllpcands = branchcand->nlpcands + branchcand->nimpllpfracs;
    /* do nothing, if no fractional variables exist */
-   if( branchcand->nlpcands == 0 )
+   if( nalllpcands == 0 )
       return SCIP_OKAY;
 
    /* if there is a non-fixed variable with higher priority than the maximal priority of the fractional candidates,
@@ -2374,7 +2415,7 @@ SCIP_RETCODE SCIPbranchExecLP(
       bestcand = -1;
       bestpriority = INT_MIN;
       bestfactor = SCIP_REAL_MIN;
-      for( i = 0; i < branchcand->nlpcands; ++i )
+      for( i = 0; i < nalllpcands; ++i )
       {
          priority = SCIPvarGetBranchPriority(branchcand->lpcands[i]);
          factor = SCIPvarGetBranchFactor(branchcand->lpcands[i]);
@@ -2385,10 +2426,12 @@ SCIP_RETCODE SCIPbranchExecLP(
             bestfactor = factor;
          }
       }
-      assert(0 <= bestcand && bestcand < branchcand->nlpcands);
+      assert(0 <= bestcand && bestcand < nalllpcands);
 
       var = branchcand->lpcands[bestcand];
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+      assert(branchcand->nlpcands == 0 || SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT);
+
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
       SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,

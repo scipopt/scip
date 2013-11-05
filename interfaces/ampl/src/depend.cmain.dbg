@@ -30,7 +30,7 @@ cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/pub_sepa.h ../../src/scip/pub_prop.h \
  ../../src/scip/pub_sol.h ../../src/scip/pub_tree.h \
  ../../src/scip/pub_var.h ../../src/scip/type_history.h \
- ../../src/scip/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/scip/scipdefplugins.h ../../src/scip/branch_allfullstrong.h \
  ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
@@ -127,7 +127,7 @@ reader_nl.o: src/reader_nl.c src/reader_nl.h ../../src/scip/scip.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
  ../../src/scip/pub_tree.h ../../src/scip/pub_var.h \
- ../../src/scip/type_history.h ../../src/scip/lpi.h \
+ ../../src/scip/type_history.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
  ../../src/nlpi/type_exprinterpret.h ../../src/scip/cons_linear.h \
  ../../src/scip/cons_quadratic.h ../../src/scip/cons_nonlinear.h \

@@ -145,7 +145,7 @@ struct SCIP_Set
    SCIP_Bool             branch_forceboth;   /**< should both strong branching children be regarded even if the first
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
-   SCIP_Bool             branch_heursbsol;   /**< should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE) */
+   SCIP_Bool             branch_roundsbsol;  /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */

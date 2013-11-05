@@ -154,11 +154,11 @@ public:
 } /* namespace scip */
 
 
-   
+
 /** create and capture problem variable and associates the given variable data with the variable;
  *  if variable is of integral type, fractional bounds are automatically rounded
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateObjVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to variable object */
@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPcreateObjVar(
  *  Warning! This method should only be called after a variable was created with SCIPcreateObjVar().
  *  Otherwise, a segmentation fault may arise, or an undefined pointer is returned.
  */
-extern
+EXTERN
 scip::ObjVardata* SCIPgetObjVardata(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */

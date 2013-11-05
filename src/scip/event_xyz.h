@@ -24,6 +24,7 @@
 #ifndef __SCIP_EVENT_XYZ_H__
 #define __SCIP_EVENT_XYZ_H__
 
+
 #include "scip/scip.h"
 
 #ifdef __cplusplus
@@ -31,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates event handler for xyz event */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeEventHdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

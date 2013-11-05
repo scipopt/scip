@@ -23,7 +23,7 @@
 
 #include "qsopt.h"
 #include "scip/bitencode.h"
-#include "scip/lpi.h"
+#include "lpi/lpi.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include <string.h>
@@ -1171,17 +1171,17 @@ SCIP_RETCODE SCIPlpiScaleRow(
  CLEANUP:
    if( rowcnt != NULL )
       QSfree(rowcnt);
-   if( rowbeg != NULL ) 
+   if( rowbeg != NULL )
       QSfree(rowbeg);
-   if( rowind != NULL ) 
+   if( rowind != NULL )
       QSfree(rowind);
-   if( rowval != NULL ) 
+   if( rowval != NULL )
       QSfree(rowval);
-   if( rhs != NULL ) 
+   if( rhs != NULL )
       QSfree(rhs);
-   if( sense != NULL ) 
+   if( sense != NULL )
       QSfree(sense);
-   if( range != NULL ) 
+   if( range != NULL )
       QSfree(range);
 
    QS_RETURN(rval);
@@ -1257,7 +1257,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
  CLEANUP:
    if( colcnt != NULL )
       QSfree(colcnt);
-   if( colbeg != NULL ) 
+   if( colbeg != NULL )
       QSfree(colbeg);
    if( colind != NULL )
       QSfree(colind);
@@ -1913,7 +1913,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    *up = objval;
    *downvalid = TRUE;
    *upvalid = TRUE;
-   
+
    if( iter )
       *iter = 0;
 

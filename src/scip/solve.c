@@ -2606,6 +2606,8 @@ SCIP_RETCODE solveNodeLP(
          {
             if( bestsol != SCIPgetBestSol(set->scip) )
                SCIPstoreSolutionGap(set->scip);
+
+            stat->nlpsolsfound++;
          }
 
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )

@@ -409,6 +409,143 @@ SCIP_RETCODE SCIPsolTransform(
    return SCIP_OKAY;
 }
 
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ */
+SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< either original or transformed problem, depending on sol origin */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             uselprows           /**< should LP row information be considered for none-objective variables */
+   )
+{
+   SCIP_VAR** vars;
+   int nimplvars;
+   int nbinvars;
+   int nintvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+
+   /* get variable data */
+   vars = SCIPprobGetVars(prob);
+   nbinvars = SCIPprobGetNBinVars(prob);
+   nintvars = SCIPprobGetNIntVars(prob);
+   nimplvars = SCIPprobGetNImplVars(prob);
+
+   if( nimplvars == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the last array position of implicit integer variables */
+   nimplvars = nbinvars + nintvars + nimplvars;
+
+   /* loop over implicit integer variables and round them up or down */
+   for( v = nbinvars + nintvars; v < nimplvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real obj;
+      SCIP_Real newsolval;
+      SCIP_Bool roundup;
+      SCIP_Bool rounddown;
+      int nuplocks;
+      int ndownlocks;
+
+      var = vars[v];
+
+      assert( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT );
+      solval = SCIPsolGetVal(sol, set, stat, var);
+
+      /* we do not need to round integral solution values or those of variables which are not column variables */
+      if( SCIPsetIsFeasIntegral(set, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+         continue;
+
+      nuplocks = SCIPvarGetNLocksUp(var);
+      ndownlocks = SCIPvarGetNLocksDown(var);
+      obj = SCIPvarGetObj(var);
+
+      roundup = FALSE;
+      rounddown = FALSE;
+
+      /* in case of a non-zero objective coefficient, there is only one possible rounding direction */
+      if( SCIPsetIsFeasNegative(set, obj) )
+         roundup = TRUE;
+      else if( SCIPsetIsFeasPositive(set, obj) )
+         rounddown = TRUE;
+      else if( uselprows )
+      {
+         /* determine rounding direction based on row violations */
+         SCIP_COL* col;
+         SCIP_ROW** rows;
+         SCIP_Real* vals;
+         int nrows;
+         int r;
+
+         col = SCIPvarGetCol(var);
+         vals = SCIPcolGetVals(col);
+         rows = SCIPcolGetRows(col);
+         nrows = SCIPcolGetNNonz(col);
+
+         /* loop over rows and search for equations whose violation can be decreased by rounding */
+         for( r = 0; r < nrows && !(roundup && rounddown); ++r )
+         {
+            SCIP_ROW* row;
+            SCIP_Real activity;
+            SCIP_Real rhs;
+            SCIP_Real lhs;
+
+            row = rows[r];
+            assert(!SCIPsetIsFeasZero(set, vals[r]));
+
+            if( SCIProwIsLocal(row) || !SCIProwIsInLP(row) )
+               continue;
+
+            rhs = SCIProwGetRhs(row);
+            lhs = SCIProwGetLhs(row);
+
+            if( SCIPsetIsInfinity(set, rhs) || SCIPsetIsInfinity(set, -lhs) )
+               continue;
+
+            activity = SCIProwGetSolActivity(row, set, stat, sol);
+            if( SCIPsetIsFeasLE(set, activity, rhs) && SCIPsetIsFeasLE(set, lhs, activity) )
+               continue;
+
+            if( (SCIPsetIsFeasGT(set, activity, rhs) && SCIPsetIsPositive(set, vals[r]))
+                  || (SCIPsetIsFeasLT(set, activity, lhs) && SCIPsetIsNegative(set, vals[r])) )
+               rounddown = TRUE;
+            else
+               roundup = TRUE;
+         }
+      }
+
+      /* in case of a tie, we select the rounding step based on the number of variable locks */
+      if( roundup == rounddown )
+      {
+         rounddown = ndownlocks <= nuplocks;
+         roundup = !rounddown;
+      }
+
+      /* round the variable up or down */
+      if( roundup )
+      {
+         newsolval = SCIPsetCeil(set, solval);
+         assert(SCIPsetIsFeasLE(set, newsolval, SCIPvarGetUbGlobal(var)));
+      }
+      else
+      {
+         assert( rounddown ); /* should be true because of the code above */
+         newsolval = SCIPsetFloor(set, solval);
+         assert(SCIPsetIsFeasGE(set, newsolval, SCIPvarGetLbGlobal(var)));
+      }
+
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, newsolval) );
+   }
+
+   return SCIP_OKAY;
+}
 /** creates primal CIP solution, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -836,7 +973,7 @@ SCIP_RETCODE SCIPsolSetVal(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_VAR*             var,                /**< variable to add to solution */
    SCIP_Real             val                 /**< solution value of variable */
    )

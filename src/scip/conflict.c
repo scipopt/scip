@@ -120,7 +120,6 @@
 #include "scip/stat.h"
 #include "scip/clock.h"
 #include "scip/vbc.h"
-#include "scip/lpi.h"
 #include "scip/history.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"
@@ -135,6 +134,7 @@
 #include "scip/debug.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "lpi/lpi.h"
 
 #include "scip/struct_conflict.h"
 

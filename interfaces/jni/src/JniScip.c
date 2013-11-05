@@ -12762,7 +12762,7 @@ void JNISCIP(writeMIP)(
 }
 
 /** gets the LP interface of SCIP;
- *  with the LPI you can use all of the methods defined in scip/lpi.h;
+ *  with the LPI you can use all of the methods defined in lpi/lpi.h;
  *
  *  @warning You have to make sure, that the full internal state of the LPI does not change or is recovered completely
  *           after the end of the method that uses the LPI. In particular, if you manipulate the LP or its solution
