@@ -16153,6 +16153,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 {
    SCIP_Longint ndomreds;
 
+   *foundsol = FALSE;
+
    /* check whether the strong branching child is already infeasible due to the bound change */
    if( down )
    {
@@ -16287,6 +16289,10 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             if( rounded )
             {
                SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPfreeSol(scip, &sol) );
             }
 
             if( *foundsol )
