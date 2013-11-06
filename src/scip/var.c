@@ -3739,7 +3739,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< variable array to get active variables */
    SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
-   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and scalars array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
@@ -3789,6 +3789,14 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    if( *nvars == 0 )
       return SCIP_OKAY;
+
+   /* handle the "easy" case of just one variable and avoid memory allocation if the variable is already active */
+   if( *nvars == 1 && (vars[0]->varstatus == SCIP_VARSTATUS_COLUMN || vars[0]->varstatus == SCIP_VARSTATUS_LOOSE) )
+   {
+      *requiredsize = 1;
+
+      return SCIP_OKAY;
+   }
 
    nactivevars = 0;
    activeconstant = 0.0;
