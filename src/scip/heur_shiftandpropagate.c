@@ -492,18 +492,18 @@ SCIP_RETCODE initMatrix(
    }
 
    /* allocate memory for the members of heuristic matrix */
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatvals, matrix->nnonzs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatind, matrix->nnonzs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatvals, matrix->nnonzs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatind, matrix->nnonzs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatbegin, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatbegin, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, matrix->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, matrix->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colnorms, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->transformstatus, matrix->ndiscvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->upperbounds, matrix->ndiscvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->transformshiftvals, matrix->ndiscvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->rowmatvals, matrix->nnonzs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->rowmatind, matrix->nnonzs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->colmatvals, matrix->nnonzs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->colmatind, matrix->nnonzs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->rowmatbegin, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->colmatbegin, matrix->ncols) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->lhs, matrix->nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->rhs, matrix->nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->colnorms, matrix->ncols) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->transformstatus, matrix->ndiscvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->upperbounds, matrix->ndiscvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &matrix->transformshiftvals, matrix->ndiscvars) );
 
    /* set transform status of variables */
    for( j = 0; j < matrix->ndiscvars; ++j )
@@ -696,18 +696,18 @@ void freeMatrix(
       assert((*matrix)->transformshiftvals != NULL);
 
       /* free all fields */
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
-      SCIPfreeBufferArray(scip, &((*matrix)->colmatvals));
-      SCIPfreeBufferArray(scip, &((*matrix)->colmatind));
-      SCIPfreeBufferArray(scip, &((*matrix)->colmatbegin));
-      SCIPfreeBufferArray(scip, &((*matrix)->lhs));
-      SCIPfreeBufferArray(scip, &((*matrix)->rhs));
-      SCIPfreeBufferArray(scip, &((*matrix)->colnorms));
-      SCIPfreeBufferArray(scip, &((*matrix)->transformstatus));
-      SCIPfreeBufferArray(scip, &((*matrix)->upperbounds));
-      SCIPfreeBufferArray(scip, &((*matrix)->transformshiftvals));
+      SCIPfreeMemoryArray(scip, &((*matrix)->rowmatbegin));
+      SCIPfreeMemoryArray(scip, &((*matrix)->rowmatvals));
+      SCIPfreeMemoryArray(scip, &((*matrix)->rowmatind));
+      SCIPfreeMemoryArray(scip, &((*matrix)->colmatvals));
+      SCIPfreeMemoryArray(scip, &((*matrix)->colmatind));
+      SCIPfreeMemoryArray(scip, &((*matrix)->colmatbegin));
+      SCIPfreeMemoryArray(scip, &((*matrix)->lhs));
+      SCIPfreeMemoryArray(scip, &((*matrix)->rhs));
+      SCIPfreeMemoryArray(scip, &((*matrix)->colnorms));
+      SCIPfreeMemoryArray(scip, &((*matrix)->transformstatus));
+      SCIPfreeMemoryArray(scip, &((*matrix)->upperbounds));
+      SCIPfreeMemoryArray(scip, &((*matrix)->transformshiftvals));
 
      (*matrix)->nrows = 0;
      (*matrix)->ncols = 0;
