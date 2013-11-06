@@ -4344,6 +4344,13 @@ SCIP_RETCODE SCIPsolveCIP(
          stat->nnodes, SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
       SCIPdebugMessage("**********************************************************************\n");
    }
+
+   /* update the primal-dual integral if node or time limits were hit or an interruption signal was called */
+   if( SCIPsolveIsStopped(set, stat, TRUE) )
+   {
+      SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
+   }
+
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    SCIPdebugMessage("Problem solving finished with status %u (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
