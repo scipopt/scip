@@ -32,6 +32,10 @@
 #include "scip/scip.h"
 #include "grph.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates the handler for element constraints and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeConshdlrStp(
@@ -46,5 +50,9 @@ SCIP_RETCODE SCIPcreateConsStp(
    const char*           name,               /**< name of constraint */
    GRAPH*                graph
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

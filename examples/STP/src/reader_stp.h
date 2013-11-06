@@ -29,11 +29,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the binpacking file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
