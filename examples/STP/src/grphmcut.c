@@ -25,7 +25,7 @@
 #include "grph.h"
 
 #define DEBUG        0        /* 0 = No, 1 = Validation, 2 = Show flow       */
-#define STATIST      1
+#define STATIST      0
 
 #ifdef NDEBUG
 #undef STATIST
@@ -46,16 +46,6 @@ static void cut_statist(void);
 static void cut_sum(const GRAPH*, const int*, const int*);
 #endif
 
-static int* dist = NULL;    /* dist[i] : Distance-label of Knot i          */
-static int* head = NULL;    /* head[i] : Head of Active Queue with Label i */
-static int* numb = NULL;    /* numb[i] : numb[i] Knots with Label i        */
-static int* prev = NULL;
-static int* next = NULL;
-static int* temp = NULL;
-static int* e    = NULL;    /* e[i] : Excess of Knot i                     */
-static int* x    = NULL;    /* x[k] : Actual Flow on Arc k                 */
-static int* r    = NULL;    /* r[k] : Capacity of Arc k                    */
-
 #if STATIST
 static int    s_pushes = 0;
 static int    n_pushes = 0;
@@ -75,38 +65,38 @@ static int    cutsums  = 0;
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 void graph_mincut_init(
-   const GRAPH* p)
+   GRAPH* p)
 {
    assert(p    != NULL);
-   assert(dist == NULL);
-   assert(head == NULL);
-   assert(numb == NULL);
-   assert(prev == NULL);
-   assert(next == NULL);
-   assert(temp == NULL);
-   assert(e    == NULL);
-   assert(x    == NULL);
-   assert(r    == NULL);
+   assert(p->mincut_dist == NULL);
+   assert(p->mincut_head == NULL);
+   assert(p->mincut_numb == NULL);
+   assert(p->mincut_prev == NULL);
+   assert(p->mincut_next == NULL);
+   assert(p->mincut_temp == NULL);
+   assert(p->mincut_e    == NULL);
+   assert(p->mincut_x    == NULL);
+   assert(p->mincut_r    == NULL);
 
-   dist = malloc((size_t)p->knots * sizeof(int));
-   head = malloc((size_t)p->knots * sizeof(int));
-   numb = malloc((size_t)p->knots * sizeof(int));
-   prev = malloc((size_t)p->knots * sizeof(int));
-   next = malloc((size_t)p->knots * sizeof(int));
-   temp = malloc((size_t)p->knots * sizeof(int));
-   e    = malloc((size_t)p->knots * sizeof(int));
-   x    = malloc((size_t)p->edges * sizeof(int));
-   r    = malloc((size_t)p->edges * sizeof(int));
+   p->mincut_dist = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_head = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_numb = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_prev = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_next = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_temp = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_e    = malloc((size_t)p->knots * sizeof(int));
+   p->mincut_x    = malloc((size_t)p->edges * sizeof(int));
+   p->mincut_r    = malloc((size_t)p->edges * sizeof(int));
 
-   assert(dist != NULL);
-   assert(head != NULL);
-   assert(numb != NULL);
-   assert(prev != NULL);
-   assert(next != NULL);
-   assert(temp != NULL);
-   assert(e    != NULL);
-   assert(x    != NULL);
-   assert(r    != NULL);
+   assert(p->mincut_dist != NULL);
+   assert(p->mincut_head != NULL);
+   assert(p->mincut_numb != NULL);
+   assert(p->mincut_prev != NULL);
+   assert(p->mincut_next != NULL);
+   assert(p->mincut_temp != NULL);
+   assert(p->mincut_e    != NULL);
+   assert(p->mincut_x    != NULL);
+   assert(p->mincut_r    != NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -115,37 +105,38 @@ void graph_mincut_init(
 /*--- Parameter: Keine                                                    ---*/
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
-void graph_mincut_exit(void)
+void graph_mincut_exit(
+   GRAPH* p)
 {
-   assert(dist != NULL);
-   assert(head != NULL);
-   assert(numb != NULL);
-   assert(prev != NULL);
-   assert(next != NULL);
-   assert(temp != NULL);
-   assert(e    != NULL);
-   assert(x    != NULL);
-   assert(r    != NULL);
+   assert(p->mincut_dist != NULL);
+   assert(p->mincut_head != NULL);
+   assert(p->mincut_numb != NULL);
+   assert(p->mincut_prev != NULL);
+   assert(p->mincut_next != NULL);
+   assert(p->mincut_temp != NULL);
+   assert(p->mincut_e    != NULL);
+   assert(p->mincut_x    != NULL);
+   assert(p->mincut_r    != NULL);
 
-   free((void*)dist);
-   free((void*)head);
-   free((void*)numb);
-   free((void*)prev);
-   free((void*)next);
-   free((void*)temp);
-   free((void*)e);
-   free((void*)x);
-   free((void*)r);
+   free((void*)p->mincut_dist);
+   free((void*)p->mincut_head);
+   free((void*)p->mincut_numb);
+   free((void*)p->mincut_prev);
+   free((void*)p->mincut_next);
+   free((void*)p->mincut_temp);
+   free((void*)p->mincut_e);
+   free((void*)p->mincut_x);
+   free((void*)p->mincut_r);
 
-   dist = NULL;
-   head = NULL;
-   numb = NULL;
-   prev = NULL;
-   next = NULL;
-   temp = NULL;
-   e    = NULL;
-   x    = NULL;
-   r    = NULL;
+   p->mincut_dist = NULL;
+   p->mincut_head = NULL;
+   p->mincut_numb = NULL;
+   p->mincut_prev = NULL;
+   p->mincut_next = NULL;
+   p->mincut_temp = NULL;
+   p->mincut_e    = NULL;
+   p->mincut_x    = NULL;
+   p->mincut_r    = NULL;
 
 #if STATIST
    cut_statist();
@@ -341,6 +332,8 @@ static void initialise(
    int*         w,
    int*         dmax)
 {
+   int* r;
+   int* x;
    int i;
    int j;
    int k;
@@ -362,6 +355,11 @@ static void initialise(
    assert(excess != NULL);
    assert(transx != NULL);
    assert(residi != NULL);
+   assert(p->mincut_r != NULL);
+   assert(p->mincut_x != NULL);
+
+   r = p->mincut_r;
+   x = p->mincut_x;
 
    /* Knotenarrays Initialisieren
     */
@@ -573,7 +571,7 @@ static void reinitialise(
 /*---            liegen und Null fuer die auf der Senkenseite.            ---*/
 /*---------------------------------------------------------------------------*/
 void graph_mincut_exec(
-   const GRAPH* p,
+   GRAPH*       p,
    int          s,
    int          t,
    const int*   capa,
@@ -588,6 +586,15 @@ void graph_mincut_exec(
    int    i;
    int    k;
    int    dmin = 1;
+   int*   dist;
+   int*   head;
+   int*   numb;
+   int*   prev;
+   int*   next;
+   int*   temp;
+   int*   e;
+   int*   x;
+   int*   r;
 
    assert(p      != NULL);
    assert(s      >= 0);
@@ -597,15 +604,25 @@ void graph_mincut_exec(
    assert(s      != t);
    assert(capa   != NULL);
    assert(w      != NULL);
-   assert(dist   != NULL);
-   assert(numb   != NULL);
-   assert(head   != NULL);
-   assert(prev   != NULL);
-   assert(next   != NULL);
-   assert(temp   != NULL);
-   assert(e      != NULL);
-   assert(x      != NULL);
-   assert(r      != NULL);
+   assert(p->mincut_dist   != NULL);
+   assert(p->mincut_numb   != NULL);
+   assert(p->mincut_head   != NULL);
+   assert(p->mincut_prev   != NULL);
+   assert(p->mincut_next   != NULL);
+   assert(p->mincut_temp   != NULL);
+   assert(p->mincut_e      != NULL);
+   assert(p->mincut_x      != NULL);
+   assert(p->mincut_r      != NULL);
+
+   dist = p->mincut_dist;
+   head = p->mincut_head;
+   numb = p->mincut_numb;
+   prev = p->mincut_prev;
+   next = p->mincut_next;
+   temp = p->mincut_temp;
+   e    = p->mincut_e;
+   x    = p->mincut_x;
+   r    = p->mincut_r;
 
 #if DEBUG > 0
    (void)printf("graph_mincut_exec(p, s=%d, t=%d, capa, w, rerun=%d)\n",
@@ -924,10 +941,20 @@ static int is_valid(
    const int*   capa,
    const int*   w)
 {
+   int* e;
+   int* r;
+   int* x;
    int j;
    int k;
 
    assert(p      != NULL);
+   assert(p->mincut_e != NULL);
+   assert(p->mincut_r != NULL);
+   assert(p->mincut_x != NULL);
+
+   e = p->mincut_e;
+   r = p->mincut_r;
+   x = p->mincut_x;
 
    for(j = 0; j < p->knots; j++)
    {
@@ -947,7 +974,7 @@ static int is_valid(
       if (e[j] < 0)
          return((void)fprintf(stderr, "Negativ Execess Knot %d\n", j), FALSE);
 
-      if (dist[j] >= p->knots)
+      if (p->mincut_dist[j] >= p->knots)
          return((void)fprintf(stderr, "Distance too big Knot %d\n", j), FALSE);
 
       /* Extended Dormacy Property
@@ -989,9 +1016,33 @@ static void show_flow(
    const int*   w)
 {
    int          j;
+   int*   head;
+   int*   numb;
+   int*   prev;
+   int*   next;
+   int*   e;
+   int*   x;
+   int*   r;
 
    assert(p != NULL);
    assert(w != NULL);
+   assert(p->mincut_numb   != NULL);
+   assert(p->mincut_head   != NULL);
+   assert(p->mincut_prev   != NULL);
+   assert(p->mincut_next   != NULL);
+   assert(p->mincut_e      != NULL);
+   assert(p->mincut_x      != NULL);
+   assert(p->mincut_r      != NULL);
+
+   head = p->mincut_head;
+   numb = p->mincut_numb;
+   prev = p->mincut_prev;
+   next = p->mincut_next;
+   e    = p->mincut_e;
+   x    = p->mincut_x;
+   r    = p->mincut_r;
+
+
 
    (void)printf("   ");
    for(j = 0; j < p->edges; j++)
@@ -1030,7 +1081,7 @@ static void show_flow(
 
    (void)printf("d: ");
    for(j = 0; j < p->knots; j++)
-      (void)printf("%2d ", dist[j]);
+      (void)printf("%2d ", p->mincut_dist[j]);
    (void)fputc('\n', stdout);
 
    (void)printf("n: ");

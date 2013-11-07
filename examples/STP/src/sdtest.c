@@ -14,6 +14,7 @@
 #include <assert.h>
 #include "grph.h"
 #include "portab.h"
+#include "scip/scip.h"
 
 /* Das Nachfolgende ist eine Implementierung von Dijkstras Algorithmus
  * mit einem Heap zur Verwaltung der aktiven Knoten.
@@ -34,9 +35,6 @@ typedef struct sd_path
    double tran;
 } SDPTH;
 
-static int  count;
-static int* heap  = NULL;
-static int* state = NULL;
 
 static int compare(
    const SDPTH* path,
@@ -59,6 +57,9 @@ static int compare(
 /*--- Returns  : Nummer des bewussten Knotens                             ---*/
 /*---------------------------------------------------------------------------*/
 inline static int nearest(
+   int*          heap,
+   int*          state,
+   int*          count, /* pointer to store number of elements of heap */
    const SDPTH* path)
 {
    int   k;
@@ -72,14 +73,14 @@ inline static int nearest(
    k              = heap[1];
    j              = 1;
    c              = 2;
-   heap[1]        = heap[count--];
+   heap[1]        = heap[(*count)--];
    state[heap[1]] = 1;
 
-   if (count > 2)
+   if ((*count) > 2)
       if (compare(path, heap[3], heap[2]) < 0)
          c++;
 
-   while((c <= count) && (compare(path, heap[j], heap[c]) > 0))
+   while((c <= (*count)) && (compare(path, heap[j], heap[c]) > 0))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -89,7 +90,7 @@ inline static int nearest(
       j              = c;
       c             += c;
 
-      if ((c + 1) <= count)
+      if ((c + 1) <= (*count))
          if (compare(path, heap[c + 1], heap[c]) < 0)
             c++;
    }
@@ -106,6 +107,9 @@ inline static int nearest(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 inline static void correct(
+   int*          heap,
+   int*          state,
+   int*          count, /* pointer to store number of elements of heap */
    SDPTH* path,
    int    l)
 {
@@ -117,8 +121,8 @@ inline static void correct(
     */
    if (state[l] == UNKNOWN)
    {
-      heap[++count] = l;
-      state[l]      = count;
+      heap[++(*count)] = l;
+      state[l]      = (*count);
    }
 
    /* Heap shift up
@@ -154,6 +158,9 @@ static void compute_sd(
    const GRAPH*  p,
    int           start,
    const double* cost,
+   int*          heap,
+   int*          state,
+   int*          count, /* pointer to store number of elements of heap */
    SDPTH*        path)
 {
    int    k;
@@ -170,13 +177,15 @@ static void compute_sd(
    assert(state  != NULL);
    assert(path   != NULL);
    assert(cost   != NULL);
+   assert(count != NULL);
+   assert(*count >= 0);
 
    /* Kein Baum ohne Knoten
     */
    if (p->knots == 0)
       return;
 
-   count = 0;
+   (*count) = 0;
 
    /* Erstmal alles auf null, unbekannt und weit weg
     */
@@ -197,18 +206,18 @@ static void compute_sd(
     */
    if (p->knots > 1)
    {
-      count       = 1;
-      heap[count] = k;
-      state[k]    = count;
+      (*count)       = 1;
+      heap[(*count)] = k;
+      state[k]    = (*count);
 
       /* Wenn nichts mehr auf dem Heap ist, sind wir fertig
        * und jetzt erstmal Hula Loop
        */
-      while(count > 0)
+      while((*count) > 0)
       {
          /* Na, wer ist der Naechste ?
           */
-         k = nearest(path);
+         k = nearest(heap, state, count, path);
 
          /* Wieder einen erledigt
           */
@@ -244,7 +253,7 @@ static void compute_sd(
                   path[m].dist = dist;
                   path[m].tran = tran;
 
-                  correct(path, m);
+                  correct(heap, state, count, path, m);
                }
             }
          }
@@ -265,12 +274,15 @@ int sd_reduction(
 {
    SDPTH*  sd;
    double* cost;
+   int*    heap;
+   int*    state;
+   int     count = 0;
    int     i;
    int     e;
    int     j;
    int     elimins = 0;
 
-   printf("SD-Reduktion: ");
+   SCIPdebugMessage("SD-Reduktion: ");
    fflush(stdout);
 
    heap  = malloc((size_t)g->knots * sizeof(int));
@@ -297,8 +309,8 @@ int sd_reduction(
    {
       if (!(i % 100))
       {
-         fputc('.', stdout);
-         fflush(stdout);
+         SCIPdebug(fputc('.', stdout));
+         SCIPdebug(fflush(stdout));
       }
       if (g->grad[i] == 0)
          continue;
@@ -310,7 +322,7 @@ int sd_reduction(
          g->mark[g->head[e]] = 2;
       }
 
-      compute_sd(g, i, cost, sd);
+      compute_sd(g, i, cost, heap, state, &count, sd);
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
       {
@@ -345,7 +357,7 @@ int sd_reduction(
 
    assert(graph_valid(g));
 
-   printf("%d Edges deleted\n", elimins * 2);
+   SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
 
    return(elimins);
 }
@@ -419,6 +431,9 @@ int bd3_reduction(
 {
    SDPTH* path1;
    SDPTH* path2;
+   int*    heap;
+   int*    state;
+   int     count = 0;
    int    i;
    int    k1;
    int    k2;
@@ -432,7 +447,7 @@ int bd3_reduction(
    double c3;
    double c123;
 
-   printf("BD3-Reduction: ");
+   SCIPdebugMessage("BD3-Reduction: ");
    fflush(stdout);
 
    heap  = malloc((size_t)g->knots * sizeof(int));
@@ -454,8 +469,8 @@ int bd3_reduction(
    {
       if (!(i % 100))
       {
-         fputc('.', stdout);
-         fflush(stdout);
+         SCIPdebug(fputc('.', stdout));
+         SCIPdebug(fflush(stdout));
       }
       if (g->grad[i] != 3)
          continue;
@@ -484,8 +499,8 @@ int bd3_reduction(
 
       assert(g->oeat[e3] == EAT_LAST);
 
-      compute_sd(g, k1, g->cost, path1);
-      compute_sd(g, k2, g->cost, path2);
+      compute_sd(g, k1, g->cost, heap, state, &count, path1);
+      compute_sd(g, k2, g->cost, heap, state, &count, path2);
 #if 0
       graph_path_exec(g, FSP_MODE, k1, g->cost, path1);
       graph_path_exec(g, FSP_MODE, k2, g->cost, path2);
@@ -527,7 +542,7 @@ int bd3_reduction(
 
    assert(graph_valid(g));
 
-   printf("%d Knots deleted\n", elimins);
+   SCIPdebugMessage("%d Knots deleted\n", elimins);
 
    return(elimins);
 }
@@ -538,8 +553,8 @@ static void calculate_distances(
 {
    int i;
 
-   fputc('C', stdout);
-   fflush(stdout);
+   SCIPdebug(fputc('C', stdout));
+   SCIPdebug(fflush(stdout));
 
    for(i = 0; i < g->knots; i++)
    {
@@ -605,7 +620,7 @@ int nsv_reduction(
    double  cost2;
    int     elimins = 0;
 
-   printf("NSV-Reduction: ");
+   SCIPdebugMessage("NSV-Reduction: ");
    fflush(stdout);
 /*
    graph_show(g);
@@ -639,8 +654,8 @@ int nsv_reduction(
    {
       if (!(i % 100))
       {
-         fputc('.', stdout);
-         fflush(stdout);
+         SCIPdebug(fputc('.', stdout));
+         SCIPdebug(fflush(stdout));
       }
       if (g->grad[i] < 3)
          continue;
@@ -673,7 +688,7 @@ int nsv_reduction(
       if (LE(cost2 - cost1, 2.0))
       {
 /*
-         printf("\t\te=%d i=%d k=%d cost1=%d cost2=%d\n",
+         SCIPdebugMessage("\t\te=%d i=%d k=%d cost1=%d cost2=%d\n",
             e, i, g->head[e], cost1, cost2);
 */
          continue;
@@ -698,7 +713,7 @@ int nsv_reduction(
       if (EQ(min1, FARAWAY) || EQ(min2, FARAWAY))
       {
 /*
-         printf("\te=%d i=%d k=%d min1=%d min2=%d cost1=%d cost2=%d\n",
+         SCIPdebugMessage("\te=%d i=%d k=%d min1=%d min2=%d cost1=%d cost2=%d\n",
             e, i, k, min1, min2, cost1, cost2);
 */
          continue;
@@ -706,7 +721,7 @@ int nsv_reduction(
       if (LT(cost1 + min1 + min2, cost2))
       {
 /*
-         printf("e=%d i=%d k=%d min1=%d min2=%d cost1=%d cost2=%d\n",
+         SCIPdebugMessage("e=%d i=%d k=%d min1=%d min2=%d cost1=%d cost2=%d\n",
             e, i, k, min1, min2, cost1, cost2);
  */
          *fixed += g->cost[e];
@@ -737,7 +752,7 @@ int nsv_reduction(
 
    assert(graph_valid(g));
 
-   printf(" %d Knots deleted\n", elimins);
+   SCIPdebugMessage(" %d Knots deleted\n", elimins);
 
    return(elimins);
 }

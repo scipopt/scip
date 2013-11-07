@@ -732,6 +732,11 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 
    graphcopy = graph_copy(sourcedata->graph);
 
+   graph_path_init(graphcopy);
+
+   if( sourcedata->mode == MODE_CUT )
+      graph_mincut_init(graphcopy);
+
    SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
 
    (*targetdata)->mode = sourcedata->mode;
@@ -953,14 +958,10 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
    SCIPdebugMessage("free original problem data\n");
 
+   if ( (*probdata)->mode == MODE_CUT )
+      graph_mincut_exit((*probdata)->graph);
 
-   if( !(*probdata)->copy )
-   {
-      if ( (*probdata)->mode == MODE_CUT )
-         graph_mincut_exit();
-
-      graph_path_exit();
-   }
+   graph_path_exit((*probdata)->graph);
 
    if( (*probdata)->graph != NULL )
       graph_free((*probdata)->graph);
@@ -1143,9 +1144,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
 
-   if( probdata->mode == MODE_CUT )
-      graph_mincut_init(graph);
-
    /* init shortest path algorithm (needed for reduction) */
    graph_path_init(graph);
 
@@ -1160,6 +1158,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* presolving */
    offset = reduce(graph, reduction);
+   graph_path_exit(graph);
+
    probdata->graph = graph_pack(graph);
    graph = probdata->graph;
 
@@ -1170,8 +1170,10 @@ SCIP_RETCODE SCIPprobdataCreate(
       int k;
 
       /* init shortest path algorithm (needed for creating path variables) */
-      graph_path_exit();
       graph_path_init(graph);
+
+      if( probdata->mode == MODE_CUT )
+         graph_mincut_init(graph);
 
       if( print )
       {

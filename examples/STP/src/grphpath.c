@@ -30,10 +30,6 @@
 
 #include "grph.h"
 
-static int  count;
-static int* heap  = NULL;
-static int* state = NULL;
-
 /*---------------------------------------------------------------------------*/
 /*--- Name     : get NEAREST knot                                         ---*/
 /*--- Function : Holt das oberste Element vom Heap (den Knoten mit der    ---*/
@@ -42,6 +38,9 @@ static int* state = NULL;
 /*--- Returns  : Nummer des bewussten Knotens                             ---*/
 /*---------------------------------------------------------------------------*/
 inline static int nearest(
+   int* heap,
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
    const PATH* path)
 {
    int   k;
@@ -55,14 +54,14 @@ inline static int nearest(
    k              = heap[1];
    j              = 1;
    c              = 2;
-   heap[1]        = heap[count--];
+   heap[1]        = heap[(*count)--];
    state[heap[1]] = 1;
 
-   if (count > 2)
+   if ((*count) > 2)
       if (LT(path[heap[3]].dist, path[heap[2]].dist))
          c++;
 
-   while((c <= count) && GT(path[heap[j]].dist, path[heap[c]].dist))
+   while((c <= (*count)) && GT(path[heap[j]].dist, path[heap[c]].dist))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -72,7 +71,7 @@ inline static int nearest(
       j              = c;
       c             += c;
 
-      if ((c + 1) <= count)
+      if ((c + 1) <= (*count))
          if (LT(path[heap[c + 1]].dist, path[heap[c]].dist))
             c++;
    }
@@ -90,6 +89,9 @@ inline static int nearest(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 inline static void correct(
+   int* heap,
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
    PATH*  path,
    int    l,
    int    k,
@@ -108,8 +110,8 @@ inline static void correct(
     */
    if (state[l] == UNKNOWN)
    {
-      heap[++count] = l;
-      state[l]      = count;
+      heap[++(*count)] = l;
+      state[l]      = (*count);
    }
 
    /* Heap shift up
@@ -137,16 +139,16 @@ inline static void correct(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 void graph_path_init(
-   const GRAPH* p)
+   GRAPH* p)
 {
-   assert(heap  == NULL);
-   assert(state == NULL);
+   assert(p->path_heap  == NULL);
+   assert(p->path_state == NULL);
 
-   heap  = malloc((size_t)p->knots * sizeof(int));
-   state = malloc((size_t)p->knots * sizeof(int));
+   p->path_heap  = malloc((size_t)p->knots * sizeof(int));
+   p->path_state = malloc((size_t)p->knots * sizeof(int));
 
-   assert(heap  != NULL);
-   assert(state != NULL);
+   assert(p->path_heap  != NULL);
+   assert(p->path_state != NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -156,16 +158,17 @@ void graph_path_init(
 /*--- Parameter: Keine                                                    ---*/
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
-void graph_path_exit()
+void graph_path_exit(
+   GRAPH* p)
 {
-   assert(heap  != NULL);
-   assert(state != NULL);
+   assert(p->path_heap  != NULL);
+   assert(p->path_state != NULL);
 
-   free(heap);
-   free(state);
+   free(p->path_heap);
+   free(p->path_state);
 
-   heap  = NULL;
-   state = NULL;
+   p->path_heap  = NULL;
+   p->path_state = NULL;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -190,13 +193,16 @@ void graph_path_exec(
    int   k;
    int   m;
    int   i;
+   int* heap;
+   int* state;
+   int count;
 
    assert(p      != NULL);
    assert(start  >= 0);
    assert(start  <  p->knots);
    assert((mode  == FSP_MODE) || (mode == MST_MODE));
-   assert(heap   != NULL);
-   assert(state  != NULL);
+   assert(p->path_heap   != NULL);
+   assert(p->path_state  != NULL);
    assert(path   != NULL);
    assert(cost   != NULL);
 
@@ -205,6 +211,8 @@ void graph_path_exec(
    if (p->knots == 0)
       return;
 
+   heap = p->path_heap;
+   state = p->path_state;
    count = 0;
 
    /* Erstmal alles auf null, unbekannt und weit weg
@@ -236,7 +244,7 @@ void graph_path_exec(
       {
          /* Na, wer ist der Naechste ?
           */
-         k = nearest(path);
+         k = nearest(heap, state, &count, path);
 
          /* Wieder einen erledigt
           */
@@ -260,7 +268,7 @@ void graph_path_exec(
              *    Wenn ja, dann muss die Entferung kuerzer sein.
              */
              && (GT(path[m].dist, (mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i]))))
-                correct(path, m, k, i, cost[i], mode);
+                correct(heap, state, &count, path, m, k, i, cost[i], mode);
          }
       }
    }

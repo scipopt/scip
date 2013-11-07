@@ -132,8 +132,6 @@ int validate(
    assert(xval      != NULL);
    assert(connected != NULL);
 
-   printf("source=%d\n", g->source[0]);
-
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
 #if 0

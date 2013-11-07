@@ -206,8 +206,8 @@ SCIP_RETCODE do_heuristic(
 
    SCIPfreeBufferArray(scip, &cluster);
 
-   fputc('M', stdout);
-   fflush(stdout);
+   SCIPdebug(fputc('M', stdout));
+   SCIPdebug(fflush(stdout));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, g->knots) );
 
@@ -236,8 +236,8 @@ SCIP_RETCODE do_heuristic(
     */
    do
    {
-      fputc('C', stdout);
-      fflush(stdout);
+      SCIPdebug(fputc('C', stdout));
+      SCIPdebug(fflush(stdout));
 
       count = 0;
 

@@ -71,6 +71,19 @@ GRAPH* graph_init(
    p->xpos  = malloc((size_t)ksize * sizeof(int));
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
+   p->mincut_dist = NULL;
+   p->mincut_head = NULL;
+   p->mincut_numb = NULL;
+   p->mincut_prev = NULL;
+   p->mincut_next = NULL;
+   p->mincut_temp = NULL;
+   p->mincut_e = NULL;
+   p->mincut_x = NULL;
+   p->mincut_r = NULL;
+
+   p->path_heap = NULL;
+   p->path_state = NULL;
+
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
    assert(p->locals != NULL);

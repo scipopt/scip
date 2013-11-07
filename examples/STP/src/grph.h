@@ -62,6 +62,22 @@ typedef struct
                    /* Knot [i]                                    */
    int*    ypos;   /* Array [0..knots-1] with Y Coordinates of    */
                    /* Knot [i]                                    */
+   /* data for min cut computation
+    */
+   int*    mincut_dist;    /* dist[i] : Distance-label of Knot i          */
+   int*    mincut_head;    /* head[i] : Head of Active Queue with Label i */
+   int*    mincut_numb;    /* numb[i] : numb[i] Knots with Label i        */
+   int*    mincut_prev;
+   int*    mincut_next;
+   int*    mincut_temp;
+   int*    mincut_e;       /* e[i] : Excess of Knot i                     */
+   int*    mincut_x;       /* x[k] : Actual Flow on Arc k                 */
+   int*    mincut_r;       /* r[k] : Capacity of Arc k                    */
+   /* data for math and mst computation
+    */
+   int* path_heap;
+   int* path_state;
+
 } GRAPH;
 
 typedef struct presolve_info
@@ -122,16 +138,16 @@ extern int    graph_valid(const GRAPH*);
 
 /* grphpath.c
  */
-extern void   graph_path_init(const GRAPH*);
-extern void   graph_path_exit(void);
+extern void   graph_path_init(GRAPH*);
+extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, const double*, PATH*);
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c
  */
-extern void   graph_mincut_init(const GRAPH*);
-extern void   graph_mincut_exit(void);
-extern void   graph_mincut_exec(const GRAPH*, int, int, const int*, int*, int);
+extern void   graph_mincut_init(GRAPH*);
+extern void   graph_mincut_exit(GRAPH*);
+extern void   graph_mincut_exec(GRAPH*, int, int, const int*, int*, int);
 
 /* grphload.c
  */

@@ -428,7 +428,7 @@ int sep_flow(
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
    }
-   printf("In/Out Separator: %d Inequalities added\n", count);
+   SCIPdebugMessage("In/Out Separator: %d Inequalities added\n", count);
 
    return(count);
 }
@@ -512,7 +512,7 @@ int sep_2cut(
                count++;
          }
       }
-      printf("Cut Pretest: %d eliminations\n", count);
+      SCIPdebugMessage("Cut Pretest: %d eliminations\n", count);
 
       count = 0;
       tsave = terms;
@@ -618,7 +618,7 @@ int sep_2cut(
    free(cost);
    free(capa);
 
-   printf("2-cut Separator: %d Inequalities added\n", count);
+   SCIPdebugMessage("2-cut Separator: %d Inequalities added\n", count);
 
    return(count);
 }

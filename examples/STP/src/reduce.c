@@ -17,6 +17,7 @@
 #include <assert.h>
 #include "grph.h"
 #include "portab.h"
+#include "scip/scip.h"
 
 /* Moeglichkeiten:
  *    a 1 b 2 c
@@ -43,15 +44,15 @@ static int degree_test(
    assert(g      != NULL);
    assert(fixed  != NULL);
 
-   printf("Degree Test: ");
+   SCIPdebugMessage("Degree Test: ");
    fflush(stdout);
 
    while(rerun)
    {
       rerun = FALSE;
 
-      fputc('.', stdout);
-      fflush(stdout);
+      SCIPdebug(fputc('.', stdout));
+      SCIPdebug(fflush(stdout));
 
       for(i = 0; i < g->knots; i++)
       {
@@ -165,7 +166,7 @@ static int degree_test(
          }
       }
    }
-   printf(" %d Knots deleted\n", count);
+   SCIPdebugMessage(" %d Knots deleted\n", count);
 
    assert(graph_valid(g));
 
@@ -195,7 +196,7 @@ static int tt_aggregation(
    assert(g      != NULL);
    assert(fixed  != NULL);
 
-   printf("T-T Aggregation: ");
+   SCIPdebugMessage("T-T Aggregation: ");
    fflush(stdout);
 
    mst = malloc((size_t)g->knots * sizeof(PATH));
@@ -240,7 +241,7 @@ static int tt_aggregation(
 
    free(mst);
 
-   printf("%d Knots deleted\n", count);
+   SCIPdebugMessage("%d Knots deleted\n", count);
 
    assert(graph_valid(g));
 
@@ -270,7 +271,7 @@ static int tt_deletion(
 
    assert(g != NULL);
 
-   printf("T-T Edge deletion: ");
+   SCIPdebugMessage("T-T Edge deletion: ");
    fflush(stdout);
 
    for(i = 0; i < g->edges; i++)
@@ -356,7 +357,7 @@ static int tt_deletion(
 
    /* Vielleicht sogar noch mehr Kanten, bei der Knoten Kontraktion
     */
-   printf("%d Edges deleted\n", count);
+   SCIPdebugMessage("%d Edges deleted\n", count);
 
    assert(graph_valid(g));
 
@@ -388,7 +389,7 @@ static int czv_reduction(
    assert(g     != NULL);
    assert(fixed != NULL);
 
-   printf("Lazy closest T-Edge Reduction: ");
+   SCIPdebugMessage("Lazy closest T-Edge Reduction: ");
    fflush(stdout);
 
    for(i = 0; i < g->knots; i++)
@@ -470,7 +471,7 @@ static int czv_reduction(
 
       count++;
    }
-   printf("%d Knots deleted\n", count);
+   SCIPdebugMessage("%d Knots deleted\n", count);
 
    assert(graph_valid(g));
 
@@ -499,7 +500,7 @@ static int lle_reduction(
 
    assert(g      != NULL);
 
-   printf("Lazy Longest Edge Reduction: ");
+   SCIPdebugMessage("Lazy Longest Edge Reduction: ");
    fflush(stdout);
 
    for(i = 0; i < g->knots; i++)
@@ -549,7 +550,7 @@ static int lle_reduction(
          g->mark[i1] = FALSE;
       }
    }
-   printf("%d Edges deleted\n", count * 2);
+   SCIPdebugMessage("%d Edges deleted\n", count * 2);
 
    assert(graph_valid(g));
 
@@ -581,7 +582,7 @@ static int le_reduction(
 
    assert(g      != NULL);
 
-   printf("Longest Edge Reduction: ");
+   SCIPdebugMessage("Longest Edge Reduction: ");
    fflush(stdout);
 
    for(i = 0; i < g->knots; i++)
@@ -683,7 +684,7 @@ static int le_reduction(
    free(used);
    free(term);
 
-   printf("%d Edges deleted\n", count * 2);
+   SCIPdebugMessage("%d Edges deleted\n", count * 2);
 
    assert(graph_valid(g));
 
@@ -714,7 +715,7 @@ static int hops_test(
 
    assert(g->layers == 1);
 
-   printf("Max-Hops reachability Test: ");
+   SCIPdebugMessage("Max-Hops reachability Test: ");
    fflush(stdout);
 
    cost  = malloc((size_t)g->edges * sizeof(*cost));
@@ -797,7 +798,7 @@ static int hops_test(
    free(path);
    free(cost);
 
-   printf("%d Knots removed (%d/%d)\n", count, min_hops, max_hops);
+   SCIPdebugMessage("%d Knots removed (%d/%d)\n", count, min_hops, max_hops);
 
    assert(graph_valid(g));
 
@@ -832,7 +833,7 @@ static double level1(
 
    assert(graph_valid(g));
 
-   printf("Reduction Level 1: Fixed Cost = %.12e\n",
+   SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n",
       fixed);
 
    return(fixed);
@@ -872,7 +873,7 @@ static double level2(
          rerun = TRUE;
 
    }
-   printf("Reduction Level 2: Fixed Cost = %.12e\n",
+   SCIPdebugMessage("Reduction Level 2: Fixed Cost = %.12e\n",
       fixed);
 
    return(fixed);
@@ -903,7 +904,7 @@ static double level3(
 
    degree_test(g, &fixed);
 
-   printf("Reduction Level 3: Fixed Cost = %.12e\n",
+   SCIPdebugMessage("Reduction Level 3: Fixed Cost = %.12e\n",
       fixed);
 
    return(fixed);
@@ -940,7 +941,7 @@ static double level4(
       if (degree_test(g, &fixed) > 0)
          rerun = TRUE;
    }
-   printf("Reduction Level 4: Fixed Cost = %.12e\n",
+   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n",
       fixed);
 
    return(fixed);
@@ -976,7 +977,7 @@ static double level5(
    tt_aggregation(g, &fixed);
    degree_test(g, &fixed);
 
-   printf("Reduction Level 5: Fixed Cost = %.12e\n",
+   SCIPdebugMessage("Reduction Level 5: Fixed Cost = %.12e\n",
       fixed);
 
    return(fixed);
