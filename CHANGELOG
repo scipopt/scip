@@ -5,6 +5,7 @@ fixed bugs:
 - fixed bug in handling max-functions in ampl interface
 - fixed bug in cons_indicator with trying to create solution in problem stage
 - fixed bug in cons_orbitope with fixing upper right triangle in non-root nodes
+- fixed bug in reader_lp when writing bilinear terms (product sign was missing)
 
 
 SCIP version 3.0.2
