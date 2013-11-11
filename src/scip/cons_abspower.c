@@ -2706,7 +2706,7 @@ SCIP_RETCODE propagateCons(
                   else
                      newub = SCIPinfinity(scip);
                }
-               if( !SCIPisInfinity(scip, -newub) )
+               if( !SCIPisInfinity(scip, newub) )
                {
                   /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
                   if( consdata->exponent == 2.0 )

@@ -74,6 +74,7 @@ SCIP_RETCODE turnoffNodeSelector(
 
    return SCIP_OKAY;
 }
+
 /*
  * Callback methods
  */
@@ -117,6 +118,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBreadthfirst)
 {  /*lint --e{715}*/
 
    SCIP_NODESELDATA* nodeseldata;
+
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);

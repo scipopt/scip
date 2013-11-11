@@ -157,7 +157,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique nlpi xml dijkstra
+LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique lpi nlpi xml dijkstra
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -193,25 +193,6 @@ DFLAGS		+=	$(USRDFLAGS)
 #-----------------------------------------------------------------------------
 
 #FLAGS		+=	-DBMS_NOBLOCKMEM
-
-
-#-----------------------------------------------------------------------------
-# SHARED Libaries
-#-----------------------------------------------------------------------------
-
-ifeq ($(SHARED),true)
-FLAGS		+=	-fPIC
-LIBEXT		=	$(SHAREDLIBEXT)
-LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-ARFLAGS		=
-RANLIB		=
-endif
-
-ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
-endif
 
 
 #-----------------------------------------------------------------------------
@@ -254,6 +235,14 @@ LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUF
 
 ifeq ($(LPSCHECK),true)
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+endif
+endif
+
+ifeq ($(LPS),spx2)
+LPSLDFLAGS  += $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+
+ifeq ($(LPSCHECK),true)
+LPSLDFLAGS  += $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 endif
 
@@ -363,6 +352,29 @@ endif
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
+endif
+
+
+#-----------------------------------------------------------------------------
+# SHARED Libaries
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+LIBEXT		=	$(SHAREDLIBEXT)
+ifeq ($(LINKER),CPP)
+LIBBUILD	=	$(LINKCXX)
+else
+LIBBUILD	=	$(LINKCC)
+endif
+LIBBUILDFLAGS	+=      -shared
+LIBBUILD_o	= 	-o # the trailing space is important
+ARFLAGS		=
+RANLIB		=
+endif
+
+ifneq ($(LINKRPATH),)
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
 endif
 
 

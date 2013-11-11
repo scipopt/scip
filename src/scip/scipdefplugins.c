@@ -106,6 +106,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
+   SCIP_CALL( SCIPincludeHeurDualval(scip) );
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
@@ -122,6 +123,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
    SCIP_CALL( SCIPincludeHeurProximity(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurRandrounding(scip) );
    SCIP_CALL( SCIPincludeHeurRens(scip) );
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );

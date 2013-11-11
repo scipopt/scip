@@ -175,6 +175,7 @@ struct SCIP_Tree
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
@@ -201,6 +202,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
    SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
+   SCIP_Bool             sbprobing;          /**< is the probing mode used for strong branching? */
 };
 
 #ifdef __cplusplus

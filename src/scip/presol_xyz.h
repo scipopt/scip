@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

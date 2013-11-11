@@ -557,7 +557,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    if( branchruledata->fractionals )
    {
       /* get LP candidates (fractional integer variables) */
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, NULL, &ncands) );
+      SCIP_CALL( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, NULL, &ncands, NULL) );
    }
    else
    {

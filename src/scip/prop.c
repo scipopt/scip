@@ -162,6 +162,7 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->propdata = propdata;
    SCIP_CALL( SCIPclockCreate(&(*prop)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*prop)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
    (*prop)->ncalls = 0;
@@ -232,6 +233,7 @@ SCIP_RETCODE SCIPpropFree(
 
    SCIPclockFree(&(*prop)->presoltime);
    SCIPclockFree(&(*prop)->resproptime);
+   SCIPclockFree(&(*prop)->sbproptime);
    SCIPclockFree(&(*prop)->proptime);
    SCIPclockFree(&(*prop)->setuptime);
    BMSfreeMemoryArray(&(*prop)->desc);
@@ -259,6 +261,7 @@ SCIP_RETCODE SCIPpropInit(
    if( set->misc_resetstat )
    {
       SCIPclockReset(prop->proptime);
+      SCIPclockReset(prop->sbproptime);
       SCIPclockReset(prop->resproptime);
       SCIPclockReset(prop->presoltime);
       SCIPclockReset(prop->setuptime);
@@ -589,6 +592,7 @@ SCIP_RETCODE SCIPpropExec(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_Bool             instrongbranching,  /**< are we currently doing strong branching? */
    SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -615,13 +619,19 @@ SCIP_RETCODE SCIPpropExec(
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
          /* start timing */
-         SCIPclockStart(prop->proptime, set);
+         if( instrongbranching )
+            SCIPclockStart(prop->sbproptime, set);
+         else
+            SCIPclockStart(prop->proptime, set);
 
          /* call external propagation method */
          SCIP_CALL( prop->propexec(set->scip, prop, proptiming, result) );
 
          /* stop timing */
-         SCIPclockStop(prop->proptime, set);
+         if( instrongbranching )
+            SCIPclockStop(prop->sbproptime, set);
+         else
+            SCIPclockStop(prop->proptime, set);
 
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
@@ -966,6 +976,16 @@ SCIP_Real SCIPpropGetTime(
    assert(prop != NULL);
 
    return SCIPclockGetTime(prop->proptime);
+}
+
+/** gets time in seconds used in this propagator for propagation during strong branching */
+SCIP_Real SCIPpropGetStrongBranchPropTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return SCIPclockGetTime(prop->sbproptime);
 }
 
 /** gets time in seconds used in this propagator for resolve propagation */

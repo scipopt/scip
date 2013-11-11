@@ -236,9 +236,9 @@ BEGIN {
 # get objective sense
 #
 /^  Objective sense  :/ {
-   if ( $4 == "minimize" )
+   if ( $4 == "minimize" || $4 == "minimize\r")
       objsense = 1;
-   if ( $4 == "maximize" )
+   if ( $4 == "maximize" || $4 == "maximize\r" )
       objsense = -1;
 
    # objsense is 0 otherwise
@@ -401,7 +401,7 @@ BEGIN {
       dbset = 1;
       feasible = 0;
    }
-   else if( $4 == "-" ) {
+   else if( $4 == "-"  || $4 == "-\r") {
       pb = +infty;
       feasible = 0;
    }
@@ -411,14 +411,14 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^  Dual Bound       :/ {
-   if( $4 != "-" ) {
+/^Dual Bound         :/ {
+   if( $4 != "-" && $4 != "-\r" ) {
       db = $4;
       dbset = 1;
    }
 }
 /^  Root Dual Bound  :/ {
-   if( $5 != "-" )
+   if( $5 != "-" && $5 != "-\r" )
       rootdb = $5;
    else
        rootdb = db;  # SCIP most likely finished during root node, perhaps due to a solution limit. the rootdb is NOT printed then, but needed later
@@ -702,7 +702,7 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( objsense == -1 && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+         if( ( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) ) ) {
             status = "fail";
             failtime += tottime;
             fail++;
@@ -725,7 +725,7 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
+               if( (db == -infty || (abs(pb - db) <= max(abstol, reltol))) && abs(pb - sol[prob]) <= reltol ) {
                   status = "ok";
                   pass++;
                }
@@ -943,7 +943,7 @@ BEGIN {
             gamsprobtype = "MIP";
          #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
          #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
          printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
       }
    }

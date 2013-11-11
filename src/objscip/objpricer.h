@@ -179,7 +179,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyPricer is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjPricer*      objpricer,          /**< variable pricer object */
@@ -187,14 +187,14 @@ SCIP_RETCODE SCIPincludeObjPricer(
    );
 
 /** returns the variable pricer object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjPricer* SCIPfindObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable pricer */
    );
    
 /** returns the variable pricer object for the given pricer */
-extern
+EXTERN
 scip::ObjPricer* SCIPgetObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< pricer */

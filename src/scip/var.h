@@ -394,7 +394,8 @@ SCIP_RETCODE SCIPvarFix(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -428,7 +429,9 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
  *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
- *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
  */
 extern
 SCIP_RETCODE SCIPvarGetProbvarSum(
@@ -474,7 +477,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -498,7 +502,8 @@ SCIP_RETCODE SCIPvarAggregate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -519,7 +524,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -636,7 +642,8 @@ SCIP_RETCODE SCIPvarAddObj(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -925,7 +932,8 @@ SCIP_RETCODE SCIPvarAddVlb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -949,7 +957,8 @@ SCIP_RETCODE SCIPvarAddVub(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -975,7 +984,8 @@ SCIP_RETCODE SCIPvarAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -990,6 +1000,24 @@ SCIP_RETCODE SCIPvarAddImplic(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
+/** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
+extern
+SCIP_RETCODE SCIPvarFixBinary(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             value,              /**< value to fix variable to */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
 /** adds the variable to the given clique and updates the list of cliques the binary variable is member of;
  *  if the variable now appears twice in the clique with the same value, it is fixed to the opposite value;
  *  if the variable now appears twice in the clique with opposite values, all other variables are fixed to
@@ -1001,7 +1029,8 @@ SCIP_RETCODE SCIPvarAddClique(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1010,6 +1039,17 @@ SCIP_RETCODE SCIPvarAddClique(
    SCIP_CLIQUE*          clique,             /**< clique the variable should be added to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
+/** adds a filled clique to the cliquelists of all corresponding variables */
+extern
+SCIP_RETCODE SCIPvarsAddClique(
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Bool*            values,             /**< values of the variables in the clique */
+   int                   nvars,              /**< number of problem variables */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CLIQUE*          clique              /**< clique that contains all given variables and values */
    );
 
 /** deletes the variable from the given clique and updates the list of cliques the binary variable is member of */

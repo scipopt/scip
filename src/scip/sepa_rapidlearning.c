@@ -220,7 +220,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    *result = SCIP_DIDNOTRUN;
    
-   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)+SCIPgetNImplVars(scip);
+   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
 
    /* only run when still not fixed binary variables exists */
    if( ndiscvars == 0 )
@@ -243,7 +243,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY;
 
    /* if the separator should be exclusive to the root node, this prevents multiple calls due to restarts */
-   if(  SCIPsepaGetFreq(sepa) == 0 && SCIPsepaGetNCalls(sepa) > 0)
+   if( SCIPsepaGetFreq(sepa) == 0 && SCIPsepaGetNCalls(sepa) > 0 )
       return SCIP_OKAY;
 
    /* call separator at most once per node */
@@ -277,11 +277,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    }
 
    for( i = 0; i < nvars; i++ )
+   {
       subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+      /* change implicit integer variables to integer type */
+      if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
+         assert(!infeasible);
+      }
+   }
    
    SCIPhashmapFree(&varmapfw);
    
-   /* this avoids dual presolving */
+   /* This avoids dual presolving.
+    *
+    * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
+    * but no variables should be missing because we stop earlier anyway if pricers are present).
+    * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
+    */
    if( !success )
    {
       for( i = 0; i < nvars; i++ )
@@ -519,11 +535,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( sepadata->applysolved && !disabledualreductions 
       && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE) )
    {
-      /* we need to multiply the dualbound with the scaling factor and add the offset, 
-       * because this information has been disregarded in the sub-SCIP */
-      SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPgetTransObjscale(scip) * SCIPgetDualbound(subscip) + SCIPgetTransObjoffset(scip));
+      /* we need to multiply the dualbound with the scaling factor and add the offset,
+       * because this information has been disregarded in the sub-SCIP
+       */
+      SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
 
-      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPgetDualbound(subscip) * SCIPgetTransObjscale(scip) + SCIPgetTransObjoffset(scip)) );
+      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPretransformObj(scip, SCIPgetDualbound(subscip))) );
       dualboundchg = TRUE;
    }
 
@@ -566,6 +583,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
                success = FALSE;
 
+               /* @todo assert that flags are as they should be for conflicts */
                SCIP_CALL( SCIPgetConsCopy(subscip, scip, cons, &conscopy, conshdlrs[i], varmapbw, consmap, NULL,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      SCIPconsIsPropagated(cons), TRUE, FALSE, SCIPconsIsDynamic(cons), 
@@ -600,6 +618,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));  
          
          /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
+         /* @todo handle infeasible pointer? can it be set to TRUE? */
          SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
          if( tightened ) 
             nbdchgs++;
@@ -613,7 +632,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    n2startinfers = 0;
 
    /* install start values for inference branching */
-   if( sepadata->applyinfervals && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
+   /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
+   if( sepadata->applyinfervals && SCIPgetDepth(scip) == 0 && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
    {
       for( i = 0; i < nvars; ++i )
       {

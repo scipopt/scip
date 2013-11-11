@@ -653,7 +653,7 @@ SCIP_RETCODE correctPresoldata(
 		  return SCIP_NOMEMORY;
 
 	       /* correct hashtable, remove old elements */
-	       SCIPhashtableClear(presoldata->hashdatatable);
+	       SCIPhashtableRemoveAll(presoldata->hashdatatable);
 
 	       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas, newsize) );
 	       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas, newsize) );
@@ -1223,9 +1223,9 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
       assert(presoldata->logicorhashtable != NULL);
 
       /* clear old hashtable entries */
-      SCIPhashtableClear(presoldata->hashdatatable);
-      SCIPhashtableClear(presoldata->setppchashtable);
-      SCIPhashtableClear(presoldata->logicorhashtable);
+      SCIPhashtableRemoveAll(presoldata->hashdatatable);
+      SCIPhashtableRemoveAll(presoldata->setppchashtable);
+      SCIPhashtableRemoveAll(presoldata->logicorhashtable);
    }
 
    presoldata->nusefullogicor = 0;

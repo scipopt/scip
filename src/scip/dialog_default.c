@@ -593,6 +593,50 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the cliquegraph command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph)
+{  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+   SCIP_Bool endoffile;
+   char* filename;
+
+   assert(nextdialog != NULL);
+
+   *nextdialog = NULL;
+
+   if( !SCIPisTransformed(scip) )
+   {
+      SCIPdialogMessage(scip, NULL, "cannot call method before problem was transformed\n");
+      SCIPdialoghdlrClearBuffer(dialoghdlr);
+   }
+   else
+   {
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
+
+      if( filename[0] != '\0' )
+      {
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+         retcode = SCIPwriteCliqueGraph(scip, filename, TRUE, FALSE);
+         if( retcode == SCIP_FILECREATEERROR )
+            SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display branching command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
 {  /*lint --e{715}*/
@@ -3437,6 +3481,19 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* write cliquegraph */
+   if( !SCIPdialogHasEntry(submenu, "cliquegraph") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecCliquegraph, NULL, NULL,
+            "cliquegraph",
+            "write graph of cliques and implications of binary variables to GML file (better call after presolving)",
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4024,7 +4081,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecSetLimitsObjective, NULL, NULL,
-            "objective", "set limit on objective value", FALSE, NULL) );
+            "objective", "set limit on objective function, such that only solutions better than this limit are accepted", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 

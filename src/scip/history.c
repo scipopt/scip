@@ -26,6 +26,7 @@
 #include "scip/set.h"
 #include "scip/history.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_history.h"
 
 #ifndef NDEBUG
 #include "scip/struct_history.h"
@@ -297,6 +298,8 @@ void SCIPvaluehistoryScaleVSIDS(
  * simple functions implemented as defines
  */
 
+#ifndef NDEBUG
+
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
@@ -337,11 +340,15 @@ SCIP_Real* SCIPvaluehistoryGetValues(
    return valuehistory->values;
 }
 
+#endif
+
 /**@} */
 
 /*
  * simple functions implemented as defines
  */
+
+#ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -626,3 +633,5 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 
    return history->nbranchings[dir] > 0 ? (SCIP_Real)history->branchdepthsum[dir]/(SCIP_Real)history->nbranchings[dir] : 1.0;
 }
+
+#endif

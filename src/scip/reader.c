@@ -269,10 +269,10 @@ SCIP_RETCODE SCIPreaderWrite(
       {
          SCIP_CONSHDLR** conshdlrs;
          int nconshdlrs;
-         
+
          conshdlrs = set->conshdlrs;
          nconshdlrs = set->nconshdlrs;
-         
+
          /* collect number of constraints which have to be enforced; these are the constraints which currency (locally)
           * enabled; these also includes the local constraints
           */
@@ -285,6 +285,9 @@ SCIP_RETCODE SCIPreaderWrite(
             else
                nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
          }
+
+         SCIPdebugMessage("Writing %d constraints.\n", nconss);
+
 
          SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
 
@@ -308,6 +311,8 @@ SCIP_RETCODE SCIPreaderWrite(
                nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
             }
 
+            SCIPdebugMessage("Conshdlr <%s> has %d constraints to write from all in all %d constraints.\n", SCIPconshdlrGetName(conshdlrs[i]), nconshdlrconss, SCIPconshdlrGetNConss(conshdlrs[i]));
+
             for( c = 0; c < nconshdlrconss; ++c )
             {
                conss[nconss] = conshdlrconss[c];
@@ -320,7 +325,7 @@ SCIP_RETCODE SCIPreaderWrite(
          conss = prob->conss;
          nconss = prob->nconss;
       }
-      
+
       if( genericnames )
       {
          SCIP_VAR* var;
@@ -346,7 +351,7 @@ SCIP_RETCODE SCIPreaderWrite(
             varnames[i] = SCIPvarGetName(var);
             
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
-            (void) SCIPsnprintf(name, size, "x%d", i);
+            (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
          }  
 

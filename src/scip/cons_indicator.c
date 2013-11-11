@@ -3129,7 +3129,8 @@ SCIP_RETCODE createVarUbs(
 	    /* mark linear constraint to be upgrade-able */
 	    if ( SCIPconsIsActive(consdata->lincons) )
 	    {
-	       SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+               assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
 	    }
 
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
@@ -3195,7 +3196,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete indicator constraint (leave linear constraint) */
@@ -3214,7 +3216,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete indicator constraint */
@@ -3248,7 +3251,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete constraint */
@@ -3316,7 +3320,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be upgrade-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete constraint */
@@ -3447,7 +3452,8 @@ SCIP_RETCODE propIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
       {
-	 SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -3604,7 +3610,8 @@ SCIP_RETCODE propIndicator(
 	 /* mark linear constraint to be update-able */
 	 if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
 	 {
-	    SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+            SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+            assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
 	 }
 
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -5232,7 +5239,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    assert( conshdlrdata != NULL );
 
    /* copy solution if it makes sense (will send solution to trysol heuristic in any case (see below) */
-   if ( SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trysolutions && conshdlrdata->heurtrysol != NULL )
+   if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trysolutions && conshdlrdata->heurtrysol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
       assert( trysol != NULL );
@@ -6382,7 +6389,8 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    }
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-   SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
+   SCIPconsAddUpgradeLocks(lincons, 1);
+   assert(SCIPconsGetNUpgradeLocks(lincons) > 0);
 
    /* add slack variable */
    if ( conshdlrdata->scaleslackvar )
@@ -6565,7 +6573,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    }
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-   SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
+   SCIPconsAddUpgradeLocks(lincons, 1);
+   assert(SCIPconsGetNUpgradeLocks(lincons) > 0);
 
    /* check whether we should generate a bilinear constraint instead of an indicator constraint */
    if ( conshdlrdata->generatebilinear )
@@ -7022,8 +7031,6 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       }
       else
       {
-         SCIP_Real obj;
-
          assert( SCIPisFeasGE(scip, val * ((SCIP_Real) sigma), 0.0) );
 
          /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
@@ -7034,37 +7041,43 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             *changed = TRUE;
          }
 
-         obj = varGetObjDelta(binvar);
-
-         /* check objective for possibly setting binary variable */
-         if ( obj <= 0 )
+         /* check whether binary variable is fixed or its negated variable is fixed */
+         if ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_FIXED &&
+            ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(SCIPvarGetNegationVar(binvar)) != SCIP_VARSTATUS_FIXED ) )
          {
-            /* setting variable to 1 does not increase objective - check whether we can set it to 1 */
-            if ( SCIPvarGetLbLocal(binvar) < 0.5 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+            SCIP_Real obj;
+            obj = varGetObjDelta(binvar);
+
+            /* check objective for possibly setting binary variable */
+            if ( obj <= 0 )
             {
-               /* check whether variable only occurs in the current constraint */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               /* setting variable to 1 does not increase objective - check whether we can set it to 1 */
+               if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
                {
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
-                  *changed = TRUE;
+                  /* check whether variable only occurs in the current constraint */
+                  if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+                  {
+                     SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+                     *changed = TRUE;
+                     /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
+                     obj = -1.0;
+                  }
+               }
+               else
+               {
                   /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
                   obj = -1.0;
                }
             }
-            else
+            if ( obj >= 0 )
             {
-               /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
-               obj = -1.0;
-            }
-         }
-         if ( obj >= 0 )
-         {
-            /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
-             * note: binary variables are only locked up */
-            if ( SCIPvarGetNLocksDown(binvar) <= 0 && SCIPvarGetUbLocal(binvar) > 0.5 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
-            {
-               SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
-               *changed = TRUE;
+               /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
+                * note: binary variables are only locked up */
+               if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+               {
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+                  *changed = TRUE;
+               }
             }
          }
       }

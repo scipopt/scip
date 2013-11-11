@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -133,7 +133,7 @@ void collectNonBinaryVBoundData(
 
          /* do not use inactive variables */
          /* @todo if implvars[x] is aggregated, we could transform the variable into the active representation */
-         if( idx < 0 )
+         if( idx < 0 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(implvars[w]), SCIPvarGetUbGlobal(implvars[w])) )
             continue;
 
          /* the upper bound of implvars[w] is bounding upper bound of var */
@@ -331,7 +331,7 @@ void collectNonBinaryVBoundData(
 
          /* do not use inactive variables */
          /* @todo if implvars[x] is aggregated, we could transform the variable into the active representation */
-         if( idx < 0 )
+         if( idx < 0 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(implvars[w]), SCIPvarGetUbGlobal(implvars[w])) )
             continue;
 
          /* the lower bound of implvars[w] is bounding lower bound of var */
@@ -578,7 +578,7 @@ void collectNonBinaryImplicationData(
 
          /* do not use inactive variables */
          /* @todo if implvars[x] is aggregated, we could transform the variable into the active representation */
-         if( idx < 0 )
+         if( idx < 0 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(implvars[w]), SCIPvarGetUbGlobal(implvars[w])) )
             continue;
 
          if( implboundtypes[w] == SCIP_BOUNDTYPE_UPPER )
@@ -1003,6 +1003,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    int w;
    int v;
 
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
@@ -1018,7 +1021,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    assert(scip->transprob != NULL);
    nprobvars = SCIPprobGetNVars(scip->transprob);
 
-   /* @todo need global memory because allocating and clearing can be expensive in presolving */
+   /* @todo need global memory because allocating and clearing can be expensive in presolving, i.e. calloc(memset) is
+    *       too expensive, might also consider other data structures like hashmaps for issetvar and counts
+    */
    /* allocate temporary memory */
    SCIP_ALLOC( BMSallocClearMemoryArray(&issetvar, 2*nprobvars) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&counts, 2*nprobvars) );
@@ -1246,7 +1251,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPvarGetLbGlobal(probvar) < 0.5 )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar, 1.0,
+                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar, 1.0,
                         SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   assert(SCIPvarGetLbGlobal(probvar) > 0.5 || scip->tree->npendingbdchgs > 0);
@@ -1264,7 +1269,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPisLT(scip, SCIPvarGetLbGlobal(probvar), newbounds[v]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
+                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
                         newbounds[v], SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   ++(*nglobalred);
@@ -1283,7 +1288,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPvarGetUbGlobal(probvar) > 0.5 )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar, 0.0,
+                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar, 0.0,
                         SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   assert(SCIPvarGetUbGlobal(probvar) < 0.5 || scip->tree->npendingbdchgs > 0);
@@ -1303,7 +1308,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPisGT(scip, SCIPvarGetUbGlobal(probvar), newbounds[idx]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
+                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
                         newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   ++(*nglobalred);

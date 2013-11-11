@@ -3,6 +3,7 @@
 # For a project mostly in C, the following would be a good set of
 # exclude patterns (uncomment them if you want to use them):
 *.[oa]
+*.pyc
 *~
 \#*
 bin/
@@ -20,6 +21,7 @@ doc/html/
 doc/html_devel/
 doc/doxygen
 doc/scip.tag
+doc/*.tmp
 .cproject
 .project
 .settings/
@@ -34,3 +36,5 @@ interfaces/ampl/lint
 examples/CallableLibrary/lint
 unittests/check/results
 unittests/check/locks
+unittests/check/evalcheck.sh
+unittests/check/getlastprob.awk

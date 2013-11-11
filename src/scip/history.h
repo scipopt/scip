@@ -30,7 +30,6 @@
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_history.h"
-#include "scip/pub_history.h"
 
 #ifdef NDEBUG
 #include "scip/struct_history.h"

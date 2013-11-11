@@ -69,6 +69,18 @@ void SCIPgmlWriteNode(
    const char*           bordercolor         /**< color of the node's border, or NULL */
    );
 
+/** writes a node section including weight to the given graph file */
+EXTERN
+void SCIPgmlWriteNodeWeight(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor,        /**< color of the node's border, or NULL */
+   SCIP_Real             weight              /**< weight of node */
+   );
+
 /** writes an edge section to the given graph file */
 EXTERN
 void SCIPgmlWriteEdge(
@@ -351,20 +363,31 @@ void SCIPhashtableFree(
  *
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ *
+ *  @deprecated Please use SCIPhashtableRemoveAll()
  */
 EXTERN
+SCIP_DEPRECATED
 void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible) */
+/** inserts element in hash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
 EXTERN
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *        element to the hash table, due to dynamic resizing.
+ */
 EXTERN
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -379,11 +402,16 @@ void* SCIPhashtableRetrieve(
    );
 
 /** retrieve element with key from hash table, returns NULL if not existing
- * can be used to retrieve all entries with the same key (one-by-one) */
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ */
 EXTERN
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
@@ -399,6 +427,28 @@ EXTERN
 SCIP_RETCODE SCIPhashtableRemove(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to remove from the table */
+   );
+
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+EXTERN
+void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** returns number of hash table elements */
+EXTERN
+SCIP_Longint SCIPhashtableGetNElemenets(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** returns the load of the given hash table in percentage */
+EXTERN
+SCIP_Real SCIPhashtableGetLoad(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** prints statistics about hash table usage */
@@ -1388,6 +1438,17 @@ void SCIPsortRealPtrPtrInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortRealLongRealInt(
@@ -1874,6 +1935,17 @@ void SCIPsortDownRealPtrPtrInt(
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be sorted */
    int                   len                 /**< length of arrays */
    );
 
@@ -2445,6 +2517,23 @@ void SCIPsortedvecInsertRealPtrPtrInt(
    void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
    int                   intval,             /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
+   int*                  intarray1,          /**< int array where an element is to be inserted */
+   int*                  intarray2,          /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int                   intval1,            /**< additional value of new element */
+   int                   intval2,            /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -3154,6 +3243,23 @@ void SCIPsortedvecInsertDownRealPtrPtrInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
+   int*                  intarray1,          /**< int array where an element is to be inserted */
+   int*                  intarray2,          /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int                   intval1,            /**< additional value of new element */
+   int                   intval2,            /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownRealLongRealInt(
@@ -3769,6 +3875,18 @@ void SCIPsortedvecDelPosRealPtrPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray1,          /**< int array where an element is to be deleted */
+   int*                  intarray2,          /**< int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from four joint arrays of Reals/Long/Reals/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecDelPosRealLongRealInt(
@@ -4307,6 +4425,18 @@ void SCIPsortedvecDelPosDownRealPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
    void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
    int*                  intarray,           /**< int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray1,          /**< int array where an element is to be deleted */
+   int*                  intarray2,          /**< int array where an element is to be deleted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );

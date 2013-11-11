@@ -182,7 +182,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyDisp is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjDisp*        objdisp,            /**< display column object */
@@ -190,14 +190,14 @@ SCIP_RETCODE SCIPincludeObjDisp(
    );
 
 /** returns the display column object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjDisp* SCIPfindObjDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of display column */
    );
 
 /** returns the display column object for the given display column */
-extern
+EXTERN
 scip::ObjDisp* SCIPgetObjDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISP*            disp                /**< display column */

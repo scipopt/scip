@@ -74,6 +74,7 @@
 #define DEFAULT_SORTROOTNEIGHBORS  TRUE      /**< sort neighbors of the root in the level graph */
 #define DEFAULT_MAXCUTSLEVEL         50      /**< maximal number of cuts produced per level */
 #define DEFAULT_MAXUNSUCESSFULL       3      /**< maximal number of unsuccessful calls at each node */
+#define DEFAULT_CUTTHRESHOLD         -1      /**< maximal number of other cuts s.t. separation is applied (-1 for direct call) */
 
 
 /*
@@ -96,9 +97,9 @@
 struct levelGraph
 {
    unsigned int          nnodes;             /**< number of nodes */
-   unsigned int          nedges;             /**< number of arcs */
-   unsigned int          n;                  /**< maximal number of nodes of the level graph */
-   unsigned int          m;                  /**< maximal number of arcs of the level graph */
+   unsigned int          narcs;              /**< number of arcs */
+   unsigned int          maxnodes;           /**< maximal number of nodes of the level graph */
+   unsigned int          maxarcs;            /**< maximal number of arcs of the level graph */
    unsigned int          nlevels;            /**< number of levels completely inserted so far */
    unsigned int*         level;              /**< level number for each node */
    unsigned int          lastF;              /**< last storage element index in targetForward, weightForward - forward direction */
@@ -183,6 +184,7 @@ struct SCIP_SepaData
    int                   maxnlevels;         /**< maximal number of levels in level graph */
    int                   maxunsucessfull;    /**< maximal number of unsuccessful calls at each node */
    int                   nunsucessfull;      /**< number of unsuccessful calls at current node */
+   int                   cutthreshold;       /**< maximal number of other cuts s.t. separation is applied (-1 for direct call) */
    SCIP_Longint          lastnode;           /**< number of last node */
 };
 
@@ -872,8 +874,8 @@ SCIP_RETCODE liftOddCycleCut(
  * methods for both techniques
  */
 
-/* add the inequality corresponding to the given odd cycle to the LP (if violated)
- * after lifting it (if requested by user flag)
+/** add the inequality corresponding to the given odd cycle to the LP (if violated)
+ *  after lifting it (if requested by user flag)
  */
 static
 SCIP_RETCODE generateOddCycleCut(
@@ -918,7 +920,7 @@ SCIP_RETCODE generateOddCycleCut(
 
 #ifdef SCIP_OUTPUT
    /* debug method that prints out all found cycles */
-   printCycle(vars,pred,nbinvars,startnode);
+   printCycle(vars, pred, nbinvars, startnode);
 #endif
 
    /* cycle contains only one node */
@@ -1028,7 +1030,7 @@ SCIP_RETCODE generateOddCycleCut(
    }
 
    /* modify right hand side corresponding to number of added negated variables */
-   SCIP_CALL( SCIPchgRowRhs(scip, cut, SCIProwGetRhs(cut)-negatedcount) );
+   SCIP_CALL( SCIPchgRowRhs(scip, cut, SCIProwGetRhs(cut) - negatedcount) );
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
    /* set cut rank: for oddcycle cuts we always set to 1 */
@@ -1052,6 +1054,10 @@ SCIP_RETCODE generateOddCycleCut(
          if( *result == SCIP_DIDNOTFIND )
             *result = SCIP_SEPARATED;
       }
+
+#ifdef SCIP_OUTPUT
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+#endif
 
       assert(*result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM);
    }
@@ -1262,15 +1268,15 @@ SCIP_RETCODE checkArraySizesHeur(
 
    SCIPdebugMessage("reallocating...\n");
 
-   additional = MIN(graph->m + graph->n - *size, *size) * ((int) sizeof(**weightArray));
+   additional = MIN(graph->maxarcs + graph->maxnodes - *size, *size) * ((int) sizeof(**weightArray));
    if( targetArray != NULL )
    {
-      additional += MIN(graph->m + graph->n - *size, *size) * ((int) sizeof(**targetArray));
+      additional += MIN(graph->maxarcs + graph->maxnodes - *size, *size) * ((int) sizeof(**targetArray));
    }
    else
    {
-      additional += MIN(graph->m + graph->n - *size, *size) * ((int) sizeof(**sourceAdjArray));
-      additional += MIN(graph->m + graph->n - *size, *size) * ((int) sizeof(**targetAdjArray));
+      additional += MIN(graph->maxarcs + graph->maxnodes - *size, *size) * ((int) sizeof(**sourceAdjArray));
+      additional += MIN(graph->maxarcs + graph->maxnodes - *size, *size) * ((int) sizeof(**targetAdjArray));
    }
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
@@ -1291,15 +1297,15 @@ SCIP_RETCODE checkArraySizesHeur(
 
    *size = 2 * (*size);
 
-   SCIP_CALL( SCIPreallocBufferArray(scip, weightArray, (int) MIN(graph->m + graph->n, *size)) );
+   SCIP_CALL( SCIPreallocBufferArray(scip, weightArray, (int) MIN(graph->maxarcs + graph->maxnodes, *size)) );
    if( targetArray != NULL )
    {
-      SCIP_CALL( SCIPreallocBufferArray(scip, targetArray, (int) MIN(graph->m + graph->n, *size)) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, targetArray, (int) MIN(graph->maxarcs + graph->maxnodes, *size)) );
    }
    else
    {
-      SCIP_CALL( SCIPreallocBufferArray(scip, sourceAdjArray, (int) MIN(graph->m, *size)) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, targetAdjArray, (int) MIN(graph->m, *size)) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, sourceAdjArray, (int) MIN(graph->maxarcs, *size)) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, targetAdjArray, (int) MIN(graph->maxarcs, *size)) );
    }
 
    /* if memorylimit is exceeded free all data and exit */
@@ -1341,7 +1347,7 @@ SCIP_RETCODE addArc(
       graph->targetForward[graph->lastF] = (int) v;
       graph->weightForward[graph->lastF] = weight;
       ++(graph->lastF);
-      ++(graph->nedges);
+      ++(graph->narcs);
       if( graph->lastF == graph->sizeForward )
       {
          SCIP_CALL( checkArraySizesHeur(scip, graph, &(graph->sizeForward), &(graph->targetForward),
@@ -1360,7 +1366,7 @@ SCIP_RETCODE addArc(
          graph->targetBackward[graph->lastB] = (int) v;
          graph->weightBackward[graph->lastB] = weight;
          ++(graph->lastB);
-         ++(graph->nedges);
+         ++(graph->narcs);
 
          if( graph->lastB == graph->sizeBackward )
          {
@@ -1381,7 +1387,7 @@ SCIP_RETCODE addArc(
             graph->targetAdj[graph->levelAdj[level+1]+*nAdj] = v;
             graph->weightAdj[graph->levelAdj[level+1]+*nAdj] = weight;
             ++(*nAdj);
-            ++(graph->nedges);
+            ++(graph->narcs);
 
             if( graph->levelAdj[level+1]+*nAdj == graph->sizeAdj )
             {
@@ -1438,9 +1444,9 @@ SCIP_RETCODE addNextLevelBinImpls(
    assert(nAdj != NULL);
    assert(success != NULL);
 
-   assert(u < (graph->n));
+   assert(u < graph->maxnodes);
 
-   nbinvars = (graph->n)/2;
+   nbinvars = (graph->maxnodes)/2;
 
    /* current node signifies a problem variable */
    if( u < nbinvars )
@@ -1455,7 +1461,7 @@ SCIP_RETCODE addNextLevelBinImpls(
       varsidx = u - nbinvars;
    }
    assert(varsidx < nbinvars);
-   assert(!SCIPisFeasIntegral(scip, vals[varsidx]));
+   assert(! SCIPisFeasIntegral(scip, vals[varsidx]) );
 
    /* get binary implications of the current variable */
    nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[varsidx], varfixing);
@@ -1472,7 +1478,7 @@ SCIP_RETCODE addNextLevelBinImpls(
       unsigned int weight;
 
       assert( implvars != NULL && impltypes != NULL );
-      assert(SCIPvarGetType(implvars[j]) == SCIP_VARTYPE_BINARY);
+      assert( SCIPvarIsBinary(implvars[j]) );
 
       k = sepadata->mapping[SCIPvarGetProbindex(implvars[j])];
       assert(k < nbinvars);
@@ -1490,7 +1496,7 @@ SCIP_RETCODE addNextLevelBinImpls(
          assert(impltypes[j] == SCIP_BOUNDTYPE_UPPER);
          v = k;
       }
-      assert(v < (graph->n));
+      assert(v < graph->maxnodes);
 
       /* if variable is a new node, it will be assigned to the next level, but if the level contains
        * more nodes than allowed (defined by percent per level plus offset), we skip the rest of the
@@ -1511,40 +1517,19 @@ SCIP_RETCODE addNextLevelBinImpls(
       {
          int tmp;
 
+         /* the computation of 1.0 - vals[v] if v is negated is ensured by the fact that v > nbinvars in this case */
          /* set weight of arc (x,y) to 1 - x* -y* */
          if( varfixing )
          {
-            /* x = 1 -> y <= 0 */
-            if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-            {
-               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[k]));
-               assert( tmp >= 0 );
-               weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-            }
-            /* x = 1 -> y >= 1 <-> neg(y) <= 0 */
-            else
-            {
-               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - (1-vals[k])));
-               assert( tmp >= 0 );
-               weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-            }
+            /* x = 1 -> y <= 0  or y >= 1, i.e., x + y <= 1  or  x + (1-y) <= 1 */
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[v]));
+            weight = (unsigned int) MAX(tmp, sepadata->maxreference);
          }
          else
          {
-            /* x = 0 <-> neg(x) = 1 -> y <= 0 */
-            if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-            {
-               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1 - vals[varsidx]) - vals[k]));
-               assert( tmp >= 0 );
-               weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-            }
-            /* x = 0 <-> neg(x) = 1 -> y >= 1 <-> neg(y) <= 0 */
-            else
-            {
-               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1 - vals[varsidx]) - (1-vals[k])));
-               assert( tmp >= 0 );
-               weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-            }
+            /* x = 0 <-> neg(x) = 1 -> y <= 0  or  y >= 1, i.e., (1-x) + y <= 1  or  (1-x) + (1-y) <= 1 */
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - vals[v]));
+            weight = (unsigned int) MAX(tmp, sepadata->maxreference);
          }
 
          /* add arc from current to neighbor node */
@@ -1605,9 +1590,9 @@ SCIP_RETCODE addNextLevelCliques(
    assert(nAdj != NULL);
    assert(success != NULL);
 
-   assert(u < (graph->n));
+   assert(u < graph->maxnodes);
 
-   nbinvars = (graph->n)/2;
+   nbinvars = (graph->maxnodes)/2;
 
    /* current node signifies a problem variable */
    if( u < nbinvars )
@@ -1662,7 +1647,7 @@ SCIP_RETCODE addNextLevelCliques(
          /* x = 1 -> y <= 0 */
          else
             v = l;
-         assert(v < (graph->n));
+         assert(v < graph->maxnodes);
 
          /* if variable is a new node, it will be assigned to the next level,
           * but if the level contains more nodes than allowed
@@ -1684,40 +1669,19 @@ SCIP_RETCODE addNextLevelCliques(
          {
             int tmp;
 
+            /* the computation of 1.0 - vals[v] if v is negated is ensured by the fact that v > nbinvars in this case */
             /* set weight of arc (x,y) to 1 - x* -y* */
             if( varfixing )
             {
-               /* x = 1 -> y <= 0 */
-               if( cliquevals[k] )
-               {
-                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - vals[l]));
-                  assert( tmp >= 0 );
-                  weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-               }
-               /* x = 1 -> y >= 1 <-> neg(y) <= 0 */
-               else
-               {
-                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - (1-vals[l])));
-                  assert( tmp >= 0 );
-                  weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-               }
+               /* x = 1 -> y <= 0  or  y >= 1 */
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - vals[v]));
+               weight = (unsigned int) MAX(tmp, sepadata->maxreference);
             }
             else
             {
-               /* x = 0 <-> neg(x) = 1 -> y <= 0 */
-               if( !cliquevals[k] )
-               {
-                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - vals[l]));
-                  assert( tmp >= 0 );
-                  weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-               }
-               /* x = 0 <-> neg(x) = 1 -> y >= 1 <-> neg(y) <= 0 */
-               else
-               {
-                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1-vals[l])));
-                  assert( tmp >= 0 );
-                  weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-               }
+               /* x = 0 <-> neg(x) = 1 -> y <= 0  or  y >= 1 */
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - vals[v]));
+               weight = (unsigned int) MAX(tmp, sepadata->maxreference);
             }
 
             /* add arc from current to neighbor node */
@@ -1769,7 +1733,6 @@ SCIP_RETCODE insertSortedRootNeighbors(
    unsigned int nneighbors;
    SCIP_Bool* isneighbor;
    int* neighbors;
-   SCIP_Real* neighvals;
    SCIP_Real* sortvals;
 
    SCIP_Bool varfixing;
@@ -1792,10 +1755,10 @@ SCIP_RETCODE insertSortedRootNeighbors(
    unsigned int v;
 
    /* allocate flag array for neighbor detection */
-   SCIP_CALL( SCIPallocBufferArray(scip, &isneighbor, (int) graph->n) );
-   BMSclearMemoryArray(isneighbor, graph->n);
+   SCIP_CALL( SCIPallocBufferArray(scip, &isneighbor, (int) graph->maxnodes) );
+   BMSclearMemoryArray(isneighbor, graph->maxnodes);
 
-   nbinvars = (graph->n)/2;
+   nbinvars = (graph->maxnodes)/2;
 
    assert(ncurlevel == 1);
    root = u;
@@ -1813,7 +1776,8 @@ SCIP_RETCODE insertSortedRootNeighbors(
       varsidx = root - nbinvars;
    }
    assert(varsidx < nbinvars);
-   assert(!SCIPisFeasIntegral(scip, vals[varsidx]));
+   assert(! SCIPisFeasIntegral(scip, vals[varsidx]));
+   nneighbors = 0;
 
    /* count implications of the root */
    nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[varsidx], varfixing);
@@ -1834,28 +1798,23 @@ SCIP_RETCODE insertSortedRootNeighbors(
          if( SCIPisFeasIntegral(scip, vals[jidx]))
             continue;
 
-         if( varfixing == TRUE)
+         /* implication x + y <= 1  or  (1-x) + y <= 1 */
+         if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
-            /* implication x + y <= 1 */
-            if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-               isneighbor[jidx] = TRUE;
-            /* implication x + neg(y) <= 1 */
-            else
+            if ( ! isneighbor[jidx] )
             {
-               assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-               isneighbor[jidx+nbinvars] = TRUE;
+               ++nneighbors;
+               isneighbor[jidx] = TRUE;
             }
          }
+         /* implication x + (1-y) <= 1  or  (1-x) + (1-y) <= 1 */
          else
          {
-            /* implication neg(x) + neg(y) <= 1 */
-            if( impltypes[j] == SCIP_BOUNDTYPE_LOWER )
-               isneighbor[jidx+nbinvars] = TRUE;
-            /* implication neg(x) + y <= 1 */
-            else
+            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
+            if ( ! isneighbor[jidx + nbinvars] )
             {
-               assert(impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-               isneighbor[jidx] = TRUE;
+               ++nneighbors;
+               isneighbor[jidx + nbinvars] = TRUE;
             }
          }
       }
@@ -1886,58 +1845,56 @@ SCIP_RETCODE insertSortedRootNeighbors(
             kidx = sepadata->mapping[SCIPvarGetProbindex(cliquevars[k])];
             assert(kidx < nbinvars);
 
-            /* skip integral neighbors */
-            if( SCIPisFeasIntegral(scip, vals[kidx]))
-               continue;
-
             /* skip root */
             if( kidx == varsidx )
                continue;
 
+            /* skip integral neighbors */
+            if( SCIPisFeasIntegral(scip, vals[kidx]))
+               continue;
+
             if( cliquevals[k] == TRUE )
-               isneighbor[kidx] = TRUE;
+            {
+               if ( ! isneighbor[kidx] )
+               {
+                  ++nneighbors;
+                  isneighbor[kidx] = TRUE;
+               }
+            }
             else
             {
                assert(cliquevals[k] == FALSE);
-               isneighbor[kidx+nbinvars] = TRUE;
+               if ( ! isneighbor[kidx + nbinvars] )
+               {
+                  ++nneighbors;
+                  isneighbor[kidx+nbinvars] = TRUE;
+               }
             }
          }
       }
    }
 
    /* root cannot be part of the next level */
-   assert(!isneighbor[root]);
-
-   nneighbors = 0;
-   /* count root neighbors */
-   for( j = 0; j < graph->n; ++j )
-   {
-      if( isneighbor[j] )
-         ++nneighbors;
-   }
+   assert(! isneighbor[root]);
 
    /* allocate memory for sorting of root neighbors */
    SCIP_CALL( SCIPallocBufferArray(scip, &neighbors, (int) nneighbors) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighvals, (int) nneighbors) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortvals, (int) nneighbors) );
 
    k = 0;
-   for( j = 0; j < graph->n; ++j )
+   for( j = 0; j < graph->maxnodes; ++j )
    {
       if( isneighbor[j] )
       {
          assert(j != root);
+         assert(!SCIPisFeasIntegral(scip, vals[j]));
+
          neighbors[k] = (int) j;
-         neighvals[k] = vals[j];
-         assert(!SCIPisFeasIntegral(scip, neighvals[k]));
+         sortvals[k] = MIN(1.0 - vals[j], vals[j]);
          ++k;
       }
    }
    assert(k == nneighbors);
-
-   /* calculate fractionality of neighbors */
-   for( j = 0; j < nneighbors; ++j )
-      sortvals[j] = MIN(1-neighvals[j],neighvals[j]);
 
    /* sort neighbors by fractionality */
    SCIPsortDownRealInt(sortvals, neighbors, (int) nneighbors);
@@ -1951,36 +1908,36 @@ SCIP_RETCODE insertSortedRootNeighbors(
       int tmp;
 
       v = (unsigned int) neighbors[j];
+      assert( v < 2 * nbinvars );
 
       /* only the root is contained in the levelgraph */
-      assert(!inlevelgraph[v] || v == root+nbinvars || v == root-nbinvars);
+      assert(! inlevelgraph[v] || v == root+nbinvars || v == root-nbinvars);
 
       /* insert neighbor into levelgraph */
       ++(graph->nnodes);
-      graph->level[v] = level+1;
+      graph->level[v] = level + 1;
       inlevelgraph[v] = TRUE;
       newlevel[*nnewlevel] = v;
       ++(*nnewlevel);
 
-      assert(!SCIPisFeasIntegral(scip, vals[varsidx]));
-      assert(!SCIPisFeasIntegral(scip, neighvals[j]));
+      assert(! SCIPisFeasIntegral(scip, vals[varsidx]));
+      assert(! SCIPisFeasIntegral(scip, vals[v]));
 
       graph->targetForward[graph->lastF] = (int) v;
+      /* the computation of 1.0 - vals[v] if v is negated is ensured by the fact that v > nbinvars in this case */
       if( varfixing )
       {
-         tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - neighvals[j]));
-         assert( tmp >= 0 );
+         tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[v]));
          graph->weightForward[graph->lastF] = (unsigned int) MAX(tmp, sepadata->maxreference);
       }
       else
       {
-         assert(varfixing == FALSE);
-         tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0-vals[varsidx]) - neighvals[j]));
-         assert( tmp >= 0 );
+         assert( ! varfixing );
+         tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - vals[v]));
          graph->weightForward[graph->lastF] = (unsigned int) MAX(tmp, sepadata->maxreference);
       }
       ++(graph->lastF);
-      ++(graph->nedges);
+      ++(graph->narcs);
       if( graph->lastF == graph->sizeForward )
       {
          SCIP_CALL( checkArraySizesHeur(scip, graph, &(graph->sizeForward), &(graph->targetForward),
@@ -1992,7 +1949,6 @@ SCIP_RETCODE insertSortedRootNeighbors(
    }
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &neighvals);
    SCIPfreeBufferArray(scip, &neighbors);
    SCIPfreeBufferArray(scip, &isneighbor);
 
@@ -2034,7 +1990,7 @@ SCIP_RETCODE findShortestPathToRoot(
    assert(parentTree != NULL);
 
    /* initialize distances */
-   for( i = 0; i < graph->n; ++i )
+   for( i = 0; i < graph->maxnodes; ++i )
    {
       distance[i] = 2*(graph->nnodes)*scale;
       parentTree[i] = -1;
@@ -2217,14 +2173,14 @@ findUnblockedShortestPathToRoot(
    assert(inQueue != NULL);
 
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, (int) graph->n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &transform, (int) graph->n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, (int) graph->maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transform, (int) graph->maxnodes) );
 
    assert(parentTree != NULL);
    assert(transform != NULL);
 
    /* initialize distances */
-   for( i = 0; i < graph->n; ++i )
+   for( i = 0; i < graph->maxnodes; ++i )
    {
       distance[i] = 2*(graph->nnodes)*scale;
       parentTree[i] = -1;
@@ -2347,8 +2303,8 @@ SCIP_RETCODE createNextLevel(
 
    *nnewlevel = 0;
    nAdj = 0;
-   assert((graph->n) % 2 == 0);
-   nbinvars = (graph->n)/2;
+   assert(graph->maxnodes % 2 == 0);
+   nbinvars = (graph->maxnodes)/2;
 
    /* for every node in current level add its implications and assign its neighbors to the next
     * level, if neighbor is not already existing in the level graph
@@ -2360,7 +2316,7 @@ SCIP_RETCODE createNextLevel(
 
       /* get node */
       u = curlevel[i];
-      assert(u < (graph->n));
+      assert(u < graph->maxnodes);
       assert(graph->level[u] == level);
       assert(graph->beginForward[u] < 0);
       assert(graph->beginBackward[u] < 0);
@@ -2372,7 +2328,7 @@ SCIP_RETCODE createNextLevel(
          negated = u + nbinvars;
       else
          negated = u - nbinvars;
-      assert(negated < (graph->n));
+      assert(negated < graph->maxnodes);
       assert(negated < nbinvars || u < nbinvars);
       assert(negated >= nbinvars || u >= nbinvars);
 
@@ -2529,39 +2485,56 @@ SCIP_RETCODE separateHeur(
    unsigned int i;
    unsigned int j;
    unsigned int k;
+
    int nscipbinvars;
+   int nscipintvars;
+   int nscipimplvars;
+   int nintegral;
+   int l;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(result != NULL);
 
-   /* get variable data */
-   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, &nscipintvars, &nscipimplvars, NULL) );
+   assert(nscipbinvars >= 0);
+   assert(nscipintvars >= 0);
+   assert(nscipimplvars >= 0);
 
-   assert(scipvars != NULL || nscipbinvars == 0);
+   nintegral = nscipbinvars + nscipintvars + nscipimplvars;
+   assert(scipvars != NULL || nintegral == 0);
 
-   if( nscipbinvars == 0 )
-      return SCIP_OKAY;
+   /* collect binary variables, including implicit binary */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
+   for (l = 0; l < nscipbinvars; ++l)
+      vars[l] = scipvars[l]; /*lint !e613*/
 
    nbinvars = (unsigned int) nscipbinvars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
-
-   vars = NULL;
-   /* duplicate variable data array for sorting (if requested) */
-   if( sepadata->sortswitch != UNSORTED )
+   for (l = nscipbinvars; l < nintegral; ++l)
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, scipvars, nscipbinvars) );
+      assert( SCIPvarGetType(scipvars[l]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      if ( SCIPvarIsBinary(scipvars[l]) ) /*lint !e613*/
+         vars[nbinvars++] = scipvars[l]; /*lint !e613*/
    }
 
+   if( nbinvars == 0 )
+   {
+      SCIPfreeBufferArray(scip, &vars);
+      return SCIP_OKAY;
+   }
+
+   /* initialize flag array to avoid multiple cuts per variable, if requested by user-flag */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
+
+   /* prepare values */
+   assert( vars != NULL );
    switch( sepadata->sortswitch )
    {
    case UNSORTED :
       /* if no sorting is requested, we use the normal variable array */
-      vars = scipvars;
       break;
-   case MAXIMAL_LPVALUE :
-      assert(vars != NULL);
 
+   case MAXIMAL_LPVALUE :
       /* store lp-values */
       for( i = 0; i < nbinvars; ++i )
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
@@ -2571,8 +2544,6 @@ SCIP_RETCODE separateHeur(
       break;
 
    case MINIMAL_LPVALUE :
-      assert(vars != NULL);
-
       /* store lp-values */
       for( i = 0; i < nbinvars; ++i )
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
@@ -2582,13 +2553,11 @@ SCIP_RETCODE separateHeur(
       break;
 
    case MAXIMAL_FRACTIONALITY  :
-      assert(vars != NULL);
-
       /* store lp-values and determine fractionality */
       for( i = 0; i < nbinvars; ++i )
       {
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-         vals[i] = MIN(1 - vals[i], vals[i]);
+         vals[i] = MIN(1.0 - vals[i], vals[i]);
       }
 
       /* sort by fractionality, maximal first */
@@ -2596,13 +2565,11 @@ SCIP_RETCODE separateHeur(
       break;
 
    case MINIMAL_FRACTIONALITY :
-      assert(vars != NULL);
-
       /* store lp-values and determine fractionality */
       for( i = 0; i < nbinvars; ++i )
       {
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-         vals[i] = MIN(1 - vals[i], vals[i]);
+         vals[i] = MIN(1.0 - vals[i], vals[i]);
       }
 
       /* sort by fractionality, minimal first */
@@ -2616,65 +2583,70 @@ SCIP_RETCODE separateHeur(
    assert(vars != NULL);
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), (int) nbinvars) );
-   for( i = 0; i < nbinvars; ++i )
-      sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nintegral) );
 
-   graph.n = 2*nbinvars;
+   /* initialize LP value and cut flag for all variables */
+   for( i = 0; i < nbinvars; ++i )
+   {
+      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nintegral);  /* since binary, integer, and implicit variables are first */
+      sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
+      vals[i] = SCIPgetSolVal(scip, sol, vars[i]); /* need to get new values, since they might be corrupted */
+   }
+
+   for( i = nbinvars; i < 2*nbinvars; ++i )
+      vals[i] = 1.0 - vals[i - nbinvars];
+
+   /* determine size of level graph */
+   graph.maxnodes = 2 * nbinvars;
 
    /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added
     */
-   /* graph.m = nbinvars*(2*nbinvars-1); */ /* = 2*nbinvars*(2*nbinvars-1)/2 */
-   graph.m = UINT_MAX;
+   /* graph.maxarcs = nbinvars*(2*nbinvars-1); */ /* = 2*nbinvars*(2*nbinvars-1)/2 */
+   graph.maxarcs = UINT_MAX;
 
    /* set sizes for graph memory storage */
-   graph.sizeForward = 100*graph.n;
-   graph.sizeBackward = 100*graph.n;
-   graph.sizeAdj = 100*graph.n;
+   graph.sizeForward = 100 * graph.maxnodes;
+   graph.sizeBackward = 100 * graph.maxnodes;
+   graph.sizeAdj = 100 * graph.maxnodes;
 
    /* allocate memory for level graph structure */
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.level, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.beginForward, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.beginBackward, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.targetForward, (int) MIN(graph.sizeForward, graph.m)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.targetBackward, (int) MIN(graph.sizeBackward, graph.m)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.weightForward, (int) MIN(graph.sizeForward, graph.m)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.weightBackward, (int) MIN(graph.sizeBackward, graph.m)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.level, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.beginForward, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.beginBackward, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.targetForward, (int) MIN(graph.sizeForward, graph.maxarcs)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.targetBackward, (int) MIN(graph.sizeBackward, graph.maxarcs)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.weightForward, (int) MIN(graph.sizeForward, graph.maxarcs)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.weightBackward, (int) MIN(graph.sizeBackward, graph.maxarcs)) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &curlevel, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &newlevel, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.beginAdj, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.sourceAdj, (int) MIN(graph.sizeAdj,graph.m)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.targetAdj, (int) MIN(graph.sizeAdj,graph.m)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.weightAdj, (int) MIN(graph.sizeAdj,graph.m)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &graph.levelAdj, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &inlevelgraph, (int) graph.n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &curlevel, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newlevel, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.beginAdj, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.sourceAdj, (int) MIN(graph.sizeAdj, graph.maxarcs)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.targetAdj, (int) MIN(graph.sizeAdj, graph.maxarcs)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.weightAdj, (int) MIN(graph.sizeAdj, graph.maxarcs)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &graph.levelAdj, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inlevelgraph, (int) graph.maxnodes) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &queue, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &inQueue, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &parentTreeBackward, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &distance, (int) graph.n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &blocked, (int) graph.n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inQueue, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &parentTreeBackward, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &distance, (int) graph.maxnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &blocked, (int) graph.maxnodes) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (2 * nbinvars)) );
 
-   /* initialize LP value and cut flag for all variables */
+   /* initialize cut flag for all variables */
    BMSclearMemoryArray(incut, 2*nbinvars);
-   for( i = 0; i < nbinvars; ++i )
-      vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-
-   for( i = nbinvars; i < 2*nbinvars; ++i )
-      vals[i] = 1 - vals[i-nbinvars];
 
    /* determine the number of level graph roots */
    maxroots = (unsigned int) SCIPceil(scip, sepadata->offsettestvars + (0.02 * nbinvars * sepadata->percenttestvars));
-   sepadata->maxlevelsize = (unsigned int) SCIPceil(scip, sepadata->offsetnodeslevel + 0.01 * sepadata->maxpernodeslevel * graph.n);
+   sepadata->maxlevelsize = (unsigned int) SCIPceil(scip, sepadata->offsetnodeslevel + 0.01 * sepadata->maxpernodeslevel * graph.maxnodes);
    rootcounter = 0;
 
    /* check each node as root */
-   for( i = (unsigned int) sepadata->lastroot; i < graph.n && rootcounter < maxroots
+   for( i = (unsigned int) sepadata->lastroot; i < graph.maxnodes && rootcounter < maxroots
            && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround
            && !SCIPisStopped(scip) ; ++i )
    {
@@ -2717,7 +2689,7 @@ SCIP_RETCODE separateHeur(
       ncutsroot = 0;
 
       /* initialize graph */
-      for( j = 0; j < graph.n; ++j)
+      for( j = 0; j < graph.maxnodes; ++j)
       {
          graph.beginForward[j] = -1;
          graph.beginBackward[j] = -1;
@@ -2728,7 +2700,7 @@ SCIP_RETCODE separateHeur(
       graph.lastF = 0;
       graph.lastB = 0;
       graph.nlevels = 0;
-      graph.nedges = 0;
+      graph.narcs = 0;
 
       /* insert root (first level contains root only) */
       inlevelgraph[i] = TRUE;
@@ -2789,7 +2761,7 @@ SCIP_RETCODE separateHeur(
                k = 1;
                while( u != graph.sourceAdj[j] )
                {
-                  assert(parentTree[u] != -1 && k <= graph.n);
+                  assert(parentTree[u] != -1 && k <= graph.maxnodes);
                   u = (unsigned int) parentTree[u];
                   ++k;
                }
@@ -2815,7 +2787,7 @@ SCIP_RETCODE separateHeur(
                /* allocate and initialize predecessor list and flag array representing odd cycle */
                SCIP_CALL( SCIPallocBufferArray(scip, &pred, (int) (2 * nbinvars)) );
                SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
-               for( k = 0; k < 2*nbinvars; ++k )
+               for( k = 0; k < 2 * nbinvars; ++k )
                {
                   pred[k] = DIJKSTRA_UNUSED;
                   incycle[k] = FALSE;
@@ -2918,7 +2890,7 @@ SCIP_RETCODE separateHeur(
     */
    if( sepadata->sortswitch == UNSORTED )
    {
-      if( i == graph.n )
+      if( i == graph.maxnodes )
          sepadata->lastroot = 0;
       else
          sepadata->lastroot = (int) i;
@@ -2953,10 +2925,7 @@ SCIP_RETCODE separateHeur(
    SCIPfreeBufferArray(scip, &graph.level);
 
    SCIPfreeBufferArray(scip, &(sepadata->mapping));
-   if( sepadata->sortswitch != UNSORTED )
-   {
-      SCIPfreeBufferArray(scip, &vars);
-   }
+   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
@@ -3100,7 +3069,7 @@ SCIP_RETCODE addGLSBinImpls(
       int tmp;
 
       assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
-      assert(SCIPvarGetType(implvars[m]) == SCIP_VARTYPE_BINARY);
+      assert( SCIPvarIsBinary(implvars[m]) );
 
       neighbor = implvars[m];
       neighindex = sepadata->mapping[SCIPvarGetProbindex(neighbor)];
@@ -3114,42 +3083,42 @@ SCIP_RETCODE addGLSBinImpls(
       /* add implication for x==1 */
       if( original )
       {
-         /* implication to y=0 (I->III) */
+         /* implication to y=0 (I->III), i.e., x + y <= 1 */
          if( impltypes[m] == SCIP_BOUNDTYPE_UPPER )
          {
-            assert(implbounds[m] == 0.0);
+            assert( SCIPisEQ(scip, implbounds[m], 0.0) );
 
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * ( 1 - vals[varsidx] - vals[neighindex] ));
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[neighindex]));
             graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 2 * nbinvars;
          }
-         /* implication to y=1 (I->IV) */
+         /* implication to y=1 (I->IV), i.e., x + (1-y) <= 1 */
          else
          {
-            assert(impltypes[m] == SCIP_BOUNDTYPE_LOWER && implbounds[m] == 1.0 );
+            assert( impltypes[m] == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, implbounds[m], 1.0) );
 
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * ( 1 - vals[varsidx] - (1 - vals[neighindex]) ));
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - (1.0 - vals[neighindex])) );
             graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 3 * nbinvars;
          }
       }
       else       /* add implication for x==0 */
       {
-         /* implication to y=0 (II->III) */
+         /* implication to y=0 (II->III), i.e., (1-x) + y <= 1 */
          if( impltypes[m] == SCIP_BOUNDTYPE_UPPER )
          {
             assert(implbounds[m] == 0.0);
 
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * ( 1 - (1 - vals[varsidx]) - vals[neighindex] ));
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - vals[neighindex]) );
             graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 2 * nbinvars;
          }
-         /* implication to y=1 (II->IV) */
+         /* implication to y=1 (II->IV), i.e., (1-x) + (1-y) <= 1 */
          else
          {
             assert(impltypes[m] == SCIP_BOUNDTYPE_LOWER && implbounds[m] == 1.0 );
 
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1 - vals[neighindex]) ));
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - (1.0 - vals[neighindex])) );
             graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 3 * nbinvars;
          }
@@ -3363,7 +3332,6 @@ SCIP_RETCODE separateGLS(
    SCIP_VAR** vars;                          /* variables of the current SCIP (sorted if requested) */
    unsigned int nbinvars;                    /* number of binary problem variables */
    SCIP_Bool original;                       /* flag if the current variable is original or negated */
-   int nscipbinvars;
 
    unsigned int nbinimpls;                   /* number of binary implications of the current variable */
    unsigned int ncliques;                    /* number of cliques of the current variable */
@@ -3374,6 +3342,7 @@ SCIP_RETCODE separateGLS(
    unsigned int maxarcs;                     /* maximum number of arcs in the Dijkstra graph */
    unsigned int maxstarts;                   /* maximum number of start nodes */
    unsigned int startcounter;                /* counter of tried start nodes */
+   unsigned long long cutoff;                /* cutoff value for Dijkstra algorithm */
 
    unsigned int startnode;                   /* start node for Dijkstra algorithm */
    unsigned int endnode;                     /* target node for Dijkstra algorithm */
@@ -3387,6 +3356,12 @@ SCIP_RETCODE separateGLS(
    SCIP_Bool* incycle;                       /* flag array if variable is contained in the found cycle */
    unsigned int* pred2;                      /* temporary predecessor list for backprojection of found cycle */
 
+   int nscipbinvars;
+   int nscipintvars;
+   int nscipimplvars;
+   int nintegral;
+   int k;
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(result != NULL);
@@ -3394,35 +3369,45 @@ SCIP_RETCODE separateGLS(
    success = TRUE;
    emptygraph = TRUE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, NULL, NULL, NULL) );
-   assert(scipvars != NULL || nscipbinvars == 0);
+   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, &nscipintvars, &nscipimplvars, NULL) );
+   assert(nscipbinvars >= 0);
+   assert(nscipintvars >= 0);
+   assert(nscipimplvars >= 0);
 
-   if( nscipbinvars == 0 )
-      return SCIP_OKAY;
+   nintegral = nscipbinvars + nscipintvars + nscipimplvars;
+   assert(scipvars != NULL || nintegral == 0);
+
+   /* collect binary variables, including implicit binary */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
+   for (k = 0; k < nscipbinvars; ++k)
+      vars[k] = scipvars[k]; /*lint !e613*/
 
    nbinvars = (unsigned int) nscipbinvars;
-
-   /* initialize flag array to avoid multiple cuts per variable, if requested by user-flag */
-   SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (4 * nbinvars)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
-
-   /* duplicate variable data array for sorting (if requested) */
-   vars = NULL;
-   if( sepadata->sortswitch != UNSORTED )
+   for (k = nscipbinvars; k < nintegral; ++k)
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, scipvars, nscipbinvars) );
+      assert( SCIPvarGetType(scipvars[k]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      if ( SCIPvarIsBinary(scipvars[k]) ) /*lint !e613*/
+         vars[nbinvars++] = scipvars[k]; /*lint !e613*/
    }
 
+   if( nbinvars == 0 )
+   {
+      SCIPfreeBufferArray(scip, &vars);
+      return SCIP_OKAY;
+   }
+
+   /* initialize flag array to avoid multiple cuts per variable, if requested by user-flag */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
+
+   /* prepare values */
+   assert( vars != NULL );
    switch( sepadata->sortswitch )
    {
    case UNSORTED :
       /* if no sorting is requested, we use the normal variable array */
-      vars = scipvars;
       break;
 
    case MAXIMAL_LPVALUE :
-      assert(vars != NULL);
-
       /* store lp-values */
       for( i = 0; i < nbinvars; ++i )
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
@@ -3432,8 +3417,6 @@ SCIP_RETCODE separateGLS(
       break;
 
    case MINIMAL_LPVALUE :
-      assert(vars != NULL);
-
       /* store lp-values */
       for( i = 0; i < nbinvars; ++i )
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
@@ -3443,13 +3426,11 @@ SCIP_RETCODE separateGLS(
       break;
 
    case MAXIMAL_FRACTIONALITY  :
-      assert(vars != NULL);
-
       /* store lp-values and determine fractionality */
       for( i = 0; i < nbinvars; ++i )
       {
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-         vals[i] = MIN(1-vals[i], vals[i]);
+         vals[i] = MIN(1.0 - vals[i], vals[i]);
       }
 
       /* sort by fractionality, maximal first */
@@ -3457,13 +3438,11 @@ SCIP_RETCODE separateGLS(
       break;
 
    case MINIMAL_FRACTIONALITY :
-      assert(vars != NULL);
-
       /* store lp-values and determine fractionality */
       for( i = 0; i < nbinvars; ++i )
       {
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-         vals[i] = MIN(1-vals[i], vals[i]);
+         vals[i] = MIN(1.0 - vals[i], vals[i]);
       }
 
       /* sort by fractionality, minimal first */
@@ -3477,13 +3456,14 @@ SCIP_RETCODE separateGLS(
    assert(vars != NULL);
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), (int) nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nintegral) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (4 * nbinvars)) );
    BMSclearMemoryArray(incut, 4 * nbinvars);
 
    /* initialize LP value and cut flag for all variables */
    for( i = 0; i < nbinvars; ++i )
    {
-      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < (int) nbinvars );  /* since binary variables are first */
+      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nintegral);  /* since binary, integer, and implicit variables are first */
       sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
       vals[i] = SCIPgetSolVal(scip, sol, vars[i]); /* need to get new values, since they might be corrupted */
    }
@@ -3492,18 +3472,21 @@ SCIP_RETCODE separateGLS(
       vals[i] = 1 - vals[i - nbinvars];
 
    /* initialize number of nodes in  Dijkstra graph (2*2*n nodes in a mirrored bipartite graph with negated variables) */
-   graph.nodes = 4*nbinvars;
+   graph.nodes = 4 * nbinvars;
 
-   /* initialize number of arcs in  Dijkstra graph
-    * (nbinvars-1 possible arcs per node (it is not possible to be linked to variable and negated)
+   /* Initialize number of arcs in Dijkstra graph, should be (nbinvars+1) * graph.nodes, but might deviate, because
+    * there might be parallel arcs:
+    * nbinvars-1 possible arcs per node (it is not possible to be linked to variable and negated)
     * + 1 self-arc (arc to negated variable)
     * + 1 dummy arc for Dijkstra data structure
     * = nbinvars+1 arcs per node
     * * graph.nodes
     * = (nbinvars+1)*graph.nodes
     * + graph.nodes => separating entries for arclist)
+    *
+    * Number is corrected below.
     */
-   graph.arcs = (nbinvars+1) * graph.nodes;
+   graph.arcs = 0;
 
    /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added,  maxarcs should be graph.arcs rather than INT_MAX;
@@ -3522,7 +3505,7 @@ SCIP_RETCODE separateGLS(
    SCIP_CALL( SCIPallocBufferArray(scip, &order, (int) graph.nodes) );
 
    /* initialize Dijkstra graph as empty graph */
-   for( i = 0; i < MIN(arraysize,maxarcs); ++i )
+   for( i = 0; i < MIN(arraysize, maxarcs); ++i )
    {
       graph.head[i] = DIJKSTRA_UNUSED;
       graph.weight[i] = DIJKSTRA_UNUSED;
@@ -3540,7 +3523,7 @@ SCIP_RETCODE separateGLS(
 #endif
 
    /* add arcs from first to second partition to Dijkstra graph (based on the original fractional implication graph) */
-   for( dijkindex = 0; dijkindex < 2*nbinvars; ++dijkindex )
+   for( dijkindex = 0; dijkindex < 2 * nbinvars; ++dijkindex )
    {
       graph.outbeg[dijkindex] = narcs;
       graph.outcnt[dijkindex] = 0;
@@ -3559,7 +3542,7 @@ SCIP_RETCODE separateGLS(
       assert(i < nbinvars);
 
       /* if the variable has a fractional value we add it to the graph */
-      if( !SCIPisFeasIntegral(scip, vals[i]) )
+      if( ! SCIPisFeasIntegral(scip, vals[i]) )
       {
          nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[i], original);
          ncliques =  (unsigned int) SCIPvarGetNCliques(vars[i], original);
@@ -3644,8 +3627,8 @@ SCIP_RETCODE separateGLS(
    /* add arcs from second to first partition to Dijkstra graph */
    for( i = 0; i < 2*nbinvars; ++i )
    {
-      graph.outbeg[2*nbinvars+i] = narcs;
-      graph.outcnt[2*nbinvars+i] = 0;
+      graph.outbeg[2 * nbinvars + i] = narcs;
+      graph.outcnt[2 * nbinvars + i] = 0;
 
       /* copy all arcs to head from the second to the first bipartition */
       for( j = graph.outbeg[i]; j < graph.outbeg[i] + graph.outcnt[i]; ++j )
@@ -3654,7 +3637,7 @@ SCIP_RETCODE separateGLS(
          assert(graph.head[j] >= 2*nbinvars && graph.head[j] < 4*nbinvars);
 
          /* the backward arcs head from III->I or IV->II */
-         graph.head[narcs] = graph.head[j]-2*nbinvars;
+         graph.head[narcs] = graph.head[j] - 2 * nbinvars;
          graph.weight[narcs] = graph.weight[j];
          ++narcs;
          if( arraysize == narcs )
@@ -3683,10 +3666,27 @@ SCIP_RETCODE separateGLS(
       assert(narcs < maxarcs);
    }
 
+   /* correct number of arcs */
+   graph.arcs = narcs;
+
    SCIPdebugMessage("--- graph successfully created (%u nodes, %u arcs) ---\n", graph.nodes, narcs);
 
    /* graph is now prepared for Dijkstra methods */
    assert( dijkstraGraphIsValid(&graph) );
+
+#ifdef SCIP_ODDCYCLE_WRITEGRAPH
+   {
+      char probname [SCIP_MAXSTRLEN];
+      char filename [SCIP_MAXSTRLEN];
+      char* name;
+
+      (void)  SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
+      SCIPsplitFilename(probname, NULL, &name, NULL, NULL);
+      (void)  SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s_%d.gml", name, SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPwriteCliqueGraph(scip, filename, TRUE, TRUE) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Wrote clique/implication graph to <%s>.\n", filename);
+   }
+#endif
 
    /* determine the number of start nodes */
    maxstarts = (unsigned int) SCIPceil(scip, sepadata->offsettestvars + (0.02 * nbinvars * sepadata->percenttestvars));
@@ -3697,12 +3697,12 @@ SCIP_RETCODE separateGLS(
    SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
 
    /* separate odd cycle inequalities by GLS method */
+   cutoff = (unsigned long long) (0.5 * sepadata->scale);
    for( i = (unsigned int) sepadata->lastroot; i < 2 * nbinvars
            && startcounter < maxstarts
            && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround
            && !SCIPisStopped(scip); ++i )
    {
-      unsigned long long cutoff;             /* cutoff value for Dijkstra algorithm */
       unsigned int ncyclevars;               /* cycle length */
       SCIP_Bool edgedirection;               /* partitionindicator for backprojection from bipartite graph to original graph:
                                               * is the current edge a backwards edge, i.e., from second to first partition? */
@@ -3719,17 +3719,16 @@ SCIP_RETCODE separateGLS(
 
       /* search shortest path from node to its counter part in the other partition */
       startnode = i;
-      endnode = i + 2*nbinvars;
+      endnode = i + 2 * nbinvars;
 
       /* skip node if it is already covered by a cut and
        * we do not want to search cycles starting with a node already covered by a cut
        */
-      if( incut[startnode] && !sepadata->multiplecuts )
+      if( incut[startnode] && ! sepadata->multiplecuts )
          continue;
 
-      startcounter++;
+      ++startcounter;
 
-      cutoff = (unsigned long long) (0.5 * sepadata->scale);
       if ( sepadata->allowmultiplecuts )
          (void) dijkstraPairCutoffIgnore(&graph, startnode, endnode, incut, cutoff, dist, pred, entry, order);
       else
@@ -3739,12 +3738,16 @@ SCIP_RETCODE separateGLS(
       if( dist[endnode] == DIJKSTRA_FARAWAY )
          continue;
 
+      /* skip check if cutoff has been exceeded */
+      if ( dist[endnode] >= cutoff )
+         continue;
+
       /* detect cycle including:
        * project bipartitioned graph to original graph of variables and their negated
        * (pred&incycle-structure for generateOddCycleCut)
        * check cycles for double variables and try to clean variable-negated-sub-cycles if existing
        */
-      for( j = 0; j < 2*nbinvars; ++j )
+      for( j = 0; j < 2 * nbinvars; ++j )
       {
          pred2[j] = DIJKSTRA_UNUSED;
          incycle[j] = FALSE;
@@ -3760,10 +3763,10 @@ SCIP_RETCODE separateGLS(
          if( edgedirection )
          {
             /* check that current node is in second partition and next node is in first partition */
-            assert(dijkindex >= 2*nbinvars && dijkindex < 4*nbinvars);
+            assert(dijkindex >= 2 * nbinvars && dijkindex < 4 * nbinvars);
             assert(pred[dijkindex] < 2*nbinvars);
 
-            pred2[dijkindex - 2*nbinvars] = pred[dijkindex];
+            pred2[dijkindex - 2 * nbinvars] = pred[dijkindex];
 
             /* check whether the object found is really a cycle without sub-cycles
              * (sub-cycles may occur in case there is not violated odd cycle inequality)
@@ -3775,10 +3778,10 @@ SCIP_RETCODE separateGLS(
          else
          {
             /* check that current node is in first partition and next node is in second partition */
-            assert(dijkindex < 2*nbinvars);
-            assert(pred[dijkindex] >= 2*nbinvars && pred[dijkindex] < 4*nbinvars);
+            assert(dijkindex < 2 * nbinvars);
+            assert(pred[dijkindex] >= 2 * nbinvars && pred[dijkindex] < 4 * nbinvars);
 
-            pred2[dijkindex] = pred[dijkindex] - 2*nbinvars;
+            pred2[dijkindex] = pred[dijkindex] - 2 * nbinvars;
 
             /* check whether the object found is really a cycle without sub-cycles
              * (sub-cycles may occur in case there is not violated odd cycle inequality)
@@ -3809,7 +3812,7 @@ SCIP_RETCODE separateGLS(
     */
    if( sepadata->sortswitch == UNSORTED )
    {
-      if( i == 2*nbinvars )
+      if( i == 2 * nbinvars )
          sepadata->lastroot = 0;
       else
          sepadata->lastroot = (int) i;
@@ -3825,17 +3828,10 @@ SCIP_RETCODE separateGLS(
    SCIPfreeBufferArray(scip, &graph.head);
    SCIPfreeBufferArray(scip, &graph.outcnt);
    SCIPfreeBufferArray(scip, &graph.outbeg);
-
-   SCIPfreeBufferArray(scip, &(sepadata->mapping));
-
-   /* remove variable data array if duplicated */
-   if( sepadata->sortswitch != UNSORTED )
-   {
-      SCIPfreeBufferArray(scip, &vars);
-   }
-
-   SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &incut);
+   SCIPfreeBufferArray(scip, &(sepadata->mapping));
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
@@ -3957,6 +3953,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       SCIPdebugMessage("skipping separator: not enough implications present\n");
       return SCIP_OKAY;
    }
+
+   /* only run if number of cuts already found is small enough */
+   if ( sepadata->cutthreshold >= 0 && SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
+      return SCIP_OKAY;
 
    /* store node number and reset number of unsuccessful calls */
    if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
@@ -4120,6 +4120,9 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxunsucessfull",
          "number of unsuccessful calls at current node",
          &sepadata->maxunsucessfull, TRUE, DEFAULT_MAXUNSUCESSFULL, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/cutthreshold",
+         "maximal number of other cuts s.t. separation is applied (-1 for direct call)",
+         &sepadata->cutthreshold, TRUE, DEFAULT_CUTTHRESHOLD, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

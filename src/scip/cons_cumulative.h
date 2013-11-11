@@ -64,7 +64,7 @@ extern "C" {
  *  @param[in] durations           array of durations
  *  @param[in,out] ests            array of earliest start times for each job
  *  @param[in,out] lsts            array of latest start times for each job
- *  @param[in] objvals             array of objective coefficients for each job (linear objective function)
+ *  @param[in] objvals             array of objective coefficients for each job (linear objective function), or NULL if none
  *  @param[in] demands             array of demands
  *  @param[in] capacity            cumulative capacity
  *  @param[in] hmin                left bound of time axis to be considered (including hmin)
@@ -272,7 +272,10 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
 
 /** propagate the given cumulative condition */
@@ -329,8 +332,6 @@ SCIP_RETCODE SCIPsetSolveCumulative(
 
 /** solves given cumulative condition as independent sub problem
  *
- *  @note The time and memory limit of the SCIP environment in transferred to sub solver
- *
  *  @note If the problem was solved to the earliest start times (ests) and latest start times (lsts) array contain the
  *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
  *        solver was interrupted.
@@ -338,21 +339,51 @@ SCIP_RETCODE SCIPsetSolveCumulative(
 EXTERN
 SCIP_RETCODE SCIPsolveCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of start time variables (activities) */
-   SCIP_VAR**            vars,               /**< start time variables */
+   int                   njobs,              /**< number of jobs (activities) */
+   SCIP_Real*            ests,               /**< array with the earlier start time for each job */
+   SCIP_Real*            lsts,               /**< array with the latest start time for each job */
+   SCIP_Real*            objvals,            /**< array of objective coefficients for each job (linear objective function), or NULL if none */
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
-   SCIP_Bool             local,              /**< use local bounds, otherwise global */
-   SCIP_Real*            ests,               /**< array to store the earlier start time for each job */
-   SCIP_Real*            lsts,               /**< array to store the latest start time for each job */
+   SCIP_Real             timelimit,          /**< time limit for solving in seconds */
+   SCIP_Real             memorylimit,        /**< memory limit for solving in mega bytes (MB) */
    SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
    SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
    SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
    SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
    SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   );
+
+/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
+ *  completion time
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateWorstCaseProfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands             /**< array containing corresponding demands */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
+EXTERN
+int SCIPcomputeHmin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case resource profile */
+   int                   capacity            /**< capacity to check */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
+EXTERN
+int SCIPcomputeHmax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case profile */
+   int                   capacity            /**< capacity to check */
    );
 
 #ifdef __cplusplus

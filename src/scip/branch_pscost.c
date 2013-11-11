@@ -228,6 +228,13 @@ SCIP_RETCODE updateBestCandidate(
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
    assert(candbrpoint >= SCIPvarGetLbLocal(cand));
    assert(candbrpoint <= SCIPvarGetUbLocal(cand));
+
+   /* we cannot branch on a huge value, because we simply cannot enumerate such huge integer values in floating point
+    * arithmetics
+    */
+   if( SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint) )
+      return SCIP_OKAY;
+
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
    if( SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS )
@@ -294,7 +301,7 @@ SCIP_RETCODE updateBestCandidate(
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       assert(!SCIPisNegative(scip, branchscore));
    }
-   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; score = %g; type=%d bestbrscore=%g\n",
+   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; wscore = %g; type=%d bestbrscore=%g\n",
       SCIPvarGetName(cand), SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum),
       SCIPvarGetType(cand), *bestscore);
 
@@ -317,6 +324,7 @@ SCIP_RETCODE updateBestCandidate(
          /* if both variables are unbounded but one of them is bounded on one side, take the one with the larger bound on this side (hope that this avoids branching on always the same variable) */
          if( SCIPvarGetUbLocal(cand) > SCIPvarGetUbLocal(*bestvar) || SCIPvarGetLbLocal(cand) < SCIPvarGetLbLocal(*bestvar) )
          {
+            (*bestscore)   = branchscore;
             (*bestvar)     = cand;
             (*bestbrpoint) = candbrpoint;
          }
@@ -326,6 +334,7 @@ SCIP_RETCODE updateBestCandidate(
          /* if both have the same type, take the one with larger diameter */
          if( SCIPvarGetUbLocal(*bestvar) - SCIPvarGetLbLocal(*bestvar) < SCIPvarGetUbLocal(cand) - SCIPvarGetLbLocal(cand) )
          {
+            (*bestscore)   = branchscore;
             (*bestvar)     = cand;
             (*bestbrpoint) = candbrpoint;
          }
@@ -333,6 +342,7 @@ SCIP_RETCODE updateBestCandidate(
       else if( SCIPvarGetType(*bestvar) > SCIPvarGetType(cand) )
       { 
          /* take the one with better type ("more discrete") */
+         (*bestscore)   = branchscore;
          (*bestvar)     = cand;
          (*bestbrpoint) = candbrpoint;
       }
@@ -425,9 +435,19 @@ SCIP_RETCODE selectBranchVar(
       
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol) );
-      assert(*brvar != NULL);
    }
-   
+
+   /* there were candidates, but no variable was selected; this can only happen if the branching points are huge values
+    * for all variables on which we cannot branch
+    * @todo delay the node?
+    */
+   if( (*brvar) == NULL )
+   {
+      SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
+      SCIPABORT();
+      return SCIP_BRANCHERROR;
+   }
+
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &candssorted);
    SCIPfreeBufferArray(scip, &candsorigidx);
@@ -488,7 +508,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    SCIPdebugMessage("Execlp method of pscost branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    bestcand = -1;

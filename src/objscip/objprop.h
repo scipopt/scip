@@ -233,7 +233,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyProp is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjProp*        objprop,            /**< propagator object */
@@ -241,14 +241,14 @@ SCIP_RETCODE SCIPincludeObjProp(
    );
 
 /** returns the prop object of the given name, or 0 if not existing */
-extern
+EXTERN
 scip::ObjProp* SCIPfindObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of propagator */
    );
 
 /** returns the prop object for the given propagator */
-extern
+EXTERN
 scip::ObjProp* SCIPgetObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop                /**< propagator */

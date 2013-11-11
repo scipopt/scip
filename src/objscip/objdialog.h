@@ -134,7 +134,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyDialog is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeObjDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjDialog*      objdialog,          /**< dialog object */

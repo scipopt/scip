@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -59,8 +59,8 @@ jlong JNISCIPCONSLINKING(createConsLinking)(
    jstring               jname,              /**< name of constraint */
    jlong                 jintvar,            /**< integer variable which should be linked */
    jlongArray            jbinvars,           /**< binary variables, or NULL */
+   jintArray             jvals,              /**< coefficients of the binary variables */
    jint                  nbinvars,           /**< number of binary variables */
-   jint                  offset,             /**< offset of the binary variable representation */
    jboolean              initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    jboolean              separate,           /**< should the constraint be separated during LP processing?
@@ -108,8 +108,8 @@ jlong JNISCIPCONSLINKING(createConsBasicLinking)(
    jstring               jname,              /**< name of constraint */
    jlong                 jintvar,            /**< integer variable which should be linked */
    jlongArray            jbinvars,           /**< binary variables, or NULL */
-   jint                  nbinvars,           /**< number of binary variables */
-   jint                  offset              /**< offset of the binary variable representation */
+   jintArray             jvals,              /**< coefficients of the binary variables */
+   jint                  nbinvars            /**< number of binary variables */
    )
 {
    SCIPerrorMessage("method createConsBasicLinking is not implemented yet\n");
@@ -203,5 +203,5 @@ jint JNISCIPCONSLINKING(getNBinvarsLinking)(
    cons = (SCIP_CONS*) (size_t) jcons;
    assert(cons != NULL);
 
-   return (jint) SCIPgetOffsetLinking(scip, cons);
+   return (jint) SCIPgetNBinvarsLinking(scip, cons);
 }

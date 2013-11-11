@@ -1985,7 +1985,7 @@ SCIP_RETCODE resolvePropagation(
       if( nvars > 0 )
       {
          addedvars = propdata->addedvars;
-         SCIPhashtableClear(addedvars);
+         SCIPhashtableRemoveAll(addedvars);
       }
 
       if( infervar != NULL )
@@ -3066,6 +3066,7 @@ SCIP_RETCODE propagateLowerbound(
       return SCIP_OKAY;
 
    maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
+   assert(!SCIPisInfinity(scip, maxpseudoobjact) || !SCIPisInfinity(scip, lowerbound));
 
 #ifndef NDEBUG
    /* check that the global indices are correct */
@@ -3083,7 +3084,7 @@ SCIP_RETCODE propagateLowerbound(
       int nobjintvars;
       int v;
 
-      if( propdata->maxpseudoobjactinf == 0 )
+      if( propdata->maxpseudoobjactinf == 0 && !SCIPisInfinity(scip, maxpseudoobjact) )
       {
          SCIP_VAR** maxactvars;
          int nmaxactvars;
