@@ -49,6 +49,7 @@ do
   RESFILE=$DIR/$EVALFILE.res
   TEXFILE=$DIR/$EVALFILE.tex
   PAVFILE=$DIR/$EVALFILE.pav
+  EXMFILE=$DIR/$EVALFILE.exm
   
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
@@ -66,6 +67,10 @@ do
     if test -e $TRCFILE
     then
         cp $TRCFILE $TRCFILE.old-$DATEINT
+    fi
+    if test -e $EXMFILE
+    then
+        cp $EXMFILE $EXMFILE.old-$DATEINT
     fi
     if test -e $LSTFILE
     then
@@ -89,6 +94,11 @@ do
       then
         break
       fi
+
+      case $i in SOLVER,* )
+        SOLVER=${i:7}
+        ;;
+      esac
      
       # pass auxiliary lines about solver and limits form eval file to trace file
       case $i in *,* )
@@ -122,13 +132,24 @@ do
       FILE=$i.trc
       if test -e $FILE
       then
-        grep -v "^*" $FILE >> $TRCFILE
+        grep -v "^*" $FILE | sed -e "s/EXAMINER2/$SOLVER/" >> $TRCFILE
         if test "$REMOVE" = "1"
         then
           rm -f $FILE
         fi
       else
         echo Missing $i
+      fi
+
+      FILE=$i.exm
+      if test -e $FILE
+      then
+        test -e $EXMFILE || grep "^*" $FILE > $EXMFILE
+        grep -v "^*" $FILE >> $EXMFILE
+        if test "$REMOVE" = "1"
+        then
+          rm -f $FILE
+        fi
       fi
       
       FILE=$i.lst
