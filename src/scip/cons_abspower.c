@@ -3434,8 +3434,8 @@ SCIP_RETCODE generateSecantCut(
 
 /** computes secant underestimator for sign(x+xoffset)abs(x+xoffset)^n + c*z <= rhs
  *
- * the generated cut is slope*xmult*x + c*z <= rhs + (-xlb-xoffset)^n + slope*xlb,
- * where slope = (sign(xub+xoffset)*abs(xub+xoffset)^n + (-xlb-xoffset)^n) / (xub - xlb).
+ *  The generated cut is slope*xmult*x + c*z <= rhs + (-xlb-xoffset)^n + slope*xlb,
+ *  where slope = (sign(xub+xoffset)*abs(xub+xoffset)^n + (-xlb-xoffset)^n) / (xub - xlb).
  */
 static
 SCIP_RETCODE generateSecantCutNoCheck(
@@ -3471,6 +3471,9 @@ SCIP_RETCODE generateSecantCutNoCheck(
    slope  = SIGN(xub+xoffset) * mypow(ABS(xub+xoffset), exponent) + tmp;
    slope /= xub - xlb;
 
+   if( SCIPisInfinity(scip, REALABS(slope)) )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, "signpowcut", -SCIPinfinity(scip), SCIPinfinity(scip),
          SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 /* local */, FALSE /* modifiable */, TRUE /* removable */ ) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*slope) );
@@ -3481,7 +3484,7 @@ SCIP_RETCODE generateSecantCutNoCheck(
 }
 
 /** generates a cut
- * based on Liberti and Pantelides, Convex Envelopes of Monomials of Odd Degree, J. Global Optimization 25, 157-168, 2003, and previous publications
+ *  based on Liberti and Pantelides, Convex Envelopes of Monomials of Odd Degree, J. Global Optimization 25, 157-168, 2003, and previous publications
  */
 static
 SCIP_RETCODE generateCut(
