@@ -4997,6 +4997,20 @@ SCIP_RETCODE conssetchgDelDisabledCons(
    return SCIP_OKAY;
 }
 
+/** gets added constraints data for a constraint set change */
+void SCIPconssetchgGetAddedConsData(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
+   SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
+   int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   )
+{
+   assert(conssetchg != NULL);
+   if( conss != NULL )
+      *conss = conssetchg->addedconss;
+   if( nconss != NULL )
+      *nconss = conssetchg->naddedconss;
+}
+
 /** applies constraint set change */
 SCIP_RETCODE SCIPconssetchgApply(
    SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to apply */

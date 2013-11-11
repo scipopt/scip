@@ -6838,6 +6838,16 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    return node->reprop;
 }
 
+/* returns the set of changed constraints for a particular node */
+SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
+   SCIP_NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->conssetchg;
+}
+
 /** gets number of children of the focus node */
 int SCIPtreeGetNChildren(
    SCIP_TREE*            tree                /**< branch and bound tree */
