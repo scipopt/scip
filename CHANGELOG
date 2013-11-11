@@ -120,6 +120,7 @@ interface
   fractionalities and solution values in the same way as binary and integer variables before; the arrays are sorted such
   that binary and integer variables precede the implicit integer variables; the method SCIPbranchcandGetLPCands()
   has been modified in the same way
+- new SCIP method SCIPgetExternalValue() to transform given value back into original space
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),

@@ -6571,6 +6571,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetEstimate
 #undef SCIPnodeGetDomchg
 #undef SCIPnodeGetParent
+#undef SCIPnodeGetConssetchg
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -6940,6 +6941,16 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    assert(node != NULL);
 
    return node->reprop;
+}
+
+/* returns the set of changed constraints for a particular node */
+SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
+   SCIP_NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->conssetchg;
 }
 
 /** gets number of children of the focus node */

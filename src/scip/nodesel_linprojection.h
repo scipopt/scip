@@ -13,19 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_solvingstage.h
- * @ingroup EVENTS
- * @brief  eventhdlr for solving stage dependent parameter adjustment
- * @author Gregor Hendel
- *
- * this event handler is used to apply dynamic parameter adjustment depending on the
- * progress of the solving process.
+/**@file   nodesel_linprojection.h
+ * @ingroup NODESELECTORS
+ * @brief  linprojection node selector
+ * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EVENT_XYZ_H__
-#define __SCIP_EVENT_XYZ_H__
+#ifndef __SCIP_NODESEL_LINPROJECTION_H__
+#define __SCIP_NODESEL_LINPROJECTION_H__
+
 
 #include "scip/scip.h"
 
@@ -33,16 +31,12 @@
 extern "C" {
 #endif
 
-/** creates event handler for solving stage event */
+/** creates the linprojection node selector and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
+SCIP_RETCODE SCIPincludeNodeselLinprojection(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-extern
-SCIP_Real SCIPgetOptimalSolutionValue(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 #ifdef __cplusplus
 }
 #endif

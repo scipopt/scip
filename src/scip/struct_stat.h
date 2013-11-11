@@ -88,7 +88,7 @@ struct SCIP_Stat
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
    SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
-   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
