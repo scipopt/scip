@@ -616,6 +616,20 @@ SCIP_Bool mpsinputReadLine(
    return TRUE;
 }
 
+/** Insert \p str as field 4 and shift all other fields up. */
+static
+void mpsinputInsertField4(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           str                 /**< str to insert */
+   )
+{
+   assert(mpsi != NULL);
+   assert(str != NULL);
+
+   mpsi->f5 = mpsi->f4;
+   mpsi->f4 = str;
+}
+
 /** Insert \p name as field 1 or 2 and shift all other fields up. */
 static
 void mpsinputInsertName(
@@ -1013,7 +1027,11 @@ SCIP_RETCODE readRhs(
       }
       if( (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
          || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL) )
+      {
+         SCIPwarningMessage(scip, "reading rhs section, a field is missing, assuming that the vector name is the missing one(, row identfier <%s>)\n", mpsinputField2(mpsi));
+
          mpsinputInsertName(mpsi, "_RHS_", FALSE);
+      }
 
       if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
          break;
@@ -1136,7 +1154,11 @@ SCIP_RETCODE readRanges(
       }
       if( (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
          || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL) )
+      {
+         SCIPwarningMessage(scip, "reading ranged section, a field is missing, assuming that the vector name is the missing one(, row identfier <%s>)\n", mpsinputField2(mpsi));
+
          mpsinputInsertName(mpsi, "_RNG_", FALSE);
+      }
 
       if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
          break;
@@ -1288,8 +1310,31 @@ SCIP_RETCODE readBounds(
       {
          if( mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL )
          {
-            mpsinputInsertName(mpsi, "_BND_", TRUE);
-            shifted = TRUE;
+            int l;
+
+            /* check what might be missing, if field 3 is a number the bound name might be missing */
+            for( l = strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
+            {
+               if( mpsinputField3(mpsi)[l] != '.' && !isdigit(mpsinputField3(mpsi)[l]) )
+                  break;
+            }
+
+            /* the bound name?! is missing */
+            if( l < 0 )
+            {
+               SCIPwarningMessage(scip, "in bound section a name for value <%s> might be missing\n", mpsinputField3(mpsi));
+
+               mpsinputInsertName(mpsi, "_BND_", TRUE);
+               shifted = TRUE;
+            }
+            /* the bound is be missing */
+            else
+            {
+               SCIPwarningMessage(scip, "in bound section a value for column <%s> is missing, assuming 0.0\n", mpsinputField3(mpsi));
+
+               mpsinputInsertField4(mpsi, "0.0");
+               shifted = TRUE;
+            }
          }
       }
       else if( !strcmp(mpsinputField1(mpsi), "FR") /* free variable */
@@ -1299,6 +1344,8 @@ SCIP_RETCODE readBounds(
       {
          if( mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL )
          {
+            SCIPwarningMessage(scip, "in bound section a name for a column is missing\n");
+
             mpsinputInsertName(mpsi, "_BND_", TRUE);
             shifted = TRUE;
          }

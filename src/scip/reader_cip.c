@@ -500,8 +500,8 @@ SCIP_RETCODE getFixedVariable(
          cipinput->haserror = TRUE;
          return SCIP_OKAY;
       }
-      assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
-      assert( SCIPvarGetType(negvar) == SCIP_VARTYPE_BINARY );
+      assert(SCIPvarIsBinary(var));
+      assert(SCIPvarIsBinary(negvar));
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 

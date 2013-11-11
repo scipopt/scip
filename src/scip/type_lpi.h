@@ -90,7 +90,8 @@ enum SCIP_LPSolQuality
 typedef enum SCIP_LPSolQuality SCIP_LPSOLQUALITY;
 
 typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
-typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */
+typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information) */
+typedef struct SCIP_LPiNorms SCIP_LPINORMS;       /**< LP pricing norms information */
 
 #ifdef __cplusplus
 }

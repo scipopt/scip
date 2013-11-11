@@ -31,7 +31,6 @@
 #include "scip/vbc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/lpi.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
@@ -44,6 +43,7 @@
 #include "scip/prob.h"
 #include "scip/scip.h"
 #include "scip/pub_message.h"
+#include "lpi/lpi.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
@@ -1186,7 +1186,8 @@ SCIP_RETCODE nodeRepropagate(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1259,7 +1260,7 @@ SCIP_RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, conflict,
+   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, eventqueue, conflict,
          SCIPnodeGetDepth(node), 0, SCIP_PROPTIMING_ALWAYS, cutoff) );
    assert(!node->reprop || *cutoff);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
@@ -1333,7 +1334,8 @@ SCIP_RETCODE nodeActivate(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1384,7 +1386,7 @@ SCIP_RETCODE nodeActivate(
    {
       SCIP_Bool propcutoff;
 
-      SCIP_CALL( nodeRepropagate(node, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict, 
+      SCIP_CALL( nodeRepropagate(node, blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, conflict,
             eventfilter, eventqueue, &propcutoff) );
       *cutoff = *cutoff || propcutoff;
    }
@@ -1628,7 +1630,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1730,8 +1733,11 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       int conflictingdepth;
 
       conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newbound);
+
       if( conflictingdepth >= 0 )
       {
+         /* 0 would mean the bound change conflicts with a global bound */
+         assert(conflictingdepth > 0);
          assert(conflictingdepth < tree->pathlen);
 
          SCIPdebugMessage(" -> bound change <%s> %s %g violates current local bounds [%g,%g] since depth %d: remember for later application\n",
@@ -1811,8 +1817,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       if( set->misc_exactsolve )
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
-         newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, prob, var, oldbound, newbound, boundtype);
-      SCIPnodeUpdateLowerbound(node, stat, set, tree, prob, newpseudoobjval);
+         newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
+      SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
    }
    else
    {
@@ -1861,7 +1867,8 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1872,7 +1879,7 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    )
 {
-   SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, var, newbound,
+   SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, var, newbound,
          boundtype, NULL, NULL, 0, probingchange) );
 
    return SCIP_OKAY;
@@ -2043,13 +2050,16 @@ SCIP_RETCODE treeApplyPendingBdchgs(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   SCIP_VAR* var;
    int npendingbdchgs;
+   int conflictdepth;
    int i;
 
    assert(tree != NULL);
@@ -2057,12 +2067,27 @@ SCIP_RETCODE treeApplyPendingBdchgs(
    npendingbdchgs = tree->npendingbdchgs;
    for( i = 0; i < npendingbdchgs; ++i )
    {
-      SCIP_VAR* var;
-
       var = tree->pendingbdchgs[i].var;
       assert(SCIPnodeGetDepth(tree->pendingbdchgs[i].node) < tree->cutoffdepth);
-      assert(SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
-            tree->pendingbdchgs[i].newbound) == -1);
+
+      conflictdepth = SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
+         tree->pendingbdchgs[i].newbound);
+
+      /* It can happen, that a pending bound change conflicts with the global bounds, because when it was collected, it
+       * just conflicted with the local bounds, but a conflicting global bound change was applied afterwards. In this
+       * case, we can cut off the node where the pending bound change should be applied.
+       */
+      if( conflictdepth == 0 )
+      {
+         SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree);
+
+         if( tree->pendingbdchgs[i].node->depth <= tree->effectiverootdepth )
+            return SCIP_OKAY;
+         else
+            continue;
+      }
+
+      assert(conflictdepth == -1);
 
       SCIPdebugMessage("applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
@@ -2098,7 +2123,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
          }
       }
 
-      SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, prob, tree, lp, branchcand,
+      SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
             eventqueue, var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
             tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
             tree->pendingbdchgs[i].probingchange) );
@@ -2118,7 +2143,8 @@ void SCIPnodeUpdateLowerbound(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
@@ -2136,7 +2162,7 @@ void SCIPnodeUpdateLowerbound(
       {
          stat->rootlowerbound = newbound;
          if( set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), newbound);
+            SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
       }
       else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldlowerbound, stat->lastlowerbound) )
       {
@@ -2146,7 +2172,7 @@ void SCIPnodeUpdateLowerbound(
 
          /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
          if( lowerbound > stat->lastlowerbound )
-            SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), lowerbound);
+            SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
       }
    }
 }
@@ -2157,7 +2183,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp                  /**< LP data */
    )
 {
@@ -2170,9 +2197,9 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
    }
    else
-      lpobjval = SCIPlpGetObjval(lp, set, prob);
+      lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   SCIPnodeUpdateLowerbound(node, stat, set, tree, prob, lpobjval);
+   SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
    return SCIP_OKAY;
 }
@@ -2216,7 +2243,8 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2307,7 +2335,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
             }
 
             /* apply the implication */
-            SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+            SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                   implvars[j], implbounds[j], impltypes[j], NULL, NULL, 0, FALSE) );
          }
 
@@ -2362,7 +2390,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                }
 
                /* apply the clique implication */
-               SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+               SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                      vars[k], (SCIP_Real)(!values[k]), values[k] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
                      NULL, NULL, 0, FALSE) );
             }
@@ -2784,7 +2812,8 @@ SCIP_RETCODE treeSwitchPath(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2828,7 +2857,7 @@ SCIP_RETCODE treeSwitchPath(
    tree->pathlen = forkdepth+1;
 
    /* apply the pending bound changes */
-   SCIP_CALL( treeApplyPendingBdchgs(tree, blkmem, set, stat, prob, lp, branchcand, eventqueue) );
+   SCIP_CALL( treeApplyPendingBdchgs(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue) );
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
@@ -2848,7 +2877,7 @@ SCIP_RETCODE treeSwitchPath(
       assert(fork->active);
       assert(!fork->cutoff);
 
-      SCIP_CALL( nodeRepropagate(fork, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict, 
+      SCIP_CALL( nodeRepropagate(fork, blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, conflict,
             eventfilter, eventqueue, cutoff) );
    }
    assert(fork != NULL || !(*cutoff));
@@ -2864,8 +2893,8 @@ SCIP_RETCODE treeSwitchPath(
 
       /* activate the node, and apply domain propagation if the reprop flag is set */
       tree->pathlen++;
-      SCIP_CALL( nodeActivate(tree->path[i], blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
-            eventfilter, eventqueue, cutoff) );
+      SCIP_CALL( nodeActivate(tree->path[i], blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand,
+            conflict, eventfilter, eventqueue, cutoff) );
    }
 
    /* mark last node of path to be cut off, if a cutoff was found */
@@ -3401,7 +3430,8 @@ SCIP_RETCODE focusnodeCleanupVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -3441,9 +3471,9 @@ SCIP_RETCODE focusnodeCleanupVars(
    }
 
    /* mark variables as deleted */
-   for( i = 0; i < prob->nvars; i++ )
+   for( i = 0; i < transprob->nvars; i++ )
    {
-      var = prob->vars[i];
+      var = transprob->vars[i];
       assert(var != NULL);
 
       /* check whether variable is deletable */
@@ -3457,16 +3487,16 @@ SCIP_RETCODE focusnodeCleanupVars(
 
             if( !SCIPsetIsFeasZero(set, SCIPvarGetLbGlobal(var)) )
             {
-               SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, prob,
+               SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob,
                      tree, lp, branchcand, eventqueue, var, 0.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
             }
             if( !SCIPsetIsFeasZero(set, SCIPvarGetUbGlobal(var)) )
             {
-               SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, prob,
+               SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob,
                      tree, lp, branchcand, eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
             }
 
-            SCIP_CALL( SCIPprobDelVar(prob, blkmem, set, eventqueue, var, &deleted) );
+            SCIP_CALL( SCIPprobDelVar(transprob, blkmem, set, eventqueue, var, &deleted) );
 
             if( deleted )
                ndelvars++;
@@ -3486,7 +3516,7 @@ SCIP_RETCODE focusnodeCleanupVars(
    if( ndelvars > 0 )
    {
       /* perform the variable deletions from the problem */
-      SCIP_CALL( SCIPprobPerformVarDeletions(prob, blkmem, set, stat, eventqueue, lp, branchcand) );
+      SCIP_CALL( SCIPprobPerformVarDeletions(transprob, blkmem, set, stat, eventqueue, lp, branchcand) );
    }
 
    return SCIP_OKAY;
@@ -3499,7 +3529,8 @@ SCIP_RETCODE focusnodeToDeadend(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -3516,7 +3547,7 @@ SCIP_RETCODE focusnodeToDeadend(
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* remove variables from the problem that are marked as deletable and were created at this node */
-   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, TRUE) );
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, transprob, origprob, tree, lp, branchcand, TRUE) );
 
    tree->focusnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
 
@@ -3576,7 +3607,8 @@ SCIP_RETCODE focusnodeToPseudofork(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -3597,11 +3629,11 @@ SCIP_RETCODE focusnodeToPseudofork(
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* remove variables from the problem that are marked as deletable and were created at this node */
-   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, FALSE) );
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, transprob, origprob, tree, lp, branchcand, FALSE) );
 
    /* create pseudofork data */
    SCIP_CALL( pseudoforkCreate(&pseudofork, blkmem, tree, lp) );
-   
+
    tree->focusnode->nodetype = SCIP_NODETYPE_PSEUDOFORK; /*lint !e641*/
    tree->focusnode->data.pseudofork = pseudofork;
 
@@ -3626,7 +3658,8 @@ SCIP_RETCODE focusnodeToFork(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -3662,7 +3695,7 @@ SCIP_RETCODE focusnodeToFork(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3691,7 +3724,7 @@ SCIP_RETCODE focusnodeToFork(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp, branchcand) );
       
       return SCIP_OKAY;
    }
@@ -3700,13 +3733,13 @@ SCIP_RETCODE focusnodeToFork(
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* remove variables from the problem that are marked as deletable, were created at this node and are not contained in the LP */
-   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, FALSE) );
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, transprob, origprob, tree, lp, branchcand, FALSE) );
 
    assert(lp->flushed);
    assert(lp->solved);
 
    /* create fork data */
-   SCIP_CALL( forkCreate(&fork, blkmem, set, prob, tree, lp) );
+   SCIP_CALL( forkCreate(&fork, blkmem, set, transprob, tree, lp) );
    
    tree->focusnode->nodetype = SCIP_NODETYPE_FORK; /*lint !e641*/
    tree->focusnode->data.fork = fork;
@@ -3739,7 +3772,8 @@ SCIP_RETCODE focusnodeToSubroot(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -3784,7 +3818,7 @@ SCIP_RETCODE focusnodeToSubroot(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3813,7 +3847,7 @@ SCIP_RETCODE focusnodeToSubroot(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp, branchcand) );
       
       return SCIP_OKAY;
    }
@@ -3822,14 +3856,14 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* remove variables from the problem that are marked as deletable, were created at this node and are not contained in the LP */
-   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, FALSE) );
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, transprob, origprob, tree, lp, branchcand, FALSE) );
 
    assert(lp->flushed);
    assert(lp->solved);
 
 
    /* create subroot data */
-   SCIP_CALL( subrootCreate(&subroot, blkmem, set, prob, tree, lp) );
+   SCIP_CALL( subrootCreate(&subroot, blkmem, set, transprob, tree, lp) );
 
    tree->focusnode->nodetype = SCIP_NODETYPE_SUBROOT; /*lint !e641*/
    tree->focusnode->data.subroot = subroot;
@@ -3929,7 +3963,8 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -3937,7 +3972,8 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
 {
    SCIP_NODE* oldfocusnode;
@@ -4016,6 +4052,18 @@ SCIP_RETCODE SCIPnodeFocus(
    if( lpstatefork != tree->focuslpstatefork )
       tree->focuslpstateforklpcount = -1;
 
+   /* in exitsolve we only need to take care of open children
+    *
+    * @note because we might do a 'newstart' and converted cuts to constraints might have rendered the LP in the current
+    *       focusnode unsolved the latter code would have resolved the LP unnecessarily
+    */
+   if( exitsolve && tree->nchildren > 0 )
+   {
+      SCIPdebugMessage(" -> deleting the %d children (in exitsolve) of the old focus node\n", tree->nchildren);
+      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, NULL, SCIP_REAL_MIN) );
+      assert(tree->nchildren == 0);
+   }
+
    /* if the old focus node was cut off, we can delete its children;
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
     */
@@ -4070,7 +4118,7 @@ SCIP_RETCODE SCIPnodeFocus(
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */
-            SCIP_CALL( focusnodeToSubroot(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
+            SCIP_CALL( focusnodeToSubroot(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, origprob, tree, lp, branchcand) );
             if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD
                && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT )
                subroot = tree->focusnode;
@@ -4079,7 +4127,7 @@ SCIP_RETCODE SCIPnodeFocus(
 #endif
          {
             /* convert old focus node into a fork node */
-            SCIP_CALL( focusnodeToFork(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
+            SCIP_CALL( focusnodeToFork(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, origprob, tree, lp, branchcand) );
          }
 
          /* check, if the conversion into a subroot or fork was successful */
@@ -4107,7 +4155,7 @@ SCIP_RETCODE SCIPnodeFocus(
       else if( tree->focuslpconstructed && (SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0) )
       {
          /* convert old focus node into pseudofork */
-         SCIP_CALL( focusnodeToPseudofork(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
+         SCIP_CALL( focusnodeToPseudofork(blkmem, set, stat, eventqueue, transprob, origprob, tree, lp, branchcand) );
          assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_PSEUDOFORK);
 
          /* update the path's LP size */
@@ -4129,7 +4177,7 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIPlpMarkSize(lp);
 
          /* convert old focus node into junction */
-         SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
+         SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp, branchcand) );
       }
    }
    else if( tree->focusnode != NULL )
@@ -4141,7 +4189,7 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIPlpMarkSize(lp);
 
       /* convert old focus node into deadend */
-      SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
+      SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, transprob, origprob, tree, lp, branchcand) );
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
    assert(lpstatefork == NULL
@@ -4238,7 +4286,7 @@ SCIP_RETCODE SCIPnodeFocus(
       (*node)->nodetype = SCIP_NODETYPE_FOCUSNODE; /*lint !e641*/
    }
    assert(tree->nchildren == 0);
-   
+
    /* set new focus node, LP fork, LP state fork, and subroot */
    assert(subroot == NULL || (lpstatefork != NULL && subroot->depth <= lpstatefork->depth));
    assert(lpstatefork == NULL || (lpfork != NULL && lpstatefork->depth <= lpfork->depth));
@@ -4251,8 +4299,8 @@ SCIP_RETCODE SCIPnodeFocus(
    lp->resolvelperror = FALSE;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
-   SCIP_CALL( treeSwitchPath(tree, blkmem, set, stat, prob, primal, lp, branchcand, conflict, eventfilter, eventqueue, 
-         fork, *node, cutoff) );
+   SCIP_CALL( treeSwitchPath(tree, blkmem, set, stat, transprob, origprob, primal, lp, branchcand, conflict,
+         eventfilter, eventqueue, fork, *node, cutoff) );
    assert(tree->pathlen >= 0);
    assert(*node != NULL || tree->pathlen == 0);
    assert(*node == NULL || tree->pathlen-1 <= (int)(*node)->depth);
@@ -4281,7 +4329,7 @@ SCIP_RETCODE SCIPnodeFocus(
             SCIP_Bool nodecutoff;
 
             SCIPdebugMessage(" -> applying constraint set changes of depth %d\n", d);
-            SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, prob) );
+            SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, transprob) );
             SCIPdebugMessage(" -> applying bound changes of depth %d\n", d);
             SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue,
                   &nodecutoff) );
@@ -4335,6 +4383,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
    (*tree)->probinglpistate = NULL;
+   (*tree)->probinglpinorms = NULL;
    (*tree)->pendingbdchgs = NULL;
    (*tree)->pendingbdchgssize = 0;
    (*tree)->npendingbdchgs = 0;
@@ -4361,6 +4410,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpwasrelax = FALSE;
    (*tree)->probingsolvedlp = FALSE;
    (*tree)->forcinglpmessage = FALSE;
+   (*tree)->sbprobing = FALSE;
 
    return SCIP_OKAY;
 }
@@ -4513,7 +4563,8 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -4536,8 +4587,8 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    assert(tree->root != NULL);
 
    /* install the temporary root node as focus node */
-   SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, prob, primal, tree, lp, branchcand, conflict,
-         eventfilter, eventqueue, &cutoff) );
+   SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, branchcand,
+         conflict, eventfilter, eventqueue, &cutoff, FALSE) );
    assert(!cutoff);
 
    return SCIP_OKAY;
@@ -4550,7 +4601,8 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -4569,8 +4621,8 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
 
    /* unfocus the temporary root node */
    node = NULL;
-   SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, prob, primal, tree, lp, branchcand, conflict,
-         eventfilter, eventqueue, &cutoff) );
+   SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, branchcand,
+         conflict, eventfilter, eventqueue, &cutoff, FALSE) );
    assert(!cutoff);
    assert(tree->root == NULL);
    assert(tree->focusnode == NULL);
@@ -4899,7 +4951,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5027,20 +5080,20 @@ SCIP_RETCODE SCIPtreeBranchVar(
           */
          if( SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-                  var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
-            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-                  var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, transprob, origprob, tree, lp,
+                  branchcand, eventqueue, var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, transprob, origprob, tree, lp,
+                  branchcand, eventqueue, var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else if( SCIPvarGetObj(var) >= 0.0 )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
-                  eventqueue, var, SCIPvarGetUbLocal(var), SCIP_BOUNDTYPE_LOWER, FALSE) );
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob,
+                  tree, lp, branchcand, eventqueue, var, SCIPvarGetUbLocal(var), SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
-                  eventqueue, var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob,
+                  tree, lp, branchcand, eventqueue, var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
       }
       else if( SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.0 * SCIPsetEpsilon(set) )
@@ -5141,7 +5194,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), downub, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
       /* output branching bound change to VBC file */
       SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
@@ -5160,12 +5213,12 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, fixval, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), fixval) )
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
       }
       /* output branching bound change to VBC file */
@@ -5186,7 +5239,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), uplb, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
       /* output branching bound change to VBC file */
       SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
@@ -5204,7 +5257,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5291,7 +5345,7 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
       SCIPvarGetName(var), left, priority, estimate);
 
    SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-   SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+   SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
          var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
    /* output branching bound change to VBC file */
    SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
@@ -5311,7 +5365,7 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
       SCIPvarGetName(var), right, priority, estimate);
 
    SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-   SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+   SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
          var, right, SCIP_BOUNDTYPE_LOWER, FALSE) );
    /* output branching bound change to VBC file */
    SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
@@ -5344,7 +5398,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5383,7 +5438,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       SCIP_NODE* fixchild;
       SCIP_NODE* upchild;
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, prob, lp, branchcand, eventqueue, var, val,
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
             &downchild, &fixchild, &upchild) );
 
       if( nchildren != NULL )
@@ -5548,9 +5603,9 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          SCIPdebugMessage(" -> creating middle child: %g <= <%s> <= %g (priority: %g, estimate: %g, width: %g)\n",
             left, SCIPvarGetName(var), right, priority, estimate, right - left);
          SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, left , SCIP_BOUNDTYPE_LOWER, FALSE) );
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, right, SCIP_BOUNDTYPE_UPPER, FALSE) );
          /* output branching bound change to VBC file */
          SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
@@ -5627,10 +5682,10 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
          if( SCIPsetIsGT(set, bnd, SCIPvarGetLbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+            SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, bnd, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
          /* output branching bound change to VBC file */
          SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
@@ -5674,11 +5729,11 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          SCIPdebugMessage(" -> creating right child: %g <= <%s> <= %g (priority: %g, estimate: %g, width: %g)\n",
             right, SCIPvarGetName(var), bnd, priority, estimate, bnd - right);
          SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, right, SCIP_BOUNDTYPE_LOWER, FALSE) );
          if( SCIPsetIsLT(set, bnd, SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+            SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, bnd, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          /* output branching bound change to VBC file */
@@ -5782,11 +5837,13 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             strongbranching     /**< is the probing mode used for strongbranching? */
    )
 {
    assert(tree != NULL);
    assert(tree->probinglpistate == NULL);
+   assert(tree->probinglpinorms == NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
 
@@ -5805,12 +5862,14 @@ SCIP_RETCODE SCIPtreeStartProbing(
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = lp->isrelax;
    tree->probingsolvedlp = FALSE;
+   tree->sbprobing = strongbranching;
 
    /* remember the LP state in order to restore the LP solution quickly after probing */
    /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
    if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
+      SCIP_CALL( SCIPlpGetNorms(lp, blkmem, &tree->probinglpinorms) );
    }
 
    /* create temporary probing root node */
@@ -5856,6 +5915,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    {
       SCIP_NODE* node;
       SCIP_LPISTATE* lpistate;
+      SCIP_LPINORMS* lpinorms;
 
       /* get the current probing node */
       node = SCIPtreeGetCurrentNode(tree);
@@ -5863,6 +5923,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
 
       /* search the last node where an LP state information was attached */
       lpistate = NULL;
+      lpinorms = NULL;
       do
       {
          assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -5879,13 +5940,21 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
 
       /* if there was no LP information stored in the probing nodes, use the one stored before probing started */
       if( lpistate == NULL )
+      {
          lpistate = tree->probinglpistate;
+         lpinorms = tree->probinglpinorms;
+      }
 
       /* set the LP state */
       if( lpistate != NULL )
       {
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate) );
+      }
+
+      /* set the LP pricing norms */
+      if( lpinorms != NULL )
+      {
+         SCIP_CALL( SCIPlpSetNorms(lp, blkmem, set, lpinorms) );
       }
 
       /* now we don't need to load the LP state again until the next backtracking */
@@ -5928,7 +5997,8 @@ SCIP_RETCODE treeBacktrackProbing(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6011,7 +6081,7 @@ SCIP_RETCODE treeBacktrackProbing(
       if( tree->cutoffdepth >= tree->pathlen )
       {
          /* apply the pending bound changes */
-         SCIP_CALL( treeApplyPendingBdchgs(tree, blkmem, set, stat, prob, lp, branchcand, eventqueue) );
+         SCIP_CALL( treeApplyPendingBdchgs(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue) );
 
          tree->cutoffdepth = INT_MAX;
       }
@@ -6034,7 +6104,8 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6047,7 +6118,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    assert(0 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
 
    /* undo the domain and constraint set changes and free the temporary probing nodes below the given probing depth */
-   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, prob, lp, branchcand, eventqueue, eventfilter, probingdepth) );
+   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, probingdepth) );
 
    assert(SCIPtreeProbing(tree));
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(tree)) == SCIP_NODETYPE_PROBINGNODE);
@@ -6064,7 +6135,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6085,7 +6157,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    assert(set != NULL);
 
    /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
-   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, prob, lp, branchcand, eventqueue, eventfilter, -1) );
+   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, -1) );
    assert(SCIPtreeGetCurrentNode(tree) == tree->focusnode);
    assert(!SCIPtreeProbing(tree));
 
@@ -6102,6 +6174,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          /* reset the LP state before probing started */
          if( tree->probinglpistate == NULL )
          {
+            assert(tree->probinglpinorms == NULL);
             SCIP_CALL( SCIPlpiClearState(lp->lpi) );
             lp->primalfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
             lp->dualfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
@@ -6111,17 +6184,25 @@ SCIP_RETCODE SCIPtreeEndProbing(
          {
             SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
+
+            if( tree->probinglpinorms != NULL )
+            {
+               SCIP_CALL( SCIPlpSetNorms(lp, blkmem, set, tree->probinglpinorms) );
+               SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &tree->probinglpinorms) );
+               tree->probinglpinorms = NULL;
+            }
          }
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
          /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %"SCIP_LONGINT_FORMAT" after probing\n",
                stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
+            tree->focusnodehaslp = FALSE;
          }
          else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
@@ -6131,10 +6212,11 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "LP was not resolved to a sufficient status after probing\n");
             lp->resolvelperror = TRUE;
+            tree->focusnodehaslp = FALSE;
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, prob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
       }
    }
@@ -6173,6 +6255,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = FALSE;
    tree->probingsolvedlp = FALSE;
+   tree->sbprobing = FALSE;
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );

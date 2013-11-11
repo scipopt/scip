@@ -47,7 +47,8 @@ enum SCIP_Retcode
    SCIP_PARAMETERWRONGTYPE = -13,       /**< the parameter is not of the expected type */
    SCIP_PARAMETERWRONGVAL  = -14,       /**< the value is invalid for the given parameter */
    SCIP_KEYALREADYEXISTING = -15,       /**< the given key is already existing in table */
-   SCIP_MAXDEPTHLEVEL      = -16        /**< maximal branching depth level exceeded */
+   SCIP_MAXDEPTHLEVEL      = -16,       /**< maximal branching depth level exceeded */
+   SCIP_BRANCHERROR        = -17        /**< no branching could be created */
 };
 typedef enum SCIP_Retcode SCIP_RETCODE;           /**< return code for SCIP method */
 

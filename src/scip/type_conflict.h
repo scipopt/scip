@@ -18,7 +18,7 @@
  * @brief  type definitions for conflict analysis
  * @author Tobias Achterberg
  *
- *  This file defines the interface for conflict handler implemented in C.
+ * This file defines the interface for conflict handler implemented in C.
  *
  */
 
@@ -104,13 +104,13 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  If the parameter "resolved" is set, the conflict handler should not create a constraint, because
  *  a different conflict handler with higher priority already created a constraint.
  *  The bounds in the conflict set lead to a conflict (i.e. an infeasibility) when all enforced at the same time.
- *  Thus, a feasible conflict constraint must demand, that at least one of the variables in the conflict
+ *  Thus, a feasible conflict constraint must demand that at least one of the variables in the conflict
  *  set violates its corresponding bound, i.e., fulfills the negation of the bound change in the conflict set.
  *  For continuous variables, the negation has to be defined in a relaxed way: if, e.g., the bound in the conflict
  *  set is "x <= u", the negation to be used has to be "x >= u", and not "x > u".
  *  The given "bdchginfos" array representing the conflict set is only a reference to an internal
  *  buffer, that may be modified at any time by SCIP. The user must copy the needed information from the
- *  "bdchginfos" array to its own data structures, if (s)he wants to use the information later.
+ *  "bdchginfos" array to own data structures, if (s)he wants to use the information later.
  *  (S)he should not keep a pointer to the array or pointers to the single bdchginfos in the array, because these
  *  may get invalid afterwards.
  *
@@ -123,7 +123,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - relaxedbds      : array with relaxed bounds which are efficient to create a valid conflict
  *  - nbdchginfos     : number of bound changes in the conflict set
  *  - separate        : should the conflict constraint be separated?
- *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
+ *  - local           : is the conflict set only valid locally, i.e., should the constraint be created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
  *  - removable       : should the conflict's relaxation be made subject to LP aging and cleanup?
  *  - resolved        : is the conflict set already used to create a constraint?

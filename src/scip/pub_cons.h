@@ -192,6 +192,12 @@ SCIP_Real SCIPconshdlrGetPropTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for propagation in this constraint handler during strong branching */
+EXTERN
+SCIP_Real SCIPconshdlrGetStrongBranchPropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets time in seconds used for feasibility checking in this constraint handler */
 EXTERN
 SCIP_Real SCIPconshdlrGetCheckTime(

@@ -356,7 +356,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
 
 
       /* initialize strong branching */
-      SCIP_CALL( SCIPstartStrongbranch(scip) );
+      SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
 
       /* search the full strong candidate:
        * cycle through the candidates, starting with the position evaluated in the last run

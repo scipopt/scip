@@ -128,6 +128,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    SCIP_Longint          nchildren;          /**< number of children the constraint handler created during branching */
    SCIP_Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
+   SCIP_Longint          storedpropdomchgcount;/**< bound change number, where the domain propagation was called last before starting probing */
    SCIP_Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    SCIP_Longint          lastenfolpnode;     /**< last node at which the LP enforcement was called */
@@ -187,6 +188,7 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
+   SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this constraint handler during strong branching */
    SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
    SCIP_Longint          lastsepalpcount;    /**< last LP number, where the separations was called */

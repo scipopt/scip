@@ -57,13 +57,14 @@ SCIP_RETCODE SCIPsolCreate(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution in original problem space, initialized to zero */
+/** creates primal CIP solution in original problem space, initialized to the offset in the original problem */
 extern
 SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -90,6 +91,19 @@ SCIP_RETCODE SCIPsolTransform(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal              /**< primal data */
+   );
+
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ */
+EXTERN
+SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< either original or transformed problem, depending on sol origin */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             uselprows           /**< should LP row information be considered for none-objective variables */
    );
 
 /** creates primal CIP solution, initialized to the current LP solution */
@@ -302,7 +316,8 @@ extern
 SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob            /**< original problem data */
    );
 
 /** updates primal solutions after a change in a variable's objective value */
@@ -410,6 +425,19 @@ SCIP_RETCODE SCIPsolPrintRay(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** adds value to the objective value of a given original primal CIP solution */
+extern
+void SCIPsolOrigAddObjval(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             addval              /**< offset value to add */
+   );
+
 /** gets current position of solution in array of existing solutions of primal data */
 extern
 int SCIPsolGetPrimalIndex(
@@ -429,6 +457,7 @@ void SCIPsolSetPrimalIndex(
  * speed up the algorithms.
  */
 
+#define SCIPsolOrigAddObjval(sol, addval) ((sol)->obj += (addval))
 #define SCIPsolGetPrimalIndex(sol)      ((sol)->primalindex)
 #define SCIPsolSetPrimalIndex(sol,idx)  { (sol)->primalindex = idx; }
 

@@ -40,7 +40,7 @@ $(LIBOBJDIR)/JniScipBranchAllfullstrong.o: src/JniScipBranchAllfullstrong.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -164,7 +164,7 @@ $(LIBOBJDIR)/JniScipBranchFullstrong.o: src/JniScipBranchFullstrong.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -288,7 +288,7 @@ $(LIBOBJDIR)/JniScipBranchInference.o: src/JniScipBranchInference.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -413,7 +413,7 @@ $(LIBOBJDIR)/JniScipBranchLeastinf.o: src/JniScipBranchLeastinf.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -537,7 +537,7 @@ $(LIBOBJDIR)/JniScipBranchMostinf.o: src/JniScipBranchMostinf.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -661,7 +661,7 @@ $(LIBOBJDIR)/JniScipBranchPscost.o: src/JniScipBranchPscost.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -785,7 +785,7 @@ $(LIBOBJDIR)/JniScipBranchRandom.o: src/JniScipBranchRandom.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -919,7 +919,7 @@ $(LIBOBJDIR)/JniScipConsIndicator.o: src/JniScipConsIndicator.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -1043,7 +1043,7 @@ $(LIBOBJDIR)/JniScipConsIntegral.o: src/JniScipConsIntegral.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -1166,7 +1166,7 @@ $(LIBOBJDIR)/JniScipCons.o: src/JniScipCons.c src/JniScipCons.h src/def.h \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -1290,7 +1290,7 @@ $(LIBOBJDIR)/JniScipConsKnapsack.o: src/JniScipConsKnapsack.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -1413,7 +1413,7 @@ $(LIBOBJDIR)/JniScipConsLinear.o: src/JniScipConsLinear.c src/JniScipConsLinear.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -1536,7 +1536,7 @@ $(LIBOBJDIR)/JniScipConsLinking.o: src/JniScipConsLinking.c src/JniScipConsLinki
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -1659,7 +1659,7 @@ $(LIBOBJDIR)/JniScipConsLogicor.o: src/JniScipConsLogicor.c src/JniScipConsLogic
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -1783,7 +1783,7 @@ $(LIBOBJDIR)/JniScipConsNonlinear.o: src/JniScipConsNonlinear.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -1907,7 +1907,7 @@ $(LIBOBJDIR)/JniScipConsOrbitope.o: src/JniScipConsOrbitope.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2030,7 +2030,7 @@ $(LIBOBJDIR)/JniScipConsOr.o: src/JniScipConsOr.c src/JniScipConsOr.h src/def.h 
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2154,7 +2154,7 @@ $(LIBOBJDIR)/JniScipConsPseudoboolean.o: src/JniScipConsPseudoboolean.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2278,7 +2278,7 @@ $(LIBOBJDIR)/JniScipConsQuadratic.o: src/JniScipConsQuadratic.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2401,7 +2401,7 @@ $(LIBOBJDIR)/JniScipConsSetppc.o: src/JniScipConsSetppc.c src/JniScipConsSetppc.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -2524,7 +2524,7 @@ $(LIBOBJDIR)/JniScipConsSoc.o: src/JniScipConsSoc.c src/JniScipConsSoc.h src/def
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2647,7 +2647,7 @@ $(LIBOBJDIR)/JniScipConsSos1.o: src/JniScipConsSos1.c src/JniScipConsSos1.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2770,7 +2770,7 @@ $(LIBOBJDIR)/JniScipConsSos2.o: src/JniScipConsSos2.c src/JniScipConsSos2.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -2894,7 +2894,7 @@ $(LIBOBJDIR)/JniScipConsSuperindicator.o: src/JniScipConsSuperindicator.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3018,7 +3018,7 @@ $(LIBOBJDIR)/JniScipConsVarbound.o: src/JniScipConsVarbound.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3141,7 +3141,7 @@ $(LIBOBJDIR)/JniScipConsXor.o: src/JniScipConsXor.c src/JniScipConsXor.h src/def
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3264,7 +3264,7 @@ $(LIBOBJDIR)/JniScipCutpool.o: src/JniScipCutpool.c src/JniScipCutpool.h src/def
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3388,7 +3388,7 @@ $(LIBOBJDIR)/JniScipDialogDefault.o: src/JniScipDialogDefault.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3512,7 +3512,7 @@ $(LIBOBJDIR)/JniScipDialog.o: src/JniScipDialog.c src/JniScipDialog.h src/def.h 
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3635,7 +3635,7 @@ $(LIBOBJDIR)/JniScipDispDefault.o: src/JniScipDispDefault.c src/JniScipDispDefau
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -3758,7 +3758,7 @@ $(LIBOBJDIR)/JniScipDisp.o: src/JniScipDisp.c src/JniScipDisp.h src/def.h \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -3881,7 +3881,7 @@ $(LIBOBJDIR)/JniScipEvent.o: src/JniScipEvent.c src/JniScipEvent.h src/def.h \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4006,7 +4006,7 @@ $(LIBOBJDIR)/JniScipHeurActconsdiving.o: src/JniScipHeurActconsdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4129,7 +4129,7 @@ $(LIBOBJDIR)/JniScipHeurClique.o: src/JniScipHeurClique.c src/JniScipHeurClique.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -4253,7 +4253,7 @@ $(LIBOBJDIR)/JniScipHeurCoefdiving.o: src/JniScipHeurCoefdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4377,7 +4377,7 @@ $(LIBOBJDIR)/JniScipHeurCrossover.o: src/JniScipHeurCrossover.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4500,7 +4500,7 @@ $(LIBOBJDIR)/JniScipHeurDins.o: src/JniScipHeurDins.c src/JniScipHeurDins.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4624,7 +4624,7 @@ $(LIBOBJDIR)/JniScipHeurFeaspump.o: src/JniScipHeurFeaspump.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4748,7 +4748,7 @@ $(LIBOBJDIR)/JniScipHeurFixandinfer.o: src/JniScipHeurFixandinfer.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4872,7 +4872,7 @@ $(LIBOBJDIR)/JniScipHeurFracdiving.o: src/JniScipHeurFracdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -4996,7 +4996,7 @@ $(LIBOBJDIR)/JniScipHeurGuideddiving.o: src/JniScipHeurGuideddiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5120,7 +5120,7 @@ $(LIBOBJDIR)/JniScipHeurIntdiving.o: src/JniScipHeurIntdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5244,7 +5244,7 @@ $(LIBOBJDIR)/JniScipHeurIntshifting.o: src/JniScipHeurIntshifting.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5369,7 +5369,7 @@ $(LIBOBJDIR)/JniScipHeurLinesearchdiving.o: src/JniScipHeurLinesearchdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5493,7 +5493,7 @@ $(LIBOBJDIR)/JniScipHeurLocalbranching.o: src/JniScipHeurLocalbranching.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5617,7 +5617,7 @@ $(LIBOBJDIR)/JniScipHeurMutation.o: src/JniScipHeurMutation.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5741,7 +5741,7 @@ $(LIBOBJDIR)/JniScipHeurNlpdiving.o: src/JniScipHeurNlpdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5865,7 +5865,7 @@ $(LIBOBJDIR)/JniScipHeurObjpscostdiving.o: src/JniScipHeurObjpscostdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -5988,7 +5988,7 @@ $(LIBOBJDIR)/JniScipHeurOctane.o: src/JniScipHeurOctane.c src/JniScipHeurOctane.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -6111,7 +6111,7 @@ $(LIBOBJDIR)/JniScipHeurOneopt.o: src/JniScipHeurOneopt.c src/JniScipHeurOneopt.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -6235,7 +6235,7 @@ $(LIBOBJDIR)/JniScipHeurPscostdiving.o: src/JniScipHeurPscostdiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -6358,7 +6358,7 @@ $(LIBOBJDIR)/JniScipHeurRens.o: src/JniScipHeurRens.c src/JniScipHeurRens.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -6481,7 +6481,7 @@ $(LIBOBJDIR)/JniScipHeurRins.o: src/JniScipHeurRins.c src/JniScipHeurRins.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -6605,7 +6605,7 @@ $(LIBOBJDIR)/JniScipHeurRootsoldiving.o: src/JniScipHeurRootsoldiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -6729,7 +6729,7 @@ $(LIBOBJDIR)/JniScipHeurRounding.o: src/JniScipHeurRounding.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -6853,7 +6853,7 @@ $(LIBOBJDIR)/JniScipHeurShiftandpropagate.o: src/JniScipHeurShiftandpropagate.c 
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -6977,7 +6977,7 @@ $(LIBOBJDIR)/JniScipHeurShifting.o: src/JniScipHeurShifting.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -7101,7 +7101,7 @@ $(LIBOBJDIR)/JniScipHeurSimplerounding.o: src/JniScipHeurSimplerounding.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -7224,7 +7224,7 @@ $(LIBOBJDIR)/JniScipHeurSubnlp.o: src/JniScipHeurSubnlp.c src/JniScipHeurSubnlp.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -7347,7 +7347,7 @@ $(LIBOBJDIR)/JniScipHeurTrivial.o: src/JniScipHeurTrivial.c src/JniScipHeurTrivi
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -7470,7 +7470,7 @@ $(LIBOBJDIR)/JniScipHeurTrysol.o: src/JniScipHeurTrysol.c src/JniScipHeurTrysol.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -7593,7 +7593,7 @@ $(LIBOBJDIR)/JniScipHeurTwoopt.o: src/JniScipHeurTwoopt.c src/JniScipHeurTwoopt.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -7717,7 +7717,7 @@ $(LIBOBJDIR)/JniScipHeurUndercover.o: src/JniScipHeurUndercover.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -7840,7 +7840,7 @@ $(LIBOBJDIR)/JniScipHeurVbounds.o: src/JniScipHeurVbounds.c src/JniScipHeurVboun
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -7964,7 +7964,7 @@ $(LIBOBJDIR)/JniScipHeurVeclendiving.o: src/JniScipHeurVeclendiving.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -8087,7 +8087,7 @@ $(LIBOBJDIR)/JniScipHeurZeroobj.o: src/JniScipHeurZeroobj.c src/JniScipHeurZeroo
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -8211,7 +8211,7 @@ $(LIBOBJDIR)/JniScipHeurZirounding.o: src/JniScipHeurZirounding.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -8335,7 +8335,7 @@ $(LIBOBJDIR)/JniScip.o: src/JniScip.c src/JniScip.h src/def.h src/JniScipRetcode
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -8458,7 +8458,7 @@ $(LIBOBJDIR)/JniScipLp.o: src/JniScipLp.c src/JniScipLp.h src/def.h \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -8582,7 +8582,7 @@ $(LIBOBJDIR)/JniScipMessageDefault.o: src/JniScipMessageDefault.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -8710,7 +8710,7 @@ $(LIBOBJDIR)/JniScipNodeselBfs.o: src/JniScipNodeselBfs.c src/JniScipNodeselBfs.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -8833,7 +8833,7 @@ $(LIBOBJDIR)/JniScipNodeselDfs.o: src/JniScipNodeselDfs.c src/JniScipNodeselDfs.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -8957,7 +8957,7 @@ $(LIBOBJDIR)/JniScipNodeselEstimate.o: src/JniScipNodeselEstimate.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9081,7 +9081,7 @@ $(LIBOBJDIR)/JniScipNodeselHybridestim.o: src/JniScipNodeselHybridestim.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9206,7 +9206,7 @@ $(LIBOBJDIR)/JniScipNodeselRestartdfs.o: src/JniScipNodeselRestartdfs.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9331,7 +9331,7 @@ $(LIBOBJDIR)/JniScipPresolBoundshift.o: src/JniScipPresolBoundshift.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9455,7 +9455,7 @@ $(LIBOBJDIR)/JniScipPresolComponents.o: src/JniScipPresolComponents.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9579,7 +9579,7 @@ $(LIBOBJDIR)/JniScipPresolConvertinttobin.o: src/JniScipPresolConvertinttobin.c 
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9703,7 +9703,7 @@ $(LIBOBJDIR)/JniScipPresolDomcol.o: src/JniScipPresolDomcol.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9827,7 +9827,7 @@ $(LIBOBJDIR)/JniScipPresolGateextraction.o: src/JniScipPresolGateextraction.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -9951,7 +9951,7 @@ $(LIBOBJDIR)/JniScipPresolImplics.o: src/JniScipPresolImplics.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -10075,7 +10075,7 @@ $(LIBOBJDIR)/JniScipPresolInttobinary.o: src/JniScipPresolInttobinary.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -10200,7 +10200,7 @@ $(LIBOBJDIR)/JniScipPresolTrivial.o: src/JniScipPresolTrivial.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -10327,7 +10327,7 @@ $(LIBOBJDIR)/JniScipPropObbt.o: src/JniScipPropObbt.c src/JniScipPropObbt.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -10450,7 +10450,7 @@ $(LIBOBJDIR)/JniScipPropProbing.o: src/JniScipPropProbing.c src/JniScipPropProbi
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -10574,7 +10574,7 @@ $(LIBOBJDIR)/JniScipPropPseudoobj.o: src/JniScipPropPseudoobj.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -10697,7 +10697,7 @@ $(LIBOBJDIR)/JniScipPropRedcost.o: src/JniScipPropRedcost.c src/JniScipPropRedco
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -10821,7 +10821,7 @@ $(LIBOBJDIR)/JniScipPropRootredcost.o: src/JniScipPropRootredcost.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -10945,7 +10945,7 @@ $(LIBOBJDIR)/JniScipReaderBnd.o: src/JniScipReaderBnd.c src/JniScipReaderBnd.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11068,7 +11068,7 @@ $(LIBOBJDIR)/JniScipReaderCcg.o: src/JniScipReaderCcg.c src/JniScipReaderCcg.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11191,7 +11191,7 @@ $(LIBOBJDIR)/JniScipReaderCip.o: src/JniScipReaderCip.c src/JniScipReaderCip.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11314,7 +11314,7 @@ $(LIBOBJDIR)/JniScipReaderCnf.o: src/JniScipReaderCnf.c src/JniScipReaderCnf.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11437,7 +11437,7 @@ $(LIBOBJDIR)/JniScipReaderFix.o: src/JniScipReaderFix.c src/JniScipReaderFix.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11560,7 +11560,7 @@ $(LIBOBJDIR)/JniScipReaderFzn.o: src/JniScipReaderFzn.c src/JniScipReaderFzn.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11683,7 +11683,7 @@ $(LIBOBJDIR)/JniScipReaderGms.o: src/JniScipReaderGms.c src/JniScipReaderGms.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11808,7 +11808,7 @@ $(LIBOBJDIR)/JniScipReaderMps.o: src/JniScipReaderMps.c src/JniScipReaderMps.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -11931,7 +11931,7 @@ $(LIBOBJDIR)/JniScipReaderOpb.o: src/JniScipReaderOpb.c src/JniScipReaderOpb.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12054,7 +12054,7 @@ $(LIBOBJDIR)/JniScipReaderOsil.o: src/JniScipReaderOsil.c src/JniScipReaderOsil.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12177,7 +12177,7 @@ $(LIBOBJDIR)/JniScipReaderPip.o: src/JniScipReaderPip.c src/JniScipReaderPip.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12300,7 +12300,7 @@ $(LIBOBJDIR)/JniScipReaderPpm.o: src/JniScipReaderPpm.c src/JniScipReaderPpm.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12423,7 +12423,7 @@ $(LIBOBJDIR)/JniScipReaderRlp.o: src/JniScipReaderRlp.c src/JniScipReaderRlp.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12546,7 +12546,7 @@ $(LIBOBJDIR)/JniScipReaderSol.o: src/JniScipReaderSol.c src/JniScipReaderSol.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12669,7 +12669,7 @@ $(LIBOBJDIR)/JniScipReaderWbo.o: src/JniScipReaderWbo.c src/JniScipReaderWbo.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12792,7 +12792,7 @@ $(LIBOBJDIR)/JniScipReaderZpl.o: src/JniScipReaderZpl.c src/JniScipReaderZpl.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -12916,7 +12916,7 @@ $(LIBOBJDIR)/JniScipSepaCgmip.o: src/JniScipSepaCgmip.c src/JniScipSepaCgmip.h \
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -13039,7 +13039,7 @@ $(LIBOBJDIR)/JniScipSepaClique.o: src/JniScipSepaClique.c src/JniScipSepaClique.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -13163,7 +13163,7 @@ $(LIBOBJDIR)/JniScipSepaClosecuts.o: src/JniScipSepaClosecuts.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -13286,7 +13286,7 @@ $(LIBOBJDIR)/JniScipSepaCmir.o: src/JniScipSepaCmir.c src/JniScipSepaCmir.h src/
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -13410,7 +13410,7 @@ $(LIBOBJDIR)/JniScipSepaFlowcover.o: src/JniScipSepaFlowcover.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -13533,7 +13533,7 @@ $(LIBOBJDIR)/JniScipSepaGomory.o: src/JniScipSepaGomory.c src/JniScipSepaGomory.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -13657,7 +13657,7 @@ $(LIBOBJDIR)/JniScipSepaImpliedbounds.o: src/JniScipSepaImpliedbounds.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -13780,7 +13780,7 @@ $(LIBOBJDIR)/JniScipSepaIntobj.o: src/JniScipSepaIntobj.c src/JniScipSepaIntobj.
  lib/scip/src/scip/struct_sol.h lib/scip/src/scip/pub_tree.h \
  lib/scip/src/scip/struct_tree.h lib/scip/src/scip/pub_var.h \
  lib/scip/src/scip/struct_var.h lib/scip/src/scip/implics.h \
- lib/scip/src/scip/history.h lib/scip/src/scip/lpi.h \
+ lib/scip/src/scip/history.h lib/scip/src/lpi/lpi.h \
  lib/scip/src/nlpi/pub_expr.h lib/scip/src/scip/intervalarith.h \
  lib/scip/src/nlpi/type_exprinterpret.h lib/scip/src/nlpi/struct_expr.h \
  lib/scip/src/scip/presolve.h lib/scip/src/scip/struct_scip.h \
@@ -13904,7 +13904,7 @@ $(LIBOBJDIR)/JniScipSepaMcf.o: src/JniScipSepaMcf.c src/JniScipSepaMcf.h src/def
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -14028,7 +14028,7 @@ $(LIBOBJDIR)/JniScipSepaOddcycle.o: src/JniScipSepaOddcycle.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -14152,7 +14152,7 @@ $(LIBOBJDIR)/JniScipSepaRapidlearning.o: src/JniScipSepaRapidlearning.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -14276,7 +14276,7 @@ $(LIBOBJDIR)/JniScipSepaStrongcg.o: src/JniScipSepaStrongcg.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -14400,7 +14400,7 @@ $(LIBOBJDIR)/JniScipSepaZerohalf.o: src/JniScipSepaZerohalf.c \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -14523,7 +14523,7 @@ $(LIBOBJDIR)/JniScipSol.o: src/JniScipSol.c src/JniScipSol.h src/def.h \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \
@@ -14647,7 +14647,7 @@ $(LIBOBJDIR)/JniScipVar.o: src/JniScipVar.c src/JniScipVar.h src/def.h \
  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/struct_tree.h \
  lib/scip/src/scip/pub_var.h lib/scip/src/scip/struct_var.h \
  lib/scip/src/scip/implics.h lib/scip/src/scip/history.h \
- lib/scip/src/scip/lpi.h lib/scip/src/nlpi/pub_expr.h \
+ lib/scip/src/lpi/lpi.h lib/scip/src/nlpi/pub_expr.h \
  lib/scip/src/scip/intervalarith.h lib/scip/src/nlpi/type_exprinterpret.h \
  lib/scip/src/nlpi/struct_expr.h lib/scip/src/scip/presolve.h \
  lib/scip/src/scip/struct_scip.h lib/scip/src/scip/type_interrupt.h \

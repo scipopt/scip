@@ -66,7 +66,11 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
-
+#define SCIP_DEFAULT_BRANCH_FORCEBOTH     FALSE /**< should both strong branching children be regarded even if the first
+                                                 *   one is detected to be infeasible? (only with propagation) */
+#define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
+#define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
+#define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
 
 /* Conflict Analysis */
 
@@ -319,6 +323,9 @@
 #define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
 #define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
 #define SCIP_DEFAULT_READ_DYNAMICROWS     FALSE /**< should rows be added and removed dynamically to the LP? */
+#define SCIP_DEFAULT_WRITE_GENNAMES_OFFSET    0 /**< when writing the problem with generic names, we start with index
+                                                 *   0; using this parameter we can change the starting index to be
+                                                 *   different */
 
 /* Writing */
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
@@ -772,8 +779,8 @@ SCIP_RETCODE SCIPsetCreate(
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/scorefunc",
-         "branching score function ('s'um, 'p'roduct)",
-         &(*set)->branch_scorefunc, TRUE, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
+         "branching score function ('s'um, 'p'roduct, 'q'uotient)",
+         &(*set)->branch_scorefunc, TRUE, SCIP_DEFAULT_BRANCH_SCOREFUNC, "spq",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "branching/scorefac",
@@ -799,6 +806,26 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/delaypscostupdate",
          "should updating pseudo costs for continuous variables be delayed to the time after separation?",
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/forcebothchildren",
+         "should both strong branching children be regarded even if the first one is detected to be infeasible? (only with propagation)",
+         &(*set)->branch_forceboth, TRUE, SCIP_DEFAULT_BRANCH_FORCEBOTH,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "branching/firstsbchild",
+         "child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic",
+         &(*set)->branch_firstsbchild, TRUE, SCIP_DEFAULT_BRANCH_FIRSTSBCHILD, "adu",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/checksol",
+         "should LP solutions during strong branching with propagation be checked for feasibility?",
+         &(*set)->branch_checksbsol, TRUE, SCIP_DEFAULT_BRANCH_CHECKSBSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/roundsbsol",
+         "should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE)",
+         &(*set)->branch_roundsbsol, TRUE, SCIP_DEFAULT_BRANCH_ROUNDSBSOL,
          NULL, NULL) );
 
    /* conflict analysis parameters */
@@ -1669,6 +1696,11 @@ SCIP_RETCODE SCIPsetCreate(
          "write/allconss",
          "should all constraints be written (including the redundant constraints)?",
          &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "write/genericnamesoffset",
+         "when writing a generic problem the index for the first variable should start with?",
+         &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
 
    return SCIP_OKAY;

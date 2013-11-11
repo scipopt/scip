@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

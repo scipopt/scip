@@ -3131,10 +3131,11 @@ SCIP_RETCODE SCIPwritePip(
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_Bool ispolynomial;
+         int nexprtrees = SCIPgetNExprtreesNonlinear(scip, cons);
 
          /* check whether expressions are polynomials (assumed simplified exprtrees) */
          ispolynomial = TRUE;
-         for( e = 0; e < SCIPgetNExprtreesNonlinear(scip, cons) && ispolynomial; ++e )
+         for( e = 0; e < nexprtrees && ispolynomial; ++e )
          {
             exprtree = SCIPgetExprtreesNonlinear(scip, cons)[e];
             expr = SCIPexprtreeGetRoot(exprtree);
@@ -3208,13 +3209,12 @@ SCIP_RETCODE SCIPwritePip(
             } /*lint !e788*/
 
             /* check if all children of root expression correspond to variables */
-            for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
+            for( v = 0; v < SCIPexprGetNChildren(expr) && ispolynomial; ++v )
             {
                if( SCIPexprGetOperator(SCIPexprGetChildren(expr)[v]) != SCIP_EXPR_VARIDX )
                {
                   SCIPwarningMessage(scip, "%dth expression tree of constraint <%s> is not simplified, cannot write in pip format\n", e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
-                  break;
                }
             }
          }

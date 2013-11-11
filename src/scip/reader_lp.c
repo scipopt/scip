@@ -3326,6 +3326,7 @@ SCIP_RETCODE SCIPreadLp(
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
    LPINPUT lpinput;
    int i;
 
@@ -3359,7 +3360,7 @@ SCIP_RETCODE SCIPreadLp(
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(lpinput.dynamicrows)) );
 
    /* read the file */
-   SCIP_CALL( readLPFile(scip, &lpinput, filename) );
+   retcode = readLPFile(scip, &lpinput, filename);
 
    /* free dynamically allocated memory */
    SCIPfreeMemoryArray(scip, &lpinput.token);
@@ -3368,6 +3369,9 @@ SCIP_RETCODE SCIPreadLp(
    {
       SCIPfreeMemoryArray(scip, &lpinput.pushedtokens[i]);
    }
+
+   /* check for correct return value */
+   SCIP_CALL( retcode );
 
    /* evaluate the result */
    if( lpinput.haserror )

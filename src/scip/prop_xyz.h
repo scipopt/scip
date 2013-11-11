@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

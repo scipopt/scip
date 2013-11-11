@@ -55,6 +55,7 @@ struct SCIP_Prop
    SCIP_PROPDATA*        propdata;           /**< propagators local data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this propagator for the next stages */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this propagator */
+   SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this propagator during strong branching */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this propagator */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this propagator */
    int                   priority;           /**< priority of the propagator for propagation */

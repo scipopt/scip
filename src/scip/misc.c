@@ -33,14 +33,56 @@
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
-#include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
-#include "scip/var.h"
 #endif
+
+/** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
+static
+int calcGrowSize(
+   int                   initsize,           /**< initial size of array */
+   SCIP_Real             growfac,            /**< growing factor of array */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   int size;
+
+   assert(initsize >= 0);
+   assert(growfac >= 1.0);
+   assert(num >= 0);
+
+   if( growfac == 1.0 )
+      size = MAX(initsize, num);
+   else
+   {
+      int oldsize;
+
+      /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
+      initsize = MAX(initsize, 4);
+      size = initsize;
+      oldsize = size - 1;
+
+      /* second condition checks against overflow */
+      while( size < num && size > oldsize )
+      {
+         oldsize = size;
+         size = (int)(growfac * size + initsize);
+      }
+
+      /* if an overflow happened, set the correct value */
+      if( size <= oldsize )
+         size = num;
+   }
+
+   assert(size >= initsize);
+   assert(size >= num);
+
+   return size;
+}
 
 /*
  * GML graphical printing methods
@@ -73,6 +115,56 @@ void SCIPgmlWriteNode(
    fprintf(file, "  [\n");
    fprintf(file, "    id      %u\n", id);
    fprintf(file, "    label   \"%s\"\n", label);
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      w       %g\n", GMLNODEWIDTH);
+   fprintf(file, "      h       %g\n", GMLNODEHEIGTH);
+
+   if( nodetype != NULL )
+      fprintf(file, "      type    \"%s\"\n", nodetype);
+   else
+      fprintf(file, "      type    \"%s\"\n", GMLNODETYPE);
+
+   if( fillcolor != NULL )
+      fprintf(file, "      fill    \"%s\"\n", fillcolor);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLNODEFILLCOLOR);
+
+   if( bordercolor != NULL )
+      fprintf(file, "      outline \"%s\"\n", bordercolor);
+   else
+      fprintf(file, "      outline \"%s\"\n", GMLNODEBORDERCOLOR);
+
+   fprintf(file, "    ]\n");
+   fprintf(file, "    LabelGraphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      text      \"%s\"\n", label);
+   fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+   fprintf(file, "      fontName  \"Dialog\"\n");
+   fprintf(file, "      anchor    \"c\"\n");
+   fprintf(file, "    ]\n");
+   fprintf(file, "  ]\n");
+}
+
+/** writes a node section including weight to the given graph file */
+void SCIPgmlWriteNodeWeight(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor,        /**< color of the node's border, or NULL */
+   SCIP_Real             weight              /**< weight of node */
+   )
+{
+   assert(file != NULL);
+   assert(label != NULL);
+
+   fprintf(file, "  node\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    id      %u\n", id);
+   fprintf(file, "    label   \"%s\"\n", label);
+   fprintf(file, "    weight  %g\n", weight);
    fprintf(file, "    graphics\n");
    fprintf(file, "    [\n");
    fprintf(file, "      w       %g\n", GMLNODEWIDTH);
@@ -250,7 +342,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
       for( v = nvars - 1; v >= 0; --v )
       {
 	 assert(vars[v] != NULL);
-	 assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS);
+	 /* assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS); */
       }
    }
 #endif
@@ -1159,7 +1251,7 @@ SCIP_RETCODE hashtableResize(
       /* remember number of elements */
       nelements = hashtable->nelements;
       /* clear old lists */
-      SCIPhashtableClear(hashtable);
+      SCIPhashtableRemoveAll(hashtable);
       /* free old lists */
       BMSfreeMemoryArray(&(hashtable->lists));
 
@@ -1240,7 +1332,7 @@ void SCIPhashtableFree(
    for( i = table->nlists - 1; i >= 0; --i )
       hashtablelistFree(&lists[i], blkmem);
 
-   /* free main hast table data structure */
+   /* free main hash table data structure */
    BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
 }
@@ -1249,6 +1341,8 @@ void SCIPhashtableFree(
  *
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ *
+ *  @deprecated Please use SCIPhashtableRemoveAll()
  */
 void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -1454,6 +1548,31 @@ SCIP_RETCODE SCIPhashtableRemove(
       --(hashtable->nelements);
 
    return SCIP_OKAY;
+}
+
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
+   int i;
+
+   assert(hashtable != NULL);
+
+   blkmem = hashtable->blkmem;
+   lists = hashtable->lists;
+
+   /* free hash lists */
+   for( i = hashtable->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
+
+   hashtable->nelements = 0;
 }
 
 /** returns number of hash table elements */
@@ -2108,7 +2227,8 @@ SCIP_RETCODE SCIPrealarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 SCIP_RETCODE SCIPrealarrayExtend(
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    )
@@ -2142,7 +2262,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       int newvalssize;
 
       /* allocate new memory storage */
-      newvalssize = SCIPsetCalcMemGrowSize(set, nused);
+      newvalssize = calcGrowSize(arraygrowinit, arraygrowfac, nused);
       SCIP_ALLOC( BMSallocBlockMemoryArray(realarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
@@ -2314,7 +2434,8 @@ SCIP_Real SCIPrealarrayGetVal(
 /** sets value of entry in dynamic array */
 SCIP_RETCODE SCIPrealarraySetVal(
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    SCIP_Real             val                 /**< value to set array index to */
    )
@@ -2328,7 +2449,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    if( val != 0.0 )
    {
       /* extend array to be able to store the index */
-      SCIP_CALL( SCIPrealarrayExtend(realarray, set, idx, idx) );
+      SCIP_CALL( SCIPrealarrayExtend(realarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
 
@@ -2382,7 +2503,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
 /** increases value of entry in dynamic array */
 SCIP_RETCODE SCIPrealarrayIncVal(
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to increase value for */
    SCIP_Real             incval              /**< value to increase array index */
    )
@@ -2391,7 +2513,7 @@ SCIP_RETCODE SCIPrealarrayIncVal(
 
    oldval = SCIPrealarrayGetVal(realarray, idx);
    if( oldval != SCIP_INVALID ) /*lint !e777*/
-      return SCIPrealarraySetVal(realarray, set, idx, oldval + incval);
+      return SCIPrealarraySetVal(realarray, arraygrowinit, arraygrowfac, idx, oldval + incval);
    else
       return SCIP_OKAY;
 }
@@ -2476,7 +2598,8 @@ SCIP_RETCODE SCIPintarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 SCIP_RETCODE SCIPintarrayExtend(
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    )
@@ -2510,7 +2633,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       int newvalssize;
 
       /* allocate new memory storage */
-      newvalssize = SCIPsetCalcMemGrowSize(set, nused);
+      newvalssize = calcGrowSize(arraygrowinit, arraygrowfac, nused);
       SCIP_ALLOC( BMSallocBlockMemoryArray(intarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
@@ -2682,7 +2805,8 @@ int SCIPintarrayGetVal(
 /** sets value of entry in dynamic array */
 SCIP_RETCODE SCIPintarraySetVal(
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    int                   val                 /**< value to set array index to */
    )
@@ -2696,7 +2820,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    if( val != 0 )
    {
       /* extend array to be able to store the index */
-      SCIP_CALL( SCIPintarrayExtend(intarray, set, idx, idx) );
+      SCIP_CALL( SCIPintarrayExtend(intarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= intarray->firstidx);
       assert(idx < intarray->firstidx + intarray->valssize);
       
@@ -2749,12 +2873,13 @@ SCIP_RETCODE SCIPintarraySetVal(
 /** increases value of entry in dynamic array */
 SCIP_RETCODE SCIPintarrayIncVal(
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to increase value for */
    int                   incval              /**< value to increase array index */
    )
 {
-   return SCIPintarraySetVal(intarray, set, idx, SCIPintarrayGetVal(intarray, idx) + incval);
+   return SCIPintarraySetVal(intarray, arraygrowinit, arraygrowfac, idx, SCIPintarrayGetVal(intarray, idx) + incval);
 }
 
 /** returns the minimal index of all stored non-zero elements */
@@ -2839,7 +2964,8 @@ SCIP_RETCODE SCIPboolarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 SCIP_RETCODE SCIPboolarrayExtend(
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    )
@@ -2873,7 +2999,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       int newvalssize;
 
       /* allocate new memory storage */
-      newvalssize = SCIPsetCalcMemGrowSize(set, nused);
+      newvalssize = calcGrowSize(arraygrowinit, arraygrowfac, nused);
       SCIP_ALLOC( BMSallocBlockMemoryArray(boolarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
@@ -3047,7 +3173,8 @@ SCIP_Bool SCIPboolarrayGetVal(
 /** sets value of entry in dynamic array */
 SCIP_RETCODE SCIPboolarraySetVal(
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    SCIP_Bool             val                 /**< value to set array index to */
    )
@@ -3061,7 +3188,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    if( val != FALSE )
    {
       /* extend array to be able to store the index */
-      SCIP_CALL( SCIPboolarrayExtend(boolarray, set, idx, idx) );
+      SCIP_CALL( SCIPboolarrayExtend(boolarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= boolarray->firstidx);
       assert(idx < boolarray->firstidx + boolarray->valssize);
       
@@ -3192,7 +3319,8 @@ SCIP_RETCODE SCIPptrarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 SCIP_RETCODE SCIPptrarrayExtend(
    SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    )
@@ -3226,7 +3354,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       int newvalssize;
 
       /* allocate new memory storage */
-      newvalssize = SCIPsetCalcMemGrowSize(set, nused);
+      newvalssize = calcGrowSize(arraygrowinit, arraygrowfac, nused);
       SCIP_ALLOC( BMSallocBlockMemoryArray(ptrarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
@@ -3398,7 +3526,8 @@ void* SCIPptrarrayGetVal(
 /** sets value of entry in dynamic array */
 SCIP_RETCODE SCIPptrarraySetVal(
    SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    void*                 val                 /**< value to set array index to */
    )
@@ -3412,7 +3541,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    if( val != NULL )
    {
       /* extend array to be able to store the index */
-      SCIP_CALL( SCIPptrarrayExtend(ptrarray, set, idx, idx) );
+      SCIP_CALL( SCIPptrarrayExtend(ptrarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= ptrarray->firstidx);
       assert(idx < ptrarray->firstidx + ptrarray->valssize);
       
@@ -3753,6 +3882,16 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortRealPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
@@ -4240,6 +4379,16 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealRealBoolPtr
@@ -4487,6 +4636,8 @@ void SCIPactivityFree(
 
 /* some simple variable functions implemented as defines */
 
+#ifndef NDEBUG
+
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
@@ -4538,6 +4689,7 @@ int SCIPactivityGetEnergy(
    return activity->duration * activity->demand ;
 }
 
+#endif
 
 /*
  * Resource Profile

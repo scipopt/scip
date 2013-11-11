@@ -779,7 +779,7 @@
 
        If you need to solve a separate LP, creating a sub-SCIP is not recommended because of the overhead involved
        and because dual information is not accessible (compare <a href="#Q1.12">here</a>). Instead you can use SCIP's LP
-       interface. For this you should include <code>scip/lpi.h</code> and call the methods provided therein.
+       interface. For this you should include <code>lpi/lpi.h</code> and call the methods provided therein.
        Note that the LPi can be used independently from SCIP.
     </p>
 

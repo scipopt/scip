@@ -518,7 +518,6 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    SCIP_Real bestroundval;
    SCIP_Real minobj;
    int nlpcands;
-   int nimplfracs;
    int nlprows;
    int nfrac;
    int nviolrows;
@@ -562,8 +561,8 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, &nimplfracs) );
-   nfrac = nlpcands + nimplfracs;
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */
    if( nfrac == 0 )

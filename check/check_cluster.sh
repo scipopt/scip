@@ -156,7 +156,6 @@ else
     EXCLUSIVE=""
 fi
 
-
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 

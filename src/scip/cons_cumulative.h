@@ -272,7 +272,10 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
 
 /** propagate the given cumulative condition */
@@ -352,6 +355,35 @@ SCIP_RETCODE SCIPsolveCumulative(
    SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
    SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
    SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   );
+
+/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
+ *  completion time
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateWorstCaseProfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands             /**< array containing corresponding demands */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
+EXTERN
+int SCIPcomputeHmin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case resource profile */
+   int                   capacity            /**< capacity to check */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
+EXTERN
+int SCIPcomputeHmax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case profile */
+   int                   capacity            /**< capacity to check */
    );
 
 #ifdef __cplusplus
