@@ -11164,6 +11164,22 @@ SCIP_Real SCIPgetNodeDualbound(
    return SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node));
 }
 
+/** gets external value of a transformed objective value (estimate or lower bound)
+ *
+ *  @return untransformed (original space) value of \p val
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Real SCIPgetExternalValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< internal objective value */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetExternalValue", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPprobExternObjval(scip->transprob, scip->set, val);
+}
 /** gets lower bound of given node in transformed problem
  *
  *  @return lower bound  of given node in transformed problem
