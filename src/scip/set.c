@@ -779,8 +779,8 @@ SCIP_RETCODE SCIPsetCreate(
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/scorefunc",
-         "branching score function ('s'um, 'p'roduct)",
-         &(*set)->branch_scorefunc, TRUE, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
+         "branching score function ('s'um, 'p'roduct, 'q'uotient)",
+         &(*set)->branch_scorefunc, TRUE, SCIP_DEFAULT_BRANCH_SCOREFUNC, "spq",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "branching/scorefac",

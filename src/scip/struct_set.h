@@ -134,7 +134,7 @@ struct SCIP_Set
    SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
-   char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */
+   char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */
    char                  branch_firstsbchild;/**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
    SCIP_Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction
                                               *   in sum score function */

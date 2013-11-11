@@ -169,6 +169,7 @@ interface
 - removed parameter "normtype" from function SCIPcomputeLPRelIntPoint()
 
 parameters:
+- parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
 - new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from

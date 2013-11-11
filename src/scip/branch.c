@@ -2078,7 +2078,12 @@ SCIP_Real SCIPbranchGetScore(
    case 'p':  /* product score function */
       score = downgain * upgain;
       break;
-
+   case 'q': /* quotient score function */
+      if( downgain > upgain )
+         score = upgain * upgain / downgain;
+      else
+         score = downgain * downgain / upgain;
+      break;
    default:
       SCIPerrorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
       score = 0.0;
