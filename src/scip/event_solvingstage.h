@@ -39,6 +39,10 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+extern
+SCIP_Real SCIPgetOptimalSolutionValue(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 #ifdef __cplusplus
 }
 #endif

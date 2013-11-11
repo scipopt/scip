@@ -72,6 +72,19 @@ struct SCIP_EventhdlrData
  * Local methods
  */
 
+SCIP_Real SCIPgetOptimalSolutionValue(
+   SCIP*                 scip
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   return eventhdlrdata->optimalvalue;
+}
 static
 SCIP_RETCODE searchSolufileForProbname(
    SCIP*                scip,
@@ -184,6 +197,26 @@ SCIP_RETCODE applySolvingStage(
    return SCIP_OKAY;
 }
 
+/* frees strings from the eventhandler data */
+static
+void dataFreeStrings(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   /* read solufile information for problem */
+   /* free memory from previous run first (can happen if several problems are consecutively read in one session) */
+   if (eventhdlrdata->nosolsetname != NULL )
+   {
+      assert(eventhdlrdata->suboptsetname != NULL);
+      assert(eventhdlrdata->optsetname != NULL);
+      assert(eventhdlrdata->infeasiblesetname != NULL);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->nosolsetname);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->suboptsetname);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->optsetname);
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->infeasiblesetname);
+   }
+}
 /*
  * Callback methods of event handler
  */
@@ -214,19 +247,14 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingstage)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   if( eventhdlrdata->nosolsetname != NULL )
-   {
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->nosolsetname);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->suboptsetname);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->optsetname);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->infeasiblesetname);
-   }
+   dataFreeStrings(scip, eventhdlrdata);
    SCIPfreeMemory(scip, &eventhdlrdata);
    eventhdlrdata = NULL;
 
    return SCIP_OKAY;
 
 }
+
 
 /** initialization method of event handler (called after problem was transformed) */
 
@@ -241,6 +269,9 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    /* read solufile information for problem */
+
+   /* free memory from previous run first (can happen if several problems are consecutively read in one session) */
+   dataFreeStrings(scip, eventhdlrdata);
 
    eventhdlrdata->solvingstage = SOLVINGSTAGE_UNINITIALIZED;
 
