@@ -145,7 +145,7 @@ BEGIN {
    firstpb = +infty;
    db = -infty;
    dbset = 0;
-   rootdb = -infty;
+   dbforobjsense = -infty;
    simpiters = 0;
    bbnodes = 0;
    primlps = 0;
@@ -410,17 +410,14 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^Dual Bound         :/ { 
+/^  Dual Bound       :/ {
    if( $4 != "-" && $4 != "-\r" ) {
       db = $4;
       dbset = 1;
    }
 }
-/^  Root Dual Bound  :/ {
-   if( $5 != "-" && $5 != "-\r" )
-      rootdb = $5;
-   else
-       rootdb = db;  # SCIP most likely finished during root node, perhaps due to a solution limit. the rootdb is NOT printed then, but needed later
+/^Dual Bound         :/ {
+    dbforobjsense = $4; # in old SCIP log files, this value is used to detect the objective sense
 }
 #
 # iterations
@@ -535,8 +532,8 @@ BEGIN {
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
-      temp = rootdb;
-      rootdb = 1.0*temp;
+      temp = dbforobjsense;
+      dbforobjsense = 1.0*temp;
       
       # if objsense could not be determined so far (output is maybe too old)
       if ( objsense == 0 )
@@ -544,14 +541,14 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-	 # firstpb and rootdb are used to detect the direction of optimization (min or max)
+	 # firstpb and dbforobjsense are used to detect the direction of optimization (min or max)
 	 if( timetofirst < 0.0 )
 	    temp = pb;
 	 else
 	    temp = firstpb;
 	 firstpb = 1.0*temp;
 
-	 if ( firstpb - rootdb > max(abstol,reltol) )
+	 if ( firstpb - dbforobjsense > max(abstol,reltol) )
 	    objsense = 1;   # minimize
 	 else
 	    objsense = -1;  # maximize
