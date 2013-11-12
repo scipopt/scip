@@ -4292,10 +4292,13 @@ SCIP_RETCODE SCIPsolveCIP(
 
          /* call primal heuristics that should be applied after the node was solved */
          nnodes = SCIPtreeGetNNodes(tree);
-         if( !afternodeheur && (!cutoff || nnodes > 0) )
+         stopped = SCIPsolveIsStopped(set, stat, TRUE);
+         if( !afternodeheur && (!cutoff || nnodes > 0) && !stopped )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+            stopped = SCIPsolveIsStopped(set, stat, FALSE);
          }
 
          /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
@@ -4303,7 +4306,7 @@ SCIP_RETCODE SCIPsolveCIP(
           */
          assert(!tree->cutoffdelayed);
 
-         if( nnodes != SCIPtreeGetNNodes(tree) || SCIPsolveIsStopped(set, stat, TRUE) )
+         if( nnodes != SCIPtreeGetNNodes(tree) || stopped )
             nextnode = NULL;
       }
       else if( !infeasible )
