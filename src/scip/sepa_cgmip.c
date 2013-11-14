@@ -2907,6 +2907,7 @@ SCIP_RETCODE createCGCutDirect(
    localboundsused = FALSE;
    *cutoff = FALSE;
    success = TRUE;
+
    /* compute coefficients */
    SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &cutrank, &success) );
    cutislocal = localrowsused || localboundsused;
