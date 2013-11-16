@@ -21,6 +21,7 @@ fixed bugs:
   are now listed in line "other solutions" of Primal Heuristics statistics
 - fixed memory bug in reader_mps
 - fixed output of aggregated variables in indicator constraints in lp and mps-format
+- fixed bug in reading indicator constraints in mps-format
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)

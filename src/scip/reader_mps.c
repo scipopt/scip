@@ -2221,7 +2221,7 @@ SCIP_RETCODE readIndicators(
 
       /* check lhs/rhs */
       lhs = SCIPgetLhsLinear(scip, lincons);
-      rhs = SCIPgetLhsLinear(scip, lincons);
+      rhs = SCIPgetRhsLinear(scip, lincons);
       nlinvars = SCIPgetNVarsLinear(scip, lincons);
       linvars = SCIPgetVarsLinear(scip, lincons);
       linvals = SCIPgetValsLinear(scip, lincons);
@@ -2291,7 +2291,10 @@ SCIP_RETCODE readIndicators(
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
       /* create new name */
-      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
+      if ( SCIPisEQ(scip, lhs, rhs) )
+         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indrhs_%s", SCIPconsGetName(lincons));
+      else
+         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "ind_%s", SCIPconsGetName(lincons));
 
       /* create indicator constraint */
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, &cons, name, binvar, lincons, slackvar,
