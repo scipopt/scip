@@ -5816,7 +5816,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    posstr = strstr(slackvarname, "indslack");
    if ( posstr == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", binvarname);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
       *success = FALSE;
       return SCIP_OKAY;
    }
