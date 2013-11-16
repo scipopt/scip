@@ -186,6 +186,8 @@
  *
  * @todo Improve parsing of indicator constraint in CIP-format. Currently, we have to rely on a particular name, i.e.,
  * the slack variable has to start with "indslack" and end with the name of the corresponding linear constraint.
+ *
+ * @todo Check whether one can further use the fact that the slack variable is aggregated.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3151,6 +3153,7 @@ SCIP_RETCODE createVarUbs(
 static
 SCIP_RETCODE presolRoundIndicator(
    SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool             dualreductions,     /**< should dual reductions be performed? */
@@ -3333,6 +3336,108 @@ SCIP_RETCODE presolRoundIndicator(
       ++(*ndelconss);
       *success = TRUE;
       return SCIP_OKAY;
+   }
+
+   /* check whether indicator variable is aggregated  */
+   if ( SCIPvarGetStatus(consdata->binvar) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      SCIP_Bool negated = FALSE;
+      SCIP_VAR* var;
+
+      /* possibly get representation of indicator variable by active variable */
+      var = consdata->binvar;
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      assert( var == consdata->binvar || SCIPvarIsActive(var) || SCIPvarIsNegated(var) );
+
+      /* we can replace the binary variable by the active variable if it is not negated */
+      if ( var != consdata->binvar && ! negated )
+      {
+         SCIPdebugMessage("Indicator variable <%s> is aggregated and replaced by active/negated variable <%s>.\n", SCIPvarGetName(consdata->binvar), SCIPvarGetName(var) );
+
+         /* we need to update the events and locks */
+         assert( conshdlrdata->eventhdlrbound != NULL );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
+
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+
+         /* change binvary variable */
+         consdata->binvar = var;
+      }
+   }
+
+   /* check whether slack variable is aggregated  */
+   if ( SCIPvarGetStatus(consdata->slackvar) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      SCIP_BOUNDTYPE boundtype = SCIP_BOUNDTYPE_LOWER;
+      SCIP_Real bound;
+      SCIP_VAR* var;
+
+      /* possibly get representation of slack variable by active variable */
+      var = consdata->slackvar;
+      bound = SCIPvarGetLbGlobal(var);
+
+      SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
+
+      /* we can replace the binary variable by the active variable if it is also a >= variable */
+      if ( var != consdata->slackvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
+      {
+         assert( SCIPvarIsActive(var) );
+         SCIPdebugMessage("Slack variable <%s> is aggregated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
+
+         /* we need to update the events and locks */
+         assert( conshdlrdata->eventhdlrbound != NULL );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
+
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+
+         /* change slack variable */
+         consdata->slackvar = var;
+      }
+      else if ( var == consdata->binvar )
+      {
+         /* check special case that aggregating variable is equal to the indicator variable */
+         assert( SCIPisEQ(scip, bound, 0.0) || SCIPisEQ(scip, bound, 1.0) );
+
+         /* if the lower bound is transformed to an upper bound, we have "y = 1 -> 1 - y = 0", i.e., the constraint is redundant */
+         if ( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            SCIPdebugMessage("Slack variable <%s> is aggregated to negated indicator variable <%s> -> constraint redundant.\n",
+               SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
+            assert( SCIPisEQ(scip, bound, 1.0) );
+
+            /* delete constraint */
+            assert( ! SCIPconsIsModifiable(cons) );
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+            *success = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            /* if the lower bound is transformed to a lower bound, we have "y = 1 -> y = 0", i.e., we can fix the binary variable to 0 */
+            SCIPdebugMessage("Slack variable <%s> is aggregated to the indicator variable <%s> -> fix indicator variable to 0.\n",
+               SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
+            assert( boundtype == SCIP_BOUNDTYPE_LOWER );
+            assert( SCIPisEQ(scip, bound, 0.0) );
+
+            SCIP_CALL( SCIPfixVar(scip, consdata->binvar, 0.0, &infeasible, &fixed) );
+            assert( ! infeasible );
+
+            if ( fixed )
+               ++(*nfixedvars);
+
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+
+            ++(*ndelconss);
+            *success = TRUE;
+
+            return SCIP_OKAY;
+         }
+      }
    }
 
    /* Note that because of possible multi-aggregation we cannot simply remove the indicator
@@ -4986,7 +5091,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          }
 
          /* perform one presolving round */
-         SCIP_CALL( presolRoundIndicator(scip, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, ndelconss, nfixedvars) );
+         SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {

@@ -98,6 +98,7 @@ features:
   after a backtrack, e.g. in probing or strong branching with domain propagation
 - probing supports implicit binary variables
 - added scaling to computation of relative interior point in SCIPcomputeLPRelIntPoint()
+- added more presolving to cons_indicator, checking whether indicator/slack variables are aggregated
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
