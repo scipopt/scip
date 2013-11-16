@@ -21,6 +21,8 @@
  * @author Stefan Vigerske
  * @author Michael Winkler
  * @author Lars Schewe
+ *
+ * @todo write fixed (non-active) variables, e.g., for transformed problem
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
