@@ -25,6 +25,7 @@ data structures
 - hash tables will now increase dynamically
 
 features:
+- new distribution branching rule to base decisions on row activity (normal) distribution over domain space
 - new LNS heuristic called proximity which solves a problem in which a local branching constraint replaces the
   objective function which in turn is treated as additional constraint
 - added average gap based on primal-dual integral to solution statistics, can be disabled via parameter
