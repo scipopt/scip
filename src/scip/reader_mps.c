@@ -3815,12 +3815,18 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          assert( !SCIPhashtableExists(indicatorSlackHash, (void*) slackvar) );
          SCIP_CALL( SCIPhashtableInsert(indicatorSlackHash, (void*) slackvar) );
 
-         /* indicator constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
-         rhss[c] = SCIPinfinity(scip);
+         /* if slackvariable is aggregated, we store it in the list of aggregated variables */
+         if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_CALL( collectAggregatedVars(scip, &slackvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
+         }
 
          /* store aggregated variables */
          binvar = SCIPgetBinaryVarIndicator(cons);
          SCIP_CALL( collectAggregatedVars(scip, &binvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
+
+         /* indicator constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
+         rhss[c] = SCIPinfinity(scip);
 
          /* store constraint */
          consIndicator[nConsIndicator++] = cons;
@@ -4494,12 +4500,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* output each indicator constraint */
       for( c = 0; c < nConsIndicator; ++c )
       {
-         SCIP_VAR* binvar;
          SCIP_CONS* lincons;
+         SCIP_VAR* slackvar;
+         SCIP_VAR* binvar;
 
          cons = consIndicator[c];
          binvar = SCIPgetBinaryVarIndicator(cons);
          lincons = SCIPgetLinearConsIndicator(cons);
+         slackvar = SCIPgetSlackVarIndicator(cons);
 
          /* create variable and value strings */
          if( SCIPvarIsNegated(binvar) )
@@ -4517,9 +4525,15 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          }
 
          /* write records */
-         printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
-         printRecord(scip, file, varname, valuestr, maxnamelen);
-         SCIPinfoMessage(scip, file, "\n");
+         if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+         }
+         else
+         {
+         }
       }
    }
 
