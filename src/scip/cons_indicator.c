@@ -183,6 +183,9 @@
  * but directly enforce the propagations etc.
  *
  * @todo Turn off separation if the alternative polyhedron is infeasible and updateBounds is false.
+ *
+ * @todo Improve parsing of indicator constraint in CIP-format. Currently, we have to rely on a particular name, i.e.,
+ * the slack variable has to start with "indslack" and end with the name of the corresponding linear constraint.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
