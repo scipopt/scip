@@ -2245,8 +2245,8 @@ SCIP_RETCODE readIndicators(
                SCIP_VAR** vars;
                SCIP_Real* vals;
 
-               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars+1) );
-               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars+1) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
                for( i = 0; i < nlinvars; ++i )
                {
                   vars[i] = linvars[i];
@@ -2257,7 +2257,7 @@ SCIP_RETCODE readIndicators(
                (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
 
                /* create indicator constraint */
-               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars+1, vars, vals, -lhs,
+               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars, vars, vals, -lhs,
                      initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
                SCIP_CALL( SCIPaddCons(scip, cons) );
                SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));

@@ -19,6 +19,7 @@ fixed bugs:
 - fixed bug w.r.t. changing the variable branching priority beyond the problem stage
 - fixed statistics bug: externally given solutions and new solutions found while transforming existing ones
   are now listed in line "other solutions" of Primal Heuristics statistics
+- fixed memory bug in reader_mps
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
