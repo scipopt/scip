@@ -3316,7 +3316,7 @@ void printBoundSection(
       }
    }
 
-   /* output aggregated variables as 'free' */
+   /* output aggregated variables as 'free', except if they are binary */
    for( v = 0; v < naggvars; ++v )
    {
       if( !sectionName )
@@ -3332,10 +3332,20 @@ void printBoundSection(
       varname = varnames[nvars + v];
       assert(strncmp(varname, SCIPvarGetName(var), maxnamelen) == 0);
 
-      /* variable is free */
-      printStart(scip, file, "FR", "Bound", (int) maxnamelen);
-      printRecord(scip, file, varname, "", maxnamelen);
-      SCIPinfoMessage(scip, file, "\n");
+      /* take care of binary variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         printStart(scip, file, "BV", "Bound", (int) maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+      else
+      {
+         /* variable is free */
+         printStart(scip, file, "FR", "Bound", (int) maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
+      }
    }
 
    /* output all fixed variables */
@@ -3796,6 +3806,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_VAR* slackvar;
+         SCIP_VAR* binvar;
 
          /* store slack variable in hash */
          slackvar = SCIPgetSlackVarIndicator(cons);
@@ -3803,6 +3814,13 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          assert( indicatorSlackHash != NULL );
          assert( !SCIPhashtableExists(indicatorSlackHash, (void*) slackvar) );
          SCIP_CALL( SCIPhashtableInsert(indicatorSlackHash, (void*) slackvar) );
+
+         /* indicator constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
+         rhss[c] = SCIPinfinity(scip);
+
+         /* store aggregated variables */
+         binvar = SCIPgetBinaryVarIndicator(cons);
+         SCIP_CALL( collectAggregatedVars(scip, &binvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
 
          /* store constraint */
          consIndicator[nConsIndicator++] = cons;
