@@ -3429,10 +3429,12 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CONS** consSOS2;
    SCIP_CONS** consQuadratic;
    SCIP_CONS** consSOC;
+   SCIP_CONS** consIndicator;
    int nConsSOS1 = 0;
    int nConsSOS2 = 0;
    int nConsQuadratic = 0;
    int nConsSOC = 0;
+   int nConsIndicator = 0;
    char consname[LP_MAX_NAMELEN];
 
    SCIP_VAR** aggregatedVars;
@@ -3575,6 +3577,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS2, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3741,6 +3744,9 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPfreeBufferArray(scip, &consvars);
             SCIPfreeBufferArray(scip, &consvals);
          }
+
+         /* store constraint */
+         consIndicator[nConsIndicator++] = cons;
       }
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
@@ -3828,6 +3834,16 @@ SCIP_RETCODE SCIPwriteLp(
       SCIP_CALL( collectAggregatedVars(scip, 1, &var, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
+   /* check for aggregated variables in indicator constraints and output aggregations as linear constraints */
+   for( c = 0; c < nConsIndicator; ++c )
+   {
+      SCIP_VAR* binvar;
+
+      cons = consIndicator[c];
+      binvar = SCIPgetBinaryVarIndicator(cons);
+      SCIP_CALL( collectAggregatedVars(scip, 1, &binvar, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+   }
+
    /* print aggregation constraints */
    SCIP_CALL( printAggregatedCons(scip, file, transformed, nvars, nAggregatedVars, aggregatedVars) );
 
@@ -3891,12 +3907,6 @@ SCIP_RETCODE SCIPwriteLp(
       SCIPinfoMessage(scip, file, " %s free\n", varname);
    }
 
-   /* free space */
-   SCIPfreeBufferArray(scip, &aggregatedVars);
-   SCIPhashtableFree(&varAggregated);
-   if( conshdlrInd != NULL )
-      SCIPhashmapFree(&consHidden);
-
    /* print binaries section */
    if( nbinvars > 0 )
    {
@@ -3904,9 +3914,24 @@ SCIP_RETCODE SCIPwriteLp(
 
       clearLine(linebuffer, &linecnt);
 
+      /* output active variables */
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
+         assert( var != NULL );
+
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         {
+            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+         }
+      }
+
+      /* possibly output aggregated variables */
+      for( v = 0; v < nAggregatedVars; ++v )
+      {
+         var = aggregatedVars[v];
          assert( var != NULL );
 
          if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -3925,6 +3950,7 @@ SCIP_RETCODE SCIPwriteLp(
    {
       SCIPinfoMessage(scip, file, "Generals\n");
 
+      /* output active variables */
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
@@ -3937,8 +3963,29 @@ SCIP_RETCODE SCIPwriteLp(
             appendLine(scip, file, linebuffer, &linecnt, buffer);
          }
       }
+
+      /* possibly output aggregated variables */
+      for( v = 0; v < nAggregatedVars; ++v )
+      {
+         var = aggregatedVars[v];
+         assert( var != NULL );
+
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         {
+            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+         }
+      }
+
       endLine(scip, file, linebuffer, &linecnt);
    }
+
+   /* free space */
+   SCIPfreeBufferArray(scip, &aggregatedVars);
+   SCIPhashtableFree(&varAggregated);
+   if( conshdlrInd != NULL )
+      SCIPhashmapFree(&consHidden);
 
    /* print SOS section */
    if( nConsSOS1 > 0 || nConsSOS2 > 0 )
@@ -3972,10 +4019,11 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* free space */
-   SCIPfreeBufferArray(scip, &consSOS1);
-   SCIPfreeBufferArray(scip, &consSOS2);
-   SCIPfreeBufferArray(scip, &consQuadratic);
+   SCIPfreeBufferArray(scip, &consIndicator);
    SCIPfreeBufferArray(scip, &consSOC);
+   SCIPfreeBufferArray(scip, &consQuadratic);
+   SCIPfreeBufferArray(scip, &consSOS2);
+   SCIPfreeBufferArray(scip, &consSOS1);
 
    /* end of lp format */
    SCIPinfoMessage(scip, file, "%s\n", "End");
