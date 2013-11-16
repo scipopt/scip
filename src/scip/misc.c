@@ -7741,6 +7741,18 @@ SCIP_Bool SCIPfileExists(
    return TRUE;
 }
 
+/* returns the base name of a file, i.e., "path/to/somefile.ext" is cut to "somefile.ext" */
+const char* SCIPstringGetBasename(
+   const char*           string              /**< null terminated string */
+   )
+{
+   char* retval;
+
+   retval = strrchr(string, '/');
+
+   return retval == NULL ? string : &(retval[1]);
+}
+
 /** splits filename into path, name, and extension */
 void SCIPsplitFilename(
    char*                 filename,           /**< filename to split; is destroyed (but not freed) during process */

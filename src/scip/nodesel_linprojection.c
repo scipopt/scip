@@ -56,11 +56,15 @@
 
 #define EVENTHDLR_NAME         "linprojection"
 #define EVENTHDLR_DESC         "event handler for linprojection node events"
-#define EVENT_TYPE_LINPROJECTION SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFEASIBLE
+#define EVENT_TYPE_LINPROJECTION SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE
+#define HEADER "NUMBER  NODELOWER NODEESTIM NODELINESTIM CUTOFFBOUND CLASSICESTIM NODELPCANDS OPTVAL"
 
 /* structure to collect descriptive statistics */
 struct SCIP_DescStat
 {
+   char*                name;
+   SCIP_Real            min;
+   SCIP_Real            max;
    SCIP_Real            sumofobservations;
    SCIP_Real            sumofsquaredobservations;
    SCIP_Longint         nobservations;
@@ -92,18 +96,26 @@ struct SCIP_NodeselData
    int                   minnlpcands;        /**< minimum number of LP candidates found so far */
    SCIP_Real             minlowerbound;      /**< best lower bound of a node with minnlpcands branching candidates */
    SCIP_Real             projectionslope;    /**< slope of linear estimate of best MIP-feasible solution attainable in a subtree */
+   SCIP_Real             cutoffbound;        /**< estimation of best MIP objective attainable */
    SCIP_DESCSTAT*        newestimationstat;  /**< descriptive statistics of new linear projection estimate */
    SCIP_DESCSTAT*        oldestimationstat;  /**< descriptive statistics of classic estimation method */
    SCIP_Real             optsolvalue;        /**< optimal solution value according to solu file */
+   SCIP_VAR**            rootlpcands;        /**< root LP candidates */
+   SCIP_Real*            rootfracs;          /**< root fractionalities */
+   int                   nrootlpcands;       /**< number of root LP candidates */
+   char*                 filename;           /**< file to keep node results */
 };
 
 static
 void SCIPdescstatReset(
+   SCIP*                scip,
    SCIP_DESCSTAT*       descstat
    )
 {
    assert(descstat != NULL);
 
+   descstat->min = SCIPinfinity(scip);
+   descstat->max = -descstat->min;
    descstat->nobservations = 0l;
    descstat->sumofobservations = 0.0;
    descstat->sumofsquaredobservations = 0.0;
@@ -111,15 +123,19 @@ void SCIPdescstatReset(
 static
 SCIP_RETCODE SCIPdescstatCreate(
    SCIP*                scip,
-   SCIP_DESCSTAT**      descstat
+   SCIP_DESCSTAT**      descstat,
+   const char*          name
    )
 {
    assert(scip != NULL);
    assert(descstat != NULL);
+   assert(name != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, descstat) );
 
-   SCIPdescstatReset(*descstat);
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*descstat)->name, name, strlen(name) + 1) );
+
+   SCIPdescstatReset(scip, *descstat);
 
    return SCIP_OKAY;
 }
@@ -133,6 +149,9 @@ void SCIPdescstatFree(
    assert(scip != NULL);
    assert(descstat != NULL);
    assert(*descstat != NULL);
+   assert((*descstat)->name != NULL);
+
+   SCIPfreeMemoryArray(scip, &(*descstat)->name);
 
    SCIPfreeMemory(scip, descstat);
 }
@@ -148,22 +167,12 @@ void SCIPdescstatAddObservation(
    ++descstat->nobservations;
    descstat->sumofobservations += newobservation;
    descstat->sumofsquaredobservations += newobservation * newobservation;
+   if( newobservation < descstat->min )
+      descstat->min = newobservation;
+   if( newobservation > descstat->max )
+      descstat->max = newobservation;
 }
 
-static
-void SCIPdescstatReplaceObservation(
-   SCIP_DESCSTAT*        descstat,
-   SCIP_Real             oldobservation,
-   SCIP_Real             newobservation
-   )
-{
-   assert(descstat != NULL);
-
-   assert(descstat->nobservations >= 1);
-
-   descstat->sumofobservations += newobservation - oldobservation;
-   descstat->sumofsquaredobservations += (newobservation * newobservation) - (oldobservation * oldobservation);
-}
 
 static
 void SCIPprintDescstat(
@@ -180,8 +189,8 @@ void SCIPprintDescstat(
    variance = descstat->nobservations == 0 ? 0.0 : descstat->sumofsquaredobservations / (SCIP_Real)descstat->nobservations;
    variance -= meanval * meanval;
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "Descriptive statistic: mean %15.4g, variance %15.4g (%"SCIP_LONGINT_FORMAT" observations)\n",
-         meanval, variance, descstat->nobservations);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%s: range [%15.4g, %15.4g], mean %15.4g, variance %15.4g (%"SCIP_LONGINT_FORMAT" observations)\n",
+         descstat->name, descstat->min, descstat->max, meanval, variance, descstat->nobservations);
 }
 
 /** creates and captures a linprojection constraint
@@ -255,7 +264,6 @@ SCIP_CONSDATA* nodeGetLinprojectionData(
    SCIP_CONSSETCHG* conssetchg;
    SCIP_CONS** nodeconss;
    int         nnodeconss;
-   char name[64];
    int c;
 
    assert(node != NULL);
@@ -278,7 +286,6 @@ SCIP_CONSDATA* nodeGetLinprojectionData(
    }
 
    SCIPconssetchgGetAddedConsData(conssetchg, &nodeconss, &nnodeconss);
-   sprintf(name, "node_%"SCIP_LONGINT_FORMAT"", SCIPnodeGetNumber(node));
    assert(nnodeconss == 0 || nodeconss != NULL);
 
    /* loop over node constraints to find the unique one belonging to the linprojection conshdlr */
@@ -289,7 +296,7 @@ SCIP_CONSDATA* nodeGetLinprojectionData(
       cons = nodeconss[c];
 
       /* TODO replace the slow string comparison method by a faster method comparing constraint handlers */
-      if(strcmp(SCIPconsGetName(cons), name) != 0)
+      if(SCIPconsGetHdlr(cons) != nodeseldata->conshdlr)
          continue;
 
       return SCIPconsGetData(cons);
@@ -367,6 +374,7 @@ void selectBestNode(
    SCIP_NODE** nodes,
    SCIP_NODE** selnode,
    SCIP_Real*  bestnodeestimate,
+   SCIP_Real*  bestnodelowerbound,
    int nnodes
    )
 {
@@ -381,8 +389,36 @@ void selectBestNode(
       {
          *bestnodeestimate = nodelinprojectionestimate;
          *selnode = nodes[c];
+         *bestnodelowerbound = SCIPnodeGetLowerbound(nodes[c]);
       }
    }
+}
+
+static
+SCIP_Real recalcClassicEstimate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   )
+{
+   SCIP_Real estimate;
+   int i;
+   estimate = SCIPgetLowerboundRoot(scip);
+
+   if( nodeseldata->nrootlpcands == 0 || nodeseldata->rootlpcands == NULL )
+      return SCIP_OKAY;
+
+   for( i = 0; i < nodeseldata->nrootlpcands; ++i )
+   {
+      SCIP_Real upscore;
+      SCIP_Real downscore;
+
+      upscore = SCIPgetVarPseudocostScore(scip, nodeseldata->rootlpcands[i], - nodeseldata->rootfracs[i]);
+      downscore = SCIPgetVarPseudocostScore(scip, nodeseldata->rootlpcands[i], 1 - nodeseldata->rootfracs[i]);
+
+      estimate += MIN(upscore, downscore);
+   }
+
+   return estimate;
 }
 
 /*
@@ -472,6 +508,61 @@ void updateLinprojectionslope(
    }
    else
       nodeseldata->projectionslope = 0.0;
+
+   nodeseldata->cutoffbound = SCIPgetLowerbound(scip) + nodeseldata->projectionslope * nrootlpcands;
+   nodeseldata->cutoffbound = MIN(SCIPgetUpperbound(scip), nodeseldata->cutoffbound);
+}
+
+/* free root LP solution from node selector data */
+static
+void dataFreeRootLPSol(
+   SCIP*                 scip,
+   SCIP_NODESELDATA*     nodeseldata
+   )
+{
+   assert(scip != NULL);
+   assert(nodeseldata != NULL);
+
+   assert(nodeseldata->nrootlpcands == 0 || nodeseldata->rootlpcands != NULL);
+
+   if( nodeseldata->rootlpcands != NULL )
+   {
+      SCIPfreeMemoryArray(scip, &nodeseldata->rootlpcands);
+      SCIPfreeMemoryArray(scip, &nodeseldata->rootfracs);
+   }
+   nodeseldata->nrootlpcands = 0;
+}
+
+/* stores root LP solution (after separation) in nodeseldata */
+static
+SCIP_RETCODE storeRootLPSol(
+   SCIP*                 scip,
+   SCIP_NODESELDATA*     nodeseldata
+   )
+{
+   SCIP_VAR** lpcandsroot;
+   SCIP_Real* lpcandsfrac;
+
+   assert(scip != NULL);
+   assert(nodeseldata != NULL);
+   assert(SCIPgetDepth(scip) == 0);
+
+   /* free previously stored root LP solutions */
+   if( nodeseldata->rootlpcands != NULL )
+   {
+      dataFreeRootLPSol(scip, nodeseldata);
+   }
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT )
+   {
+      SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcandsroot, NULL, &lpcandsfrac, &nodeseldata->nrootlpcands, NULL, NULL) );
+   }
+
+   if( nodeseldata->nrootlpcands > 0 )
+   {
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &nodeseldata->rootlpcands, lpcandsroot, nodeseldata->nrootlpcands) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &nodeseldata->rootfracs, lpcandsfrac, nodeseldata->nrootlpcands) );
+   }
+   return SCIP_OKAY;
 }
 /*
  * Callback methods of event handler
@@ -483,6 +574,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinprojection)
    SCIP_NODE* focusnode;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_NODESELDATA* nodeseldata;
+   FILE* file;
 
    SCIP_Real nodelowerbound;
    SCIP_Real currentupperbound;
@@ -520,9 +612,32 @@ SCIP_DECL_EVENTEXEC(eventExecLinprojection)
       updateLinprojectionslope(scip, nodeseldata, nodelowerbound, nlpcands);
    }
 
+   /* store the last root LP solution, if it is not already integer feasible */
+   if( SCIPnodeGetDepth(focusnode) == 0 && SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED )
+   {
+      SCIP_CALL( storeRootLPSol(scip, nodeseldata) );
+   }
+
+   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
+   {
+      file = fopen(nodeseldata->filename, "a");
+      assert(file != NULL);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%lld %15g %15g %15g %15g %15g %10d %15g\n",
+            SCIPnodeGetNumber(focusnode),
+            SCIPgetExternalValue(scip, SCIPnodeGetLowerbound(focusnode)),
+            SCIPgetExternalValue(scip, SCIPnodeGetEstimate(focusnode)),
+            SCIPgetExternalValue(scip, nodeGetLinprojectionEstimate(focusnode, nodeseldata)),
+            SCIPgetExternalValue(scip, nodeseldata->cutoffbound),
+            SCIPgetExternalValue(scip, recalcClassicEstimate(scip, nodeseldata)),
+            nlpcands,
+            nodeseldata->optsolvalue);
+      fclose(file);
+   }
    return SCIP_OKAY;
 
 }
+
+
 /*
  * Callback methods of node selector
  */
@@ -541,6 +656,33 @@ SCIP_DECL_NODESELCOPY(nodeselCopyLinprojection)
 }
 
 static
+SCIP_DECL_NODESELINIT(nodeselInitLinprojection)
+{
+   SCIP_NODESELDATA* nodeseldata;
+   FILE* file;
+   char filename[SCIP_MAXSTRLEN];
+   assert(scip != NULL);
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   if( nodeseldata->filename != NULL )
+      SCIPfreeMemory(scip, &nodeseldata->filename);
+
+   sprintf(filename, "/OPTI/bzfhende/nodefiles/%s.npf",SCIPstringGetBasename(SCIPgetProbName(scip)));
+
+   SCIPduplicateMemoryArray(scip, &nodeseldata->filename, filename, strlen(filename) + 1);
+
+   /* open the file and overwrite its content */
+   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
+   {
+      file = fopen(nodeseldata->filename, "w+");
+      assert(file != NULL);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, HEADER"\n");
+      fclose(file);
+   }
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_NODESELINITSOL(nodeselInitsolLinprojection)
 {
    SCIP_NODESELDATA* nodeseldata;
@@ -555,9 +697,10 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolLinprojection)
    nodeseldata->projectionslope = 0.0;
    nodeseldata->rootconsdepth = -1;
    nodeseldata->rootnodecons = NULL;
+   nodeseldata->cutoffbound = SCIPinfinity(scip);
 
-   SCIPdescstatReset(nodeseldata->newestimationstat);
-   SCIPdescstatReset(nodeseldata->oldestimationstat);
+   SCIPdescstatReset(scip, nodeseldata->newestimationstat);
+   SCIPdescstatReset(scip, nodeseldata->oldestimationstat);
 
    nodeseldata->optsolvalue = SCIPgetOptimalSolutionValue(scip);
 
@@ -565,8 +708,11 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolLinprojection)
    {
       SCIPwarningMessage(scip, "Optimal solution value is infinite!\n");
    }
-   SCIP_CALL( SCIPcatchEvent(scip, EVENT_TYPE_LINPROJECTION, nodeseldata->eventhdlr, NULL, NULL) );
 
+   if( SCIPgetNRuns(scip) == 1 )
+   {
+      SCIP_CALL( SCIPcatchEvent(scip, EVENT_TYPE_LINPROJECTION, nodeseldata->eventhdlr, NULL, NULL) );
+   }
    return SCIP_OKAY;
 }
 
@@ -610,6 +756,11 @@ SCIP_DECL_NODESELFREE(nodeselFreeLinprojection)
    SCIPdescstatFree(scip, &nodeseldata->oldestimationstat);
    SCIPdescstatFree(scip, &nodeseldata->newestimationstat);
 
+   dataFreeRootLPSol(scip, nodeseldata);
+
+   if( nodeseldata->filename != NULL )
+      SCIPfreeMemoryArray(scip, &nodeseldata->filename);
+
    SCIPfreeMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, NULL);
 
@@ -624,7 +775,8 @@ SCIP_DECL_NODESELSELECT(nodeselSelectLinprojection)
    SCIP_NODE** siblings;
    SCIP_NODESELDATA* nodeseldata;
    SCIP_Real bestnodeestimate;
-   SCIP_Real upperbound;
+   SCIP_Real cutoffbound;
+   SCIP_Real bestlowerbound;
    int nleaves;
    int nchildren;
    int nsiblings;
@@ -640,20 +792,21 @@ SCIP_DECL_NODESELSELECT(nodeselSelectLinprojection)
 
    *selnode = NULL;
    bestnodeestimate = SCIPinfinity(scip);
-   upperbound = SCIPgetUpperbound(scip);
-   selectBestNode(scip, nodeseldata, children, selnode, &bestnodeestimate, nchildren);
+   bestlowerbound = SCIPinfinity(scip);
+   cutoffbound = nodeseldata->cutoffbound;
+   selectBestNode(scip, nodeseldata, children, selnode, &bestnodeestimate, &bestlowerbound, nchildren);
 
-   if( *selnode == NULL || SCIPisGT(scip, bestnodeestimate, upperbound) )
+   if( *selnode == NULL || SCIPisGT(scip, bestlowerbound, cutoffbound) )
    {
-      selectBestNode(scip, nodeseldata, siblings, selnode, &bestnodeestimate, nsiblings);
-      if( *selnode == NULL || SCIPisGT(scip, bestnodeestimate, upperbound) )
+      selectBestNode(scip, nodeseldata, siblings, selnode, &bestnodeestimate, &bestlowerbound, nsiblings);
+      if( *selnode == NULL || SCIPisGT(scip, bestlowerbound, cutoffbound) )
       {
          SCIP_Real bestclassicestimate;
          SCIP_NODE* bestleaf;
          SCIP_NODE* bestchild;
          SCIP_NODE* bestsibling;
 
-         selectBestNode(scip, nodeseldata, leaves, selnode, &bestnodeestimate, nleaves);
+         selectBestNode(scip, nodeseldata, leaves, selnode, &bestnodeestimate, &bestlowerbound, nleaves);
 
          bestleaf = SCIPgetBestLeaf(scip);
          bestclassicestimate = SCIPinfinity(scip);
@@ -666,13 +819,15 @@ SCIP_DECL_NODESELSELECT(nodeselSelectLinprojection)
          if( bestchild != NULL && SCIPisLT(scip, SCIPnodeGetEstimate(bestchild), bestclassicestimate) )
             bestclassicestimate = SCIPnodeGetEstimate(bestchild);
 
-         if( bestclassicestimate != SCIPinfinity(scip) )
+
+         if( !(SCIPisInfinity(scip, REALABS(bestclassicestimate)) || SCIPisInfinity(scip, REALABS(bestnodeestimate)) ))
          {
             SCIP_Real extclassicestimate;
             SCIP_Real extnewestimate;
 
             extclassicestimate = SCIPgetExternalValue(scip, bestclassicestimate);
             extnewestimate = SCIPgetExternalValue(scip, bestnodeestimate);
+
             if( !SCIPisInfinity(scip, REALABS(nodeseldata->optsolvalue)) )
             {
                SCIPdescstatAddObservation(nodeseldata->oldestimationstat, extclassicestimate - nodeseldata->optsolvalue);
@@ -729,8 +884,13 @@ SCIP_RETCODE SCIPincludeNodeselLinprojection(
 
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->conshdlr = NULL;
-   SCIP_CALL( SCIPdescstatCreate(scip, &nodeseldata->oldestimationstat) );
-   SCIP_CALL( SCIPdescstatCreate(scip, &nodeseldata->newestimationstat) );
+   nodeseldata->rootlpcands = NULL;
+   nodeseldata->rootfracs = NULL;
+   nodeseldata->nrootlpcands = 0;
+   nodeseldata->filename = NULL;
+
+   SCIP_CALL( SCIPdescstatCreate(scip, &nodeseldata->oldestimationstat, "classic estimate") );
+   SCIP_CALL( SCIPdescstatCreate(scip, &nodeseldata->newestimationstat, "new estimate    ") );
 
    /* include dummy constraint handler to represent linprojection node data */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &nodeseldata->conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -754,6 +914,7 @@ SCIP_RETCODE SCIPincludeNodeselLinprojection(
    assert(nodesel != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetNodeselInit(scip, nodesel, nodeselInitLinprojection) );
    SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyLinprojection) );
    SCIP_CALL( SCIPsetNodeselInitsol(scip, nodesel, nodeselInitsolLinprojection) );
    SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeLinprojection) );

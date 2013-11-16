@@ -34,7 +34,7 @@
  */
 #define MAXLINELEN 1024   /**< limit for line length */
 #define DEFAULT_ENABLED FALSE /**< should the event handler be executed? */
-#define DEFAULT_SOLUFILENAME "short.solu" /**< default filename to read solution value from */
+#define DEFAULT_SOLUFILENAME "myshort.solu" /**< default filename to read solution value from */
 #define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//testset//"
 #define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"
 #define DEFAULT_SETNAME "default.set"
@@ -262,6 +262,8 @@ static
 SCIP_DECL_EVENTINIT(eventInitSolvingstage)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   const char* probname;
+
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -280,14 +282,14 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
    SCIPduplicateMemoryArray(scip, &eventhdlrdata->optsetname, eventhdlrdata->optsetnameparam, strlen(eventhdlrdata->optsetnameparam) + 1);
    SCIPduplicateMemoryArray(scip, &eventhdlrdata->infeasiblesetname, eventhdlrdata->infeasiblesetnameparam, strlen(eventhdlrdata->infeasiblesetnameparam) + 1);
 
+   probname = SCIPstringGetBasename(SCIPgetProbName(scip));
+   eventhdlrdata->optimalvalue = SCIPinfinity(scip);
+   SCIP_CALL( searchSolufileForProbname(scip, probname, eventhdlrdata) );
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Optimal value for problem %s from solufile %s: %16.9g\n", probname, eventhdlrdata->solufilename, eventhdlrdata->optimalvalue);
+
    if( eventhdlrdata->enabled )
    {
-      const char* probname;
 
-      probname = SCIPgetProbName(scip);
-      eventhdlrdata->optimalvalue = SCIPinfinity(scip);
-      SCIP_CALL( searchSolufileForProbname(scip, probname, eventhdlrdata) );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Optimal value for problem %s from solufile %s: %16.9g\n", probname, eventhdlrdata->solufilename, eventhdlrdata->optimalvalue);
 
       SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
       SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
