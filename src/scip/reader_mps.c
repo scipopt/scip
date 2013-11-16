@@ -4169,7 +4169,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( SCIPreallocBufferArray(scip, &consnames, nconss + naddrows + naggvars) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &rhss, nconss + naddrows + naggvars) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &varnames, nvars + naggvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 1) );
 
       for( c = 0; c < naggvars; ++c )
       {
@@ -4193,7 +4192,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
 
          /* output row type (it is an equation) */
-         SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_VALUELEN) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_VALUELEN) ); /* note that namestr above is freed via varnames */
          (void) SCIPsnprintf(namestr, MPS_MAX_VALUELEN, "aggr%d", c );
          printRowType(scip, file, 1.0, 1.0, namestr);
 
@@ -4202,11 +4201,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          consnames[nconss + naddrows + c] = namestr;
 
-         consvars[0] = aggvars[c];
          rhss[nconss + naddrows + c] = 0.0;
 
          /* compute column entries */
-         SCIP_CALL( getLinearCoeffs(scip, namestr, consvars, NULL, 1, transformed, matrix, &rhss[nconss + naddrows + c]) );
+         SCIP_CALL( getLinearCoeffs(scip, namestr, &(aggvars[c]), NULL, 1, transformed, matrix, &rhss[nconss + naddrows + c]) );
 
          /* add the aggregated variables to the sparse matrix */
          SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
@@ -4215,7 +4213,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          matrix->rows[matrix->nentries] = namestr;
          matrix->nentries++;
       }
-      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* collect also fixed variables, because they might not be removed from all constraints */
