@@ -4192,8 +4192,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
 
          /* output row type (it is an equation) */
-         SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_VALUELEN) ); /* note that namestr above is freed via varnames */
-         (void) SCIPsnprintf(namestr, MPS_MAX_VALUELEN, "aggr%d", c );
+         SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) ); /* note that namestr above is freed via varnames */
+         (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(var));
          printRowType(scip, file, 1.0, 1.0, namestr);
 
          l = strlen(namestr);
@@ -4268,7 +4268,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
 
    /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows, consnames, rhss, maxnamelen);
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen);
 
    /* output RANGES section */
    if( needRANGES )
@@ -4491,6 +4491,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* print indicator section */
    if( nConsIndicator > 0 )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
+
       SCIPinfoMessage(scip, file, "INDICATORS\n");
       SCIPdebugMessage("start printing INDICATOR section\n");
 
@@ -4524,14 +4526,20 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* write records */
          if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
          {
-            printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
+            /* for aggregated variables output name of aggregating constraint */
+            (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(slackvar));
+            printStart(scip, file, "IF", namestr, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
             SCIPinfoMessage(scip, file, "\n");
          }
          else
          {
+            printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
          }
       }
+      SCIPfreeBufferArray(scip, &namestr);
    }
 
    /* free matrix data structure */
