@@ -122,6 +122,7 @@ struct SCIP_ConsData
 
    SCIP_Real             lincoefsmin;        /**< maximal absolute value of coefficients in linear part, only available in solving stage */
    SCIP_Real             lincoefsmax;        /**< minimal absolute value of coefficients in linear part, only available in solving stage */
+   unsigned int          ncuts;              /**< number of cuts created for this constraint so far */
 };
 
 /** nonlinear constraint update method */
@@ -1110,6 +1111,8 @@ SCIP_RETCODE consdataCreateEmpty(
 
    (*consdata)->curvature = SCIP_EXPRCURV_LINEAR;
    (*consdata)->iscurvchecked = TRUE;
+
+   (*consdata)->ncuts = 0;
 
    return SCIP_OKAY;
 }
@@ -4790,6 +4793,7 @@ SCIP_RETCODE generateCut(
    SCIP_Bool             assumeconvex        /**< whether to assume convexity in inequalities */
    )
 {
+   char rowname[SCIP_MAXSTRLEN];
    SCIP_CONSDATA* consdata;
    SCIP_Bool success;
    SCIP_Real* x;
@@ -4808,13 +4812,16 @@ SCIP_RETCODE generateCut(
 
    if( consdata->nexprtrees == 0 )
    {
+      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%u", SCIPconsGetName(cons), ++(consdata->ncuts));
+
       /* if we are actually linear, add the constraint as row to the LP */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPconsIsLocal(cons), FALSE , TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, consdata->lhs, consdata->rhs, SCIPconsIsLocal(cons), FALSE , TRUE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons),
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%u", SCIPconsGetName(cons), ++(consdata->ncuts));
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname,
          side == SCIP_SIDETYPE_LEFT  ? consdata->lhs : -SCIPinfinity(scip),
          side == SCIP_SIDETYPE_RIGHT ? consdata->rhs :  SCIPinfinity(scip),
          !(side == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) &&
