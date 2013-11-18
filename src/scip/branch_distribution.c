@@ -127,39 +127,47 @@ SCIP_Real rowCalcProbability(
    SCIP*                 scip,               /**< current scip */
    SCIP_ROW*             row,                /**< the row */
    SCIP_Real             mu,                 /**< the mean value of the row distribution */
-   SCIP_Real             sigma2              /**< the variance of the row distribution */
+   SCIP_Real             sigma2,             /**< the variance of the row distribution */
+   int                   rowinfinitiesdown,  /**< the number of variables with infinite bounds to DECREASE activity */
+   int                   rowinfinitiesup     /**< the number of variables with infinite bounds to INCREASE activity */
    )
 {
    SCIP_Real rowprobability;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Real lhsprob;
+   SCIP_Real rhsprob;
 
    lhs = SCIProwGetLhs(row);
    rhs = SCIProwGetRhs(row);
 
-   /* use centeredness measure for equations */
+   lhsprob = 1.0;
+   rhsprob = 1.0;
+
+   /* use the cumulative distribution if the row contains no variable to repair every infeasibility */
+   if( !SCIPisInfinity(scip, rhs) && rowinfinitiesdown == 0 )
+      rhsprob = calcCumulativeDistribution(scip, mu, sigma2, rhs);
+
+   /* use the cumulative distribution if the row contains no variable to repair every infeasibility
+    * otherwise the row can always be made feasible by increasing activity far enough
+    */
+   if( !SCIPisInfinity(scip, -lhs) && rowinfinitiesup == 0 )
+      lhsprob = 1.0 - calcCumulativeDistribution(scip, mu, sigma2, lhs);
+
+   /* use centeredness measure for equations; for inequalities, the minimum of the two probabilities is the
+    * probability to satisfy the row */
    if( SCIPisFeasEQ(scip, lhs, rhs) )
    {
-      SCIP_Real rhsprob;
       SCIP_Real minprobability;
       SCIP_Real maxprobability;
 
-      assert(!SCIPisInfinity(scip, rhs));
-
-      rhsprob = calcCumulativeDistribution(scip, mu, sigma2, rhs);
-      minprobability = MIN(rhsprob, 1 - rhsprob);
-      maxprobability = 1 - minprobability;
+      minprobability = MIN(rhsprob, lhsprob);
+      maxprobability = MAX(lhsprob, rhsprob);
       rowprobability = minprobability / maxprobability;
    }
-   else if( !SCIPisInfinity(scip, rhs) )
-   {
-      rowprobability = calcCumulativeDistribution(scip, mu, sigma2, rhs);
-   }
    else
-   {
-      assert(!SCIPisInfinity(scip, lhs));
-      rowprobability = 1.0 - calcCumulativeDistribution(scip, mu, sigma2, lhs);
-   }
+      rowprobability = MIN(rhsprob, lhsprob);
+
    SCIPdebug( SCIPprintRow(scip, row, NULL) );
    SCIPdebugMessage(" Row %s, mean %g, sigma2 %g, LHS %g, RHS %g has probability %g to be satisfied\n",
       SCIProwGetName(row), mu, sigma2, lhs, rhs, rowprobability);
@@ -181,7 +189,9 @@ void rowCalculateGauss(
    SCIP*                 scip,               /**< current scip */
    SCIP_ROW*             row,                /**< the row for which the gaussian normal distribution has to be calculated */
    SCIP_Real*            mu,                 /**< pointer to store the mean value of the gaussian normal distribution */
-   SCIP_Real*            sigma2              /**< pointer to store the variance value of the gaussian normal distribution */
+   SCIP_Real*            sigma2,             /**< pointer to store the variance value of the gaussian normal distribution */
+   int*                  rowinfinitiesdown,  /**< pointer to store the number of variables with infinite bounds to DECREASE activity */
+   int*                  rowinfinitiesup     /**< pointer to store the number of variables with infinite bounds to INCREASE activity */
    )
 {
    SCIP_COL** rowcols;
@@ -193,6 +203,8 @@ void rowCalculateGauss(
    assert(row != NULL);
    assert(mu != NULL);
    assert(sigma2 != NULL);
+   assert(rowinfinitiesup != NULL);
+   assert(rowinfinitiesdown != NULL);
 
    rowcols = SCIProwGetCols(row);
    rowvals = SCIProwGetVals(row);
@@ -203,11 +215,14 @@ void rowCalculateGauss(
 
    *mu = SCIProwGetConstant(row);
    *sigma2 = 0.0;
+   *rowinfinitiesdown = 0;
+   *rowinfinitiesup = 0;
 
    /* loop over nonzero row coefficients and sum up the variable contributions to mu and sigma2 */
    for( c = 0; c < nrowvals; ++c )
    {
       SCIP_VAR* colvar;
+      SCIP_Real colval;
       SCIP_Real colvarlb;
       SCIP_Real colvarub;
       SCIP_Real squarecoeff;
@@ -217,15 +232,10 @@ void rowCalculateGauss(
       colvar = SCIPcolGetVar(rowcols[c]);
       assert(colvar != NULL);
 
+      colval = rowvals[c];
       colvarlb = SCIPvarGetLbLocal(colvar);
       colvarub = SCIPvarGetUbLocal(colvar);
 
-      /* variables with infinite bounds are skipped */
-      if( SCIPisInfinity(scip, -colvarlb) || SCIPisInfinity(scip, colvarub) )
-      {
-         SCIPdebugMessage("  Variable %g <= %s <= %g skipped due to infinite bounds\n", colvarlb, SCIPvarGetName(colvar), colvarub);
-         continue;
-      }
       /* fixed variables can be skipped */
       if( SCIPisFeasEQ(scip, colvarlb, colvarub) )
       {
@@ -233,12 +243,50 @@ void rowCalculateGauss(
          continue;
       }
 
+      /* variables with infinite bounds are skipped for the calculation of the variance; they need to
+       * be accounted for by the counters for infinite row activity decrease and increase and they
+       * are used to shift the row activity mean in case they have one nonzero, but finite bound */
+      if( SCIPisInfinity(scip, -colvarlb) || SCIPisInfinity(scip, colvarub) )
+      {
+         if( SCIPisInfinity(scip, colvarub) )
+         {
+         /* an infinite upper bound gives the row an infinite maximum activity or minimum activity, if the coefficient is
+          * positive or negative, resp.
+          */
+            if( SCIPisNegative(scip, colval) )
+               ++(*rowinfinitiesdown);
+            else
+               ++(*rowinfinitiesup);
+         }
+         else
+            /* finite bound contributes to row activity mean by adding offset */
+            *mu += colvarub * colval;
+
+         /* an infinite lower bound gives the row an infinite maximum activity or minimum activity, if the coefficient is
+          * negative or positive, resp.
+          */
+         if( SCIPisInfinity(scip, -colvarlb) )
+         {
+            if( SCIPisPositive(scip, colval) )
+               ++(*rowinfinitiesdown);
+            else
+               ++(*rowinfinitiesup);
+         }
+         else
+            /* in the case of a finite lower bound, the bound contributes to row activity mean by adding offset */
+            *mu += colvarlb * colval;
+
+         /* skip the calculation of row mean and variance */
+         SCIPdebugMessage("  Variable %g <= %s <= %g skipped due to infinite bounds\n", colvarlb, SCIPvarGetName(colvar), colvarub);
+         continue;
+      }
+
       /* actual values are updated; the contribution of the variable to mu is the arithmetic mean of its bounds */
-      *mu += rowvals[c] * (colvarlb + colvarub) / 2.0;
+      *mu += colval * (colvarlb + colvarub) / 2.0;
 
       /* the variance contribution of a variable is c^2 * (u - l)^2 / 12.0 */
       squarebounddiff = SQUARED(colvarub - colvarlb);
-      squarecoeff = SQUARED(rowvals[c]);
+      squarecoeff = SQUARED(colval);
       *sigma2 += squarecoeff * squarebounddiff / 12.0;
    }
 
@@ -316,6 +364,10 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real             lpsolval,           /**< current fractional LP-relaxation solution value  */
    SCIP_Real*            rowmeans,           /**< LP row gaussian mean acitivity values */
    SCIP_Real*            rowvariances,       /**< LP row gaussian variance activity values */
+   int*                  rowinfinitiesdown,  /**< array with number of variables with infinite bounds which allow for
+                                                * always repairing the constraint right hand side */
+   int*                  rowinfinitiesup,    /**< array with number of variables with infinite bounds which allow for
+                                                * always repairing the constraint left hand side */
    int                   nlprows,            /**< number of LP rows */
    SCIP_Real*            upscore,            /**< pointer to store the variable score when branching on it in upward direction */
    SCIP_Real*            downscore,          /**< pointer to store the variable score when branching on it in downward direction */
@@ -359,37 +411,64 @@ SCIP_RETCODE calcBranchScore(
    assert(SCIPisFeasLT(scip, varlb, varub));
 
    /* calculate mean and variance of variable uniform distribution before and after branching */
-   squaredbounddiff = SQUARED(varub - varlb);
-   squaredbounddiff /= 12.0;
-   currentmean = (varub + varlb) * .5;
+   if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
+   {
+      /* variables with infinite bounds are not kept in the row activity variance */
+      squaredbounddiff = 0.0;
+
+      if( !SCIPisInfinity(scip, varub) )
+         currentmean = varub;
+      else if( !SCIPisInfinity(scip, varlb) )
+         currentmean = varlb;
+      else
+         currentmean = 0.0;
+   }
+   else
+   {
+      squaredbounddiff = SQUARED(varub - varlb);
+      squaredbounddiff /= 12.0;
+      currentmean = (varub + varlb) * .5;
+   }
+
    newlb = SCIPfeasCeil(scip, lpsolval);
    newub = SCIPfeasFloor(scip, lpsolval);
 
-   /* calculate the variable's uniform distribution after branching up and down, respectively */
-   if( SCIPisFeasEQ(scip, newlb, varub) )
+   /* calculate the variable's uniform distribution after branching up and down, respectively.
+    * This is only possible for finite lower or upper bounds */
+   if( !SCIPisInfinity(scip, varub) )
    {
-      squaredbounddiffup = 0.0;
+      if( SCIPisFeasEQ(scip, newlb, varub) )
+         meanup = newlb;
+      else
+      {
+         squaredbounddiffup = SQUARED(varub - newlb);
+         squaredbounddiffup /= 12.0;
+         meanup = (newlb + varub) * .5;
+      }
+   }
+   else
+   {
       meanup = newlb;
+      squaredbounddiffup = 0.0;
+   }
+
+   /* calculate the distribution mean and variance for a variable with finite lower bound */
+   if( !SCIPisInfinity(scip, -varlb) )
+   {
+      if( SCIPisFeasEQ(scip, newub, varlb) )
+         meandown = newub;
+      else
+      {
+         squaredbounddiffdown = SQUARED(newub - varlb);
+         squaredbounddiffdown /= 12.0;
+         meandown = (newub + varlb) * .5;
+      }
    }
    else
    {
-      squaredbounddiffup = SQUARED(varub - newlb);
-      squaredbounddiffup /= 12.0;
-      meanup = (newlb + varub) * .5;
-   }
-
-   if( SCIPisFeasEQ(scip, newub, varlb) )
-   {
-      squaredbounddiffdown = 0.0;
       meandown = newub;
+      squaredbounddiffdown = 0.0;
    }
-   else
-   {
-      squaredbounddiffdown = SQUARED(newub - varlb);
-      squaredbounddiffdown /= 12.0;
-      meandown = (newub + varlb) * .5;
-   }
-
    *upscore = 0.0;
    *downscore = 0.0;
 
@@ -414,22 +493,68 @@ SCIP_RETCODE calcBranchScore(
          continue;
 
       assert(rowpos < nlprows);
-      currentrowprob = rowCalcProbability(scip, row, rowmeans[rowpos], rowvariances[rowpos]);
+      currentrowprob = rowCalcProbability(scip, row, rowmeans[rowpos], rowvariances[rowpos],
+            rowinfinitiesdown[rowpos], rowinfinitiesup[rowpos]);
 
       /* get variable's current expected contribution to row activity */
       squaredcoeff = SQUARED(rowvals[i]);
 
       /* first, get the probability change for the row if the variable is branched on upwards */
-      changedrowmean = rowmeans[rowpos] - rowvals[i] * (currentmean - meanup);
-      changedrowvariance = rowvariances[rowpos] - squaredcoeff * (squaredbounddiff - squaredbounddiffup);
+      if( !SCIPisInfinity(scip, varub) )
+      {
+         int rowinftiesdownafterbranch;
+         int rowinftiesupafterbranch;
 
-      newrowprobup = rowCalcProbability(scip, row, changedrowmean, changedrowvariance);
+         changedrowmean = rowmeans[rowpos] - rowvals[i] * (currentmean - meanup);
+         changedrowvariance = rowvariances[rowpos] - squaredcoeff * (squaredbounddiff - squaredbounddiffup);
 
+         rowinftiesdownafterbranch = rowinfinitiesdown[rowpos];
+         rowinftiesupafterbranch = rowinfinitiesup[rowpos];
+
+         if( SCIPisInfinity(scip, -varlb) && SCIPisNegative(scip, rowvals[i]) )
+         {
+            assert(rowinftiesupafterbranch >= 1);
+            rowinftiesupafterbranch -= 1;
+         }
+         if( SCIPisInfinity(scip, -varlb) && SCIPisPositive(scip, rowvals[i]) )
+         {
+            assert(rowinftiesdownafterbranch >= 1);
+            rowinftiesdownafterbranch -= 1;
+         }
+
+         newrowprobup = rowCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
+               rowinftiesupafterbranch);
+      }
+      else
+         newrowprobup = currentrowprob;
       /* do the same for the other branching direction */
-      changedrowmean = rowmeans[rowpos] - rowvals[i] * (currentmean - meandown);
-      changedrowvariance = rowvariances[rowpos] - squaredcoeff * (squaredbounddiff - squaredbounddiffdown);
+      if( !SCIPisInfinity(scip, varlb) )
+      {
+         int rowinftiesdownafterbranch;
+         int rowinftiesupafterbranch;
 
-      newrowprobdown = rowCalcProbability(scip, row, changedrowmean, changedrowvariance);
+         changedrowmean = rowmeans[rowpos] - rowvals[i] * (currentmean - meandown);
+         changedrowvariance = rowvariances[rowpos] - squaredcoeff * (squaredbounddiff - squaredbounddiffdown);
+
+         rowinftiesdownafterbranch = rowinfinitiesdown[rowpos];
+         rowinftiesupafterbranch = rowinfinitiesup[rowpos];
+
+         if( SCIPisInfinity(scip, varub) && SCIPisPositive(scip, rowvals[i]) )
+         {
+            assert(rowinftiesupafterbranch >= 1);
+            rowinftiesupafterbranch -= 1;
+         }
+         if( SCIPisInfinity(scip, varub) && SCIPisNegative(scip, rowvals[i]) )
+         {
+            assert(rowinftiesdownafterbranch >= 1);
+            rowinftiesdownafterbranch -= 1;
+         }
+
+         newrowprobdown = rowCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
+               rowinftiesupafterbranch);
+      }
+      else
+         newrowprobdown = currentrowprob;
 
       /* update the up and down score depending on the chosen scoring parameter */
       getScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam);
@@ -488,6 +613,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    SCIP_Real* lpcandssol;
    SCIP_Real* rowmeans;
    SCIP_Real* rowvariances;
+   int* rowinfinitiesdown;  /* count the number of variables with infinite bounds which allow for always repairing the constraint right hand side */
+   int* rowinfinitiesup; /* count the number of variables with infinite bounds which allow for always repairing the constraint left hand side */
+
    SCIP_Real bestscore;
    SCIP_BRANCHDIR bestbranchdir;
    int nlpcands;
@@ -512,6 +640,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rowmeans, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowvariances, nlprows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowinfinitiesdown, nlprows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowinfinitiesup, nlprows) );
 
    BMSclearMemoryArray(rowmeans, nlprows);
    BMSclearMemoryArray(rowvariances, nlprows);
@@ -522,6 +652,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    bestbranchdir = SCIP_BRANCHDIR_AUTO;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
+
    /* loop over LP rows and calculate their respective activity mean and variance */
    for( i = 0; i < nlprows; ++i )
    {
@@ -534,7 +665,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       rowpos = SCIProwGetLPPos(row);
       assert(0 <= rowpos  && rowpos < nlprows);
 
-      rowCalculateGauss(scip, row, &rowmeans[rowpos], &rowvariances[rowpos]);
+      rowCalculateGauss(scip, row, &rowmeans[rowpos], &rowvariances[rowpos], &rowinfinitiesdown[rowpos], &rowinfinitiesup[rowpos]);
    }
 
    /* loop over candidate variables and calculate their score in changing the cumulative
@@ -544,7 +675,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       SCIP_Real upscore;
       SCIP_Real downscore;
 
-      SCIP_CALL( calcBranchScore(scip, lpcands[c], lpcandssol[c], rowmeans, rowvariances, nlprows,
+      SCIP_CALL( calcBranchScore(scip, lpcands[c], lpcandssol[c], rowmeans, rowvariances, rowinfinitiesdown,
+            rowinfinitiesup, nlprows,
             &upscore, &downscore, branchruledata->scoreparam) );
 
       if( upscore > bestscore && upscore > downscore )
@@ -589,7 +721,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       SCIPchgChildPrio(scip, downchild, DEFAULT_PRIORITY);
       SCIPdebugMessage("  Changing node priority of down-child\n");
    }
-
+   SCIPfreeBufferArray(scip, &rowinfinitiesup);
+   SCIPfreeBufferArray(scip, &rowinfinitiesdown);
    SCIPfreeBufferArray(scip, &rowmeans);
    SCIPfreeBufferArray(scip, &rowvariances);
 
