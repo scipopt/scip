@@ -37,6 +37,7 @@
 #define DEFAULT_PRIORITY 2.0
 #define SQRTOFTWO 1.4142136
 #define SQUARED(x) (x) * (x)
+#define DEFAULT_ONLYACTIVEROWS FALSE /**< should only rows which are active at the current node be considered? */
 /*
  * Data structures
  */
@@ -47,6 +48,7 @@
 struct SCIP_BranchruleData
 {
    char                  scoreparam;     /**< parameter how the branch score is calculated */
+   SCIP_Bool             onlyactiverows; /**< should only rows which are active at the current node be considered? */
 };
 
 /*
@@ -371,7 +373,8 @@ SCIP_RETCODE calcBranchScore(
    int                   nlprows,            /**< number of LP rows */
    SCIP_Real*            upscore,            /**< pointer to store the variable score when branching on it in upward direction */
    SCIP_Real*            downscore,          /**< pointer to store the variable score when branching on it in downward direction */
-   char                  scoreparam          /**< the score parameter of this branching rule */
+   char                  scoreparam,         /**< the score parameter of this branching rule */
+   SCIP_Bool             onlyactiverows      /**< should only rows which are active at the current node be considered? */
    )
 {
    SCIP_COL* varcol;
@@ -490,7 +493,16 @@ SCIP_RETCODE calcBranchScore(
       rowpos = SCIProwGetLPPos(row);
 
       if( rowpos < 0 )
+         break;
+
+      /* skip non-active rows if the user parameter was set this way */
+      if( onlyactiverows && SCIPisSumPositive(scip, SCIPgetRowLPFeasibility(scip, row)) )
          continue;
+
+      /* calculate row activity distribution if this is the first candidate to appear in this row */
+      if( rowmeans[rowpos] == SCIP_INVALID )
+         rowCalculateGauss(scip, row, &rowmeans[rowpos], &rowvariances[rowpos],
+               &rowinfinitiesdown[rowpos], &rowinfinitiesup[rowpos]);
 
       assert(rowpos < nlprows);
       currentrowprob = rowCalcProbability(scip, row, rowmeans[rowpos], rowvariances[rowpos],
@@ -638,13 +650,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
+
+   /* allocate buffer arrays for row distribution information */
+   /* todo speed this up by means of an event handler */
    SCIP_CALL( SCIPallocBufferArray(scip, &rowmeans, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowvariances, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowinfinitiesdown, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowinfinitiesup, nlprows) );
-
-   BMSclearMemoryArray(rowmeans, nlprows);
-   BMSclearMemoryArray(rowvariances, nlprows);
 
    assert(lprows != NULL || nlprows == 0);
 
@@ -653,20 +665,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
 
-   /* loop over LP rows and calculate their respective activity mean and variance */
+   /* invalidate the current row distribution data which is initialized on the fly when looping over the candidates */
    for( i = 0; i < nlprows; ++i )
-   {
-      SCIP_ROW* row;
-      int rowpos;
-
-      row = lprows[i];
-
-      assert(row != NULL);
-      rowpos = SCIProwGetLPPos(row);
-      assert(0 <= rowpos  && rowpos < nlprows);
-
-      rowCalculateGauss(scip, row, &rowmeans[rowpos], &rowvariances[rowpos], &rowinfinitiesdown[rowpos], &rowinfinitiesup[rowpos]);
-   }
+      rowmeans[i] = SCIP_INVALID;
 
    /* loop over candidate variables and calculate their score in changing the cumulative
     * probability of fulfilling each of their constraints */
@@ -677,7 +678,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
       SCIP_CALL( calcBranchScore(scip, lpcands[c], lpcandssol[c], rowmeans, rowvariances, rowinfinitiesdown,
             rowinfinitiesup, nlprows,
-            &upscore, &downscore, branchruledata->scoreparam) );
+            &upscore, &downscore, branchruledata->scoreparam, branchruledata->onlyactiverows) );
 
       if( upscore > bestscore && upscore > downscore )
       {
@@ -758,8 +759,12 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpDistribution) );
 
    /* add distribution branching rule parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/scoreparam", "the parameter to determine the score calculation; 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
+   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/scoreparam", "the score calculation; 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
          &branchruledata->scoreparam, TRUE, DEFAULT_SCOREPARAM, SCOREPARAM_VALUES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/"BRANCHRULE_NAME"/onlyactiverows",
+         "should only rows which are active at the current node be considered?",
+         &branchruledata->onlyactiverows, TRUE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
