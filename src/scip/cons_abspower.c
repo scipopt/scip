@@ -147,6 +147,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
+   unsigned int          nsecantcuts;        /**< number of secant cuts created so far */
+   unsigned int          ncuts;              /**< number of linearization cuts created so far */
 };
 
 /*
@@ -3267,11 +3269,16 @@ SCIP_RETCODE generateLinearizationCut(
    SCIP_Bool             islocal             /**< whether the cut is valid only locally */
    )
 {
+   char rowname[SCIP_MAXSTRLEN];
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Real tmp;
 
    assert(scip != NULL);
    assert(!SCIPisFeasNegative(scip, refpoint+xoffset));
    assert(!SCIPisInfinity(scip, refpoint));
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    if( refpoint < -xoffset )
       refpoint = -xoffset;
@@ -3284,7 +3291,9 @@ SCIP_RETCODE generateLinearizationCut(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, "signpowlinearizecut", -SCIPinfinity(scip), SCIPinfinity(scip), islocal,
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "signpowlinearizecut_%u", ++(conshdlrdata->ncuts));
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowname, -SCIPinfinity(scip), SCIPinfinity(scip), islocal,
          FALSE /* modifiable */, TRUE /* removable */ ) );
 
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*exponent*tmp) );
@@ -3398,11 +3407,16 @@ SCIP_RETCODE generateSecantCut(
    SCIP_VAR*             z                   /**< variable z */
    )
 {
+   char rowname[SCIP_MAXSTRLEN];
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Real slope, tmp, val;
 
    assert(scip != NULL);
    assert(SCIPisLE(scip, xlb, xub));
    assert(!SCIPisPositive(scip, xlb+xoffset));
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
@@ -3423,7 +3437,9 @@ SCIP_RETCODE generateSecantCut(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, "signpowsecantcut", -SCIPinfinity(scip), SCIPinfinity(scip),
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "signpowsecantcut_%u", ++(conshdlrdata->nsecantcuts));
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowname, -SCIPinfinity(scip), SCIPinfinity(scip),
          SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 /* local */, FALSE /* modifiable */, TRUE /* removable */ ) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*slope) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
@@ -4980,6 +4996,8 @@ SCIP_DECL_CONSINIT(consInitAbspower)
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
    conshdlrdata->conshdlrindicator = SCIPfindConshdlr(scip, "indicator");
+   conshdlrdata->nsecantcuts = 0;
+   conshdlrdata->ncuts = 0;
 
    return SCIP_OKAY;
 }
