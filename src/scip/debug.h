@@ -181,6 +181,12 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
                                               */
    );
 
+/** set the main SCIP settings pointer */
+extern
+void SCIPdebugSetMainscipset(
+   SCIP_SET*             set                  /**< settings of SCIP instance */
+   );
+
 /** enabling solution debugging mechanism */
 extern
 void SCIPdebugSolEnable(
@@ -216,6 +222,7 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugSolIsValidInSubtree(scip,isvalidinsubtree) SCIP_OKAY
+#define SCIPdebugSetMainscipset(set) /**/
 #define SCIPdebugSolEnable(scip) /**/
 #define SCIPdebugSolDisable(scip) /**/
 #define SCIPdebugSolIsEnabled(scip) FALSE

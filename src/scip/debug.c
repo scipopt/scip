@@ -53,6 +53,16 @@ static SCIP_Bool solisachieved = FALSE;      /**< means if current best solution
 static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solution */
 static SCIP_Bool debugsoldisabled = FALSE;   /**< flag indicating if debugging of solution was disabled or not */
 
+
+/** returns whether the solution belongs to the current SCIP instance */
+static
+SCIP_Bool isSolutionInMip(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   return (mainscipset == NULL || mainscipset == set);
+}
+
 /** reads solution from given file into given arrays */
 static
 SCIP_RETCODE readSolfile(
@@ -167,9 +177,6 @@ SCIP_RETCODE readSolfile(
    /* close file */
    fclose(file);
 
-   /* remember the set pointer to identify sub-MIP calls */
-   mainscipset = set;
-
    printf("***** debug: read %d non-zero entries\n", *nvals);
 
    return SCIP_OKAY;
@@ -183,7 +190,7 @@ SCIP_RETCODE readSolution(
 {
    assert(set != NULL);
 
-   if( nsolvals > 0 )
+   if( !isSolutionInMip(set) || nsolvals > 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( readSolfile(set, SCIP_DEBUG_SOLUTION, &solnames, &solvals, &nsolvals, &solsize) );
@@ -270,7 +277,7 @@ SCIP_RETCODE getSolutionValue(
    }
    *val = constant;
 
-   if( *val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06 )
+   if( isSolutionInMip(set) && (*val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06) )
    {
       SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
@@ -330,15 +337,6 @@ SCIP_Bool debugSolIsAchieved(
    }
 
    return solisachieved;
-}
-
-/** returns whether the solution belongs to the current SCIP instance */
-static
-SCIP_Bool isSolutionInMip(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   return (mainscipset == NULL || mainscipset == set);
 }
 
 /** returns whether the solution is contained in node's subproblem */
@@ -1225,6 +1223,16 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
    return SCIP_OKAY;
 }
 
+/** set the main SCIP settings pointer */
+void SCIPdebugSetMainscipset(
+   SCIP_SET*             set                  /**< settings of SCIP instance */
+   )
+{
+   assert(set != NULL);
+
+   if( mainscipset == NULL )
+      mainscipset = set;
+}
 
 /** enabling solution debugging mechanism */
 void SCIPdebugSolEnable(

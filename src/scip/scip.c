@@ -8247,6 +8247,8 @@ SCIP_RETCODE SCIPcreateProb(
 
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
+   SCIPdebugSetMainscipset(scip->set);
+
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
 
@@ -11899,6 +11901,9 @@ SCIP_RETCODE SCIPtransformProb(
          scip->set->mem_externestim = SCIPgetMemUsed(scip);
       SCIPdebugMessage("external memory usage estimated to %"SCIP_LONGINT_FORMAT" byte\n", scip->set->mem_externestim);
    }
+
+   SCIPdebugSetMainscipset(scip->set);
+
    return SCIP_OKAY;
 }
 
@@ -12891,9 +12896,6 @@ SCIP_RETCODE freeSolve(
    assert( ! restart || scip->stat->inrestart );
    scip->stat->inrestart = FALSE;
 
-   /* free all debug data */
-   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
-
    return SCIP_OKAY;
 }
 
@@ -12907,6 +12909,9 @@ SCIP_RETCODE freeTransform(
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
+
+   /* free all debug data */
+   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
 
    /* call exit methods of plugins */
    SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
@@ -12971,9 +12976,6 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
-
-   /* free all debug data */ 
-   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
 
    if( scip->set->misc_resetstat )
    {

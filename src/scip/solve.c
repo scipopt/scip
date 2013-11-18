@@ -55,6 +55,7 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/pub_misc.h"
+#include "scip/debug.h"
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
@@ -3915,6 +3916,7 @@ SCIP_RETCODE solveNode(
       SCIPdebugMessage("node is cut off\n");
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
+      SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) );
    }
 
    return SCIP_OKAY;
