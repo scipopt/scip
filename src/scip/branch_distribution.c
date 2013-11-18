@@ -436,6 +436,7 @@ SCIP_RETCODE calcBranchScore(
    newlb = SCIPfeasCeil(scip, lpsolval);
    newub = SCIPfeasFloor(scip, lpsolval);
 
+   squaredbounddiffup = 0.0;
    /* calculate the variable's uniform distribution after branching up and down, respectively.
     * This is only possible for finite lower or upper bounds */
    if( !SCIPisInfinity(scip, varub) )
@@ -450,11 +451,9 @@ SCIP_RETCODE calcBranchScore(
       }
    }
    else
-   {
       meanup = newlb;
-      squaredbounddiffup = 0.0;
-   }
 
+   squaredbounddiffdown = 0.0;
    /* calculate the distribution mean and variance for a variable with finite lower bound */
    if( !SCIPisInfinity(scip, -varlb) )
    {
@@ -468,10 +467,7 @@ SCIP_RETCODE calcBranchScore(
       }
    }
    else
-   {
       meandown = newub;
-      squaredbounddiffdown = 0.0;
-   }
    *upscore = 0.0;
    *downscore = 0.0;
 
@@ -662,6 +658,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    bestscore = -1;
    bestbranchdir = SCIP_BRANCHDIR_AUTO;
+   bestcand = NULL;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
 
