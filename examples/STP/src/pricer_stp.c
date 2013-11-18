@@ -135,9 +135,13 @@ SCIP_DECL_PRICERINITSOL(pricerInitsolStp)
 
    /* allocate memory */
    if( !pricerdata->bigt )
+   {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->pi), SCIPprobdataGetNEdges(scip) * SCIPprobdataGetRNTerms(scip)) );
+   }
    else
+   {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->pi), SCIPprobdataGetNEdges(scip)) );
+   }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->mi), SCIPprobdataGetRNTerms(scip)) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pricerdata->ncreatedvars, SCIPprobdataGetRNTerms(scip)) );
@@ -217,53 +221,75 @@ SCIP_RETCODE pricing(
       pricerdata->lowerbound++;
    }
 #endif
-   /* get graph*/
+   /* get the graph*/
    graph = SCIPprobdataGetGraph(probdata);
 
    /* get dual solutions and save them in mi and pi */
    for( t = 0; t < pricerdata->realnterms; ++t )
    {
       if( farkas )
+      {
 	 pricerdata->mi[t] = SCIPgetDualfarkasLinear(scip, pricerdata->pathcons[t]);
+      }
       else
+      {
          pricerdata->mi[t] = SCIPgetDualsolLinear(scip, pricerdata->pathcons[t]);
+         assert(!SCIPisNegative(scip, pricerdata->mi[t]));
+      }
    }
 
    for( e = 0; e < pricerdata->nedges; ++e )
    {
       if( !pricerdata->bigt )
+      {
          for( t = 0; t < pricerdata->realnterms; ++t )
          {
             if( farkas )
+	    {
                pricerdata->pi[t * pricerdata->nedges + e] = SCIPgetDualfarkasLinear(
                   scip, pricerdata->edgecons[t * pricerdata->nedges + e]);
+	    }
             else
+	    {
                pricerdata->pi[t * pricerdata->nedges + e] = SCIPgetDualsolLinear(
                   scip, pricerdata->edgecons[t * pricerdata->nedges + e]);
+	    }
          }
+      }
       else
-	 if( farkas )
+      {
+         if( farkas )
+	 {
 	    pricerdata->pi[e] = SCIPgetDualfarkasLinear(
                scip, pricerdata->edgecons[e]);
+	 }
 	 else
+	 {
 	    pricerdata->pi[e] = SCIPgetDualsolLinear(
                scip, pricerdata->edgecons[e]);
+	 }
+      }
    }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &path, graph->knots) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &edgecosts, pricerdata->nedges) );
 
    if( pricerdata->bigt )
+   {
       for( e = 0; e < pricerdata->nedges; ++e )
+      {
          edgecosts[e] = (-pricerdata->pi[e]);
-
+      }
+   }
    /* find shortest r-t (r root, t terminal) paths and create corresponding variables iff reduced cost < 0 */
    for( t = 0; t < pricerdata->realnterms; ++t )
    {
       for( e = 0; e < pricerdata->nedges; ++e )
       {
 	 if( !pricerdata->bigt )
+	 {
             edgecosts[e] = (-pricerdata->pi[t * pricerdata->nedges + e]);
+	 }
 
          assert(!SCIPisNegative(scip, edgecosts[e]));
       }
@@ -274,7 +300,7 @@ SCIP_RETCODE pricing(
       graph_path_exec(graph, FSP_MODE, pricerdata->root, edgecosts, path);
 
       /* compute reduced cost of shortest path to terminal t */
-      redcost = 0;
+      redcost = 0.0;
       tail = pricerdata->realterms[t];
       while( tail != pricerdata->root )
       {
@@ -284,14 +310,14 @@ SCIP_RETCODE pricing(
       redcost -= pricerdata->mi[t];
 
       if( !farkas && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
          newlowerbound += redcost;
-
+      }
       /* check if reduced cost < 0 */
       if( SCIPisNegative(scip, redcost) )
       {
 	 /* create variable to the shortest path (having reduced cost < 0) */
          var = NULL;
-
 	 sprintf(varname, "PathVar%d_%d", t, pricerdata->ncreatedvars[t]);
          ++(pricerdata->ncreatedvars[t]);
 
@@ -302,9 +328,13 @@ SCIP_RETCODE pricing(
          {
             /* add variable to constraints */
 	    if( !pricerdata->bigt )
+	    {
 	       SCIP_CALL( SCIPaddCoefLinear(scip, pricerdata->edgecons[t * pricerdata->nedges + path[tail].edge], var, 1.0) );
+	    }
 	    else
+	    {
 	       SCIP_CALL( SCIPaddCoefLinear(scip, pricerdata->edgecons[path[tail].edge], var, 1.0) );
+	    }
 
 	    tail = graph->tail[path[tail].edge];
          }

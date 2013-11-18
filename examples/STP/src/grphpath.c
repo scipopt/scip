@@ -131,6 +131,46 @@ inline static void correct(
    }
 }
 
+inline static void correct2(
+   int* heap,
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
+   PATH*  path,
+   int    l,
+   int    k,
+   int    e,
+   double cost,
+   int    mode)
+{
+   int    t;
+   int    c;
+   int    j;
+
+   /* Ist der Knoten noch ganz frisch ?
+    */
+   if (state[l] == UNKNOWN)
+   {
+      heap[++(*count)] = l;
+      state[l]      = (*count);
+   }
+
+   /* Heap shift up
+    */
+   j = state[l];
+   c = j / 2;
+
+   while((j > 1) && GT(path[heap[c]].dist, path[heap[j]].dist))
+   {
+      t              = heap[c];
+      heap[c]        = heap[j];
+      heap[j]        = t;
+      state[heap[j]] = j;
+      state[heap[c]] = c;
+      j              = c;
+      c              = j / 2;
+   }
+}
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : INIT shortest PATH algorithm                             ---*/
 /*--- Function : Initialisiert den benoetigten Speicher fuer die          ---*/
@@ -274,6 +314,138 @@ void graph_path_exec(
    }
 }
 
+
+/* Find a tree conntaining all terminals */
+void graph_path_exec2(
+   const GRAPH*  p,
+   int           mode,
+   int           start,
+   const double* cost,
+   PATH*         path,
+   char*         connected,
+   int* cluster,
+   int* csize
+		     )
+{
+   int   k;
+   int   m;
+   int   i;
+   int* heap;
+   int* state;
+   int count;
+
+   assert(p      != NULL);
+   assert(start  >= 0);
+   assert(start  <  p->knots);
+   assert((mode  == FSP_MODE) || (mode == MST_MODE));
+   assert(path   != NULL);
+   assert(cost   != NULL);
+   assert(connected != NULL);
+   /* Kein Baum ohne Knoten
+    */
+   if (p->knots == 0)
+      return;
+
+   heap = p->path_heap;
+   state = p->path_state;
+   count = 0;
+
+   /* Erstmal alles auf null, unbekannt und weit weg
+    */
+   for(i = 0; i < p->knots; i++)
+   {
+      state[i]     = UNKNOWN;
+      path[i].dist = FARAWAY;
+      path[i].edge = -1;
+      connected[i] = FALSE;
+   }
+   /* Startknoten in den Heap
+    */
+   k            = start;
+   path[k].dist = 0.0;
+   connected[k] = TRUE;
+
+   /* Wenn nur ein Knoten drin ist funktioniert der Heap nicht sehr gut,
+    * weil dann fuer genau 0 Elemente Platz ist.
+    */
+   if (p->knots > 1)
+   {
+      int termsn = 0;
+      int node;
+      count       = 1;
+      heap[count] = k;
+      state[k]    = count;
+
+      /* Wenn nichts mehr auf dem Heap ist, sind wir fertig
+       * und jetzt erstmal Hula Loop
+       */
+      while(count > 0)
+      {
+         /* Na, wer ist der Naechste ?
+          */
+         k = nearest(heap, state, &count, path);
+
+         /* Wieder einen erledigt
+          */
+         state[k] = CONNECT;
+
+         if( p->term[k] != -1 )
+         {
+            /* add path to the terminal */
+
+
+	       ++termsn;
+	       connected[k] = TRUE;
+
+            if (cluster[*csize-1] != k)
+
+            cluster[(*csize)++] = k;
+               path[k].dist = 0.0;
+//	       printf("connect (term): %d \n", k);
+	       /* */
+
+	    node = k;
+            while( path[k].edge != -1 && connected[node = p->tail[path[node].edge]] == FALSE )
+            {
+//	       printf("connect (node): %d \n", node);
+               connected[node] = TRUE;
+	       if (cluster[*csize-1] != k)
+
+            cluster[(*csize)++] = node;
+               path[node].dist = 0.0;
+               state[node] = UNKNOWN;
+               correct2(heap, state, &count, path, node, 0, 0, 0, mode);
+            }
+            /* have all terminals been reached? */
+            if( termsn == p->terms )
+            {
+               break;
+            }
+         }
+
+         /* Verbunden Knoten berichtigen ...
+          *
+          * Wenn ein Knoten noch nicht erledigt ist
+          * werden wir dann auf diesem Wege besser ?
+          */
+         for(i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i])
+         {
+            m = p->head[i];
+
+            /* 1. Ist der Knoten noch nicht festgelegt ?
+             *    Ist der wohlmoeglich tabu ?
+             */
+            if( (state[m]) /*  && (p->mark[m]) */
+
+            /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
+             *    Wenn ja, dann muss die Entferung kuerzer sein.
+             */
+             && (GT(path[m].dist, (path[k].dist + cost[i]))) )
+               correct(heap, state, &count, path, m, k, i, cost[i], mode);
+         }
+      }
+   }
+}
 /* ARGSUSED */
 void graph_path_length(
    const GRAPH* g,

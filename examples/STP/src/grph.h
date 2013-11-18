@@ -141,6 +141,7 @@ extern int    graph_valid(const GRAPH*);
 extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, const double*, PATH*);
+extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c
