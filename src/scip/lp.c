@@ -8432,6 +8432,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divingobjchg = FALSE;
    (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
+   (*lp)->divelpwasprimfeas = TRUE;
+   (*lp)->divelpwasdualfeas = TRUE;
    (*lp)->divechgsides = NULL;
    (*lp)->divechgsidetypes = NULL;
    (*lp)->divechgrows = NULL;
@@ -11902,7 +11904,9 @@ SCIP_RETCODE SCIPlpSetState(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
+   SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             wasdualfeas         /**< dual feasibility when LP state information was stored */
    )
 {
    assert(lp != NULL);
@@ -11930,8 +11934,8 @@ SCIP_RETCODE SCIPlpSetState(
    /* @todo: setting feasibility to TRUE might be wrong because in probing mode, the state is even saved when the LP was
     *        flushed and solved, also, e.g., when we hit the iteration limit
     */
-   lp->primalfeasible = TRUE;
-   lp->dualfeasible = TRUE;
+   lp->primalfeasible = wasprimfeas;
+   lp->dualfeasible = wasdualfeas;
 
    return SCIP_OKAY;
 }
@@ -16954,6 +16958,8 @@ SCIP_RETCODE SCIPlpStartDive(
    assert(!lp->diving);
    assert(!lp->probing);
    assert(lp->divelpistate == NULL);
+   assert(lp->divelpwasprimfeas);
+   assert(lp->divelpwasdualfeas);
    assert(lp->validsollp <= stat->lpcount);
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -16977,6 +16983,8 @@ SCIP_RETCODE SCIPlpStartDive(
 
    /* save current LPI state (basis information) */
    SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lp->divelpistate) );
+   lp->divelpwasprimfeas = lp->primalfeasible;
+   lp->divelpwasdualfeas = lp->dualfeasible;
 
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
@@ -17103,8 +17111,11 @@ SCIP_RETCODE SCIPlpEndDive(
    SCIP_CALL( lpSetIterationLimit(lp, lp->divinglpiitlim) );
 
    /* reload LPI state saved at start of diving, free LPI state afterwards */
-   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate) );
+   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate,
+         lp->divelpwasprimfeas, lp->divelpwasdualfeas) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
+   lp->divelpwasprimfeas = TRUE;
+   lp->divelpwasdualfeas = TRUE;
    assert(lp->divelpistate == NULL);
 
    /* switch to standard (non-diving) mode */
