@@ -6,6 +6,7 @@ fixed bugs:
 - fixed bug in cons_indicator with trying to create solution in problem stage
 - fixed bug in cons_orbitope with fixing upper right triangle in non-root nodes
 - fixed bug in reader_lp when writing bilinear terms (product sign was missing)
+- allow again branching on continuous variables with hugh bounds
 
 
 SCIP version 3.0.2
