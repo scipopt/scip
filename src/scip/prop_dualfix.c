@@ -165,6 +165,7 @@ SCIP_RETCODE performDualfix(
       }
 
       /* apply the fixing */
+      SCIPdebugMessage("apply fixing of variable %s to %g\n", SCIPvarGetName(var), bound);
       SCIP_CALL( SCIPfixVar(scip, var, bound, &infeasible, &fixed) );
 
       if( infeasible )
@@ -173,7 +174,9 @@ SCIP_RETCODE performDualfix(
          *cutoff = TRUE;
          return SCIP_OKAY;
       }
-      assert(fixed);
+
+      assert(fixed || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
+            && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
       (*nfixedvars)++;
    }
 
