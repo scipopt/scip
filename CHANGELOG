@@ -171,6 +171,9 @@ interface
   solver, loading them back into the solver, and freeing the data
 - add method SCIPgetNCheckConss() in scip.{c,h}
 - removed parameter "normtype" from function SCIPcomputeLPRelIntPoint()
+- SCIPgetLPObjval() now returns the LP value of the current (suboptimal) basis if the iteration limit is hit during LP
+  solving (instead of -infinity); this value is not necessarily a valid dual bound and must not be used as such, but can
+  be used as an objective estimate, e.g., if strong branching is simulated using the probing mode
 
 parameters:
 - parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function

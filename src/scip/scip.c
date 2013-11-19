@@ -16017,6 +16017,8 @@ SCIP_RETCODE analyzeStrongbranch(
    {
       SCIP_Real lpobjval;
 
+      assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+
       lpobjval =  SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
 
       if( col->sbdownvalid && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5 && lpobjval < col->sbdown )

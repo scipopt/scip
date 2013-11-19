@@ -13754,12 +13754,10 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
-      lp->lpobjval = -SCIPsetInfinity(set);
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
-      lp->lpobjval = -SCIPsetInfinity(set);
    }
    else if( !solveddual && lpalgo != SCIP_LPALGO_DUALSIMPLEX)
    {
@@ -14543,7 +14541,7 @@ SCIP_Real SCIPlpGetObjval(
 
    if( !lp->flushed )
       return SCIP_INVALID;
-   else if( SCIPsetIsInfinity(set, lp->lpobjval) )
+   else if( SCIPsetIsInfinity(set, lp->lpobjval) || SCIPsetIsInfinity(set, -lp->lpobjval))
       return lp->lpobjval;
    else if( lp->looseobjvalinf > 0 )
       return -SCIPsetInfinity(set);

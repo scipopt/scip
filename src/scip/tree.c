@@ -2196,6 +2196,11 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    assert(set != NULL);
 
+   /* in case of iteration or time limit, the LP value may not be a valid dual bound */
+   /* @todo check for dual feasibility of LP solution and use sub-optimal solution if they are dual feasible */
+   if( lp->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT || lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
+      return SCIP_OKAY;
+
    if( set->misc_exactsolve )
    {
       SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );

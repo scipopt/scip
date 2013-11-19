@@ -211,6 +211,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    assert(provedbound != NULL);
    assert(result != NULL);
    assert(nlpcands > 0);
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children

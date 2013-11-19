@@ -276,6 +276,8 @@ SCIP_RETCODE execRelpscost(
 
    *result = SCIP_DIDNOTRUN;
 
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);

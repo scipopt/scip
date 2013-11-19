@@ -1674,7 +1674,9 @@ void SCIPprobUpdateBestRootSol(
    int v;
 
    assert(prob != NULL);
+   assert(lp != NULL);
    assert(prob->transformed);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* in case we have a zero objective fucntion, we skip the root reduced cost update */
    if( SCIPprobGetNObjVars(prob, set) == 0 )
