@@ -1104,7 +1104,12 @@ SCIP_Bool SCIPlpIsRootLPRelax(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** gets objective value of current LP */
+/** gets objective value of current LP
+ *
+ *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible
+ *        if a limit was hit during solving. It must not be used as a dual bound if the LP solution status is
+ *        SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ */
 extern
 SCIP_Real SCIPlpGetObjval(
    SCIP_LP*              lp,                 /**< current LP data */
