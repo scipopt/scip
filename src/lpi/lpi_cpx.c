@@ -158,6 +158,8 @@ struct SCIP_LPi
    SCIP_Bool             fromscratch;        /**< shall solves be performed with CPX_PARAM_ADVIND turned off? */
    SCIP_Bool             clearstate;         /**< shall next solve be performed with CPX_PARAM_ADVIND turned off? */
    SCIP_Real             feastol;            /**< feasibility tolerance for integrality */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
 #if (CPX_VERSION <= 1100)
    SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug
                                               *   in the scaling algorithm for ranged rows in CPLEX up to version 11.0 */
@@ -1087,6 +1089,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
    (*lpi)->feastol = 1e-06;
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
 #if (CPX_VERSION <= 1100)
    (*lpi)->rngfound = FALSE;
 #endif
@@ -3137,6 +3141,19 @@ SCIP_Bool SCIPlpiIsStable(
          return FALSE;
    }
 
+   /* If the condition number of the basis should be checked, everything above the specified threshold is counted
+    * as instable.
+    */
+   if( lpi->checkcondition && (lpi->solstat == CPX_STAT_OPTIMAL || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_Real kappa;
+
+      CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, &kappa, CPX_EXACT_KAPPA) );
+
+      if( kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+
    return (lpi->solstat != CPX_STAT_NUM_BEST && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS);
 }
 
@@ -4166,6 +4183,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_MARKOWITZ:
       *dval = getDblParam(lpi, CPX_PARAM_EPMRK);
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4208,6 +4228,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_MARKOWITZ:
       setDblParam(lpi, CPX_PARAM_EPMRK, dval);
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

@@ -2909,7 +2909,30 @@ SCIP_RETCODE lpSetLPInfo(
    return SCIP_OKAY;
 }
 
+/** sets the CONDITIONLIMIT setting of the LP solver */
+static
+SCIP_RETCODE lpSetConditionLimit(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             condlimit,          /**< new CONDITIONLIMIT value */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
 
+   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_CONDITIONLIMIT, lp->lpiconditionlimit) );
+
+   if( condlimit != lp->lpiconditionlimit )  /*lint !e777*/
+   {
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_CONDITIONLIMIT, condlimit, success) );
+      if( *success )
+         lp->lpiconditionlimit = condlimit;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -8452,6 +8475,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipresolving = set->lp_presolving;
    (*lp)->lpilpinfo = set->disp_lpinfo;
    (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
+   (*lp)->lpiconditionlimit = set->lp_conditionlimit;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
@@ -8545,6 +8569,13 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: row representation of the basis not available -- SCIP parameter lp/rowrepswitch has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_CONDITIONLIMIT, (*lp)->lpiconditionlimit, &success) );
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: condition number limit for the basis not available -- SCIP parameter lp/conditionlimit has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_THREADS, (*lp)->lpithreads, &success) );
@@ -13272,6 +13303,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetPricingChar(lp, set->lp_pricing) );
    SCIP_CALL( lpSetThreads(lp, set->lp_threads, &success) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
+   SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
@@ -13303,7 +13335,7 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again without FASTMIP with %s\n",
+            "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again with %s without FASTMIP\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 

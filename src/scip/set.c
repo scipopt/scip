@@ -183,6 +183,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
+#define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
 #define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_FASTMIP               1 /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
@@ -1185,6 +1186,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/checkstability",
          "should LP solver's return status be checked for stability?",
          &(*set)->lp_checkstability, TRUE, SCIP_DEFAULT_LP_CHECKSTABILITY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "lp/conditionlimit",
+         "maximum condition number of LP basis counted as stable (-1.0: no limit)",
+         &(*set)->lp_conditionlimit, TRUE, SCIP_DEFAULT_LP_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/checkfeas",
