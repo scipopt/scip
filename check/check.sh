@@ -15,7 +15,7 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 TSTNAME=$1
 BINNAME=$2
-SETNAME=$3
+SETNAMES=$3
 BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
@@ -35,7 +35,7 @@ then
     echo Skipping test since not all variables are define
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
-    echo "SETNAME       = $SETNAME"
+    echo "SETNAMES       = $SETNAMES"
     echo "BINID         = $BINID"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
@@ -62,93 +62,6 @@ then
     mkdir locks
 fi
 
-# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
-SETCUTOFF=0
-
-LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
-RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
-DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.done
-
-OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
-ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
-RESFILE=results/check.$TSTNAME.$BINID.$SETNAME.res
-TEXFILE=results/check.$TSTNAME.$BINID.$SETNAME.tex
-TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
-SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
-
-# if cutoff should be passed, check for solu file
-if test $SETCUTOFF = 1 ; then
-  if test -e testset/$TSTNAME.solu ; then
-    SOLUFILE=testset/$TSTNAME.solu
-  elif test -e testset/all.solu ; then
-    SOLUFILE=testset/all.solu
-  else
-    echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
-    SETCUTOFF=0
-  fi
-fi
-
-SETTINGS=$SETDIR/$SETNAME.set
-
-if test "$LOCK" = "true"
-then
-    if test -e $DONEFILE
-    then
-        echo skipping test due to existing done file $DONEFILE
-        exit
-    fi
-    if test -e $LOCKFILE
-    then
-        if test -e $RUNFILE
-        then
-            echo continuing aborted run with run file $RUNFILE
-        else
-            echo skipping test due to existing lock file $LOCKFILE
-            exit
-        fi
-    fi
-    date > $LOCKFILE
-    date > $RUNFILE
-fi
-
-if test ! -e $OUTFILE
-then
-    CONTINUE=false
-fi
-
-if test "$CONTINUE" = "true"
-then
-    MVORCP=cp
-else
-    MVORCP=mv
-fi
-
-DATEINT=`date +"%s"`
-if test -e $OUTFILE
-then
-    $MVORCP $OUTFILE $OUTFILE.old-$DATEINT
-fi
-if test -e $ERRFILE
-then
-    $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
-fi
-
-if test "$CONTINUE" = "true"
-then
-    LASTPROB=`awk -f getlastprob.awk $OUTFILE`
-    echo Continuing benchmark. Last solved instance: $LASTPROB
-    echo "" >> $OUTFILE
-    echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
-    echo "" >> $OUTFILE
-else
-    LASTPROB=""
-fi
-
-uname -a >>$OUTFILE
-uname -a >>$ERRFILE
-date >>$OUTFILE
-date >>$ERRFILE
-
 # we add 10% to the hard time limit and additional 10 seconds in case of small time limits
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
@@ -156,9 +69,112 @@ HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 1000\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 
-echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
-echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
+# split the comma separated list of settings into an array
+SETTINGSLIST=(${SETNAMES//,/ })
+FINALSETTINGSLIST=""
+# copy existing settings (and the default, if included) to TMPSETTINGS
+for S in ${SETTINGSLIST[@]}
+do
+   # every desired setting needs to exist in the $SETDIR; always accept the default setting
+   if test "$S" = 'default' || test -e ${SETDIR}/${S}.set
+   then
+      FINALSETTINGSLIST="${FINALSETTINGSLIST} ${S}"
+   else
+      # not existing settings get rejected
+      echo "Settings file ${SETDIR}/${S}.set doesn't exist"
+   fi
+done
+# now copy the temporary list back to get a valid settings list
+echo "Remaining settings to test"
+echo ${FINALSETTINGSLIST[@]}
 
+# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
+SETCUTOFF=0
+
+for SET in ${FINALSETTINGSLIST[@]}
+do
+   LOCKFILE=locks/$TSTNAME.$SET.$VERSION.$LPS.lock
+   RUNFILE=locks/$TSTNAME.$SET.$VERSION.$LPS.run.$BINID
+   DONEFILE=locks/$TSTNAME.$SET.$VERSION.$LPS.done
+
+   OUTFILE=results/check.$TSTNAME.$BINID.$SET.out
+   ERRFILE=results/check.$TSTNAME.$BINID.$SET.err
+   TMPFILE=results/check.$TSTNAME.$BINID.$SET.tmp
+   SETFILE=results/check.$TSTNAME.$BINID.$SET.set
+
+   # if cutoff should be passed, check for solu file
+   if test $SETCUTOFF = 1 ; then
+      if test -e testset/$TSTNAME.solu ; then
+         SOLUFILE=testset/$TSTNAME.solu
+      elif test -e testset/all.solu ; then
+         SOLUFILE=testset/all.solu
+      else
+         echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+         SETCUTOFF=0
+      fi
+   fi
+
+   SETTINGS=$SETDIR/$SET.set
+
+   if test "$LOCK" = "true"
+   then
+      if test -e $DONEFILE
+      then
+         echo skipping test due to existing done file $DONEFILE
+         exit
+      fi
+      if test -e $LOCKFILE
+      then
+         if test -e $RUNFILE
+         then
+             echo continuing aborted run with run file $RUNFILE
+         else
+             echo skipping test due to existing lock file $LOCKFILE
+             exit
+         fi
+      fi
+      date > $LOCKFILE
+      date > $RUNFILE
+   fi
+
+   if test ! -e $OUTFILE
+   then
+      CONTINUE=false
+   fi
+
+   # copy or move existing out/err-files of the same name to files tagged with .old and the date
+   DATEINT=`date +"%s"`
+   for FILE in $OUTFILE $ERRFILE
+   do
+      if test -e $FILE && test "$CONTINUE" = "true"
+      then
+          cp -v $FILE $FILE.old-$DATEINT
+      elif test -e $FILE
+      then
+          mv -v $FILE $FILE.old-$DATEINT
+      fi
+   done
+
+   if test "$CONTINUE" = "true"
+   then
+      LASTPROB=`awk -f getlastprob.awk $OUTFILE`
+      echo Continuing benchmark. Last solved instance: $LASTPROB
+      echo "" >> $OUTFILE
+      echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
+      echo "" >> $OUTFILE
+   else
+      LASTPROB=""
+   fi
+
+   uname -a >>$OUTFILE
+   uname -a >>$ERRFILE
+   date >>$OUTFILE
+   date >>$ERRFILE
+
+
+   echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
+   echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
+done
 # check if the test run should be processed in the valgrind environment
 if test "$VALGRIND" = "true"
 then
@@ -169,39 +185,57 @@ fi
 
 for i in `cat testset/$TSTNAME.test` DONE
 do
-    if test "$i" = "DONE"
-    then
-        date > $DONEFILE
-        break
-    fi
+    for SET in ${FINALSETTINGSLIST[@]}
+    do
+      LOCKFILE=locks/$TSTNAME.$SET.$VERSION.$LPS.lock
+      RUNFILE=locks/$TSTNAME.$SET.$VERSION.$LPS.run.$BINID
+      DONEFILE=locks/$TSTNAME.$SET.$VERSION.$LPS.done
 
-    if test "$LASTPROB" = ""
-    then
-        LASTPROB=""
+      OUTFILE=results/check.$TSTNAME.$BINID.$SET.out
+      ERRFILE=results/check.$TSTNAME.$BINID.$SET.err
+      TMPFILE=results/check.$TSTNAME.$BINID.$SET.tmp
+      SETFILE=results/check.$TSTNAME.$BINID.$SET.set
+      SETTINGS=$SETDIR/$SET.set
+      if test "$i" = "DONE"
+      then
+        date > $DONEFILE
+        ./evalcheck.sh $OUTFILE
+
+         if test "$LOCK" = "true"
+         then
+             rm -f $RUNFILE
+         fi
+         continue
+      fi
+
+      if test "$LASTPROB" = ""
+      then
         if test -f $i
         then
-	    SHORTFILENAME=`basename $i .gz`
-	    SHORTFILENAME=`basename $SHORTFILENAME .mps`
-	    SHORTFILENAME=`basename $SHORTFILENAME .lp`
-	    SHORTFILENAME=`basename $SHORTFILENAME .opb`
-	    SHORTFILENAME=`basename $SHORTFILENAME .gms`
-	    SHORTFILENAME=`basename $SHORTFILENAME .pip`
-	    SHORTFILENAME=`basename $SHORTFILENAME .zpl`
-	    SHORTFILENAME=`basename $SHORTFILENAME .cip`
-	    SHORTFILENAME=`basename $SHORTFILENAME .fzn`
-	    SHORTFILENAME=`basename $SHORTFILENAME .osil`
-	    SHORTFILENAME=`basename $SHORTFILENAME .wbo`
-	    SHORTFILENAME=`basename $SHORTFILENAME .cnf`
+        #todo put this into a readable for-loop
+            SHORTFILENAME=`basename $i .gz`
+            SHORTFILENAME=`basename $SHORTFILENAME .mps`
+            SHORTFILENAME=`basename $SHORTFILENAME .lp`
+            SHORTFILENAME=`basename $SHORTFILENAME .opb`
+            SHORTFILENAME=`basename $SHORTFILENAME .gms`
+            SHORTFILENAME=`basename $SHORTFILENAME .pip`
+            SHORTFILENAME=`basename $SHORTFILENAME .zpl`
+            SHORTFILENAME=`basename $SHORTFILENAME .cip`
+            SHORTFILENAME=`basename $SHORTFILENAME .fzn`
+            SHORTFILENAME=`basename $SHORTFILENAME .osil`
+            SHORTFILENAME=`basename $SHORTFILENAME .wbo`
+            SHORTFILENAME=`basename $SHORTFILENAME .cnf`
 
-	    if test $SETCUTOFF = 1
-	    then
-		export CUTOFF=`grep "$SHORTFILENAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
-		echo CUTOFF:  $CUTOFF
-	    fi
+            if test $SETCUTOFF = 1
+            then
+                export CUTOFF=`grep "$SHORTFILENAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+                echo CUTOFF:  $CUTOFF
+            fi
 
-            echo @01 $i ===========
+            echo @01 $i ===========                | tee -a $OUTFILE
             echo @01 $i ===========                >> $ERRFILE
-            echo > $TMPFILE
+            # overwrite the tmp file now
+            echo                                    > $TMPFILE
             if test "$SETNAME" != "default"
             then
                 echo set load $SETTINGS            >>  $TMPFILE
@@ -223,15 +257,15 @@ do
             fi
             echo set save $SETFILE                 >> $TMPFILE
             echo read $i                           >> $TMPFILE
-	    if test $SETCUTOFF = 1
-	    then
-		if test $CUTOFF != ""
-		then
-		    echo set limits objective $CUTOFF      >> $TMPFILE
-		fi
-		echo set heur emph off                 >> $TMPFILE
-		echo set sepa emph off                 >> $TMPFILE
-	    fi
+            if test $SETCUTOFF = 1
+            then
+               if test $CUTOFF != ""
+               then
+                  echo set limits objective $CUTOFF      >> $TMPFILE
+               fi
+               echo set heur emph off                 >> $TMPFILE
+               echo set sepa emph off                 >> $TMPFILE
+            fi
 #            echo write genproblem cipreadparsetest.cip >> $TMPFILE
 #            echo read cipreadparsetest.cip         >> $TMPFILE
             echo optimize                          >> $TMPFILE
@@ -239,44 +273,34 @@ do
 #           echo display solution                  >> $TMPFILE
             echo checksol                          >> $TMPFILE
             echo quit                              >> $TMPFILE
-            echo -----------------------------
-            date
-            date >>$ERRFILE
-            echo -----------------------------
-            date +"@03 %s"
-            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-            date +"@04 %s"
-            echo -----------------------------
-            date
-            date >>$ERRFILE
-            echo -----------------------------
-            echo
-            echo =ready=
+            echo -----------------------------     | tee -a $OUTFILE
+            date                                   | tee -a $OUTFILE
+            date                                   >> $ERRFILE
+            echo -----------------------------     | tee -a $OUTFILE
+            date +"@03 %s"                         | tee -a $OUTFILE
+            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE | tee -a $OUTFILE
+            date +"@04 %s"                         2>>$ERRFILE
+            echo -----------------------------     | tee -a $OUTFILE
+            date                                   | tee -a $OUTFILE
+            date                                   >> $ERRFILE
+            echo -----------------------------     | tee -a $OUTFILE
+            echo                                   | tee -a $OUTFILE
+            echo =ready=                           | tee -a $OUTFILE
         else
-            echo @02 FILE NOT FOUND: $i ===========
-            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+            echo @02 FILE NOT FOUND: $i =========== | tee -a $OUTFILE
+            echo @02 FILE NOT FOUND: $i =========== >> $ERRFILE
         fi
     else
-        echo skipping $i
+        echo skipping $i                            | tee -a $OUTFILE
         if test "$LASTPROB" = "$i"
         then
             LASTPROB=""
         fi
     fi
-done | tee -a $OUTFILE
-
-rm -f $TMPFILE
-rm -f cipreadparsetest.cip
-
-date >>$OUTFILE
-date >>$ERRFILE
-
-if test -e $DONEFILE
-then
-    ./evalcheck.sh $OUTFILE
-    
-    if test "$LOCK" = "true"
+    rm -f $TMPFILE
+    done
+    if test "$i" = "DONE"
     then
-        rm -f $RUNFILE
+        break
     fi
-fi
+done
