@@ -3386,13 +3386,16 @@ SCIP_RETCODE presolRoundIndicator(
          assert( SCIPvarIsActive(var) );
          SCIPdebugMessage("Slack variable <%s> is aggregated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
 
-         /* we need to update the events and locks */
+         /* we need to update the events, locks, and captures */
          assert( conshdlrdata->eventhdlrbound != NULL );
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
          SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
          SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+
+         SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
 
          /* change slack variable */
          consdata->slackvar = var;
