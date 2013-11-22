@@ -1865,19 +1865,13 @@ SCIP_RETCODE SCIPhashmapCreate(
    int                   mapsize             /**< size of the hash map */
    )
 {
-   int i;
-
    assert(hashmap != NULL);
    assert(mapsize > 0);
 
    SCIP_ALLOC( BMSallocMemory(hashmap) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*hashmap)->lists, mapsize) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*hashmap)->lists, mapsize) );
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nlists = mapsize;
-
-   /* initialize hash lists */
-   for( i = 0; i < mapsize; ++i )
-      (*hashmap)->lists[i] = NULL;
 
    return SCIP_OKAY;
 }
@@ -2152,9 +2146,9 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
    int listidx;
 
    assert(hashmap != NULL);
-   
+
    /* free hash lists */
-   for( listidx = 0; listidx < hashmap->nlists; ++listidx )
+   for( listidx = hashmap->nlists - 1; listidx >= 0; --listidx )
       hashmaplistFree(&hashmap->lists[listidx], hashmap->blkmem);
 
    return SCIP_OKAY;
