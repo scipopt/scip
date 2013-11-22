@@ -3664,8 +3664,36 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   *quality = SCIP_INVALID;
+#if ((SOPLEX_VERSION == 170 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 170)
+   int maxiter;
+   int tolerance;
 
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   SCIPdebugMessage("requesting solution quality from SoPlex: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         maxiter = 20;
+         tolerance = 1e-6;
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         maxiter = 10000;
+         tolerance = 1e-9;
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+   }
+
+   *quality = lpi->spx->basis().condition(maxiter, tolerance);
+#else
+   *quality = SCIP_INVALID;
+#endif
    return SCIP_OKAY;
 }
 
