@@ -373,7 +373,8 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
    );
 
 /** recomputes the objective value of an original solution, e.g., when transferring solutions

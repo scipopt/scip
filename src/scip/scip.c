@@ -12916,13 +12916,11 @@ SCIP_RETCODE freeTransform(
    /* call exit methods of plugins */
    SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
-   /* switch stage to FREETRANS */
-   scip->set->stage = SCIP_STAGE_FREETRANS;
-
    /* copy best primal solutions to original solution candidate list */
    if( scip->set->limit_maxorigsol > 0 )
    {
       SCIP_Bool stored;
+      SCIP_Bool hasinfval;
       int maxsols;
       int nsols;
       int s;
@@ -12945,11 +12943,26 @@ SCIP_RETCODE freeTransform(
          if( !SCIPsolIsOriginal(sol) )
          {
             /* retransform solution into the original problem space */
-            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
          }
+         else
+            hasinfval = FALSE;
 
-         /* add solution to original candidate solution storage */
-         SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+         if( !hasinfval )
+         {
+            /* add solution to original candidate solution storage */
+            SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+         }
+         else
+         {
+            SCIP_SOL* newsol;
+            SCIP_Bool success;
+
+            SCIP_CALL( SCIPcreateFiniteSolCopy(scip, &newsol, sol, &success) );
+
+            /* add solution to original candidate solution storage */
+            SCIP_CALL( SCIPaddSolFree(scip, &newsol, &stored) );
+         }
          ++s;
       }
 
@@ -12964,6 +12977,9 @@ SCIP_RETCODE freeTransform(
             "stored the best primal solution in the original solution cadidate list\n");
       }
    }
+
+   /* switch stage to FREETRANS */
+   scip->set->stage = SCIP_STAGE_FREETRANS;
 
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
@@ -30628,7 +30644,8 @@ SCIP_RETCODE SCIPcreateSolCopy(
 }
 
 /** creates a copy of a primal solution, thereby replacing infinite fixings of variables by finite values;
- *  the copy is always defined in the original variable space
+ *  the copy is always defined in the original variable space;
+ *  success indicates whether the objective value of the solution was changed by removing infinite values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -30644,12 +30661,13 @@ SCIP_RETCODE SCIPcreateSolCopy(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_RETCODE SCIPcreateFiniteSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_SOL*             sourcesol,          /**< primal CIP solution to copy */
-   SCIP_Bool*            success             /**< could infinite fixings be removed? */
+   SCIP_Bool*            success             /**< does the finite solution have the same objective value? */
    )
 {
    SCIP_VAR** fixedvars;
@@ -30660,7 +30678,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    int norigvars;
    int v;
 
-   SCIP_CALL( checkStage(scip, "SCIPcreateFiniteSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateFiniteSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(sol != NULL);
@@ -30708,11 +30726,11 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       /* create sub-SCIP */
       SCIP_CALL( SCIPcreate(&subscip) );
 
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
-
       /* copy the original problem to the sub-SCIP */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * norigvars)) );
       SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
       /* in the sub-SCIP, we try to minimize the absolute values of all variables with infinite values in the solution
        * and fix all other variables to the value they have in the solution
@@ -30816,10 +30834,6 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    if( SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
    {
       *success = TRUE;
-   }
-   else
-   {
-      SCIP_CALL( SCIPfreeSol(scip, sol) );
    }
 
    SCIPfreeBufferArray(scip, &solvals);
@@ -32058,10 +32072,12 @@ SCIP_RETCODE SCIPretransformSol(
 
       /*lint -fallthrough*/
    case SCIP_SOLORIGIN_ZERO:
+   {
+      SCIP_Bool hasinfval;
 
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
       break;
-
+   }
    case SCIP_SOLORIGIN_UNKNOWN:
       SCIPerrorMessage("unkown solution origin.\n");
       return SCIP_INVALIDCALL;
@@ -32145,8 +32161,10 @@ SCIP_RETCODE SCIPaddSol(
        */
       if( !SCIPsolIsOriginal(sol) )
       {
+         SCIP_Bool hasinfval;
+
          SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
@@ -32217,8 +32235,10 @@ SCIP_RETCODE SCIPaddSolFree(
        */
       if( !SCIPsolIsOriginal(*sol) )
       {
+         SCIP_Bool hasinfval;
+
          SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
@@ -32321,8 +32341,10 @@ SCIP_RETCODE SCIPtrySol(
     */ 
    if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
    {
+      SCIP_Bool hasinfval;
+
       SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
    }
 
    if( SCIPsolIsOriginal(sol) )
@@ -32400,8 +32422,10 @@ SCIP_RETCODE SCIPtrySolFree(
     */
    if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
    {
+      SCIP_Bool hasinfval;
+
       SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
    }
 
    if( SCIPsolIsOriginal(*sol) )

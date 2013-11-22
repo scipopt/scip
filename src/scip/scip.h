@@ -14964,7 +14964,8 @@ SCIP_RETCODE SCIPcreateSolCopy(
    );
 
 /** creates a copy of a primal solution, thereby replacing infinite fixings of variables by finite values;
- *  the copy is always defined in the original variable space
+ *  the copy is always defined in the original variable space;
+ *  success indicates whether the objective value of the solution was changed by removing infinite values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -14980,13 +14981,14 @@ SCIP_RETCODE SCIPcreateSolCopy(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
 SCIP_RETCODE SCIPcreateFiniteSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_SOL*             sourcesol,          /**< primal CIP solution to copy */
-   SCIP_Bool*            success             /**< could infinite fixings be removed? */
+   SCIP_Bool*            success             /**< does the finite solution have the same objective value? */
    );
 
 /** frees primal CIP solution

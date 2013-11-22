@@ -1437,6 +1437,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
+   SCIP_Bool hasinfval;
    int i;
 
    assert(primal != NULL);
@@ -1445,7 +1446,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    {
       if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ZERO )
       {
-         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob) );
+         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob, &hasinfval) );
       }
    }
 
