@@ -22,6 +22,8 @@ fixed bugs:
 - fixed memory bug in reader_mps
 - fixed output of aggregated variables in indicator constraints in lp and mps-format
 - fixed bug in reading indicator constraints in mps-format
+- improved handling of initial constraints: constraints which are initial, but added during the search to an already
+  treated node are kept and added to the LP at every node where they are active
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)

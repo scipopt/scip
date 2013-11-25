@@ -999,7 +999,7 @@ SCIP_RETCODE initConssLP(
    SCIPdebugMessage("init LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
-      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
+      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree) );
    }
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
          eventqueue, eventfilter, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );

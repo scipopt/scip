@@ -185,7 +185,8 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** calls separator method of constraint handler to separate LP solution */
