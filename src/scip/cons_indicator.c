@@ -188,6 +188,8 @@
  * the slack variable has to start with "indslack" and end with the name of the corresponding linear constraint.
  *
  * @todo Check whether one can further use the fact that the slack variable is aggregated.
+ *
+ * @todo Check whether using an objective cutoff can be integrated into the alternative polyhedron.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
