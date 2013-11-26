@@ -103,6 +103,7 @@ features:
 - added more presolving to cons_indicator, checking whether indicator/slack variables are aggregated
 - before copying solutions to the original solution candidate store, infinite solution values are now removed using
   SCIPcreateFiniteSolCopy()
+- new initial constraints are now added to the LP before solving a probing LP
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

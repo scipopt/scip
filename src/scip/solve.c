@@ -969,8 +969,7 @@ SCIP_RETCODE updateEstimate(
 }
 
 /** puts all constraints with initial flag TRUE into the LP */
-static
-SCIP_RETCODE initConssLP(
+SCIP_RETCODE SCIPinitConssLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
@@ -1070,8 +1069,8 @@ SCIP_RETCODE initLP(
    }
 
    /* put all initial constraints into the LP */
-   SCIP_CALL( initConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand, eventqueue, eventfilter,
-         root, cutoff) );
+   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+         eventfilter, root, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -1875,7 +1874,7 @@ SCIP_RETCODE SCIPpriceLoop(
       assert(!lp->flushed || lp->solved || *lperror);
 
       /* put all initial constraints into the LP */
-      SCIP_CALL( initConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+      SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             eventfilter, pretendroot, &cutoff) );
       assert(cutoff == FALSE);
 

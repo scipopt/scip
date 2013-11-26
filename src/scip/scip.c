@@ -29352,6 +29352,8 @@ SCIP_RETCODE solveProbingLP(
                                               *   limit was reached (or NULL, if not needed) */
    )
 {
+   SCIP_Bool initcutoff;
+
    assert(lperror != NULL);
    assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
 
@@ -29362,7 +29364,18 @@ SCIP_RETCODE solveProbingLP(
    }
    assert(SCIPtreeGetCurrentDepth(scip->tree) > 0);
 
-   if( cutoff != NULL )
+   SCIP_CALL( SCIPinitConssLP(scip->mem->probmem, scip->set, scip->sepastore, scip->stat, scip->transprob,
+         scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, FALSE,
+         &initcutoff) );
+
+   if( initcutoff )
+   {
+      if( cutoff != NULL )
+         *cutoff = FALSE;
+
+      return SCIP_OKAY;
+   }
+   else if( cutoff != NULL )
       *cutoff = FALSE;
 
    /* load the LP state (if necessary) */
