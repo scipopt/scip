@@ -2712,7 +2712,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       for( c = conshdlr->ninitconsskept; c < oldninitconss; ++c )
       {
          assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) >= -1);
-         assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) < currentdepth);
+         assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) <= currentdepth);
 
          /* if the constraint was not initialized at its valid node, we keep it */
          if( currentdepth > 0 ? SCIPconsGetActiveDepth(conshdlr->initconss[c]) != currentdepth :
