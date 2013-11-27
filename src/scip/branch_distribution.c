@@ -324,10 +324,10 @@ void getScore(
    {
    case 'l' :
       /* 'l'owest cumulative probability */
-      if( SCIPisGT(scip, -newprobup, *upscore) )
-         *upscore = -newprobup;
-      if( SCIPisGT(scip, -newprobdown, *downscore) )
-         *downscore = -newprobdown;
+      if( SCIPisGT(scip, 1.0 - newprobup, *upscore) )
+         *upscore = 1.0 - newprobup;
+      if( SCIPisGT(scip, 1.0 - newprobdown, *downscore) )
+         *downscore = 1.0 - newprobdown;
       break;
    case 'd' :
       /* biggest 'd'ifference currentprob - newprob */
