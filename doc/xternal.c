@@ -1203,6 +1203,8 @@
  *    and "cons_subtour.h".
  *     \n
  *    Make sure to <b>adjust your Makefile</b> such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeConsSubtour() in order to include the constraint handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -2124,6 +2126,8 @@
  *    and "pricer_mypricer.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2403,6 +2407,8 @@
  *    and "presol_mypresolver.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2608,6 +2614,8 @@
  *    and "sepa_myseparator.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2874,6 +2882,8 @@
  *    and "prop_mypropagator.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -3177,6 +3187,8 @@
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3476,6 +3488,8 @@
  *    and "nodesel_mynodeselector.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3717,6 +3731,8 @@
  *    and "heur_myheuristic.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -3999,6 +4015,8 @@
  *    and "relax_myrelaxator.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
+ *    e.g, in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -4235,6 +4253,8 @@
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -4451,6 +4471,8 @@
  *    and "dialog_mydialog.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -4673,6 +4695,8 @@
  *    and "disp_mydisplaycolumn.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -4860,6 +4884,8 @@
  *    and "event_bestsol.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeEventBestsol() in order to include the event handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Eventhdlr example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
@@ -5105,6 +5131,8 @@
  *    and "nlpi_mynlpi.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPcreateNlpSolverMynlpi() in order to include the NLPI into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynlpi".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
