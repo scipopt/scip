@@ -58,6 +58,7 @@
 #define EVENTHDLR_DESC         "event handler for linprojection node events"
 #define EVENT_TYPE_LINPROJECTION SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE
 #define HEADER "NUMBER  NODELOWER NODEESTIM NODELINESTIM CUTOFFBOUND CLASSICESTIM NODELPCANDS OPTVAL"
+#define DEFAULT_ADDNODEDATA FALSE
 
 /* structure to collect descriptive statistics */
 struct SCIP_DescStat
@@ -104,6 +105,7 @@ struct SCIP_NodeselData
    SCIP_Real*            rootfracs;          /**< root fractionalities */
    int                   nrootlpcands;       /**< number of root LP candidates */
    char*                 filename;           /**< file to keep node results */
+   SCIP_Bool             addnodedata;        /**< should data be added as node constraints? */
 };
 
 static
@@ -709,7 +711,7 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolLinprojection)
       SCIPwarningMessage(scip, "Optimal solution value is infinite!\n");
    }
 
-   if( SCIPgetNRuns(scip) == 1 )
+   if( nodeseldata->addnodedata && SCIPgetNRuns(scip) == 1 )
    {
       SCIP_CALL( SCIPcatchEvent(scip, EVENT_TYPE_LINPROJECTION, nodeseldata->eventhdlr, NULL, NULL) );
    }
@@ -922,6 +924,7 @@ SCIP_RETCODE SCIPincludeNodeselLinprojection(
 
    /* add linprojection node selector parameters */
    /* TODO: (optional) add node selector specific parameters with SCIPaddTypeParam() here */
-
+   SCIP_CALL( SCIPaddBoolParam(scip, "nodeselection/"NODESEL_NAME"/addnodedata", "should data be added as node constraints?",
+         &nodeseldata->addnodedata, TRUE, DEFAULT_ADDNODEDATA, NULL, NULL) );
    return SCIP_OKAY;
 }
