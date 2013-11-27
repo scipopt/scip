@@ -571,6 +571,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* don't call heuristic, if no continuous variables are present
     *  -> in this case, it is equivalent to shifting heuristic
     */

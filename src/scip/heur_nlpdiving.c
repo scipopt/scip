@@ -1583,6 +1583,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* only call heuristic, if an NLP relaxation has been constructed */
    if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;

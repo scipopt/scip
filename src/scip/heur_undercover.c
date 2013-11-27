@@ -3198,6 +3198,10 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);

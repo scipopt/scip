@@ -191,6 +191,10 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* we cannot run on problems with continuous variables */
    if( SCIPgetNContVars(scip) > 0 )
       return SCIP_OKAY;

@@ -552,6 +552,10 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    *result = SCIP_DELAYED;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* only call heuristic, if a CIP solution is at hand */
    if( SCIPgetNSols(scip) <= 0 )
       return SCIP_OKAY;

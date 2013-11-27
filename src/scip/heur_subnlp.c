@@ -1986,12 +1986,16 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    assert(scip != NULL);
    assert(heur != NULL);
 
+   /* obviously, we did not do anything yet */
+   *result = SCIP_DIDNOTRUN;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-
-   /* obviously, we did not do anything yet */
-   *result = SCIP_DIDNOTRUN;
 
    /* if keepcopy and subscip == NULL, then InitsolNlp decided that we do not need an NLP solver,
     *   probably because we do not have nonlinear continuous or implicit integer variables

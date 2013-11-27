@@ -370,11 +370,15 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    assert( result != NULL );
    assert( SCIPhasCurrentNodeLP(scip) );
 
+   *result = SCIP_DELAYED;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
-
-   *result = SCIP_DELAYED;
 
    /* only call heuristic, if an optimal LP solution and a feasible solution are at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )

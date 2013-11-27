@@ -427,6 +427,10 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* only call heuristic, if an optimal LP solution is at hand or if relaxation solution is available */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && ! SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
