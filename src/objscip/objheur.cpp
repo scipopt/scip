@@ -179,7 +179,7 @@ SCIP_DECL_HEUREXEC(heurExecObj)
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, heurtiming, result) );
+   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, heurtiming, nodeinfeasible, result) );
 
    return SCIP_OKAY;
 }

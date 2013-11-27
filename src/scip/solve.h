@@ -123,6 +123,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    );
 

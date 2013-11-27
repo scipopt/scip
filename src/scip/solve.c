@@ -133,6 +133,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )
 {  /*lint --e{715}*/
@@ -264,7 +265,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
       }
 #endif
 
-      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
+      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, nodeinfeasible,
+            &ndelayedheurs, &result) );
 
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
@@ -1820,7 +1822,8 @@ SCIP_RETCODE SCIPpriceLoop(
       }
 
       /* call primal heuristics which are callable during pricing */
-      SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGPRICINGLOOP, &foundsol) );
+      SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGPRICINGLOOP,
+            FALSE, &foundsol) );
 
       /* price problem variables */
       SCIPdebugMessage("problem variable pricing\n");
@@ -2156,7 +2159,8 @@ SCIP_RETCODE priceAndCutLoop(
          {
             SCIP_Bool foundsol;
 
-            SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP,
+                  FALSE, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
             *lperror = *lperror || lp->resolvelperror;
@@ -3226,7 +3230,8 @@ SCIP_RETCODE propAndSolve(
    if( !(*cutoff) && !SCIPtreeProbing(tree) && timingmask == SCIP_PROPTIMING_BEFORELP )
    {
       /* if the heuristics find a new incumbent solution, propagate again */
-      SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP, propagateagain) );
+      SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP,
+            FALSE, propagateagain) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
    }
          
@@ -3468,7 +3473,7 @@ SCIP_RETCODE solveNode(
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
    /* call primal heuristics that should be applied before the node was solved */
-   SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
+   SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, FALSE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    if( SCIPsolveIsStopped(set, stat, FALSE) )
@@ -3568,12 +3573,13 @@ SCIP_RETCODE solveNode(
          if( actdepth == 0 && nloops == 1 )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL,
-                  SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, &foundsol) );
+                  SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, *cutoff, &foundsol) );
             *afternodeheur = TRUE; /* the AFTERNODE heuristics should not be called again after the node */
          }
          else
          {
-            SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP,
+                  *cutoff, &foundsol) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -4296,7 +4302,8 @@ SCIP_RETCODE SCIPsolveCIP(
          stopped = SCIPsolveIsStopped(set, stat, TRUE);
          if( !afternodeheur && (!cutoff || nnodes > 0) && !stopped )
          {
-            SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE,
+                  cutoff, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
             stopped = SCIPsolveIsStopped(set, stat, FALSE);

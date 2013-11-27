@@ -124,6 +124,7 @@ SCIP_RETCODE SCIPheurExec(
    int                   depth,              /**< depth of current node */
    int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
    int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );

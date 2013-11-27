@@ -12371,7 +12371,7 @@ SCIP_RETCODE presolveRound(
          
          /* call primal heuristics */
          SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
-               SCIP_HEURTIMING_DURINGPRESOLLOOP, &foundsol) );
+               SCIP_HEURTIMING_DURINGPRESOLLOOP, FALSE, &foundsol) );
          
          /* output a message, if a solution was found */
          if( foundsol )
@@ -12446,7 +12446,7 @@ SCIP_RETCODE presolve(
 
       /* call primal heuristics */
       SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
-            SCIP_HEURTIMING_BEFOREPRESOL, &foundsol) );
+            SCIP_HEURTIMING_BEFOREPRESOL, FALSE, &foundsol) );
 
       /* output a message, if a solution was found */
       if( foundsol )
