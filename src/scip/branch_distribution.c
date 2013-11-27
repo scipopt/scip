@@ -32,12 +32,13 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define SCOREPARAM_VALUES "hlvw"
+#define SCOREPARAM_VALUES "dhlvw"
 #define DEFAULT_SCOREPARAM 'v'
 #define DEFAULT_PRIORITY 2.0
 #define SQRTOFTWO 1.4142136
 #define SQUARED(x) (x) * (x)
 #define DEFAULT_ONLYACTIVEROWS FALSE /**< should only rows which are active at the current node be considered? */
+#define DEFAULT_USEWEIGHTEDSCORE FALSE /**< should the branching score weigh up- and down-scores of a variable */
 /*
  * Data structures
  */
@@ -49,6 +50,7 @@ struct SCIP_BranchruleData
 {
    char                  scoreparam;     /**< parameter how the branch score is calculated */
    SCIP_Bool             onlyactiverows; /**< should only rows which are active at the current node be considered? */
+   SCIP_Bool             useweightedscore;/**< should the branching score weigh up- and down-scores of a variable */
 };
 
 /*
@@ -327,7 +329,13 @@ void getScore(
       if( SCIPisGT(scip, -newprobdown, *downscore) )
          *downscore = -newprobdown;
       break;
-
+   case 'd' :
+      /* biggest 'd'ifference currentprob - newprob */
+      if( SCIPisGT(scip, currentprob - newprobup, *upscore) )
+         *upscore = currentprob - newprobup;
+      if( SCIPisGT(scip, currentprob - newprobdown, *downscore) )
+         *downscore = currentprob - newprobdown;
+      break;
    case 'h' :
       /* 'h'ighest cumulative probability */
       if( SCIPisGT(scip, newprobup, *upscore) )
@@ -673,37 +681,63 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       SCIP_Real upscore;
       SCIP_Real downscore;
 
+      upscore = 0.0;
+      downscore = 0.0;
+      /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
       SCIP_CALL( calcBranchScore(scip, lpcands[c], lpcandssol[c], rowmeans, rowvariances, rowinfinitiesdown,
             rowinfinitiesup, nlprows,
             &upscore, &downscore, branchruledata->scoreparam, branchruledata->onlyactiverows) );
 
-      if( upscore > bestscore && upscore > downscore )
+      /* if weighted scoring is enabled, use the branching score method of SCIP to weigh up and down score */
+      if( branchruledata->useweightedscore )
       {
-         bestscore = upscore;
-         bestbranchdir = SCIP_BRANCHDIR_UPWARDS;
-         bestcand = lpcands[c];
+         SCIP_Real score;
+
+         score = SCIPgetBranchScore(scip, lpcands[c], downscore, upscore);
+
+         /* select the candidate with the highest branching score */
+         if( score > bestscore )
+         {
+            bestscore = score;
+            bestcand = lpcands[c];
+            /* prioritize branching direction with the higher score */
+            if( upscore > downscore )
+               bestbranchdir = SCIP_BRANCHDIR_UPWARDS;
+            else
+               bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+         }
       }
-      else if( downscore > bestscore )
+      else
       {
-         bestscore = downscore;
-         bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
-         bestcand = lpcands[c];
+         /* no weighted score; keep candidate which has the single highest score in one direction */
+         if( upscore > bestscore && upscore > downscore )
+         {
+            bestscore = upscore;
+            bestbranchdir = SCIP_BRANCHDIR_UPWARDS;
+            bestcand = lpcands[c];
+         }
+         else if( downscore > bestscore )
+         {
+            bestscore = downscore;
+            bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+            bestcand = lpcands[c];
+         }
       }
 
-      assert(bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS || bestbranchdir == SCIP_BRANCHDIR_UPWARDS);
-      assert(bestcand != NULL);
 
       SCIPdebugMessage("  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcands[c]), downscore, upscore);
       SCIPdebugMessage("  Best candidate: %s, score %g, direction %d\n", SCIPvarGetName(bestcand), bestscore, bestbranchdir);
 
    }
 
+   assert(bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS || bestbranchdir == SCIP_BRANCHDIR_UPWARDS);
    assert(bestcand != NULL);
 
    SCIPdebugMessage("  Branching on variable %s with bounds [%g, %g] and solution value <%g>\n", SCIPvarGetName(bestcand),
       SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand), SCIPvarGetLPSol(bestcand));
 
-   SCIPbranchVar(scip, bestcand, &downchild, NULL, &upchild);
+   /* branch on the best candidate variable */
+   SCIP_CALL( SCIPbranchVar(scip, bestcand, &downchild, NULL, &upchild) );
 
    assert(downchild != NULL);
       assert(upchild != NULL);
@@ -756,12 +790,15 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpDistribution) );
 
    /* add distribution branching rule parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/scoreparam", "the score calculation; 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
+   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/scoreparam", "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
          &branchruledata->scoreparam, TRUE, DEFAULT_SCOREPARAM, SCOREPARAM_VALUES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/"BRANCHRULE_NAME"/onlyactiverows",
          "should only rows which are active at the current node be considered?",
          &branchruledata->onlyactiverows, TRUE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/"BRANCHRULE_NAME"/weightedscore",
+         "should the branching score weigh up- and down-scores of a variable",
+         &branchruledata->useweightedscore, TRUE, DEFAULT_USEWEIGHTEDSCORE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
