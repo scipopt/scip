@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
 
 /**@file   heur_randrounding.c
  * @brief  randomized LP rounding heuristic which also generates conflicts via an auxiliary probing tree
