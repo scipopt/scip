@@ -36,7 +36,7 @@
 #define HEUR_FREQ             30
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
