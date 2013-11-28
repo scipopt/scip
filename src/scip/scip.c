@@ -10552,6 +10552,7 @@ SCIP_Bool SCIPallVarsInProb(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -17973,7 +17974,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
    assert(!SCIPinDive(scip));
 
-   SCIP_CALL( checkStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -18006,7 +18007,10 @@ SCIP_RETCODE SCIPtightenVarLb(
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       break;
-
+   case SCIP_STAGE_TRANSFORMED:
+      SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      break;
    case SCIP_STAGE_PRESOLVING:
       if( !SCIPinProbing(scip) )
       {
@@ -18076,7 +18080,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
    assert(!SCIPinDive(scip));
 
-   SCIP_CALL( checkStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -18109,7 +18113,10 @@ SCIP_RETCODE SCIPtightenVarUb(
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       break;
-
+   case SCIP_STAGE_TRANSFORMED:
+      SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      break;
    case SCIP_STAGE_PRESOLVING:
       if( !SCIPinProbing(scip) )
       {
