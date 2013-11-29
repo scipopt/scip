@@ -72,6 +72,8 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   int nenfolp;   /* store the number of nenfolp calls */
+   int ncheck;    /* store the number of check calls */
 };
 
 
@@ -138,18 +140,19 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyUnittest)
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_CONSFREE(consFreeUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeUnittest NULL
-#endif
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
@@ -321,13 +324,23 @@ SCIP_DECL_CONSSEPASOL(consSepasolUnittest)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
 {
+
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
    /* now add a cutting plane: x+y <= 2 */
-
-
    SCIP_VAR** vars;
    SCIP_ROW *row;
    SCIP_Bool infeasible;
    char s[SCIP_MAXSTRLEN];
+
+
+   /* count this function call in the hdlr data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   conshdlrdata->nenfolp++;
+
+
 
    vars = SCIPgetVars(scip);
 
@@ -364,12 +377,22 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
 {
 
    SCIP_Real val;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VAR** vars;
 
-   SCIP_VAR** vars = SCIPgetVars(scip);
 
+   vars = SCIPgetVars(scip);
 
    assert(vars[0] != NULL);
    assert(vars[1] != NULL);
+
+
+   /* count this function call in the hdlr data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   conshdlrdata->ncheck++;
+
+
 
    val = SCIPgetSolVal(scip, sol, vars[0]) + SCIPgetSolVal(scip, sol, vars[1]);
 
@@ -598,7 +621,9 @@ SCIP_RETCODE SCIPincludeConshdlrUnittest(
    SCIP_CONSHDLR* conshdlr;
 
    /* create unittest constraint handler data */
-   conshdlrdata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+
+
    /* TODO: (optional) create constraint handler specific data here */
 
    conshdlr = NULL;
@@ -758,4 +783,38 @@ SCIP_RETCODE SCIPcreateConsBasicUnittest(
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
+}
+
+/*
+ * Interface methods of constraint handler
+ */
+
+/** gets nenfolp from the conshdlrdata */
+int SCIPgetNenfolpUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->nenfolp;
+}
+
+/** gets nenfolp from the conshdlrdata */
+int SCIPgetNcheckUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->ncheck;
 }

@@ -93,6 +93,20 @@ SCIP_RETCODE SCIPcreateConsBasicUnittest(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
+/** gets nenfolp from the conshdlrdata */
+EXTERN
+int SCIPgetNenfolpUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets ncheck from the conshdlrdata */
+EXTERN
+int SCIPgetNcheckUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -82,146 +82,160 @@ SCIP_RETCODE initProb(
 
 /* Check methods */
 static
-SCIP_RETCODE consCheckName(SCIP* scip, SCIP_CONSHDLR* hdler )
+SCIP_RETCODE consCheckName(SCIP* scip, SCIP_CONSHDLR* conshdlr )
 {
    const char* name = "unittest";
-   CHECK_GET( strcmp(SCIPconshdlrGetName(hdler), name), 0 );
+   CHECK_GET( strcmp(SCIPconshdlrGetName(conshdlr), name), 0 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckDesc(SCIP* scip, SCIP_CONSHDLR* hdler )
+SCIP_RETCODE consCheckDesc(SCIP* scip, SCIP_CONSHDLR* conshdlr )
 {
    const char* desc = "constraint handler template";
-   CHECK_GET( strcmp(SCIPconshdlrGetDesc(hdler), desc), 0 );
+   CHECK_GET( strcmp(SCIPconshdlrGetDesc(conshdlr), desc), 0 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckSepaPriority(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckSepaPriority(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetSepaPriority(hdler), 0 );
+   CHECK_GET( SCIPconshdlrGetSepaPriority(conshdlr), 0 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckEnfoPriority(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckEnfoPriority(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetEnfoPriority(hdler), 0 );
+   CHECK_GET( SCIPconshdlrGetEnfoPriority(conshdlr), 0 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckCheckPriority(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckCheckPriority(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetCheckPriority(hdler), 0 );
+   CHECK_GET( SCIPconshdlrGetCheckPriority(conshdlr), 0 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckSepaFreq(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckSepaFreq(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetSepaFreq(hdler), -1 );
+   CHECK_GET( SCIPconshdlrGetSepaFreq(conshdlr), -1 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckEagerFreq(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckEagerFreq(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetEagerFreq(hdler), 100 );
+   CHECK_GET( SCIPconshdlrGetEagerFreq(conshdlr), 100 );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckNeedsCons(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckNeedsCons(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrNeedsCons(hdler), TRUE );
+   CHECK_GET( SCIPconshdlrNeedsCons(conshdlr), TRUE );
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE consCheckDoesPresolve(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrDoesPresolve(conshdlr), FALSE );
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE consCheckIsSparationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrIsSeparationDelayed(conshdlr), FALSE );
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE consCheckIsPropagationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrIsPropagationDelayed(conshdlr), FALSE );
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE consCheckIsPresolvingDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrIsPresolvingDelayed(conshdlr), FALSE );
    return SCIP_OKAY;
 }
 
 /*
 static
-SCIP_RETCODE consCheckDoesPresolve(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckWasLPSparationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrDoesPresolve(hdler),  );
-   return SCIP_OKAY;
-}
-*/
-
-static
-SCIP_RETCODE consCheckIsSparationDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
-{
-   CHECK_GET( SCIPconshdlrIsSeparationDelayed(hdler), FALSE );
+   CHECK_GET( SCIPconshdlrWasLPSeparationDelayed(conshdlr),  );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckIsPropagationDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckWasSolSparationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrIsPropagationDelayed(hdler), FALSE );
+   CHECK_GET( SCIPconshdlrWasSolSeparationDelayed(conshdlr),  );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckIsPresolvingDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckWasPropagationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrIsPresolvingDelayed(hdler), FALSE );
-   return SCIP_OKAY;
-}
-
-/*
-static
-SCIP_RETCODE consCheckWasLPSparationDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
-{
-   CHECK_GET( SCIPconshdlrWasLPSeparationDelayed(hdler),  );
+   CHECK_GET( SCIPconshdlrWasPropagationDelayed(conshdlr),  );
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckWasSolSparationDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckWasPresolvingDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrWasSolSeparationDelayed(hdler),  );
+   CHECK_GET( SCIPconshdlrWasPresolvingDelayed(conshdlr),  );
    return SCIP_OKAY;
 }
 
-static
-SCIP_RETCODE consCheckWasPropagationDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
-{
-   CHECK_GET( SCIPconshdlrWasPropagationDelayed(hdler),  );
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE consCheckWasPresolvingDelayed(SCIP* scip, SCIP_CONSHDLR* hdler)
-{
-   CHECK_GET( SCIPconshdlrWasPresolvingDelayed(hdler),  );
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE consCheckIsInitialized(SCIP* scip, SCIP_CONSHDLR* hdler)
-{
-   CHECK_GET( SCIPconshdlrIsInitialized(hdler),  );
-   return SCIP_OKAY;
-}
 */
 
 /*
 static
-SCIP_RETCODE consCheckIsCloneable(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckIsCloneable(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrIsCloneable(hdler),  );
+   CHECK_GET( SCIPconshdlrIsCloneable(conshdlr),  );
    return SCIP_OKAY;
 }
 */
 
 static
-SCIP_RETCODE consCheckGetPropTimingmask(SCIP* scip, SCIP_CONSHDLR* hdler)
+SCIP_RETCODE consCheckIsInitialized(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_Bool initialized)
 {
-   CHECK_GET( SCIPconshdlrGetPropTimingmask(hdler), SCIP_PROPTIMING_BEFORELP );
+   CHECK_GET( SCIPconshdlrIsInitialized(conshdlr), initialized );
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE consCheckGetPropTimingmask(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrGetPropTimingmask(conshdlr), SCIP_PROPTIMING_BEFORELP );
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrGetNEnfoLPCalls(conshdlr), SCIPgetNenfolpUnittest(scip) );
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
+   return SCIP_OKAY;
+}
 
 /** main function */
 int
@@ -230,9 +244,9 @@ main(
    char**                     argv
    )
 {
-   SCIP_RETCODE retcode;
+
    SCIP* scip;
-   SCIP_CONSHDLR* hdler;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
 
    /*********
@@ -265,7 +279,7 @@ main(
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* get the constraint handler */
-   hdler = SCIPfindConshdlr(scip,"unittest");
+   conshdlr = SCIPfindConshdlr(scip, "unittest");
 
 
    /*********
@@ -273,24 +287,32 @@ main(
     *********/
 
    /* tests before solving */
-   consCheckName(scip, hdler);
-   consCheckDesc(scip, hdler);
-   consCheckSepaPriority(scip, hdler);
-   consCheckEnfoPriority(scip, hdler);
-   consCheckCheckPriority(scip, hdler);
-   consCheckSepaFreq(scip, hdler);
-   consCheckEagerFreq(scip, hdler);
-   consCheckNeedsCons(scip, hdler);
-   consCheckIsSparationDelayed(scip, hdler);
-   consCheckIsPropagationDelayed(scip, hdler);
-   consCheckIsPresolvingDelayed(scip, hdler);
-   consCheckGetPropTimingmask(scip, hdler);
+   consCheckName(scip, conshdlr);
+   consCheckDesc(scip, conshdlr);
+   consCheckSepaPriority(scip, conshdlr);
+   consCheckEnfoPriority(scip, conshdlr);
+   consCheckCheckPriority(scip, conshdlr);
+   consCheckSepaFreq(scip, conshdlr);
+   consCheckEagerFreq(scip, conshdlr);
+   consCheckNeedsCons(scip, conshdlr);
+   consCheckIsSparationDelayed(scip, conshdlr);
+   consCheckIsPropagationDelayed(scip, conshdlr);
+   consCheckIsPresolvingDelayed(scip, conshdlr);
+   consCheckGetPropTimingmask(scip, conshdlr);
+   consCheckIsInitialized(scip, conshdlr, FALSE);
+   consCheckDoesPresolve(scip, conshdlr);
+
+
 
    /* solve */
    SCIP_CALL( SCIPsolve(scip) );
 
 
    /* tests after solving */
+   consCheckIsInitialized(scip, conshdlr, TRUE);
+   consCheckNCheckCalls(scip, conshdlr);
+   consCheckNEnfoLPCalls(scip, conshdlr);
+
 
 
 
