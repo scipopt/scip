@@ -74,6 +74,10 @@ struct SCIP_ConshdlrData
 {
    int nenfolp;   /* store the number of nenfolp calls */
    int ncheck;    /* store the number of check calls */
+   int nsepalp;   /* store the number of sepalp calls */
+   int nenfopslp; /* store the number of enfopslp calls */
+   int nprop;     /* store the number of prop calls */
+   int nresprop;  /* store the number of resprop calls */
 };
 
 
@@ -291,18 +295,19 @@ SCIP_DECL_CONSINITLP(consInitlpUnittest)
 
 
 /** separation method of constraint handler for LP solutions */
-#if 0
 static
 SCIP_DECL_CONSSEPALP(consSepalpUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->nsepalp++;
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpUnittest NULL
-#endif
+
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
@@ -363,10 +368,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
+{
    return SCIP_OKAY;
 }
 
@@ -408,18 +410,12 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
 
 
 /** domain propagation method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPROP(consPropUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
+{
    return SCIP_OKAY;
 }
-#else
-#define consPropUnittest NULL
-#endif
+
 
 
 /** presolving method of constraint handler */
@@ -438,18 +434,11 @@ SCIP_DECL_CONSPRESOL(consPresolUnittest)
 
 
 /** propagation conflict resolving method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSRESPROP(consRespropUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
+{
    return SCIP_OKAY;
 }
-#else
-#define consRespropUnittest NULL
-#endif
 
 
 /** variable rounding lock method of constraint handler */
@@ -817,4 +806,64 @@ int SCIPgetNcheckUnittest(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    return conshdlrdata->ncheck;
+}
+
+/* gets nsepalp from the conshdlrdata */
+int SCIPgetNsepalpUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->nsepalp;
+}
+
+/* gets nenfopslp from the conshdlrdata */
+int SCIPgetNenfopslpUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->nenfopslp;
+}
+
+/* gets nprop from the conshdlrdata */
+int SCIPgetNpropUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->nprop;
+}
+
+/* gets nresprop from the conshdlrdata */
+int SCIPgetNrespropUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->nresprop;
 }
