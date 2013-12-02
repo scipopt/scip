@@ -1,4 +1,4 @@
-emacs/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -93,6 +93,7 @@ SCIP_RETCODE SCIPcreateConsBasicUnittest(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
+
 /** gets nenfolp from the conshdlrdata */
 EXTERN
 int SCIPgetNenfolpUnittest(
@@ -105,6 +106,29 @@ int SCIPgetNcheckUnittest(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/* gets nsepalp from the conshdlrdata */
+EXTERN
+int SCIPgetNsepalpUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/* gets nenfopslp from the conshdlrdata */
+EXTERN
+int SCIPgetNenfopslpUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/* gets nprop from the conshdlrdata */
+EXTERN
+int SCIPgetNpropUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/* gets nresprop from the conshdlrdata */
+EXTERN
+int SCIPgetNrespropUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 
 #ifdef __cplusplus

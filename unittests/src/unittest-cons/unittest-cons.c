@@ -437,6 +437,7 @@ SCIP_RETCODE consCheckGetNRespropCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
    return SCIP_OKAY;
 }
 
+
 /************************************/
 
 /** main function */

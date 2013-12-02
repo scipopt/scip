@@ -778,6 +778,7 @@ SCIP_RETCODE SCIPcreateConsBasicUnittest(
  * Interface methods of constraint handler
  */
 
+
 /** gets nenfolp from the conshdlrdata */
 int SCIPgetNenfolpUnittest(
    SCIP*                 scip                /**< SCIP data structure */
