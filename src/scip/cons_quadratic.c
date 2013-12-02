@@ -3231,7 +3231,7 @@ SCIP_RETCODE presolveTryAddAND(
       /* create auxiliary variable */ 
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]), SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
-            TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+            SCIPvarIsInitial(vars[0]) || SCIPvarIsInitial(vars[1]), SCIPvarIsRemovable(vars[0]) && SCIPvarIsRemovable(vars[1]), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
 #ifdef SCIP_DEBUG_SOLUTION
       {
@@ -3390,6 +3390,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    int                maxnrvar;
    SCIP_Bool          integral;
    SCIP_Longint       gcd;
+   SCIP_Bool          auxvarinitial;
+   SCIP_Bool          auxvarremovable;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -3427,6 +3429,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
       /* alloc array to store indices of bilinear terms that shall be deleted */
       SCIP_CALL( SCIPreallocBufferArray(scip, &todelete, nbilinterms) );
       ntodelete = 0;
+
+      auxvarinitial = SCIPvarIsInitial(y);
+      auxvarremovable = SCIPvarIsRemovable(y);
 
       /* setup a list of bounded variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
        * and compute range of sum_i a_i*x_i for the cases y = 0 and y = 1
@@ -3510,6 +3515,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
                   gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)SCIPround(scip, REALABS(bilincoef)));
             }
 
+            /* if bvar is initial, then also the auxiliary variable should be initial
+             * if bvar is not removable, then also the auxiliary variable should not be removable
+             */
+            auxvarinitial |= SCIPvarIsInitial(bvar);
+            auxvarremovable &= SCIPvarIsRemovable(bvar);
+
             /* remember that we have to remove this bilinear term later */
             assert(ntodelete < nbilinterms);
             todelete[ntodelete++] = bilinidx;
@@ -3537,7 +3548,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             /* add auxiliary variable z */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT,
-                  TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+                  auxvarinitial, auxvarremovable, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
 #ifdef SCIP_DEBUG_SOLUTION
@@ -3622,7 +3633,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
             else
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbndsone)), MAX(0., SCIPintervalGetSup(xbndsone)),
-                  0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+                  0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS,
+                  auxvarinitial, auxvarremovable, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
             /* compute value of auxvar in debug solution */
@@ -4086,7 +4098,7 @@ SCIP_RETCODE presolveDisaggregate(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp%d", SCIPconsGetName(cons), comp);
 
       SCIP_CALL( SCIPcreateVar(scip, &auxvars[comp], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPcreateConsQuadratic2(scip, &auxconss[comp], name, 0, NULL, NULL, 0, NULL, 0, NULL,
             (SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : 0.0),
