@@ -1989,10 +1989,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
 
-   /* do not call heuristic of node was already detected to be infeasible */
-   if( nodeinfeasible )
-      return SCIP_OKAY;
-
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -2014,6 +2010,10 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    if( heurdata->startcand == NULL )
    {
       /* if no start candidate is given, we consider the LP solution of the current node */
+
+      /* however, if the node was already detected to be infeasible, then there is no point to look at its LP solution */
+      if( nodeinfeasible )
+         return SCIP_OKAY;
 
       /* at least if we are not called the first time, we call the heuristic only if an optimal LP solution is available 
        * if we are called the first time and the LP is unbounded, then we are quite desperate and still give the NLP a try
