@@ -12966,9 +12966,13 @@ SCIP_RETCODE freeTransform(
             SCIP_Bool success;
 
             SCIP_CALL( SCIPcreateFiniteSolCopy(scip, &newsol, sol, &success) );
+            /* @todo shouldn't we check for success and not add the solution in case we were not successful??? */
 
-            /* add solution to original candidate solution storage */
-            SCIP_CALL( SCIPaddSolFree(scip, &newsol, &stored) );
+            if( newsol != NULL )
+            {
+               /* add solution to original candidate solution storage */
+               SCIP_CALL( SCIPaddSolFree(scip, &newsol, &stored) );
+            }
          }
          ++s;
       }
@@ -30711,7 +30715,8 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    assert(sourcesol != NULL);
    assert(success != NULL);
 
-   *success = FALSE;
+   *success = TRUE;
+   *sol = NULL;
 
    fixedvars = SCIPgetFixedVars(scip);
    nfixedvars = SCIPgetNFixedVars(scip);
@@ -30832,16 +30837,23 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
 
       bestsol = SCIPgetBestSol(subscip);
 
-      /* change the stored solution values for variables fixed to infinite values */
-      for( v = 0; v < norigvars; ++v )
+      if( bestsol != NULL )
       {
-         varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
-         assert(varcopy != NULL);
-
-         if( (SCIPisInfinity(scip, solvals[v]) || SCIPisInfinity(scip, -solvals[v])) )
+         /* change the stored solution values for variables fixed to infinite values */
+         for( v = 0; v < norigvars; ++v )
          {
-            solvals[v] = SCIPgetSolVal(subscip, bestsol, varcopy);
+            varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+            assert(varcopy != NULL);
+
+            if( (SCIPisInfinity(scip, solvals[v]) || SCIPisInfinity(scip, -solvals[v])) )
+            {
+               solvals[v] = SCIPgetSolVal(subscip, bestsol, varcopy);
+            }
          }
+      }
+      else
+      {
+         *success = FALSE;
       }
 
       /* free sub-SCIP */
@@ -30850,16 +30862,19 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    }
 
    /* create original solution and set the solution values */
-   SCIP_CALL( SCIPcreateOrigSol(scip, sol, NULL) );
-   for( v = 0; v < norigvars; ++v )
+   if( *success )
    {
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, origvars[v], solvals[v]) );
+      SCIP_CALL( SCIPcreateOrigSol(scip, sol, NULL) );
+      for( v = 0; v < norigvars; ++v )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, *sol, origvars[v], solvals[v]) );
+      }
    }
 
    /* the solution of the sub-SCIP should have the same objective value */
-   if( SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
+   if( *success && !SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
    {
-      *success = TRUE;
+      *success = FALSE;
    }
 
    SCIPfreeBufferArray(scip, &solvals);
