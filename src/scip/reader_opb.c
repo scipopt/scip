@@ -300,7 +300,6 @@ SCIP_Bool getNextLine(
    )
 {
    int i;
-   char* last;
 
    assert(opbinput != NULL);
 
@@ -339,8 +338,7 @@ SCIP_Bool getNextLine(
 
    if( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' )
    {
-      /* overwrite the character to search the last blank from this position backwards */
-      opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
+      char* last;
 
       /* buffer is full; erase last token since it might be incomplete */
       opbinput->endline = FALSE;
@@ -348,7 +346,6 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-
          SCIPwarningMessage(scip, "we read %d character from the file; these might indicates a corrupted input file!",
             OPB_MAX_LINELEN - 2);
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
@@ -356,8 +353,8 @@ SCIP_Bool getNextLine(
       }
       else
       {
-         SCIPfseek(opbinput->file, -(long) strlen(last) - 1, SEEK_CUR);
-         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last));
          *last = '\0';
       }
    }
@@ -1062,7 +1059,7 @@ SCIP_RETCODE readCoefficients(
             /***********************/
             if( !SCIPisIntegral(scip, (*termcoefs)[*ntermcoefs]) )
             {
-               SCIPwarningMessage(scip, "coefficient not integral.\n");
+               SCIPwarningMessage(scip, "coefficient %g in line %d not integral.\n", (*termcoefs)[*ntermcoefs], opbinput->linenumber);
             }
 
             ++(*ntermcoefs);
@@ -1099,7 +1096,7 @@ SCIP_RETCODE readCoefficients(
             /***********************/
             if( !SCIPisIntegral(scip, (*lincoefs)[*nlincoefs]) )
             {
-               SCIPwarningMessage(scip, "coefficient not integral.\n");
+               SCIPwarningMessage(scip, "coefficient %g in line %d not integral.\n", (*lincoefs)[*nlincoefs], opbinput->linenumber);
             }
 
             ++(*nlincoefs);

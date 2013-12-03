@@ -407,7 +407,6 @@ SCIP_Bool getNextLine(
    )
 {
    int i;
-   char* last;
 
    assert(fzninput != NULL);
 
@@ -447,8 +446,7 @@ SCIP_Bool getNextLine(
 
    if( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' )
    {
-      /* overwrite the character to search the last blank from this position backwards */
-      fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
+      char* last;
 
       /* buffer is full; erase last token since it might be incomplete */
       fzninput->endline = FALSE;
@@ -463,8 +461,8 @@ SCIP_Bool getNextLine(
       }
       else
       {
-         SCIPfseek(fzninput->file, -(long) strlen(last) - 1, SEEK_CUR);
-         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         SCIPfseek(fzninput->file, -(long) strlen(last), SEEK_CUR);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last));
          *last = '\0';
       }
    }

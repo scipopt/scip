@@ -318,8 +318,8 @@ SCIP_Bool getNextLine(
       }
       else
       {
-         SCIPfseek(lpinput->file, -(long) strlen(last) - 1, SEEK_CUR);
-         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         SCIPfseek(lpinput->file, -(long) strlen(last), SEEK_CUR);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last));
          *last = '\0';
       }
    }
