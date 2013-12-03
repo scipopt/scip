@@ -63,7 +63,7 @@
  *      & D x + C z \leq f, \\
  *      & l \leq x \leq u, \\
  *      & u \leq z \leq v, \\
- *      & 0 \geq s.
+ *      & 0 \leq s.
  * \end{array}
  * \f]
  * As above \f$Ax - s \leq b\f$ contains all inequalities corresponding to indicator constraints,
@@ -83,7 +83,7 @@
  * Here, \f$r\f$ and \f$t\f$ correspond to the lower and upper bounds on \f$x\f$, respectively.
  *
  * It turns out that the vertices of \f$P\f$ correspond to minimal infeasible subsystems of \f$A x
- * \leq b\f$. If \f$I\f$ is the index set of such a system, it follows that not all \f$s_i\f$ for
+ * \leq b\f$, \f$l \leq x \leq u\f$. If \f$I\f$ is the index set of such a system, it follows that not all \f$s_i\f$ for
  * \f$i \in I\f$ can be 0, i.e., \f$y_i\f$ can be 1. In other words, the following cut is valid:
  * \f[
  *      \sum_{i \in I} y_i \leq |I| - 1.
@@ -2716,9 +2716,9 @@ SCIP_RETCODE extendToCover(
                   binvar = consdata->binvar;
                   assert( binvar != NULL );
 
-                  /* Fix binary variables in cover to 1 and corresponding slack variables to 0. The other binary variables
+                  /* Fix binary variables not in cover to 1 and corresponding slack variables to 0. The other binary variables
                    * are fixed to 0 */
-                  if ( S[j] )
+                  if ( ! S[j] )
                   {
                      SCIP_VAR* slackvar;
 
