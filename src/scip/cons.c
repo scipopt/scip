@@ -3455,7 +3455,9 @@ SCIP_RETCODE SCIPconshdlrCheck(
 
       /* update statistics */
       conshdlr->ncheckcalls++;
-      
+
+
+
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 

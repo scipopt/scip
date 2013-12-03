@@ -130,6 +130,11 @@ int SCIPgetNrespropUnittest(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/* gets nresprop from the conshdlrdata */
+EXTERN
+int SCIPgetNpresolUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

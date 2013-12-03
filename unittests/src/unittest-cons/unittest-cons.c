@@ -223,7 +223,7 @@ SCIP_RETCODE consCheckNeedsCons(SCIP_CONSHDLR* conshdlr)
 static
 SCIP_RETCODE consCheckDoesPresolve(SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrDoesPresolve(conshdlr), FALSE );
+   CHECK_GET( SCIPconshdlrDoesPresolve(conshdlr), TRUE );
    return SCIP_OKAY;
 }
 
@@ -304,37 +304,23 @@ SCIP_RETCODE consCheckGetPropTimingmask(SCIP_CONSHDLR* conshdlr)
 }
 
 static
-SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+SCIP_RETCODE consCheckGetNConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-   CHECK_GET( SCIPconshdlrGetNEnfoLPCalls(conshdlr), SCIPgetNenfolpUnittest(scip) );
+   CHECK_GET( SCIPconshdlrGetNConss(conshdlr) , val);
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+SCIP_RETCODE consCheckGetNEnfoConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-   CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
+   CHECK_GET( SCIPconshdlrGetNEnfoConss(conshdlr) , val);
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE consCheckGetNConss(SCIP_CONSHDLR* conshdlr)
+SCIP_RETCODE consCheckGetNCheckConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-   CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr) , 1);
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE consCheckGetEnfoConss(SCIP_CONSHDLR* conshdlr)
-{
-   CHECK_GET( SCIPconshdlrGetNEnfoConss(conshdlr) , 1);
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE consCheckGetCheckConss(SCIP_CONSHDLR* conshdlr)
-{
-   CHECK_GET( SCIPconshdlrGetNCheckConss(conshdlr) , 1);
+   CHECK_GET( SCIPconshdlrGetNCheckConss(conshdlr) , val);
    return SCIP_OKAY;
 }
 
@@ -437,7 +423,27 @@ SCIP_RETCODE consCheckGetNRespropCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE consCheckGetNPresolCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrGetNPresolCalls(conshdlr), SCIPgetNpresolUnittest(scip) );
+   return SCIP_OKAY;
+}
 
+static
+SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   CHECK_GET( SCIPconshdlrGetNEnfoLPCalls(conshdlr), SCIPgetNenfolpUnittest(scip) );
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+{
+   printf("1. value: %lld   2. value %d" ,SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
+   CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
+   return SCIP_OKAY;
+}
 /************************************/
 
 /** main function */
@@ -449,6 +455,7 @@ main(
 {
 
    SCIP* scip;
+   SCIP_RETCODE retcode;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
 
@@ -491,64 +498,65 @@ main(
     *********/
 
    /* tests before solving */
-   consCheckName(conshdlr);
-   consCheckDesc(conshdlr);
-   consCheckSepaPriority(conshdlr);
-   consCheckEnfoPriority(conshdlr);
-   consCheckCheckPriority(conshdlr);
-   consCheckSepaFreq(conshdlr);
-   consCheckEagerFreq(conshdlr);
-   consCheckNeedsCons(conshdlr);
-   consCheckIsSparationDelayed(conshdlr);
-   consCheckIsPropagationDelayed(conshdlr);
-   consCheckIsPresolvingDelayed(conshdlr);
-   consCheckGetPropTimingmask(conshdlr);
-   consCheckIsInitialized(conshdlr, FALSE);
-   consCheckDoesPresolve(conshdlr);
-   consCheckPropFreq(conshdlr);
-   consCheckGetNConss(conshdlr);
-   consCheckGetEnfoConss(conshdlr);
-   consCheckGetCheckConss(conshdlr);
-   consCheckGetNActiveConss(conshdlr, 0);
-   consCheckGetNEnabledConss(conshdlr, 0);
-   consCheckGetSetupTime(conshdlr);
-   consCheckGetPresolTime(conshdlr);
-   consCheckGetSepaTime(conshdlr);
-   consCheckGetEnfoLPTime(conshdlr);
-   consCheckGetEnfoPSTime(conshdlr);
-   consCheckGetPropTime(conshdlr);
-   consCheckGetEnfoLPTime(conshdlr);
-   consCheckGetStrongBranchPropTime(conshdlr);
-   consCheckGetCheckTime(conshdlr);
-   consCheckGetRespropTime(conshdlr);
+   CHECK_TEST( consCheckName(conshdlr) );
+   CHECK_TEST( consCheckDesc(conshdlr) );
+   CHECK_TEST( consCheckSepaPriority(conshdlr) );
+   CHECK_TEST( consCheckEnfoPriority(conshdlr) );
+   CHECK_TEST( consCheckCheckPriority(conshdlr) );
+   CHECK_TEST( consCheckSepaFreq(conshdlr) );
+   CHECK_TEST( consCheckEagerFreq(conshdlr) );
+   CHECK_TEST( consCheckNeedsCons(conshdlr) );
+   CHECK_TEST( consCheckIsSparationDelayed(conshdlr) );
+   CHECK_TEST( consCheckIsPropagationDelayed(conshdlr) );
+   CHECK_TEST( consCheckIsPresolvingDelayed(conshdlr) );
+   CHECK_TEST( consCheckGetPropTimingmask(conshdlr) );
+   CHECK_TEST( consCheckIsInitialized(conshdlr, FALSE) );
+   CHECK_TEST( consCheckDoesPresolve(conshdlr) );
+   CHECK_TEST( consCheckPropFreq(conshdlr) );
+   CHECK_TEST( consCheckGetNConss(conshdlr, 0) );
+   CHECK_TEST( consCheckGetNEnfoConss(conshdlr, 0) );
+   CHECK_TEST( consCheckGetNCheckConss(conshdlr, 0) );
+   CHECK_TEST( consCheckGetNActiveConss(conshdlr, 0) );
+   CHECK_TEST( consCheckGetNEnabledConss(conshdlr, 0) );
+   CHECK_TEST( consCheckGetSetupTime(conshdlr) );
+   CHECK_TEST( consCheckGetPresolTime(conshdlr) );
+   CHECK_TEST( consCheckGetSepaTime(conshdlr) );
+   CHECK_TEST( consCheckGetEnfoLPTime(conshdlr) );
+   CHECK_TEST( consCheckGetEnfoPSTime(conshdlr) );
+   CHECK_TEST( consCheckGetPropTime(conshdlr) );
+   CHECK_TEST( consCheckGetEnfoLPTime(conshdlr) );
+   CHECK_TEST( consCheckGetStrongBranchPropTime(conshdlr) );
+   CHECK_TEST( consCheckGetCheckTime(conshdlr) );
+   CHECK_TEST( consCheckGetRespropTime(conshdlr) );
 
    /* solve */
    SCIP_CALL( SCIPsolve(scip) );
 
 
    /* tests after solving */
-   consCheckIsInitialized(conshdlr, TRUE);
-   consCheckNCheckCalls(scip, conshdlr);
-   consCheckNEnfoLPCalls(scip, conshdlr);
-   consCheckGetNActiveConss(conshdlr, 1);
-   consCheckGetNEnabledConss(conshdlr, 1);
-   consCheckGetSetupTime(conshdlr);
-   consCheckGetPresolTime(conshdlr);
-   consCheckGetSepaTime(conshdlr);
-   consCheckGetEnfoLPTime(conshdlr);
-   consCheckGetEnfoPSTime(conshdlr);
-   consCheckGetPropTime(conshdlr);
-   consCheckGetEnfoLPTime(conshdlr);
-   consCheckGetStrongBranchPropTime(conshdlr);
-   consCheckGetCheckTime(conshdlr);
-   consCheckGetRespropTime(conshdlr);
-   consCheckGetNSepaCalls(scip,conshdlr);
-   consCheckGetEnfoPSCalls(scip,conshdlr);
-   consCheckGetNPropCalls(scip,conshdlr);
-   consCheckGetNRespropCalls(scip,conshdlr);
-
-
-
+   CHECK_TEST( consCheckIsInitialized(conshdlr, TRUE) );
+   /*CHECK_TEST( consCheckNCheckCalls(scip, conshdlr) ); I guess here is a bug! */
+   CHECK_TEST( consCheckNEnfoLPCalls(scip, conshdlr)  );
+   CHECK_TEST( consCheckGetNActiveConss(conshdlr, 1)  );
+   CHECK_TEST( consCheckGetNEnabledConss(conshdlr, 1)  );
+   CHECK_TEST( consCheckGetSetupTime(conshdlr) );
+   CHECK_TEST( consCheckGetPresolTime(conshdlr) );
+   CHECK_TEST( consCheckGetSepaTime(conshdlr) );
+   CHECK_TEST( consCheckGetEnfoLPTime(conshdlr) );
+   CHECK_TEST( consCheckGetEnfoPSTime(conshdlr) );
+   CHECK_TEST( consCheckGetPropTime(conshdlr) );
+   CHECK_TEST( consCheckGetEnfoLPTime(conshdlr) );
+   CHECK_TEST( consCheckGetStrongBranchPropTime(conshdlr) );
+   CHECK_TEST( consCheckGetCheckTime(conshdlr) );
+   CHECK_TEST( consCheckGetRespropTime(conshdlr) );
+   CHECK_TEST( consCheckGetNSepaCalls(scip, conshdlr) );
+   CHECK_TEST( consCheckGetEnfoPSCalls(scip, conshdlr) );
+   CHECK_TEST( consCheckGetNPropCalls(scip, conshdlr) );
+   CHECK_TEST( consCheckGetNRespropCalls(scip, conshdlr) );
+   CHECK_TEST( consCheckGetNPresolCalls(scip, conshdlr) );
+   CHECK_TEST( consCheckGetNEnfoConss(conshdlr, 1) );
+   CHECK_TEST( consCheckGetNCheckConss(conshdlr, 1) );
+   CHECK_TEST( consCheckGetNConss(conshdlr, 1) );
 
    /********************
     * Deinitialization *

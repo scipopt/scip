@@ -78,6 +78,7 @@ struct SCIP_ConshdlrData
    int nenfopslp; /* store the number of enfopslp calls */
    int nprop;     /* store the number of prop calls */
    int nresprop;  /* store the number of resprop calls */
+   int npresol;   /* store the number of presol calls */
 };
 
 
@@ -369,6 +370,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsUnittest)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->nenfopslp++;
+
    return SCIP_OKAY;
 }
 
@@ -393,7 +400,7 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    conshdlrdata->ncheck++;
-
+   printf("HIER IN CHECK!\n");
 
 
    val = SCIPgetSolVal(scip, sol, vars[0]) + SCIPgetSolVal(scip, sol, vars[1]);
@@ -413,30 +420,48 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
 static
 SCIP_DECL_CONSPROP(consPropUnittest)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->nprop++;
+
+
    return SCIP_OKAY;
 }
 
 
 
 /** presolving method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPRESOL(consPresolUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->npresol++;
+
+   /* without that this function call will not be counted */
+   *result = SCIP_DIDNOTFIND;
+
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolUnittest NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
 static
 SCIP_DECL_CONSRESPROP(consRespropUnittest)
 {
+
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->nresprop++;
+
+
    return SCIP_OKAY;
 }
 
@@ -817,7 +842,6 @@ int SCIPgetNsepalpUnittest(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -867,4 +891,19 @@ int SCIPgetNrespropUnittest(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    return conshdlrdata->nresprop;
+}
+
+/* gets npresol from the conshdlrdata */
+int SCIPgetNpresolUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->npresol;
 }
