@@ -3462,7 +3462,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             /* skip products with unbounded variables */
             if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bvar)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bvar)) )
+            {
+               SCIPdebugMessage("skip reform of <%s><%s> due to unbounded second variable [%g,%g]\n",
+                  SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPvarGetLbGlobal(bvar), SCIPvarGetUbGlobal(bvar));
                continue;
+            }
 
             bilincoef = consdata->bilinterms[bilinidx].coef;
             assert(bilincoef != 0.0);
@@ -3475,19 +3479,31 @@ SCIP_RETCODE presolveTryAddLinearReform(
             getImpliedBounds(y,  TRUE, bvar, &act1);
             SCIPintervalMulScalar(SCIPinfinity(scip), &act1, act1, bilincoef);
 
-            /* skip products that give rise to very large coefficients (big big-M's)
-             * we just reuse cutmaxrange as threshold, which is similarly motivated
-             */
-            if( SCIPintervalGetInf(act0) <= -conshdlrdata->cutmaxrange || SCIPintervalGetSup(act0) >= conshdlrdata->cutmaxrange )
+            /* skip products that give rise to very large coefficients (big big-M's) */
+            if( SCIPfeastol(scip) * REALABS(act0.inf) >= 0.1 || SCIPfeastol(scip) * REALABS(act0.sup) >= 0.1 )
             {
                SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 0.0\n",
                   bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act0), SCIPintervalGetSup(act0), SCIPvarGetName(y));
                continue;
             }
-            if( SCIPintervalGetInf(act1) <= -conshdlrdata->cutmaxrange || SCIPintervalGetSup(act1) >= conshdlrdata->cutmaxrange )
+            if( SCIPfeastol(scip) * REALABS(act1.inf) >= 0.1 || SCIPfeastol(scip) * REALABS(act1.sup) >= 0.1 )
             {
                SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 1.0\n",
                   bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act1), SCIPintervalGetSup(act1), SCIPvarGetName(y));
+               continue;
+            }
+            if( !SCIPisZero(scip, MIN(REALABS(act0.inf), REALABS(act0.sup))) &&
+               SCIPfeastol(scip) * MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)) >= 0.1 )
+            {
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n",
+                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)), SCIPvarGetName(y));
+               continue;
+            }
+            if( !SCIPisZero(scip, MIN(REALABS(act1.inf), REALABS(act1.sup))) &&
+               SCIPfeastol(scip) * MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)) >= 0.1 )
+            {
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n",
+                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)), SCIPvarGetName(y));
                continue;
             }
 
@@ -3757,6 +3773,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
       /* remove bilinear terms that have been replaced */
       SCIP_CALL( removeBilinearTermsPos(scip, cons, ntodelete, todelete) );
    }
+   SCIPdebugMessage("resulting quadratic constraint: ");
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    SCIPfreeBufferArrayNull(scip, &xvars);
    SCIPfreeBufferArrayNull(scip, &xcoef);
