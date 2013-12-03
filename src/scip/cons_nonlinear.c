@@ -2423,6 +2423,68 @@ SCIP_RETCODE reformMonomial(
 
       return SCIP_OKAY;
    }
+
+   if( nfactors == 2 && exponents != NULL && exponents[0] == -exponents[1] )  /*lint !e777*/
+   {
+      /* factor0^exponent * factor1^(-exponent), reform as (factor0/factor1)^exponent or (factor1/factor0)^(-exponent) */
+      SCIP_EXPRGRAPHNODE* auxvarnode;
+      SCIP_EXPRGRAPHNODE* auxconsnode;
+      SCIP_EXPRGRAPHNODE* leftright[2];
+      SCIP_Real absexp;
+
+      /* create variable and constraint for factor0 = auxvar * factor1 (if exponent > 0) or factor1 = auxvar * factor0 (if exponent < 0) */
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%d", *naddcons);
+      SCIPdebugMessage("add auxiliary variable and constraint %s\n", name);
+
+      SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, auxvar) );
+      SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+      /* store debug sol value of node as value for auxvar in debug solution and as value for resultnode */
+      {
+         SCIP_Real debugval;
+         if( exponents[0] > 0.0 )
+            debugval = SCIPexprgraphGetNodeVal(factors[0]) / SCIPexprgraphGetNodeVal(factors[1]);
+         else
+            debugval = SCIPexprgraphGetNodeVal(factors[1]) / SCIPexprgraphGetNodeVal(factors[0]);
+         SCIPexprgraphSetVarNodeValue(auxvarnode, debugval);
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
+      }
+#endif
+
+      /* add new constraint resultnode(= auxvar) * factor1 - factor0 == 0 (exponent > 0) or auxvar * factor0 - factor1 == 0 (exponent < 0) */
+      leftright[0] = auxvarnode;
+      leftright[1] = exponents[0] > 0.0 ? factors[1] : factors[0];
+
+      SCIP_CALL( SCIPexprgraphCreateNode(SCIPblkmem(scip), &auxconsnode, SCIP_EXPR_MUL, NULL) );
+      SCIP_CALL( SCIPexprgraphAddNode(exprgraph, auxconsnode, -1, 2, leftright) );
+
+      leftright[0] = auxconsnode;
+      leftright[1] = exponents[0] > 0.0 ? factors[0] : factors[1];
+
+      SCIP_CALL( SCIPexprgraphCreateNode(SCIPblkmem(scip), &auxconsnode, SCIP_EXPR_MINUS, NULL) );
+      SCIP_CALL( SCIPexprgraphAddNode(exprgraph, auxconsnode, -1, 2, leftright) );
+
+      SCIP_CALL( SCIPcreateConsNonlinear2(scip, &auxcons, name, 0, NULL, NULL, auxconsnode, 0.0, 0.0,
+         TRUE, TRUE, TRUE, TRUE, TRUE,
+         FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, auxcons) );
+
+      SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
+      SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
+
+      ++*naddcons;
+
+      /* create node for auxvarnode^abs(exponents[0]) by just calling this method again */
+      absexp = fabs(exponents[0]);
+      SCIP_CALL( reformMonomial(scip, exprgraph, 1, &auxvarnode, &absexp, resultnode, createauxcons, naddcons) );
+
+      return SCIP_OKAY;
+   }
+
    /* @todo if nfactors > 2, assemble groups of factors with same exponent and replace these by a single variable first */
 
    {
