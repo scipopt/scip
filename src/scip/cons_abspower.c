@@ -2978,7 +2978,7 @@ SCIP_RETCODE addVarbound(
 
    SCIPdebugMessage("-> %g <= <%s> + %g*<%s> <= %g\n", lhs, SCIPvarGetName(var), vbdcoef, SCIPvarGetName(vbdvar), rhs);
 
-   if( addcons )
+   if( addcons && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
    {
       SCIP_CONS* vbdcons;
       char name[SCIP_MAXSTRLEN];
