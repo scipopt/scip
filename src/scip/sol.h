@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPsolTransform(
 /** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
  *  deteriorated by this method.
  */
-EXTERN
+extern
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
