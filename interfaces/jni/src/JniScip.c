@@ -1245,6 +1245,41 @@ jboolean JNISCIP(isParamFixed)(
    return (jboolean) paramfixed;
 }
 
+/** returns the pointer to the SCIP parameter with the given name
+ *
+ *  @return pointer to the parameter with the given name
+ */
+JNIEXPORT
+jlong JNISCIP(getParam)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jstring               jname               /**< name of the parameter */
+   )
+{
+	SCIP* scip;
+	const char* name;
+	jboolean iscopy;
+	SCIP_PARAM *param;
+
+	/* convert JNI pointer into C pointer */
+	scip = (SCIP*) (size_t) jscip;
+	assert(scip != NULL);
+
+	/* convert JNI string into const char* */
+	name = (*env)->GetStringUTFChars(env, jname, &iscopy);
+	if( name == NULL )
+	   SCIPABORT();
+	assert(iscopy);
+
+	param=SCIPgetParam(scip, name);
+
+	(*env)->ReleaseStringUTFChars(env, jname, name);
+
+	return (jlong) (size_t) param;
+}
+
+
 /** gets the value of an existing SCIP_Bool parameter */
 JNIEXPORT
 jboolean JNISCIP(getBoolParam)(
@@ -7412,7 +7447,8 @@ JNIEXPORT
 void JNISCIP(startStrongbranch)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip               /**< SCIP data structure */
+   jlong                 jscip,              /**< SCIP data structure */
+   jboolean              jenablepropagation  /**< should propagation be done before solving the strong branching LP? */
    )
 {
    SCIP* scip;
@@ -7421,7 +7457,7 @@ void JNISCIP(startStrongbranch)(
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   JNISCIP_CALL( SCIPstartStrongbranch(scip) );
+   JNISCIP_CALL( SCIPstartStrongbranch(scip, (SCIP_Bool)jenablepropagation) );
 }
 
 /** end strong branching - call after any strong branching
