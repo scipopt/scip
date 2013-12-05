@@ -170,6 +170,91 @@ function texsolvername(s, sname)
    return sname;
 }
 
+# McNemar statistical test
+#
+# input: two arrays of Boolean values whose difference should be tested for statistical significance and the length of
+#        both arrays
+#
+# output: the chi_squared value, (which needs to be transformed to the desired p-value, see also function chi_to_p
+function mcnemar(ref_array, solver_array, problistlen)
+{
+   chi_squared = 0.0;
+   b = 0;
+   c = 0;
+
+   # count the number of entries for which both arrays differ,
+   # separately for both possible differences (TRUE/FALSE and FALSE/TRUE)
+   for( i = 0; i < problistlen; ++i )
+   {
+      if( ref_array[i] && !solver_array[i] )
+	 b++;
+      else if( !ref_array[i] && solver_array[i] )
+	 c++;
+   }
+
+   # textbook McNemar formula, the square of the differences of both counters divided by their sum is supposed to be
+   # chi-square distributed for a random experiment
+   if( b + c > 0 )
+      chi_squared = (b-c)*(b-c)/(1.0*(b+c));
+
+   return chi_squared;
+}
+
+# a brute-force table lookup for determining in which range the p-value of a given chi-square value will be (in
+# particular whether it will be below 0.05)
+function chi_to_p(chi)
+{
+   if(chi> 1e+20)
+      chi = 1e+20;
+
+   p_val[0]=1;
+   p_val[1]=0.25;
+   p_val[2]=0.20;
+   p_val[3]=0.15;
+   p_val[4]=0.10;
+   p_val[5]=0.05;
+   p_val[6]=0.025;
+   p_val[7]=0.02;
+   p_val[8]=0.01;
+   p_val[9]=0.005;
+   p_val[10]=0.0025;
+   p_val[11]=0.001;
+   p_val[12]=0.0005;
+   p_val[13]=0.0000;
+
+   chi2[0]=0.0;
+   chi2[1]=1.32;
+   chi2[2]=1.64;
+   chi2[3]=2.07;
+   chi2[4]=2.71;
+   chi2[5]=3.84;
+   chi2[6]=5.02;
+   chi2[7]=5.41;
+   chi2[8]=6.63;
+   chi2[9]=7.88;
+   chi2[10]=9.14;
+   chi2[11]=10.83;
+   chi2[12]=12.12;
+   chi2[13]=2e+20;
+
+   i = 1;
+
+   while( chi > chi2[i] )
+      i++;
+  printf(" -> p < %6.4f", p_val[i]);
+  printf("   ");
+
+   if( p_val[i-1] > 0.05 )
+      printf("   X ");
+   else if( p_val[i-1] > 0.005 )
+      printf("   ! ");
+   else if( p_val[i-1] > 0.0005 )
+      printf("  !! ");
+   else
+      printf(" !!! ");
+}
+
+
 BEGIN {
 
    short = 0;  #for each non reference solver, only absolute time and number of nodes are printed 
@@ -744,6 +829,10 @@ END {
          pidx = probidx[p,s];
          processed = (pidx != "");
 
+	 # arrays for applying McNemar tests
+	 solfound[s,pidx] = 0;
+	 optproven[s,pidx] = 0;
+
          if( processed && name[s,pidx] != p )
             printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
 
@@ -760,6 +849,8 @@ END {
                   nsolved[s,0]++;
                   nsolved[s,category[s]]++;
                   nthissolved++;
+		  # fill array for  McNemar test "optimality proven?"
+		  optproven[s,pidx] = 1;
                }
             }
             else if( hitlimit[s,pidx] )
@@ -793,7 +884,11 @@ END {
          }
 
          if( primalbound[s,pidx] < infinity )
+  	 {
             feasmark = " ";
+	    # fill the array for McNemar test "solution found?"
+	    solfound[s,pidx] = 1;
+	 }
          else
             feasmark = "#";
 
@@ -1234,6 +1329,47 @@ END {
    bestnodeshiftedgeom = max(bestnodeshiftedgeom, 1.0);
    besttimeshiftedgeom = max(besttimeshiftedgeom, 1.0);
    
+   printf("\n");
+   printhline(nsolver,short, printsoltimes);
+
+   # compute and print result for McNemar test to "solution found?", for every setting except the reference setting
+   printf("%-20s ","McNemar (feas)");
+   printf("%-19s  ","               ");
+   for( o = 1; o < nsolver; ++o )
+   {
+      # copy two-indexed arrays to one-indexed arrays
+      for( i = 0; i < problistlen; ++i )
+      {
+	 s = printorder[o];
+	 ref_array[i] = solfound[printorder[0],i];
+	 solver_array[i] = solfound[s,i];
+      }
+
+      # compute chi-squared value and convert to p-value
+      chi_squared = mcnemar(ref_array, solver_array, problistlen);
+      printf("   x2 %7.5f",chi_squared);
+      chi_to_p(chi_squared);
+   }
+   printf("\n");
+
+   # compute and print result for McNemar test to "optimality proven?", for every setting except the reference setting
+   printf("%-20s ","McNemar (opt)");
+   printf("%-19s  ","               ");
+   for( o = 1; o < nsolver; ++o )
+   {
+      # copy two-indexed arrays to one-indexed arrays
+      for( i = 0; i < problistlen; ++i )
+      {
+	 s = printorder[o];
+	 ref_array[i] = optproven[printorder[0],i];
+	 solver_array[i] = optproven[s,i];
+      }
+
+      # compute chi-squared value and convert to p-value
+      chi_squared = mcnemar(ref_array, solver_array, problistlen);
+      printf("   x2 %7.5f",chi_squared);
+      chi_to_p(chi_squared);
+   }
    printf("\n");
 
    #since the rows of the quotients are not printed, print the quotients of the geometric means
