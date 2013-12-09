@@ -28701,7 +28701,6 @@ SCIP_RETCODE SCIPaddRowDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
 SCIP_RETCODE SCIPchgRowLhsDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< row to change the lhs for */
@@ -28735,7 +28734,6 @@ SCIP_RETCODE SCIPchgRowLhsDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
 SCIP_RETCODE SCIPchgRowRhsDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< row to change the lhs for */
