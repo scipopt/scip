@@ -224,13 +224,13 @@ public:
    }
 
    // we might need these methods to return the original values SCIP provided, even if they could not be set
-   /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
+   /** return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol()
    {
       return (Real) rationalParam(FEASTOL);
    }
 
-   /**< set feastol and store value in case SoPlex only accepts a larger tolerance */
+   /** set feastol and store value in case SoPlex only accepts a larger tolerance */
    void setFeastol(
       const Real d
       )
@@ -238,18 +238,26 @@ public:
       setRationalParam(FEASTOL, (Rational) d);
    }
 
-   /**< return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
+   /** return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real opttol()
    {
       return (Real) rationalParam(OPTTOL);
    }
 
-   /**< set opttol and store value in case SoPlex only accepts a larger tolerance */
+   /** set opttol and store value in case SoPlex only accepts a larger tolerance */
    void setOpttol(
       const Real d
       )
    {
       setRationalParam(OPTTOL, (Rational) d);
+   }
+
+   /** get objective limit according to objective sense */
+   Real getObjLimit() const
+   {
+      return (intParam(SoPlex2::OBJSENSE) == SoPlex2::OBJSENSE_MINIMIZE)
+         ? realParam(SoPlex2::OBJLIMIT_UPPER)
+         : realParam(SoPlex2::OBJLIMIT_LOWER);
    }
 
    // @todo realize this with a member variable as before
@@ -412,7 +420,7 @@ public:
 
       try
       {
-         solveReal();
+         solve();
       }
       catch(SPxException x)
       {
@@ -422,11 +430,11 @@ public:
             SCIPmessagePrintWarning(_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
          }
 
-      /* since it is not clear if the status in SoPlex are set correctly
-      * we want to make sure that if an error is thrown the status is
-      * not OPTIMAL anymore.
-      */
-         assert(statusReal() != SPxSolver::OPTIMAL);
+         /* since it is not clear if the status in SoPlex are set correctly
+          * we want to make sure that if an error is thrown the status is
+          * not OPTIMAL anymore.
+          */
+         assert(status() != SPxSolver::OPTIMAL);
       }
 
       assert(intParam(ITERLIMIT) < 0 || numIterations() < intParam(ITERLIMIT));
@@ -451,7 +459,7 @@ public:
    {
       int verbosity;
 
-      SPxSolver::Status status;
+      SPxSolver::Status spxStatus;
 
       /* store and set verbosity */
       verbosity = Param::verbose();
@@ -467,7 +475,7 @@ public:
 #endif
 
       trySolve(printwarning);
-      status = statusReal();
+      spxStatus = status();
 
       /* for safety reset iteration limit */
 //       setTerminationIter(_itlim);
@@ -478,7 +486,7 @@ public:
       Real objLimitLower = realParam(OBJLIMIT_LOWER);
 
       /* if SoPlex gave a definite answer, we double check if it is consistent with CPLEX's answer */
-      if( getDoubleCheck() && (status == SPxSolver::OPTIMAL || status == SPxSolver::UNBOUNDED || status == SPxSolver::INFEASIBLE || status == SPxSolver::ABORT_VALUE) )
+      if( getDoubleCheck() && (spxStatus == SPxSolver::OPTIMAL || spxStatus == SPxSolver::UNBOUNDED || spxStatus == SPxSolver::INFEASIBLE || spxStatus == SPxSolver::ABORT_VALUE) )
       {
          SCIP_Real cpxobj;
          int cpxstat;
@@ -503,20 +511,20 @@ public:
          if( cpxstat == CPX_STAT_OPTIMAL_INFEAS )
          {
             SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
-               _probname, status, spxStatusString(status), cpxstat, cpxStatusString(cpxstat));
+               _probname, spxStatus, spxStatusString(spxStatus), cpxstat, cpxStatusString(cpxstat));
             if( EXIT_AT_CPXERROR )
                exit(1);
          }
-         else if( (status == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
-            || (status == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
-            || (status == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
+         else if( (spxStatus == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
+            || (spxStatus == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
+            || (spxStatus == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
          {
             SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
-               _probname, status, spxStatusString(status), cpxstat, cpxStatusString(cpxstat), _checknum);
+               _probname, spxStatus, spxStatusString(spxStatus), cpxstat, cpxStatusString(cpxstat), _checknum);
             if( EXIT_AT_WRONG_RESULT )
                exit(1);
          }
-         else if( status == SPxSolver::ABORT_VALUE )
+         else if( spxStatus == SPxSolver::ABORT_VALUE )
          {
             switch( cpxstat )
             {
@@ -525,7 +533,7 @@ public:
                   || (!minimize && GTrel(cpxobj, objLimitLower, 2*opttol())) )
                {
                   SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
-                     _probname, status, spxStatusString(status), cpxobj, minimize ? "<" : ">",
+                     _probname, spxStatus, spxStatusString(spxStatus), cpxobj, minimize ? "<" : ">",
                      minimize ? objLimitUpper : objLimitLower, cpxStatusString(cpxstat), _checknum);
                   if( EXIT_AT_WRONG_RESULT )
                      exit(1);
@@ -533,7 +541,7 @@ public:
                else if( (minimize && cpxobj < objLimitUpper) || (!minimize && cpxobj > objLimitLower) )
                {
                   SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
-                     _probname, status, spxStatusString(status), cpxobj, minimize? "<" : ">",
+                     _probname, spxStatus, spxStatusString(spxStatus), cpxobj, minimize? "<" : ">",
                      minimize ? objLimitUpper : objLimitLower, cpxStatusString(cpxstat), _checknum);
                }
                break;
@@ -542,7 +550,7 @@ public:
                if( (minimize && cpxobj < objLimitUpper) || (!minimize && cpxobj > objLimitLower) )
                {
                   SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
-                     _probname, status, spxStatusString(status), cpxobj, minimize ? "<" : ">",
+                     _probname, spxStatus, spxStatusString(spxStatus), cpxobj, minimize ? "<" : ">",
                      minimize ? objLimitUpper : objLimitLower, cpxStatusString(cpxstat), _checknum);
                }
                break;
@@ -550,19 +558,19 @@ public:
                break;
             case CPX_STAT_UNBOUNDED:
                SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
-                  _probname, status, spxStatusString(status), cpxstat, cpxStatusString(cpxstat), _checknum);
+                  _probname, spxStatus, spxStatusString(spxStatus), cpxstat, cpxStatusString(cpxstat), _checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
                break;
             case CPX_STAT_INForUNBD:
             default:
                SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
-                  _probname, status, spxStatusString(status), cpxstat, cpxStatusString(cpxstat), _checknum);
+                  _probname, spxStatus, spxStatusString(spxStatus), cpxstat, cpxStatusString(cpxstat), _checknum);
                break;
             }  /*lint !e788*/
          }
          /* check for same objective values */
-         else if( status == SPxSolver::OPTIMAL )
+         else if( spxStatus == SPxSolver::OPTIMAL )
          {
             if( (minimize && LTrel(objValueReal(), cpxobj, 2*opttol()))
                || (!minimize && GTrel(objValueReal(), cpxobj, 2*opttol())) )
@@ -587,7 +595,7 @@ public:
       /* restore verbosity */
       Param::setVerbose(verbosity);
 
-      return status;
+      return spxStatus;
    }
 
    /** save the current basis */
@@ -601,7 +609,7 @@ public:
 
       try
       {
-         getBasisReal(_rowStat, _colStat);
+         getBasis(_rowStat, _colStat);
       }
       catch(SPxException x)
       {
@@ -613,7 +621,7 @@ public:
           * we want to make sure that if an error is thrown the status is
           * not OPTIMAL anymore.
           */
-         assert(statusReal() != SPxSolver::OPTIMAL);
+         assert(status() != SPxSolver::OPTIMAL);
 #endif
       }
    }
@@ -626,7 +634,7 @@ public:
 
       try
       {
-         setBasisReal(_rowStat, _colStat);
+         setBasis(_rowStat, _colStat);
       }
       catch(SPxException x)
       {
@@ -638,7 +646,7 @@ public:
           * we want to make sure that if an error is thrown the status is
           * not OPTIMAL anymore.
           */
-         assert(statusReal() != SPxSolver::OPTIMAL);
+         assert(status() != SPxSolver::OPTIMAL);
       }
    }
 
@@ -2042,7 +2050,7 @@ SCIP_RETCODE spxSolve(
 #endif
 
    SPxSolver::Status status = lpi->spx->doSolve();
-   SCIPdebugMessage(" -> SoPlex status: %d, basis status: %d\n", lpi->spx->statusReal(), lpi->spx->basisStatusReal());
+   SCIPdebugMessage(" -> SoPlex status: %d, basis status: %d\n", lpi->spx->status(), lpi->spx->basisStatus());
    lpi->solved = TRUE;
 
    /* restore verbosity */
@@ -2245,8 +2253,8 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-   spx->setIntParam(SoPlex2::ALGORITHM, spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW ?
-   SoPlex2::ALGORITHM_ENTER : SoPlex2::ALGORITHM_LEAVE);
+   spx->setIntParam(SoPlex2::ALGORITHM, spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW
+      ? SoPlex2::ALGORITHM_ENTER : SoPlex2::ALGORITHM_LEAVE);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -2263,7 +2271,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
-         status = spx->solveReal();
+         status = spx->solve();
          SCIPdebugMessage(" --> Terminate with status %d\n", status);
          switch( status )
          {
@@ -2279,7 +2287,7 @@ SCIP_RETCODE lpiStrongbranch(
             break;
          case SPxSolver::ABORT_VALUE:
          case SPxSolver::INFEASIBLE:
-            *down = spx->terminationValueReal();
+            *down = spx->getObjLimit();
             *downvalid = TRUE;
             break;
          default:
@@ -2319,7 +2327,7 @@ SCIP_RETCODE lpiStrongbranch(
    }
    else if( down != NULL )
    {
-      *down = spx->terminationValueReal();
+      *down = spx->getObjLimit();
       *downvalid = TRUE;
    }
    else
@@ -2342,7 +2350,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
-            status = spx->solveReal();
+            status = spx->solve();
             SCIPdebugMessage(" --> Terminate with status %d\n", status);
             switch( status )
             {
@@ -2358,7 +2366,7 @@ SCIP_RETCODE lpiStrongbranch(
                break;
             case SPxSolver::ABORT_VALUE:
             case SPxSolver::INFEASIBLE:
-               *up = spx->terminationValueReal();
+               *up = spx->getObjLimit();
                *upvalid = TRUE;
                break;
             default:
@@ -2397,7 +2405,7 @@ SCIP_RETCODE lpiStrongbranch(
       }
       else if( up != NULL )
       {
-         *up = spx->terminationValueReal();
+         *up = spx->getObjLimit();
          *upvalid = TRUE;
       }
       else
@@ -2622,7 +2630,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::UNBOUNDED);
+   return (lpi->spx->status() == SPxSolver::UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
@@ -2638,7 +2646,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi->spx != NULL);
 
 #if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
-   return (lpi->spx->statusReal() == SPxSolver::UNBOUNDED);
+   return (lpi->spx->status() == SPxSolver::UNBOUNDED);
 #else
    return FALSE;
 #endif
@@ -2654,12 +2662,12 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   assert(lpi->spx->statusReal() != SPxSolver::UNBOUNDED || lpi->spx->basisStatusReal() == SPxBasis::UNBOUNDED);
+   assert(lpi->spx->status() != SPxSolver::UNBOUNDED || lpi->spx->basisStatus() == SPxBasis::UNBOUNDED);
 
    /* if SoPlex returns unbounded, this may only mean that an unbounded ray is available, not necessarily a primal
     * feasible point; hence we have to check the perturbation
     */
-   return lpi->spx->statusReal() == SPxSolver::UNBOUNDED;
+   return lpi->spx->status() == SPxSolver::UNBOUNDED;
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -2672,7 +2680,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::INFEASIBLE);
+   return (lpi->spx->status() == SPxSolver::INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to be primal feasible */
@@ -2687,12 +2695,12 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basisStatusReal();
+   basestatus = lpi->spx->basisStatus();
 
    /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
     * still return true as long as perturbation plus violation is within tolerances
     */
-   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->statusReal() != SPxSolver::OPTIMAL);
+   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
 
    return basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::PRIMAL;
 }
@@ -2709,7 +2717,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::INFEASIBLE);
+   return (lpi->spx->status() == SPxSolver::INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
@@ -2724,7 +2732,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::INFEASIBLE);
+   return (lpi->spx->status() == SPxSolver::INFEASIBLE);
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -2737,7 +2745,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return lpi->spx->statusReal() == SPxSolver::INFEASIBLE && lpi->spx->basisStatusReal() == SPxBasis::DUAL;
+   return lpi->spx->status() == SPxSolver::INFEASIBLE && lpi->spx->basisStatus() == SPxBasis::DUAL;
 }
 
 /** returns TRUE iff LP is dual infeasible */
@@ -2750,7 +2758,7 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::UNBOUNDED);
+   return (lpi->spx->status() == SPxSolver::UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
@@ -2766,9 +2774,9 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
     * still return true as long as perturbation plus violation is within tolerances
     */
-   assert(lpi->spx->basisStatusReal() == SPxBasis::OPTIMAL || lpi->spx->statusReal() != SPxSolver::OPTIMAL);
+   assert(lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
 
-   return (lpi->spx->basisStatusReal() == SPxBasis::OPTIMAL) || lpi->spx->basisStatusReal() == SPxBasis::DUAL;
+   return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL) || lpi->spx->basisStatus() == SPxBasis::DUAL;
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -2779,13 +2787,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
    assert(lpi != NULL);
-   assert((lpi->spx->basisStatusReal() == SPxBasis::OPTIMAL)
+   assert((lpi->spx->basisStatus() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
    /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
     * still return true as long as perturbation plus violation is within tolerances
     */
-   return (lpi->spx->basisStatusReal() == SPxBasis::OPTIMAL);
+   return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL);
 }
 
 /** returns TRUE iff current LP basis is stable */
@@ -2798,7 +2806,7 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() != SPxSolver::ERROR && lpi->spx->statusReal() != SPxSolver::SINGULAR);
+   return (lpi->spx->status() != SPxSolver::ERROR && lpi->spx->status() != SPxSolver::SINGULAR);
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -2811,7 +2819,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::ABORT_VALUE);
+   return (lpi->spx->status() == SPxSolver::ABORT_VALUE);
 }
 
 /** returns TRUE iff the iteration limit was reached */
@@ -2824,7 +2832,7 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::ABORT_ITER);
+   return (lpi->spx->status() == SPxSolver::ABORT_ITER);
 }
 
 /** returns TRUE iff the time limit was reached */
@@ -2837,7 +2845,7 @@ SCIP_Bool SCIPlpiIsTimelimExc(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->statusReal() == SPxSolver::ABORT_TIME);
+   return (lpi->spx->status() == SPxSolver::ABORT_TIME);
 }
 
 /** returns the internal solution status of the solver */
@@ -2850,7 +2858,7 @@ int SCIPlpiGetInternalStatus(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return static_cast<int>(lpi->spx->statusReal());
+   return static_cast<int>(lpi->spx->status());
 }
 
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
@@ -2925,7 +2933,7 @@ SCIP_RETCODE SCIPlpiGetSol(
       if( redcost != NULL )
       {
          Vector tmp(lpi->spx->numColsReal(), redcost);
-         (void)lpi->spx->getRedcostReal(tmp);
+         (void)lpi->spx->getRedCostReal(tmp);
       }
    }
    catch(SPxException x)
@@ -2955,7 +2963,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    try
    {
       Vector tmp(lpi->spx->numColsReal(), ray);
-      (void)lpi->spx->getPrimalrayReal(tmp);
+      (void)lpi->spx->getPrimalRayReal(tmp);
    }
    catch(SPxException x)
    {
@@ -2987,7 +2995,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    try
    {
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
-      (void)lpi->spx->getDualfarkasReal(tmp);
+      (void)lpi->spx->getDualFarkasReal(tmp);
    }
    catch(SPxException x)
    {
@@ -3072,7 +3080,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    {
       for( i = 0; i < lpi->spx->numRowsReal(); ++i )
       {
-         switch( lpi->spx->basisRowStatusReal(i) )
+         switch( lpi->spx->basisRowStatus(i) )
          {
          case SPxSolver::BASIC:
             rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
@@ -3100,7 +3108,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       for( i = 0; i < lpi->spx->numColsReal(); ++i )
       {
          SCIP_Real val = 0.0;
-         switch( lpi->spx->basisColStatusReal(i) )
+         switch( lpi->spx->basisColStatus(i) )
          {
          case SPxSolver::BASIC:
             cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
@@ -3209,7 +3217,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasisReal(spxrstat, spxcstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
    // do we still need this?
 //    lpi->spx->updateStatus();
 
@@ -3256,7 +3264,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    try
    {
-      lpi->spx->getBasisInverseRow(r, coef);
+      lpi->spx->getBasisInverseRowReal(r, coef);
    }
    catch(SPxException x)
    {
@@ -3289,7 +3297,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    try
    {
-      lpi->spx->getBasisInverseCol(c, coef);
+      lpi->spx->getBasisInverseColReal(c, coef);
    }
    catch(SPxException x)
    {
@@ -3377,7 +3385,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    col.reDim(lpi->spx->numRowsReal());
 
    /* solve */
-   lpi->spx->getBasisInverseTimesVec(col.get_ptr(), coef);
+   lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef);
 
    return SCIP_OKAY;
 }
@@ -3506,7 +3514,7 @@ SCIP_RETCODE SCIPlpiClearState(
 
    try
    {
-      lpi->spx->clearBasisReal();
+      lpi->spx->clearBasis();
    }
    catch(SPxException x)
    {
@@ -3514,7 +3522,7 @@ SCIP_RETCODE SCIPlpiClearState(
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
-      assert( lpi->spx->statusReal() != SPxSolver::OPTIMAL );
+      assert( lpi->spx->status() != SPxSolver::OPTIMAL );
       return SCIP_LPERROR;
    }
 
@@ -3559,7 +3567,7 @@ SCIP_RETCODE SCIPlpiReadState(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    bool success;
-   SOPLEX_TRY( lpi->messagehdlr, success = lpi->spx->readBasisFileReal(fname, 0, 0) );
+   SOPLEX_TRY( lpi->messagehdlr, success = lpi->spx->readBasisFile(fname, 0, 0) );
 
    return success ? SCIP_OKAY : SCIP_LPERROR;
 }
@@ -3575,7 +3583,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    bool res;
-   SOPLEX_TRY( lpi->messagehdlr, res = lpi->spx->writeBasisFileReal(fname, 0, 0) );
+   SOPLEX_TRY( lpi->messagehdlr, res = lpi->spx->writeBasisFile(fname, 0, 0) );
 
    if ( ! res )
       return SCIP_LPERROR;
