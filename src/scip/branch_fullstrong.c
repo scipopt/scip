@@ -211,7 +211,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    assert(provedbound != NULL);
    assert(result != NULL);
    assert(nlpcands > 0);
-   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
@@ -228,15 +227,21 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    lpobjval = SCIPgetLPObjval(scip);
    *provedbound = lpobjval;
 
-   /* if only one candidate exists, choose this one without applying strong branching */
    *bestcand = 0;
    *bestdown = lpobjval;
    *bestup = lpobjval;
    *bestdownvalid = TRUE;
    *bestupvalid = TRUE;
    *bestscore = -SCIPinfinity(scip);
-   if( nlpcands == 1)
+
+   /** if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
+    *  stopped, all strongbranching evaluations will be aborted anyway, thus we can return immediately
+    */
+   if( nlpcands == 1 || SCIPisStopped(scip) )
       return SCIP_OKAY;
+
+   /* this assert may not hold if SCIP is stopped, thus we only check it here */
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* get branching rule */
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);

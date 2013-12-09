@@ -465,8 +465,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->usecloud = FALSE;
    }
 
-
-
    if( branchruledata->onlyF2 )
       counter = MAX(counter,1);
 
