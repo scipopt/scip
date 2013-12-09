@@ -16329,10 +16329,14 @@ SCIP_RETCODE SCIPlpEndDive(
    lp->diving = FALSE;
    lp->divingobjchg = FALSE;
 
-   /* resolve LP to reset solution */
+   /* if the LP was solved before starting the dive, but not to optimality or unboundedness, then we need to solve the
+    * LP again to reset the solution (e.g. we do not save the Farkas proof for infeasible LPs, because we assume that we
+    * are not called in this case, anyway); restoring by solving the LP again in either case can be forced by setting
+    * the parameter resolverestore to TRUE
+    */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
+      && (set->lp_resolverestore || (lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL && lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY)) )
    {
       SCIP_Bool lperror;
 
@@ -16353,7 +16357,10 @@ SCIP_RETCODE SCIPlpEndDive(
          lp->resolvelperror = TRUE;
       }
    }
-   /* reload buffered LP solution values at start of diving */
+   /* otherwise, we can just reload the buffered LP solution values at start of diving; this has the advantage that we
+    * are guaranteed to continue with the same LP status as before diving, while in numerically difficult cases, a
+    * re-solve as above can lead to a different LP status
+    */
    else
    {
       int c;
