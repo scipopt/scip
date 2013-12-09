@@ -25,8 +25,9 @@ fixed bugs:
 - improved handling of initial constraints: constraints which are initial, but added during the search to an already
   treated node are kept and added to the LP at every node where they are active
 - fixed bug where a limit on presolving rounds was exceeded by 1
+- fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 
-data structures
+data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
 - hash tables will now increase dynamically
 
