@@ -17,6 +17,7 @@
 export LANG=C
 
 REMOVE=0
+APPEND=0
 AWKARGS=""
 FILES=""
 

@@ -15,10 +15,10 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 # check if tmp-path exists
-if test ! -d $CLIENTTMPDIR
+if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
 then
-    echo Skipping test since the path $CLIENTTMPDIR for the tmp-dir does not exist.
-    exit
+    mkdir $CLIENTTMPDIR/${USER}-tmpdir
+    echo Creating directory $CLIENTTMPDIR/${USER}-tmpdir for temporary outfile
 fi
 
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
@@ -35,7 +35,7 @@ date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
-$EXECNAME                < $TMPFILE >> $OUTFILE 2>>$ERRFILE
+$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
 date +"@04 %s"                      >> $OUTFILE
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
