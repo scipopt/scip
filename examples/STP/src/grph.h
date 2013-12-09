@@ -18,7 +18,7 @@
 #define GRAPH_HAS_COORDINATES     1
 #define GRAPH_IS_GRIDGRAPH        2
 #define GRAPH_IS_DIRECTED         4
-
+#include "heur_tm.h"
 typedef struct
 {
    /* Knots
@@ -77,6 +77,10 @@ typedef struct
     */
    int* path_heap;
    int* path_state;
+
+   /* is the root given?
+    */
+   int rootisfixed;
 
 } GRAPH;
 
@@ -142,6 +146,9 @@ extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, const double*, PATH*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
+extern void   voronoi(const GRAPH*, const double*, char*, int*, PATH*);
+extern void   heap_add(int*, int*, int*, int, PATH*);
+extern void   voronoi_repair(SCIP*, const GRAPH*, const double*, int*, int*, PATH*, int*, int, UF*);
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c

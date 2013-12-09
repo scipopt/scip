@@ -890,7 +890,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
                         global, &success) );
                   assert(success);
 
-               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
+                  SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
                }
 
                for( v = (*targetdata)->nedges - 1; v >= 0; --v )
@@ -923,7 +923,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
                         global, &success) );
                   assert(success);
 
-               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
+                  SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
                }
 
                for( v = sourcedata->nedges * sourcedata->realnterms - 1; v >= 0; --v )
@@ -1160,7 +1160,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph_path_init(graph);
 
    /* select a root node */
-  graph->source[0] = central_terminal(graph, compcentral);
+   if( !graph->rootisfixed && compcentral != CENTER_DEG )
+      graph->source[0] = central_terminal(graph, compcentral);
 
    /* print the graph */
    if( print )
@@ -1174,6 +1175,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    probdata->graph = graph_pack(graph);
    graph = probdata->graph;
+
 
    /* if graph reduction solved the whole problem, NULL is returned */
    if( graph != NULL )
@@ -1191,6 +1193,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          SCIP_CALL( probdataPrintGraph(graph, "ReducedGraph.gml", NULL) );
       }
+
       nedges = graph->edges;
       nnodes = graph->knots;
       probdata->nnodes = nnodes;
@@ -1678,7 +1681,75 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       /* try to add new solution to scip and free it immediately */
       SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, success) );
+
+      /*assert( *success );*/
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** print graph (in undirected form) in GML format */
+SCIP_RETCODE SCIPprobdataPrintGraph2(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           filename,           /**< Name of the output file */
+   SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
+   )
+{
+   char label[SCIP_MAXSTRLEN];
+   FILE* file;
+   int e;
+   int n;
+   int m;
+
+   assert(graph != NULL);
+   file = fopen((filename != NULL) ? filename : "graphX.gml", "w");
+
+   for( e = 0; e < graph->edges; e += 2 )
+   {
+      assert(graph->tail[e] == graph->head[e + 1]);
+      assert(graph->tail[e + 1] == graph->head[e]);
+   }
+
+   /* write GML format opening, undirected */
+   SCIPgmlWriteOpening(file, FALSE);
+
+   /* write all nodes, discriminate between root, terminals and the other nodes */
+   e = 0;
+   m = 0;
+   for( n = 0; n < graph->knots; ++n )
+   {
+      if( n == graph->source[0] )
+      {
+         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
+	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
+	 m = 1;
+      }
+      else if( graph->term[n] == 0 )
+      {
+	 (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
+	 SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#ff0000", NULL);
+	 e += 1;
+      }
+      else
+      {
+         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
+         SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
+      }
+   }
+
+   /* write all edges (undirected) */
+   for( e = 0; e < graph->edges; e += 2 )
+   {
+      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
+      if( edgemark != NULL && edgemark[e / 2] == TRUE )
+	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
+      else
+         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
+   }
+
+   /* write GML format closing */
+   SCIPgmlWriteClosing(file);
 
    return SCIP_OKAY;
 }

@@ -34,11 +34,25 @@
 extern "C" {
 #endif
 
-/** creates the TM primal heuristic and includes it in SCIP */
-extern
-SCIP_RETCODE SCIPincludeHeurTM(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+
+   /* a  weighted-quick-union-path-compression union find structure */
+   typedef struct UnionFind_Structure
+   {
+      int* parent;    /* parent[i] stores the parent of i */
+      int* size;      /* size[i] stores number of nodes in the tree rooted at i */
+      int count;      /* number of components */
+   }UF;
+
+   extern int UF_find(
+      UF* uf,
+      int element
+      );
+
+   /** creates the TM primal heuristic and includes it in SCIP */
+   extern
+   SCIP_RETCODE SCIPincludeHeurTM(
+      SCIP*                 scip                /**< SCIP data structure */
+      );
 
 #ifdef __cplusplus
 }

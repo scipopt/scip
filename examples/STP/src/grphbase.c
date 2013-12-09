@@ -404,7 +404,7 @@ void graph_knot_contract(
 
    assert(slp != NULL);
 
-      /* Liste mit Kanten des aufzuloesenden Kontens merken
+   /* Liste mit Kanten des aufzuloesenden Kontens merken
     */
    for(es = p->outbeg[s]; es != EAT_LAST; es = p->oeat[es])
    {
@@ -413,7 +413,7 @@ void graph_knot_contract(
       if (p->head[es] != t)
       {
          /*
-         assert(EQ(p->cost[es], p->cost[Edge_anti(es)]));
+           assert(EQ(p->cost[es], p->cost[Edge_anti(es)]));
          */
          slp[slc].mark = FALSE;
          slp[slc].knot = p->head[es];
@@ -438,7 +438,7 @@ void graph_knot_contract(
       /* Keine gefunden, Kante aus der Liste muss eingefuegt werden.
        */
       if (et == EAT_LAST)
-          slp[i].mark = TRUE;
+         slp[i].mark = TRUE;
       else
       {
          /* Ja ist vorhanden !
@@ -825,6 +825,7 @@ GRAPH *graph_pack(
       assert(q->term[new[p->source[l]]] == l);
       q->source[l] = new[p->source[l]];
    }
+   q->rootisfixed = p->rootisfixed;
 
    free(new);
 
@@ -836,7 +837,7 @@ GRAPH *graph_pack(
 
    for(i = 0; i < q->knots; i++)
       if ((q->term[i] >= 0) && ((q->source[q->term[i]] < 0)
-         || (q->grad[i] > q->grad[q->source[q->term[i]]])))
+            || (q->grad[i] > q->grad[q->source[q->term[i]]])))
          q->source[q->term[i]] = i;
 #endif
    assert(q->source[0] >= 0);
@@ -923,30 +924,30 @@ int graph_valid(
    {
       if (locals[l] != 0)
          return((void)fprintf(stderr, fehler8,
-            l, p->locals[l], p->locals[l] - locals[l]), FALSE);
+               l, p->locals[l], p->locals[l] - locals[l]), FALSE);
 
       if ((p->source[l] < 0)
-       || (p->source[l] >= p->knots)
-       || (p->term[p->source[l]] != l))
+         || (p->source[l] >= p->knots)
+         || (p->term[p->source[l]] != l))
          return((void)fprintf(stderr, fehler3,
-            l, p->source[l], p->term[p->source[l]]), FALSE);
+               l, p->source[l], p->term[p->source[l]]), FALSE);
    }
    free(locals);
 
    for(e = 0; e < p->edges; e += 2)
    {
       if ((p->ieat[e    ] == EAT_FREE) && (p->oeat[e    ] == EAT_FREE)
-       && (p->ieat[e + 1] == EAT_FREE) && (p->oeat[e + 1] == EAT_FREE))
+         && (p->ieat[e + 1] == EAT_FREE) && (p->oeat[e + 1] == EAT_FREE))
          continue;
 
       if ((p->ieat[e] == EAT_FREE) || (p->oeat[e] == EAT_FREE)
-       || (p->ieat[e + 1] == EAT_FREE) || (p->oeat[e + 1] == EAT_FREE))
+         || (p->ieat[e + 1] == EAT_FREE) || (p->oeat[e + 1] == EAT_FREE))
          return((void)fprintf(stderr, fehler4, e, e + 1), FALSE);
 
       if ((p->head[e] != p->tail[e + 1]) || (p->tail[e] != p->head[e + 1]))
          return((void)fprintf(stderr, fehler5,
-            e, e + 1, p->head[e], p->tail[e + 1],
-            p->tail[e], p->head[e + 1]), FALSE);
+               e, e + 1, p->head[e], p->tail[e + 1],
+               p->tail[e], p->head[e + 1]), FALSE);
 
    }
    for(k = 0; k < p->knots; k++)

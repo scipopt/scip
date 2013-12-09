@@ -100,49 +100,49 @@ struct key
 #define KEY_PRESOLVE_TIME        5005
 
 static const struct key keyword_table[] =
-{
-   /*
-    * *** The keywords MUST be sorted alphabetically ! ***
-    */
-   {  ".eof",                KEY_EOF,                 NULL   },
-   {  ".section",            KEY_SECTION,             NULL   },
+   {
+      /*
+       * *** The keywords MUST be sorted alphabetically ! ***
+       */
+      {  ".eof",                KEY_EOF,                 NULL   },
+      {  ".section",            KEY_SECTION,             NULL   },
 
-   {  "comment.creator",     KEY_COMMENT_CREATOR,     "s"    },
-   {  "comment.date",        KEY_COMMENT_DATE,        "s"    },
-   {  "comment.end",         KEY_END,                 NULL   },
-   {  "comment.name",        KEY_COMMENT_NAME,        "s"    },
-   {  "comment.remark",      KEY_COMMENT_REMARK,      "s"    },
+      {  "comment.creator",     KEY_COMMENT_CREATOR,     "s"    },
+      {  "comment.date",        KEY_COMMENT_DATE,        "s"    },
+      {  "comment.end",         KEY_END,                 NULL   },
+      {  "comment.name",        KEY_COMMENT_NAME,        "s"    },
+      {  "comment.remark",      KEY_COMMENT_REMARK,      "s"    },
 
-   {  "coordinates.dd",      KEY_COORDINATES_DD,      "nnn"  },
-   {  "coordinates.ddd",     KEY_COORDINATES_DDD,     "nnnn" },
-   {  "coordinates.end",     KEY_END,                 NULL   },
-   {  "coordinates.grid",    KEY_COORDINATES_GRID,    NULL   },
+      {  "coordinates.dd",      KEY_COORDINATES_DD,      "nnn"  },
+      {  "coordinates.ddd",     KEY_COORDINATES_DDD,     "nnnn" },
+      {  "coordinates.end",     KEY_END,                 NULL   },
+      {  "coordinates.grid",    KEY_COORDINATES_GRID,    NULL   },
 
-   {  "graph.a",             KEY_GRAPH_A,             "nnnn" },
-   {  "graph.e",             KEY_GRAPH_E,             "nnn"  },
-   {  "graph.edges",         KEY_GRAPH_EDGES,         "n"    },
-   {  "graph.end",           KEY_END,                 NULL   },
-   {  "graph.nodes",         KEY_GRAPH_NODES,         "n"    },
+      {  "graph.a",             KEY_GRAPH_A,             "nnnn" },
+      {  "graph.e",             KEY_GRAPH_E,             "nnn"  },
+      {  "graph.edges",         KEY_GRAPH_EDGES,         "n"    },
+      {  "graph.end",           KEY_END,                 NULL   },
+      {  "graph.nodes",         KEY_GRAPH_NODES,         "n"    },
 
-   {  "presolve.date",       KEY_PRESOLVE_DATE,       "s"    },
-   {  "presolve.end",        KEY_END,                 NULL   },
-   {  "presolve.fixed",      KEY_PRESOLVE_FIXED,      "n"    },
-   {  "presolve.lower",      KEY_PRESOLVE_LOWER,      "n"    },
-   {  "presolve.time",       KEY_PRESOLVE_TIME,       "n"    },
-   {  "presolve.upper",      KEY_PRESOLVE_UPPER,      "n"    },
+      {  "presolve.date",       KEY_PRESOLVE_DATE,       "s"    },
+      {  "presolve.end",        KEY_END,                 NULL   },
+      {  "presolve.fixed",      KEY_PRESOLVE_FIXED,      "n"    },
+      {  "presolve.lower",      KEY_PRESOLVE_LOWER,      "n"    },
+      {  "presolve.time",       KEY_PRESOLVE_TIME,       "n"    },
+      {  "presolve.upper",      KEY_PRESOLVE_UPPER,      "n"    },
 
-   {  "solution.date",       KEY_SOLUTION_DATE,       "s"    },
-   {  "solution.end",        KEY_END,                 NULL   },
-   {  "solution.s",          KEY_SOLUTION_S,          "n"    },
-   {  "solution.steiner",    KEY_SOLUTION_STEINER,    "n"    },
-   {  "solution.time",       KEY_SOLUTION_TIME,       "n"    },
-   {  "solution.value",      KEY_SOLUTION_VALUE,      "n"    },
+      {  "solution.date",       KEY_SOLUTION_DATE,       "s"    },
+      {  "solution.end",        KEY_END,                 NULL   },
+      {  "solution.s",          KEY_SOLUTION_S,          "n"    },
+      {  "solution.steiner",    KEY_SOLUTION_STEINER,    "n"    },
+      {  "solution.time",       KEY_SOLUTION_TIME,       "n"    },
+      {  "solution.value",      KEY_SOLUTION_VALUE,      "n"    },
 
-   {  "terminals.end",       KEY_END,                 NULL   },
-   {  "terminals.root",      KEY_TERMINALS_ROOT,      "n"    },
-   {  "terminals.t",         KEY_TERMINALS_T,         "n"    },
-   {  "terminals.terminals", KEY_TERMINALS_TERMINALS, "n"    },
-};
+      {  "terminals.end",       KEY_END,                 NULL   },
+      {  "terminals.root",      KEY_TERMINALS_ROOT,      "n"    },
+      {  "terminals.t",         KEY_TERMINALS_T,         "n"    },
+      {  "terminals.terminals", KEY_TERMINALS_TERMINALS, "n"    },
+   };
 
 struct section
 {
@@ -161,19 +161,19 @@ struct section
 /* Extension NULL = no separate file possible !
  */
 static struct section section_table[] =
-{
-   { "",            "stp", FLAG_REQUIRED, SECTION_EXISTEND },
+   {
+      { "",            "stp", FLAG_REQUIRED, SECTION_EXISTEND },
 
-   /*
-    * *** The section names MUST be sorted alphabetically ! ***
-    */
-   { "comment",     NULL,  FLAG_REQUIRED, SECTION_MISSING },
-   { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
-   { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
-   { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
-   { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
-   { "terminals",   "trm", FLAG_REQUIRED, SECTION_MISSING },
-};
+      /*
+       * *** The section names MUST be sorted alphabetically ! ***
+       */
+      { "comment",     NULL,  FLAG_REQUIRED, SECTION_MISSING },
+      { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
+      { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
+      { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
+      { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
+      { "terminals",   "trm", FLAG_REQUIRED, SECTION_MISSING },
+   };
 
 typedef struct current_file
 {
@@ -223,7 +223,7 @@ static void message(
 
    const char* intro[] = { "Fatal Error", "Error      ", "Warning    ",
                            "Info       ", "Debug      "
-                         };
+   };
    const char* header  = "*** %s File \"%s\" line %05d: ";
 
    assert(type           <  sizeof(intro) / sizeof(char*));
@@ -313,60 +313,60 @@ static int get_arguments(
 
       switch(*format)
       {
-         case 'n' :  /* Numeric */
-            /* Go to next digit.
-             */
-            while((*s != '\0') && !isdigit(*s))
-               s++;
+      case 'n' :  /* Numeric */
+         /* Go to next digit.
+          */
+         while((*s != '\0') && !isdigit(*s))
+            s++;
 
-            /* Someting left ?
+         /* Someting left ?
+          */
+         if (*s != '\0')
+         {
+            assert(isdigit(*s));
+
+            /* Get it.
              */
-            if (*s != '\0')
+            para->n = 0;
+
+            while(isdigit(*s))
             {
-               assert(isdigit(*s));
-
-               /* Get it.
-                */
-               para->n = 0;
-
-               while(isdigit(*s))
-               {
-                  para->n = para->n * 10 + (*s - '0');
-                  s++;
-               }
-               missmatch = FALSE;
-            }
-            break;
-         case 's' :  /* String */
-            /* Go to the beginning of the string.
-             */
-            while((*s != '\0') && (*s != '\"'))
+               para->n = para->n * 10 + (*s - '0');
                s++;
-
-            /* Someting left ?
-             */
-            if (*s != '\0')
-            {
-               assert(*s == '\"');
-
-               /* Get the String.
-                */
-               i = 0;
-               s++;
-
-               while((*s != '\0') && (*s != '\"') && (i < MAX_STRING_LEN - 1))
-                  para->s[i++] = *s++;
-
-               para->s[i] = '\0';
-               missmatch  = FALSE;
             }
-            break;
-         case 'b' :  /* Bool */
-         case 'd' :  /* Date */
-         default  :
-            /* CONSTCOND */
-            assert(FALSE);
-            break;
+            missmatch = FALSE;
+         }
+         break;
+      case 's' :  /* String */
+         /* Go to the beginning of the string.
+          */
+         while((*s != '\0') && (*s != '\"'))
+            s++;
+
+         /* Someting left ?
+          */
+         if (*s != '\0')
+         {
+            assert(*s == '\"');
+
+            /* Get the String.
+             */
+            i = 0;
+            s++;
+
+            while((*s != '\0') && (*s != '\"') && (i < MAX_STRING_LEN - 1))
+               para->s[i++] = *s++;
+
+            para->s[i] = '\0';
+            missmatch  = FALSE;
+         }
+         break;
+      case 'b' :  /* Bool */
+      case 'd' :  /* Date */
+      default  :
+         /* CONSTCOND */
+         assert(FALSE);
+         break;
       }
       if (missmatch)
          message(MSG_ERROR, curf, err_missmatch_v);
@@ -419,7 +419,7 @@ static int open_file(
    /* Read Header...
     */
    else if (fscanf(curf->fp, "%8x %3s File, STP Format Version %2d.%2d \n",
-            &magic, type, &version_major, &version_minor) != 4)
+         &magic, type, &version_major, &version_minor) != 4)
       message(MSG_FATAL, curf, err_noheader_v);
 
    /* Test Magic...
@@ -487,7 +487,7 @@ static int start_section(
    {
       /* Known section ?
        */
-     temp.section = (struct section*)bsearch(strlower(sectname),
+      temp.section = (struct section*)bsearch(strlower(sectname),
          &section_table[1],
          (sizeof(section_table) / sizeof(struct section)) - 1,
          sizeof(struct section), sec_cmp);
@@ -695,7 +695,7 @@ GRAPH* graph_load(
          keyword[i] = '.';
 
          for(i++;
-            (i < MAX_KEYWORD_LEN - 1) && (isalpha(*s) || (*s == '_'));
+             (i < MAX_KEYWORD_LEN - 1) && (isalpha(*s) || (*s == '_'));
              i++, s++)
             keyword[i] = (char)tolower(*s);
 
@@ -882,13 +882,18 @@ GRAPH* graph_load(
 
       if (g->source[0] == -1)
       {
+	 g->rootisfixed = FALSE;
          for(i = 0; i < g->knots; i++)
             if ((g->term[i] == 0)
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
                g->source[0] = i;
       }
+      else
+      {
+         g->rootisfixed = TRUE;
+      }
       graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
-                      | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));
+         | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));
 
       (void)printf(msg_finish_dddd,
          g->knots, g->edges, g->terms, g->source[0]);

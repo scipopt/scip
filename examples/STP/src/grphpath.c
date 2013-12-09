@@ -131,6 +131,37 @@ inline static void correct(
    }
 }
 
+void heap_add(
+   int* heap,     /* heaparray */
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
+   int    node,    /* the node to be added */
+   PATH*  path
+   )
+{
+   int    t;
+   int    c;
+   int    j;
+
+   heap[++(*count)] = node;
+   state[node]      = (*count);
+
+   /* Heap shift up */
+   j = state[node];
+   c = j / 2;
+
+   while((j > 1) && GT(path[heap[c]].dist, path[heap[j]].dist))
+   {
+      t              = heap[c];
+      heap[c]        = heap[j];
+      heap[j]        = t;
+      state[heap[j]] = j;
+      state[heap[c]] = c;
+      j              = c;
+      c              = j / 2;
+   }
+
+}
 inline static void correct2(
    int* heap,
    int* state,
@@ -304,11 +335,11 @@ void graph_path_exec(
              */
             if ((state[m]) && (p->mark[m])
 
-            /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
-             *    Wenn ja, dann muss die Entferung kuerzer sein.
-             */
-             && (GT(path[m].dist, (mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i]))))
-                correct(heap, state, &count, path, m, k, i, cost[i], mode);
+               /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
+                *    Wenn ja, dann muss die Entferung kuerzer sein.
+                */
+               && (GT(path[m].dist, (mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i]))))
+               correct(heap, state, &count, path, m, k, i, cost[i], mode);
          }
       }
    }
@@ -325,7 +356,7 @@ void graph_path_exec2(
    char*         connected,
    int* cluster,
    int* csize
-		     )
+   )
 {
    int   k;
    int   m;
@@ -394,24 +425,21 @@ void graph_path_exec2(
             /* add path to the terminal */
 
 
-	       ++termsn;
-	       connected[k] = TRUE;
+            ++termsn;
+            connected[k] = TRUE;
 
             if (cluster[*csize-1] != k)
 
-            cluster[(*csize)++] = k;
-               path[k].dist = 0.0;
-//	       printf("connect (term): %d \n", k);
-	       /* */
+               cluster[(*csize)++] = k;
+            path[k].dist = 0.0;
+
 
 	    node = k;
             while( path[k].edge != -1 && connected[node = p->tail[path[node].edge]] == FALSE )
             {
-//	       printf("connect (node): %d \n", node);
                connected[node] = TRUE;
 	       if (cluster[*csize-1] != k)
-
-            cluster[(*csize)++] = node;
+                  cluster[(*csize)++] = node;
                path[node].dist = 0.0;
                state[node] = UNKNOWN;
                correct2(heap, state, &count, path, node, 0, 0, 0, mode);
@@ -437,15 +465,170 @@ void graph_path_exec2(
              */
             if( (state[m]) /*  && (p->mark[m]) */
 
-            /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
-             *    Wenn ja, dann muss die Entferung kuerzer sein.
-             */
-             && (GT(path[m].dist, (path[k].dist + cost[i]))) )
+               /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
+                *    Wenn ja, dann muss die Entferung kuerzer sein.
+                */
+               && (GT(path[m].dist, (path[k].dist + cost[i]))) )
                correct(heap, state, &count, path, m, k, i, cost[i], mode);
          }
       }
    }
 }
+
+
+/*** build a voronoi region, w.r.t. shortest paths, for a given set of bases ***/
+void voronoi(
+   const GRAPH*  p,
+   const double* cost,
+   char*         base,
+   int*          vbase,
+   PATH*         path
+   )
+{
+   int k;
+   int m;
+   int i;
+   int* heap;
+   int* state;
+   int count = 0;
+   int nbases = 0;
+
+   assert(p      != NULL);
+   assert(p->path_heap   != NULL);
+   assert(p->path_state  != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+
+   if( p->knots == 0 )
+      return;
+
+   heap = p->path_heap;
+   state = p->path_state;
+
+   /* init */
+   for( i = 0; i < p->knots; i++ )
+   {
+
+      /* set the base of vertex i */
+      if( base[i] )
+      {
+         nbases++;
+         if( p->knots > 1 )
+            heap[++count] = i;
+         vbase[i] = i;
+         path[i].dist = 0;
+         path[i].edge = UNKNOWN;
+         state[i] = CONNECT; /* = CONNECT? TODO */
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i]     = UNKNOWN;
+      }
+
+   }
+
+   /* add the starting vertex to the heap */
+   assert(nbases > 0);
+
+   if( p->knots > 1 && nbases < p->knots )
+   {
+
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex from the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+         /* iterate over all outgoing edges of vertex k */
+         for( i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i] )
+         {
+            m = p->head[i];
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) && (GT(path[m].dist, path[k].dist + cost[i])) ) /* TODO: && mark[m] ?? */
+            {
+               correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+}
+/*** repair the voronoi diagram for a given set nodes ***/
+void voronoi_repair(
+   SCIP*         scip,
+   const GRAPH*  g,
+   const double* cost,
+   int*          count,
+   int*          vbase,
+   PATH*         path,
+   int*          newedge,
+   int           crucnode,
+   UF*           uf
+   )
+{
+   int k;
+   int m;
+   int i;
+   int* heap;
+   int* state;
+
+   *newedge = UNKNOWN;
+   assert(g != NULL);
+   assert(g->path_heap != NULL);
+   assert(g->path_state != NULL);
+   assert(path != NULL);
+   assert(cost != NULL);
+
+   if (g->knots == 0)
+      return;
+
+   heap = g->path_heap;
+   state = g->path_state;
+
+   if( g->knots > 1 )
+   {
+
+      /* until the heap is empty */
+      while( *count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex from the heap */
+         k = nearest(heap, state, count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+         /* iterate over all outgoing edges of vertex k */
+         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         {
+            m = g->head[i];
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) && (SCIPisGT(scip,path[m].dist, path[k].dist + cost[i])) ) /* TODO: && mark[m] ?? */
+            {
+               correct(heap, state, count, path, m, k, i, cost[i], FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+            /* check whether there is a better new boundary edge adjacent to vertex k */
+            else if( (state[m] == CONNECT) && ((UF_find(uf, vbase[m]) == crucnode) ^ (UF_find(uf, vbase[k]) == crucnode))  && (SCIPisGT(scip, (*newedge == -1)? FARAWAY :
+                     (path[g->tail[*newedge]].dist + cost[*newedge] + path[g->head[*newedge]].dist), path[k].dist + cost[i] + path[m].dist) ) )
+	    {
+               *newedge = i;
+	    }
+         }
+      }
+   }
+
+
+}
+
+
 /* ARGSUSED */
 void graph_path_length(
    const GRAPH* g,
