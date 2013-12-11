@@ -24511,7 +24511,7 @@ SCIP_RETCODE SCIPgetLPI(
    return SCIP_OKAY;
 }
 
-/** Displays quality information about the current LP solution. An LP solution need to be available. Information printed
+/** displays quality information about the current LP solution. An LP solution need to be available; information printed
  *  is subject to what the LP solver supports
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -24564,6 +24564,11 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
          return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
+   /* note that after diving mode, the LPI may only have the basis information, but SCIPlpiWasSolved() can be false; in
+    * this case, we will (depending on the LP solver) probably not obtain the quality measure; one solution would be to
+    * store the results of SCIPlpiGetRealSolQuality() within the SCIP_LP after each LP solve; this would have the added
+    * advantage, that we reduce direct access to the LPI, but it sounds potentially expensive
+    */
    lpi = SCIPlpGetLPI(scip->lp);
    assert(lpi != NULL);
 
