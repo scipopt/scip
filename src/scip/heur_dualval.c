@@ -44,7 +44,7 @@
 #define HEUR_DESC             "primal heuristic using dual values"
 #define HEUR_DISPCHAR         'Y'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -178,7 +178,7 @@ SCIP_DECL_EVENTEXEC(eventExecLPsol)
    /* free memory of all entries and clear the hashmap before filling it */
    for( i = 0; i < nsubconss; i++ )
    {
-      dualval = SCIPhashmapGetImage(heurdata->dualvalues, subconss[i]);
+      dualval = (double*)SCIPhashmapGetImage(heurdata->dualvalues, subconss[i]);
       if( dualval != NULL )
          SCIPfreeBlockMemoryArray(heurdata->subscip, &dualval, 1);
    }
@@ -910,7 +910,7 @@ SCIP_RETCODE createSubSCIP(
       transcons = NULL;
       SCIP_CALL( SCIPgetTransformedCons(scip, conss[i], &transcons) );
 
-      subcons = SCIPhashmapGetImage(conssmap, transcons);
+      subcons = (SCIP_CONS*)SCIPhashmapGetImage(conssmap, transcons);
       assert( subcons != NULL );
 
       SCIP_CALL( SCIPhashmapInsert(heurdata->origsubscipConsMap, transcons, subcons) );
@@ -1016,7 +1016,7 @@ SCIP_RETCODE createSubSCIP(
       heurdata->integervars[j] = vars[i];
       ++j;
 
-      var = SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
+      var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
       assert( var != NULL );
 
       /* in this case our variable is an indicator variable */
@@ -1036,7 +1036,7 @@ SCIP_RETCODE createSubSCIP(
             indicatorbinvar = SCIPgetBinaryVarIndicator(currcons);
             assert(indicatorbinvar != NULL);
 
-            SCIP_CALL( SCIPgetNegatedVar(scip, SCIPhashmapGetImage(heurdata->varsubsciptoscip, var), &negatedvar) );
+            SCIP_CALL( SCIPgetNegatedVar(scip, (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsubsciptoscip, var), &negatedvar) );
 
             if( indicatorbinvar == SCIPhashmapGetImage(heurdata->varsubsciptoscip, var)
                || indicatorbinvar == negatedvar )
@@ -1059,7 +1059,7 @@ SCIP_RETCODE createSubSCIP(
                indicons = currcons;
                assert( indicons != NULL );
 
-               indicons = SCIPhashmapGetImage(conssmap, indicons);
+               indicons = (SCIP_CONS*)SCIPhashmapGetImage(conssmap, indicons);
 
                assert( indicons != NULL );
                linindicons = SCIPgetLinearConsIndicator(indicons);
@@ -1147,11 +1147,11 @@ SCIP_RETCODE createSubSCIP(
                   {
                     if (!SCIPvarIsNegated(indicatorbinvar))
                     {
-                        indicatorcopy = SCIPhashmapGetImage(heurdata->indicopymap, indicatorbinvar);
+                        indicatorcopy = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, indicatorbinvar);
                     }
                     else
                     {
-                        negatedvar = SCIPhashmapGetImage(heurdata->indicopymap, negatedvar);
+                        negatedvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, negatedvar);
                         SCIP_CALL( SCIPgetNegatedVar(heurdata->subscip, negatedvar, &indicatorcopy) );
                     }
                   }
@@ -1202,7 +1202,7 @@ SCIP_RETCODE createSubSCIP(
             if( SCIPhashmapGetImage(heurdata->indicators, vars[i]) == NULL )
                continue;
             
-            tmpvar = SCIPhashmapGetImage(heurdata->varsciptosubscip, vars[k]);
+            tmpvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, vars[k]);
             SCIP_CALL( SCIPchgVarType(heurdata->subscip, tmpvar, SCIP_VARTYPE_CONTINUOUS, &feasible) );
             SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, tmpvar, -SCIPinfinity(heurdata->subscip)) );
             SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, tmpvar,  SCIPinfinity(heurdata->subscip)) );
@@ -1287,7 +1287,7 @@ SCIP_RETCODE createSubSCIP(
             && (SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), -SCIPinfinity(scip))) )
             continue;
 
-         var = SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
+         var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
          assert( var != NULL );
 
          /* in this case, we have a normal variable */
@@ -1346,7 +1346,7 @@ SCIP_RETCODE createSubSCIP(
       if( !SCIPvarIsActive(var) )
          continue;
 
-      subvar = SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
+      subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
       assert( subvar != NULL );
 
       SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, subvar, SCIPvarGetObj(var)) );
@@ -1404,7 +1404,7 @@ SCIP_RETCODE freeSubSCIP(
       assert(subvar != NULL);
       assert(SCIPvarGetProbindex(subvar) == i);
 
-      var = SCIPhashmapGetImage(heurdata->varsubsciptoscip, subvar);
+      var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsubsciptoscip, subvar);
       if( var == NULL )
       {
          SCIP_CALL( SCIPreleaseVar(heurdata->subscip, &subvar) );
@@ -1506,13 +1506,13 @@ SCIP_RETCODE fixDiscreteVars(
 
       var = SCIPvarGetTransVar(var);
       assert(var != NULL);
-      subvar = SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
+      subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
 
       if( subvar == NULL )
          continue;
 
       if ( SCIPhashmapGetImage(heurdata->indicopymap, subvar) != NULL )
-          subvar = SCIPhashmapGetImage(heurdata->indicopymap, subvar);
+          subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, subvar);
 
       /* get value of the variables, taking NULL as refpoint gives us the current LP solution,
        * otherwise we get our start point */
@@ -1583,13 +1583,13 @@ SCIP_RETCODE freeMemory(
          var = heurdata->integervars[i];
 
          if( SCIPhashmapGetImage(heurdata->slacktoindivarsmap, var) != NULL )
-            var = SCIPhashmapGetImage(heurdata->slacktoindivarsmap, var);
+            var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->slacktoindivarsmap, var);
 
-         val = SCIPhashmapGetImage(heurdata->switchedvars, var);
+         val = (SCIP_Real*)SCIPhashmapGetImage(heurdata->switchedvars, var);
          if( val != NULL )
             SCIPfreeBlockMemoryArray(heurdata->subscip, &val, 1);
 
-         val = SCIPhashmapGetImage(heurdata->switchedvars2, var);
+         val = (SCIP_Real*)SCIPhashmapGetImage(heurdata->switchedvars2, var);
          if( val != NULL )
             SCIPfreeBlockMemoryArray(heurdata->subscip, &val, 1);
       }
@@ -1621,10 +1621,10 @@ SCIP_RETCODE freeMemory(
       subvar = subvars[i];
       assert(SCIPvarGetProbindex(subvar) == i);
 
-      var = SCIPhashmapGetImage(heurdata->varsubsciptoscip, subvar);
+      var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsubsciptoscip, subvar);
 
       if (SCIPhashmapGetImage(heurdata->indicopymapback, subvar) != NULL)
-         var = SCIPhashmapGetImage(heurdata->varsubsciptoscip, SCIPhashmapGetImage(heurdata->indicopymapback, subvar));
+         var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsubsciptoscip, SCIPhashmapGetImage(heurdata->indicopymapback, subvar));
 
       assert(var != NULL);
 
@@ -1680,18 +1680,18 @@ SCIP_RETCODE computeRanks(
       }
       else
       {
-         var = SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
+         var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
          assert(var != NULL);
-         relaxcons = SCIPhashmapGetImage(heurdata->relaxcons, (void*)(var));
+         relaxcons = (SCIP_CONS*)SCIPhashmapGetImage(heurdata->relaxcons, (void*)(var));
 
          /* get ranks */
          if( relaxcons != NULL )
          {
             SCIP_CALL( SCIPgetTransformedCons(heurdata->subscip, relaxcons, &transcons) );
-            dualvalue = SCIPhashmapGetImage(heurdata->dualvalues, (void*)transcons);
+            dualvalue = (SCIP_Real*)SCIPhashmapGetImage(heurdata->dualvalues, (void*)transcons);
 
             if( dualvalue == NULL )
-               dualvalue = SCIPhashmapGetImage(heurdata->dualvalues, (void*)(relaxcons));
+               dualvalue = (SCIP_Real*)SCIPhashmapGetImage(heurdata->dualvalues, (void*)(relaxcons));
 
             if( dualvalue == NULL )
                continue;
@@ -1706,9 +1706,9 @@ SCIP_RETCODE computeRanks(
 
             if (SCIPhashmapGetImage(heurdata->relaxconsindi, (void*)(var)) != NULL)
             {
-                subcons = SCIPhashmapGetImage(heurdata->relaxconsindi, (void*)(var));
+                subcons = (SCIP_CONS*)SCIPhashmapGetImage(heurdata->relaxconsindi, (void*)(var));
 
-                dualvalue = SCIPhashmapGetImage(heurdata->dualvalues, (void*)(subcons));
+                dualvalue = (SCIP_Real*)SCIPhashmapGetImage(heurdata->dualvalues, (void*)(subcons));
 
                 if( dualvalue == NULL )
                   continue;
@@ -1731,19 +1731,19 @@ SCIP_RETCODE computeRanks(
                indicatorbinvar = SCIPgetBinaryVarIndicator(currcons);
                assert(indicatorbinvar != NULL);
 
-               if( indicatorbinvar == SCIPhashmapGetImage(heurdata->varsubsciptoscip, var)
+               if( indicatorbinvar == (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsubsciptoscip, var)
                   || (SCIPvarIsNegated(indicatorbinvar) && indicatorbinvar == SCIPvarGetNegatedVar(var)) )
                {
                   indicons = currcons;
                   assert(indicons != NULL);
 
-                  subcons = SCIPhashmapGetImage(heurdata->origsubscipConsMap, (void*)(indicons));
+                  subcons = (SCIP_CONS*)SCIPhashmapGetImage(heurdata->origsubscipConsMap, (void*)(indicons));
                   assert(subcons != NULL);
 
                   subcons = SCIPgetLinearConsIndicator(subcons);
                   assert(subcons != NULL);
 
-                  dualvalue = SCIPhashmapGetImage(heurdata->dualvalues, (void*)(subcons));
+                  dualvalue = (SCIP_Real*)SCIPhashmapGetImage(heurdata->dualvalues, (void*)(subcons));
 
                   if( dualvalue == NULL )
                      continue;
@@ -2095,7 +2095,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
             continue;
          }
 
-         var = SCIPhashmapGetImage(heurdata->varsubsciptoscip, subvar);
+         var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsubsciptoscip, subvar);
          if( var == NULL || REALABS( SCIPgetSolVal(scip, refpoint, var) ) > 1.0e+12 )
          {
             SCIP_Real tmpmax;
@@ -2142,7 +2142,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
          if( SCIPconsGetHdlr(transcons) != SCIPfindConshdlr(heurdata->subscip, "linear") )
             continue;
 
-         nlrow = SCIPhashmapGetImage(heurdata->conss2nlrow, transcons);
+         nlrow = (SCIP_NLROW*)SCIPhashmapGetImage(heurdata->conss2nlrow, transcons);
          
          if (nlrow != NULL)
          {
@@ -2272,7 +2272,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
          break;
 
       var = SCIPvarGetTransVar(var);
-      subvar = SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
+      subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
 
       rcons = (SCIP_CONS*) SCIPhashmapGetImage(heurdata->relaxcons, subvar);
       if( rcons != NULL )
@@ -2282,7 +2282,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       assert(subvar != NULL);
 
       if ( SCIPhashmapGetImage(heurdata->indicopymap, subvar) != NULL )
-          subvar = SCIPhashmapGetImage(heurdata->indicopymap, subvar);
+          subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, subvar);
 
       SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(heurdata->integervars[k])) );
       SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(heurdata->integervars[k])) );
@@ -2299,7 +2299,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       if( SCIPhashmapGetImage(heurdata->slacktoindivarsmap, v) != NULL )
       {
          /* get the indicator var of this constraint */
-         v = SCIPhashmapGetImage(heurdata->slacktoindivarsmap, v);
+         v = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->slacktoindivarsmap, v);
 
          /* set the value to 0 */
          SCIP_CALL( SCIPsetSolVal(scip, transsol, v, 0.0) );
@@ -2334,8 +2334,8 @@ SCIP_RETCODE SCIPapplyHeurDualval(
             *newval = SCIPgetSolVal(scip, transsol, v) - 1;
          }
       }
-      lastval = SCIPhashmapGetImage(heurdata->switchedvars, v);
-      seclastval = SCIPhashmapGetImage(heurdata->switchedvars2, v);
+      lastval = (SCIP_Real*)SCIPhashmapGetImage(heurdata->switchedvars, v);
+      seclastval = (SCIP_Real*)SCIPhashmapGetImage(heurdata->switchedvars2, v);
 
       /* we don't want to set a variable to a value it already had,or set a binary variable more than once */
       if( (lastval != NULL && (SCIPvarIsBinary(v) || SCIPisFeasEQ(scip, *lastval, *newval))) || (seclastval != NULL && SCIPisFeasEQ(scip, *seclastval, *newval)) )
@@ -2456,7 +2456,7 @@ SCIP_DECL_HEURFREE(heurFreeDualval)
       /* free memory of all entries and clear the hashmap before filling it */
       for( i = 0; i < nsubconss; i++ )
       {
-         dualval = SCIPhashmapGetImage(heurdata->dualvalues, subconss[i]);
+         dualval = (SCIP_Real*)SCIPhashmapGetImage(heurdata->dualvalues, subconss[i]);
          SCIPfreeBlockMemoryArray(heurdata->subscip, &dualval, 1);
       }
       SCIP_CALL( SCIPhashmapRemoveAll(heurdata->dualvalues) );
