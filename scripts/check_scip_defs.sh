@@ -53,50 +53,68 @@ echo
 LPSS=(grb cpx spx none) # spx132 xprs msk clp qso)
 OPTS=(dbg opt prf opt-gccold)
 
-# first ensure that links are available so we don't fail because of that when making with -j later
+# first ensure that links are available so we don't have to wait later
 for i in ${LPSS[@]}
 do
-    for k in ${OPTS[@]}
-    do
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" links"
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" links
-	echo
-    done
+    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" links"
+    echo
+    make LPS=$i USRCFLAGS="$USRDEFS" links
+    echo
 done
 
 for i in ${LPSS[@]}
 do
     for k in ${OPTS[@]}
     do
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" clean"
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" clean
-	echo
+        echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" clean"
+        echo
+        make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" clean
+        echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\"" -j
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" -j || exit 1
-	echo
+        echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\""
+        echo
+        make LPS=$i OPT=$k USRCFLAGS="$USRDEFS"  || exit 1
+        echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false clean
-	echo
+        echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
+        echo
+        make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false clean
+        echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false -j
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false -j || exit 1
-	echo
+        echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false
+        echo
+        make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false || exit 1
+        echo
 
-#	if test "$?" = 0
-#	then
-#	    echo
+        echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\" clean"
+        echo
+        make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS" clean
+        echo
+
+        echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\""
+        echo
+        make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS"  || exit 1
+        echo
+
+        echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
+        echo
+        make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS" CC=clang++ CFLAGS="" ZIMPL=false clean
+        echo
+
+        echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false
+        echo
+        make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS" CC=clang++ CFLAGS="" ZIMPL=false || exit 1
+        echo
+
+#if test "$?" = 0
+#then
+#    echo
 #
-#	    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" test"
-#	    echo
-#	    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
-#	    echo
-#	fi
+#    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" test"
+#    echo
+#    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
+#    echo
+#fi
+        done
     done
 done |& tee -a $OUTFILE
