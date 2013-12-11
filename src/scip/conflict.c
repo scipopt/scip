@@ -5959,8 +5959,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(lp != NULL);
    assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
-   if( success != NULL )
-      *success = FALSE;
+   assert(success == NULL || *success == FALSE);
 
    /* check, if infeasible LP conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useinflp )
@@ -6028,8 +6027,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    assert(!SCIPlpDivingObjChanged(lp));
    assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
-   if( success != NULL )
-      *success = FALSE;
+   assert(success == NULL || *success == FALSE);
 
    /* check, if bound exceeding LP conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useboundlp )
@@ -6090,6 +6088,18 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_ROWSOLVALS* storedrowsolvals;
    int c;
    int r;
+
+   if( success != NULL )
+      *success = FALSE;
+
+   /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
+    * happens when a new incumbent which cuts off the current node is found during the LP solving loop; in this case the
+    * LP has status objlimit, but if diving has been used, the LPI only has the basis information, but is not solved
+    *
+    * @todo: alternatively, solve the LPI
+    */
+   if( !SCIPlpiWasSolved(SCIPlpGetLPI(lp)) )
+      return SCIP_OKAY;
 
    /* LP conflict analysis is only valid, if all variables are known */
    assert( SCIPprobAllColsInLP(transprob, set, lp) );

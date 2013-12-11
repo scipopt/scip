@@ -234,8 +234,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    *bestupvalid = TRUE;
    *bestscore = -SCIPinfinity(scip);
 
-   /** if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
-    *  stopped, all strongbranching evaluations will be aborted anyway, thus we can return immediately
+   /* if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
+    * stopped, all strongbranching evaluations will be aborted anyway, thus we can return immediately
     */
    if( nlpcands == 1 || SCIPisStopped(scip) )
       return SCIP_OKAY;

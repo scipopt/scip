@@ -26,6 +26,7 @@ fixed bugs:
   treated node are kept and added to the LP at every node where they are active
 - fixed bug where a limit on presolving rounds was exceeded by 1
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
+- fixed rare bug with conflict analysis and LP/LPI having different stati after diving
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
