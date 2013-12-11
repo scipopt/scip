@@ -21,46 +21,31 @@ cd $SCIPDIR
 rm -f $OUTFILE
 
 DEFS=`grep -h 'ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
-# echo "DEFS = \"$DEFS\""
-# echo
 
 # IMPLINTSARECONT, BETTERWEIGHTFORDEMANDNODES, MAKECUTINTEGRAL, and SEPARATEROWS are defined by default
 # ALLDIFFERENT and WITHEQKNAPSACK are excluded because they need non-default plugins
 EXCLUDES=" __GNUC__ __cplusplus CPX_VERSION_VERSION ___DEBUG _MSC_VER NDEBUG ___NDEBUG NO_NEXTAFTER NO_RAND_R NO_SIGACTION NO_STRERROR_R NO_STRTOK_R ROUNDING_FE ROUNDING_FP ROUNDING_MS SCIP_DEBUG_SOLUTION SORTTPL_BACKWARDS SORTTPL_EXPANDNAME SORTTPL_FIELD1TYPE SORTTPL_FIELD2TYPE SORTTPL_FIELD3TYPE SORTTPL_FIELD4TYPE SORTTPL_FIELD5TYPE SORTTPL_FIELD6TYPE SORTTPL_INDCOMP SORTTPL_NAME SORTTPL_PTRCOMP __sun _WIN32 WITH_GMP WITH_READLINE WITH_ZIMPL WITH_ZLIB QUADCONSUPGD_PRIORITY LINCONSUPGD_PRIORITY ALLDIFFERENT WITHEQKNAPSACK IMPLINTSARECONT BETTERWEIGHTFORDEMANDNODES MAKECUTINTEGRAL SEPARATEROWS SCIP_MORE_DEBUG "
-# echo "EXCLUDES = \"$EXCLUDES\""
-# echo
 
-echo
-echo "gathering defines . . ."
-echo
+echo "gathering defines . . ." |& tee -a $OUTFILE
+
 for i in $DEFS
 do
     if [[ ! $EXCLUDES =~ " $i " ]]; then
         INCLUDES="$INCLUDES$i "
     else
-        echo "- excluding $i"
+        echo "- excluding $i" |& tee -a $OUTFILE
     fi
 done
-echo
 
 for i in $INCLUDES
 do
     USRDEFS="$USRDEFS-D$i "
-    echo "- including $i"
+    echo "- including $i" |& tee -a $OUTFILE
 done
-echo
+echo |& tee -a $OUTFILE
 
 LPSS=(grb cpx spx none) # spx132 xprs msk clp qso)
 OPTS=(dbg opt prf opt-gccold)
-
-# first ensure that links are available so we don't have to wait later
-for i in ${LPSS[@]}
-do
-    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" links"
-    echo
-    make LPS=$i USRCFLAGS="$USRDEFS" links
-    echo
-done
 
 for i in ${LPSS[@]}
 do
@@ -115,6 +100,5 @@ do
 #    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
 #    echo
 #fi
-        done
     done
 done |& tee -a $OUTFILE
