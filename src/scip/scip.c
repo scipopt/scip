@@ -16357,13 +16357,17 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       case SCIP_LPSOLSTAT_TIMELIMIT:
       {
          /* use LP value as estimate */
-         /* @todo: set valid pointer according to dual feasibility of the LP solution */
          SCIP_LPI* lpi;
          SCIP_Real objval;
          SCIP_Real looseobjval;
 
          SCIPdebugMessage("probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
 
+         /* we access the LPI directly, because when a time limit was hit, we cannot access objective value and dual
+          * feasibility using the SCIPlp... methods; we should try to avoid direct calls to the LPI, but this is rather
+          * uncritical here, because we are immediately after the SCIPsolveProbingLP() call, because we access the LPI
+          * read-only, and we check SCIPlpiWasSolved() first
+          */
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
          if( SCIPlpiWasSolved(lpi) )
@@ -16371,7 +16375,10 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
             looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
 
-            if( SCIPisInfinity(scip, objval) )
+            /* we need to compare the objective value obtained from the LPI with the infinity threshold of the LPI (not
+             * of SCIP); for the returned value, we must use SCIP's infinity value
+             */
+            if( SCIPlpiIsInfinity(lpi, objval) )
                *value = SCIPinfinity(scip);
             else if( SCIPisInfinity(scip, -looseobjval) )
                *value = -SCIPinfinity(scip);
