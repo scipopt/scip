@@ -1,6 +1,6 @@
 $(LIBOBJDIR)/lpi/lpi_msk.o: src/lpi/lpi_msk.c lib/mskinc/mosek.h src/lpi/lpi.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
- src/scip/type_message.h src/blockmemshell/memory.h src/scip/type_lpi.h \
+ src/scip/type_message.h src/blockmemshell/memory.h src/lpi/type_lpi.h \
  src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/bitencode.h

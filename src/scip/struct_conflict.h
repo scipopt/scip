@@ -26,10 +26,10 @@
 
 #include "scip/def.h"
 #include "scip/type_clock.h"
-#include "scip/type_lpi.h"
 #include "scip/type_misc.h"
 #include "scip/type_var.h"
 #include "scip/type_conflict.h"
+#include "lpi/type_lpi.h"
 
 #ifdef __cplusplus
 extern "C" {

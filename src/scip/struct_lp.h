@@ -66,10 +66,10 @@
 
 
 #include "scip/def.h"
-#include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_event.h"
+#include "lpi/type_lpi.h"
 
 #ifdef __cplusplus
 extern "C" {

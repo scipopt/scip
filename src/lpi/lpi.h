@@ -39,7 +39,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
-#include "scip/type_lpi.h"
+#include "lpi/type_lpi.h"
 
 #ifdef __cplusplus
 extern "C" {
