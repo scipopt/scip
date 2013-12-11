@@ -178,7 +178,7 @@ SCIP_DECL_EVENTEXEC(eventExecLPsol)
    /* free memory of all entries and clear the hashmap before filling it */
    for( i = 0; i < nsubconss; i++ )
    {
-      dualval = (double*)SCIPhashmapGetImage(heurdata->dualvalues, subconss[i]);
+      dualval = (SCIP_Real*)SCIPhashmapGetImage(heurdata->dualvalues, subconss[i]);
       if( dualval != NULL )
          SCIPfreeBlockMemoryArray(heurdata->subscip, &dualval, 1);
    }
