@@ -1937,12 +1937,12 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    assert( lpi->grbmodel != NULL );
    assert( objsen != NULL );
 
-   /* note that the objective sense is define equally in SCIP (LPI) and Gurobi */
-   assert( GRB_MINIMIZE == SCIP_OBJSEN_MINIMIZE );
-   assert( GRB_MAXIMIZE == SCIP_OBJSEN_MAXIMIZE );
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &grbobjsen) );
+   SCIPdebugMessage("getting objective sense\n");
 
-   *objsen = grbobjsen;
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &grbobjsen) );
+   assert(grbobjsen == GRB_MINIMIZE || grbobjsen == GRB_MAXIMIZE);
+
+   *objsen = (grbobjsen == GRB_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
 
    return SCIP_OKAY;
 }
