@@ -39,6 +39,9 @@
 #define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"
 #define DEFAULT_SETNAME "default.set"
 #define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND /**< the actual event to be caught */
+#define DEFAULT_LAMBA12 0.6 /* gap to reach for phase transition phase 1 -> phase 2 */
+#define DEFAULT_LAMBA23 0.03 /* gap to reach for phase transition phase 2 -> phase 3 */
+#define MAXGAP 1
 
 /** enumerator to represent the event handler solving stage */
 enum SolvingStage
@@ -65,6 +68,8 @@ struct SCIP_EventhdlrData
    char*                optsetname;
    char*                infeasiblesetname;
    SCIP_Real            optimalvalue;        /**< value of optimal solution of the problem */
+   SCIP_Real            lambda12;            /**< gap to reach for phase transition phase 1 -> phase 2 */
+   SCIP_Real            lambda23;            /**< gap to reach for phase transition phase 2 -> phase 3 */
    SOLVINGSTAGE         solvingstage;        /**< the current solving stage */
 };
 
@@ -137,28 +142,72 @@ SCIP_RETCODE searchSolufileForProbname(
    return SCIP_OKAY;
 }
 
+/* gap function to compare values, returns a value between 0.0 and MAXGAP */
+static
+SCIP_Real getGap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first for gap */
+   SCIP_Real             val2                /**< second value for gap */
+   )
+{
+   assert(scip != NULL);
+
+   /* if one value is infinite return the maximum gap */
+   if( SCIPisInfinity(scip, REALABS(val1)) || SCIPisInfinity(scip, REALABS(val2)) )
+      return MAXGAP;
+   /* feasibly equal values have zero gap */
+   if( SCIPisFeasEQ(scip, val1,val2) )
+      return 0.0;
+   else
+   {
+      /* calculate the gap as |val1 - val2|/max(|val1|,|val2|), and bound it by MAXGAP (if val1, val2 have different signs)*/
+      SCIP_Real absdiff;
+      SCIP_Real maxabs;
+      SCIP_Real gap;
+      absdiff = REALABS(val1 - val2);
+      maxabs = MAX(REALABS(val1), REALABS(val2));
+
+      gap = absdiff / maxabs;
+
+      return MIN(gap, MAXGAP);
+   }
+}
+
+/* determine the solving phase -> phase 1: gap > lambda12, phase2: lambda12 > gap > lambda23, phase 3: gap <= lambda23 */
 static
 void determineSolvingStage(
    SCIP* scip,
    SCIP_EVENTHDLRDATA* eventhdlrdata
    )
 {
-   if( SCIPgetNSols(scip) == 0 )
-      eventhdlrdata->solvingstage = SOLVINGSTAGE_NOSOLUTION;
+   SCIP_Real primalgap; /* primal optimal gap */
+   SCIP_Real referencevalue;
+
+   /* use the optimal value as reference value unless it is not available in which case we take the dual bound instead */
+   if( !SCIPisInfinity(scip, eventhdlrdata->optimalvalue) )
+      referencevalue = eventhdlrdata->optimalvalue;
+   else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      referencevalue = SCIPgetDualbound(scip);
    else
+      referencevalue = SCIPinfinity(scip);
+
+   primalgap = getGap(scip, SCIPgetPrimalbound(scip), referencevalue);
+   if( SCIPgetNSols(scip) == 0 || SCIPisFeasGT(scip, primalgap, eventhdlrdata->lambda12) )
+      eventhdlrdata->solvingstage = SOLVINGSTAGE_NOSOLUTION;
+   else if( SCIPisGT(scip, primalgap, eventhdlrdata->lambda23) )
       eventhdlrdata->solvingstage = SOLVINGSTAGE_SUBOPTIMAL;
-
-   if( !SCIPisInfinity(scip, eventhdlrdata->optimalvalue) && SCIPisFeasEQ(scip, eventhdlrdata->optimalvalue, SCIPgetPrimalbound(scip)) )
+   else
       eventhdlrdata->solvingstage = SOLVINGSTAGE_OPTIMAL;
-
 }
 
+/* apply the phase based settings: A phase transition invokes completely new parameters */
 static
 SCIP_RETCODE applySolvingStage(
    SCIP* scip,
    SCIP_EVENTHDLRDATA* eventhdlrdata
    )
 {
+   FILE* file;
    SOLVINGSTAGE stagebefore;
    char paramfilename[256];
 
@@ -188,11 +237,22 @@ SCIP_RETCODE applySolvingStage(
       break;
    }
    assert(paramfilename != NULL);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d -- Resetting parameters\n", eventhdlrdata->solvingstage);
-   SCIP_CALL( SCIPresetParams(scip) );
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file %s\n", paramfilename);
-   SCIP_CALL( SCIPreadParams(scip, paramfilename) );
-   eventhdlrdata->enabled = TRUE;
+   file = fopen(paramfilename, "r");
+   if( file == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d \n", eventhdlrdata->solvingstage);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Parameter file %s not found--keeping settings as before \n", paramfilename);
+   }
+   else
+   {
+      fclose(file);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d -- \n", eventhdlrdata->solvingstage);
+      //SCIP_CALL( SCIPresetParams(scip) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file %s\n", paramfilename);
+      SCIP_CALL( SCIPreadParams(scip, paramfilename) );
+
+      eventhdlrdata->enabled = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -289,8 +349,6 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
 
    if( eventhdlrdata->enabled )
    {
-
-
       SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
       SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
    }
@@ -364,6 +422,10 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolSolvingstage) );
 
    /* add Solvingstage event handler parameters */
+   SCIP_CALL( SCIPaddRealParam(scip, "eventhdlr/"EVENTHDLR_NAME"/lambda12", "gap for phase transition 1->2",
+            &eventhdlrdata->lambda12, FALSE, DEFAULT_LAMBA12, 0,MAXGAP, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "eventhdlr/"EVENTHDLR_NAME"/lambda23", "gap for phase transition 2->3",
+               &eventhdlrdata->lambda23, FALSE, DEFAULT_LAMBA23, 0,MAXGAP, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 

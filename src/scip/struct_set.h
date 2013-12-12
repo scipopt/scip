@@ -313,7 +313,7 @@ struct SCIP_Set
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                               *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
-
+   SCIP_Bool             nodesel_useaspiration; /**< should node aspiration be used? */
    /* numerical settings */
    SCIP_Real             num_infinity;       /**< values larger than this are considered infinity */
    SCIP_Real             num_epsilon;        /**< absolute values smaller than this are considered zero */

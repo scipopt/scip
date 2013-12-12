@@ -237,7 +237,7 @@
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
-
+#define SCIP_DEFAULT_NODESEL_USEASPIRATION FALSE/**< should nodeselection use aspiration values for backtracking */
 /* Presolving */
 
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
@@ -1389,6 +1389,11 @@ SCIP_RETCODE SCIPsetCreate(
          "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'ybrid inference/root LP value difference)",
          &(*set)->nodesel_childsel, FALSE, SCIP_DEFAULT_NODESEL_CHILDSEL, "dupilrh",
          NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "nodeselection/useaspiration",
+         "should aspiration be used?",
+         &(*set)->nodesel_useaspiration, FALSE, SCIP_DEFAULT_NODESEL_USEASPIRATION, NULL, NULL) );
 
    /* numerical parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

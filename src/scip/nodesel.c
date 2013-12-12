@@ -35,6 +35,7 @@
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/event_solvingstage.h"
 
 #include "scip/struct_nodesel.h"
 
@@ -914,6 +915,7 @@ SCIP_RETCODE SCIPnodeselSelect(
    SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
+
    assert(nodesel != NULL);
    assert(nodesel->nodeselselect != NULL);
    assert(set != NULL);
@@ -924,6 +926,42 @@ SCIP_RETCODE SCIPnodeselSelect(
 
    SCIP_CALL( nodesel->nodeselselect(set->scip, nodesel, selnode) );
 
+   /* check if aspiration should be used and select the best leaf node instead */
+   if( set->nodesel_useaspiration && *selnode != NULL &&
+         (SCIPnodeGetType(*selnode) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(*selnode) == SCIP_NODETYPE_SIBLING) )
+   {
+      SCIP_Real aspirationvalue;
+      aspirationvalue = SCIPgetOptimalSolutionValue(set->scip);
+      if( !SCIPsetIsInfinity(set, REALABS(aspirationvalue)) )
+      {
+         SCIP_OBJSENSE objsense;
+         SCIP_Real nodebound;
+         nodebound = SCIPnodeGetLowerbound(*selnode);
+         objsense = SCIPgetObjsense(set->scip);
+         nodebound = SCIPgetExternalValue(set->scip, nodebound);
+
+         /* check if next selected node bound exceeds aspiration value */
+         if( (objsense == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsFeasGT(set, nodebound, aspirationvalue))
+               ||  (objsense == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsFeasLT(set, nodebound, aspirationvalue)) )
+         {
+            SCIP_NODE* bestnode;
+
+            /* compare best leaf bound with aspiration value */
+            bestnode = SCIPgetBestNode(set->scip);
+            if( bestnode != NULL )
+            {
+               SCIP_Real bestnodebound;
+
+               bestnodebound = SCIPgetExternalValue(set->scip, SCIPnodeGetLowerbound(bestnode));
+               /* replace selected node with best node if best node bound does not exceed limit */
+               if( (objsense == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsFeasLE(set, bestnodebound, aspirationvalue))
+                     ||  (objsense == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsFeasGE(set, bestnodebound, aspirationvalue)))
+               *selnode = bestnode;
+               //SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "Backtracking 'cause of aspiration\n");
+            }
+         }
+      }
+   }
    /* stop timing */
    SCIPclockStop(nodesel->nodeseltime, set);
 
