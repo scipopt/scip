@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    int                   ncomplete,          /**< number of branching candidates without skip         */
    int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
-   SCIP_Bool             maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
+   int                   maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
                                               *   strong branching (only with propagation)? */

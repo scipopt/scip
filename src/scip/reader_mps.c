@@ -1313,7 +1313,7 @@ SCIP_RETCODE readBounds(
             int l;
 
             /* check what might be missing, if field 3 is a number the bound name might be missing */
-            for( l = strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
+            for( l = (int) strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
             {
                if( mpsinputField3(mpsi)[l] != '.' && !isdigit(mpsinputField3(mpsi)[l]) )
                   break;

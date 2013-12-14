@@ -3921,7 +3921,7 @@ SCIP_RETCODE solveNode(
       SCIPdebugMessage("node is cut off\n");
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
-      SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) );
+      SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
    }
 
    return SCIP_OKAY;

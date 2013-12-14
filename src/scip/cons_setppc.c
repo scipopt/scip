@@ -3271,7 +3271,7 @@ SCIP_RETCODE presolvePropagateCons(
       }
 
       /* delete constraint */
-      SCIPdebugMessage(" -> deleting constraint <%s>, all %svariables are fixed\n", SCIPconsGetName(cons), consdata->setppctype == SCIP_SETPPCTYPE_PACKING ? "but one " : "");
+      SCIPdebugMessage(" -> deleting constraint <%s>, all %svariables are fixed\n", SCIPconsGetName(cons), consdata->setppctype == (int) SCIP_SETPPCTYPE_PACKING ? "but one " : "");
       assert(SCIPconsIsActive(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
@@ -5283,12 +5283,13 @@ SCIP_RETCODE addCliques(
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(firstclique >= 0);
    assert(lastclique <= nconss);
 
    /* add clique and implication information */
    for( c = firstclique; c < lastclique; ++c )
    {
-      cons = conss[c];
+      cons = conss[c]; /*lint !e613*/
       assert(cons != NULL);
 
       /* ignore deleted constraints */

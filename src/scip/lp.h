@@ -223,7 +223,6 @@ void SCIPcolSetStrongbranchData(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real             lpobjval,           /**< objective value of the current LP */
    SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
@@ -241,7 +240,6 @@ void SCIPcolInvalidateStrongbranchData(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp                  /**< LP data */
    );
 
@@ -1029,7 +1027,6 @@ extern
 SCIP_RETCODE SCIPlpSetNorms(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPINORMS*        lpinorms            /**< LP pricing norms information */
    );
 

@@ -3790,8 +3790,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    if( *nvars == 0 )
       return SCIP_OKAY;
 
+   assert(vars != NULL);
+
    /* handle the "easy" case of just one variable and avoid memory allocation if the variable is already active */
-   if( *nvars == 1 && (vars[0]->varstatus == SCIP_VARSTATUS_COLUMN || vars[0]->varstatus == SCIP_VARSTATUS_LOOSE) )
+   if( *nvars == 1 && (vars[0]->varstatus == ((int) SCIP_VARSTATUS_COLUMN) || vars[0]->varstatus == ((int) SCIP_VARSTATUS_LOOSE)) )
    {
       *requiredsize = 1;
 

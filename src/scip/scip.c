@@ -16596,7 +16596,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       if( upconflict != NULL )
          *upconflict = TRUE;
 
-      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->lp, lpobjval, solval,
          *down, *up, *downvalid, *upvalid, 0, INT_MAX);
 
       /* we do not regard the down branch; its valid pointer stays set to FALSE */
@@ -16622,7 +16622,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       if( downconflict != NULL )
          *downconflict = TRUE;
 
-      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->lp, lpobjval, solval,
          *down, *up, *downvalid, *upvalid, 0, INT_MAX);
 
       /* we do not regard the up branch; its valid pointer stays set to FALSE */
@@ -16732,11 +16732,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    /* set strong branching information in column */
    if( *lperror )
    {
-      SCIPcolInvalidateStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp);
+      SCIPcolInvalidateStrongbranchData(col, scip->set, scip->stat, scip->lp);
    }
    else
    {
-      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->lp, lpobjval, solval,
          *down, *up, *downvalid, *upvalid, scip->stat->nsbdivinglpiterations - oldniters, itlim);
    }
 

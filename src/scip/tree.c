@@ -479,6 +479,7 @@ SCIP_RETCODE forkCreate(
    assert(blkmem != NULL);
    assert(tree != NULL);
    assert(tree->nchildren > 0);
+   assert(tree->nchildren < (1 << 30));
    assert(SCIPtreeIsPathComplete(tree));
    assert(tree->focusnode != NULL);
    assert(lp != NULL);
@@ -497,9 +498,9 @@ SCIP_RETCODE forkCreate(
    (*fork)->addedrows = NULL;
    (*fork)->naddedcols = SCIPlpGetNNewcols(lp);
    (*fork)->naddedrows = SCIPlpGetNNewrows(lp);
-   (*fork)->nchildren = tree->nchildren;
+   (*fork)->nchildren = (unsigned int) tree->nchildren;
 
-   SCIPdebugMessage("creating fork information with %d children (%d new cols, %d new rows)\n",
+   SCIPdebugMessage("creating fork information with %u children (%d new cols, %d new rows)\n",
       (*fork)->nchildren, (*fork)->naddedcols, (*fork)->naddedrows);
 
    if( (*fork)->naddedcols > 0 )
@@ -2085,7 +2086,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
       {
          SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree);
 
-         if( tree->pendingbdchgs[i].node->depth <= tree->effectiverootdepth )
+         if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
             return SCIP_OKAY;
          else
             continue;
@@ -5972,13 +5973,13 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       if( lpistate != NULL )
       {
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate,
-               lpwasprimfeas, lpwasdualfeas) );
+               lpwasprimfeas, lpwasdualfeas) ); /*lint !e644*/
       }
 
       /* set the LP pricing norms */
       if( lpinorms != NULL )
       {
-         SCIP_CALL( SCIPlpSetNorms(lp, blkmem, set, lpinorms) );
+         SCIP_CALL( SCIPlpSetNorms(lp, blkmem, lpinorms) );
       }
 
       /* now we don't need to load the LP state again until the next backtracking */
@@ -6214,7 +6215,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
             if( tree->probinglpinorms != NULL )
             {
-               SCIP_CALL( SCIPlpSetNorms(lp, blkmem, set, tree->probinglpinorms) );
+               SCIP_CALL( SCIPlpSetNorms(lp, blkmem, tree->probinglpinorms) );
                SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &tree->probinglpinorms) );
                tree->probinglpinorms = NULL;
             }

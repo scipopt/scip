@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    int                   ncomplete,          /**< number of branching candidates without skip         */
    int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
-   SCIP_Bool             maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
+   int                   maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
                                               *   strong branching (only with propagation)? */
@@ -322,7 +322,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                   maxproprounds, skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid,
                   &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror, newlbs, newubs) );
 
-            SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d)\n",
+            SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u)\n",
                down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);
          }
          else
@@ -577,7 +577,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
          branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand, allowaddcons,
          branchruledata->maxproprounds, branchruledata->probingbounds,
-      &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+         &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {

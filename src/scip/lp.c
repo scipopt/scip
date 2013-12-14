@@ -3802,7 +3802,6 @@ void SCIPcolSetStrongbranchData(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real             lpobjval,           /**< objective value of the current LP */
    SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
@@ -3857,7 +3856,6 @@ void SCIPcolInvalidateStrongbranchData(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp                  /**< LP data */
    )
 {
@@ -12013,7 +12011,6 @@ SCIP_RETCODE SCIPlpGetNorms(
 SCIP_RETCODE SCIPlpSetNorms(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPINORMS*        lpinorms            /**< LP pricing norms information */
    )
 {
@@ -19017,8 +19014,11 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       }
       else
       {
+         SCIP_Real abslhs = REALABS(lhs);
+         SCIP_Real absrhs = REALABS(rhs);
+
          /* treat lhs */
-         if( !SCIPsetIsInfinity(set, REALABS(lhs)) )
+         if( !SCIPsetIsInfinity(set, abslhs) )
          {
             assert(!SCIPsetIsEQ(set, lhs, rhs));
 
@@ -19030,7 +19030,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             {
                /* add slack variable */
                colinds[nnonz+1] = lp->ncols + 1 + cnt;
-               colvals[nnonz+1] = -MAX(1.0, REALABS(lhs));
+               colvals[nnonz+1] = -MAX(1.0, lhs);
                ++cnt;
                SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+2, &beg, colinds, colvals) );
             }
@@ -19041,7 +19041,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          }
 
          /* treat rhs */
-         if( !SCIPsetIsInfinity(set, REALABS(rhs)) )
+         if( !SCIPsetIsInfinity(set, absrhs) )
          {
             assert(!SCIPsetIsEQ(set, lhs, rhs));
 
@@ -19053,7 +19053,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             {
                /* add slack variable */
                colinds[nnonz+1] = lp->ncols + 1 + cnt;
-               colvals[nnonz+1] = MAX(1.0, REALABS(rhs));
+               colvals[nnonz+1] = MAX(1.0, absrhs);
                ++cnt;
                SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+2, &beg, colinds, colvals) );
             }
@@ -19097,9 +19097,11 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
       if( relaxrows )
       {
+         SCIP_Real absrhs = REALABS(rhs);
+
          /* add slack variable */
          colinds[nnonz] = lp->ncols + 1 + cnt;
-         colvals[nnonz] = MAX(1.0, REALABS(rhs));
+         colvals[nnonz] = MAX(1.0, absrhs);
          ++cnt;
          ++nnonz;
       }
@@ -19110,6 +19112,8 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
+      SCIP_Real abscollb;
+      SCIP_Real abscolub;
 
       col = lp->cols[j];
       assert( col != NULL );
@@ -19132,8 +19136,11 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          continue;
       }
 
+      abscollb = REALABS(col->lb);
+      abscolub = REALABS(col->ub);
+
       /* lower bound */
-      if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
+      if( !SCIPsetIsInfinity(set, abscollb) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -19141,13 +19148,13 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
          /* add slack variable */
          colinds[2] = lp->ncols + 1 + cnt;
-         colvals[2] = -MAX(1.0, REALABS(col->lb));
+         colvals[2] = -MAX(1.0, abscollb);
          ++cnt;
          SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, 3, &beg, colinds, colvals) );
       }
 
       /* upper bound */
-      if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
+      if( !SCIPsetIsInfinity(set, abscolub) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -19155,7 +19162,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
          /* add slack variable */
          colinds[2] = lp->ncols + 1 + cnt;
-         colvals[2] = MAX(1.0, REALABS(col->ub));
+         colvals[2] = MAX(1.0, abscolub);
          ++cnt;
          SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, 3, &beg, colinds, colvals) );
       }

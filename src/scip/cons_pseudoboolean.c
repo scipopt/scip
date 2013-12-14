@@ -9142,7 +9142,12 @@ int SCIPgetNLinVarsWithoutAndPseudoboolean(
    }
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( checkConsConsistency(scip, cons) );
+   {
+      SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
+
+      if( retcode != SCIP_OKAY )
+         return -1;
+   }
 #endif
 
    consdata = SCIPconsGetData(cons);
@@ -9286,7 +9291,9 @@ int SCIPgetNAndsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return -1;
    }
 #endif
 
@@ -9417,7 +9424,9 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
    }
 #endif
 
@@ -9445,7 +9454,9 @@ SCIP_Real SCIPgetRhsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
    }
 #endif
 

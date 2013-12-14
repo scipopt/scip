@@ -432,7 +432,7 @@ SCIP_RETCODE selectBranchVar(
       /* set i to last occurrence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
       i = j-1;
       assert(candssorted[i] == cand);
-      
+
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol) );
    }
@@ -445,7 +445,7 @@ SCIP_RETCODE selectBranchVar(
    {
       SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
       SCIPABORT();
-      return SCIP_BRANCHERROR;
+      return SCIP_BRANCHERROR; /*lint !e527*/
    }
 
    /* free buffer arrays */
