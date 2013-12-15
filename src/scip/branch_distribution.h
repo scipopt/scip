@@ -15,7 +15,7 @@
 
 /**@file   branch_distribution.h
  * @brief  distribution branching rule
- * @author Tobias Achterberg
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
