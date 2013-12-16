@@ -437,7 +437,7 @@ public:
          assert(status() != SPxSolver::OPTIMAL);
       }
 
-      assert(intParam(ITERLIMIT) < 0 || numIterations() < intParam(ITERLIMIT));
+      assert(intParam(ITERLIMIT) < 0 || numIterations() <= intParam(ITERLIMIT));
 
       /* update time limit */
       timespent = solveTime();
