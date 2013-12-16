@@ -2656,8 +2656,11 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,                /**< dynamic problem statistics */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+                                              *   but were not activated there? Should be FALSE for repeated calls at
+                                              *   one node or if the current focusnode is a child of the former one */
    )
 {
    assert(conshdlr != NULL);
@@ -2683,15 +2686,18 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       /* start timing */
       SCIPclockStart(conshdlr->sepatime, set);
 
-      /* add all kept initial constraints which are currently active to the second part of the initconss array */
-      /* @todo keep track of where a constraint was already initialized (e.g., in the conssetchg)? */
-      for( c = 0; c < conshdlr->ninitconsskept; ++c )
+      if( initkeptconss )
       {
-         assert(conshdlr->initconss[c]->initconsspos == c);
-
-         if( SCIPconsIsActive(conshdlr->initconss[c]) )
+         /* add all kept initial constraints which are currently active to the second part of the initconss array */
+         /* @todo keep track of where a constraint was already initialized (e.g., in the conssetchg)? */
+         for( c = 0; c < conshdlr->ninitconsskept; ++c )
          {
-            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->initconss[c]) );
+            assert(conshdlr->initconss[c]->initconsspos == c);
+
+            if( SCIPconsIsActive(conshdlr->initconss[c]) )
+            {
+               SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->initconss[c]) );
+            }
          }
       }
 
