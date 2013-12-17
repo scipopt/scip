@@ -209,7 +209,6 @@ SCIP_RETCODE setAndTestObjsense(SCIP* scip, SCIP_OBJSENSE sense)
  * TESTS
  */
 
-
 /** test setProbName */
 static
 SCIP_RETCODE setProbNameTest(void)
@@ -381,6 +380,8 @@ main(
    CHECK_TEST( setNodeselStdPriorityTest() );
    CHECK_TEST( setNodeselMemsavePriorityTest() );
    CHECK_TEST( setBranchrulePriorityTest() );
+
    printf("All tests passed\n");
+
    return 0;
 }

@@ -332,25 +332,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
 {
 
    SCIP_CONSHDLRDATA* conshdlrdata;
-
-
-   /* now add a cutting plane: x+y <= 2 */
    SCIP_VAR** vars;
    SCIP_ROW *row;
    SCIP_Bool infeasible;
    char s[SCIP_MAXSTRLEN];
 
-
    /* count this function call in the hdlr data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
    assert(conshdlrdata != NULL);
+
    conshdlrdata->nenfolp++;
 
-
-
+   /* now add a cutting plane: x+y <= 2 */
    vars = SCIPgetVars(scip);
-
-
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "MyCut");
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 0.0, 2.0, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -371,7 +366,9 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsUnittest)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
    assert(conshdlrdata != NULL);
 
    conshdlrdata->nenfopslp++;
@@ -384,33 +381,31 @@ SCIP_DECL_CONSENFOPS(consEnfopsUnittest)
 static
 SCIP_DECL_CONSCHECK(consCheckUnittest)
 {
-
    SCIP_Real val;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** vars;
 
-
    vars = SCIPgetVars(scip);
 
+   assert(vars != NULL);
    assert(vars[0] != NULL);
    assert(vars[1] != NULL);
 
-
    /* count this function call in the hdlr data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
    assert(conshdlrdata != NULL);
+
    conshdlrdata->ncheck++;
    printf("HIER IN CHECK!\n");
 
 
    val = SCIPgetSolVal(scip, sol, vars[0]) + SCIPgetSolVal(scip, sol, vars[1]);
 
-
-   if( val > 2)
+   if( val > 2 )
       *result = SCIP_INFEASIBLE;
    else
       *result = SCIP_FEASIBLE;
-
 
    return SCIP_OKAY;
 }
@@ -421,15 +416,15 @@ static
 SCIP_DECL_CONSPROP(consPropUnittest)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
    assert(conshdlrdata != NULL);
 
    conshdlrdata->nprop++;
 
-
    return SCIP_OKAY;
 }
-
 
 
 /** presolving method of constraint handler */
@@ -437,18 +432,18 @@ static
 SCIP_DECL_CONSPRESOL(consPresolUnittest)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
    assert(conshdlrdata != NULL);
 
    conshdlrdata->npresol++;
 
-   /* without that this function call will not be counted */
    *result = SCIP_DIDNOTFIND;
 
 
    return SCIP_OKAY;
 }
-
 
 /** propagation conflict resolving method of constraint handler */
 static
@@ -456,11 +451,12 @@ SCIP_DECL_CONSRESPROP(consRespropUnittest)
 {
 
    SCIP_CONSHDLRDATA* conshdlrdata;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
    assert(conshdlrdata != NULL);
 
    conshdlrdata->nresprop++;
-
 
    return SCIP_OKAY;
 }
@@ -645,7 +641,6 @@ SCIP_RETCODE SCIPincludeConshdlrUnittest(
    conshdlrdata->nresprop = 0;
    conshdlrdata->npresol = 0;
 
-
    conshdlr = NULL;
 
    /* include constraint handler */
@@ -818,7 +813,6 @@ int SCIPgetNenfolpUnittest(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -832,7 +826,6 @@ int SCIPgetNcheckUnittest(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -862,7 +855,6 @@ int SCIPgetNenfopslpUnittest(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -876,7 +868,6 @@ int SCIPgetNpropUnittest(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -892,7 +883,6 @@ int SCIPgetNrespropUnittest(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -906,7 +896,6 @@ int SCIPgetNpresolUnittest(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

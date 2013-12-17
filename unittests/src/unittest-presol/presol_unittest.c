@@ -15,7 +15,6 @@
 
 /**@file   presol_unittest.c
  * @brief  unittest presolver
- * @author Tobias Achterberg
  * @author Benjamin Mueller
  */
 
@@ -40,10 +39,10 @@
 /* TODO: fill in the necessary presolver data */
 
 /** presolver data */
-struct SCIP_PresolData
+/*struct SCIP_PresolData
 {
 };
-
+*/
 
 /*
  * Local methods
@@ -150,24 +149,23 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreUnittest)
 
 
 /** execution method of presolver */
+/* TODO: complete */
 static
 SCIP_DECL_PRESOLEXEC(presolExecUnittest)
 {
    SCIP_VAR** vars;
-   int nvars;
-   int i;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
-   SCIP_Bool tightened;
 
    assert(scip != NULL);
 
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
 #if 0
-   for( i = 0; i < nvars; ++i )
-      printf("%s [%e,%e]\n", SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
 
+   int i;
+   int nvars;
+   SCIP_Bool tightened;
+   nvars = SCIPgetNVars(scip);
    /* tighten lower bound of the first variable to 1.0 */
    SCIP_CALL( SCIPtightenVarLb( scip, vars[0], 1.0, TRUE, &infeasible, &tightened) );
 
@@ -183,7 +181,14 @@ SCIP_DECL_PRESOLEXEC(presolExecUnittest)
 
 
    SCIP_CALL( SCIPfixVar(scip, vars[0], 2.0, &infeasible, &fixed) );
-   printf("FIXED: %d INFEASIBLE: %d\n" , fixed, infeasible);
+   SCIPdebugMessage("FIXED: %d INFEASIBLE: %d\n" , fixed, infeasible);
+
+   if( fixed )
+   {
+      (*nfixedvars)++;
+   }
+
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;

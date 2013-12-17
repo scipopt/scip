@@ -60,8 +60,11 @@
 static
 SCIP_RETCODE relaxCheckName(SCIP_RELAX* relax)
 {
-   const char* name = "relax-unittest";
-   CHECK_GET( strcmp(SCIPrelaxGetName(relax),name) , 0 );
+   char name[SCIP_MAXSTRLEN];
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "relax-unittest");
+
+   CHECK_GET( strcmp(SCIPrelaxGetName(relax), name), 0 );
 
    return SCIP_OKAY;
 }
@@ -69,8 +72,11 @@ SCIP_RETCODE relaxCheckName(SCIP_RELAX* relax)
 static
 SCIP_RETCODE relaxCheckDesc(SCIP_RELAX* relax)
 {
-   const char* name = "relaxator template";
-   CHECK_GET( strcmp(SCIPrelaxGetDesc(relax),name) , 0 );
+   char desc[SCIP_MAXSTRLEN];
+
+   (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "relaxator template");
+
+   CHECK_GET( strcmp(SCIPrelaxGetDesc(relax), desc), 0 );
 
    return SCIP_OKAY;
 }
@@ -79,7 +85,9 @@ static
 SCIP_RETCODE relaxCheckPriority(SCIP_RELAX* relax)
 {
    int priority;
+
    priority = 101;
+
    CHECK_GET( SCIPrelaxGetPriority(relax), priority );
 
    return SCIP_OKAY;
@@ -89,7 +97,9 @@ static
 SCIP_RETCODE relaxCheckFreq(SCIP_RELAX* relax)
 {
    int freq;
+
    freq = 2;
+
    CHECK_GET( SCIPrelaxGetFreq(relax), freq );
 
    return SCIP_OKAY;
@@ -101,6 +111,7 @@ SCIP_RETCODE relaxCheckSetupTime(SCIP_RELAX* relax)
 {
    if( SCIPrelaxGetSetupTime(relax) < 0 )
       return SCIP_ERROR;
+
    return SCIP_OKAY;
 }
 
@@ -110,6 +121,7 @@ SCIP_RETCODE relaxCheckTime(SCIP_RELAX* relax)
 {
    if( SCIPrelaxGetTime(relax) < 0 )
       return SCIP_ERROR;
+
    return SCIP_OKAY;
 }
 
@@ -138,8 +150,7 @@ SCIP_RETCODE relaxCheckMarkedUnsolved(SCIP_RELAX* relax)
 }
 
 /** main function */
-int
-main(
+int main(
    int                        argc,
    char**                     argv
    )
@@ -163,7 +174,7 @@ main(
    SCIP_CALL( SCIPincludeRelaxUnittest(scip) );
 
    /* store the relaxertor */
-   relax = SCIPgetRelaxs(scip)[0];
+   relax = SCIPfindRelax(scip, "relax-unittest");
 
    /* create a problem and disable the presolver */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
@@ -176,17 +187,19 @@ main(
     *********/
    CHECK_TEST( relaxCheckName(relax) );
    CHECK_TEST( relaxCheckDesc(relax) );
-   CHECK_TEST( relaxCheckPriority(relax) );
    CHECK_TEST( relaxCheckFreq(relax) );
-   CHECK_TEST( relaxCheckSetupTime(relax) );
    CHECK_TEST( relaxCheckTime(relax) );
+   CHECK_TEST( relaxCheckPriority(relax) );
+   CHECK_TEST( relaxCheckSetupTime(relax) );
    CHECK_TEST( relaxCheckNCalls(scip, relax) );
 
-   CHECK_TEST( relaxCheckInitialized(relax, FALSE) ); /* before solving this should be false  */
-   SCIP_CALL( SCIPsolve(scip));
-   CHECK_TEST( relaxCheckInitialized(relax, TRUE) ); /* after solving this should be true */
+   CHECK_TEST( relaxCheckInitialized(relax, FALSE) );
 
+   SCIP_CALL( SCIPsolve(scip) );
+
+   CHECK_TEST( relaxCheckInitialized(relax, TRUE) );
    CHECK_TEST( relaxCheckMarkedUnsolved(relax) );
+
    /********************
     * Deinitialization *
     ********************/
@@ -196,5 +209,6 @@ main(
    BMScheckEmptyMemory();
 
    printf("All tests passed\n");
+
    return 0;
 }

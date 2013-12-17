@@ -67,8 +67,6 @@ SCIP_RETCODE initProb(
    SCIP_CALL( SCIPaddVar(scip, xvar) );
    SCIP_CALL( SCIPaddVar(scip, yvar) );
 
-
-
    /* add a constraint x + y <= 2 */
    vals[0] = 1.0;
    vals[1] = 1.0;
@@ -78,7 +76,6 @@ SCIP_RETCODE initProb(
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
 
    SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
@@ -120,7 +117,10 @@ SCIPpresolGetNCalls
 static
 SCIP_RETCODE checkPresolGetName(SCIP_PRESOL* presol)
 {
-   const char* name = "unittest";
+   char name[SCIP_MAXSTRLEN];
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "unittest");
+
    if( strcmp(SCIPpresolGetName(presol), name) !=  0 )
       return SCIP_ERROR;
 
@@ -130,7 +130,10 @@ SCIP_RETCODE checkPresolGetName(SCIP_PRESOL* presol)
 static
 SCIP_RETCODE checkPresolGetDesc(SCIP_PRESOL* presol)
 {
-   const char* desc = "presolver template";
+   char desc[SCIP_MAXSTRLEN];
+
+   (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "presolver template");
+
    if( strcmp(SCIPpresolGetDesc(presol), desc) !=  0 )
       return SCIP_ERROR;
 
@@ -164,11 +167,9 @@ SCIP_RETCODE checkPresolIsInitialized(SCIP_PRESOL* presol, SCIP_Bool val)
    return SCIP_OKAY;
 }
 
-/************************************/
 
 /** main function */
-int
-main(
+int main(
    int                        argc,
    char**                     argv
    )
@@ -199,30 +200,24 @@ main(
    SCIP_CALL( initProb(scip) );
 
    /* set the msghdlr off */
-   SCIPsetMessagehdlrQuiet(scip, FALSE);
-
-
+   SCIPsetMessagehdlrQuiet(scip, TRUE);
 
 
    /*********
     * Tests *
     *********/
 
-
-
    /* tests before solving */
    CHECK_TEST( checkPresolGetName(presol) );
    CHECK_TEST( checkPresolGetDesc(presol) );
-   CHECK_TEST( checkPresolGetPriority(presol) );
    CHECK_TEST( checkPresolIsDelayed(presol) );
+   CHECK_TEST( checkPresolGetPriority(presol) );
    CHECK_TEST( checkPresolIsInitialized(presol, FALSE) );
 
    /* solve */
    SCIP_CALL( SCIPsolve(scip) );
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE));
-
-   printf("FIXINGS: %d\n" , SCIPpresolGetNFixedVars(presol));
-   printf("BOUND CHGS: %d\n" , SCIPpresolGetNChgBds(presol));
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
    /* tests after solving */
    CHECK_TEST( checkPresolIsInitialized(presol, TRUE) );
@@ -237,5 +232,6 @@ main(
    BMScheckEmptyMemory();
 
    printf("All tests passed\n");
+
    return 0;
 }

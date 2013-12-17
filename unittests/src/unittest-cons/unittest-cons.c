@@ -154,16 +154,24 @@ SCIPconshdlrGetPropTimingmask
 static
 SCIP_RETCODE consCheckName(SCIP_CONSHDLR* conshdlr )
 {
-   const char* name = "unittest";
+   char name[SCIP_MAXSTRLEN];
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "unittest");
+
    CHECK_GET( strcmp(SCIPconshdlrGetName(conshdlr), name), 0 );
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckDesc(SCIP_CONSHDLR* conshdlr )
 {
-   const char* desc = "constraint handler template";
+   char desc[SCIP_MAXSTRLEN];
+
+   (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "constraint handler template");
+
    CHECK_GET( strcmp(SCIPconshdlrGetDesc(conshdlr), desc), 0 );
+
    return SCIP_OKAY;
 }
 
@@ -171,6 +179,7 @@ static
 SCIP_RETCODE consCheckSepaPriority(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetSepaPriority(conshdlr), 0 );
+
    return SCIP_OKAY;
 }
 
@@ -178,6 +187,7 @@ static
 SCIP_RETCODE consCheckEnfoPriority(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetEnfoPriority(conshdlr), 0 );
+
    return SCIP_OKAY;
 }
 
@@ -185,6 +195,7 @@ static
 SCIP_RETCODE consCheckCheckPriority(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetCheckPriority(conshdlr), 0 );
+
    return SCIP_OKAY;
 }
 
@@ -192,6 +203,7 @@ static
 SCIP_RETCODE consCheckSepaFreq(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetSepaFreq(conshdlr), -1 );
+
    return SCIP_OKAY;
 }
 
@@ -199,13 +211,15 @@ static
 SCIP_RETCODE consCheckEagerFreq(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetEagerFreq(conshdlr), 100 );
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckPropFreq(SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetPropFreq(conshdlr) , -1 );
+   CHECK_GET( SCIPconshdlrGetPropFreq(conshdlr), -1 );
+
    return SCIP_OKAY;
 }
 
@@ -213,6 +227,7 @@ static
 SCIP_RETCODE consCheckNeedsCons(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrNeedsCons(conshdlr), TRUE );
+
    return SCIP_OKAY;
 }
 
@@ -221,6 +236,7 @@ static
 SCIP_RETCODE consCheckDoesPresolve(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrDoesPresolve(conshdlr), TRUE );
+
    return SCIP_OKAY;
 }
 
@@ -229,6 +245,7 @@ static
 SCIP_RETCODE consCheckIsSparationDelayed(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrIsSeparationDelayed(conshdlr), FALSE );
+
    return SCIP_OKAY;
 }
 
@@ -236,6 +253,7 @@ static
 SCIP_RETCODE consCheckIsPropagationDelayed(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrIsPropagationDelayed(conshdlr), FALSE );
+
    return SCIP_OKAY;
 }
 
@@ -243,6 +261,7 @@ static
 SCIP_RETCODE consCheckIsPresolvingDelayed(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrIsPresolvingDelayed(conshdlr), FALSE );
+
    return SCIP_OKAY;
 }
 
@@ -290,6 +309,7 @@ static
 SCIP_RETCODE consCheckIsInitialized(SCIP_CONSHDLR* conshdlr, SCIP_Bool initialized)
 {
    CHECK_GET( SCIPconshdlrIsInitialized(conshdlr), initialized );
+
    return SCIP_OKAY;
 }
 
@@ -297,43 +317,47 @@ static
 SCIP_RETCODE consCheckGetPropTimingmask(SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetPropTimingmask(conshdlr), SCIP_PROPTIMING_BEFORELP );
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckGetNConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-   CHECK_GET( SCIPconshdlrGetNConss(conshdlr) , val);
+   CHECK_GET( SCIPconshdlrGetNConss(conshdlr), val);
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckGetNEnfoConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-   CHECK_GET( SCIPconshdlrGetNEnfoConss(conshdlr) , val);
+   CHECK_GET( SCIPconshdlrGetNEnfoConss(conshdlr), val);
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckGetNCheckConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-   CHECK_GET( SCIPconshdlrGetNCheckConss(conshdlr) , val);
+   CHECK_GET( SCIPconshdlrGetNCheckConss(conshdlr), val);
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckGetNActiveConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-
    CHECK_GET( SCIPconshdlrGetNActiveConss(conshdlr), val);
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE consCheckGetNEnabledConss(SCIP_CONSHDLR* conshdlr, int val)
 {
-
    CHECK_GET( SCIPconshdlrGetNEnabledConss(conshdlr), val);
+
    return SCIP_OKAY;
 }
 
@@ -341,61 +365,62 @@ SCIP_RETCODE consCheckGetNEnabledConss(SCIP_CONSHDLR* conshdlr, int val)
 static
 SCIP_RETCODE consCheckGetSetupTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetSetupTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetSetupTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetPresolTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetPresolTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetPresolTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetSepaTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetSepaTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetSepaTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetEnfoLPTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetEnfoLPTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetEnfoLPTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetEnfoPSTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetEnfoPSTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetEnfoPSTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetPropTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetPropTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetPropTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetStrongBranchPropTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetStrongBranchPropTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetStrongBranchPropTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetCheckTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetCheckTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetCheckTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetRespropTime(SCIP_CONSHDLR* conshdlr)
 {
-   return (SCIPconshdlrGetRespropTime(conshdlr) >= 0 ) ? SCIP_OKAY : SCIP_ERROR;
+   return (SCIPconshdlrGetRespropTime(conshdlr) >= 0) ? SCIP_OKAY : SCIP_ERROR;
 }
 
 static
 SCIP_RETCODE consCheckGetNSepaCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNSepaCalls(conshdlr), SCIPgetNsepalpUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -403,6 +428,7 @@ static
 SCIP_RETCODE consCheckGetEnfoPSCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNEnfoPSCalls(conshdlr), SCIPgetNenfopslpUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -410,6 +436,7 @@ static
 SCIP_RETCODE consCheckGetNPropCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNPropCalls(conshdlr), SCIPgetNpropUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -417,6 +444,7 @@ static
 SCIP_RETCODE consCheckGetNRespropCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNRespropCalls(conshdlr), SCIPgetNrespropUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -424,6 +452,7 @@ static
 SCIP_RETCODE consCheckGetNPresolCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNPresolCalls(conshdlr), SCIPgetNpresolUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -432,6 +461,7 @@ SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
 
    CHECK_GET( SCIPconshdlrGetNEnfoLPCalls(conshdlr), SCIPgetNenfolpUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -439,9 +469,10 @@ static
 SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
+
    return SCIP_OKAY;
 }
-/************************************/
+
 
 /** main function */
 int
@@ -450,7 +481,6 @@ main(
    char**                     argv
    )
 {
-
    SCIP* scip;
    SCIP_RETCODE retcode;
    SCIP_CONSHDLR* conshdlr;
@@ -484,7 +514,6 @@ main(
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
 
    /* get the constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "unittest");
@@ -532,13 +561,7 @@ main(
 
    /* tests after solving */
    CHECK_TEST( consCheckIsInitialized(conshdlr, TRUE) );
-
-   /* this method can not be checked yet */
-   /*CHECK_TEST( consCheckNCheckCalls(scip, conshdlr) ); */
-
    CHECK_TEST( consCheckNEnfoLPCalls(scip, conshdlr)  );
-
-
    CHECK_TEST( consCheckGetNActiveConss(conshdlr, 1)  );
    CHECK_TEST( consCheckGetNEnabledConss(conshdlr, 1)  );
    CHECK_TEST( consCheckGetSetupTime(conshdlr) );
@@ -560,6 +583,10 @@ main(
    CHECK_TEST( consCheckGetNCheckConss(conshdlr, 1) );
    CHECK_TEST( consCheckGetNConss(conshdlr, 1) );
 
+   /* this method can not be checked yet
+    * TODO: benny please write down the discussion */
+   /*CHECK_TEST( consCheckNCheckCalls(scip, conshdlr) ); */
+
 
    /********************
     * Deinitialization *
@@ -570,5 +597,6 @@ main(
    BMScheckEmptyMemory();
 
    printf("All tests passed\n");
+
    return 0;
 }

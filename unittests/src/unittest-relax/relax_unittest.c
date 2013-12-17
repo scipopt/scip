@@ -15,7 +15,7 @@
 
 /**@file   relax_unittest.c
  * @brief  unittest relaxator
- * @author Felipe Serrano
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -31,8 +31,6 @@
 #define RELAX_FREQ             2
 
 
-
-
 /*
  * Data structures
  */
@@ -46,15 +44,11 @@ struct SCIP_RelaxData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -84,7 +78,9 @@ SCIP_DECL_RELAXFREE(relaxFreeUnittest)
    /* call destructor of relaxation handler */
 
    SCIP_RELAXDATA* relaxdata;
+
    relaxdata = SCIPrelaxGetData(relax);
+
    assert(relaxdata != NULL);
 
    SCIPfreeMemory(scip, &relaxdata);
@@ -159,16 +155,15 @@ static
 SCIP_DECL_RELAXEXEC(relaxExecUnittest)
 {
    SCIP_RELAXDATA* relaxdata;
+
    relaxdata = SCIPrelaxGetData(relax);
+
    assert(relaxdata != NULL);
 
    relaxdata->ncalls++;
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
@@ -229,10 +224,12 @@ int SCIPgetNcallsUnittest(
    SCIP_RELAX* relax;
    SCIP_RELAXDATA* relaxdata;
 
-
    relax = SCIPfindRelax(scip, RELAX_NAME);
+
    assert(relax != NULL);
+
    relaxdata = SCIPrelaxGetData(relax);
+
    assert(relaxdata != NULL);
 
    return relaxdata->ncalls;

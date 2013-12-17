@@ -47,8 +47,8 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=	unittest-slack unittest-depthlevel unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol
-EXTRASRC		=  unittest-relax/relax_unittest unittest-cons/cons_unittest unittest-presol/presol_unittest
+UNITTESTS	=  unittest-slack unittest-depthlevel unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol
+EXTRASRC	=  unittest-relax/relax_unittest unittest-cons/cons_unittest unittest-presol/presol_unittest
 
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
