@@ -118,15 +118,13 @@ SCIPconshdlrGetNSepaCalls
 SCIPconshdlrGetNEnfoPSCalls
 SCIPconshdlrGetNPropCalls
 SCIPconshdlrGetNRespropCalls
-
-
-
-@TODO:
+SCIPconshdlrGetNPresolCalls
 SCIPconshdlrGetConss
 SCIPconshdlrGetEnfoConss
 SCIPconshdlrGetCheckConss
 
 
+@TODO:
 SCIPconshdlrGetNCutoffs
 SCIPconshdlrGetNCutsFound
 SCIPconshdlrGetNCutsApplied
@@ -145,7 +143,6 @@ SCIPconshdlrGetNAddConss
 SCIPconshdlrGetNUpgdConss
 SCIPconshdlrGetNChgCoefs
 SCIPconshdlrGetNChgSides
-SCIPconshdlrGetNPresolCalls
 SCIPconshdlrWasLPSeparationDelayed
 SCIPconshdlrWasSolSeparationDelayed
 SCIPconshdlrWasPropagationDelayed
@@ -433,6 +430,7 @@ SCIP_RETCODE consCheckGetNPresolCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 static
 SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
+
    CHECK_GET( SCIPconshdlrGetNEnfoLPCalls(conshdlr), SCIPgetNenfolpUnittest(scip) );
    return SCIP_OKAY;
 }
@@ -440,7 +438,6 @@ SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 static
 SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
-   printf("1. value: %lld   2. value %d" ,SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
    CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
    return SCIP_OKAY;
 }
@@ -535,8 +532,13 @@ main(
 
    /* tests after solving */
    CHECK_TEST( consCheckIsInitialized(conshdlr, TRUE) );
-   /*CHECK_TEST( consCheckNCheckCalls(scip, conshdlr) ); I guess here is a bug! */
+
+   /* this method can not be checked yet */
+   /*CHECK_TEST( consCheckNCheckCalls(scip, conshdlr) ); */
+
    CHECK_TEST( consCheckNEnfoLPCalls(scip, conshdlr)  );
+
+
    CHECK_TEST( consCheckGetNActiveConss(conshdlr, 1)  );
    CHECK_TEST( consCheckGetNEnabledConss(conshdlr, 1)  );
    CHECK_TEST( consCheckGetSetupTime(conshdlr) );
@@ -557,6 +559,7 @@ main(
    CHECK_TEST( consCheckGetNEnfoConss(conshdlr, 1) );
    CHECK_TEST( consCheckGetNCheckConss(conshdlr, 1) );
    CHECK_TEST( consCheckGetNConss(conshdlr, 1) );
+
 
    /********************
     * Deinitialization *

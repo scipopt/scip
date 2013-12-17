@@ -637,8 +637,14 @@ SCIP_RETCODE SCIPincludeConshdlrUnittest(
    /* create unittest constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
+   conshdlrdata->nenfolp = 0;
+   conshdlrdata->ncheck = 0;
+   conshdlrdata->nsepalp = 0;
+   conshdlrdata->nenfopslp = 0;
+   conshdlrdata->nprop = 0;
+   conshdlrdata->nresprop = 0;
+   conshdlrdata->npresol = 0;
 
-   /* TODO: (optional) create constraint handler specific data here */
 
    conshdlr = NULL;
 
