@@ -21,7 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <scip/scip.h>
-
+#include "presol_unittest.h"
 #include "scip/scipdefplugins.h"
 #include <string.h>
 
@@ -46,6 +46,7 @@
 
 /* local methods */
 
+
 /** create bounded problem */
 static
 SCIP_RETCODE initProb(
@@ -54,13 +55,30 @@ SCIP_RETCODE initProb(
 {
    SCIP_VAR* xvar;
    SCIP_VAR* yvar;
+   SCIP_CONS* cons;
+   SCIP_Real vals[2];
+   SCIP_VAR* vars[2];
+   char name[SCIP_MAXSTRLEN];
 
    /* create variables */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &xvar, "x", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &yvar, "y", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &xvar, "x", 0, 3, -1.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &yvar, "y", 0, 3, -1.0, SCIP_VARTYPE_INTEGER) );
 
    SCIP_CALL( SCIPaddVar(scip, xvar) );
    SCIP_CALL( SCIPaddVar(scip, yvar) );
+
+
+
+   /* add a constraint x + y <= 2 */
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   vars[0] = xvar;
+   vars[1] = yvar;
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "1. Cons");
+   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
 
    SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
@@ -71,8 +89,80 @@ SCIP_RETCODE initProb(
 
 /* Check methods */
 
+/*
+DONE:
+SCIPpresolGetName
+SCIPpresolGetDesc
+SCIPpresolGetPriority
+SCIPpresolIsDelayed
+SCIPpresolIsInitialized
+
+TODO:
+SCIPpresolGetData
+SCIPpresolWasDelayed
+SCIPpresolGetSetupTime
+SCIPpresolGetTime
+SCIPpresolGetNFixedVars
+SCIPpresolGetNAggrVars
+SCIPpresolGetNChgVarTypes
+SCIPpresolGetNChgBds
+SCIPpresolGetNAddHoles
+SCIPpresolGetNDelConss
+SCIPpresolGetNAddConss
+SCIPpresolGetNUpgdConss
+SCIPpresolGetNChgCoefs
+SCIPpresolGetNChgSides
+SCIPpresolGetNCalls
+*/
 
 
+
+static
+SCIP_RETCODE checkPresolGetName(SCIP_PRESOL* presol)
+{
+   const char* name = "unittest";
+   if( strcmp(SCIPpresolGetName(presol), name) !=  0 )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE checkPresolGetDesc(SCIP_PRESOL* presol)
+{
+   const char* desc = "presolver template";
+   if( strcmp(SCIPpresolGetDesc(presol), desc) !=  0 )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE checkPresolGetPriority(SCIP_PRESOL* presol)
+{
+   if( SCIPpresolGetPriority(presol) !=  20010001 )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE checkPresolIsDelayed(SCIP_PRESOL* presol)
+{
+   if( SCIPpresolIsDelayed(presol) != FALSE )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE checkPresolIsInitialized(SCIP_PRESOL* presol, SCIP_Bool val)
+{
+   if( SCIPpresolIsInitialized(presol) != val )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
 
 /************************************/
 
@@ -86,6 +176,7 @@ main(
 
    SCIP* scip;
    SCIP_RETCODE retcode;
+   SCIP_PRESOL* presol;
 
    /*********
     * Setup *
@@ -99,12 +190,16 @@ main(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
 
+   /* include unittest presolver */
+   SCIP_CALL( SCIPincludePresolUnittest(scip) );
+   presol = SCIPfindPresol(scip, "unittest");
+
    /* create a problem and disable the presolver */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
    SCIP_CALL( initProb(scip) );
 
    /* set the msghdlr off */
-   SCIPsetMessagehdlrQuiet(scip, TRUE);
+   SCIPsetMessagehdlrQuiet(scip, FALSE);
 
 
 
@@ -113,16 +208,24 @@ main(
     * Tests *
     *********/
 
-   /* tests before solving */
 
+
+   /* tests before solving */
+   CHECK_TEST( checkPresolGetName(presol) );
+   CHECK_TEST( checkPresolGetDesc(presol) );
+   CHECK_TEST( checkPresolGetPriority(presol) );
+   CHECK_TEST( checkPresolIsDelayed(presol) );
+   CHECK_TEST( checkPresolIsInitialized(presol, FALSE) );
 
    /* solve */
    SCIP_CALL( SCIPsolve(scip) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE));
 
-
+   printf("FIXINGS: %d\n" , SCIPpresolGetNFixedVars(presol));
+   printf("BOUND CHGS: %d\n" , SCIPpresolGetNChgBds(presol));
 
    /* tests after solving */
-
+   CHECK_TEST( checkPresolIsInitialized(presol, TRUE) );
 
 
    /********************

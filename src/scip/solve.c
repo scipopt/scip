@@ -4140,15 +4140,6 @@ SCIP_RETCODE SCIPsolveCIP(
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
 
-
-         /*HACK*/
-         if( SCIPnodeGetDepth(focusnode) > 0 ){
-            stat->status = SCIP_STATUS_NODELIMIT;
-            return SCIP_OKAY;
-         }
-
-
-
          /* start node activation timer */
          SCIPclockStart(stat->nodeactivationtime, set);
 

@@ -28,8 +28,8 @@
 
 #define PRESOL_NAME            "unittest"
 #define PRESOL_DESC            "presolver template"
-#define PRESOL_PRIORITY               0 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_PRIORITY        20010001 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_MAXROUNDS             20 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
@@ -152,9 +152,39 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreUnittest)
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+   SCIP_Bool tightened;
+
+   assert(scip != NULL);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+#if 0
+   for( i = 0; i < nvars; ++i )
+      printf("%s [%e,%e]\n", SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
+
+   /* tighten lower bound of the first variable to 1.0 */
+   SCIP_CALL( SCIPtightenVarLb( scip, vars[0], 1.0, TRUE, &infeasible, &tightened) );
+
+   /* tighten upper bounds to 2.0 */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPtightenVarUb( scip, vars[i], 2.0, TRUE, &infeasible, &tightened) );
+   }
+
+   /* fix first variable to 1 */
+   SCIP_CALL( SCIPfixVar(scip, vars[0], 1.0, &infeasible, &fixed) );
+#endif
+
+
+   SCIP_CALL( SCIPfixVar(scip, vars[0], 2.0, &infeasible, &fixed) );
+   printf("FIXED: %d INFEASIBLE: %d\n" , fixed, infeasible);
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
