@@ -15,7 +15,7 @@
 
 /**@file   unittest-relax.c
  * @brief  unit test for checking setters on scip.c
- *
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -115,8 +115,10 @@ SCIP_RETCODE relaxCheckTime(SCIP_RELAX* relax)
 
 /*@todo how to check this? */
 static
-SCIP_RETCODE relaxCheckNCalls(SCIP_RELAX* relax)
+SCIP_RETCODE relaxCheckNCalls(SCIP* scip, SCIP_RELAX* relax)
 {
+   CHECK_GET( SCIPrelaxGetNCalls(relax), SCIPgetNcallsUnittest(scip) );
+
    return SCIP_OKAY;
 }
 
@@ -178,7 +180,7 @@ main(
    CHECK_TEST( relaxCheckFreq(relax) );
    CHECK_TEST( relaxCheckSetupTime(relax) );
    CHECK_TEST( relaxCheckTime(relax) );
-   CHECK_TEST( relaxCheckNCalls(relax) );
+   CHECK_TEST( relaxCheckNCalls(scip, relax) );
 
    CHECK_TEST( relaxCheckInitialized(relax, FALSE) ); /* before solving this should be false  */
    SCIP_CALL( SCIPsolve(scip));

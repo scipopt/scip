@@ -42,6 +42,7 @@
 /** relaxator data */
 struct SCIP_RelaxData
 {
+   int ncalls;
 };
 
 
@@ -77,17 +78,20 @@ SCIP_DECL_RELAXCOPY(relaxCopyUnittest)
 #endif
 
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_RELAXFREE(relaxFreeUnittest)
 {  /*lint --e{715}*/
    /* call destructor of relaxation handler */
 
+   SCIP_RELAXDATA* relaxdata;
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+
+   SCIPfreeMemory(scip, &relaxdata);
+   SCIPrelaxSetData(relax, NULL);
+
    return SCIP_OKAY;
 }
-#else
-#define relaxFreeUnittest NULL
-#endif
 
 
 /** initialization method of relaxator (called after problem was transformed) */
@@ -153,9 +157,12 @@ SCIP_DECL_RELAXEXITSOL(relaxExitsolUnittest)
 /** execution method of relaxator */
 static
 SCIP_DECL_RELAXEXEC(relaxExecUnittest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of unittest relaxator not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   SCIP_RELAXDATA* relaxdata;
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+
+   relaxdata->ncalls++;
 
    return SCIP_OKAY;
 }
@@ -175,9 +182,10 @@ SCIP_RETCODE SCIPincludeRelaxUnittest(
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP_RELAX* relax;
+
    /* create unittest relaxator data */
-   relaxdata = NULL;
-   /* TODO: (optional) create relaxator specific data here */
+   SCIP_CALL( SCIPallocMemory(scip, &relaxdata) );
+   relaxdata->ncalls = 0;
 
    relax = NULL;
 
@@ -211,4 +219,21 @@ SCIP_RETCODE SCIPincludeRelaxUnittest(
    /* TODO: (optional) add relaxator specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
+}
+
+/** get the number of calls of the relaxator */
+int SCIPgetNcallsUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_RELAX* relax;
+   SCIP_RELAXDATA* relaxdata;
+
+
+   relax = SCIPfindRelax(scip, RELAX_NAME);
+   assert(relax != NULL);
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+
+   return relaxdata->ncalls;
 }

@@ -37,6 +37,14 @@ SCIP_RETCODE SCIPincludeRelaxUnittest(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** get the number of calls of the relaxator */
+EXTERN
+int SCIPgetNcallsUnittest(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
 #ifdef __cplusplus
 }
 #endif
