@@ -15751,7 +15751,10 @@ SCIP_HOLELIST* SCIPholelistGetNext(
    return holelist->next;
 }
 
-/** get name of variable */
+/** returns the name of the variable
+ *
+ *  @note to change the name of a variable, use SCIPchgVarName() from scip.h
+ */
 const char* SCIPvarGetName(
    SCIP_VAR*             var                 /**< problem variable */
    )

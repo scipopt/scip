@@ -7513,7 +7513,10 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
 
-/** returns the name of the constraint */
+/** returns the name of the constraint 
+ *
+ *  @note to change the name of a constraint, use SCIPchgConsName() from scip.h
+ */
 const char* SCIPconsGetName(
    SCIP_CONS*            cons                /**< constraint */
    )

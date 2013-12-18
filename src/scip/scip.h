@@ -6406,6 +6406,8 @@ SCIP_RETCODE SCIPreleaseVar(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note to get the current name of a variable, use SCIPvarGetName() from pub_var.h
  */
 EXTERN
 SCIP_RETCODE SCIPchgVarName(
@@ -9705,6 +9707,8 @@ SCIP_RETCODE SCIPreleaseCons(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note to get the current name of a constraint, use SCIPconsGetName() from pub_cons.h
  */
 EXTERN
 SCIP_RETCODE SCIPchgConsName(

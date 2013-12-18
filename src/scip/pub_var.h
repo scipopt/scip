@@ -311,7 +311,10 @@ SCIP_RETCODE SCIPvarSetRemovable(
    SCIP_Bool             removable           /**< removable flag */
    );
 
-/** get name of variable */
+/** returns the name of the variable
+ *
+ *  @note to change the name of a variable, use SCIPchgVarName() from scip.h
+ */
 EXTERN
 const char* SCIPvarGetName(
    SCIP_VAR*             var                 /**< problem variable */

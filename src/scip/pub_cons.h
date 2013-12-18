@@ -474,7 +474,10 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
  * Constraint methods
  */
 
-/** returns the name of the constraint */
+/** returns the name of the constraint 
+ *
+ *  @note to change the name of a constraint, use SCIPchgConsName() from scip.h
+ */
 EXTERN
 const char* SCIPconsGetName(
    SCIP_CONS*            cons                /**< constraint */
