@@ -12496,13 +12496,23 @@ SCIP_RETCODE lpSolveStable(
 
    assert(lp != NULL);
    assert(lp->flushed);
-   assert(lp->looseobjvalinf == 0);
    assert(set != NULL);
    assert(stat != NULL);
    assert(lperror != NULL);
    assert(timelimit != NULL);
 
    *lperror = FALSE;
+
+   /**@todo implement solving the LP when loose variables with infinite best bound are present; for this, we need to
+    *       solve with deactivated objective limit in order to determine whether we are (a) infeasible or (b) feasible
+    *       and hence unbounded; to handle case (b) we need to store an array of loose variables with best bound in
+    *       SCIP_LP such that we can return a primal ray
+    */
+   if( lp->looseobjvalinf > 0 )
+   {
+      SCIPerrorMessage("cannot solve LP when loose variable with infinite best bound is present\n");
+      return SCIP_ERROR;
+   }
 
    /* check, whether we solve with a simplex algorithm */
    simplex = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lpalgo == SCIP_LPALGO_DUALSIMPLEX);
