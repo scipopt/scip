@@ -3262,18 +3262,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(r >= 0);
    assert(r < lpi->spx->numRowsReal());
 
-   try
-   {
-      lpi->spx->getBasisInverseRowReal(r, coef);
-   }
-   catch(SPxException x)
-   {
-#ifndef NDEBUG
-      std::string s = x.what();
-      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-#endif
+   if( ! lpi->spx->getBasisInverseRowReal(r, coef) )
       return SCIP_LPERROR;
-   }
 
    return SCIP_OKAY;
 }
@@ -3295,18 +3285,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   try
-   {
-      lpi->spx->getBasisInverseColReal(c, coef);
-   }
-   catch(SPxException x)
-   {
-      #ifndef NDEBUG
-      std::string s = x.what();
-      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-      #endif
+   if( ! lpi->spx->getBasisInverseColReal(c, coef) )
       return SCIP_LPERROR;
-   }
 
    return SCIP_OKAY;
 }
