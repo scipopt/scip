@@ -15184,7 +15184,10 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
 
    /* check if the LP solver is able to provide a primal unbounded ray */
    if( !SCIPlpiHasPrimalRay(lp->lpi) )
+   {
+      SCIPerrorMessage("LP solver has no primal ray to prove unboundedness\n");
       return SCIP_LPERROR;
+   }
 
    lp->validsollp = stat->lpcount;
 
@@ -15332,7 +15335,10 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
 
    /* check if the LP solver is able to provide a primal unbounded ray */
    if( !SCIPlpiHasPrimalRay(lp->lpi) )
+   {
+      SCIPerrorMessage("LP solver has no primal ray for unbounded LP\n");
       return SCIP_LPERROR;
+   }
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lpiray, lp->nlpicols) );
