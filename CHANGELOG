@@ -108,6 +108,7 @@ features:
   SCIPcreateFiniteSolCopy()
 - new initial constraints are now added to the LP before solving a probing LP
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface
+- added McNemar tests and Wilcoxon signed rank tests to cmpres.awk evaluation scripts
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
