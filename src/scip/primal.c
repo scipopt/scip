@@ -796,8 +796,12 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, transprob, origprob);
-      assert( SCIPsetIsLE(set, solobj, obj) );
-     
+
+      /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
+       * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
+       */
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
+
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
    
@@ -818,7 +822,11 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, transprob, origprob);
-      assert( SCIPsetIsGE(set, solobj, obj) );
+
+      /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
+       * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
+       */
+      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
 
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
