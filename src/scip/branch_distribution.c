@@ -36,7 +36,7 @@
 #define DEFAULT_SCOREPARAM 'v'
 #define DEFAULT_PRIORITY 2.0
 #define SQRTOFTWO 1.4142136
-#define SQUARED(x) (x) * (x)
+#define SQUARED(x) ((x) * (x))
 #define DEFAULT_ONLYACTIVEROWS FALSE /**< should only rows which are active at the current node be considered? */
 #define DEFAULT_USEWEIGHTEDSCORE FALSE /**< should the branching score weigh up- and down-scores of a variable */
 
@@ -54,16 +54,18 @@
 struct SCIP_BranchruleData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler pointer */
+   SCIP_VAR**            updatedvars;        /**< variables to process bound change events for */
    SCIP_Real*            rowmeans;           /**< row activity mean values for all rows */
    SCIP_Real*            rowvariances;       /**< row activity variances for all rows */
    int*                  rowinfinitiesdown;  /**< count the number of variables with infinite bounds which allow for always
                                                *  repairing the constraint right hand side */
    int*                  rowinfinitiesup;    /**< count the number of variables with infinite bounds which allow for always
                                                *< repairing the constraint left hand side */
+   int*                  varposs;            /**< array of variable positions in the updated variables array */
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
    char                  scoreparam;         /**< parameter how the branch score is calculated */
    SCIP_Bool             onlyactiverows;     /**< should only rows which are active at the current node be considered? */
-   SCIP_Bool             useweightedscore;   /**< should the branching score weigh up- and down-scores of a variable */
+   SCIP_Bool             usescipscore;       /**< should the branching use SCIP's branching score function */
 };
 
 struct SCIP_EventhdlrData
@@ -95,7 +97,7 @@ SCIP_RETCODE branchruledataEnsureArraySize(
       return SCIP_OKAY;
 
    /* new memory size is the max index + 1 plus 10% additional space */
-   newsize = SCIPfeasCeil(scip, (maxindex + 1) * 1.1);
+   newsize = (int)SCIPfeasCeil(scip, (maxindex + 1) * 1.1);
    assert(newsize > branchruledata->memsize);
    assert(branchruledata->memsize >= 0);
    /* alloc memory arrays for row information */
@@ -214,10 +216,12 @@ SCIP_Real calcCumulativeDistribution(
       else
          return 0.0;
    }
+
    /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
    normvalue = (value - mean)/(std * SQRTOFTWO);
 
    SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
+
    /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate
     * the normvalue and use the oddness of the erf()-function; special treatment for values close to zero.
     */
@@ -281,6 +285,8 @@ SCIP_Real rowCalcProbability(
    if( !SCIPisInfinity(scip, -lhs) && rowinfinitiesup == 0 )
       lhsprob = 1.0 - calcCumulativeDistribution(scip, mu, sigma2, lhs);
 
+   assert(SCIPisFeasLE(scip, lhsprob, 1.0) && SCIPisFeasGE(scip, lhsprob, 0.0));
+   assert(SCIPisFeasLE(scip, rhsprob, 1.0) && SCIPisFeasGE(scip, rhsprob, 0.0));
    /* use centeredness measure for equations; for inequalities, the minimum of the two probabilities is the
     * probability to satisfy the row */
    if( SCIPisFeasEQ(scip, lhs, rhs) )
@@ -364,14 +370,13 @@ void rowCalculateGauss(
       colvarlb = SCIPvarGetLbLocal(colvar);
       colvarub = SCIPvarGetUbLocal(colvar);
 
-      varmean = varvariance = 0.0;
-      /* fixed variables can be skipped */
-      if( SCIPisFeasEQ(scip, colvarlb, colvarub) )
-      {
-         SCIPdebugMessage("  Fixed Variable %g <= %s <= %g skipped\n", colvarlb, SCIPvarGetName(colvar), colvarub);
-         continue;
-      }
+      varmean = 0.0;
+      varvariance = 0.0;
 
+      assert(!SCIPisFeasZero(scip, colval));
+      assert(!SCIPisInfinity(scip, colvarlb));
+      assert(!SCIPisInfinity(scip, -colvarub));
+      assert(SCIPisFeasLT(scip, colvarlb, colvarub));
       /* variables with infinite bounds are skipped for the calculation of the variance; they need to
        * be accounted for by the counters for infinite row activity decrease and increase and they
        * are used to shift the row activity mean in case they have one nonzero, but finite bound */
@@ -418,7 +423,7 @@ void rowCalculateGauss(
  * particular row, depending on the chosen score parameter
  */
 static
-void getScore(
+SCIP_RETCODE getScore(
    SCIP*                 scip,               /**< current SCIP pointer */
    SCIP_Real             currentprob,        /**< the current probability */
    SCIP_Real             newprobup,          /**< the new probability if branched upwards */
@@ -477,9 +482,11 @@ void getScore(
       break;
 
    default :
-      SCIPwarningMessage(scip, " ERROR! No branching scheme selected ! Exiting  method\n");
-      break;
+      SCIPerrorMessage(" ERROR! No branching scheme selected ! Exiting  method\n");
+      return SCIP_INVALIDCALL;
    }
+
+   return SCIP_OKAY;
 }
 
 
@@ -622,17 +629,14 @@ SCIP_RETCODE calcBranchScore(
          rowinftiesdownafterbranch = rowinfinitiesdown;
          rowinftiesupafterbranch = rowinfinitiesup;
 
+         /* account for changes of the row's infinite bound contributions */
          if( SCIPisInfinity(scip, -varlb) && SCIPisNegative(scip, rowvals[i]) )
-         {
-            assert(rowinftiesupafterbranch >= 1);
-            rowinftiesupafterbranch -= 1;
-         }
+            rowinftiesupafterbranch--;
          if( SCIPisInfinity(scip, -varlb) && SCIPisPositive(scip, rowvals[i]) )
-         {
-            assert(rowinftiesdownafterbranch >= 1);
-            rowinftiesdownafterbranch -= 1;
-         }
+            rowinftiesdownafterbranch--;
 
+         assert(rowinftiesupafterbranch >= 0);
+         assert(rowinftiesdownafterbranch >= 0);
          newrowprobup = rowCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
                rowinftiesupafterbranch);
       }
@@ -651,17 +655,14 @@ SCIP_RETCODE calcBranchScore(
          rowinftiesdownafterbranch = rowinfinitiesdown;
          rowinftiesupafterbranch = rowinfinitiesup;
 
+         /* account for changes of the row's infinite bound contributions */
          if( SCIPisInfinity(scip, varub) && SCIPisPositive(scip, rowvals[i]) )
-         {
-            assert(rowinftiesupafterbranch >= 1);
             rowinftiesupafterbranch -= 1;
-         }
          if( SCIPisInfinity(scip, varub) && SCIPisNegative(scip, rowvals[i]) )
-         {
-            assert(rowinftiesdownafterbranch >= 1);
             rowinftiesdownafterbranch -= 1;
-         }
 
+         assert(rowinftiesdownafterbranch >= 0);
+         assert(rowinftiesupafterbranch >= 0);
          newrowprobdown = rowCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
                rowinftiesupafterbranch);
       }
@@ -687,14 +688,18 @@ SCIP_RETCODE branchruledataFreeArrays(
    )
 {
    assert(branchruledata->memsize == 0 || branchruledata->rowmeans != NULL);
+   assert(branchruledata->memsize >= 0);
+
    if( branchruledata->memsize > 0 )
    {
       SCIPfreeBlockMemoryArray(scip, &branchruledata->rowmeans, branchruledata->memsize);
       SCIPfreeBlockMemoryArray(scip, &branchruledata->rowvariances, branchruledata->memsize);
       SCIPfreeBlockMemoryArray(scip, &branchruledata->rowinfinitiesup, branchruledata->memsize);
       SCIPfreeBlockMemoryArray(scip, &branchruledata->rowinfinitiesdown, branchruledata->memsize);
+
       branchruledata->memsize = 0;
    }
+
 
    return SCIP_OKAY;
 }
@@ -793,6 +798,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    if( nlpcands == 0 )
       return SCIP_OKAY;
 
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
 
    /* allocate buffer arrays for row distribution information */
    /* todo speed this up by means of an event handler */
@@ -838,7 +845,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
             &upscore, &downscore, branchruledata->scoreparam) );
 
       /* if weighted scoring is enabled, use the branching score method of SCIP to weigh up and down score */
-      if( branchruledata->useweightedscore )
+      if( branchruledata->usescipscore )
       {
          SCIP_Real score;
 
@@ -968,7 +975,11 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
    }
 
    /* calculate old and new variable distribution mean and variance */
-   oldvariance = newvariance = oldmean = newmean = 0.0;
+   oldvariance = 0.0;
+   newvariance = 0.0;
+   oldmean = 0.0;
+   newmean = 0.0;
+
    varCalcDistributionParameters(scip, oldlb, oldub, &oldmean, &oldvariance);
    varCalcDistributionParameters(scip, newlb, newub, &newmean, &newvariance);
 
@@ -981,6 +992,7 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
    {
       int rowpos;
 
+      assert(colrows[r] != NULL);
       rowpos = SCIProwGetIndex(colrows[r]);
       assert(rowpos >= 0);
 
@@ -1092,7 +1104,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
          &branchruledata->onlyactiverows, TRUE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/"BRANCHRULE_NAME"/weightedscore",
          "should the branching score weigh up- and down-scores of a variable",
-         &branchruledata->useweightedscore, TRUE, DEFAULT_USEWEIGHTEDSCORE, NULL, NULL) );
+         &branchruledata->usescipscore, TRUE, DEFAULT_USEWEIGHTEDSCORE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
