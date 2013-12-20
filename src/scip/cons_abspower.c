@@ -5583,7 +5583,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
     */
 
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, conshdlrdata->sepainboundsonly, &success, &cutoff, NULL) );
-   if ( cutoff )
+   if( cutoff )
       *result = SCIP_CUTOFF;
    else if( success )
       *result = SCIP_SEPARATED;
@@ -5616,7 +5616,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
       return SCIP_OKAY;
 
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, FALSE, &success, &cutoff, NULL) );
-   if ( cutoff )
+   if( cutoff )
       *result = SCIP_CUTOFF;
    else if( success )
       *result = SCIP_SEPARATED;
@@ -5730,7 +5730,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
-   if ( cutoff )
+   if( cutoff )
    {
       SCIPdebugMessage("separation detected cutoff.\n");
       *result = SCIP_CUTOFF;
@@ -5753,7 +5753,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
-      if ( cutoff )
+      if( cutoff )
       {
          SCIPdebugMessage("separation detected cutoff.\n");
          *result = SCIP_CUTOFF;

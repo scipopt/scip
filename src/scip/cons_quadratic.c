@@ -7164,7 +7164,7 @@ SCIP_RETCODE separatePoint(
 
             /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
-            if ( infeasible )
+            if( infeasible )
             {
                SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
                *result = SCIP_CUTOFF;
@@ -7187,7 +7187,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
 
-      if ( *result == SCIP_CUTOFF )
+      if( *result == SCIP_CUTOFF )
          break;
 
       /* enforce only useful constraints
@@ -10166,9 +10166,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666 */
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666 */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
-   if ( separateresult == SCIP_CUTOFF )
+   if( separateresult == SCIP_CUTOFF )
    {
-      SCIPdebugMessage("separation found cutoff.)\n");
+      SCIPdebugMessage("separation found cutoff\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -10192,9 +10192,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
-      if ( separateresult == SCIP_CUTOFF )
+      if( separateresult == SCIP_CUTOFF )
       {
-         SCIPdebugMessage("separation found cutoff.)\n");
+         SCIPdebugMessage("separation found cutoff\n");
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }

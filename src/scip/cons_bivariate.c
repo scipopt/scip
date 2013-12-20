@@ -4706,7 +4706,7 @@ SCIP_RETCODE separatePoint(
 
             /* cut cuts off solution sufficiently */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
-            if ( infeasible )
+            if( infeasible )
             {
                SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
                *result = SCIP_CUTOFF;
@@ -4731,7 +4731,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
 
-      if ( *result == SCIP_CUTOFF )
+      if( *result == SCIP_CUTOFF )
          break;
 
       /* enforce only useful constraints
@@ -6718,10 +6718,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
-   if( separateresult == SCIP_SEPARATED )
+   if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
    {
-      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
-      *result = SCIP_SEPARATED;
+      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g, cutoff = %d)\n", sepaefficacy, minefficacy, separateresult == SCIP_CUTOFF);
+      *result = separateresult;
       return SCIP_OKAY;
    }
 
@@ -6738,9 +6738,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
-      if( separateresult == SCIP_SEPARATED )
+      if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
       {
-         *result = SCIP_SEPARATED;
+         *result = separateresult;
          return SCIP_OKAY;
       }
    }

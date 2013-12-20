@@ -1255,7 +1255,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
 
-      if ( *cutoff )
+      if( *cutoff )
          break;
 
       /* enforce only useful constraints
@@ -1282,7 +1282,7 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
    SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
    SCIP_Real             minefficacy,        /**< minimal efficacy of a cut when checking for separation of LP solution */
-   SCIP_Bool*            cutoff              /**< pointer to store whether a fixing leads to a cutoff */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1362,7 +1362,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    SCIP_CONS**    conss;
    int            nconss;
    SCIP_SOL*      sol;
-   SCIP_Bool cutoff;
+   SCIP_Bool      cutoff;
 
    assert(scip != NULL);
    assert(event != NULL);
@@ -1397,7 +1397,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    SCIPdebugMessage("caught new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0, &cutoff) );
-   /* ingore cutoff, cannot return status */
+   /* ignore cutoff, cannot return status */
 
    return SCIP_OKAY;
 }
@@ -3418,7 +3418,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
-         if ( cutoff )
+         if( cutoff )
          {
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
@@ -3440,7 +3440,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
     */
 
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, &cutoff, &sepasuccess) );
-   if ( cutoff )
+   if( cutoff )
       *result = SCIP_CUTOFF;
    else if ( sepasuccess )
       *result = SCIP_SEPARATED;
@@ -3474,7 +3474,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
       return SCIP_OKAY;
 
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, &cutoff, &sepasuccess) );
-   if ( cutoff )
+   if( cutoff )
       *result = SCIP_CUTOFF;
    else if ( sepasuccess )
       *result = SCIP_SEPARATED;
@@ -3544,7 +3544,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
 
    /* try separation, this should usually work */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, &cutoff, &success) );
-   if ( cutoff )
+   if( cutoff )
    {
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;

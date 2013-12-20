@@ -7286,9 +7286,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, minefficacy, TRUE, &separateresult, &sepaefficacy) );
-   if ( separateresult == SCIP_CUTOFF )
+   if( separateresult == SCIP_CUTOFF )
    {
-      SCIPdebugMessage("separation found cutoff.)\n");
+      SCIPdebugMessage("separation found cutoff\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -7312,9 +7312,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
-      if( separateresult == SCIP_SEPARATED )
+      if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
       {
-         *result = SCIP_SEPARATED;
+         *result = separateresult;
          return SCIP_OKAY;
       }
    }
