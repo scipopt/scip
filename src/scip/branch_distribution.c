@@ -57,12 +57,16 @@ struct SCIP_BranchruleData
    SCIP_VAR**            updatedvars;        /**< variables to process bound change events for */
    SCIP_Real*            rowmeans;           /**< row activity mean values for all rows */
    SCIP_Real*            rowvariances;       /**< row activity variances for all rows */
+   SCIP_Real*            currentubs;         /**< variable upper bounds as currently saved in the row activities */
+   SCIP_Real*            currentlbs;         /**< variable lower bounds as currently saved in the row activities */
    int*                  rowinfinitiesdown;  /**< count the number of variables with infinite bounds which allow for always
                                                *  repairing the constraint right hand side */
    int*                  rowinfinitiesup;    /**< count the number of variables with infinite bounds which allow for always
                                                *< repairing the constraint left hand side */
    int*                  varposs;            /**< array of variable positions in the updated variables array */
+   int                   nupdatedvars;       /**< the current number of variables with pending bound changes */
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
+   int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
    char                  scoreparam;         /**< parameter how the branch score is calculated */
    SCIP_Bool             onlyactiverows;     /**< should only rows which are active at the current node be considered? */
    SCIP_Bool             usescipscore;       /**< should the branching use SCIP's branching score function */
@@ -100,6 +104,7 @@ SCIP_RETCODE branchruledataEnsureArraySize(
    newsize = (int)SCIPfeasCeil(scip, (maxindex + 1) * 1.1);
    assert(newsize > branchruledata->memsize);
    assert(branchruledata->memsize >= 0);
+
    /* alloc memory arrays for row information */
    if( branchruledata->memsize == 0 )
    {
@@ -117,6 +122,8 @@ SCIP_RETCODE branchruledataEnsureArraySize(
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
+      /* set up variable events to catch bound changes */
+      assert(nvars > 0);
       for( v = 0; v < nvars; ++v )
       {
          if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
@@ -124,6 +131,25 @@ SCIP_RETCODE branchruledataEnsureArraySize(
             SCIP_CALL( SCIPcatchVarEvent(scip, vars[v], EVENT_DISTRIBUTION, branchruledata->eventhdlr, NULL, NULL) );
          }
       }
+
+      /* allocate variable update event processing array storage */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->varposs, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->updatedvars, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->currentubs, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->currentlbs, nvars) );
+
+      branchruledata->varpossmemsize = nvars;
+      branchruledata->nupdatedvars = 0;
+
+      /* init variable event processing data */
+      for( v = 0; v < nvars; ++v )
+      {
+         branchruledata->varposs[v] = -1;
+         branchruledata->updatedvars[v] = NULL;
+         branchruledata->currentlbs[v] = SCIP_INVALID;
+         branchruledata->currentubs[v] = SCIP_INVALID;
+      }
+
    }
    else
    {
@@ -146,6 +172,30 @@ SCIP_RETCODE branchruledataEnsureArraySize(
    branchruledata->memsize = newsize;
 
    return SCIP_OKAY;
+}
+
+/* update the variables current lower and upper bound */
+static
+void branchruledataUpdateCurrentBounds(
+   SCIP*                scip,                /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA* branchruledata,      /**< branchrule data */
+   SCIP_VAR*            var                  /**< the variable to update current bounds */
+   )
+{
+   int varindex;
+   SCIP_Real lblocal;
+   SCIP_Real ublocal;
+   assert(var != NULL);
+
+   varindex = SCIPvarGetProbindex(var);
+   assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
+   lblocal = SCIPvarGetLbLocal(var);
+   ublocal = SCIPvarGetUbLocal(var);
+
+   assert(SCIPisFeasLE(scip, lblocal, ublocal));
+
+   branchruledata->currentlbs[varindex] = lblocal;
+   branchruledata->currentubs[varindex] = ublocal;
 }
 
 /** calculate the variable's distribution parameters (mean and variance) for the bounds specified in the arguments.
@@ -319,7 +369,8 @@ SCIP_Real rowCalcProbability(
  */
 static
 void rowCalculateGauss(
-   SCIP*                 scip,               /**< current scip */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< the branching rule data */
    SCIP_ROW*             row,                /**< the row for which the gaussian normal distribution has to be calculated */
    SCIP_Real*            mu,                 /**< pointer to store the mean value of the gaussian normal distribution */
    SCIP_Real*            sigma2,             /**< pointer to store the variance value of the gaussian normal distribution */
@@ -361,6 +412,7 @@ void rowCalculateGauss(
       SCIP_Real squarecoeff;
       SCIP_Real varvariance;
       SCIP_Real varmean;
+      int varindex;
 
       assert(rowcols[c] != NULL);
       colvar = SCIPcolGetVar(rowcols[c]);
@@ -372,11 +424,17 @@ void rowCalculateGauss(
 
       varmean = 0.0;
       varvariance = 0.0;
+      varindex = SCIPvarGetProbindex(colvar);
+      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
+
+      /* variable bounds need to be watched from now on */
+      if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
+         branchruledataUpdateCurrentBounds(scip, branchruledata, colvar);
 
       assert(!SCIPisFeasZero(scip, colval));
       assert(!SCIPisInfinity(scip, colvarlb));
       assert(!SCIPisInfinity(scip, -colvarub));
-      assert(SCIPisFeasLT(scip, colvarlb, colvarub));
+      assert(SCIPisFeasLE(scip, colvarlb, colvarub));
       /* variables with infinite bounds are skipped for the calculation of the variance; they need to
        * be accounted for by the counters for infinite row activity decrease and increase and they
        * are used to shift the row activity mean in case they have one nonzero, but finite bound */
@@ -592,12 +650,12 @@ SCIP_RETCODE calcBranchScore(
       /* calculate row activity distribution if this is the first candidate to appear in this row */
       if( branchruledata->rowmeans[rowpos] == SCIP_INVALID )
       {
-         rowCalculateGauss(scip, row, &branchruledata->rowmeans[rowpos], &branchruledata->rowvariances[rowpos],
+         rowCalculateGauss(scip, branchruledata, row, &branchruledata->rowmeans[rowpos], &branchruledata->rowvariances[rowpos],
                &branchruledata->rowinfinitiesdown[rowpos], &branchruledata->rowinfinitiesup[rowpos]);
       }
 #ifndef NDEBUG
       {
-         rowCalculateGauss(scip, row, &rowmean, &rowvariance, &rowinfinitiesdown, &rowinfinitiesup);
+         rowCalculateGauss(scip, branchruledata, row, &rowmean, &rowvariance, &rowinfinitiesdown, &rowinfinitiesup);
          assert(rowinfinitiesdown == branchruledata->rowinfinitiesdown[rowpos]);
          assert(rowinfinitiesup == branchruledata->rowinfinitiesup[rowpos]);
          assert(SCIPisFeasEQ(scip, rowmean, branchruledata->rowmeans[rowpos]));
@@ -700,6 +758,204 @@ SCIP_RETCODE branchruledataFreeArrays(
       branchruledata->memsize = 0;
    }
 
+
+   return SCIP_OKAY;
+}
+
+/** add variable to the bound change event queue; skipped if variable is already in there, or if variable has
+ *  no row currently watched
+ */
+static
+void branchruledataAddBoundChangeVar(
+   SCIP*                scip,                /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA* branchruledata,      /**< branchrule data */
+   SCIP_VAR*            var                  /**< the variable whose bound changes need to be processed */
+)
+{
+   int varindex;
+   int varpos;
+
+   assert(var != NULL);
+
+   varindex = SCIPvarGetProbindex(var);
+   assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
+   varpos = branchruledata->varposs[varindex];
+   assert(varpos < branchruledata->nupdatedvars);
+
+
+   /* nothing to do if variable is already in the queue */
+   if( varpos >= 0 )
+   {
+      assert(branchruledata->updatedvars[varpos] == var);
+
+      return;
+   }
+
+   /* if none of the variables rows was calculated yet, variable needs not to be watched */
+   assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
+   if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
+      return;
+
+   /* add the variable to the branch rule data of variables to process updates for */
+   assert(branchruledata->varpossmemsize > branchruledata->nupdatedvars);
+   varpos = branchruledata->nupdatedvars;
+   branchruledata->updatedvars[varpos] = var;
+   branchruledata->varposs[varindex] = varpos;
+   ++branchruledata->nupdatedvars;
+}
+
+/** returns the next unprocessed variable (last in, first out) with pending bound changes, or NULL */
+static
+SCIP_VAR* branchruledataPopBoundChangeVar(
+   SCIP*                scip,                /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA* branchruledata       /**< branchrule data */
+)
+{
+   SCIP_VAR* var;
+   int varpos;
+   int varindex;
+
+   assert(branchruledata->nupdatedvars >= 0);
+   /* return if no variable is currently pending */
+   if( branchruledata->nupdatedvars == 0 )
+      return NULL;
+
+   varpos = branchruledata->nupdatedvars - 1;
+   var = branchruledata->updatedvars[varpos];
+   assert(var != NULL);
+   varindex = SCIPvarGetProbindex(var);
+   assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
+   assert(varpos == branchruledata->varposs[varindex]);
+
+   branchruledata->varposs[varindex] = -1;
+   branchruledata->nupdatedvars--;
+
+   return var;
+
+}
+
+/** process a variable from the queue of changed variables */
+static
+SCIP_RETCODE varProcessBoundChanges(
+   SCIP*                scip,                /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA* branchruledata,      /**< branchrule data */
+   SCIP_VAR*            var                  /**< the variable whose bound changes need to be processed */
+   )
+{
+   SCIP_ROW** colrows;
+   SCIP_COL* varcol;
+   SCIP_Real* colvals;
+   SCIP_Real oldmean;
+   SCIP_Real newmean;
+   SCIP_Real oldvariance;
+   SCIP_Real newvariance;
+   SCIP_Real oldlb;
+   SCIP_Real newlb;
+   SCIP_Real oldub;
+   SCIP_Real newub;
+   int ncolrows;
+   int r;
+   int varindex;
+   /* skip event execution if SCIP is in Probing mode because these bound changes will be undone anyway before branching
+    * rule is called again
+    */
+   assert(!SCIPinProbing(scip));
+
+
+   assert(var != NULL);
+   varcol = SCIPvarGetCol(var);
+   assert(varcol != NULL);
+   colrows = SCIPcolGetRows(varcol);
+   colvals = SCIPcolGetVals(varcol);
+   ncolrows = SCIPcolGetNNonz(varcol);
+
+   varindex = SCIPvarGetProbindex(var);
+
+   oldlb = branchruledata->currentlbs[varindex];
+   oldub = branchruledata->currentubs[varindex];
+
+   /* skip update if the variable has never been subject of previously calculated row activities */
+   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID));
+   if( oldlb == SCIP_INVALID )
+      return SCIP_OKAY;
+
+   newlb = SCIPvarGetLbLocal(var);
+   newub = SCIPvarGetUbLocal(var);
+
+   /* skip update if the bound change events have cancelled out */
+   if( SCIPisFeasEQ(scip, oldlb, newlb) && SCIPisFeasEQ(scip, oldub, newub) )
+      return SCIP_OKAY;
+
+   /* calculate old and new variable distribution mean and variance */
+   oldvariance = 0.0;
+   newvariance = 0.0;
+   oldmean = 0.0;
+   newmean = 0.0;
+   varCalcDistributionParameters(scip, oldlb, oldub, &oldmean, &oldvariance);
+   varCalcDistributionParameters(scip, newlb, newub, &newmean, &newvariance);
+
+   /* loop over all rows of this variable and update activity distribution */
+   for( r = 0; r < ncolrows; ++r )
+   {
+      int rowpos;
+
+      assert(colrows[r] != NULL);
+      rowpos = SCIProwGetIndex(colrows[r]);
+      assert(rowpos >= 0);
+
+      SCIP_CALL( branchruledataEnsureArraySize(scip, branchruledata, rowpos) );
+
+      /* only consider rows for which activity distribution was already calculated */
+      if( branchruledata->rowmeans[rowpos] != SCIP_INVALID )
+      {
+         SCIP_Real coeff;
+         SCIP_Real coeffsquared;
+         assert(branchruledata->rowvariances[rowpos] != SCIP_INVALID
+               && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
+
+         coeff = colvals[r];
+         coeffsquared = SQUARED(coeff);
+
+         /* update variable contribution to row activity distribution */
+         branchruledata->rowmeans[rowpos] += coeff * (newmean - oldmean);
+         branchruledata->rowvariances[rowpos] += coeffsquared * (newvariance - oldvariance);
+         assert(SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
+
+         /* account for changes of the infinite contributions to row activities */
+         if( SCIPisPositive(scip, coeff) )
+         {
+            /* if the coefficient is positive, upper bounds affect activity up */
+            if( SCIPisInfinity(scip, newub) && !SCIPisInfinity(scip, oldub) )
+               ++branchruledata->rowinfinitiesup[rowpos];
+            else if( !SCIPisInfinity(scip, newub) && SCIPisInfinity(scip, oldub) )
+               --branchruledata->rowinfinitiesup[rowpos];
+
+            if( SCIPisInfinity(scip, newlb) && !SCIPisInfinity(scip, oldlb) )
+               ++branchruledata->rowinfinitiesdown[rowpos];
+            else if( !SCIPisInfinity(scip, newlb) && SCIPisInfinity(scip, oldlb) )
+               --branchruledata->rowinfinitiesdown[rowpos];
+         }
+         else
+         {
+            /* if the coefficient is negative, upper bounds affect activity down */
+            assert(SCIPisNegative(scip, coeff));
+            if( SCIPisInfinity(scip, newub) && !SCIPisInfinity(scip, oldub) )
+               ++branchruledata->rowinfinitiesdown[rowpos];
+            else if( !SCIPisInfinity(scip, newub) && SCIPisInfinity(scip, oldub) )
+               --branchruledata->rowinfinitiesdown[rowpos];
+
+            if( SCIPisInfinity(scip, newlb) && !SCIPisInfinity(scip, oldlb) )
+               ++branchruledata->rowinfinitiesup[rowpos];
+            else if( !SCIPisInfinity(scip, newlb) && SCIPisInfinity(scip, oldlb) )
+               --branchruledata->rowinfinitiesup[rowpos];
+         }
+         assert(branchruledata->rowinfinitiesdown[rowpos] >= 0);
+         assert(branchruledata->rowinfinitiesup[rowpos] >= 0);
+      }
+   }
+
+   /* store the new local bounds in the data */
+   branchruledataUpdateCurrentBounds(scip, branchruledata, var);
 
    return SCIP_OKAY;
 }
@@ -824,6 +1080,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
          return SCIP_OKAY;
    }
 
+   /* process pending bound change events */
+   while( branchruledata->nupdatedvars > 0 )
+   {
+      SCIP_VAR* nextvar;
+
+      /* pop the next variable from the queue and process its bound changes */
+      nextvar = branchruledataPopBoundChangeVar(scip, branchruledata);
+      assert(nextvar != NULL);
+      SCIP_CALL( varProcessBoundChanges(scip, branchruledata, nextvar) );
+   }
+
    bestscore = -1;
    bestbranchdir = SCIP_BRANCHDIR_AUTO;
    bestcand = NULL;
@@ -837,9 +1104,37 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    {
       SCIP_Real upscore;
       SCIP_Real downscore;
+      SCIP_Real locallb;
+      SCIP_Real localub;
+      int varindex;
+
+      assert(lpcands[c] != NULL);
+      locallb = SCIPvarGetLbLocal(lpcands[c]);
+      localub = SCIPvarGetUbLocal(lpcands[c]);
+      varindex = SCIPvarGetProbindex(lpcands[c]);
+
+      /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
+       * by the branching rule event system
+       */
+      assert(SCIPisFeasLE(scip, locallb, localub));
+      assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
+
+      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
+      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID)
+            || SCIPisFeasEQ(scip, locallb, branchruledata->currentlbs[varindex]));
+      assert((branchruledata->currentubs[varindex] == SCIP_INVALID)
+                  || SCIPisFeasEQ(scip, localub, branchruledata->currentubs[varindex]));
+
+      /* if the branching rule has not captured the variable bounds yet, this can be done now */
+      if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
+      {
+         branchruledataUpdateCurrentBounds(scip, branchruledata, lpcands[c]);
+      }
 
       upscore = 0.0;
       downscore = 0.0;
+
+
       /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
       SCIP_CALL( calcBranchScore(scip, branchruledata, lpcands[c], lpcandssol[c],
             &upscore, &downscore, branchruledata->scoreparam) );
@@ -915,139 +1210,29 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    return SCIP_OKAY;
 }
 
-/** event handler method to update row activity distributions every time a variable bound changes */
+/** event execution method of distribution branching which handles bound change events of variables */
 static
 SCIP_DECL_EVENTEXEC(eventExecDistribution)
 {
-   SCIP_VAR* eventvar;
-   SCIP_ROW** colrows;
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_COL* eventvarcol;
-   SCIP_Real* colvals;
-   SCIP_Real oldmean;
-   SCIP_Real newmean;
-   SCIP_Real oldvariance;
-   SCIP_Real newvariance;
-   SCIP_Real oldlb;
-   SCIP_Real newlb;
-   SCIP_Real oldub;
-   SCIP_Real newub;
-   int ncolrows;
-   int r;
+   SCIP_VAR* var;
 
-   assert(SCIPeventGetType(event) & (SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED));
-
-   /* skip event execution if SCIP is in Probing mode because these bound changes will be undone anyway before branching
-    * rule is called again
-    */
-   if( SCIPinProbing(scip) )
-      return SCIP_OKAY;
-
-   eventvar = SCIPeventGetVar(event);
-
-   assert(eventvar != NULL);
-   eventvarcol = SCIPvarGetCol(eventvar);
-   assert(eventvarcol != NULL);
-   colrows = SCIPcolGetRows(eventvarcol);
-   colvals = SCIPcolGetVals(eventvarcol);
-   ncolrows = SCIPcolGetNNonz(eventvarcol);
-
-   /* do not update if variable has no rows */
-   if( ncolrows == 0 )
-      return SCIP_OKAY;
-
-   newlb = SCIPvarGetLbLocal(eventvar);
-   newub = SCIPvarGetUbLocal(eventvar);
-
-   /* depending on the event type, either lower or upper bound was changed, while the other bound remains unchanged */
-   if( SCIPeventGetType(event) & SCIP_EVENTTYPE_LBCHANGED )
-   {
-      /* lower bound changed */
-      oldlb = SCIPeventGetOldbound(event);
-      oldub = SCIPvarGetUbLocal(eventvar);
-   }
-   else
-   {
-      /* upper bound changed */
-      oldub = SCIPeventGetOldbound(event);
-      oldlb = SCIPvarGetLbLocal(eventvar);
-   }
-
-   /* calculate old and new variable distribution mean and variance */
-   oldvariance = 0.0;
-   newvariance = 0.0;
-   oldmean = 0.0;
-   newmean = 0.0;
-
-   varCalcDistributionParameters(scip, oldlb, oldub, &oldmean, &oldvariance);
-   varCalcDistributionParameters(scip, newlb, newub, &newmean, &newvariance);
-
+   assert(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
+
    branchruledata = eventhdlrdata->branchruledata;
+   var = SCIPeventGetVar(event);
 
-   /* loop over all rows of this variable and update activity distribution */
-   for( r = 0; r < ncolrows; ++r )
-   {
-      int rowpos;
+   /* add the variable to the queue of unprocessed variables; method itself ensures that every variable is added
+    * at most once
+    */
+   branchruledataAddBoundChangeVar(scip, branchruledata, var);
 
-      assert(colrows[r] != NULL);
-      rowpos = SCIProwGetIndex(colrows[r]);
-      assert(rowpos >= 0);
-
-      SCIP_CALL( branchruledataEnsureArraySize(scip, branchruledata, rowpos) );
-
-      /* only consider rows for which activity distribution was already calculated */
-      if( branchruledata->rowmeans[rowpos] != SCIP_INVALID )
-      {
-         SCIP_Real coeff;
-         SCIP_Real coeffsquared;
-         assert(branchruledata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
-
-         coeff = colvals[r];
-         coeffsquared = SQUARED(coeff);
-
-         /* update variable contribution to row activity distribution */
-         branchruledata->rowmeans[rowpos] += coeff * (newmean - oldmean);
-         branchruledata->rowvariances[rowpos] += coeffsquared * (newvariance - oldvariance);
-         assert(SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
-
-         /* account for changes of the infinite contributions to row activities */
-         if( SCIPisPositive(scip, coeff) )
-         {
-            /* if the coefficient is positive, upper bounds affect activity up */
-            if( SCIPisInfinity(scip, newub) && !SCIPisInfinity(scip, oldub) )
-               ++branchruledata->rowinfinitiesup[rowpos];
-            else if( !SCIPisInfinity(scip, newub) && SCIPisInfinity(scip, oldub) )
-               --branchruledata->rowinfinitiesup[rowpos];
-
-            if( SCIPisInfinity(scip, newlb) && !SCIPisInfinity(scip, oldlb) )
-               ++branchruledata->rowinfinitiesdown[rowpos];
-            else if( !SCIPisInfinity(scip, newlb) && SCIPisInfinity(scip, oldlb) )
-               --branchruledata->rowinfinitiesdown[rowpos];
-         }
-         else
-         {
-            /* if the coefficient is negative, upper bounds affect activity down */
-            assert(SCIPisNegative(scip, coeff));
-            if( SCIPisInfinity(scip, newub) && !SCIPisInfinity(scip, oldub) )
-               ++branchruledata->rowinfinitiesdown[rowpos];
-            else if( !SCIPisInfinity(scip, newub) && SCIPisInfinity(scip, oldub) )
-               --branchruledata->rowinfinitiesdown[rowpos];
-
-            if( SCIPisInfinity(scip, newlb) && !SCIPisInfinity(scip, oldlb) )
-               ++branchruledata->rowinfinitiesup[rowpos];
-            else if( !SCIPisInfinity(scip, newlb) && SCIPisInfinity(scip, oldlb) )
-               --branchruledata->rowinfinitiesup[rowpos];
-         }
-         assert(branchruledata->rowinfinitiesdown[rowpos] >= 0);
-         assert(branchruledata->rowinfinitiesup[rowpos] >= 0);
-      }
-   }
    return SCIP_OKAY;
 }
+
 
 /*
  * branching rule specific interface methods
