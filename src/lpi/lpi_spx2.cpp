@@ -3365,7 +3365,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    col.reDim(lpi->spx->numRowsReal());
 
    /* solve */
-   lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef);
+   if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )
+      return SCIP_LPERROR;
 
    return SCIP_OKAY;
 }
