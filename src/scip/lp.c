@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -15886,8 +15887,8 @@ SCIP_RETCODE SCIPlpGetSol(
                SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
                SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
                primalfeasible != NULL ? *primalfeasible : TRUE,
-               !SCIPsetIsFeasPositive(set, (lpicols[c]->primsol - lpicols[c]->lb) * lpicols[c]->redcost),
-               !SCIPsetIsFeasNegative(set, (lpicols[c]->ub - lpicols[c]->primsol) * lpicols[c]->redcost),
+               !SCIPsetIsFeasPositive(set, MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost),
+               !SCIPsetIsFeasNegative(set, MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost),
                dualfeasible != NULL ? *dualfeasible : TRUE);
          }
          else
@@ -15945,8 +15946,8 @@ SCIP_RETCODE SCIPlpGetSol(
                SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
                SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
                primalfeasible != NULL ? *primalfeasible : TRUE,
-               !SCIPsetIsFeasPositive(set, (lpirows[r]->activity - lpirows[r]->lhs) * lpirows[r]->dualsol),
-               !SCIPsetIsFeasNegative(set, (lpirows[r]->rhs - lpirows[r]->activity) * lpirows[r]->dualsol),
+               !SCIPsetIsFeasPositive(set, MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol),
+               !SCIPsetIsFeasNegative(set, MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol),
                dualfeasible != NULL ? *dualfeasible : TRUE);
          }
          else
