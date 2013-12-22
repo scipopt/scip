@@ -28,6 +28,7 @@ LOCK=${12}
 VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
+CLIENTTMPDIR=${16}
 
 # check if all variables defined (by checking the last one)
 if test -z $VALGRIND
@@ -59,7 +60,6 @@ MEMFORMAT="kB"
 
 INIT="true"
 COUNT=0
-CLIENTTMPDIR=/usr/local/tmp
 for INSTANCE in `cat testset/$TSTNAME.test` DONE
 do
     COUNT=`expr $COUNT + 1`
