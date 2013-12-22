@@ -258,6 +258,11 @@ SCIP version 3.0.3
 
 fixed bugs:
 - fixed bug in handling max-functions in ampl interface
+- fixed bug in cons_indicator with trying to create solution in problem stage
+- fixed bug in cons_orbitope with fixing upper right triangle in non-root nodes
+- fixed bug in reader_lp when writing bilinear terms (product sign was missing)
+- allow again branching on continuous variables with hugh bounds
+- fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 
 
 SCIP version 3.0.2
@@ -322,7 +327,6 @@ fixed bugs:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
 - updated get.ASL script to cope with broken ftp access to netlib server
-- fixed bug in cons_indicator with trying to create solution in problem stage
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

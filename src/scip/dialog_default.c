@@ -4035,7 +4035,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       }
    }
 
-   /* create set presolving emphasis */
+   /* create set heuristics emphasis */
    SCIP_CALL( createEmphasisSubmenu(scip, submenu, &emphasismenu) );
    assert(emphasismenu != NULL);
 

@@ -2634,7 +2634,7 @@ void printRow(
 
          (void) SCIPsnprintf(varname,  LP_MAX_NAMELEN, "%s", SCIPvarGetName(bilinterms[v].var1));
          (void) SCIPsnprintf(varname2, LP_MAX_NAMELEN, "%s", SCIPvarGetName(bilinterms[v].var2));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s %s", bilinterms[v].coef, varname, varname2);
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s * %s", bilinterms[v].coef, varname, varname2);
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }

@@ -2230,6 +2230,7 @@ SCIP_RETCODE replaceQuadVarTermPos(
    consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
    consdata->quadvarssorted = (consdata->nquadvars == 1);
    consdata->quadvarsmerged = FALSE;
+   consdata->bilinsorted &= (quadvarterm->nadjbilin == 0);  /*lint !e514*/
    consdata->bilinmerged &= (quadvarterm->nadjbilin == 0);  /*lint !e514*/
 
    consdata->ispropagated  = FALSE;

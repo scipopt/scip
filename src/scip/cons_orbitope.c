@@ -101,7 +101,7 @@ struct SCIP_ConsData
    int                   nblocks;            /**< number of symmetric variable blocks             <=> q     */
    SCIP_Bool             ispart;             /**< whether we deal with the partitioning case (packing otherwise) */
    SCIP_Bool             resolveprop;        /**< should propagation be resolved?                           */
-   SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already been fixed to zero?  */
+   SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already globally been fixed to zero?  */
 };
 
 
@@ -375,9 +375,6 @@ void copyValues(
  *
  *  Build up dynamic programming table in order to find SCs with minimum weight.
  *
- *  The method here works for the general case in which the variables in the
- *  top right triangle are not necessarily fixed.
- *
  *  The values of the minimal SCIs are stored in @a weights.
  *  The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
  *  Here, 3 means that we have reached the upper limit.
@@ -490,6 +487,7 @@ SCIP_RETCODE fixTriangle(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
+   SCIP_Bool fixedglobal;
    SCIP_Bool fixed;
    int diagsize;
    int nspcons;
@@ -517,6 +515,7 @@ SCIP_RETCODE fixTriangle(
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
    vars = consdata->vars;
+   fixedglobal = TRUE;
 
    /* get last row of triangle */
    diagsize = nblocks;
@@ -528,6 +527,7 @@ SCIP_RETCODE fixTriangle(
    {
       for (j = i+1; j < nblocks; ++j)
       {
+         /* fix variable, if not in the root the fixation is local */
          SCIP_CALL( SCIPfixVar(scip, vars[i][j], 0.0, infeasible, &fixed) );
 
          if ( *infeasible )
@@ -538,18 +538,22 @@ SCIP_RETCODE fixTriangle(
 
          if ( fixed )
             ++(*nfixedvars);
+
+         if ( SCIPvarGetUbGlobal(vars[i][j]) > 0.5 )
+            fixedglobal = FALSE;
       }
    }
    if ( *nfixedvars > 0 )
    {
-      SCIPdebugMessage("<%s>: Fixed upper right triangle to 0 (fixed vars: %d).\n", SCIPconsGetName(cons), *nfixedvars);
+      SCIPdebugMessage("<%s>: %s fixed upper right triangle to 0 (fixed vars: %d).\n", SCIPconsGetName(cons), fixedglobal ? "globally" : "locally", *nfixedvars);
    }
    else
    {
       SCIPdebugMessage("<%s>: Upper right triangle already fixed to 0.\n", SCIPconsGetName(cons));
    }
 
-   consdata->istrianglefixed = TRUE;
+   if ( fixedglobal )
+      consdata->istrianglefixed = TRUE;
 
    return SCIP_OKAY;
 }
@@ -617,7 +621,6 @@ SCIP_RETCODE separateSCIs(
       if ( *nfixedvars > 0 )
          return SCIP_OKAY;
    }
-   assert( consdata->istrianglefixed );
 
    /* compute table if necessary (i.e., not computed before) */
    computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
@@ -762,7 +765,6 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( fixTriangle(scip, cons, infeasible, &nfixed) );
       *nfixedvars += nfixed;
    }
-   assert( consdata->istrianglefixed );
 
    /* prepare further propagation */
    SCIP_CALL( SCIPallocBufferArray(scip, &firstnonzeros, nspcons) );
@@ -1666,7 +1668,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
             return SCIP_OKAY;
          }
       }
-      assert( consdata->istrianglefixed );
 
       nspcons = consdata->nspcons;
       nblocks = consdata->nblocks;

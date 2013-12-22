@@ -229,10 +229,10 @@ SCIP_RETCODE updateBestCandidate(
    assert(candbrpoint >= SCIPvarGetLbLocal(cand));
    assert(candbrpoint <= SCIPvarGetUbLocal(cand));
 
-   /* we cannot branch on a huge value, because we simply cannot enumerate such huge integer values in floating point
+   /* we cannot branch on a huge value for a discrete variable, because we simply cannot enumerate such huge integer values in floating point
     * arithmetics
     */
-   if( SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint) )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS && (SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint)) )
       return SCIP_OKAY;
 
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
