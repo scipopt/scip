@@ -1138,6 +1138,7 @@ void evalSignPower(
  * only implemented for real numbers, thus gives error by default
  */
 template<class Type>
+static
 void evalSignPower(
    Type&                 resultant,          /**< resultant */
    Type&                 arg,                /**< operand */
@@ -1153,6 +1154,7 @@ void evalSignPower(
 /** specialization of signpower evaluation for real numbers
  */
 template<>
+static
 void evalSignPower(
    CppAD::AD<double>&    resultant,          /**< resultant */
    CppAD::AD<double>&    arg,                /**< operand */
@@ -1178,6 +1180,7 @@ void evalSignPower(
  * @todo implement own userad function
  */
 template<class Type>
+static
 void evalMin(
    Type&                 resultant,          /**< resultant */
    Type&                 arg1,               /**< first operand */
@@ -1207,6 +1210,7 @@ void evalMin(
  * @todo implement own userad function
  */
 template<class Type>
+static
 void evalMax(
    Type&                 resultant,          /**< resultant */
    Type&                 arg1,               /**< first operand */
@@ -1235,6 +1239,7 @@ void evalMax(
  * default is to use the standard sqrt-function
  */
 template<class Type>
+static
 void evalSqrt(
    Type&                 resultant,          /**< resultant */
    Type&                 arg                 /**< operand */
@@ -1258,6 +1263,7 @@ void evalSqrt(
 /** template for evaluation for absolute value operator
  */
 template<class Type>
+static
 void evalAbs(
    Type&                 resultant,          /**< resultant */
    Type&                 arg                 /**< operand */
@@ -1285,6 +1291,7 @@ void evalAbs(
 
 /** integer power operation for arbitrary integer exponents */
 template<class Type>
+static
 void evalIntPower(
    Type&                 resultant,          /**< resultant */
    Type&                 arg,                /**< operand */
@@ -1331,6 +1338,7 @@ void evalIntPower(
 
 /** CppAD compatible evaluation of an expression for given arguments and parameters */
 template<class Type>
+static
 SCIP_RETCODE eval(
    SCIP_EXPR*            expr,               /**< expression */
    const vector<Type>&   x,                  /**< values of variables */
@@ -1611,6 +1619,7 @@ SCIP_RETCODE eval(
 /** analysis an expression tree whether it requires retaping on every evaluation
  * this may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...)
  */
+static
 bool needAlwaysRetape(SCIP_EXPR* expr)
 {
    assert(expr != NULL);
