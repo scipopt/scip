@@ -882,7 +882,8 @@ SCIP_RETCODE applyGenVBound(
    SCIP_PROP*            prop,               /**< genvbounds propagator */
    GENVBOUND*            genvbound,          /**< genvbound data structure */
    SCIP_Bool             global,             /**< apply global bound changes? (global: true, local: false)*/
-   SCIP_RESULT*          result              /**< result pointer */
+   SCIP_RESULT*          result,             /**< result pointer */
+   int*                  nchgbds             /**< counter to increment if bound was tightened */
    )
 {
    SCIP_Real boundval;
@@ -973,6 +974,8 @@ SCIP_RETCODE applyGenVBound(
    else if( tightened )
    {
       *result = SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING ? SCIP_SUCCESS : SCIP_REDUCEDDOM;
+      if( nchgbds != NULL )
+         ++(*nchgbds);
       SCIPdebugMessage("    tightened!\n");
    }
 
@@ -1460,7 +1463,8 @@ SCIP_RETCODE applyGenVBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< genvbounds propagator */
    SCIP_Bool             global,             /**< use global variable bounds for propagation? */
-   SCIP_RESULT*          result              /**< result pointer */
+   SCIP_RESULT*          result,             /**< result pointer */
+   int*                  nchgbds             /**< counter to increase by the number of changed bounds */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -1501,7 +1505,7 @@ SCIP_RETCODE applyGenVBounds(
          else
          {
             SCIPdebugMessage("applying genvbound with index %d (unsorted mode)\n", j);
-            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result) );
+            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result, nchgbds) );
          }
       }
 
@@ -1530,7 +1534,7 @@ SCIP_RETCODE applyGenVBounds(
          else
          {
             SCIPdebugMessage("applying genvbound with index %d, component %d\n", j, startingcomponents[i]);
-            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result) );
+            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result, nchgbds) );
          }
       }
    }
@@ -1618,7 +1622,8 @@ SCIP_RETCODE execGenVBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< data of the genvbounds propagator */
    SCIP_RESULT*          result,             /**< result pointer */
-   SCIP_Bool             local               /**< should local propagation be applied? */
+   SCIP_Bool             local,              /**< should local propagation be applied? */
+   int*                  nchgbds             /**< counter to increase by the number of changed bounds */
    )
 {
    assert(scip != NULL);
@@ -1662,7 +1667,7 @@ SCIP_RETCODE execGenVBounds(
    {
       if( propdata->ngindices > 0 )
       {
-         SCIP_CALL( applyGenVBounds(scip, propdata->prop, TRUE, result) );
+         SCIP_CALL( applyGenVBounds(scip, propdata->prop, TRUE, result, nchgbds) );
          assert(*result != SCIP_DIDNOTRUN);
       }
       propdata->lastcutoff = SCIPgetCutoffbound(scip);
@@ -1677,7 +1682,7 @@ SCIP_RETCODE execGenVBounds(
          /* if genvbounds are already sorted, check if bound change events were caught; otherwise apply all genvbounds */
          if( !propdata->issorted || ( SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 ) )
          {
-            SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result) );
+            SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result, nchgbds) );
             assert(*result != SCIP_DIDNOTRUN);
          }
       }
@@ -1880,7 +1885,7 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
    }
 
    /* propagate */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE) );
+   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, nchgbds) );
 
    return SCIP_OKAY;
 }
@@ -1914,7 +1919,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    }
 
    /* propagate locally and globally */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE) );
+   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, NULL) );
 
    /* when called in presolving stage the result is set to SCIP_SUCCESS instead of SCIP_REDUCEDDOM, this is corrected
     * here
