@@ -63,7 +63,6 @@ using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Woverloaded-virtual"
 #if GCC_VERSION >= 480
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #endif
@@ -74,7 +73,6 @@ using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
-/* #pragma GCC diagnostic warning "-Woverloaded-virtual" */
 #if GCC_VERSION >= 480
 #pragma GCC diagnostic warning "-Wunused-local-typedefs"
 #endif
@@ -374,6 +372,79 @@ public:
 
 #ifndef NO_CPPAD_USER_ATOMIC
 
+/** computes sparsity of jacobian for a univariate function during a forward sweep
+ * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
+ * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
+ */
+static
+bool univariate_for_sparse_jac(
+   size_t                     q,  /**< number of columns in R */
+   const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
+   CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+)
+{
+   assert(r.size() == q);
+   assert(s.size() == q);
+
+   s = r;
+
+   return true;
+}
+
+/** computes sparsity of jacobian during a reverse sweep
+ * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
+ * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+ */
+static
+bool univariate_rev_sparse_jac(
+   size_t                     q,  /**< number of rows in R */
+   CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
+   const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
+)
+{
+   assert(r.size() == q);
+   assert(s.size() == q);
+
+   r = s;
+
+   return true;
+}
+
+/** computes sparsity of hessian during a reverse sweep
+ * Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
+ * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+ */
+static
+bool univariate_rev_sparse_hes(
+   const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
+   const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
+   CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+   size_t                                  q,  /**< number of columns in R, U, and V */
+   const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
+   const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+   CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+)
+{
+   assert(r.size() == q);
+   assert(s.size() == 1);
+   assert(t.size() == 1);
+   assert(u.size() == q);
+   assert(v.size() == q);
+
+   // T(x) = g'(f(x)) * f'(x) = S * f'(x), and f' is not identically 0
+   t[0] = s[0];
+
+   // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
+   //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
+   v = u;
+   if( s[0] )
+      for( size_t j = 0; j < q; ++j )
+         v[j] |= r[j];
+
+   return true;
+}
+
+
 /** Automatic differentiation of x -> x^p, p>=2 integer, as CppAD user-atomic function.
  *
  * This class implements forward and reverse operations for the function x -> x^p for use within CppAD.
@@ -389,8 +460,8 @@ public:
    : CppAD::atomic_base<Type>("posintpower"),
      exponent(0)
    {
-      /* indicate that we want to use set-based sparsity pattern */
-      this->option(CppAD::atomic_base<Type>::set_sparsity_enum);
+      /* indicate that we want to use bool-based sparsity pattern */
+      this->option(CppAD::atomic_base<Type>::bool_sparsity_enum);
    }
 
 private:
@@ -545,41 +616,37 @@ private:
       return true;
    }
 
+   using CppAD::atomic_base<Type>::for_sparse_jac;
+
    /** computes sparsity of jacobian during a forward sweep
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<std::set<size_t> >& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<std::set<size_t> >&       s   /**< vector to store sparsity of S, columnwise */
+      size_t                     q,  /**< number of columns in R */
+      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
    )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-
-      s[0] = r[0];
-
-      return true;
+      return univariate_for_sparse_jac(q, r, s);
    }
+
+   using CppAD::atomic_base<Type>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
    bool rev_sparse_jac(
-      size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<std::set<size_t> >&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<std::set<size_t> >& s   /**< vector to store sparsity of S, rowwise */
+      size_t                     q,  /**< number of rows in R */
+      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
+      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
    )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-
-      r[0] = s[0];
-
-      return true;
+      return univariate_rev_sparse_jac(q, r, s);
    }
+
+   using CppAD::atomic_base<Type>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
     * Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
@@ -589,28 +656,13 @@ private:
       const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
       const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
       CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<std::set<size_t> >& r,  /**< sparsity pattern of R */
-      const CppAD::vector<std::set<size_t> >& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector< std::set<size_t> >&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      size_t                                  q,  /**< number of columns in R, U, and V */
+      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
    )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-      assert(t.size() == 1);
-      assert(u.size() == 1);
-      assert(v.size() == 1);
-
-      // T(x) = g'(f(x)) * f'(x) = S * f'(x), and f' is not identically 0
-      t[0] = s[0];
-
-      // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
-      //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
-      v[0] = u[0];
-      if( s[0] )
-         v[0].insert(r[0].begin(), r[0].end());
-
-      return true;
+      return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
 };
 
@@ -661,8 +713,8 @@ public:
    : CppAD::atomic_base<Type>("signpower"),
      exponent(0.0)
    {
-      /* indicate that we want to use set-based sparsity pattern */
-      this->option(CppAD::atomic_base<Type>::set_sparsity_enum);
+      /* indicate that we want to use bool-based sparsity pattern */
+      this->option(CppAD::atomic_base<Type>::bool_sparsity_enum);
    }
 
 private:
@@ -829,23 +881,22 @@ private:
       return true;
    }
 
+   using CppAD::atomic_base<Type>::for_sparse_jac;
+
    /** computes sparsity of jacobian during a forward sweep
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
       size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<std::set<size_t> >& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<std::set<size_t> >&       s   /**< vector to store sparsity of S, columnwise */
+      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
       )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-
-      s[0] = r[0];
-
-      return true;
+      return univariate_for_sparse_jac(q, r, s);
    }
+
+   using CppAD::atomic_base<Type>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
@@ -853,17 +904,14 @@ private:
     */
    bool rev_sparse_jac(
       size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<std::set<size_t> >&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<std::set<size_t> >& s   /**< vector to store sparsity of S, rowwise */
+      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
+      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
       )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-
-      r[0] = s[0];
-
-      return true;
+      return univariate_rev_sparse_jac(q, r, s);
    }
+
+   using CppAD::atomic_base<Type>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
     * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
@@ -874,27 +922,12 @@ private:
       const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
       CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
       size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<std::set<size_t> >& r,  /**< sparsity pattern of R */
-      const CppAD::vector<std::set<size_t> >& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector< std::set<size_t> >&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
    )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-      assert(t.size() == 1);
-      assert(u.size() == 1);
-      assert(v.size() == 1);
-
-      // T(x) = g'(f(x)) * f'(x) = S * f'(x), and f' is not identically 0
-      t[0] = s[0];
-
-      // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
-      //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
-      v[0] = u[0];
-      if( s[0] )
-         v[0].insert(r[0].begin(), r[0].end());
-
-      return true;
+      return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
 
 };
@@ -908,8 +941,8 @@ public:
    : CppAD::atomic_base<SCIPInterval>("signpowerint"),
      exponent(0.0)
    {
-      /* indicate that we want to use set-based sparsity pattern */
-      this->option(CppAD::atomic_base<SCIPInterval>::set_sparsity_enum);
+      /* indicate that we want to use bool-based sparsity pattern */
+      this->option(CppAD::atomic_base<SCIPInterval>::bool_sparsity_enum);
    }
 
 private:
@@ -1044,6 +1077,7 @@ private:
       return true;
    }
 
+   using CppAD::atomic_base<SCIPInterval>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
@@ -1051,17 +1085,14 @@ private:
     */
    bool for_sparse_jac(
       size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<std::set<size_t> >& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<std::set<size_t> >&       s   /**< vector to store sparsity of S, columnwise */
+      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
       )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-
-      s[0] = r[0];
-
-      return true;
+      return univariate_for_sparse_jac(q, r, s);
    }
+
+   using CppAD::atomic_base<SCIPInterval>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
@@ -1069,17 +1100,14 @@ private:
     */
    bool rev_sparse_jac(
       size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<std::set<size_t> >&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<std::set<size_t> >& s   /**< vector to store sparsity of S, rowwise */
+      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
+      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
       )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-
-      r[0] = s[0];
-
-      return true;
+      return univariate_rev_sparse_jac(q, r, s);
    }
+
+   using CppAD::atomic_base<SCIPInterval>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
     * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
@@ -1090,27 +1118,12 @@ private:
       const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
       CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
       size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<std::set<size_t> >& r,  /**< sparsity pattern of R */
-      const CppAD::vector<std::set<size_t> >& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector< std::set<size_t> >&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
    )
    {
-      assert(r.size() == 1);
-      assert(s.size() == 1);
-      assert(t.size() == 1);
-      assert(u.size() == 1);
-      assert(v.size() == 1);
-
-      // T(x) = g'(f(x)) * f'(x) = S * f'(x), and f' is not identically 0
-      t[0] = s[0];
-
-      // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
-      //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
-      v[0] = u[0];
-      if( s[0] )
-         v[0].insert(r[0].begin(), r[0].end());
-
-      return true;
+      return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
 };
 
