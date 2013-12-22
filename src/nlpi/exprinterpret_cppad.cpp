@@ -63,6 +63,7 @@ using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Woverloaded-virtual"
 #if GCC_VERSION >= 480
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #endif
@@ -73,6 +74,7 @@ using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
+#pragma GCC diagnostic warning "-Woverloaded-virtual"
 #if GCC_VERSION >= 480
 #pragma GCC diagnostic warning "-Wunused-local-typedefs"
 #endif

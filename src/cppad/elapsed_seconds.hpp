@@ -1,13 +1,13 @@
-/* $Id: elapsed_seconds.hpp 2211 2011-11-24 23:44:39Z bradbell $ */
+/* $Id: elapsed_seconds.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_ELAPSED_SECONDS_INCLUDED
 # define CPPAD_ELAPSED_SECONDS_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -32,7 +32,7 @@ $icode%s% = elapsed_seconds()%$$
 
 $head Purpose$$
 This routine is accurate to within .02 seconds
-(see $cref/elapsed_seconds.cpp/$$).
+(see $cref elapsed_seconds.cpp$$).
 It does not necessary work for time intervals that are greater than a day.
 $list number$$
 If running under the Microsoft compiler, it uses 
@@ -50,13 +50,13 @@ number of seconds since the first call to $code elapsed_seconds$$.
 $head Microsoft Systems$$
 It you are using the Microsoft C++ compiler,
 you will need to link in the external routine 
-called $cref/microsoft_timer/$$.
+called $cref microsoft_timer$$.
 
 $children%
 	speed/example/elapsed_seconds.cpp
 %$$
 $head Example$$
-The routine $cref/elapsed_seconds.cpp/$$ is
+The routine $cref elapsed_seconds.cpp$$ is
 an example and test of this routine.
 
 
@@ -73,7 +73,7 @@ $end
 
 # ifdef _MSC_VER
 extern double microsoft_timer(void);
-# elif CPPAD_GETTIMEOFDAY 
+# elif CPPAD_HAS_GETTIMEOFDAY 
 # include <sys/time.h>
 # else
 # include <ctime>
@@ -84,8 +84,10 @@ extern double microsoft_timer(void);
 
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/thread_alloc.hpp>
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup elapsed_seconds_hpp elapsed_seconds.hpp
+\{
 \file elapsed_seconds.hpp
 \brief Function that returns the elapsed seconds from first call.
 */
@@ -109,7 +111,7 @@ inline double elapsed_seconds(void)
 # ifdef _MSC_VER
 {	return microsoft_timer(); }
 
-# elif CPPAD_GETTIMEOFDAY 
+# elif CPPAD_HAS_GETTIMEOFDAY 
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
 	static bool           first_ = true;
 	static struct timeval tv_;		
@@ -146,5 +148,6 @@ inline double elapsed_seconds(void)
 }
 # endif
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

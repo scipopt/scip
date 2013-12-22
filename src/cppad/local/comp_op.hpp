@@ -1,23 +1,25 @@
-/* $Id: comp_op.hpp 1986 2011-06-18 20:33:17Z bradbell $ */
+/* $Id: comp_op.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_COMP_OP_INCLUDED
 # define CPPAD_COMP_OP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup comp_op_hpp comp_op.hpp
+\{
 \file comp_op.hpp
-Zero order forward mode check how man comparisons changed.
+Zero order forward mode check how many comparisons changed.
 */
 
 /*!
@@ -167,5 +169,6 @@ inline void forward_comp_op_0(
 	}
 	return;
 }
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

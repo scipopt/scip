@@ -1,24 +1,46 @@
-/* $Id: reverse_sweep.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: reverse_sweep.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_REVERSE_SWEEP_INCLUDED
 # define CPPAD_REVERSE_SWEEP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup reverse_sweep_hpp reverse_sweep.hpp
+\{
 \file reverse_sweep.hpp
 Compute derivatives of arbitrary order Taylor coefficients.
 */
+
+/*
+\def CPPAD_ATOMIC_CALL
+This avoids warnings when NDEBUG is defined and user_ok is not used.
+If \c NDEBUG is defined, this resolves to
+\code
+	user_atom->reverse
+\endcode
+otherwise, it respolves to
+\code
+	user_ok = user_atom->reverse
+\endcode
+This maco is undefined at the end of this file to facillitate is 
+use with a different definition in other files.
+*/
+# ifdef NDEBUG
+# define CPPAD_ATOMIC_CALL user_atom->reverse
+# else
+# define CPPAD_ATOMIC_CALL user_ok = user_atom->reverse
+# endif
 
 /*!
 \def CPPAD_REVERSE_SWEEP_TRACE
@@ -49,6 +71,8 @@ This is also equal to the number of rows in the matrix \a Taylor; i.e.,
 Rec->num_rec_var().
 
 \param Rec
+2DO: change this name from Rec to play (becuase it is a player 
+and not a recorder).
 The information stored in \a Rec
 is a recording of the operations corresponding to the function
 \f[
@@ -122,6 +146,12 @@ For j = 1 , ... , n and for k = 0 , ... , d,
 is the partial derivative of \f$ G( u ) \f$ with 
 respect to \f$ u_j^{(k)} \f$.
 
+\param cskip_op
+Is a vector with size Rec->num_rec_op().
+If cskip_op[i] is true, the operator index i in the recording
+does not affect any of the dependent variable (given the value
+of the independent variables).
+
 \par Assumptions
 The first operator on the tape is a BeginOp,
 and the next \a n operators are InvOp operations for the 
@@ -129,21 +159,22 @@ corresponding independent variables.
 */
 template <class Base>
 void ReverseSweep(
-	size_t                d,
-	size_t                n,
-	size_t                numvar,
-	player<Base>*         Rec,
-	size_t                J,
-	const Base*           Taylor,
-	size_t                K,
-	Base*                 Partial
+	size_t                      d,
+	size_t                      n,
+	size_t                      numvar,
+	player<Base>*               Rec,
+	size_t                      J,
+	const Base*                 Taylor,
+	size_t                      K,
+	Base*                       Partial,
+	const CppAD::vector<bool>&  cskip_op
 )
 {
 	OpCode           op;
 	size_t         i_op;
 	size_t        i_var;
 
-	const addr_t*   arg = 0;
+	const addr_t*   arg = CPPAD_NULL;
 
 	// check numvar argument
 	CPPAD_ASSERT_UNKNOWN( Rec->num_rec_var() == numvar );
@@ -153,24 +184,30 @@ void ReverseSweep(
 	const size_t num_par = Rec->num_rec_par();
 
 	// pointer to the beginning of the parameter vector
-	const Base* parameter = 0;
+	const Base* parameter = CPPAD_NULL;
 	if( num_par > 0 )
 		parameter = Rec->GetPar();
 
 	// work space used by UserOp.
-	const size_t user_k  = d;    // order of this forward mode calculation
+	const size_t user_k  = d;    // highest order we are differentiating
 	const size_t user_k1 = d+1;  // number of orders for this calculation
 	vector<size_t> user_ix;      // variable indices for argument vector
 	vector<Base> user_tx;        // argument vector Taylor coefficients
 	vector<Base> user_ty;        // result vector Taylor coefficients
 	vector<Base> user_px;        // partials w.r.t argument vector
 	vector<Base> user_py;        // partials w.r.t. result vector
-	size_t user_index = 0;       // indentifier for this user_atomic operation
+	size_t user_index = 0;       // indentifier for this atomic operation
 	size_t user_id    = 0;       // user identifier for this call to operator
 	size_t user_i     = 0;       // index in result vector
 	size_t user_j     = 0;       // index in argument vector
 	size_t user_m     = 0;       // size of result vector
 	size_t user_n     = 0;       // size of arugment vector
+	//
+	atomic_base<Base>* user_atom = CPPAD_NULL; // user's atomic op calculator
+# ifndef NDEBUG
+	bool               user_ok   = false;      // atomic op return value
+# endif
+	//
 	// next expected operator in a UserOp sequence
 	enum { user_start, user_arg, user_ret, user_end } user_state = user_end;
 
@@ -183,15 +220,21 @@ void ReverseSweep(
 # if CPPAD_REVERSE_SWEEP_TRACE
 	std::cout << std::endl;
 # endif
-	while(op != BeginOp )
+	bool more_operators = true;
+	while(more_operators)
 	{	// next op
 		Rec->next_reverse(op, arg, i_op, i_var);
-# ifndef NDEBUG
-		if( i_op <= n )
-		{	CPPAD_ASSERT_UNKNOWN((op == InvOp) | (op == BeginOp));
+		CPPAD_ASSERT_UNKNOWN((i_op >  n) | (op == InvOp) | (op == BeginOp));
+		CPPAD_ASSERT_UNKNOWN((i_op <= n) | (op != InvOp) | (op != BeginOp));
+
+		// check if we are skipping this operation
+		while( cskip_op[i_op] )
+		{	if( op == CSumOp )
+			{	// CSumOp has a variable number of arguments
+				Rec->reverse_csum(op, arg, i_op, i_var);
+			}
+			Rec->next_reverse(op, arg, i_op, i_var);
 		}
-		else	CPPAD_ASSERT_UNKNOWN((op != InvOp) & (op != BeginOp));
-# endif
 
 		// rest of informaiton depends on the case
 # if CPPAD_REVERSE_SWEEP_TRACE
@@ -202,6 +245,7 @@ void ReverseSweep(
 		printOp(
 			std::cout, 
 			Rec,
+			i_op,
 			i_tmp,
 			op, 
 			arg,
@@ -265,9 +309,18 @@ void ReverseSweep(
 			// -------------------------------------------------
 
 			case BeginOp:
-			CPPAD_ASSERT_NARG_NRES(op, 0, 1);
+			CPPAD_ASSERT_NARG_NRES(op, 1, 1);
+			more_operators = false;
 			break;
 			// --------------------------------------------------
+
+			case CSkipOp:
+			// CSkipOp has a variable number of arguments and
+			// next_forward thinks it one has one argument.
+			// we must inform next_forward of this special case.
+			Rec->reverse_cskip(op, arg, i_op, i_var);
+			break;
+			// -------------------------------------------------
 
 			case CSumOp:
 			// CSumOp has a variable number of arguments and
@@ -518,13 +571,22 @@ void ReverseSweep(
 				user_id    = arg[1];
 				user_n     = arg[2];
 				user_m     = arg[3];
-				if(user_ix.size() < user_n)
+				user_atom  = atomic_base<Base>::class_object(user_index);
+# ifndef NDEBUG
+				if( user_atom == CPPAD_NULL )
+				{	std::string msg = 
+						atomic_base<Base>::class_name(user_index)
+						+ ": atomic_base function has been deleted";
+					CPPAD_ASSERT_KNOWN(false, msg.c_str() );
+				}
+# endif
+				if(user_ix.size() != user_n)
 					user_ix.resize(user_n);
-				if(user_tx.size() < user_n * user_k1)
+				if(user_tx.size() != user_n * user_k1)
 				{	user_tx.resize(user_n * user_k1);
 					user_px.resize(user_n * user_k1);
 				}
-				if(user_ty.size() < user_m * user_k1)
+				if(user_ty.size() != user_m * user_k1)
 				{	user_ty.resize(user_m * user_k1);
 					user_py.resize(user_m * user_k1);
 				}
@@ -538,18 +600,26 @@ void ReverseSweep(
 				CPPAD_ASSERT_UNKNOWN( user_id    == size_t(arg[1]) );
 				CPPAD_ASSERT_UNKNOWN( user_n     == size_t(arg[2]) );
 				CPPAD_ASSERT_UNKNOWN( user_m     == size_t(arg[3]) );
-				user_state = user_end;
 
 				// call users function for this operation
-				user_atomic<Base>::reverse(user_index, user_id,
-					user_k, user_n, user_m, user_tx, user_ty,
-					user_px, user_py
+				user_atom->set_id(user_id);
+				CPPAD_ATOMIC_CALL(
+					user_k, user_tx, user_ty, user_px, user_py
 				);
+# ifndef NDEBUG
+				if( ! user_ok )
+				{	std::string msg = 
+						atomic_base<Base>::class_name(user_index)
+						+ ": atomic_base.reverse: returned false";
+					CPPAD_ASSERT_KNOWN(false, msg.c_str() );
+				}
+# endif
 				for(j = 0; j < user_n; j++) if( user_ix[j] > 0 )
 				{	for(ell = 0; ell < user_k1; ell++)
 						Partial[user_ix[j] * K + ell] +=
 							user_px[j * user_k1 + ell];
 				}
+				user_state = user_end;
 			}
 			break;
 
@@ -628,9 +698,11 @@ void ReverseSweep(
 	CPPAD_ASSERT_UNKNOWN( i_var == 0 );
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 
 // preprocessor symbols that are local to this file
 # undef CPPAD_REVERSE_SWEEP_TRACE
+# undef CPPAD_ATOMIC_CALL
 
 # endif

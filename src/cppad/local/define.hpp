@@ -1,19 +1,21 @@
-/* $Id: define.hpp 2234 2011-12-21 13:44:54Z bradbell $ */
+/* $Id: define.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_DEFINE_INCLUDED
 # define CPPAD_DEFINE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 /*!
+\defgroup define_hpp define.hpp
+\{
 \file define.hpp
 Define processor symbols and macros that are used by CppAD.
 */
@@ -32,17 +34,6 @@ in pod_vector.hpp.
 # define CPPAD_OP_CODE_TYPE unsigned char
 
 /*!
-\def CPPAD_TAPE_ID_TYPE
-Is the type used to store tape identifies on the tape. If not size_t, then 
-<code>sizeof(CPPAD_TAPE_ID_TYPE) <= sizeof( size_t )</code>
-to conserve memory.
-This type must support \c std::numeric_limits,
-the \c <= operator,
-and conversion to \c size_t.
-*/
-# define CPPAD_TAPE_ID_TYPE size_t
-
-/*!
 \def CPPAD_USE_FORWARD0SWEEP
 If ture, use compute zero order sweeps using a specialized routine.
 
@@ -55,17 +46,6 @@ verified (as yet).
 This preprocessor symbol makes it easier to compare these two options.
 */
 # define CPPAD_USE_FORWARD0SWEEP 1
-
-/*! 
-\def CPPAD_BEGIN_NAMESPACE
-Declares beginning of the CppAD namespace is a way not reconized by doxygen.
-
-\def CPPAD_END_NAMESPACE
-Used for end that matches the beginning of a CppAD namespace section.
-*/
-# define CPPAD_BEGIN_NAMESPACE namespace CppAD {
-# define CPPAD_END_NAMESPACE   }
-
 
 /*!
 \def CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
@@ -100,21 +80,13 @@ If it is not yet defined,
 it is defined when cppad/local/define.hpp is included.
 */
 # ifndef CPPAD_NULL
+# if CPPAD_HAS_NULLPTR
+# define CPPAD_NULL     nullptr  
+# else
 # define CPPAD_NULL     0
 # endif
- 
-/*!
-\def CPPAD_MAX_NUM_THREADS
-Specifies the maximum number of threads that CppAD can support.
-
-The user may define CPPAD_MAX_NUM_THREADS before including any of the CppAD
-header files.  If it is not yet defined,
-it is defined when cppad/local/define.hpp is included.
-*/
-# ifndef CPPAD_MAX_NUM_THREADS
-# define CPPAD_MAX_NUM_THREADS 48
 # endif
-
+ 
 /*!
 \def CPPAD_FOLD_ASSIGNMENT_OPERATOR(Op)
 Declares automatic coercion for certain AD assignment operations.
@@ -360,4 +332,5 @@ inline bool operator Op                                                \
 	(const VecAD_reference<double> &left, const double &right)        \
 {	return left.ADBase() Op AD<double>(right); }
 
+/*! \} */
 # endif

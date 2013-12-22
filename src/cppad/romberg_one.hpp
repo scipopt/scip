@@ -1,13 +1,13 @@
-/* $Id: romberg_one.hpp 1370 2009-05-31 05:31:50Z bradbell $ */
+/* $Id: romberg_one.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ROMBERG_ONE_INCLUDED
 # define CPPAD_ROMBERG_ONE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-06 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -31,7 +31,7 @@ $head Syntax$$
 $code # include <cppad/romberg_one.hpp>$$
 $pre
 $$
-$syntax%%r% = RombergOne(%F%, %a%, %b%, %n%, %e%)%$$
+$icode%r% = RombergOne(%F%, %a%, %b%, %n%, %e%)%$$
 
 
 $head Description$$
@@ -47,50 +47,50 @@ but it can also be included separately with out the rest of
 the $code CppAD$$ routines.
 
 $head r$$
-The return value $italic r$$ has prototype
-$syntax%
+The return value $icode r$$ has prototype
+$codei%
 	%Float% %r%
 %$$ 
 It is the estimate computed by $code RombergOne$$ for the integral above.
 
 $head F$$
-The object $italic F$$ can be of any type, but it must support 
+The object $icode F$$ can be of any type, but it must support 
 the operation
-$syntax%
+$codei%
 	%F%(%x%)
 %$$
-The argument $italic x$$ to $italic F$$ has prototype
-$syntax%
+The argument $icode x$$ to $icode F$$ has prototype
+$codei%
 	const %Float% &%x%
 %$$
-The return value of $italic F$$ is a $italic Float$$ object
-(see description of $xref/RombergOne/Float/Float/$$ below). 
+The return value of $icode F$$ is a $icode Float$$ object
+(see description of $cref/Float/RombergOne/Float/$$ below). 
 
 $head a$$
-The argument $italic a$$ has prototype
-$syntax%
+The argument $icode a$$ has prototype
+$codei%
 	const %Float% &%a%
 %$$ 
 It specifies the lower limit for the integration.
 
 $head b$$
-The argument $italic b$$ has prototype
-$syntax%
+The argument $icode b$$ has prototype
+$codei%
 	const %Float% &%b%
 %$$ 
 It specifies the upper limit for the integration.
 
 $head n$$
-The argument $italic n$$ has prototype
-$syntax%
+The argument $icode n$$ has prototype
+$codei%
 	size_t %n%
 %$$ 
-A total number of $latex 2^{n-1} + 1$$ evaluations of $syntax%%F%(%x%)%$$
+A total number of $latex 2^{n-1} + 1$$ evaluations of $icode%F%(%x%)%$$
 are used to estimate the integral.
 
 $head p$$
-The argument $italic p$$ has prototype
-$syntax%
+The argument $icode p$$ has prototype
+$codei%
 	size_t %p%
 %$$ 
 It must be less than or equal $latex n$$
@@ -103,11 +103,11 @@ r = \int_a^b F(x) {\bf d} x + O \left[ (b - a) / 2^{n-1} \right]^{2(p+1)}
 
 
 $head e$$
-The argument $italic e$$ has prototype
-$syntax%
+The argument $icode e$$ has prototype
+$codei%
 	%Float% &%e%
 %$$ 
-The input value of $italic e$$ does not matter
+The input value of $icode e$$ does not matter
 and its output value is an approximation for the error in 
 the integral estimates; i.e.,
 $latex \[
@@ -115,16 +115,16 @@ $latex \[
 \] $$
 
 $head Float$$
-The type $italic Float$$ must satisfy the conditions
-for a $xref/NumericType/$$ type.
-The routine $xref/CheckNumericType/$$ will generate an error message
+The type $icode Float$$ must satisfy the conditions
+for a $cref NumericType$$ type.
+The routine $cref CheckNumericType$$ will generate an error message
 if this is not the case.
-In addition, if $italic x$$ and $italic y$$ are $italic Float$$ objects,
-$syntax%
+In addition, if $icode x$$ and $icode y$$ are $icode Float$$ objects,
+$codei%
 	%x% < %y%
 %$$     
-returns the $code bool$$ value true if $italic x$$ is less than 
-$italic y$$ and false otherwise.
+returns the $code bool$$ value true if $icode x$$ is less than 
+$icode y$$ and false otherwise.
 
 $children%
 	example/romberg_one.cpp
@@ -134,7 +134,7 @@ $comment%
 	example/romberg_one.cpp
 %$$
 The file
-$xref/RombergOne.cpp/$$
+$cref romberg_one.cpp$$
 contains an example and test a test of using this routine.
 It returns true if it succeeds and false otherwise.
 

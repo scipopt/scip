@@ -1,30 +1,43 @@
-/* $Id: declare_ad.hpp 2038 2011-07-31 23:56:44Z bradbell $ */
+/* $Id: declare_ad.hpp 2859 2013-05-28 06:03:21Z bradbell $ */
 # ifndef CPPAD_DECLARE_AD_INCLUDED
 # define CPPAD_DECLARE_AD_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 namespace CppAD {
+	// The conditional expression operator enum type
+	enum CompareOp 
+	{	CompareLt, // less than
+		CompareLe, // less than or equal
+		CompareEq, // equal
+		CompareGe, // greater than or equal
+		CompareGt, // greater than
+		CompareNe  // not equal
+	};
+
 	// simple typedefs
 	typedef CPPAD_TAPE_ADDR_TYPE addr_t;
+	typedef CPPAD_TAPE_ID_TYPE   tape_id_t;
 
 	// classes
+	class sparse_jacobian_work;
+	class sparse_hessian_work;
 	template <class Base> class AD;
 	template <class Base> class ADFun;
 	template <class Base> class ADTape;
+	template <class Base> class atomic_base;
 	template <class Base> class discrete;
 	template <class Base> class player;
 	template <class Base> class recorder;
-	template <class Base> class user_atomic;
 	template <class Base> class VecAD;
 	template <class Base> class VecAD_reference;
 
@@ -129,13 +142,17 @@ namespace CppAD {
 	template <class Base> AD<Base> pow
 		(const AD<Base> &x, const AD<Base> &y);
 
+	// input operator
+	template <class Base> std::istream&
+		operator >> (std::istream &is, AD<Base> &x);
+
 	// output operator
 	template <class Base> std::ostream&
-	operator << (std::ostream &os, const AD<Base> &x);
+		operator << (std::ostream &os, const AD<Base> &x);
 	template <class Base> std::ostream&
-	operator << (std::ostream &os, const VecAD_reference<Base> &e);
+		operator << (std::ostream &os, const VecAD_reference<Base> &e);
 	template <class Base> std::ostream&
-	operator << (std::ostream &os, const VecAD<Base> &vec);
+		operator << (std::ostream &os, const VecAD<Base> &vec);
 }
 
 # endif

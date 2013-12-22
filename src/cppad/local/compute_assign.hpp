@@ -1,13 +1,13 @@
-/* $Id: compute_assign.hpp 1369 2009-05-31 01:31:48Z bradbell $ */
+/* $Id: compute_assign.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_COMPUTE_ASSIGN_INCLUDED
 # define CPPAD_COMPUTE_ASSIGN_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-07 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -43,65 +43,65 @@ $index /, computed assignment$$
 $index divide, computed assignment$$
 
 $head Syntax$$
-$syntax%%x% %Op% %y%$$
+$icode%x% %Op% %y%$$
 
 $head Purpose$$
 Performs computed assignment operations 
-where either $italic x$$ has type 
-$syntax%AD<%Base%>%$$.
+where either $icode x$$ has type 
+$codei%AD<%Base%>%$$.
 
 $head Op$$
-The operator $italic Op$$ is one of the following
+The operator $icode Op$$ is one of the following
 $table
 $bold Op$$  $cnext $bold Meaning$$ $rnext
-$code +=$$   $cnext $italic x$$ is assigned $italic x$$ plus $italic y$$ $rnext
-$code -=$$   $cnext $italic x$$ is assigned $italic x$$ minus $italic y$$ $rnext
-$code *=$$   $cnext $italic x$$ is assigned $italic x$$ times $italic y$$ $rnext
-$code /=$$   $cnext $italic x$$ is assigned $italic x$$ divided by $italic y$$ 
+$code +=$$   $cnext $icode x$$ is assigned $icode x$$ plus $icode y$$ $rnext
+$code -=$$   $cnext $icode x$$ is assigned $icode x$$ minus $icode y$$ $rnext
+$code *=$$   $cnext $icode x$$ is assigned $icode x$$ times $icode y$$ $rnext
+$code /=$$   $cnext $icode x$$ is assigned $icode x$$ divided by $icode y$$ 
 $tend
 
 $head Base$$
-The type $italic Base$$ is determined by the operand $italic x$$.
+The type $icode Base$$ is determined by the operand $icode x$$.
 
 $head x$$
-The operand $italic x$$ has the following prototype
-$syntax%
+The operand $icode x$$ has the following prototype
+$codei%
 	AD<%Base%> &%x%
 %$$
 
 $head y$$
-The operand $italic y$$ has the following prototype
-$syntax%
+The operand $icode y$$ has the following prototype
+$codei%
 	const %Type% &%y%
 %$$
-where $italic Type$$ is
-$syntax%VecAD<%Base%>::reference%$$,
-$syntax%AD<%Base%>%$$,
-$italic Base$$, or
+where $icode Type$$ is
+$codei%VecAD<%Base%>::reference%$$,
+$codei%AD<%Base%>%$$,
+$icode Base$$, or
 $code double$$.
 
 $head Result$$
 $index assignment, multiple$$
 $index multiple, assignment$$
 The result of this assignment 
-can be used as a reference to $italic x$$.
-For example, if $italic z$$ has the following type
-$syntax%
+can be used as a reference to $icode x$$.
+For example, if $icode z$$ has the following type
+$codei%
 	AD<%Base%> %z%
 %$$
 then the syntax
-$syntax%
+$codei%
 	%z% = %x% += %y%
 %$$
-will compute $italic x$$ plus $italic y$$
-and then assign this value to both $italic x$$ and $italic z$$. 
+will compute $icode x$$ plus $icode y$$
+and then assign this value to both $icode x$$ and $icode z$$. 
 
 
 $head Operation Sequence$$
 This is an $cref/atomic/glossary/Operation/Atomic/$$
 $cref/AD of Base/glossary/AD of Base/$$ operation
 and hence it is part of the current
-AD of $italic Base$$ 
+AD of $icode Base$$ 
 $cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $children%
@@ -116,14 +116,14 @@ The following files contain examples and tests of these functions.
 Each test returns true if it succeeds and false otherwise.
 $table
 $rref AddEq.cpp$$
-$rref SubEq.cpp$$
-$rref MulEq.cpp$$
-$rref DivEq.cpp$$
+$rref sub_eq.cpp$$
+$rref mul_eq.cpp$$
+$rref div_eq.cpp$$
 $tend
 
 $head Derivative$$
 If $latex f$$ and $latex g$$ are 
-$xref/glossary/Base Function/Base functions/$$
+$cref/Base functions/glossary/Base Function/$$
 
 $subhead Addition$$
 $latex \[

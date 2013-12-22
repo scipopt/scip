@@ -1,13 +1,13 @@
-/* $Id: dependent.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: dependent.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_DEPENDENT_INCLUDED
 # define CPPAD_DEPENDENT_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -35,82 +35,82 @@ $index tape, stop recording$$
 $index Dependent$$
 
 $head Syntax$$
-$syntax%%f%.Dependent(%x%, %y%)%$$
+$icode%f%.Dependent(%x%, %y%)%$$
 
 $head Purpose$$
-Stop recording and the AD of $italic Base$$
-$xref/glossary/Operation/Sequence/operation sequence/1/$$
+Stop recording and the AD of $icode Base$$
+$cref/operation sequence/glossary/Operation/Sequence/$$
 that started with the call
-$syntax%
+$codei%
 	Independent(%x%)
 %$$
-and store the operation sequence in $italic f$$.
+and store the operation sequence in $icode f$$.
 The operation sequence defines an 
-$xref/glossary/AD Function/AD function/$$
+$cref/AD function/glossary/AD Function/$$
 $latex \[
 	F : B^n \rightarrow B^m
 \] $$
-where $latex B$$ is the space corresponding to objects of type $italic Base$$.
+where $latex B$$ is the space corresponding to objects of type $icode Base$$.
 The value $latex n$$ is the dimension of the 
-$xref/seq_property/Domain/domain/$$ space for the operation sequence.
+$cref/domain/seq_property/Domain/$$ space for the operation sequence.
 The value $latex m$$ is the dimension of the 
-$xref/seq_property/Range/range/$$ space for the operation sequence
-(which is determined by the size of $italic y$$).
+$cref/range/seq_property/Range/$$ space for the operation sequence
+(which is determined by the size of $icode y$$).
 
 $head f$$
-The object $italic f$$ has prototype
-$syntax%
+The object $icode f$$ has prototype
+$codei%
 	ADFun<%Base%> %f%
 %$$
-The AD of $italic Base$$ operation sequence is stored in $italic f$$; i.e.,
-it becomes the operation sequence corresponding to $italic f$$.
-If a previous operation sequence was stored in $italic f$$,
+The AD of $icode Base$$ operation sequence is stored in $icode f$$; i.e.,
+it becomes the operation sequence corresponding to $icode f$$.
+If a previous operation sequence was stored in $icode f$$,
 it is deleted. 
 
 $head x$$
-The argument $italic x$$ 
+The argument $icode x$$ 
 must be the vector argument in a previous call to
-$cref/Independent/$$.
+$cref Independent$$.
 Neither its size, or any of its values, are allowed to change
 between calling
-$syntax%
+$codei%
 	Independent(%x%)
 %$$
 and 
-$syntax%
+$codei%
 	%f%.Dependent(%x%, %y%)
 %$$.
 
 $head y$$
-The vector $italic y$$ has prototype
-$syntax%
+The vector $icode y$$ has prototype
+$codei%
 	const %ADvector% &%y%
 %$$
-(see $xref/FunConstruct//ADvector/$$ below).
-The length of $italic y$$ must be greater than zero
-and is the dimension of the range space for $italic f$$.
+(see $cref/ADvector/FunConstruct/$$ below).
+The length of $icode y$$ must be greater than zero
+and is the dimension of the range space for $icode f$$.
 
 $head ADvector$$
-The type $italic ADvector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
-$syntax%AD<%Base%>%$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode ADvector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
+$codei%AD<%Base%>%$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Taping$$
 The tape,
-that was created when $syntax%Independent(%x%)%$$ was called, 
+that was created when $codei%Independent(%x%)%$$ was called, 
 will stop recording.
 The AD operation sequence will be transferred from
-the tape to the object $italic f$$ and the tape will then be deleted.
+the tape to the object $icode f$$ and the tape will then be deleted.
 
 $head Forward$$
-No $xref/Forward/$$ calculation is preformed during this operation.
+No $cref Forward$$ calculation is preformed during this operation.
 Thus, directly after this operation,
-$syntax%
+$codei%
 	%f%.size_taylor()
 %$$ 
-is zero (see $xref/size_taylor/$$).
+is zero (see $cref size_taylor$$).
 
 $head Parallel Mode$$
 $index parallel, Dependent$$
@@ -130,7 +130,7 @@ $cref/thread_alloc::thread_num/ta_thread_num/$$ must be the same.
 
 $head Example$$
 The file
-$xref/FunCheck.cpp/$$ 
+$cref fun_check.cpp$$ 
 contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 
@@ -142,10 +142,17 @@ $end
 // BEGIN CppAD namespace
 namespace CppAD {
 
+/*!
+Determine the \c tape corresponding to this exeuction thread and then use
+<code>Dependent(tape, y)</code> to store this tapes recording in a function.
+
+\param y [in]
+The dependent variable vector for the corresponding function.
+*/
 template <typename Base>
 template <typename ADvector>
 void ADFun<Base>::Dependent(const ADvector &y)
-{	ADTape<Base> *tape = AD<Base>::tape_ptr();
+{	ADTape<Base>* tape = AD<Base>::tape_ptr();
 	CPPAD_ASSERT_KNOWN(
 		tape != CPPAD_NULL,
 		"Can't store current operation sequence in this ADFun object"
@@ -156,6 +163,19 @@ void ADFun<Base>::Dependent(const ADvector &y)
 	Dependent(tape, y);
 }
 
+
+/*!
+Determine the \c tape corresponding to this exeuction thread and then use
+<code>Dependent(tape, y)</code> to store this tapes recording in a function.
+
+\param x [in]
+The independent variable vector for this tape. This informaiton is
+also stored in the tape so a check is done to make sure it is correct
+(if NDEBUG is not defined).
+
+\param y [in]
+The dependent variable vector for the corresponding function.
+*/
 template <typename Base>
 template <typename ADvector>
 void ADFun<Base>::Dependent(const ADvector &x, const ADvector &y)
@@ -168,26 +188,26 @@ void ADFun<Base>::Dependent(const ADvector &x, const ADvector &y)
 		Variable(x[0]),
 		"Dependent: independent variable vector has been changed."
 	);
-	ADTape<Base> *tape = AD<Base>::tape_ptr(x[0].id_);
+	ADTape<Base> *tape = AD<Base>::tape_ptr(x[0].tape_id_);
 	CPPAD_ASSERT_KNOWN(
-		tape->size_independent_ == x.size(),
+		tape->size_independent_ == size_t( x.size() ),
 		"Dependent: independent variable vector has been changed."
 	);
 # ifndef NDEBUG
 	size_t i, j;
-	for(j = 0; j < x.size(); j++)
+	for(j = 0; j < size_t(x.size()); j++)
 	{	CPPAD_ASSERT_KNOWN(
 		size_t(x[j].taddr_) == (j+1),
 		"ADFun<Base>: independent variable vector has been changed."
 		);
 		CPPAD_ASSERT_KNOWN(
-		x[j].id_ == x[0].id_,
+		x[j].tape_id_ == x[0].tape_id_,
 		"ADFun<Base>: independent variable vector has been changed."
 		);
 	}
-	for(i = 0; i < y.size(); i++)
+	for(i = 0; i < size_t(y.size()); i++)
 	{	CPPAD_ASSERT_KNOWN(
-		CppAD::Parameter( y[i] ) | (y[i].id_ == x[0].id_) ,
+		CppAD::Parameter( y[i] ) | (y[i].tape_id_ == x[0].tape_id_) ,
 		"ADFun<Base>: dependent vector contains a variable for"
 		"\na different tape (thread) than the independent variables."
 		);
@@ -197,7 +217,18 @@ void ADFun<Base>::Dependent(const ADvector &x, const ADvector &y)
 	// code above just determines the tape and checks for errors
 	Dependent(tape, y);
 }
-		
+
+/*!
+Replace the floationg point operations sequence for this function object.
+
+\param tape
+is a tape that contains the new floating point operation sequence
+for this function.
+After this operation, all memory allocated for this tape is deleted.
+
+\param y
+The dependent variable vector for the function being stored in this object.
+*/
 
 template <typename Base>
 template <typename ADvector>
@@ -238,13 +269,19 @@ void ADFun<Base>::Dependent(ADTape<Base> *tape, const ADvector &y)
 	// total number of variables on the tape
 	total_num_var_ = tape->Rec_.num_rec_var();
 
+	// conditional skip vector
+	cskip_op_.clear();
+	cskip_op_.resize( tape->Rec_.num_rec_op() );
+	for(i = 0; i < cskip_op_.size(); i++)
+		cskip_op_[i] = false;
+
 	// now that each dependent variable has a place in the tape,
-	// and there is a EndOp at the end of the tape,
-	// we can make a copy for this function and erase the tape.
-	play_ = tape->Rec_;
+	// and there is a EndOp at the end of the tape, we can transfer the 
+	// recording to the player and and erase the tape.
+	play_.get(tape->Rec_);
 
 	// now we can delete the tape
-	AD<Base>::tape_delete( tape->id_ );
+	AD<Base>::tape_manage(tape_manage_delete);
 
 	// total number of varables in this recording 
 	CPPAD_ASSERT_UNKNOWN( total_num_var_ == play_.num_rec_var() );
