@@ -8,6 +8,7 @@ fixed bugs:
 - fixed bug in reader_lp when writing bilinear terms (product sign was missing)
 - allow again branching on continuous variables with hugh bounds
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
+- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
 
 
 SCIP version 3.0.2
