@@ -15841,7 +15841,7 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &redcost, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
-   
+
    SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
    if( lp->solisbasic )
    {
@@ -15873,30 +15873,44 @@ SCIP_RETCODE SCIPlpGetSol(
          {
             double compslack;
 
-            /* complementary slackness in barrier solutions is measured as product of primal solution and reduced costs */
+            /* complementary slackness in barrier solutions is measured as product of primal slack and reduced costs */
             compslack = (lpicols[c]->primsol - lpicols[c]->lb) * lpicols[c]->redcost;
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
             compslack = (lpicols[c]->ub - lpicols[c]->primsol) * lpicols[c]->redcost;
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
+
+            SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+               SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+               SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
+               SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
+               primalfeasible != NULL ? *primalfeasible : TRUE,
+               !SCIPsetIsFeasPositive(set, (lpicols[c]->primsol - lpicols[c]->lb) * lpicols[c]->redcost),
+               !SCIPsetIsFeasNegative(set, (lpicols[c]->ub - lpicols[c]->primsol) * lpicols[c]->redcost),
+               dualfeasible != NULL ? *dualfeasible : TRUE);
          }
          else
          {
-            /* complementary slackness in simplex means that basic variables should have zero reduced costs */
+            /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
+             * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
+             * bounds, its reduced cost must be zero
+             */
             if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
                *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
             if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
                *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+
+            SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+               SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+               SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
+               SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
+               primalfeasible != NULL ? *primalfeasible : TRUE,
+               !SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) || !SCIPsetIsFeasPositive(set, lpicols[c]->redcost),
+               !SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) || !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
+               dualfeasible != NULL ? *dualfeasible : TRUE);
          }
       } /*lint --e{705}*/
-      SCIPdebugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u(%u)\n",
-         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
-         SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
-         SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub), 
-         primalfeasible != NULL ? *primalfeasible : TRUE,
-         !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
-         dualfeasible != NULL ? *dualfeasible : TRUE);
    }
-   
+
    /* copy dual solution and activities into rows */
    for( r = 0; r < nlpirows; ++r )
    {
@@ -15911,19 +15925,46 @@ SCIP_RETCODE SCIPlpGetSol(
             && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
       if( dualfeasible != NULL )
       {
-         if( SCIPsetIsInfinity(set, -lpirows[r]->lhs) )
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
-         if( SCIPsetIsInfinity(set, lpirows[r]->rhs) )
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
+         if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
+         {
+            double compslack;
+
+            /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier */
+            compslack = (lpirows[r]->activity - lpirows[r]->lhs) * lpirows[r]->dualsol;
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
+            compslack = (lpirows[r]->rhs - lpirows[r]->activity) * lpirows[r]->dualsol;
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
+
+            SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+               lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
+               SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
+               SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+               primalfeasible != NULL ? *primalfeasible : TRUE,
+               !SCIPsetIsFeasPositive(set, (lpirows[r]->activity - lpirows[r]->lhs) * lpirows[r]->dualsol),
+               !SCIPsetIsFeasNegative(set, (lpirows[r]->rhs - lpirows[r]->activity) * lpirows[r]->dualsol),
+               dualfeasible != NULL ? *dualfeasible : TRUE);
+         }
+         else
+         {
+            /* complementary slackness means that if the activity of a row is not at its left-hand or right-hand side,
+             * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
+             * strictly within left-hand and right-hand side, its dual multiplier must be zero
+             */
+            if( SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
+               *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
+            if( SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+               *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
+
+            SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+               lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
+               SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
+               SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+               primalfeasible != NULL ? *primalfeasible : TRUE,
+               !SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol),
+               !SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol),
+               dualfeasible != NULL ? *dualfeasible : TRUE);
+         }
       } /*lint --e{705}*/
-      SCIPdebugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n", 
-         lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity,
-         SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
-         SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
-         primalfeasible != NULL ? *primalfeasible : TRUE,
-         SCIPsetIsInfinity(set, -lpirows[r]->lhs) ? !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol) : TRUE,
-         SCIPsetIsInfinity(set, lpirows[r]->rhs) ? !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol) : TRUE,
-         dualfeasible != NULL ? *dualfeasible : TRUE);
    }
 
    /* free temporary memory */
