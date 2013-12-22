@@ -15872,10 +15872,13 @@ SCIP_RETCODE SCIPlpGetSol(
          {
             double compslack;
 
-            /* complementary slackness in barrier solutions is measured as product of primal slack and reduced costs */
-            compslack = (lpicols[c]->primsol - lpicols[c]->lb) * lpicols[c]->redcost;
+            /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
+             * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
+             * variables, which would magnify even the tiniest violation in the dual multiplier
+             */
+            compslack = MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost;
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
-            compslack = (lpicols[c]->ub - lpicols[c]->primsol) * lpicols[c]->redcost;
+            compslack = MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost;
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
 
             SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
@@ -15928,10 +15931,13 @@ SCIP_RETCODE SCIPlpGetSol(
          {
             double compslack;
 
-            /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier */
-            compslack = (lpirows[r]->activity - lpirows[r]->lhs) * lpirows[r]->dualsol;
+            /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
+             * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
+             * variables, which would magnify even the tiniest violation in the dual multiplier
+             */
+            compslack = MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol;
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
-            compslack = (lpirows[r]->rhs - lpirows[r]->activity) * lpirows[r]->dualsol;
+            compslack = MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol;
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
 
             SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",

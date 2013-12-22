@@ -251,7 +251,7 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
-- extended dual feasibility checks for LP solution activated by parameter lp/checkfeas
+- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
 
 
 SCIP version 3.0.3
