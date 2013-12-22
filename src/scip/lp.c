@@ -11332,11 +11332,7 @@ SCIP_RETCODE SCIPlpSetState(
 
    /* set LPI state in the LP solver */
    if( lpistate == NULL )
-   {
-      /**@todo the assert might be to hard since in case of solving the LP with the barrier the lpistate is also NULL */
-      assert(lp->nlpicols == 0 && lp->nlpirows == 0);
       lp->solisbasic = FALSE;
-   }
    else
    {
       SCIP_CALL( SCIPlpiSetState(lp->lpi, blkmem, lpistate) );
@@ -11357,7 +11353,10 @@ SCIP_RETCODE SCIPlpFreeState(
 {
    assert(lp != NULL);
 
-   SCIP_CALL( SCIPlpiFreeState(lp->lpi, blkmem, lpistate) );
+   if( *lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeState(lp->lpi, blkmem, lpistate) );
+   }
 
    return SCIP_OKAY;
 }
@@ -16351,7 +16350,6 @@ SCIP_RETCODE SCIPlpEndDive(
 
    assert(lp != NULL);
    assert(lp->diving);
-   assert(lp->divelpistate != NULL);
    assert(blkmem != NULL);
    assert(nvars == 0 || vars != NULL);
 
@@ -16377,7 +16375,9 @@ SCIP_RETCODE SCIPlpEndDive(
    /* restore LPI iteration limit */
    SCIP_CALL( lpSetIterationLimit(lp, lp->divinglpiitlim) );
 
-   /* reload LPI state saved at start of diving, free LPI state afterwards */
+   /* reload LPI state saved at start of diving and free it afterwards; it may be NULL, in which case simply nothing
+    * happens
+    */
    SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    assert(lp->divelpistate == NULL);
