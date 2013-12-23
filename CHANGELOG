@@ -243,6 +243,9 @@ parameters:
 - new parameter "write/genericnamesoffset" when writing a generic problem now it is possible to define an offset on the
   variable name, that normally starts with "0"
 - remove parameter "separating/closecuts/relintnormtype"
+- added parameter "constraints/abspower/scaling" and "constraints/nonlinear/scaling"
+- changed type of parameters "constraints/bivariate/scaling", "constraints/quadratic/scaling", "constraints/soc/scaling"
+  from boolean to character
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to

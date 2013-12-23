@@ -128,7 +128,7 @@ struct SCIP_ConshdlrData
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    int                   ninitlprefpoints;   /**< number of reference points in each direction where to compute linear support for envelope in LP initialization */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
-   SCIP_Bool             doscaling;          /**< should constraints be scaled in the feasibility check ? */
+   char                  scaling;            /**< scaling method of constraints in feasibility check */
 
    SCIP_EVENTHDLR*       linvareventhdlr;    /**< handler for linear variable bound change events */
    SCIP_EVENTHDLR*       nonlinvareventhdlr; /**< handler for nonlinear variable bound change events */
@@ -758,12 +758,12 @@ SCIP_RETCODE removeFixedNonlinearVariables(
 static
 SCIP_RETCODE computeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_EXPRINT*         exprinterpreter,    /**< expression interpreter */
-   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Bool             doscaling           /**< should we scale the violation by the sup norm of the gradient of the constraint function ? */
+   SCIP_SOL*             sol                 /**< solution or NULL if LP solution should be used */
    )
 {  /*lint --e{666}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real xyvals[2];
    SCIP_Real xlb;
@@ -774,14 +774,19 @@ SCIP_RETCODE computeViolation(
    SCIP_VAR* y;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(cons != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->exprinterpreter != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
    {
-      SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->f) );
+      SCIP_CALL( SCIPexprintCompile(conshdlrdata->exprinterpreter, consdata->f) );
    }
 
    x = SCIPexprtreeGetVars(consdata->f)[0];
@@ -816,7 +821,7 @@ SCIP_RETCODE computeViolation(
    }
 
    /* compute activity of constraint */
-   SCIP_CALL( SCIPexprintEval(exprinterpreter, consdata->f, xyvals, &consdata->activity) );
+   SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->f, xyvals, &consdata->activity) );
 
    /* point is outside the domain of f */
    if( !finite(consdata->activity) )
@@ -839,28 +844,59 @@ SCIP_RETCODE computeViolation(
    else
       consdata->rhsviol = 0.0;
 
-   /* scale violation by supremum-norm of gradient */
-   if( doscaling && (SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip))) )
+   switch( conshdlrdata->scaling )
    {
-      SCIP_Real grad[2];
-      SCIP_Real norm;
-      SCIP_Real val;
-
-      /* compute gradient of f in (x,y) */
-      SCIP_CALL( SCIPexprintGrad(exprinterpreter, consdata->f, xyvals, TRUE, &val, grad) );
-
-      if( finite(grad[0]) && finite(grad[1]) )
+      case 'o' :
       {
-         /* compute maximal absolute element of gradient, to use for scaling if > 1.0 */
-         norm = MAX(REALABS(grad[0]), REALABS(grad[1]));
-         if( consdata->z != NULL )
-            norm = MAX(norm, REALABS(consdata->zcoef));
+         /* no scaling */
+         break;
+      }
 
-         if( norm > 1.0 )
+      case 'g' :
+      {
+         /* scale by sup-norm of gradient in current point */
+         if( consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0 )
          {
-            consdata->lhsviol /= norm;
-            consdata->rhsviol /= norm;
+            SCIP_Real grad[2];
+            SCIP_Real norm;
+            SCIP_Real val;
+
+            /* compute gradient of f in (x,y) */
+            SCIP_CALL( SCIPexprintGrad(conshdlrdata->exprinterpreter, consdata->f, xyvals, TRUE, &val, grad) );
+
+            if( finite(grad[0]) && finite(grad[1]) )
+            {
+               /* compute maximal absolute element of gradient, to use for scaling if > 1.0 */
+               norm = MAX(REALABS(grad[0]), REALABS(grad[1]));
+               if( consdata->z != NULL )
+                  norm = MAX(norm, REALABS(consdata->zcoef));
+
+               if( norm > 1.0 )
+               {
+                  consdata->lhsviol /= norm;
+                  consdata->rhsviol /= norm;
+               }
+            }
          }
+         break;
+      }
+
+      case 's' :
+      {
+         /* scale by left/right hand side of constraint */
+         if( consdata->lhsviol > 0.0 )
+            consdata->lhsviol /= MAX(1.0, REALABS(consdata->lhs));
+
+         if( consdata->rhsviol > 0.0 )
+            consdata->rhsviol /= MAX(1.0, REALABS(consdata->rhs));
+
+         break;
+      }
+
+      default :
+      {
+         SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+         SCIPABORT();
       }
    }
 
@@ -871,11 +907,10 @@ SCIP_RETCODE computeViolation(
 static
 SCIP_RETCODE computeViolations(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_EXPRINT*         exprinterpreter,    /**< expression interpreter */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Bool             doscaling,          /**< are we scaling when computing violation ? */
    SCIP_CONS**           maxviolcon          /**< buffer to store constraint with largest violation, or NULL if solution is feasible */
    )
 {
@@ -885,6 +920,7 @@ SCIP_RETCODE computeViolations(
    int            c;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    assert(maxviolcon != NULL);
 
@@ -897,7 +933,7 @@ SCIP_RETCODE computeViolations(
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      SCIP_CALL( computeViolation(scip, conss[c], exprinterpreter, sol, doscaling) );
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol) );
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -4685,16 +4721,28 @@ SCIP_RETCODE separatePoint(
             feasibility = SCIPgetRowLPFeasibility(scip, row);
          else
             feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-         norm = SCIPgetRowMaxCoef(scip, row);
 
-         /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-          * this avoid finding cuts efficiant which are only very slightly violated
-          * CPLEX does not seem to scale row coefficients up too
-          */
-         if( norm > 1.0 )
-            efficacy = -feasibility / norm;
-         else
-            efficacy = -feasibility;
+         switch( conshdlrdata->scaling )
+         {
+            case 'o' :
+               efficacy = -feasibility;
+               break;
+            case 'g' :
+               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
+                * this avoid finding cuts efficient which are only very slightly violated
+                * CPLEX does not seem to scale row coefficients up too
+                * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
+                */
+               norm = SCIPgetRowMaxCoef(scip, row);
+               efficacy = -feasibility / MAX(1.0, norm);
+               break;
+            case 's' :
+               efficacy = -feasibility / MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+               break;
+            default:
+               efficacy = SCIP_INVALID;
+               SCIPABORT();
+         }
 
          SCIPdebug( printEstimator(scip, sol, conss[c], violside, row) );
 
@@ -5508,12 +5556,12 @@ SCIP_RETCODE proposeFeasibleSolution(
        * get absolution violation and sign */
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
       {
-         SCIP_CALL( computeViolation(scip, conss[c], conshdlrdata->exprinterpreter, newsol, conshdlrdata->doscaling) );  /*lint !e613*/
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->lhs - consdata->activity;
       }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
-         SCIP_CALL( computeViolation(scip, conss[c], conshdlrdata->exprinterpreter, newsol, conshdlrdata->doscaling) );  /*lint !e613*/
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->rhs - consdata->activity;
       }
       else
@@ -5582,7 +5630,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
       /* still here... so maybe we could not make constraint feasible due to variable bounds
        * check if we are feasible w.r.t. (relative) feasibility tolerance */
-      SCIP_CALL( computeViolation(scip, conss[c], conshdlrdata->exprinterpreter, newsol, conshdlrdata->doscaling) );  /*lint !e613*/
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
       /* if still violated, we give up */
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          break;
@@ -6594,7 +6642,7 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conss, nconss, conshdlrdata->exprinterpreter, NULL, conshdlrdata->doscaling, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcon) );
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
@@ -6623,7 +6671,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( computeViolations(scip, conss, nconss, conshdlrdata->exprinterpreter, sol, conshdlrdata->doscaling, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &maxviolcon) );
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
@@ -6655,7 +6703,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conss, nconss, conshdlrdata->exprinterpreter, NULL, conshdlrdata->doscaling, &maxviolcons) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcons) );
    if( maxviolcons == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -6789,7 +6837,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcons;
    SCIP_CONSDATA*     consdata;
    SCIP_RESULT        propresult;
@@ -6800,13 +6847,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsBivariate)
    int                i;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   SCIP_CALL( computeViolations(scip, conss, nconss, conshdlrdata->exprinterpreter, NULL, conshdlrdata->doscaling, &maxviolcons) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcons) );
    if( maxviolcons == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -6896,7 +6939,7 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], conshdlrdata->exprinterpreter, sol, conshdlrdata->doscaling) );
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol) );
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -7904,9 +7947,9 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",
-         "whether a constraint should be scaled w.r.t. the current gradient sup.norm when checking for feasibility",
-         &conshdlrdata->doscaling, TRUE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/scaling",
+         "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
+         &conshdlrdata->scaling, TRUE, 'g', "ogs", NULL, NULL) );
 
    conshdlrdata->linvareventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->linvareventhdlr), CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
