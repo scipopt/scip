@@ -18838,7 +18838,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    }
    newbound = MIN(newbound, ub);
 
-   /* bound changes of less than epsilon are ignored by SCIPvarChgXb or raise an assert in SCIPnodeAddBoundinfer,
+   /* bound changes of less than epsilon are ignored by SCIPvarChgLb or raise an assert in SCIPnodeAddBoundinfer,
     * so don't apply them even if force is set
     */
    if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
@@ -18948,10 +18948,10 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    }
    newbound = MAX(newbound, lb);
 
-   /* bound changes of less than epsilon are ignored by SCIPvarChgXb or raise an assert in SCIPnodeAddBoundinfer,
+   /* bound changes of less than epsilon are ignored by SCIPvarChgUb or raise an assert in SCIPnodeAddBoundinfer,
     * so don't apply them even if force is set
     */
-   if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
+   if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
