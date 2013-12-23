@@ -170,7 +170,7 @@ static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
 
-/** defintion of CondExpOp for SCIPInterval (required by CppAD) */
+/** definition of CondExpOp for SCIPInterval (required by CppAD) */
 inline
 SCIPInterval CondExpOp(
    enum CppAD::CompareOp cop,
@@ -499,12 +499,12 @@ private:
 
       if( q == 0 /* q <= 0 && 0 <= p */ )
       {
-         ty[0] = pow(tx[0], exponent);
+         ty[0] = CppAD::pow(tx[0], exponent);
       }
 
       if( q <= 1 && 1 <= p )
       {
-         ty[1] = pow(tx[0], exponent-1) * tx[1];
+         ty[1] = CppAD::pow(tx[0], exponent-1) * tx[1];
          ty[1] *= double(exponent);
       }
 
@@ -513,9 +513,9 @@ private:
          if( exponent > 2 )
          {
             // ty[2] = exponent * (exponent-1) * pow(tx[0], exponent-2) * tx[1] * tx[1] + exponent * pow(tx[0], exponent-1) * tx[2];
-            ty[2]  = pow(tx[0], exponent-2) * tx[1] * tx[1];
+            ty[2]  = CppAD::pow(tx[0], exponent-2) * tx[1] * tx[1];
             ty[2] *= exponent-1;
-            ty[2] += pow(tx[0], exponent-1) * tx[2];
+            ty[2] += CppAD::pow(tx[0], exponent-1) * tx[2];
             ty[2] *= exponent;
          }
          else
@@ -580,18 +580,18 @@ private:
       {
          case 0:
             // px[0] = py[0] * exponent * pow(tx[0], exponent-1);
-            px[0]  = py[0] * pow(tx[0], exponent-1);
+            px[0]  = py[0] * CppAD::pow(tx[0], exponent-1);
             px[0] *= exponent;
             break;
 
          case 1:
             // px[0] = py[0] * exponent * pow(tx[0], exponent-1) + py[1] * exponent * (exponent-1) * pow(tx[0], exponent-2) * tx[1];
-            px[0]  = py[1] * tx[1] * pow(tx[0], exponent-2);
+            px[0]  = py[1] * tx[1] * CppAD::pow(tx[0], exponent-2);
             px[0] *= exponent-1;
-            px[0] += py[0] * pow(tx[0], exponent-1);
+            px[0] += py[0] * CppAD::pow(tx[0], exponent-1);
             px[0] *= exponent;
             // px[1] = py[1] * exponent * pow(tx[0], exponent-1);
-            px[1]  = py[1] * pow(tx[0], exponent-1);
+            px[1]  = py[1] * CppAD::pow(tx[0], exponent-1);
             px[1] *= exponent;
             break;
 
@@ -973,12 +973,12 @@ private:
 
       if( q == 0 /* q <= 0 && 0 <= p */ )
       {
-         ty[0] = signpow(tx[0], exponent);
+         ty[0] = CppAD::signpow(tx[0], exponent);
       }
 
       if( q <= 1 && 1 <= p )
       {
-         ty[1] = pow(abs(tx[0]), exponent - 1.0) * tx[1];
+         ty[1] = CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0) * tx[1];
          ty[1] *= p;
       }
 
@@ -986,16 +986,16 @@ private:
       {
          if( p != 2.0 )
          {
-            ty[2]  = signpow(tx[0], exponent - 2.0) * square(tx[1]);
+            ty[2]  = CppAD::signpow(tx[0], exponent - 2.0) * CppAD::square(tx[1]);
             ty[2] *= exponent - 1.0;
-            ty[2] += CppAD::pow(abs(tx[0]), exponent - 1.0) * tx[2];
+            ty[2] += CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
             // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
-            ty[2]  = CppAD::sign(tx[0]) * square(tx[1]);
-            ty[2] += abs(tx[0]) * tx[2];
+            ty[2]  = CppAD::sign(tx[0]) * CppAD::square(tx[1]);
+            ty[2] += CppAD::abs(tx[0]) * tx[2];
             ty[2] *= exponent;
          }
       }
@@ -1028,7 +1028,7 @@ private:
       {
       case 0:
          // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
-         px[0]  = py[0] * pow(abs(tx[0]), exponent - 1.0);
+         px[0]  = py[0] * CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0);
          px[0] *= exponent;
          break;
 
@@ -1036,22 +1036,22 @@ private:
          if( exponent != 2.0 )
          {
             // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * signpow(tx[0], exponent - 2.0);
+            px[0]  = py[1] * tx[1] * CppAD::signpow(tx[0], exponent - 2.0);
             px[0] *= exponent - 1.0;
-            px[0] += py[0] * pow(abs(tx[0]), exponent - 1.0);
+            px[0] += py[0] * CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0);
             px[0] *= exponent;
             // px[1] = py[1] * p * abs(tx[0])^(p-1)
-            px[1]  = py[1] * pow(abs(tx[0]), exponent - 1.0);
+            px[1]  = py[1] * CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0);
             px[1] *= exponent;
          }
          else
          {
             // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
             px[0]  = py[1] * tx[1] * CppAD::sign(tx[0]);
-            px[0] += py[0] * abs(tx[0]);
+            px[0] += py[0] * CppAD::abs(tx[0]);
             px[0] *= 2.0;
             // px[1] = py[1] * 2.0 * abs(tx[0])
-            px[1]  = py[1] * abs(tx[0]);
+            px[1]  = py[1] * CppAD::abs(tx[0]);
             px[1] *= 2.0;
          }
          break;
@@ -1153,7 +1153,6 @@ void evalSignPower(
 /** specialization of signpower evaluation for real numbers
  */
 template<>
-static
 void evalSignPower(
    CppAD::AD<double>&    resultant,          /**< resultant */
    CppAD::AD<double>&    arg,                /**< operand */
@@ -1402,7 +1401,7 @@ SCIP_RETCODE eval(
       break;
 
    case SCIP_EXPR_REALPOWER:
-      val = pow(buf[0], SCIPexprGetRealPowerExponent(expr));
+      val = CppAD::pow(buf[0], SCIPexprGetRealPowerExponent(expr));
       break;
 
    case SCIP_EXPR_INTPOWER:
