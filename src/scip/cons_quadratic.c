@@ -4615,7 +4615,7 @@ SCIP_RETCODE checkFactorable(
    SCIP_CALL( SCIPallocBufferArray(scip, &a, n*n) );
    BMSclearMemoryArray(a, n*n);
 
-   /* set lower triagonal entries of A corresponding to bilinear terms */
+   /* set lower triangular entries of A corresponding to bilinear terms */
    for( i = 0; i < consdata->nbilinterms; ++i )
    {
       bilinterm = &consdata->bilinterms[i];
@@ -4629,7 +4629,7 @@ SCIP_RETCODE checkFactorable(
       a[MIN(idx1,idx2) * n + MAX(idx1,idx2)] = bilinterm->coef / 2.0;
    }
 
-   /* set lower triangle entries of A corresponding to square and linear terms */
+   /* set lower triangular entries of A corresponding to square and linear terms */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       a[i*n + i]   = consdata->quadvarterms[i].sqrcoef;
@@ -4704,7 +4704,7 @@ SCIP_RETCODE checkFactorable(
    /* check whether factorleft * factorright^T is matrix of augmented quadratic form */
    BMSclearMemoryArray(a, n*n);
 
-   /* set lower triagonal entries of A corresponding to bilinear terms */
+   /* set lower triangular entries of A corresponding to bilinear terms */
    for( i = 0; i < consdata->nbilinterms; ++i )
    {
       bilinterm = &consdata->bilinterms[i];
@@ -4718,7 +4718,7 @@ SCIP_RETCODE checkFactorable(
       a[MIN(idx1,idx2) * n + MAX(idx1,idx2)] = bilinterm->coef / 2.0;
    }
 
-   /* set lower triagonal entries of A corresponding to square and linear terms */
+   /* set lower triangular entries of A corresponding to square and linear terms */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       a[i*n + i]   = consdata->quadvarterms[i].sqrcoef;
