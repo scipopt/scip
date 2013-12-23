@@ -18838,7 +18838,10 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    }
    newbound = MIN(newbound, ub);
 
-   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   /* bound changes of less than epsilon are ignored by SCIPvarChgXb or raise an assert in SCIPnodeAddBoundinfer,
+    * so don't apply them even if force is set
+    */
+   if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -18945,7 +18948,10 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    }
    newbound = MAX(newbound, lb);
 
-   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   /* bound changes of less than epsilon are ignored by SCIPvarChgXb or raise an assert in SCIPnodeAddBoundinfer,
+    * so don't apply them even if force is set
+    */
+   if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -20248,7 +20254,10 @@ SCIP_RETCODE tightenBounds(
          if( *infeasible )
             return SCIP_OKAY;
 
-         assert(tightened);
+         /* the only reason for not applying a forced boundchange is when the new bound is reduced because the variables upper bound is below the new bound
+          * in a concrete case, lb == ub == 100.99999001; even though within feastol of 101, the lower bound cannot be tighented to 101 due to the upper bound
+          */
+         assert(tightened || SCIPisFeasLE(scip, SCIPvarGetUbGlobal(var), SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))));
       }
       if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(var)) ||
          (!SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) && SCIPvarGetUbGlobal(var) > SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)))
@@ -20258,7 +20267,7 @@ SCIP_RETCODE tightenBounds(
          if( *infeasible )
             return SCIP_OKAY;
 
-         assert(tightened);
+         assert(tightened || SCIPisFeasGE(scip, SCIPvarGetLbGlobal(var), SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var))));
       }
    }
 
