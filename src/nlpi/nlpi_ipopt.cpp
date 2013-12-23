@@ -47,14 +47,9 @@
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
 #include "IpJournalist.hpp"
-/* only for Ipopt >= 3.10 we can be sure that the required header files are available */
-#ifdef IPOPT_VERSION_MAJOR
-#if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
-#endif
-#endif
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
@@ -1989,11 +1984,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
 {
-#ifdef IPOPT_VERSION
    return "Ipopt "IPOPT_VERSION;
-#else
-   return "Ipopt < 3.9.0";
-#endif
 }
 
 /** gets string that describes Ipopt (version number) */
@@ -2494,8 +2485,6 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    )
 {
-#ifdef IPOPT_VERSION_MAJOR
-#if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
    if( nlpiproblem->storeintermediate && mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
    {
       Ipopt::TNLPAdapter* tnlp_adapter;
@@ -2546,8 +2535,6 @@ bool ScipNLP::intermediate_callback(
 
       }
    }
-#endif
-#endif
 
    /* do convergence test if fastfail is enabled */
    if( nlpiproblem->fastfail )
