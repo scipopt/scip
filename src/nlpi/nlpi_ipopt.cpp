@@ -1984,7 +1984,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
 {
-   return "Ipopt "IPOPT_VERSION;
+   return "Ipopt " IPOPT_VERSION;
 }
 
 /** gets string that describes Ipopt (version number) */
