@@ -15800,6 +15800,8 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_Real* dualsol;
    SCIP_Real* activity;
    SCIP_Real* redcost;
+   SCIP_Real primalbound;
+   SCIP_Real dualbound;
    int* cstat;
    int* rstat;
    SCIP_Longint lpcount;
@@ -15825,7 +15827,8 @@ SCIP_RETCODE SCIPlpGetSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new LP solution %"SCIP_LONGINT_FORMAT"\n", stat->lpcount);
+   SCIPdebugMessage("getting new LP solution %"SCIP_LONGINT_FORMAT" for solstat %d\n",
+      stat->lpcount, SCIPlpGetSolstat(lp));
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -15852,6 +15855,9 @@ SCIP_RETCODE SCIPlpGetSol(
       BMSclearMemoryArray(rstat, nlpirows);
    }
 
+   primalbound = 0.0;
+   dualbound = 0.0;
+
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
    {
@@ -15863,9 +15869,12 @@ SCIP_RETCODE SCIPlpGetSol(
       lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )
+      {
          *primalfeasible = *primalfeasible
             && !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
             && !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub);
+         primalbound += (lpicols[c]->primsol * lpicols[c]->obj);
+      }
       if( dualfeasible != NULL )
       {
          if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
@@ -15910,6 +15919,15 @@ SCIP_RETCODE SCIPlpGetSol(
                !SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) || !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
                dualfeasible != NULL ? *dualfeasible : TRUE);
          }
+
+         /* we intentionally use an exact positive/negative check because ignoring small reduced cost values may lead to
+          * a wrong bound value; if the corresponding bound is +/-infinity, we use zero reduced cost (if *dualfeasible
+          * is still TRUE, we are in the case that the reduced cost is tiny with wrong sign)
+          */
+         if( lpicols[c]->redcost > 0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
+            dualbound += (lpicols[c]->redcost * lpicols[c]->lb);
+         else if( lpicols[c]->redcost < 0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
+            dualbound += (lpicols[c]->redcost * lpicols[c]->ub);
       } /*lint --e{705}*/
    }
 
@@ -15969,7 +15987,38 @@ SCIP_RETCODE SCIPlpGetSol(
                !SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol),
                dualfeasible != NULL ? *dualfeasible : TRUE);
          }
+
+         /* we intentionally use an exact positive/negative check because ignoring small dual multipliers may lead to a
+          * wrong bound value; if the corresponding side is +/-infinity, we use a zero dual multiplier (if *dualfeasible
+          * is still TRUE, we are in the case that the dual multiplier is tiny with wrong sign)
+          */
+         if( lpirows[r]->dualsol > 0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
+            dualbound += (lpirows[r]->dualsol * (lpirows[r]->lhs - lpirows[r]->constant));
+         else if( lpirows[r]->dualsol < 0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
+            dualbound += (lpirows[r]->dualsol * (lpirows[r]->rhs - lpirows[r]->constant));
       } /*lint --e{705}*/
+   }
+
+   /* if the objective value returned by the LP solver is smaller than the internally computed primal bound, then we
+    * declare the solution primal infeasible
+    */
+   /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
+   if( primalfeasible != NULL )
+   {
+      *primalfeasible = *primalfeasible && SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
+      SCIPdebugMessage(" primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
+         SCIPsetIsFeasLE(set, primalbound, lp->lpobjval), primalfeasible != NULL ? *primalfeasible : TRUE);
+   }
+
+   /* if the objective value returned by the LP solver is smaller than the internally computed dual bound, we declare
+    * the solution dual infeasible
+    */
+   /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
+   if( dualfeasible != NULL )
+   {
+      *dualfeasible = *dualfeasible && SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
+      SCIPdebugMessage(" dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
+         SCIPsetIsFeasGE(set, dualbound, lp->lpobjval), dualfeasible != NULL ? *dualfeasible : TRUE);
    }
 
    /* free temporary memory */
