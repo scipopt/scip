@@ -3144,11 +3144,14 @@ SCIP_Bool SCIPlpiIsStable(
    /* If the condition number of the basis should be checked, everything above the specified threshold is counted
     * as instable.
     */
-   if( lpi->checkcondition && (lpi->solstat == CPX_STAT_OPTIMAL || SCIPlpiIsObjlimExc(lpi)) )
+   if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
    {
+      SCIP_RETCODE retcode;
       SCIP_Real kappa;
 
-      CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, &kappa, CPX_EXACT_KAPPA) );
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      assert(kappa != SCIP_INVALID);
+      assert(retcode == SCIP_OKAY);
 
       if( kappa > lpi->conditionlimit )
          return FALSE;

@@ -1316,6 +1316,8 @@ struct SCIP_LPi
    SCIP_Bool             solved;             /**< was the current LP solved? */
    SLUFactor*            factorization;      /**< factorization possibly needed for basis inverse */
    SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -1601,6 +1603,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->factorization = 0;
    (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
@@ -3429,6 +3433,24 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+#if ((SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 172)
+   /* If the condition number of the basis should be checked, everything above the specified threshold is counted
+    * as instable.
+    */
+   if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_RETCODE retcode;
+      SCIP_Real kappa;
+
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      assert(kappa != SCIP_INVALID);
+      assert(retcode == SCIP_OKAY);
+
+      if( kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+#endif
+
    return (lpi->spx->getStatus() != SPxSolver::ERROR && lpi->spx->getStatus() != SPxSolver::SINGULAR);
 }
 
@@ -4825,6 +4847,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4866,6 +4891,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
       lpi->rowrepswitch = dval;
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
