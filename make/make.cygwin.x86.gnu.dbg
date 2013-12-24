@@ -1,7 +1,7 @@
 FLAGS		+=      #-DROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
-CXXFLAGS	+=	$(GXXWARN)
+CXXFLAGS	+=	$(GXXWARN) -std=c++0x
 ARFLAGS		=	crs
 LDFLAGS		+=
 ZLIB_FLAGS	=
