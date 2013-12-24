@@ -819,6 +819,8 @@ SCIP_RETCODE createGenVBound(
                idx++;
 
                /* if redcost > 0, then redcost = alpha_k, otherwise redcost = - beta_k */
+               assert(redcost <= 0 || !SCIPisInfinity(scip, -SCIPgetVarLbDive(scip, xk)));
+               assert(redcost >= 0 || !SCIPisInfinity(scip, SCIPgetVarUbDive(scip, xk)));
                c -= redcost > 0 ? redcost * SCIPgetVarLbDive(scip, xk) : redcost * SCIPgetVarUbDive(scip, xk);
             }
          }
