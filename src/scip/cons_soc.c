@@ -4360,7 +4360,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    /* add soc constraint handler parameters */
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/scaling",
          "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
-         &conshdlrdata->scaling,          TRUE,   'g', "ogs",   NULL, NULL) );
+         &conshdlrdata->scaling,          TRUE,   'o', "ogs",   NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectpoint",
          "whether the reference point of a cut should be projected onto the feasible set of the SOC constraint",
