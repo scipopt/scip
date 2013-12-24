@@ -179,7 +179,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostObj)
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer, lowerbound, result) );
+   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer, lowerbound, stopearly, result) );
 
    return SCIP_OKAY;
 }

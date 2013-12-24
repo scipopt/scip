@@ -109,6 +109,7 @@ features:
 - new initial constraints are now added to the LP before solving a probing LP
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface
 - added McNemar tests and Wilcoxon signed rank tests to cmpres.awk evaluation scripts
+- a pricer can now return that no further pricing should be done but rather early branching, even if it added variables
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -187,6 +188,8 @@ interface
 - the HEUREXEC callback has a new parameter nodeinfeasible which denotes whether the current node was already detected
   to be infeasible
 - dropped support for Ipopt < 3.10
+- the PRICERREDCOST callback has a new parameter stopearly, which is a bool pointer to store whether pricing should be
+  stopped early although variables were generated, and early branching should be performed
 
 parameters:
 - parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function

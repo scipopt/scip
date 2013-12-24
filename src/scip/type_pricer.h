@@ -118,6 +118,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  *  - lowerbound      : pointer to store a lower bound found by the pricer
+ *  - stopearly       : should pricing be stopped, although new variables were added? (doing early branching)
  *  - result          : pointer to store the result of the pricer call
  *
  *  possible return values for *result:
@@ -126,7 +127,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *                      optimal
  *
  */
-#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result)
+#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_Bool* stopearly, SCIP_RESULT* result)
 
 /** Farkas pricing method of variable pricer for infeasible LPs
  *

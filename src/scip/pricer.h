@@ -127,6 +127,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_Bool*            stopearly,          /**< should pricing be stopped, although new variables were added? */
    SCIP_RESULT*          result              /**< result of the pricing process */    
    );
 
@@ -147,6 +148,7 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_Bool*            stopearly,          /**< should pricing be stopped, although new variables were added? */
    SCIP_RESULT*          result              /**< result of the pricing process */
    );
 

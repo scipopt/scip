@@ -1806,6 +1806,8 @@ SCIP_RETCODE SCIPpriceLoop(
       SCIP_RESULT result;
       SCIP_Real lb;
       SCIP_Bool foundsol;
+      SCIP_Bool stopearly;
+      SCIP_Bool stoppricing;
       int p;
 
       assert(lp->flushed);
@@ -1842,14 +1844,23 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* call external pricer algorithms, that are active for the current problem */
       enoughvars = (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2 + 1);
+      stoppricing = FALSE;
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
-         SCIP_CALL( SCIPpricerExec(set->pricers[p], set, transprob, lp, pricestore, &lb, &result) );
+         SCIP_CALL( SCIPpricerExec(set->pricers[p], set, transprob, lp, pricestore, &lb, &stopearly, &result) );
          assert(result == SCIP_DIDNOTRUN || result == SCIP_SUCCESS);
          SCIPdebugMessage("pricing: pricer %s returned result = %s, lowerbound = %f\n",
             SCIPpricerGetName(set->pricers[p]), (result == SCIP_DIDNOTRUN ? "didnotrun" : "success"), lb);
          enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= (SCIPsetGetPriceMaxvars(set, pretendroot)+1)/2);
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
+
+         /* set stoppricing to TRUE, of the first pricer wants to stop pricing */
+         if( p == 0 && stopearly )
+            stoppricing = TRUE;
+
+         /* stoppricing only remains TRUE, if all other pricers want to stop pricing as well */
+         if( stoppricing && !stopearly )
+            stoppricing = FALSE;
 
          /* update lower bound w.r.t. the lower bound given by the pricer */
          SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, lb);
@@ -1885,6 +1896,14 @@ SCIP_RETCODE SCIPpriceLoop(
 
       mustprice = mustprice || !lp->flushed || (transprob->ncolvars != *npricedcolvars);
       *mustsepa = *mustsepa || !lp->flushed;
+
+      /* if all pricers wanted to stop pricing, do not do another pricing round (LP value is no valid dual bound in this case) */
+      if( stoppricing )
+      {
+         SCIPdebugMessage("pricing: stop pricing and perform early branching\n");
+         mustprice = FALSE;
+         *aborted = TRUE;
+      }
 
       /* solve LP again after resetting bounds and adding new initial constraints (with dual simplex) */
       SCIPdebugMessage("pricing: solve LP after resetting bounds and adding new initial constraints\n");
