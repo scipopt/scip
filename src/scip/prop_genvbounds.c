@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "scip/prop_genvbounds.h"
+#include "scip/debug.h"
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
@@ -327,6 +328,54 @@ SCIP_Real getGenVBoundsBound(
 
    return boundval;
 }
+
+#ifdef SCIP_DEBUG_SOLUTION
+/** checks whether a generalized variable bound violates the debug solution */
+static
+SCIP_RETCODE checkDebugSolutionGenVBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GENVBOUND*            genvbound           /**< generalized variable bound */
+   )
+{
+   SCIP_Real activity;
+   SCIP_Real solval;
+   int i;
+
+   assert(scip != NULL);
+   assert(genvbound != NULL);
+
+   activity = 0.0;
+   for( i = 0; i < genvbound->ncoefs; i++ )
+   {
+      SCIP_CALL( SCIPdebugGetSolVal(scip, genvbound->vars[i], &solval) );
+      if( solval != SCIP_UNKNOWN || solval != SCIP_INVALID )
+         activity += genvbound->coefs[i] * solval;
+      else
+         printf("***** debug: ignoring variable with %s value in debug solution\n",
+            solval == SCIP_UNKNOWN ? "unknown" : "invalid");
+   }
+
+   activity += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   activity += genvbound->constant;
+
+   SCIP_CALL( SCIPdebugGetSolVal(scip, genvbound->var, &solval) );
+   if( solval != SCIP_UNKNOWN || solval != SCIP_INVALID )
+   {
+      if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, solval, activity) )
+      {
+         printf("***** debug: genvbound cuts off debug solution: %.9g < %.9g\n", solval, activity);
+         SCIPABORT();
+      }
+      else if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, solval, -activity) )
+      {
+         printf("***** debug: genvbound cuts off debug solution: %.9g > %.9g\n", solval, -activity);
+         SCIPABORT();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** allocate local and global startindices, startcomponents and startmap */
 static
@@ -918,6 +967,9 @@ SCIP_RETCODE applyGenVBound(
       printGenVBound(scip, genvbound);
       SCIPdebugMessage("    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
    }
+#endif
+#ifdef SCIP_DEBUG_SOLUTION
+   SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
 #endif
 
    /* tighten bound globally */
@@ -1805,6 +1857,9 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    /* debug message */
    SCIPdebugMessage("added genvbound ");
    SCIPdebug( printGenVBound(scip, genvbound) );
+#ifdef SCIP_DEBUG_SOLUTION
+   SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
+#endif
 
    return SCIP_OKAY;
 }
