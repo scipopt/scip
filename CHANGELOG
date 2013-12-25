@@ -9,6 +9,7 @@ fixed bugs:
 - allow again branching on continuous variables with hugh bounds
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 - extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
+- fixed bug in genvbound propagator occurring when objective offset changes after a restart
 
 
 SCIP version 3.0.2
