@@ -155,7 +155,6 @@ SCIP_RETCODE solveLP(
 
    if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      /**@todo check SCIPlpiIsStable() here */
       assert(!*error);
       *optimal = TRUE;
    }
@@ -221,14 +220,9 @@ SCIP_RETCODE addObjCutoff(
    /* get variables data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* create objective cutoff row; set local flag to FALSE since primal cutoff is globally valid; we relax the cutoff
-    * bound because this is numerically safer (otherwise we currently fail on ibell3a from Mittelmann's test set
-    */
-   /**@todo check whether the relaxation is still necessary when SoPlex implements persistent scaling */
-   /**@todo make the relaxation factor a parameter */
+   /* create objective cutoff row; set local flag to FALSE since primal cutoff is globally valid */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "obbt_objcutoff");
-   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, rowname, -SCIPinfinity(scip),
-         SCIPgetCutoffbound(scip) + 0.05 * REALABS(SCIPgetCutoffbound(scip)), FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip), FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for( i = 0; i < nvars; i++ )
