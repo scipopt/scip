@@ -693,6 +693,8 @@ struct SCIP_LPi
    SCIP_PRICING          pricing;            /**< current pricing strategy */
    SCIP_Bool             solved;             /**< was the current LP solved? */
    SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -952,6 +954,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
@@ -2798,7 +2802,29 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->status() != SPxSolver::ERROR && lpi->spx->status() != SPxSolver::SINGULAR);
+   if( lpi->spx->status() == SPxSolver::ERROR || lpi->spx->status() == SPxSolver::SINGULAR )
+      return FALSE;
+
+   /* only if we have a regular basis and the condition limit is set, we compute the condition number of the basis;
+    * everything above the specified threshold is then counted as instable
+    */
+   if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_RETCODE retcode;
+      SCIP_Real kappa;
+
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+      }
+      assert(kappa != SCIP_INVALID);
+
+      if( kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -3029,7 +3055,38 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   *quality = SCIP_INVALID;
+   int maxiter;
+   Real tolerance;
+   bool success;
+
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   SCIPdebugMessage("requesting solution quality from SoPlex: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         maxiter = 20;
+         tolerance = 1e-6;
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         maxiter = 10000;
+         tolerance = 1e-9;
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+   }
+
+   success = lpi->spx->getEstimatedCondition(maxiter, tolerance, *quality);
+   if( !success )
+   {
+      SCIPdebugMessage("problem computing condition number\n");
+      *quality = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }
@@ -3768,6 +3825,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3807,6 +3866,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
       lpi->rowrepswitch = dval;
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
