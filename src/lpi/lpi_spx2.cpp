@@ -80,15 +80,13 @@
 #define SOPLEX_SUBVERSION 0
 #endif
 
+/**@todo update this check to version 2.0 */
 /* check version */
-#if (SOPLEX_VERSION < 133)
-#error "This interface is not compatible with SoPlex versions prior to 1.4"
+#if (SOPLEX_VERSION < 172 || (SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION < 7))
+#error "This interface is not compatible with SoPlex versions prior to 2.0"
 #endif
 
-/* get githash of SoPlex */
-#if (SOPLEX_VERSION >= 160)
 #include "spxgithash.h"
-#endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
@@ -906,9 +904,7 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
    sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#if (SOPLEX_VERSION >= 160)
    sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
-#endif
 #ifdef WITH_LPSCHECK
    sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
 #endif
@@ -2645,11 +2641,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    return (lpi->spx->status() == SPxSolver::UNBOUNDED);
-#else
-   return FALSE;
-#endif
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -2959,7 +2951,6 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    try
    {
       Vector tmp(lpi->spx->numColsReal(), ray);
@@ -2975,10 +2966,6 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    }
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by SoPlex versions <= 1.5.0\n");
-   return SCIP_LPERROR;
-#endif
 }
 
 /** gets dual farkas proof for infeasibility */
@@ -3766,11 +3753,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->spx->feastol();
       break;
-#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->opttol();
       break;
-#endif
    case SCIP_LPPAR_LOBJLIM:
       *dval = lpi->spx->realParam(SoPlex2::OBJLIMIT_LOWER);
       break;
@@ -3807,11 +3792,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       lpi->spx->setFeastol(dval);
       break;
-#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->spx->setOpttol(dval);
       break;
-#endif
    case SCIP_LPPAR_LOBJLIM:
       lpi->spx->setRealParam(SoPlex2::OBJLIMIT_LOWER, dval);
       break;
