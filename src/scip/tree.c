@@ -1710,6 +1710,13 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       assert(SCIPsetIsFeasLE(set, newbound, oldub));
       oldbound = oldlb;
       newbound = MIN(newbound, oldub);
+
+      if ( set->stage == SCIP_STAGE_SOLVING && SCIPsetIsInfinity(set, newbound) )
+      {
+         SCIPerrorMessage("cannot change lower bound of variable <%s> to infinity.\n", SCIPvarGetName(var));
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+      }
    }
    else
    {
@@ -1721,8 +1728,15 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       assert(SCIPsetIsFeasGE(set, newbound, oldlb));
       oldbound = oldub;
       newbound = MAX(newbound, oldlb);
+
+      if ( set->stage == SCIP_STAGE_SOLVING && SCIPsetIsInfinity(set, -newbound) )
+      {
+         SCIPerrorMessage("cannot change upper bound of variable <%s> to minus infinity.\n", SCIPvarGetName(var));
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+      }
    }
-   
+
    SCIPdebugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
       SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       SCIPvarGetObj(var));
