@@ -2569,16 +2569,23 @@ SCIP_RETCODE separateCuts(
       /* update weight of rows for aggregation in c-MIR routine; all rows but current one have weight 0.0 */
       if( r > 0 )
       {
-         assert(rowweights[roworder[r-1]] == 1.0 || rowweights[roworder[r-1]] == -1.0);
+         assert(rowweights[roworder[r-1]] == 1.0 || rowweights[roworder[r-1]] == -1.0 || rowweights[roworder[r-1]] == 0.0);
          rowweights[roworder[r-1]] = 0.0;
       }
 
       /* decide which side of the row should be used */
       rowact = SCIPgetRowSolActivity(scip, rows[roworder[r]], sol);
-      if( rowact < 0.5 * SCIProwGetLhs(rows[roworder[r]]) + 0.5 * SCIProwGetRhs(rows[roworder[r]]) )
+      if( !SCIPisInfinity(scip, -SCIProwGetLhs(rows[roworder[r]]))
+         && rowact < 0.5 * SCIProwGetLhs(rows[roworder[r]]) + 0.5 * SCIProwGetRhs(rows[roworder[r]]) )
          rowweights[roworder[r]] = -1.0;
-      else 
+      else if( !SCIPisInfinity(scip, SCIProwGetRhs(rows[roworder[r]])) )
          rowweights[roworder[r]] = 1.0;
+      else
+      {
+         SCIPdebugMessage("skipping unconstrained row\n");
+         rowweights[roworder[r]] = 0.0;
+         continue;
+      }
 
       SCIPdebugMessage("===================== flow cover separation for row <%s> (%d of %d) ===================== \n",
          SCIProwGetName(rows[roworder[r]]), r, nrows);

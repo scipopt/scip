@@ -28,6 +28,7 @@ fixed bugs:
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 - fixed rare bug with conflict analysis and LP/LPI having different stati after diving
 - fixed bug in genvbound propagator occurring when objective offset changes after a restart
+- fixed bug in flowcover separator to exclude unconstrained rows in aggregation
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
