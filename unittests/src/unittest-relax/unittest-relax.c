@@ -159,6 +159,10 @@ int main(
    SCIP* scip;
    SCIP_RELAX* relax;
 
+   /* output stuff for automatic unittest evaluation */
+   printf("@01 unittest-relax ===========\n");
+   printf("=opt=  unittest-relax 0\n\n");
+
    /*********
     * Setup *
     *********/
@@ -208,7 +212,13 @@ int main(
 
    BMScheckEmptyMemory();
 
-   printf("All tests passed\n");
+   /* for automatic testing output the following */
+   printf("SCIP Status        : all tests passed\n");
+   printf("Ignore the following:\n");
+   printf("  solving          : 0.00\n");
+   printf("  nodes (total)    : 0\n");
+   printf("  Primal Bound     : 0.0\n");
+   printf("  Dual Bound       : 0.0\n");
 
    return 0;
 }

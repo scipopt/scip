@@ -368,6 +368,10 @@ main(
 {
    SCIP_RETCODE retcode;
 
+   /* output stuff for automatic unittest evaluation */
+   printf("@01 unittest-setters ===========\n");
+   printf("=opt=  unittest-setters 0\n\n");
+
    CHECK_TEST( setProbNameTest() );
    CHECK_TEST( setObjsenseTest() );
    CHECK_TEST( setConflicthdlrPriorityTest() );
@@ -381,7 +385,13 @@ main(
    CHECK_TEST( setNodeselMemsavePriorityTest() );
    CHECK_TEST( setBranchrulePriorityTest() );
 
-   printf("All tests passed\n");
+   /* for automatic testing output the following */
+   printf("SCIP Status        : all tests passed\n");
+   printf("Ignore the following:\n");
+   printf("  solving          : 0.00\n");
+   printf("  nodes (total)    : 0\n");
+   printf("  Primal Bound     : 0.0\n");
+   printf("  Dual Bound       : 0.0\n");
 
    return 0;
 }
