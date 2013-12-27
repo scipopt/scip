@@ -47,15 +47,15 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=  unittest-slack unittest-depthlevel unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol
+UNITTESTS	=  unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol unittest-depthlevel unittest-slack
 EXTRASRC	=  unittest-relax/relax_unittest unittest-cons/cons_unittest unittest-presol/presol_unittest
 
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
-EXECCOMMANDS    =       testslack NOEXEC NOEXEC
+EXECCOMMANDS    =       NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC testslack
 # testsets or NOTEST if there is no testset
-TESTCASES       =       short nofile nofile
+TESTCASES       =       nofile nofile nofile nofile nofile nofile short
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(join $(addsuffix /,$(UNITTESTS)), $(addsuffix .c, $(UNITTESTS))))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
@@ -93,8 +93,11 @@ lint:		$(UNITTESTSSRC)
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
-$(BINDIR):
-		@-mkdir -p $(BINDIR)
+# if $(BINDIR) does *not* exist: create it and generate links
+t_bin:
+		-@test -d $(BINDIR) || { \
+		echo "-> Creating $(BINDIR) directory"; \
+		mkdir -p $(BINDIR); }
 
 .PHONY: test
 test:           $(UNITTESTSEXECS)
@@ -130,7 +133,7 @@ depend:		$(SCIPDIR)
 
 -include	$(UNITTESTSDEP)
 
-$(UNITTESTSEXECS): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ)
+$(UNITTESTSEXECS): $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ) | t_bin
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/$(notdir $(patsubst %$(BASESUFFIX),%,$@)).o \
 		$(addprefix $(OBJDIR)/, $(addsuffix .o, $(notdir $(filter $(notdir $(patsubst %$(BASESUFFIX),%,$@))/%, $(EXTRASRC))))) \
