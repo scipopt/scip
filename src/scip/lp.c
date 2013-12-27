@@ -15802,6 +15802,8 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_Real* redcost;
    SCIP_Real primalbound;
    SCIP_Real dualbound;
+   SCIP_Bool stillprimalfeasible;
+   SCIP_Bool stilldualfeasible;
    int* cstat;
    int* rstat;
    SCIP_Longint lpcount;
@@ -15817,10 +15819,23 @@ SCIP_RETCODE SCIPlpGetSol(
    assert(stat != NULL);
    assert(lp->validsollp <= stat->lpcount);
 
-   if( primalfeasible != NULL )
+   /* initialize return and feasibility flags; if primal oder dual feasibility shall not be checked, we set the
+    * corresponding flag immediately to FALSE to skip all checks
+    */
+   if( primalfeasible == NULL )
+      stillprimalfeasible = FALSE;
+   else
+   {
       *primalfeasible = TRUE;
-   if( dualfeasible != NULL )
+      stillprimalfeasible = TRUE;
+   }
+   if( dualfeasible == NULL )
+      stilldualfeasible = FALSE;
+   else
+   {
       *dualfeasible = TRUE;
+      stilldualfeasible = TRUE;
+   }
 
    /* check if the values are already calculated */
    if( lp->validsollp == stat->lpcount )
@@ -15868,72 +15883,72 @@ SCIP_RETCODE SCIPlpGetSol(
       lpicols[c]->redcost = redcost[c];
       lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
-      if( primalfeasible != NULL && *primalfeasible )
+      if( stillprimalfeasible )
       {
-         *primalfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
+         stillprimalfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
             && !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub);
          primalbound += (lpicols[c]->primsol * lpicols[c]->obj);
       }
-      if( dualfeasible != NULL )
+      if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
       {
-         if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
-         {
-            double compslack;
+         double compslack;
 
-            /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
-             * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
-             * variables, which would magnify even the tiniest violation in the dual multiplier
-             */
-            if( *dualfeasible )
-            {
-               compslack = MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost;
-               *dualfeasible = !SCIPsetIsFeasPositive(set, compslack);
-            }
-            if( *dualfeasible )
-            {
-               compslack = MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost;
-               *dualfeasible = !SCIPsetIsFeasNegative(set, compslack);
-            }
-
-            SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
-               SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
-               SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
-               SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
-               primalfeasible != NULL ? *primalfeasible : TRUE,
-               !SCIPsetIsFeasPositive(set, MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost),
-               !SCIPsetIsFeasNegative(set, MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost),
-               dualfeasible != NULL ? *dualfeasible : TRUE);
-         }
-         else
-         {
-            /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
-             * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
-             * bounds, its reduced cost must be zero
-             */
-            if( *dualfeasible && SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
-               *dualfeasible = !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
-            if( *dualfeasible && SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
-               *dualfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
-
-            SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
-               SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
-               SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
-               SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
-               primalfeasible != NULL ? *primalfeasible : TRUE,
-               !SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) || !SCIPsetIsFeasPositive(set, lpicols[c]->redcost),
-               !SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) || !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
-               dualfeasible != NULL ? *dualfeasible : TRUE);
-         }
-
-         /* we intentionally use an exact positive/negative check because ignoring small reduced cost values may lead to
-          * a wrong bound value; if the corresponding bound is +/-infinity, we use zero reduced cost (if *dualfeasible
-          * is still TRUE, we are in the case that the reduced cost is tiny with wrong sign)
+         /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
+          * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
+          * variables, which would magnify even the tiniest violation in the dual multiplier
           */
-         if( *dualfeasible && lpicols[c]->redcost > 0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
+         if( stilldualfeasible )
+         {
+            compslack = MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost;
+            stilldualfeasible = !SCIPsetIsFeasPositive(set, compslack);
+         }
+         if( stilldualfeasible )
+         {
+            compslack = MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost;
+            stilldualfeasible = !SCIPsetIsFeasNegative(set, compslack);
+         }
+
+         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+            SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+            SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
+            SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
+            primalfeasible != NULL ? stillprimalfeasible : TRUE,
+            !SCIPsetIsFeasPositive(set, MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost),
+            !SCIPsetIsFeasNegative(set, MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost),
+            dualfeasible != NULL ? stilldualfeasible : TRUE);
+      }
+      else
+      {
+         /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
+          * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
+          * bounds, its reduced cost must be zero
+          */
+         if( stilldualfeasible && SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+            stilldualfeasible = !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
+         if( stilldualfeasible && SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+            stilldualfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+
+         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+            SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+            SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
+            SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
+            primalfeasible != NULL ? stillprimalfeasible : TRUE,
+            !SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) || !SCIPsetIsFeasPositive(set, lpicols[c]->redcost),
+            !SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) || !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
+            dualfeasible != NULL ? stilldualfeasible : TRUE);
+      }
+
+      /* we intentionally use an exact positive/negative check because ignoring small reduced cost values may lead to a
+       * wrong bound value; if the corresponding bound is +/-infinity, we use zero reduced cost (if stilldualfeasible is
+       * TRUE, we are in the case that the reduced cost is tiny with wrong sign)
+       */
+      if( stilldualfeasible )
+      {
+         if( lpicols[c]->redcost > 0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
             dualbound += (lpicols[c]->redcost * lpicols[c]->lb);
-         else if( *dualfeasible && lpicols[c]->redcost < 0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
+         else if( lpicols[c]->redcost < 0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
             dualbound += (lpicols[c]->redcost * lpicols[c]->ub);
-      } /*lint --e{705}*/
+      }
    }
 
    /* copy dual solution and activities into rows */
@@ -15944,92 +15959,99 @@ SCIP_RETCODE SCIPlpGetSol(
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
       lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
-      if( primalfeasible != NULL && *primalfeasible )
-         *primalfeasible = SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
-            && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
-      if( dualfeasible != NULL )
+      if( stillprimalfeasible )
       {
-         if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
-         {
-            double compslack;
+         stillprimalfeasible = SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
+            && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
+      }
+      if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
+      {
+         double compslack;
 
-            /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
-             * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
-             * variables, which would magnify even the tiniest violation in the dual multiplier
-             */
-            if( *dualfeasible )
-            {
-               compslack = MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol;
-               *dualfeasible = !SCIPsetIsFeasPositive(set, compslack);
-            }
-            if( *dualfeasible )
-            {
-               compslack = MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol;
-               *dualfeasible = !SCIPsetIsFeasNegative(set, compslack);
-            }
-
-            SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
-               lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
-               SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
-               SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
-               primalfeasible != NULL ? *primalfeasible : TRUE,
-               !SCIPsetIsFeasPositive(set, MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol),
-               !SCIPsetIsFeasNegative(set, MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol),
-               dualfeasible != NULL ? *dualfeasible : TRUE);
-         }
-         else
-         {
-            /* complementary slackness means that if the activity of a row is not at its left-hand or right-hand side,
-             * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
-             * strictly within left-hand and right-hand side, its dual multiplier must be zero
-             */
-            if( *dualfeasible && SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
-               *dualfeasible = !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
-            if( *dualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
-               *dualfeasible = !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
-
-            SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
-               lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
-               SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
-               SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
-               primalfeasible != NULL ? *primalfeasible : TRUE,
-               !SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol),
-               !SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol),
-               dualfeasible != NULL ? *dualfeasible : TRUE);
-         }
-
-         /* we intentionally use an exact positive/negative check because ignoring small dual multipliers may lead to a
-          * wrong bound value; if the corresponding side is +/-infinity, we use a zero dual multiplier (if *dualfeasible
-          * is still TRUE, we are in the case that the dual multiplier is tiny with wrong sign)
+         /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
+          * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
+          * variables, which would magnify even the tiniest violation in the dual multiplier
           */
-         if( *dualfeasible && lpirows[r]->dualsol > 0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
+         if( stilldualfeasible )
+         {
+            compslack = MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol;
+            stilldualfeasible = !SCIPsetIsFeasPositive(set, compslack);
+         }
+         if( stilldualfeasible )
+         {
+            compslack = MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol;
+            stilldualfeasible = !SCIPsetIsFeasNegative(set, compslack);
+         }
+
+         SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+            lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
+            SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
+            SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+            primalfeasible != NULL ? stillprimalfeasible : TRUE,
+            !SCIPsetIsFeasPositive(set, MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol),
+            !SCIPsetIsFeasNegative(set, MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol),
+            dualfeasible != NULL ? stilldualfeasible : TRUE);
+      }
+      else
+      {
+         /* complementary slackness means that if the activity of a row is not at its left-hand or right-hand side,
+          * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
+          * strictly within left-hand and right-hand side, its dual multiplier must be zero
+          */
+         if( stilldualfeasible && SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
+            stilldualfeasible = !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
+         if( stilldualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+            stilldualfeasible = !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
+
+         SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+            lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
+            SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
+            SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+            primalfeasible != NULL ? stillprimalfeasible : TRUE,
+            !SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol),
+            !SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol),
+            dualfeasible != NULL ? stilldualfeasible : TRUE);
+      }
+
+      /* we intentionally use an exact positive/negative check because ignoring small dual multipliers may lead to a
+       * wrong bound value; if the corresponding side is +/-infinity, we use a zero dual multiplier (if
+       * stilldualfeasible is TRUE, we are in the case that the dual multiplier is tiny with wrong sign)
+       */
+      if( stilldualfeasible )
+      {
+         if( lpirows[r]->dualsol > 0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->lhs - lpirows[r]->constant));
-         else if( *dualfeasible && lpirows[r]->dualsol < 0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
+         else if( lpirows[r]->dualsol < 0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->rhs - lpirows[r]->constant));
-      } /*lint --e{705}*/
+      }
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed primal bound, then we
     * declare the solution primal infeasible
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( primalfeasible != NULL && *primalfeasible )
+   if( stillprimalfeasible )
    {
-      *primalfeasible = SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
+      stillprimalfeasible = SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
       SCIPdebugMessage(" primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
-         SCIPsetIsFeasLE(set, primalbound, lp->lpobjval), primalfeasible != NULL ? *primalfeasible : TRUE);
+         SCIPsetIsFeasLE(set, primalbound, lp->lpobjval), primalfeasible != NULL ? stillprimalfeasible : TRUE);
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed dual bound, we declare
     * the solution dual infeasible
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( dualfeasible != NULL && *dualfeasible )
+   if( stilldualfeasible )
    {
-      *dualfeasible =  SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
+      stilldualfeasible =  SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
       SCIPdebugMessage(" dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
-         SCIPsetIsFeasGE(set, dualbound, lp->lpobjval), dualfeasible != NULL ? *dualfeasible : TRUE);
+         SCIPsetIsFeasGE(set, dualbound, lp->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
    }
+
+   if( primalfeasible != NULL )
+      *primalfeasible = stillprimalfeasible;
+   if( dualfeasible != NULL )
+      *dualfeasible = stilldualfeasible;
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &rstat);
