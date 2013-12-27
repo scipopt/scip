@@ -3693,7 +3693,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
 #if ((SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 172)
    int maxiter;
-   int tolerance;
+   Real tolerance;
 
    assert(lpi != NULL);
    assert(quality != NULL);
