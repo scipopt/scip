@@ -15868,10 +15868,9 @@ SCIP_RETCODE SCIPlpGetSol(
       lpicols[c]->redcost = redcost[c];
       lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
-      if( primalfeasible != NULL )
+      if( primalfeasible != NULL && *primalfeasible )
       {
-         *primalfeasible = *primalfeasible
-            && !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
+         *primalfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
             && !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub);
          primalbound += (lpicols[c]->primsol * lpicols[c]->obj);
       }
@@ -15885,10 +15884,16 @@ SCIP_RETCODE SCIPlpGetSol(
              * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
              * variables, which would magnify even the tiniest violation in the dual multiplier
              */
-            compslack = MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost;
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
-            compslack = MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost;
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
+            if( *dualfeasible )
+            {
+               compslack = MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost;
+               *dualfeasible = !SCIPsetIsFeasPositive(set, compslack);
+            }
+            if( *dualfeasible )
+            {
+               compslack = MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost;
+               *dualfeasible = !SCIPsetIsFeasNegative(set, compslack);
+            }
 
             SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
                SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
@@ -15905,10 +15910,10 @@ SCIP_RETCODE SCIPlpGetSol(
              * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
              * bounds, its reduced cost must be zero
              */
-            if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
-               *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
-            if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
-               *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+            if( *dualfeasible && SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+               *dualfeasible = !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
+            if( *dualfeasible && SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+               *dualfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
 
             SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
                SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
@@ -15924,9 +15929,9 @@ SCIP_RETCODE SCIPlpGetSol(
           * a wrong bound value; if the corresponding bound is +/-infinity, we use zero reduced cost (if *dualfeasible
           * is still TRUE, we are in the case that the reduced cost is tiny with wrong sign)
           */
-         if( lpicols[c]->redcost > 0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
+         if( *dualfeasible && lpicols[c]->redcost > 0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
             dualbound += (lpicols[c]->redcost * lpicols[c]->lb);
-         else if( lpicols[c]->redcost < 0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
+         else if( *dualfeasible && lpicols[c]->redcost < 0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
             dualbound += (lpicols[c]->redcost * lpicols[c]->ub);
       } /*lint --e{705}*/
    }
@@ -15939,9 +15944,8 @@ SCIP_RETCODE SCIPlpGetSol(
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
       lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
-      if( primalfeasible != NULL )
-         *primalfeasible = *primalfeasible
-            && SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
+      if( primalfeasible != NULL && *primalfeasible )
+         *primalfeasible = SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
             && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
       if( dualfeasible != NULL )
       {
@@ -15953,10 +15957,16 @@ SCIP_RETCODE SCIPlpGetSol(
              * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
              * variables, which would magnify even the tiniest violation in the dual multiplier
              */
-            compslack = MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol;
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
-            compslack = MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol;
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
+            if( *dualfeasible )
+            {
+               compslack = MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol;
+               *dualfeasible = !SCIPsetIsFeasPositive(set, compslack);
+            }
+            if( *dualfeasible )
+            {
+               compslack = MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol;
+               *dualfeasible = !SCIPsetIsFeasNegative(set, compslack);
+            }
 
             SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
                lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
@@ -15973,10 +15983,10 @@ SCIP_RETCODE SCIPlpGetSol(
              * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
              * strictly within left-hand and right-hand side, its dual multiplier must be zero
              */
-            if( SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
-               *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
-            if( SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
-               *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
+            if( *dualfeasible && SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
+               *dualfeasible = !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
+            if( *dualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+               *dualfeasible = !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
 
             SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
                lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
@@ -15992,9 +16002,9 @@ SCIP_RETCODE SCIPlpGetSol(
           * wrong bound value; if the corresponding side is +/-infinity, we use a zero dual multiplier (if *dualfeasible
           * is still TRUE, we are in the case that the dual multiplier is tiny with wrong sign)
           */
-         if( lpirows[r]->dualsol > 0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
+         if( *dualfeasible && lpirows[r]->dualsol > 0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->lhs - lpirows[r]->constant));
-         else if( lpirows[r]->dualsol < 0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
+         else if( *dualfeasible && lpirows[r]->dualsol < 0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->rhs - lpirows[r]->constant));
       } /*lint --e{705}*/
    }
@@ -16003,9 +16013,9 @@ SCIP_RETCODE SCIPlpGetSol(
     * declare the solution primal infeasible
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( primalfeasible != NULL )
+   if( primalfeasible != NULL && *primalfeasible )
    {
-      *primalfeasible = *primalfeasible && SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
+      *primalfeasible = SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
       SCIPdebugMessage(" primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
          SCIPsetIsFeasLE(set, primalbound, lp->lpobjval), primalfeasible != NULL ? *primalfeasible : TRUE);
    }
@@ -16014,9 +16024,9 @@ SCIP_RETCODE SCIPlpGetSol(
     * the solution dual infeasible
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( dualfeasible != NULL )
+   if( dualfeasible != NULL && *dualfeasible )
    {
-      *dualfeasible = *dualfeasible && SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
+      *dualfeasible =  SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
       SCIPdebugMessage(" dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
          SCIPsetIsFeasGE(set, dualbound, lp->lpobjval), dualfeasible != NULL ? *dualfeasible : TRUE);
    }

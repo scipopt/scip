@@ -129,6 +129,7 @@ performance improvements:
 - added upgradability for implicit binary variable cases for linear constraints
 - improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
 - improved merging of constraints in cons_and.c
+- faster feasibility check of LP solutions (controlled by parameter lp/checkfeas)
 
 interface
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
