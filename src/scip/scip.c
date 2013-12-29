@@ -1647,6 +1647,7 @@ SCIP_RETCODE SCIPcopyOrigProb(
  *
  *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -1684,7 +1685,7 @@ SCIP_RETCODE SCIPgetVarCopy(
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -2751,6 +2752,194 @@ SCIP_RETCODE SCIPcopyCuts(
       *ncutsadded += nlocalcutsadded;
 
    SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
+
+   return SCIP_OKAY;
+}
+
+/** copies implications and cliques of sourcescip to targetscip
+ *
+ *  This function should be called for a targetscip in transformed stage. It can save time in presolving of the
+ *  targetscip, since implications and cliques are copied.
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyImplicationsCliques(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*                  nbdchgs,            /**< pointer to store the number of performed bound changes, or NULL */
+   int*                  ncopied             /**< pointer to store number of copied implications and cliques, or NULL */
+   )
+{
+   SCIP_CLIQUE** cliques;
+   SCIP_VAR** sourcevars;
+   SCIP_Bool success;
+   int nvars;
+   int nbinvars;
+   int ncliques;
+   int j;
+   int c;
+
+   assert( sourcescip != NULL );
+   assert( targetscip != NULL );
+   assert( sourcescip != targetscip );
+   assert( infeasible != NULL );
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyImplicationsCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyImplicationsCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if ( ncopied != NULL )
+      *ncopied = 0;
+   if ( nbdchgs != NULL )
+      *nbdchgs = 0;
+
+   /* get all active variables */
+   SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nvars, &nbinvars, NULL, NULL, NULL) );
+
+   /* stop if no possible variables for cliques exist */
+   if ( nbinvars == 0 )
+      return SCIP_OKAY;
+
+   /* get cliques */
+   ncliques = SCIPgetNCliques(sourcescip);
+   if ( ncliques > 0 )
+   {
+      SCIP_VAR** targetclique;
+
+      /* get space for target cliques */
+      SCIP_CALL( SCIPallocBufferArray(targetscip, &targetclique, nvars) );
+      cliques = SCIPgetCliques(sourcescip);
+
+      /* loop through all cliques */
+      for (c = 0; c < ncliques; ++c)
+      {
+         SCIP_VAR** cliquevars;
+         SCIP_Bool* cliquevals;
+         int cliquesize;
+         int nboundchg = 0;
+
+         assert( cliques[c] != NULL );
+         cliquevals = SCIPcliqueGetValues(cliques[c]);
+         cliquevars = SCIPcliqueGetVars(cliques[c]);
+         cliquesize = SCIPcliqueGetNVars(cliques[c]);
+
+         /* get target variables of clique */
+         for (j = 0; j < cliquesize; ++j)
+         {
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, cliquevars[j], &targetclique[j], varmap, consmap, global, &success) );
+            if ( ! success )
+            {
+               SCIPdebugMessage("Getting copy for variable <%s> failed.\n", SCIPvarGetName(cliquevars[j]));
+               SCIPfreeBufferArray(targetscip, &targetclique);
+               return SCIP_OKAY;
+            }
+         }
+
+         /* create clique */
+         SCIP_CALL( SCIPaddClique(targetscip, targetclique, cliquevals, cliquesize, infeasible, &nboundchg) );
+         if ( *infeasible )
+         {
+            SCIPfreeBufferArray(targetscip, &targetclique);
+            return SCIP_OKAY;
+         }
+         if ( ncopied != NULL )
+            ++(*ncopied);
+         if ( nbdchgs != NULL )
+            *nbdchgs += nboundchg;
+      }
+      SCIPfreeBufferArray(targetscip, &targetclique);
+   }
+
+   /* create binary implications */
+   for (j = 0; j < nbinvars; ++j)
+   {
+      SCIP_VAR* sourcevar;
+      SCIP_VAR* targetvar;
+      int d;
+
+      sourcevar = sourcevars[j];
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, &targetvar, varmap, consmap, global, &success) );
+      if ( ! success )
+      {
+         SCIPdebugMessage("Getting copy for variable <%s> failed.\n", SCIPvarGetName(sourcevar));
+         return SCIP_OKAY;
+      }
+
+      /* consider both possible implications */
+      for (d = 0; d <= 1; ++d)
+      {
+         SCIP_BOUNDTYPE* impltypes;
+         SCIP_VAR** implvars;
+         SCIP_Real* implbounds;
+         int nimpls;
+         int l;
+
+         nimpls = SCIPvarGetNImpls(sourcevar, d);
+         if ( nimpls == 0 )
+            continue;
+
+         impltypes = SCIPvarGetImplTypes(sourcevar, d);
+         implvars = SCIPvarGetImplVars(sourcevar, d);
+         implbounds = SCIPvarGetImplBounds(sourcevar, d);
+
+         /* create implications */
+         for (l = 0; l < nimpls; ++l)
+         {
+            SCIP_VAR* implvar;
+            int nboundchg = 0;
+
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, implvars[l], &implvar, varmap, consmap, global, &success) );
+            if ( ! success )
+            {
+               SCIPdebugMessage("Getting copy for variable <%s> failed.\n", SCIPvarGetName(implvars[l]));
+               return SCIP_OKAY;
+            }
+
+            SCIP_CALL( SCIPaddVarImplication(targetscip, targetvar, d, implvar, impltypes[l], implbounds[l], infeasible, &nboundchg) );
+            if ( *infeasible )
+               return SCIP_OKAY;
+            if ( ncopied != NULL )
+               ++(*ncopied);
+            if ( nbdchgs != NULL )
+               *nbdchgs += nboundchg;
+	 }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -19267,6 +19456,7 @@ SCIP_RETCODE SCIPaddVarVub(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
@@ -19283,7 +19473,7 @@ SCIP_RETCODE SCIPaddVarImplication(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPvarIsBinary(var) )
    {
@@ -19356,6 +19546,7 @@ SCIP_RETCODE SCIPaddVarImplication(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
@@ -19369,7 +19560,7 @@ SCIP_RETCODE SCIPaddClique(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddClique", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddClique", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
    if( nbdchgs != NULL )
