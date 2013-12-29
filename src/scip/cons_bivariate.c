@@ -766,6 +766,7 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real xyvals[2];
+   SCIP_Real zval;
    SCIP_Real xlb;
    SCIP_Real xub;
    SCIP_Real ylb;
@@ -794,16 +795,7 @@ SCIP_RETCODE computeViolation(
 
    xyvals[0] = SCIPgetSolVal(scip, sol, x);
    xyvals[1] = SCIPgetSolVal(scip, sol, y);
-
-   /* project point onto box if very close to bounds to avoid eval error when function is not defined slightly outside bounds */
-   xlb = SCIPvarGetLbGlobal(x);
-   xub = SCIPvarGetUbGlobal(x);
-   ylb = SCIPvarGetLbGlobal(y);
-   yub = SCIPvarGetUbGlobal(y);
-   if( SCIPisEQ(scip, xyvals[0], xlb) || SCIPisEQ(scip, xyvals[0], xub) )
-      xyvals[0] = MAX(xlb, MIN(xub, xyvals[0]));
-   if( SCIPisEQ(scip, xyvals[1], ylb) || SCIPisEQ(scip, xyvals[1], yub) )
-      xyvals[1] = MAX(ylb, MIN(yub, xyvals[1]));
+   zval = SCIPgetSolVal(scip, sol, consdata->z);
 
    /* @todo proper handling of variables at infinity
     * for now, just say infeasible and keep fingers crossed
@@ -820,6 +812,33 @@ SCIP_RETCODE computeViolation(
       return SCIP_OKAY;
    }
 
+   /* project point onto box if from LP or very close to bounds to avoid eval error when function is not defined slightly outside bounds */
+   xlb = SCIPvarGetLbGlobal(x);
+   xub = SCIPvarGetUbGlobal(x);
+   ylb = SCIPvarGetLbGlobal(y);
+   yub = SCIPvarGetUbGlobal(y);
+   if( sol == NULL )
+   {
+      assert(SCIPisFeasGE(scip, xyvals[0], xlb));
+      assert(SCIPisFeasLE(scip, xyvals[0], xub));
+      xyvals[0] = MAX(xlb, MIN(xub, xyvals[0]));
+
+      assert(SCIPisFeasGE(scip, xyvals[1], ylb));
+      assert(SCIPisFeasLE(scip, xyvals[1], yub));
+      xyvals[1] = MAX(ylb, MIN(yub, xyvals[1]));
+
+      assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
+      assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
+      zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+   }
+   else
+   {
+      if( SCIPisEQ(scip, xyvals[0], xlb) || SCIPisEQ(scip, xyvals[0], xub) )
+         xyvals[0] = MAX(xlb, MIN(xub, xyvals[0]));
+      if( SCIPisEQ(scip, xyvals[1], ylb) || SCIPisEQ(scip, xyvals[1], yub) )
+         xyvals[1] = MAX(ylb, MIN(yub, xyvals[1]));
+   }
+
    /* compute activity of constraint */
    SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->f, xyvals, &consdata->activity) );
 
@@ -831,7 +850,7 @@ SCIP_RETCODE computeViolation(
    }
 
    if( consdata->z != NULL )
-      consdata->activity += consdata->zcoef * SCIPgetSolVal(scip, sol, consdata->z);
+      consdata->activity += consdata->zcoef * zval;
 
    /* compute violation of constraint sides */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )

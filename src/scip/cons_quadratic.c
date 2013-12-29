@@ -4812,6 +4812,9 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real varval;
+   SCIP_Real varval2;
+   SCIP_VAR* var;
+   SCIP_VAR* var2;
    int i;
    int j;
 
@@ -4830,7 +4833,10 @@ SCIP_RETCODE computeViolation(
    /* @todo Take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s). */
    for( i = 0; i < consdata->nlinvars; ++i )
    {
-      if( SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->linvars[i]))) )
+      var = consdata->linvars[i];
+      varval = SCIPgetSolVal(scip, sol, var);
+
+      if( SCIPisInfinity(scip, REALABS(varval)) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -4839,13 +4845,23 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
-      consdata->activity += consdata->lincoefs[i] * SCIPgetSolVal(scip, sol, consdata->linvars[i]);
+
+      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+      if( sol == NULL )
+      {
+         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+      }
+
+      consdata->activity += consdata->lincoefs[i] * varval;
    }
 
    for( j = 0; j < consdata->nquadvars; ++j )
    {
-      varval = SCIPgetSolVal(scip, sol, consdata->quadvarterms[j].var);
-      if( SCIPisInfinity(scip, ABS(varval)) )
+      var = consdata->quadvarterms[j].var;
+      varval = SCIPgetSolVal(scip, sol, var);
+      if( SCIPisInfinity(scip, REALABS(varval)) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -4854,11 +4870,39 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
+
+      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+      if( sol == NULL )
+      {
+         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+      }
+
       consdata->activity += (consdata->quadvarterms[j].lincoef + consdata->quadvarterms[j].sqrcoef * varval) * varval;
    }
 
    for( j = 0; j < consdata->nbilinterms; ++j )
-      consdata->activity += consdata->bilinterms[j].coef * SCIPgetSolVal(scip, sol, consdata->bilinterms[j].var1) * SCIPgetSolVal(scip, sol, consdata->bilinterms[j].var2);
+   {
+      var = consdata->bilinterms[j].var1;
+      var2 = consdata->bilinterms[j].var2;
+      varval = SCIPgetSolVal(scip, sol, var);
+      varval2 = SCIPgetSolVal(scip, sol, var2);
+
+      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+      if( sol == NULL )
+      {
+         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+
+         assert(SCIPisFeasGE(scip, varval2, SCIPvarGetLbLocal(var2)));
+         assert(SCIPisFeasLE(scip, varval2, SCIPvarGetUbLocal(var2)));
+         varval2 = MAX(SCIPvarGetLbLocal(var2), MIN(SCIPvarGetUbLocal(var2), varval2));
+      }
+
+      consdata->activity += consdata->bilinterms[j].coef * varval * varval2;
+   }
 
    /* compute absolute violation left hand side */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )

@@ -3591,7 +3591,8 @@ SCIP_RETCODE computeViolation(
 
    for( i = 0; i < consdata->nlinvars; ++i )
    {
-      varval = SCIPgetSolVal(scip, sol, consdata->linvars[i]);
+      var = consdata->linvars[i];
+      varval = SCIPgetSolVal(scip, sol, var);
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
          consdata->activity = SCIPinfinity(scip);
@@ -3601,7 +3602,16 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
-      consdata->activity += consdata->lincoefs[i] * SCIPgetSolVal(scip, sol, consdata->linvars[i]);
+
+      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+      if( sol == NULL )
+      {
+         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+      }
+
+      consdata->activity += consdata->lincoefs[i] * varval;
    }
 
    for( i = 0; i < consdata->nexprtrees; ++i )

@@ -1970,6 +1970,7 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSDATA* consdata;
    SCIP_Real val;
    SCIP_Real xval;
+   SCIP_Real zval;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1983,6 +1984,7 @@ SCIP_RETCODE computeViolation(
    assert(consdata != NULL);
 
    xval = SCIPgetSolVal(scip, sol, consdata->x);
+   zval = SCIPgetSolVal(scip, sol, consdata->z);
 
    if( SCIPisInfinity(scip, REALABS(xval)) )
    {
@@ -1991,11 +1993,22 @@ SCIP_RETCODE computeViolation(
 
       return SCIP_OKAY;
    }
+   /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+   if( sol == NULL )
+   {
+      assert(SCIPisFeasGE(scip, xval, SCIPvarGetLbLocal(consdata->x)));
+      assert(SCIPisFeasLE(scip, xval, SCIPvarGetUbLocal(consdata->x)));
+      xval = MAX(SCIPvarGetLbLocal(consdata->x), MIN(SCIPvarGetUbLocal(consdata->x), xval));
+
+      assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
+      assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
+      zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+   }
 
    xval += consdata->xoffset;
 
    val  = SIGN(xval) * consdata->power(REALABS(xval), consdata->exponent);
-   val += consdata->zcoef * SCIPgetSolVal(scip, sol, consdata->z);
+   val += consdata->zcoef * zval;
 
    if( val < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
       consdata->lhsviol = *viol = consdata->lhs - val;

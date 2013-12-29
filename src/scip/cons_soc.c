@@ -673,6 +673,7 @@ SCIP_RETCODE evalLhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR*      var;
    SCIP_Real      val;
    int            i;
 
@@ -686,12 +687,20 @@ SCIP_RETCODE evalLhs(
 
    for( i = 0; i < consdata->nvars; ++i )
    {
-      val = SCIPgetSolVal(scip, sol, consdata->vars[i]);
+      var = consdata->vars[i];
+      val = SCIPgetSolVal(scip, sol, var);
 
       if( SCIPisInfinity(scip, val) || SCIPisInfinity(scip, -val) )
       {
          consdata->lhsval = SCIPinfinity(scip);
          return SCIP_OKAY;
+      }
+
+      if( sol == NULL )
+      {
+         assert(SCIPisFeasGE(scip, val, SCIPvarGetLbLocal(var)));
+         assert(SCIPisFeasLE(scip, val, SCIPvarGetUbLocal(var)));
+         val = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), val));
       }
 
       val = consdata->coefs[i] * (val + consdata->offsets[i]);
@@ -784,8 +793,14 @@ SCIP_RETCODE computeViolation(
       consdata->violation = consdata->rhscoeff < 0.0 ? 0.0 : SCIPinfinity(scip);
       return SCIP_OKAY;
    }
+   if( sol == NULL )
+   {
+      assert(SCIPisFeasGE(scip, rhsval, SCIPvarGetLbLocal(consdata->rhsvar)));
+      assert(SCIPisFeasLE(scip, rhsval, SCIPvarGetUbLocal(consdata->rhsvar)));
+      rhsval = MAX(SCIPvarGetLbLocal(consdata->rhsvar), MIN(SCIPvarGetUbLocal(consdata->rhsvar), rhsval));
+   }
 
-   consdata->violation = consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
+   consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
    if( consdata->violation <= 0.0 )
    {
       /* constraint is not violated for sure */
