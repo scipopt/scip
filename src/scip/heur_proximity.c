@@ -422,8 +422,8 @@ SCIP_RETCODE createRows(
 /** frees the subproblem */
 static
 SCIP_RETCODE deleteSubproblem(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*       heurdata            /**< heuristic data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    /* free remaining memory from heuristic execution */

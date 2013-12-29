@@ -190,7 +190,7 @@ static
 void appendBit(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   unsigned char     	 bit,                /**< bit to append */
+   unsigned char         bit,                /**< bit to append */
    unsigned char*        bitcnt,             /**< counts bits until whole byte is gathered */
    unsigned char*        bitbuffer           /**< bit buffer */
    )

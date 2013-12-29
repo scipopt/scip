@@ -215,8 +215,8 @@ SCIP_RETCODE SCIPincludeEventHdlrLPsol(
 
 /** includes event handler for best solution found */
 SCIP_RETCODE SCIPincludeEventHdlrLPsol(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata             /**< heuristic data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -320,7 +320,7 @@ SCIP_RETCODE addVarboundConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for linear constraints */
    SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
-   SCIP_Bool             addcontconss,        /**< whether to add continuous    linear constraints to NLP */
+   SCIP_Bool             addcontconss,       /**< whether to add continuous    linear constraints to NLP */
    SCIP_HEURDATA*        heurdata            /**< heuristic data structure */
    )
 {
@@ -1483,11 +1483,11 @@ SCIP_RETCODE createSolFromNLP(
 /** method to fix the (relaxed) discrete variables */
 static
 SCIP_RETCODE fixDiscreteVars(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*       heurdata,           /**< heuristic data structure */
-   SCIP_SOL*            refpoint,           /**< point to take fixation of discrete variables from;
-                                               if NULL, then LP solution is used */
-   SCIP_SOL**           transsol            /**< pointer to new created solution with fixed values as solution value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from;
+                                              *   if NULL, then LP solution is used */
+   SCIP_SOL**            transsol            /**< pointer to new created solution with fixed values as solution value */
    )
 {
    SCIP_Real  fixval;
@@ -1556,14 +1556,14 @@ SCIP_RETCODE fixDiscreteVars(
 /** method to free memory before leaving the heuristic or jumping up in the recursion */
 static
 SCIP_RETCODE freeMemory(
-   SCIP*                scip,               /**< scip data structure */
-   SCIP_HEURDATA*       heurdata,           /**< heuristic data structure */
-   SCIP_SOL*            transsol,           /**< sol that has to be freed */
-   SCIP_Real*           absranks,           /**< array of absolute rank values */
-   SCIP_Real*           ranks,              /**< array of rank values */
-   SCIP_VAR**           sortedvars,         /**< array of corresponding variables */
-   SCIP_Bool            beforeswitching,    /**< did we call this method before or after switching variables? */
-   SCIP_Bool            clearswitchedvars   /**< says if we should clear switchedvars or not */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_SOL*             transsol,           /**< sol that has to be freed */
+   SCIP_Real*            absranks,           /**< array of absolute rank values */
+   SCIP_Real*            ranks,              /**< array of rank values */
+   SCIP_VAR**            sortedvars,         /**< array of corresponding variables */
+   SCIP_Bool             beforeswitching,    /**< did we call this method before or after switching variables? */
+   SCIP_Bool             clearswitchedvars   /**< says if we should clear switchedvars or not */
    )
 {
    SCIP_VAR**   subvars;
@@ -1638,11 +1638,11 @@ SCIP_RETCODE freeMemory(
 /** computes the ranks, saves them into an array and sorts the variables according to absolute ranks */
 static
 SCIP_RETCODE computeRanks(
-   SCIP*                scip,               /**< scip data structure */
-   SCIP_HEURDATA*       heurdata,           /**< heuristic data structure */
-   SCIP_Real*           absranks,           /**< array of absolute rank values */
-   SCIP_Real*           ranks,              /**< array of rank values */
-   SCIP_VAR**           sortedvars          /**< array of corresponding variables */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_Real*            absranks,           /**< array of absolute rank values */
+   SCIP_Real*            ranks,              /**< array of rank values */
+   SCIP_VAR**            sortedvars          /**< array of corresponding variables */
    )
 {
    SCIP_CONSHDLR*   conshdlrindicator;
@@ -1769,8 +1769,8 @@ SCIP_RETCODE computeRanks(
 /** compute maximal slack of a variable  */
 static
 SCIP_Real maximalslack(
-   SCIP*                scip,               /**< scip data structure */
-   SCIP_HEURDATA*       heurdata            /**< heuristic data structure */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data structure */
    )
 {
    SCIP_VAR* maxvar;

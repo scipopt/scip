@@ -349,7 +349,7 @@ void SCIPconshdlrSetFree(
 extern
 void SCIPconshdlrSetInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    );
 
 /** sets deinitialization method of constraint handler */
@@ -370,7 +370,7 @@ void SCIPconshdlrSetInitsol(
 extern
 void SCIPconshdlrSetExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))    /**< solving process deinitialization method of constraint handler */
    );
 
 /** sets preprocessing initialization method of constraint handler */
@@ -400,7 +400,7 @@ void SCIPconshdlrSetPresol(
 extern
 void SCIPconshdlrSetDelete(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSDELETE  ((*consdelete))    /**< free specific constraint data */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    );
 
 /** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */

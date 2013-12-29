@@ -11382,10 +11382,10 @@ SCIP_RETCODE projectVbd(
 /** compute the transitive closer of the given graph and the number of in and out arcs */
 static
 void transitiveClosure(
-   SCIP_Bool**           adjmatrix,         /**< adjacent matrix */
-   int*                  ninarcs,           /**< array to store the number of in arcs */
-   int*                  noutarcs,          /**< array to store the number of out arcs */
-   int                   nnodes             /**< number if nodes */
+   SCIP_Bool**           adjmatrix,          /**< adjacent matrix */
+   int*                  ninarcs,            /**< array to store the number of in arcs */
+   int*                  noutarcs,           /**< array to store the number of out arcs */
+   int                   nnodes              /**< number if nodes */
    )
 {
    int i;

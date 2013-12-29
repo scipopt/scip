@@ -164,7 +164,7 @@ void SCIPpricerSetPriority(
 extern
 void SCIPpricerSetCopy(
    SCIP_PRICER*          pricer,             /**< variable pricer */
-   SCIP_DECL_PRICERCOPY  ((*pricercopy))      /**< copy callback of pricer */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy))     /**< copy callback of pricer */
    );
 
 /** sets destructor callback of pricer */
@@ -178,14 +178,14 @@ void SCIPpricerSetFree(
 extern
 void SCIPpricerSetInit(
    SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICERINIT ((*pricerinit))     /**< initialize pricer */
+   SCIP_DECL_PRICERINIT ((*pricerinit))      /**< initialize pricer */
    );
 
 /** sets deinitialization callback of pricer */
 extern
 void SCIPpricerSetExit(
    SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICEREXIT ((*pricerexit))     /**< deinitialize pricer */
+   SCIP_DECL_PRICEREXIT ((*pricerexit))      /**< deinitialize pricer */
    );
 
 /** sets solving process initialization callback of pricer */
