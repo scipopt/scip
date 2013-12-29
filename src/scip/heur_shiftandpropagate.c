@@ -378,9 +378,7 @@ void transformVariable(
       matrix->transformshiftvals[colpos] = ub;
    }
 
-   /**
-    * determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0)
-    */
+   /* determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0) */
    if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
       matrix->upperbounds[colpos] = ub - lb;
    else
