@@ -9341,7 +9341,7 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddObjoffset", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddOrigObjoffset", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    scip->origprob->objoffset += addval;
    SCIPprimalAddOrigObjoffset(scip->origprimal, scip->set, addval);
