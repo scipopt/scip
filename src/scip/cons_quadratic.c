@@ -9922,10 +9922,12 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
             {
                SCIP_Bool infeasible;
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-               assert( ! infeasible );
                SCIPdebugMessage("initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));  /*lint !e613 */
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+               assert( ! infeasible );
+
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
          }
@@ -9992,10 +9994,12 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                {
                   SCIP_Bool infeasible;
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
                   SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+                  assert( ! infeasible );
+
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }
@@ -10006,10 +10010,12 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                {
                   SCIP_Bool infeasible;
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
                   SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+                  assert( ! infeasible );
+
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }

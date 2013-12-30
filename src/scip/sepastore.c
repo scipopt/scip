@@ -239,7 +239,7 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
-   if ( SCIPsetIsGT(set, minactivity, rhs) || SCIPsetIsLT(set, maxactivity, lhs) )
+   if ( SCIPsetIsFeasGT(set, minactivity, rhs) || SCIPsetIsFeasLT(set, maxactivity, lhs) )
    {
       SCIPdebugMessage("cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
