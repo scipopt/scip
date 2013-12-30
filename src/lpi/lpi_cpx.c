@@ -3146,10 +3146,15 @@ SCIP_Bool SCIPlpiIsStable(
     */
    if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
    {
+#ifndef NDEBUG
       SCIP_RETCODE retcode;
+#endif
       SCIP_Real kappa;
 
-      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+#ifndef NDEBUG
+      retcode =
+#endif
+         SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
       assert(kappa != SCIP_INVALID);
       assert(retcode == SCIP_OKAY);
 
