@@ -56,6 +56,7 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/debug.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -8058,6 +8059,14 @@ SCIP_RETCODE convertLongEquality(
 
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+            {
+               SCIP_Real varval;
+               SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, absval * varval) );
+            }
+#endif
 
             /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
             SCIPdebugMessage("linear constraint <%s>: aggregating continuous variable <%s> to newly created implicit integer variable <%s>, aggregation factor = %g\n",
