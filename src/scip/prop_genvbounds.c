@@ -68,7 +68,6 @@ struct GenVBound
    SCIP_Real*            coefs;              /**< coefficients a_j of the variables listed in vars */
    SCIP_Real             constant;           /**< constant term in generalized variable bound */
    SCIP_Real             cutoffcoef;         /**< cutoff bound's coefficient */
-   SCIP_Real             cutoffshift;        /**< objective offset at creation */
    int                   index;              /**< index of this genvbound in genvboundstore array */
    int                   ncoefs;             /**< number of nonzero coefficients a_j */
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound provided by the genvbound, SCIP_BOUNDTYPE_LOWER/UPPER
@@ -113,7 +112,6 @@ struct SCIP_PropData
                                               *   propagation of an improved primal bound, should start */
    int*                  gstartcomponents;   /**< components corresponding to indices stored in gstartindices array */
    SCIP_Real             lastcutoff;         /**< cutoff bound's value last time genvbounds propagator was called */
-   SCIP_Real             cutoffscale;        /**< objective scaling factor when first genvbound was added */
    int                   genvboundstoresize; /**< size of genvboundstore array */
    int                   ngenvbounds;        /**< number of genvbounds stored in genvboundstore array */
    int                   ncomponents;        /**< number of components in genvboundstore array */
@@ -143,12 +141,18 @@ SCIP_Real getCutoffboundGenVBound(
    assert(scip != NULL);
    assert(genvbound != NULL);
 
-   /* the cutoff bound value used is valid w.r.t. to the objective function as it looked like when the generalized
-    * variable bound was created; when the objective function has changed, we need to translate the cutoff value back
-    * using the objective offset at time of creation; e.g., when a variable is fixed, its objective contribution is
-    * subtracted from the cutoff bound and added to the objective offset, hence the following value remains constant
+   SCIPdebugMessage("cutoff = %.9g (%.9g + %.9g * %.9g)\n",
+      SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) * SCIPgetTransObjscale(scip)),
+      SCIPgetCutoffbound(scip), SCIPgetTransObjoffset(scip), SCIPgetTransObjscale(scip));
+
+   /* the cutoff bound is valid w.r.t. the current objective function in the transformed problem; during presolving,
+    * however, the objective function can change (e.g., when a variable is fixed, its contribution in the objective is
+    * subtracted from the cutoff bound and added to the objective offset); we solve this by transforming the
+    * contribution of the cutoff bound in the generalized variable bound to the original problem as described in
+    * function SCIPgenVBoundAdd()
     */
-   return SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) - genvbound->cutoffshift); }
+   return SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) * SCIPgetTransObjscale(scip));
+}
 
 /** returns corresponding genvbound in genvboundstore if there is one, NULL otherwise */
 static
@@ -1558,9 +1562,6 @@ SCIP_RETCODE applyGenVBounds(
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_DIDNOTFIND;
 
-   /**@todo implement case when after a restart the objective scaling factor has changed */
-   assert(SCIPisEQ(scip, propdata->cutoffscale, SCIPgetTransObjscale(scip)));
-
    /* if the genvbounds are not sorted, i.e. if root node processing has not been finished, yet, we just propagate in
     * the order in which they have been added to genvboundstore
     */
@@ -1647,9 +1648,6 @@ SCIP_RETCODE initPropdata(
    /* init genvboundstore hashmaps */
    SCIP_CALL( SCIPhashmapCreate(&(propdata->lbgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
    SCIP_CALL( SCIPhashmapCreate(&(propdata->ubgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
-
-   /* remember objective scaling factor */
-   propdata->cutoffscale = SCIPgetTransObjscale(scip);
 
    return SCIP_OKAY;
 }
@@ -1869,11 +1867,33 @@ SCIP_RETCODE SCIPgenVBoundAdd(
 
    /* set up data for genvbound */
    genvbound->boundtype = boundtype;
-   genvbound->constant = constant;
-   genvbound->cutoffcoef = SCIPisZero(scip, coefcutoffbound) ? 0.0 : coefcutoffbound;
-   genvbound->cutoffshift = SCIPgetTransObjoffset(scip);
-   genvbound->ncoefs = ncoefs;
    genvbound->var = var;
+   genvbound->ncoefs = ncoefs;
+   genvbound->constant = constant;
+
+   /* the cutoff bound is valid w.r.t. the current objective function in the transformed problem; during presolving,
+    * however, the objective function can change (e.g., when a variable is fixed, its contribution in the objective
+    * is subtracted from the cutoff bound and added to the objective offset); we solve this by transforming the
+    * contribution of the cutoff bound in the generalized variable bound to the original problem as follows:
+    *
+    *    +/- var >= ... + z * SCIPgetCutoffbound() + constant
+    *
+    * becomes
+    *
+    *    +/- var >= ... + (z / SCIPgetTransObjscale()) * origcutoffbound + (constant - z * SCIPgetTransObjoffset())
+    *
+    * with SCIPgetCutoffbound() = origcutoffbound / SCIPgetTransObjscale() - SCIPgetTransObjoffset(); in the
+    * propagation later, we will use (SCIPgetCutoffbound() + SCIPgetTransObjoffset()) * SCIPgetTransObjscale(), see
+    * function getCutoffboundGenVBound()
+    */
+   if( SCIPisNegative(scip, coefcutoffbound) )
+   {
+      assert(SCIPisPositive(scip, SCIPgetTransObjscale(scip)));
+      genvbound->cutoffcoef = coefcutoffbound / SCIPgetTransObjscale(scip);
+      genvbound->constant -= (coefcutoffbound * SCIPgetTransObjoffset(scip));
+   }
+   else
+      genvbound->cutoffcoef = 0.0;
 
    /* if genvbound is not overwritten, create a new entry in genvboundstore */
    if( newgenvbound )
@@ -1929,7 +1949,6 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    propdata->gstartindices = NULL;
    propdata->gstartcomponents = NULL;
    propdata->lastcutoff = SCIPinfinity(scip);
-   propdata->cutoffscale = SCIP_INVALID;
    propdata->lastnodecaught = NULL;
    propdata->ngenvbounds = -1;
    propdata->ncomponents = -1;
