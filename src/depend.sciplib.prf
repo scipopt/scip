@@ -792,7 +792,7 @@ $(LIBOBJDIR)/scip/cons_linear.o: src/scip/cons_linear.c src/scip/cons_linear.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
  src/scip/event.h src/scip/struct_event.h src/scip/cons_knapsack.h \
- src/scip/cons_quadratic.h src/scip/cons_nonlinear.h
+ src/scip/cons_quadratic.h src/scip/cons_nonlinear.h src/scip/debug.h
 $(LIBOBJDIR)/scip/cons_linking.o: src/scip/cons_linking.c src/scip/cons_linear.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -3800,7 +3800,7 @@ $(LIBOBJDIR)/scip/prop_genvbounds.o: src/scip/prop_genvbounds.c src/scip/prop_ge
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h
+ src/scip/event.h src/scip/struct_event.h src/scip/debug.h
 $(LIBOBJDIR)/scip/prop_obbt.o: src/scip/prop_obbt.c src/scip/prop_obbt.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h \
