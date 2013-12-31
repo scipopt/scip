@@ -206,14 +206,8 @@ SCIP_DECL_EVENTEXEC(eventExecLPsol)
    return SCIP_OKAY;
 }
 
-/* forward declaration, because the event handler itself is only used in a subscip */
 /** includes event handler for best solution found */
-SCIP_RETCODE SCIPincludeEventHdlrLPsol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   );
-
-/** includes event handler for best solution found */
+static
 SCIP_RETCODE SCIPincludeEventHdlrLPsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
