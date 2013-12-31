@@ -3601,6 +3601,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
    SCIP_CALL( SCIPaddVar(scip, var) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Bool debugval;
       SCIP_Real varval;

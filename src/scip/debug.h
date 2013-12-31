@@ -24,7 +24,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/* #define SCIP_DEBUG_SOLUTION "neos.sol" */
+/* #define SCIP_DEBUG_SOLUTION "debug.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
@@ -185,6 +185,12 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
 extern
 void SCIPdebugSetMainscipset(
    SCIP_SET*             set                  /**< settings of SCIP instance */
+   );
+
+/** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */
+extern
+SCIP_Bool SCIPdebugIsMainscip(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** enabling solution debugging mechanism */

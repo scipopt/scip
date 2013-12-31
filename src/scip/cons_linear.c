@@ -8061,6 +8061,7 @@ SCIP_RETCODE convertLongEquality(
             SCIP_CALL( SCIPaddVar(scip, newvar) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+            if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real varval;
                SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );

@@ -367,6 +367,9 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
    assert(scip != NULL);
    assert(genvbound != NULL);
 
+   if( !SCIPdebugIsMainscip(scip) )
+      return SCIP_OKAY;
+
    activity = 0.0;
    for( i = 0; i < genvbound->ncoefs; i++ )
    {

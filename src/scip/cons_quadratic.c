@@ -3235,6 +3235,7 @@ SCIP_RETCODE presolveTryAddAND(
             SCIPvarIsInitial(vars[0]) || SCIPvarIsInitial(vars[1]), SCIPvarIsRemovable(vars[0]) && SCIPvarIsRemovable(vars[1]), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
 #ifdef SCIP_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real var0val;
          SCIP_Real var1val;
@@ -3569,6 +3570,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+            if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real var0val;
                SCIP_Real var1val;
@@ -3656,6 +3658,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             /* compute value of auxvar in debug solution */
 #ifdef SCIP_DEBUG_SOLUTION
+            if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real debugval;
                SCIP_Real varval;

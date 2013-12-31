@@ -1526,6 +1526,7 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPaddVar(scip, resultant) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real val;
          int v;
