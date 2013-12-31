@@ -6734,6 +6734,7 @@ SCIP_RETCODE generateCut(
    {
       SCIP_Real constant;
       SCIP_Real abscoef;
+      SCIP_Real roundcoef;
       int       mincoefidx;
       SCIP_Real refactivity;
       SCIP_Real refactivitylinpart;
@@ -6767,44 +6768,40 @@ SCIP_RETCODE generateCut(
 
          for( j = 0; j < consdata->nquadvars; ++j )
          {
-            /* coefficients smaller than epsilon are rounded to 0.0 when added to row, this can be problematic if variable value is very large (bad numerics)
-             * in this case, set coef to 0.0 here, but modify constant so that cut is still valid (if possible)
-             * i.e., estimate coef[i]*x >= coef[i] * bound(x) or coef[i]*x <= coef[i] * bound(x), depending on whether lhs or rhs is finite
+            /* coefficients smaller than epsilon are rounded to 0.0 when added to row
+             * further, coefficients very close to integral values are rounded to integers when added to LP
+             * both cases can be problematic if variable value is very large (bad numerics)
+             * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
+             * i.e., estimate coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
              * if required bound of x is not finite, then do nothing
              */
-            if( coef[j] != 0.0 && SCIPisZero(scip, coef[j]) )
+            roundcoef = SCIPround(scip, coef[j]);
+            if( SCIPisEQ(scip, coef[j], roundcoef) && coef[j] != roundcoef )
             {
                SCIP_Real xbnd;
 
                var = consdata->quadvarterms[j].var;
                if( !SCIPisInfinity(scip, rhs) )
                   if( islocal )
-                     xbnd = coef[j] > 0.0 ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
+                     xbnd = coef[j] > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
                   else
-                     xbnd = coef[j] > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+                     xbnd = coef[j] > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
                else
                   if( islocal )
-                     xbnd = coef[j] > 0.0 ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
+                     xbnd = coef[j] > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
                   else
-                     xbnd = coef[j] > 0.0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
+                     xbnd = coef[j] > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
 
                if( !SCIPisInfinity(scip, REALABS(xbnd)) )
                {
-                  SCIPdebugMessage("var <%s> [%g,%g] has tiny coef %g, replace coefficient by constant %g\n",
-                     SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef[j], coef[j] * xbnd);
-                  constant += coef[j] * xbnd;
-                  coef[j] = 0.0;
+                  SCIPdebugMessage("var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
+                     SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef[j], roundcoef, (coef[j]-roundcoef) * xbnd);
+                  constant += (coef[j]-roundcoef) * xbnd;
+                  coef[j] = roundcoef;
                }
 
                continue;
             }
-
-            /* coefficients very close to integral values are rounded to integers when added to LP
-             * we do this here already to be sure to compute an accurate activity/violation/efficacy
-             * (otherwise, if variables are at huge values, cut may look efficient here, but not anymore after rounding coefs)
-             */
-            if( SCIPisIntegral(scip, coef[j]) )
-               coef[j] = SCIPround(scip, coef[j]);
 
             if( coef[j] == 0.0 )
                continue;
