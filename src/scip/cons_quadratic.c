@@ -6069,6 +6069,10 @@ SCIP_RETCODE generateCutLTI(
       rightrefactivity += consdata->factorright[i] * ref[i];
    }
 
+   /* if any of the factors is essentially fixed, give up and do usual method (numerically less sensitive, I hope) */
+   if( SCIPisRelEQ(scip, leftminactivity, leftmaxactivity) || SCIPisRelEQ(scip, rightminactivity, rightmaxactivity) )
+      return SCIP_OKAY;
+
    /* success can only be expected for separation of violated x*y <= w, assuming x>=0, y>=0
     * @todo we should check this early? */
 
