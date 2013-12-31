@@ -8285,6 +8285,9 @@ SCIP_Bool SCIPhaveVarsCommonClique(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @note there can be duplicated arcs in the output file
+ *
+ *  If @p writenodeweights is true, only nodes corresponding to variables that have a fractional value and only edges
+ *  between such nodes are written.
  */
 EXTERN
 SCIP_RETCODE SCIPwriteCliqueGraph(

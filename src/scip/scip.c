@@ -9022,12 +9022,12 @@ SCIP_RETCODE SCIPpermuteProb(
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
    assert(nconshdlrs == 0 || conshdlrs != NULL);
-   
-   /*@note the constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
-    *      that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
-    *      sub-SCIPs and contains the dependencies between the constraint handlers; for example the linear constraint
-    *      handler stays in front of all constraint handler which can upgrade a linear constraint (such as logicor,
-    *      setppc, and knapsack)
+
+   /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
+    * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
+    * sub-SCIPs and contains the dependencies between the constraint handlers; for example the linear constraint
+    * handler stays in front of all constraint handler which can upgrade a linear constraint (such as logicor,
+    * setppc, and knapsack).
     */
 
    /* for each constraint handler, permute its constraints */
@@ -19978,7 +19978,7 @@ SCIP_Bool SCIPhaveVarsCommonClique(
  *
  *  @note there can be duplicated arcs in the output file
  *
- *  If @writenodeweights is true, only nodes corresponding to variables that have a fractional value and only edges
+ *  If @p writenodeweights is true, only nodes corresponding to variables that have a fractional value and only edges
  *  between such nodes are written.
  */
 SCIP_RETCODE SCIPwriteCliqueGraph(

@@ -43,7 +43,7 @@
  * @{
  */
 
-/** performe dual presolving */
+/** perform dual presolving */
 static
 SCIP_RETCODE performDualfix(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -275,7 +275,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
 
 /**@} */
 
-/*@name Interface methods
+/**@name Interface methods
  *
  * @{
  */

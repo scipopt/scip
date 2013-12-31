@@ -47,7 +47,7 @@
 
 #define DEFAULT_DOMAINRESTARTS  FALSE /**< restart trigger only depends on domain sizes (infinite and finite) */
 
-#define DEFAULT_DOMAINFAC_INFDOMAINS 0.95 /**< trigger a restart if #inf domains / # inf domains of the last run < factor */
+#define DEFAULT_DOMAINFAC_INFDOMAINS 0.95 /**< trigger a restart if \# inf domains / \# inf domains of the last run < factor */
 
 #define DEFAULT_DOMAINFAC_TOTALDOMAINS 0.95 /**< trigger a restart if total domain / total domain of the last run < factor */
 
