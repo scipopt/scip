@@ -28,6 +28,7 @@ fixed bugs:
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 - fixed rare bug with conflict analysis and LP/LPI having different stati after diving
 - fixed bug in genvbound propagator occurring when objective offset changes after a restart
+- fixed bug in prop_dualfix w.r.t. to fixing of variables to infinity after presolving
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -263,6 +264,7 @@ core:
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
 - extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
+- return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
 
 
 SCIP version 3.0.3
