@@ -1286,7 +1286,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
    /* check whether maximal degree of expansion would exceed maxexpansionexponent
     * that is, assume monomial is f1^a1 f2^a2 ... and we want to expand f1 = (g11^beta11 g12^beta12... + g21^beta21 g22^beta22 ... + ...)
     * then we do this only if all ai and all beta are > 0.0 and a1 max(beta11+beta12+..., beta21+beta22+..., ...) + a2 + ... < maxexpansionexponent
-    * exception (there need to one) is if monomial is just f1
+    * exception (there need to be one) is if monomial is just f1
     */
    if( maxexpansionexponent < INT_MAX && (monomial->nfactors > 1 || monomial->exponents[factorpos] != 1.0) )
    {
@@ -1300,7 +1300,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
          if( monomial->exponents[i] < 0.0 )
          {
             /* ai < 0.0 */
-            SCIPdebugMessage("skip expansion because %d'th factor in monomial is negative\n", i);
+            SCIPdebugMessage("skip expansion because factor %d in monomial has negative exponent\n", i);
             *success = FALSE;
             return SCIP_OKAY;
          }

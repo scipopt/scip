@@ -1,4 +1,4 @@
-/* $Id: optimize.hpp 3016 2013-11-30 14:33:53Z bradbell $ */
+/* $Id: optimize.hpp 3022 2013-12-24 14:25:43Z bradbell $ */
 # ifndef CPPAD_OPTIMIZE_INCLUDED
 # define CPPAD_OPTIMIZE_INCLUDED
 
@@ -1880,10 +1880,11 @@ void optimize_run(
 						"Optimizing an ADFun object"
 						" that contains the atomic function\n\t";
 					s += user_atom->afun_name();
+					s += "\nCurrent atomoic_sparsity is set to";
 					//
 					if( user_set )
-						s += "\nand std::set ";
-					else	s += "\nand bool ";
+						s += " std::set\nand std::set";
+					else	s += " bool\nand bool";
 					//
 					s += " version of rev_sparse_jac returned false";
 					CPPAD_ASSERT_KNOWN(false, s.c_str() );
