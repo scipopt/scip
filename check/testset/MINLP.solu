@@ -1548,7 +1548,7 @@
 =opt= robust_50_18          -0.0731842444
 =opt= robust_50_19          -0.0694361459
 =opt= robust_200_0          -0.141089666
-=opt= robust_200_1          -0.142704656
+=best= robust_200_1          -0.1427456
 =opt= robust_200_2           -0.121670628
 =best= robust_200_3           -0.129114531
 =opt= robust_200_4            -0.15170855
@@ -1730,7 +1730,7 @@
 =opt= small-investor-MVO-SNP100-return_0.0030-budget_1000-1100      0.084068386
 =opt= small-investor-MVO-SNP100-return_0.0035-budget_2000-2200      0.263234059
 
-=opt= water0202                   125.2237
+=opt= water0202                   125.195615
 =opt= water0202r                  97.90444
 =opt= water0303                  207.98667
 =opt= water0303r                 424.54353
