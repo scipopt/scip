@@ -1186,6 +1186,7 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
 extern
 SCIP_Real SCIPvarGetRedcost(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */

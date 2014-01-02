@@ -12587,6 +12587,7 @@ SCIP_Real SCIPvarGetRootSol(
 /** returns for given variable the reduced cost */
 SCIP_Real SCIPvarGetRedcost(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
@@ -12595,19 +12596,50 @@ SCIP_Real SCIPvarGetRedcost(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
    {
       SCIP_COL* col;
+      SCIP_Real primsol;
+      SCIP_BASESTAT basestat;
+      SCIP_Bool lpissolbasic;
 
       col = SCIPvarGetCol(var);
       assert(col != NULL);
 
+#if 1
+      basestat = SCIPcolGetBasisStatus(col);
+      lpissolbasic = SCIPlpIsSolBasic(lp);
+      primsol = SCIPcolGetPrimsol(col);
+
+      if( (lpissolbasic && (basestat == SCIP_BASESTAT_LOWER || basestat == SCIP_BASESTAT_UPPER)) ||
+         (!lpissolbasic && (SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol) || SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol))) )
+      {
+         SCIP_Real redcost = SCIPcolGetRedcost(col, stat, lp);
+
+         assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsFeasNegative(set, redcost) ||
+                  SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
+         assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsFeasPositive(set, redcost) ||
+                  SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
+
+         if( (varfixing && ((lpissolbasic && basestat == SCIP_BASESTAT_LOWER) ||
+                  (!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)))) ||
+            (!varfixing && ((lpissolbasic && basestat == SCIP_BASESTAT_UPPER) ||
+                  (!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)))) )
+            return redcost;
+         else
+            return 0.0;
+      }
+
+      return 0.0;
+#else
       switch( SCIPcolGetBasisStatus(col) )
       {
       case SCIP_BASESTAT_LOWER:
-         if( varfixing == TRUE )
+         if( varfixing )
             return SCIPcolGetRedcost(col, stat, lp);
          break;
 
       case SCIP_BASESTAT_UPPER:
-         if( varfixing == FALSE )
+         if( !varfixing )
             return SCIPcolGetRedcost(col, stat, lp);
          break;
 
@@ -12620,6 +12652,7 @@ SCIP_Real SCIPvarGetRedcost(
          SCIPABORT();
          return 0.0; /*lint !e527*/
       }
+#endif
    }
 
    return 0.0;
@@ -12648,7 +12681,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* get reduced cost of given variable */
-   implredcost = SCIPvarGetRedcost(var, varfixing, stat, lp);
+   implredcost = SCIPvarGetRedcost(var, set, varfixing, stat, lp);
 
    /* collect binary implication information */
    nbinvars = SCIPimplicsGetNBinImpls(var->implics, varfixing);
@@ -12668,9 +12701,9 @@ SCIP_Real SCIPvarGetImplRedcost(
       assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
 
       if( (SCIP_Bool)boundtypes[v] != varfixing )
-         redcost = SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+         redcost = SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
       else
-         redcost = -SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+         redcost = -SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
 
       if( !SCIPsetIsFeasZero(set, redcost) )
          implredcost += redcost;
