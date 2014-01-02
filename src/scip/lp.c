@@ -15944,9 +15944,9 @@ SCIP_RETCODE SCIPlpGetSol(
        */
       if( stilldualfeasible )
       {
-         if( lpicols[c]->redcost > 0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
+         if( lpicols[c]->redcost > 0.0 && !SCIPsetIsInfinity(set, -lpicols[c]->lb) )
             dualbound += (lpicols[c]->redcost * lpicols[c]->lb);
-         else if( lpicols[c]->redcost < 0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
+         else if( lpicols[c]->redcost < 0.0 && !SCIPsetIsInfinity(set, lpicols[c]->ub) )
             dualbound += (lpicols[c]->redcost * lpicols[c]->ub);
       }
    }
@@ -16003,8 +16003,8 @@ SCIP_RETCODE SCIPlpGetSol(
          if( stilldualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
             stilldualfeasible = !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
 
-         SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
-            lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
+         SCIPdebugMessage(" row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+            lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, lpirows[r]->activity, lpirows[r]->dualsol,
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
             primalfeasible != NULL ? stillprimalfeasible : TRUE,
@@ -16019,9 +16019,9 @@ SCIP_RETCODE SCIPlpGetSol(
        */
       if( stilldualfeasible )
       {
-         if( lpirows[r]->dualsol > 0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
+         if( lpirows[r]->dualsol > 0.0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->lhs - lpirows[r]->constant));
-         else if( lpirows[r]->dualsol < 0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
+         else if( lpirows[r]->dualsol < 0.0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->rhs - lpirows[r]->constant));
       }
    }
