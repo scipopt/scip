@@ -193,7 +193,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
-#define SCIP_DEFAULT_LP_DISABLECUTOFF     FALSE /**< disables the cutoff bound in the LP solver */
+#define SCIP_DEFAULT_LP_DISABLECUTOFF         2 /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
 #define SCIP_DEFAULT_LP_ROWREPSWITCH       -1.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
@@ -1239,11 +1239,11 @@ SCIP_RETCODE SCIPsetCreate(
          "turn on the lex dual algorithm only when stalling?",
          &(*set)->lp_lexdualstalling, TRUE, SCIP_DEFAULT_LP_LEXDUALSTALLING,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/disablecutoff",
-         "disables the cutoff bound in the LP solver",
+         "disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto)",
          &(*set)->lp_disablecutoff, TRUE, SCIP_DEFAULT_LP_DISABLECUTOFF,
-         NULL, NULL) );
+         0, 2, NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "lp/rowrepswitch",
          "simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value (-1.0 to disable row representation)",

@@ -269,7 +269,7 @@ struct SCIP_Set
    int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualstalling; /**< turn on the lex dual algorithm only when stalling? */
-   SCIP_Bool             lp_disablecutoff;   /**< disables the cutoff bound in the LP solver */
+   int                   lp_disablecutoff;   /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
    SCIP_Real             lp_rowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    int                   lp_threads;         /**< number of threads used for solving the LP (0: automatic) */
