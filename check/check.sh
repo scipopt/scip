@@ -77,7 +77,7 @@ do
         if test "$INSTANCE" = "DONE"
         then
             #echo $EVALFILE
-            ./evalcheck_cluster.sh $EVALFILE
+            ./evalcheck_cluster.sh -r $EVALFILE
             continue
         fi
         # check if problem instance exists

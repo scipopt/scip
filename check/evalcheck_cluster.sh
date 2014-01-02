@@ -66,6 +66,7 @@ do
 
       echo > $OUTFILE
       echo > $ERRFILE
+      echo ""
       echo create overall output and error file for $EVALFILE
 
       for i in `cat $DIR/$EVALFILE.eval` DONE
