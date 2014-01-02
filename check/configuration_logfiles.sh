@@ -59,6 +59,11 @@ else
     EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 fi
 
+if test "$INSTANCE" = "DONE"
+then
+    return
+fi
+
 # reset files if flag is set to 'init'
 if test $INIT = "true"
 then
