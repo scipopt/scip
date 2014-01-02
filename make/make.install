@@ -38,8 +38,10 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scipshell.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scipdefplugins.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/presolve.h
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/intervalarith.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(OBJSCIPINCSRC)
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/lpi/  $(SRCDIR)/lpi/lpi.h
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/lpi/  $(SRCDIR)/lpi/type_lpi.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/pub_*.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/struct_*.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/type_*.h
