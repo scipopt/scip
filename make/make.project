@@ -53,6 +53,7 @@ SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
 VALGRIND	=	false
+CLIENTTMPDIR    =       /tmp
 
 #compiling and linking parameters
 VERBOSE		=	false
