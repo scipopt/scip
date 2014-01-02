@@ -303,6 +303,7 @@
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            0 /**< separation frequency for the global cut pool */
+#define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 
 
 /* Timing */
@@ -776,6 +777,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->mem_externestim = 0;
+   (*set)->sepa_primfeastol = SCIP_INVALID;
 
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -1638,6 +1640,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/poolfreq",
          "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
          &(*set)->sepa_poolfreq, FALSE, SCIP_DEFAULT_SEPA_POOLFREQ, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/feastolfac",
+         "factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off)",
+         &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
          NULL, NULL) );
 
    /* timing parameters */
@@ -4007,6 +4014,9 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPdispInitsol(set->disps[i], set) );
    }
 
+   /* reset feasibility tolerance for relaxations */
+   set->sepa_primfeastol = SCIP_INVALID;
+
    return SCIP_OKAY;
 }
 
@@ -4285,6 +4295,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
 #undef SCIPsetLpfeastol
+#undef SCIPsetSepaprimfeastol
 #undef SCIPsetDualfeastol
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
@@ -4419,7 +4430,18 @@ SCIP_Real SCIPsetLpfeastol(
 {
    assert(set != NULL);
 
+   if( set->sepa_primfeastol != SCIP_INVALID )
+      return MIN(set->sepa_primfeastol, set->num_lpfeastol);
+
    return set->num_lpfeastol;
+}
+
+/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
+SCIP_Real SCIPsetSepaprimfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   return set->sepa_primfeastol;
 }
 
 /** returns convergence tolerance used in barrier algorithm */

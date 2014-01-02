@@ -254,6 +254,9 @@ parameters:
   from boolean to character
 - changed default for "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling" to off
 - new parameter "propagating/obbt/conditionlimit" to discard instable LP bases
+- new parameter "separating/feastolfac" to allow dynamic decrease of relaxation feasibility tolerance depending on
+  feasibility to applied cuts, i.e., allow relaxation solutions to have a primal infeasibility of at most this factor
+  times the infeasibility applied cuts
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to

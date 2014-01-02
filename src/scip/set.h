@@ -1057,9 +1057,15 @@ SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns primal feasibility tolerance of LP solver */
+/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and tolerance specified by separation storage */
 extern
 SCIP_Real SCIPsetLpfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
+extern
+SCIP_Real SCIPsetSepaprimfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1535,7 +1541,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
-#define SCIPsetLpfeastol(set)              ( (set)->num_lpfeastol )
+#define SCIPsetLpfeastol(set)              ( (set)->sepa_primfeastol == SCIP_INVALID ? (set)->num_lpfeastol : MIN((set)->num_lpfeastol, (set)->sepa_primfeastol) )
+#define SCIPsetSepaprimfeastol(set)        ( (set)->sepa_primfeastol )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
