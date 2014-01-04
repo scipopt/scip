@@ -805,7 +805,7 @@ SCIP_RETCODE sepastoreApplyBdchg(
    if( *applied && !sepastore->initiallp )
       sepastore->ncutsapplied++;
 
-   if( *applied && set->sepa_feastolfac > 0.0 )
+   if( *applied && !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
    {
       SCIP_Real infeasibility;
 
@@ -831,8 +831,8 @@ SCIP_RETCODE sepastoreApplyBdchg(
       /* reduce relaxation feasibility tolerance */
       if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) )
       {
-         set->sepa_primfeastol = set->sepa_feastolfac * infeasibility;
-         SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g\n", set->sepa_primfeastol);
+         set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, SCIPsetEpsilon(set));
+         SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
       }
    }
 
@@ -946,7 +946,7 @@ SCIP_RETCODE sepastoreApplyCut(
       SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality) );
       (*ncutsapplied)++;
 
-      if( set->sepa_feastolfac > 0.0 )
+      if( !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
       {
          SCIP_Real infeasibility;
 
@@ -970,8 +970,8 @@ SCIP_RETCODE sepastoreApplyCut(
          /* reduce relaxation feasibility tolerance */
          if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) )
          {
-            set->sepa_primfeastol = set->sepa_feastolfac * infeasibility;
-            SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g\n", set->sepa_primfeastol);
+            set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, SCIPsetEpsilon(set));
+            SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
          }
       }
    }
