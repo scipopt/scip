@@ -40,12 +40,14 @@ SOLUFILE=${14}   # - solu file, only necessary if $SETCUTOFF is 1
 # reset TMPFILE
 echo > $TMPFILE
 
-# read in settings different from 'default'
-if test $SETNAME != "default"
+# read in settings (even when using default, see bugzilla 600)
+SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+if test $SETNAME == "default"
 then
-    SETTINGS=$SCIPPATH/../settings/$SETNAME.set
-    echo set load $SETTINGS            >>  $TMPFILE
+   # create empty settings file
+   test -e $SETTINGS || touch $SETTINGS
 fi
+echo set load $SETTINGS            >>  $TMPFILE
 
 # set non-default feasibility tolerance
 if test $FEASTOL != "default"
