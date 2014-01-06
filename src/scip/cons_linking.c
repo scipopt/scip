@@ -1080,7 +1080,7 @@ SCIP_RETCODE tightenedIntvar(
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-         /** ??????????? use reolve method and only add binvars which are needed to exceed the upper bound */
+         /* ??????????? use resolve method and only add binvars which are needed to exceed the upper bound */
 
          /* add conflicting variables */
          SCIP_CALL( SCIPaddConflictUb(scip, intvar, NULL) );
@@ -1128,7 +1128,7 @@ SCIP_RETCODE tightenedIntvar(
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-         /** ??????????? use reolve method and only add binvars which are needed to fall below the lower bound */
+         /* ??????????? use resolve method and only add binvars which are needed to fall below the lower bound */
 
          /* add conflicting variables */
          SCIP_CALL( SCIPaddConflictLb(scip, intvar, NULL) );
@@ -2336,7 +2336,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("presolve %d linking constraints", nconss);
+   SCIPdebugMessage("presolve %d linking constraints\n", nconss);
 
    (*result) = SCIP_DIDNOTFIND;
 

@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
 /** set the main SCIP settings pointer */
 extern
 void SCIPdebugSetMainscipset(
-   SCIP_SET*             set                  /**< settings of SCIP instance */
+   SCIP_SET*             set                 /**< settings of SCIP instance */
    );
 
 /** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */

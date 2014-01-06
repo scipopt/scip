@@ -27,8 +27,9 @@ fixed bugs:
 - fixed bug where a limit on presolving rounds was exceeded by 1
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 - fixed rare bug with conflict analysis and LP/LPI having different stati after diving
-- fixed bug in genvbound propagator occurring when objective offset or scale change after a restart
+- fixed bug in genvbound propagator occurring when objective offset or scale changes after a restart
 - fixed bug in flowcover separator to exclude unconstrained rows in aggregation
+- fixed bug in prop_dualfix w.r.t. to fixing of variables to infinity after presolving
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -112,6 +113,7 @@ features:
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface
 - added McNemar tests and Wilcoxon signed rank tests to cmpres.awk evaluation scripts
 - a pricer can now return that no further pricing should be done but rather early branching, even if it added variables
+- dual solution can now be displayed for pure LPs when no presolving was performed
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -193,6 +195,7 @@ interface
 - dropped support for Ipopt < 3.10
 - the PRICERREDCOST callback has a new parameter stopearly, which is a bool pointer to store whether pricing should be
   stopped early although variables were generated, and early branching should be performed
+- new method SCIPcopyImplicationsCliques() that copies implications and cliques
 
 parameters:
 - parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function
@@ -267,6 +270,7 @@ core:
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
 - extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
+- return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
 
 
 SCIP version 3.0.3

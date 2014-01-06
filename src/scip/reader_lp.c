@@ -2966,7 +2966,7 @@ SCIP_RETCODE printSOCCons(
    return SCIP_OKAY;
 }
 
-/**< prints a linearization of an and-constraint into the given file */
+/** prints a linearization of an and-constraint into the given file */
 static
 SCIP_RETCODE printAndCons(
    SCIP*                 scip,               /**< SCIP data structure */

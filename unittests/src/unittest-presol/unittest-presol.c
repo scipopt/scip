@@ -179,6 +179,10 @@ int main(
    SCIP_RETCODE retcode;
    SCIP_PRESOL* presol;
 
+   /* output stuff for automatic unittest evaluation */
+   printf("@01 unittest-presol ===========\n");
+   printf("=opt=  unittest-presol 0\n\n");
+
    /*********
     * Setup *
     *********/
@@ -231,7 +235,13 @@ int main(
 
    BMScheckEmptyMemory();
 
-   printf("All tests passed\n");
+   /* for automatic testing output the following */
+   printf("SCIP Status        : all tests passed\n");
+   printf("Ignore the following:\n");
+   printf("  solving          : 0.00\n");
+   printf("  nodes (total)    : 0\n");
+   printf("  Primal Bound     : 0.0\n");
+   printf("  Dual Bound       : 0.0\n");
 
    return 0;
 }

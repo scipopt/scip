@@ -3402,7 +3402,7 @@ SCIP_RETCODE removeOldLocks(
                                               *   capture of the corresponding and-constraint */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
    SCIP_Real const       lhs,                /**< left hand side which led to old locks */
-   SCIP_Real const       rhs                /**< right hand side which led to old locks */
+   SCIP_Real const       rhs                 /**< right hand side which led to old locks */
    )
 {
    assert(scip != NULL);

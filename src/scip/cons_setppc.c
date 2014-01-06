@@ -5263,7 +5263,7 @@ SCIP_RETCODE preprocessCliques(
 }
 
 
-/**< add cliques to SCIP */
+/** add cliques to SCIP */
 static
 SCIP_RETCODE addCliques(
    SCIP*                 scip,               /**< SCIP data structure */

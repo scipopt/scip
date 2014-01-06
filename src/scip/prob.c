@@ -1692,8 +1692,8 @@ void SCIPprobUpdateBestRootSol(
    {
       SCIP_VAR* var;
       SCIP_COL* col;
-      SCIP_Real rootsol;
-      SCIP_Real rootredcost;
+      SCIP_Real rootsol = 0.0;
+      SCIP_Real rootredcost = 0.0;
 
       var = prob->vars[v];
       assert(var != NULL);
@@ -1714,6 +1714,44 @@ void SCIPprobUpdateBestRootSol(
       }
       else
       {
+#if 1
+         SCIP_Real primsol;
+         SCIP_BASESTAT basestat;
+         SCIP_Bool lpissolbasic;
+
+         basestat = SCIPcolGetBasisStatus(col);
+         lpissolbasic = SCIPlpIsSolBasic(lp);
+         primsol = SCIPcolGetPrimsol(col);
+
+         if( (lpissolbasic && (basestat == SCIP_BASESTAT_LOWER || basestat == SCIP_BASESTAT_UPPER)) ||
+            (!lpissolbasic && (SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol) ||
+               SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol))) )
+         {
+            SCIP_Real lbrootredcost;
+            SCIP_Real ubrootredcost;
+
+            /* get reduced cost if the variable gets fixed to zero */
+            lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, lp);
+            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
+               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+            /* get reduced cost if the variable gets fixed to one */
+            ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, lp);
+            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
+               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+            if( -lbrootredcost > ubrootredcost )
+            {
+               rootredcost = lbrootredcost;
+               rootsol = 1.0;
+            }
+            else
+            {
+               rootredcost = ubrootredcost;
+               rootsol = 0.0;
+            }
+         }
+#else
          switch( SCIPcolGetBasisStatus(col) )
          {
          case SCIP_BASESTAT_LOWER:
@@ -1753,6 +1791,7 @@ void SCIPprobUpdateBestRootSol(
             SCIPABORT();
             return; /*lint !e527*/
          }
+#endif
       }
 
       /* update the current solution as best root solution in the problem variables if it is better */

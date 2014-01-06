@@ -40,15 +40,15 @@ SCIP_RETCODE SCIPincludeReaderPbm(
 /* writes picture of matrix structure to file */
 EXTERN
 SCIP_RETCODE SCIPwritePbm(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_READERDATA*   readerdata,         /**< information for reader */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_READERDATA*      readerdata,         /**< information for reader */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
 #ifdef __cplusplus

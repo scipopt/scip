@@ -1228,7 +1228,7 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
 
 /** set the main SCIP settings pointer */
 void SCIPdebugSetMainscipset(
-   SCIP_SET*             set                  /**< settings of SCIP instance */
+   SCIP_SET*             set                 /**< settings of SCIP instance */
    )
 {
    assert(set != NULL);

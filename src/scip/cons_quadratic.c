@@ -4695,12 +4695,16 @@ SCIP_RETCODE checkFactorable(
 
    SCIPdebugMessage("constraint <%s> has factorable quadratic form: (%g", SCIPconsGetName(cons), consdata->factorleft[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
+   {
       if( consdata->factorleft[i] != 0.0 )
          SCIPdebugPrintf(" %+g<%s>", consdata->factorleft[i], SCIPvarGetName(consdata->quadvarterms[i].var));
+   }
    SCIPdebugPrintf(") * (%g", consdata->factorright[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
+   {
       if( consdata->factorright[i] != 0.0 )
          SCIPdebugPrintf(" %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
+   }
    SCIPdebugPrintf(")\n");
 
 #ifndef NDEBUG

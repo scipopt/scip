@@ -17,7 +17,6 @@
 #@brief   Makefile for unit tests
 #@author  Ambros Gleixner
 #@author  Marc Pfetsch
-#@todo    check why everytime it links everything
 
 
 #-----------------------------------------------------------------------------
@@ -47,19 +46,20 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=  unittest-slack unittest-depthlevel unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol
+UNITTESTS	=  unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol unittest-depthlevel unittest-slack
 EXTRASRC	=  unittest-relax/relax_unittest unittest-cons/cons_unittest unittest-presol/presol_unittest
 
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
-EXECCOMMANDS    =       testslack NOEXEC NOEXEC
+EXECCOMMANDS    =       NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC testslack
 # testsets or NOTEST if there is no testset
-TESTCASES       =       short nofile nofile
+TESTCASES       =       nofile nofile nofile nofile nofile nofile short
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(join $(addsuffix /,$(UNITTESTS)), $(addsuffix .c, $(UNITTESTS))))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
 UNITTESTSOBJ	+=	$(addprefix $(OBJDIR)/, $(notdir $(addsuffix .o, $(EXTRASRC))))
+UNITTESTSBIN	=	$(addprefix $(BINDIR)/, $(addsuffix $(BASESUFFIX), $(UNITTESTS)))
 UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
 UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
@@ -74,11 +74,11 @@ VPATH = $(addprefix $(SRCDIR)/, $(UNITTESTS))
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(UNITTESTSEXECS) $(UNITTESTSOBJ)
+.SILENT:	$(UNITTESTSBIN) $(UNITTESTSOBJ)
 endif
 
 .PHONY: all
-all:            $(SCIPDIR) $(UNITTESTSEXECS)
+all:            $(SCIPDIR) $(UNITTESTSBIN)
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -93,11 +93,14 @@ lint:		$(UNITTESTSSRC)
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
-$(BINDIR):
-		@-mkdir -p $(BINDIR)
+# if $(BINDIR) does *not* exist: create it and generate links
+t_bin:
+		-@test -d $(BINDIR) || { \
+		echo "-> Creating $(BINDIR) directory"; \
+		mkdir -p $(BINDIR); }
 
 .PHONY: test
-test:           $(UNITTESTSEXECS)
+test:           $(UNITTESTSBIN)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 
@@ -105,8 +108,8 @@ test:           $(UNITTESTSEXECS)
 		$(foreach var,$(NUMBERS), \
 			echo; \
 			echo "--------------------------------------------------------------------"; \
-			echo "running test $(var) with executable $(word $(var),$(UNITTESTSEXECS))"; \
-			$(SHELL) -ec './check.sh $(word $(var),$(TESTCASES)) $(BINDIR)/$(word $(var),$(UNITTESTSEXECS)) $(SETTINGS) $(word $(var),$(UNITTESTSEXECS)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(word $(var),$(EXECCOMMANDS))')
+			echo "running test $(var) with executable $(word $(var),$(UNITTESTSBIN))"; \
+			$(SHELL) -ec './check.sh $(word $(var),$(TESTCASES)) $(word $(var),$(UNITTESTSBIN)) $(SETTINGS) $(word $(var),$(UNITTESTSEXECS)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(word $(var),$(EXECCOMMANDS))')
 
 
 .PHONY: clean
@@ -115,8 +118,8 @@ ifneq ($(OBJDIR),)
 		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
 		@echo "-> remove main objective files"
 endif
-		@-rm -f $(BINDIR)/$(UNITTESTSEXECS)
-		@echo "-> remove binary"
+		@-rm -f $(UNITTESTSBIN)
+		@echo "-> remove binaries"
 
 .PHONY: tags
 tags:
@@ -130,14 +133,14 @@ depend:		$(SCIPDIR)
 
 -include	$(UNITTESTSDEP)
 
-$(UNITTESTSEXECS): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ)
+$(UNITTESTSBIN): $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ) | t_bin
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/$(notdir $(patsubst %$(BASESUFFIX),%,$@)).o \
 		$(addprefix $(OBJDIR)/, $(addsuffix .o, $(notdir $(filter $(notdir $(patsubst %$(BASESUFFIX),%,$@))/%, $(EXTRASRC))))) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$(BINDIR)/$@
+		$(LDFLAGS) $(LINKCXX_o)$@
 
 
 $(OBJDIR)/%.o:	%.c

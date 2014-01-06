@@ -1962,7 +1962,6 @@ SCIP_RETCODE SCIPsolPrint(
    return SCIP_OKAY;
 }
 
-
 /** outputs non-zero elements of solution representing a ray to file stream */
 SCIP_RETCODE SCIPsolPrintRay(
    SCIP_SOL*             sol,                /**< primal CIP solution */

@@ -315,7 +315,7 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
    return SCIP_OKAY;
 }
 
-/* adds all variable/value pairs to the tclique graph that are contained in a 3-clique in the implication graph */
+/** adds all variable/value pairs to the tclique graph that are contained in a 3-clique in the implication graph */
 static
 SCIP_RETCODE tcliquegraphAddImplicsVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -532,9 +532,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
    return SCIP_OKAY;
 }
 
-/* adds all variable/value pairs to the tclique graph that have implications to two variables of the same existing
- * clique
- */
+/** adds all variable/value pairs to the tclique graph that have implications to two variables of the same existing clique */
 static
 SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -871,8 +869,8 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    return SCIP_OKAY;
 }
 
-/* creates tclique data structure using the implication graph;
- * only variables that are contained in a 3-clique are added as nodes to the clique graph
+/** creates tclique data structure using the implication graph;
+ *  only variables that are contained in a 3-clique are added as nodes to the clique graph
  */
 static
 SCIP_RETCODE loadTcliquegraph(
@@ -914,10 +912,8 @@ SCIP_RETCODE loadTcliquegraph(
    SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );
 
    /* it occurs that it might be that some cliques were not yet removed from the global clique array, so SCIPgetNClique
-    * can be greater than 0, even if there is no clique with some variables left
-    *
-    * @todo clean up empty cliques
-    */
+    * can be greater than 0, even if there is no clique with some variables left */
+   /** @todo clean up empty cliques */
    if( sepadata->tcliquegraph != NULL )
    {
       /* construct the dense clique table */
@@ -932,7 +928,7 @@ SCIP_RETCODE loadTcliquegraph(
    return SCIP_OKAY;
 }
 
-/* updates the weights in the tclique graph data structure */
+/** updates the weights in the tclique graph data structure */
 static
 void updateTcliquegraph(
    SCIP*                 scip,               /**< SCIP data structure */
