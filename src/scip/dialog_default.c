@@ -1191,6 +1191,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display dual solution command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPprintDualSol(scip, NULL, FALSE) );
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+
 /** dialog execution method for the display of solutions in the pool command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool)
 {  /*lint --e{715}*/
@@ -3181,6 +3196,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplaySolution, NULL, NULL,
             "solution", "display best primal solution", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display solution */
+   if( !SCIPdialogHasEntry(submenu, "dualsolution") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+                                   NULL,
+                                   SCIPdialogExecDisplayDualSolution, NULL, NULL,
+                                   "dualsolution", "display dual solution vector (LP only, without presolving)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

@@ -207,6 +207,7 @@ struct SCIP_Stat
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */
    SCIP_Bool             inrestart;          /**< are we currently restarting the system? */
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
+   SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
 };
 
 #ifdef __cplusplus

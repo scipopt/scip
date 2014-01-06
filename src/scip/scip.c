@@ -12677,6 +12677,9 @@ SCIP_RETCODE presolve(
       scip->stat->lastnpresolchgcoefs = scip->stat->npresolchgcoefs;
       scip->stat->lastnpresolchgsides = scip->stat->npresolchgsides;
 
+      /* set presolving flag */
+      scip->stat->performpresol = TRUE;
+
       /* sort propagators */
       SCIPsetSortPropsPresol(scip->set);
 
@@ -13473,6 +13476,9 @@ SCIP_RETCODE SCIPsolve(
       SCIPerrorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
    }
+
+   /* initialize presolving flag (may be modified in SCIPpresolve()) */
+   scip->stat->performpresol = FALSE;
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
@@ -31973,6 +31979,123 @@ SCIP_RETCODE SCIPprintTransSol(
 
    return SCIP_OKAY;
 }
+
+
+/** outputs dual solution from LP solver to file stream */
+static
+SCIP_RETCODE printDualSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   int c;
+
+   assert(scip->lp != NULL);
+   assert(scip->lp->solved);
+   assert(scip->lp->dualfeasible);
+
+   /* print dual solution values of all constraints */
+   for( c = 0; c < scip->transprob->nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      SCIP_Real solval;
+#ifndef NDEBUG
+      SCIP_CONSHDLR* conshdlr;
+#endif
+      cons = scip->transprob->conss[c];
+      assert(cons != NULL);
+
+#ifndef NDEBUG
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
+#endif
+
+      solval = SCIPgetDualsolLinear(scip, cons);
+      assert(solval != SCIP_INVALID); /*lint !e777*/
+
+      if( printzeros || !SCIPisZero(scip, solval) )
+      {
+         SCIP_MESSAGEHDLR* messagehdlr = scip->messagehdlr;
+
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPconsGetName(cons));
+
+         if( SCIPisInfinity(scip, solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity\n");
+         else if( SCIPisInfinity(scip, -solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity\n");
+         else
+            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g\n", solval);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** outputs dual solution from LP solver to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called in all stages but only prints dual information when called in \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPprintDualSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPprintTransSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "No dual solution available.\n");
+      return SCIP_OKAY;
+   }
+
+   assert(scip->stat != NULL);
+   assert(scip->transprob != NULL);
+
+   /* dual solution only useful when no presolving was performed */
+   if( scip->stat->performpresol )
+   {
+      SCIPwarningMessage(scip, "No dual information available when presolving was performed.\n");
+      return SCIP_OKAY;
+   }
+
+   /* dual solution is created by LP solver and therefore only available for pure LPs */
+   if( scip->transprob->nvars != scip->transprob->ncontvars )
+   {
+      SCIPwarningMessage(scip, "Dual information only available for pure LPs (only continuous variables).\n");
+      return SCIP_OKAY;
+   }
+
+   /* dual solution is created by LP solver and therefore only available for linear constraints */
+   for( c = scip->transprob->nconss - 1; c >= 0; --c )
+   {
+      SCIP_CONSHDLR* conshdlr;
+
+      conshdlr = SCIPconsGetHdlr(scip->transprob->conss[c]);
+      assert(conshdlr != NULL);
+
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) != 0 )
+      {
+         SCIPwarningMessage(scip, "Dual information only available for pure LPs (only linear constraints).\n");
+         return SCIP_OKAY;
+      }
+   }
+
+   /* print dual solution */
+   SCIP_CALL( printDualSol(scip, file, printzeros) );
+
+   return SCIP_OKAY;
+}
+
 
 /** outputs non-zero variables of solution representing a ray in original problem space to file stream
  *
