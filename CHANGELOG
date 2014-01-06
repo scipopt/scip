@@ -112,6 +112,7 @@ features:
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface
 - added McNemar tests and Wilcoxon signed rank tests to cmpres.awk evaluation scripts
 - a pricer can now return that no further pricing should be done but rather early branching, even if it added variables
+- dual solution can now be displayed for pure LPs when no presolving was performed
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
