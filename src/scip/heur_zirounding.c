@@ -829,8 +829,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          up   = oldsolval + upperbound;
          down = oldsolval - lowerbound;
 
-         /* if the variable is integer, do not shift further than the nearest integer */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         /* if the variable is integer or implicit binary, do not shift further than the nearest integer */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY)
          {
             SCIP_Real ceilx;
             SCIP_Real floorx;
