@@ -3808,7 +3808,7 @@ SCIP_RETCODE separatePoint(
          }
 
          /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add */
-         if( efficacy > minefficacy || (inenforcement && convex && SCIPisFeasPositive(scip, efficacy)) )
+         if( efficacy > minefficacy || (inenforcement && convex && (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPisPositive(scip, efficacy) : SCIPisFeasPositive(scip, efficacy))) )
          {
             SCIP_Bool infeasible;
 
@@ -5729,6 +5729,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    SCIP_Bool          cutoff;
    SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
+   SCIP_Real          leastpossibleefficacy;
    SCIP_Real          maxviol;
    int                nnotify;
    int                c;
@@ -5843,10 +5844,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
     */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && minefficacy > SCIPfeastol(scip) )
+   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
+   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, leastpossibleefficacy, TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
       if( cutoff )
       {
          SCIPdebugMessage("separation detected cutoff.\n");

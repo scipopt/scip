@@ -1174,6 +1174,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
       /* Do not add (non-forced) non-violated cuts.
        * Note: do not take SCIPsetIsEfficacious(), because constraint handlers often add cuts w.r.t. SCIPsetIsFeasPositive().
+       * Note2: if separating/feastolfac != -1, constraint handlers may even add cuts w.r.t. SCIPsetIsPositive(); those are currently rejected here
        */
       if( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
       {
