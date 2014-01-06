@@ -869,6 +869,17 @@ char SCIPparamGetChar(
       return param->data.charparam.curvalue;
 }
 
+/** returns allowed values of char parameter, or NULL if everything is allowed */
+char* SCIPparamGetCharAllowedValues(
+   SCIP_PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+
+   return param->data.charparam.allowedvalues;
+}
+
 /** returns default value of char parameter */
 char SCIPparamGetCharDefault(
    SCIP_PARAM*           param               /**< parameter */

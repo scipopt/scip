@@ -166,6 +166,12 @@ char SCIPparamGetChar(
    SCIP_PARAM*           param               /**< parameter */
    );
 
+/** returns allowed values of char parameter, or NULL if everything is allowed */
+EXTERN
+char* SCIPparamGetCharAllowedValues(
+   SCIP_PARAM*           param               /**< parameter */
+   );
+
 /** returns default value of char parameter */
 EXTERN
 char SCIPparamGetCharDefault(
