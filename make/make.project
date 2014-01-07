@@ -158,7 +158,14 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique lpi nlpi xml dijkstra
+LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
+			$(LIBOBJDIR)/objscip \
+			$(LIBOBJDIR)/blockmemshell \
+			$(LIBOBJDIR)/tclique \
+			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/nlpi \
+			$(LIBOBJDIR)/xml \
+			$(LIBOBJDIR)/dijkstra
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib

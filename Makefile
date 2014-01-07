@@ -546,7 +546,8 @@ endif
 
 all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
-libs: 		$(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) 
+.PHONY: libs
+libs: 		$(LINKSMARKERFILE) makesciplibfile $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -641,7 +642,7 @@ tags:
 -include make/local/make.detectgithash
 
 # this empty target is needed for the SCIP release versions
-githash::	# do not remove the double-colon
+githash::      # do not remove the double-colon
 
 # include local targets 
 -include make/local/make.targets
@@ -694,14 +695,14 @@ $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
 
-$(BINOBJDIR):	$(OBJDIR)
+$(BINOBJDIR):	| $(OBJDIR)
 		@-mkdir -p $(BINOBJDIR)
 
-$(LIBOBJDIR):	$(OBJDIR)
+$(LIBOBJDIR):	| $(OBJDIR)
 		@-mkdir -p $(LIBOBJDIR)
 
-$(LIBOBJSUBDIRS):	$(LIBOBJDIR)
-		@-mkdir -p $(LIBOBJDIR)/$@
+$(LIBOBJSUBDIRS):	| $(LIBOBJDIR)
+		@-mkdir -p $(LIBOBJSUBDIRS)
 
 $(LIBDIR):	
 		@-mkdir -p $(LIBDIR)
@@ -710,9 +711,10 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:          cleanlib cleanbin $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
+clean:          cleanlib cleanbin | $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
-		@-(cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS));
+		@-(cd $(LIBOBJDIR) && rm -f */*.o)
+		@-rmdir $(LIBOBJSUBDIRS)
 		@-rmdir $(LIBOBJDIR)
 endif
 ifneq ($(BINOBJDIR),)
@@ -724,7 +726,7 @@ ifneq ($(OBJDIR),)
 endif
 
 .PHONY: cleanlib
-cleanlib:       $(LIBDIR)
+cleanlib:       | $(LIBDIR)
 		@echo "-> remove library $(SCIPLIBFILE)"
 		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
 		@echo "-> remove library $(OBJSCIPLIBFILE)"
@@ -735,7 +737,7 @@ cleanlib:       $(LIBDIR)
 		@-rm -f $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK)
 
 .PHONY: cleanbin
-cleanbin:       $(BINDIR) 
+cleanbin:       | $(BINDIR)
 		@echo "-> remove binary $(MAINFILE)"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
@@ -806,7 +808,7 @@ depend:		scipdepend lpidepend nlpidepend maindepend
 -include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
-$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
+$(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
@@ -819,7 +821,10 @@ ifeq ($(LINKER),CPP)
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 
-$(SCIPLIBFILE):	checklpsdefine $(LIBDIR) $(LIBOBJSUBDIRS) touchexternal $(SCIPLIBOBJFILES)
+.PHONY: makesciplibfile
+makesciplibfile: checklpsdefine touchexternal | $(LIBDIR) $(LIBOBJSUBDIRS) $(SCIPLIBFILE)
+
+$(SCIPLIBFILE):	$(SCIPLIBOBJFILES)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES)
@@ -827,7 +832,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-$(OBJSCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(OBJSCIPLIBOBJFILES) 
+$(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(OBJSCIPLIBOBJFILES) 
@@ -835,7 +840,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-$(LPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
+$(LPILIBFILE):	$(LPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES)
@@ -843,7 +848,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-$(NLPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) 
+$(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) 
@@ -851,28 +856,28 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-$(BINOBJDIR)/%.o:	$(SRCDIR)/%.c $(BINOBJDIR)
+$(BINOBJDIR)/%.o:	$(SRCDIR)/%.c | $(BINOBJDIR)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 
-$(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(BINOBJDIR)
+$(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c $(LIBOBJDIR) 
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) | $(LIBOBJDIR)
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
-		@-make githash
+		@-$(MAKE) githash
 endif
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
@@ -916,7 +921,7 @@ $(LINKSMARKERFILE):
 		@$(MAKE) links
 
 .PHONY: links
-links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
+links:		echosoftlinks $(SOFTLINKS) | $(LIBDIR) $(DIRECTORIES)
 		@rm -f $(LINKSMARKERFILE)
 		@echo "this is only a marker" > $(LINKSMARKERFILE)
 
