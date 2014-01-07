@@ -44,6 +44,7 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 VERSION		=	3.0.2.1
+SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
 
@@ -543,7 +544,7 @@ ifeq ($(VERBOSE),false)
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
-all: 		githash libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 libs: 		$(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) 
 
@@ -870,6 +871,12 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP)
+ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
+		@-make githash
+endif
+ifneq ($(ZLIB),$(LAST_ZLIB))
+		@-touch $(ZLIBSRC)
+endif
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -895,6 +902,7 @@ ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
 		@-touch $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
+		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
