@@ -2424,6 +2424,9 @@ void SCIPcliquelistCheck(
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
+   /* @todo might need to change ifndef NDEBUG to ifdef SCIP_MOREDEBUG because it can take at lot of time to check for
+    *       correctness
+    */
 #ifndef NDEBUG
    int value;
 
