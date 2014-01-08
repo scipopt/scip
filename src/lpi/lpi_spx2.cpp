@@ -3055,8 +3055,6 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   int maxiter;
-   Real tolerance;
    bool success;
 
    assert(lpi != NULL);
@@ -3067,13 +3065,11 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    switch( qualityindicator )
    {
       case SCIP_LPSOLQUALITY_ESTIMCONDITION:
-         maxiter = 20;
-         tolerance = 1e-6;
+         success = lpi->spx->getEstimatedCondition(*quality);
          break;
 
       case SCIP_LPSOLQUALITY_EXACTCONDITION:
-         maxiter = 10000;
-         tolerance = 1e-9;
+         success = lpi->spx->getExactCondition(*quality);
          break;
 
       default:
@@ -3081,7 +3077,6 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
          return SCIP_INVALIDDATA;
    }
 
-   success = lpi->spx->getEstimatedCondition(maxiter, tolerance, *quality);
    if( !success )
    {
       SCIPdebugMessage("problem computing condition number\n");
