@@ -151,7 +151,7 @@ GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
 
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
