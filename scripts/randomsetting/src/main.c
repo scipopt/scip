@@ -56,6 +56,18 @@ SCIP_Bool paramIsExcluded(
       || strncmp(paramname, "misc/usevartable", MAX_PARAMNAME_LEN) == 0
       || strncmp(paramname, "misc/useconstable", MAX_PARAMNAME_LEN) == 0;
 
+   /* too large initial values easily yield a memory out */
+   excluded = excluded
+      || strncmp(paramname, "memory/arraygrowinit", MAX_PARAMNAME_LEN) == 0
+      || strncmp(paramname, "memory/treegrowinit", MAX_PARAMNAME_LEN) == 0
+      || strncmp(paramname, "memory/pathgrowinit", MAX_PARAMNAME_LEN) == 0;
+
+   /* already larger values inside the feasible interval [1,10] yield many memory outs */
+   excluded = excluded
+      || strncmp(paramname, "memory/arraygrowfac", MAX_PARAMNAME_LEN) == 0
+      || strncmp(paramname, "memory/treegrowfac", MAX_PARAMNAME_LEN) == 0
+      || strncmp(paramname, "memory/pathgrowfac", MAX_PARAMNAME_LEN) == 0;
+
    if( excluded )
    {
       SCIPdebugMessage("excluding parameter <%s>\n", SCIPparamGetName(param));
