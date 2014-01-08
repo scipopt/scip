@@ -30,6 +30,7 @@ fixed bugs:
 - fixed bug in genvbound propagator occurring when objective offset or scale changes after a restart
 - fixed bug in flowcover separator to exclude unconstrained rows in aggregation
 - fixed bug in prop_dualfix w.r.t. to fixing of variables to infinity after presolving
+- fixed bug in random integer generator SCIPgetRandomInt() for large intervals
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
