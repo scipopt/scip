@@ -10891,7 +10891,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int minidx;
    int mididx;
    int maxidx;
-   int maxabsval;
+   int addval;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -10911,16 +10911,21 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
+   addval = (int) REALABS(consdata->vals[0]);
+   addval += (((int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
+   addval += (((int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
+
    maxabsrealval = consdataGetMaxAbsval(consdata);
    /* hash value depends on vectors of variable indices */
-   if( maxabsrealval > (SCIP_Real) INT_MAX )
-      maxabsval = 0;
-   else if( maxabsrealval < 1.0 )
-      maxabsval = (int) (MULTIPLIER * maxabsrealval);
-   else
-      maxabsval = (int) maxabsrealval;
+   if( maxabsrealval < (SCIP_Real) INT_MAX )
+   {
+      if( maxabsrealval < 1.0 )
+         addval += (int) (MULTIPLIER * maxabsrealval);
+      else
+         addval += (int) maxabsrealval;
+   }
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + maxabsval; /*lint !e701*/
+   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + addval; /*lint !e701*/
 
    return hashval;
 }
@@ -10969,6 +10974,10 @@ SCIP_RETCODE detectRedundantConstraints(
 
       if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
          continue;
+
+      /* check for interuption */
+      if( c % 1000 == 0 && SCIPisStopped(scip) )
+         break;
 
       /* sorts the constraint */
       consdata0 = SCIPconsGetData(cons0);
@@ -11091,6 +11100,10 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
+#ifdef  SCIP_MORE_DEBUG
+   SCIPinfoMessage(scip, NULL, "linear pairwise comparison hashtable statistics:\n");
+   SCIPhashtablePrintStatistics(hashtable, SCIPgetMessagehdlr(scip));
+#endif
 
    /* free hash table */
    SCIPhashtableFree(&hashtable);
@@ -12546,7 +12559,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
    }
 
    /* print statistics */
-   SCIPinfoMessage(scip, NULL, "\nNumber of constraints according to type:\n");
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Number of constraints according to type:\n");
    SCIPinfoMessage(scip, NULL, "----------------------------------------\n");
    SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_EMPTY        %6d\n",  0, counter[ 0]);
    SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_FREE         %6d\n",  1, counter[ 1]);
