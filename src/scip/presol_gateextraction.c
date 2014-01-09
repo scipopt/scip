@@ -897,10 +897,10 @@ SCIP_RETCODE extractGates(
    {
       if( SCIPvarGetIndex(activevars[d]) == SCIPvarGetIndex(activevars[d - 1]) )
       {
+	 assert(presoldata->usefullogicor[pos] == logicor);
+
 	 SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) logicor) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
-
-	 assert(presoldata->usefullogicor[pos] == logicor);
 
 	 presoldata->usefullogicor[pos] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
 	 --(presoldata->nusefullogicor);
