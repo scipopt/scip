@@ -943,7 +943,7 @@
 =opt=	normalized-reduced-mps-v2-20-10-pk1 3
 =best=	normalized-reduced-mps-v2-20-10-pp08a	135
 =best=	normalized-reduced-mps-v2-20-10-pp08aCUTS	67
-=best=	normalized-reduced-mps-v2-20-10-qap10	29
+=opt=	normalized-reduced-mps-v2-20-10-qap10	29
 =inf=	normalized-reduced-mps-v2-20-10-qiu
 =best=	normalized-reduced-mps-v2-20-10-qnet1	144
 =best=	normalized-reduced-mps-v2-20-10-qnet1_o	155
