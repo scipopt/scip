@@ -73,7 +73,7 @@
 #endif
 
 /* include SoPlex solver */
-#include "soplex2.h"
+#include "soplex.h"
 
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
@@ -170,7 +170,7 @@ using namespace soplex;
 
 
 /** SCIP's SoPlex class */
-class SPxSCIP : public SoPlex2
+class SPxSCIP : public SoPlex
 {
    bool                  _lpinfo;
    bool                  _fromscratch;
@@ -253,9 +253,9 @@ public:
    /** get objective limit according to objective sense */
    Real getObjLimit() const
    {
-      return (intParam(SoPlex2::OBJSENSE) == SoPlex2::OBJSENSE_MINIMIZE)
-         ? realParam(SoPlex2::OBJLIMIT_UPPER)
-         : realParam(SoPlex2::OBJLIMIT_LOWER);
+      return (intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE)
+         ? realParam(SoPlex::OBJLIMIT_UPPER)
+         : realParam(SoPlex::OBJLIMIT_LOWER);
    }
 
    // @todo realize this with a member variable as before
@@ -893,9 +893,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex2 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION);
+   sprintf(spxname, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION);
 #else
-   sprintf(spxname, "SoPlex2 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10);
+   sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10);
 #endif
    return spxname;
 }
@@ -1041,7 +1041,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       spx->clearLPReal();
 
       /* set objective sense */
-      spx->setIntParam(SoPlex2::OBJSENSE, (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex2::OBJSENSE_MINIMIZE : SoPlex2::OBJSENSE_MAXIMIZE));
+      spx->setIntParam(SoPlex::OBJSENSE, (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE));
 
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
@@ -1440,7 +1440,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setIntParam(SoPlex2::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex2::OBJSENSE_MINIMIZE : SoPlex2::OBJSENSE_MAXIMIZE ) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setIntParam(SoPlex::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE ) );
 
    return SCIP_OKAY;
 }
@@ -1517,14 +1517,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
       rowvec *= scaleval;
 
       /* adjust the sides */
-      if( lhs > -lpi->spx->realParam(SoPlex2::INFTY) )
+      if( lhs > -lpi->spx->realParam(SoPlex::INFTY) )
          lhs *= scaleval;
       else if( scaleval < 0.0 )
-         lhs = lpi->spx->realParam(SoPlex2::INFTY);
-      if( rhs < lpi->spx->realParam(SoPlex2::INFTY) )
+         lhs = lpi->spx->realParam(SoPlex::INFTY);
+      if( rhs < lpi->spx->realParam(SoPlex::INFTY) )
          rhs *= scaleval;
       else if( scaleval < 0.0 )
-         rhs = -lpi->spx->realParam(SoPlex2::INFTY);
+         rhs = -lpi->spx->realParam(SoPlex::INFTY);
       if( scaleval < 0.0 )
       {
          SCIP_Real oldlhs = lhs;
@@ -1589,14 +1589,14 @@ SCIP_RETCODE SCIPlpiScaleCol(
       obj *= scaleval;
 
       /* adjust the bounds */
-      if( lb > -lpi->spx->realParam(SoPlex2::INFTY) )
+      if( lb > -lpi->spx->realParam(SoPlex::INFTY) )
          lb /= scaleval;
       else if( scaleval < 0.0 )
-         lb = lpi->spx->realParam(SoPlex2::INFTY);
-      if( ub < lpi->spx->realParam(SoPlex2::INFTY) )
+         lb = lpi->spx->realParam(SoPlex::INFTY);
+      if( ub < lpi->spx->realParam(SoPlex::INFTY) )
          ub /= scaleval;
       else if( scaleval < 0.0 )
-         ub = -lpi->spx->realParam(SoPlex2::INFTY);
+         ub = -lpi->spx->realParam(SoPlex::INFTY);
       if( scaleval < 0.0 )
       {
          SCIP_Real oldlb = lb;
@@ -1894,7 +1894,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    assert(lpi->spx != NULL);
    assert(objsen != NULL);
 
-   *objsen = (lpi->spx->intParam(SoPlex2::OBJSENSE) == SoPlex2::OBJSENSE_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
+   *objsen = (lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
 
    return SCIP_OKAY;
 }
@@ -2037,13 +2037,13 @@ SCIP_RETCODE spxSolve(
 
    /* set basis representation and algorithm type */
    if( rep == SPxSolver::COLUMN )
-      lpi->spx->setIntParam(SoPlex2::REPRESENTATION, SoPlex2::REPRESENTATION_COLUMN);
+      lpi->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_COLUMN);
    else
-      lpi->spx->setIntParam(SoPlex2::REPRESENTATION, SoPlex2::REPRESENTATION_ROW);
+      lpi->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_ROW);
    if( type == SPxSolver::LEAVE )
-      lpi->spx->setIntParam(SoPlex2::ALGORITHM, SoPlex2::ALGORITHM_LEAVE);
+      lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_LEAVE);
    else
-      lpi->spx->setIntParam(SoPlex2::ALGORITHM, SoPlex2::ALGORITHM_ENTER);
+      lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_ENTER);
 
 #ifdef WITH_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
@@ -2090,7 +2090,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       factor 1.1 for switching back to column representation */
    if( lpi->rowrepswitch >= 0 )
    {
-      rowrep = lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW;
+      rowrep = lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW;
 
       if( !rowrep )
          rowrep = lpi->spx->numRowsReal() > lpi->spx->numColsReal() * (lpi->rowrepswitch);
@@ -2111,8 +2111,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
     * - LEAVE = PRIMAL
     */
    retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::LEAVE) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::ENTER);
-   assert(!rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW);
-   assert(rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_COLUMN);
+   assert(!rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW);
+   assert(rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN);
 
    return retcode;
 }
@@ -2134,7 +2134,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       factor 1.1 for switching back to column representation */
    if( lpi->rowrepswitch >= 0 )
    {
-      rowrep = lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW;
+      rowrep = lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW;
 
       if( !rowrep )
          rowrep = lpi->spx->numRowsReal() > lpi->spx->numColsReal() * (lpi->rowrepswitch);
@@ -2155,8 +2155,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
     * - LEAVE = PRIMAL
     */
    retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::ENTER) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::LEAVE);
-   assert(!rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW);
-   assert(rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_COLUMN);
+   assert(!rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW);
+   assert(rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN);
 
    return retcode;
 }
@@ -2240,7 +2240,7 @@ SCIP_RETCODE lpiStrongbranch(
    status = SPxSolver::UNKNOWN;
    fromparentbasis = false;
    error = false;
-   oldItlim = spx->intParam(SoPlex2::ITERLIMIT);
+   oldItlim = spx->intParam(SoPlex::ITERLIMIT);
 
    /* get current bounds of column */
    oldlb = spx->lowerReal(col);
@@ -2253,8 +2253,8 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-   spx->setIntParam(SoPlex2::ALGORITHM, spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW
-      ? SoPlex2::ALGORITHM_ENTER : SoPlex2::ALGORITHM_LEAVE);
+   spx->setIntParam(SoPlex::ALGORITHM, spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW
+      ? SoPlex::ALGORITHM_ENTER : SoPlex::ALGORITHM_LEAVE);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -2265,7 +2265,7 @@ SCIP_RETCODE lpiStrongbranch(
       spx->changeUpperReal(col, newub);
       assert(spx->lowerReal(col) <= spx->upperReal(col));
 
-      spx->setIntParam(SoPlex2::ITERLIMIT, itlim);
+      spx->setIntParam(SoPlex::ITERLIMIT, itlim);
       do
       {
 #ifdef WITH_LPSCHECK
@@ -2309,7 +2309,7 @@ SCIP_RETCODE lpiStrongbranch(
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n",
                              itlim - spx->numIterations());
-            spx->setIntParam(SoPlex2::ITERLIMIT, itlim - spx->numIterations());
+            spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
             assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
@@ -2344,7 +2344,7 @@ SCIP_RETCODE lpiStrongbranch(
          spx->changeLowerReal(col, newlb);
          assert(spx->lowerReal(col) <= spx->upperReal(col));
 
-         spx->setIntParam(SoPlex2::ITERLIMIT, itlim);
+         spx->setIntParam(SoPlex::ITERLIMIT, itlim);
          do
          {
 #ifdef WITH_LPSCHECK
@@ -2389,7 +2389,7 @@ SCIP_RETCODE lpiStrongbranch(
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->numIterations());
                assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
-               spx->setIntParam(SoPlex2::ITERLIMIT, itlim - spx->numIterations());
+               spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
                error = false;
                fromparentbasis = true;
             }
@@ -2413,7 +2413,7 @@ SCIP_RETCODE lpiStrongbranch(
    }
 
    /* reset old iteration limit */
-   spx->setIntParam(SoPlex2::ITERLIMIT, oldItlim);
+   spx->setIntParam(SoPlex::ITERLIMIT, oldItlim);
 
    /* restore verbosity */
    Param::setVerbose(verbosity);
@@ -3701,16 +3701,16 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->spx->getLpInfo();
       break;
    case SCIP_LPPAR_LPITLIM:
-      *ival = lpi->spx->intParam(SoPlex2::ITERLIMIT);
+      *ival = lpi->spx->intParam(SoPlex::ITERLIMIT);
       break;
    case SCIP_LPPAR_PRESOLVING:
-      *ival = lpi->spx->intParam(SoPlex2::SIMPLIFIER) == SoPlex2::SIMPLIFIER_AUTO;
+      *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == SoPlex::SIMPLIFIER_AUTO;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int) lpi->pricing;
       break;
    case SCIP_LPPAR_SCALING:
-      *ival = (int) (lpi->spx->intParam(SoPlex2::SCALER) != SoPlex2::SCALER_OFF);
+      *ival = (int) (lpi->spx->intParam(SoPlex::SCALER) != SoPlex::SCALER_OFF);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3743,11 +3743,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       assert(ival >= -1);
-      lpi->spx->setIntParam(SoPlex2::ITERLIMIT, ival);
+      lpi->spx->setIntParam(SoPlex::ITERLIMIT, ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setIntParam(SoPlex2::SIMPLIFIER, (ival ? SoPlex2::SIMPLIFIER_AUTO : SoPlex2::SIMPLIFIER_OFF));
+      lpi->spx->setIntParam(SoPlex::SIMPLIFIER, (ival ? SoPlex::SIMPLIFIER_AUTO : SoPlex::SIMPLIFIER_OFF));
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = (SCIP_PRICING)ival;
@@ -3755,22 +3755,22 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       {
       case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_AUTO:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_AUTO);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_AUTO);
          break;
       case SCIP_PRICING_FULL:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_STEEP);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_STEEP);
          break;
       case SCIP_PRICING_PARTIAL:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_PARMULT);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_PARMULT);
          break;
       case SCIP_PRICING_STEEP:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_STEEP);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_STEEP);
          break;
       case SCIP_PRICING_STEEPQSTART:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_QUICKSTEEP);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_QUICKSTEEP);
          break;
       case SCIP_PRICING_DEVEX:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_DEVEX);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_DEVEX);
          break;
       default:
          return SCIP_LPERROR;
@@ -3778,7 +3778,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setIntParam(SoPlex2::SCALER, ( ival ? SoPlex2::SCALER_BIEQUI : SoPlex2::SCALER_OFF));
+      lpi->spx->setIntParam(SoPlex::SCALER, ( ival ? SoPlex::SCALER_BIEQUI : SoPlex::SCALER_OFF));
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3809,13 +3809,13 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->spx->opttol();
       break;
    case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex2::OBJLIMIT_LOWER);
+      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_LOWER);
       break;
    case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex2::OBJLIMIT_UPPER);
+      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_UPPER);
       break;
    case SCIP_LPPAR_LPTILIM:
-      *dval = lpi->spx->realParam(SoPlex2::TIMELIMIT);
+      *dval = lpi->spx->realParam(SoPlex::TIMELIMIT);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
@@ -3850,13 +3850,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setOpttol(dval);
       break;
    case SCIP_LPPAR_LOBJLIM:
-      lpi->spx->setRealParam(SoPlex2::OBJLIMIT_LOWER, dval);
+      lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_UOBJLIM:
-      lpi->spx->setRealParam(SoPlex2::OBJLIMIT_UPPER, dval);
+      lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      lpi->spx->setRealParam(SoPlex2::TIMELIMIT, dval);
+      lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
@@ -3892,7 +3892,7 @@ SCIP_Real SCIPlpiInfinity(
 {
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
-   return lpi->spx->realParam(SoPlex2::INFTY);
+   return lpi->spx->realParam(SoPlex::INFTY);
 }
 
 /** checks if given value is treated as infinity in the LP solver */
@@ -3903,7 +3903,7 @@ SCIP_Bool SCIPlpiIsInfinity(
 {
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
-   return (val >= lpi->spx->realParam(SoPlex2::INFTY));
+   return (val >= lpi->spx->realParam(SoPlex::INFTY));
 }
 
 /**@} */
@@ -3953,7 +3953,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    try
    {
-      assert(lpi->spx->intParam(SoPlex2::READMODE) == SoPlex2::READMODE_REAL);
+      assert(lpi->spx->intParam(SoPlex::READMODE) == SoPlex::READMODE_REAL);
       if( !lpi->spx->readFile(fname) )
          return SCIP_READERROR;
    }
