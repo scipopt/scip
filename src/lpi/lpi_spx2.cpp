@@ -3953,8 +3953,9 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    try
    {
-      if( !lpi->spx->readFileReal(fname) )
-      return SCIP_READERROR;
+      assert(lpi->spx->intParam(SoPlex2::READMODE) == SoPlex2::READMODE_REAL);
+      if( !lpi->spx->readFile(fname) )
+         return SCIP_READERROR;
    }
    catch(SPxException x)
    {
