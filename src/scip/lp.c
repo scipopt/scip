@@ -13799,7 +13799,7 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
    {
-      SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      lp->lpobjval = -SCIPsetInfinity(set);
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
    }
    else if( !solveddual && lpalgo != SCIP_LPALGO_DUALSIMPLEX)
