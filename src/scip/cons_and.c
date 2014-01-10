@@ -2614,6 +2614,9 @@ SCIP_RETCODE cliquePresolve(
       nvars = consdata->nvars;
    }
 
+   /* @todo when cliques are improved, we only need to collect all clique-ids for all variables and check for doubled
+    *       entries
+    */
    /* case 1 first part */
    /* check if two operands are in a clique */
    for( v = nvars - 1; v > 0; --v )
@@ -4285,7 +4288,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    cutoff = FALSE;
    delay = FALSE;
    firstchange = INT_MAX;
-   for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+   for( c = 0; c < nconss && !cutoff && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
