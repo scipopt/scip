@@ -1578,7 +1578,7 @@ void SCIPhashtableRemoveAll(
 }
 
 /** returns number of hash table elements */
-SCIP_Longint SCIPhashtableGetNElemenets(
+SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
 {
