@@ -17,6 +17,7 @@
  * @brief  methods for expressions, expression trees, expression graphs, and related
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
+ * @author Ingmar Vierhaus (exprparse)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,6 +25,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "nlpi/pub_expr.h"
 #include "nlpi/struct_expr.h"
@@ -4760,6 +4762,602 @@ SCIP_RETCODE exprsimplifyUnconvertPolynomials(
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_HASHGETKEY( exprparseVarTableGetKey )
+{
+   return (void*)((char*)elem + sizeof(int));
+}
+
+/** parses a variable name from a string and creates corresponding expression
+ *
+ * creates a new variable index if variable not seen before, updates varnames and vartable structures
+ */
+static
+SCIP_RETCODE exprparseReadVariable(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   const char**          str,                /**< pointer to the string to be parsed */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   int*                  nvars,              /**< running number of encountered variables so far */
+   char**                varnames,           /**< pointer to buffer to store new variable names */
+   SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
+   SCIP_Real             coefficient,        /**< coefficient to be used when creating the expression */
+   const char*           varnameendptr       /**< if a <varname> should be parsed, set this to NULL. Then, str points to the '<'
+                                                  else, str should point to the first letter of the varname, and varnameendptr should
+                                                  point one char behind the last char of the variable name */
+   )
+{
+   int namelength;
+   int varidx;
+   char varname[SCIP_MAXSTRLEN];
+   void* element;
+
+   assert(blkmem != NULL);
+   assert(str != NULL);
+   assert(expr != NULL);
+   assert(nvars != NULL);
+   assert(varnames != NULL);
+   assert(vartable != NULL);
+
+   if( varnameendptr == NULL )
+   {
+      ++*str;
+      varnameendptr = *str;
+      while( varnameendptr[0] != '>' )
+         ++varnameendptr;
+   }
+
+   namelength = varnameendptr - *str;
+   if( namelength >= SCIP_MAXSTRLEN )
+   {
+      SCIPerrorMessage("Variable name %.*s is too long for buffer in exprparseReadVariable.\n", namelength, str);
+      return SCIP_READERROR;
+   }
+
+   memcpy(varname, *str, namelength * sizeof(char));
+   varname[namelength] = '\0';
+
+   element = SCIPhashtableRetrieve(vartable, varname);
+   if( element != NULL )
+   {
+      /* variable is old friend */
+      assert(strcmp((char*)element + sizeof(int), varname) == 0);
+
+      varidx = *(int*)element;
+   }
+   else
+   {
+      /* variable is new */
+      varidx = *nvars;
+
+      /* store index of variable and variable name in varnames buffer */
+      *(int*)*varnames = varidx;
+      strcpy(*varnames + sizeof(int), varname);
+
+      /* insert variable into hashtable */
+      SCIP_CALL( SCIPhashtableInsert(vartable, (void*)*varnames) );
+
+      ++*nvars;
+      *varnames += sizeof(int) + strlen(varname) + 1;
+   }
+
+   /* create VARIDX expression, put into LINEAR expression if we have coefficient != 1 */
+   SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_VARIDX, varidx) );  /*lint !e613*/
+   if( coefficient != 1.0 )
+   {
+      SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 1, expr, &coefficient, 0.0) );
+   }
+
+   /* Move pointer to char behind end of variable */
+   *str = varnameendptr + 1;
+
+   /* consprint sometimes prints a variable type identifier which we don't need */
+   if( (*str)[0] == '[' && (*str)[2] == ']' &&
+       ((*str)[1] == SCIP_VARTYPE_BINARY_CHAR  ||
+        (*str)[1] == SCIP_VARTYPE_INTEGER_CHAR ||
+        (*str)[1] == SCIP_VARTYPE_IMPLINT_CHAR ||
+        (*str)[1] == SCIP_VARTYPE_CONTINUOUS_CHAR
+      )
+   )
+      *str += 3;
+
+   return SCIP_OKAY;
+}
+
+/* if str[0] points to an opening parenthesis, this function sets endptr to point to the matching closing bracket in str
+ *
+ * searches for at most length characters
+ */
+static
+SCIP_RETCODE exprparseFindClosingParenthesis(
+   const char*           str,                /**< pointer to the string to be parsed */
+   const char**          endptr,             /**< pointer to point to the closing parenthesis */
+   int                   length,             /**< length of the string to be parsed */
+   const char*           lastchar            /**< pointer to the last char of str that should be parsed */
+   )
+{
+   int nopenbrackets;
+
+   assert(str[0] == '(');
+
+   *endptr = str;
+
+   /* find the end of this expression */
+   nopenbrackets = 0;
+   while( (*endptr - str ) < length && !(nopenbrackets == 1 && *endptr[0] == ')') )
+   {
+      if( *endptr[0] == '(')
+         ++nopenbrackets;
+      if( *endptr[0] == ')')
+         --nopenbrackets;
+      ++*endptr;
+   }
+
+   if( *endptr[0] != ')' )
+   {
+      SCIPerrorMessage("unable to find closing parenthesis in unbalanced expression %.*s\n", length, str);
+      return SCIP_READERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** parses an expression from a string */
+static
+SCIP_RETCODE exprParse(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   const char*           str,                /**< pointer to the string to be parsed */
+   int                   length,             /**< length of the string to be parsed */
+   const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
+   int*                  nvars,              /**< running number of encountered variables so far */
+   char**                varnames,           /**< pointer to buffer to store new variable names */
+   SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
+   int                   recursiondepth      /**< current recursion depth */
+   )
+{
+   int subexplength;
+   const char* subexpptr;
+   const char* subexpendptr;
+
+   const char* strstart;
+
+   const char* endptr;
+   char* nonconstendptr;
+   SCIP_Real number;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(str != NULL);
+   assert(lastchar >= str);
+   assert(nvars != NULL);
+   assert(varnames != NULL);
+   assert(vartable != NULL);
+
+   assert(recursiondepth < 100);
+
+   strstart = str; /* might be needed for error message... */
+
+   SCIPdebugMessage("exprParse (%i): parsing %.*s\n", recursiondepth, (int) (lastchar-str + 1), str);
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*str) )
+      ++str;
+
+   /* look for a sum or difference not contained in brackets */
+   {
+      int nopenbrackets = 0;
+
+      subexpptr = str;
+      /* find the end of this expression
+       * a '+' right at the beginning indicates a coefficient, not treated here
+       */
+      while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str) )
+      {
+         if( subexpptr[0] == '(')
+            ++nopenbrackets;
+         if( subexpptr[0] == ')')
+            --nopenbrackets;
+         ++subexpptr;
+      }
+
+      if( subexpptr != lastchar )
+      {
+         SCIP_EXPR* arg1;
+         SCIP_EXPR* arg2;
+
+         SCIP_CALL( exprParse(blkmem, &arg1, str, (int) ((subexpptr - 1) - str + 1), subexpptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+         SCIP_CALL( exprParse(blkmem, &arg2, subexpptr , (int) (lastchar - (subexpptr ) + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+
+         /* make new expression from two arguments
+          * we always use add, because we leave the operator between the found expressions in the second argument
+          * this way, we do not have to worry about ''minus brackets'' in the case of more then two summands:
+          *   a - b - c = a + (-b -c)
+          */
+         SCIP_CALL( SCIPexprAdd(blkmem, expr, 1.0, arg1, 1.0, arg2, 0.0) );
+
+         /*
+         SCIPdebugMessage("parseExpr (%i): returns expression ", recursiondepth);
+         SCIPdebug( SCIPexprPrint(*expr, SCIPgetMessagehdlr(scip), NULL, NULL, NULL, NULL) );
+         SCIPdebug( SCIPmessagePrintInfo(scip->messagehdlr, "\n") );
+         */
+         return SCIP_OKAY;
+      }
+   }
+
+   /* check for a bracketed subexpression */
+   if( str[0] == '(' )
+   {
+      int nopenbrackets = 0;
+
+      subexplength = -1;    /* we do not want the closing bracket in the string */
+      subexpptr = str + 1;  /* leave out opening bracket */
+
+      /* find the end of this expression */
+      while( subexplength < length && !(nopenbrackets == 1 && str[0] == ')') )
+      {
+         if( str[0] == '(' )
+            ++nopenbrackets;
+         if( str[0] == ')' )
+            --nopenbrackets;
+         ++str;
+         ++subexplength;
+      }
+      subexpendptr = str - 1; /* leave out closing bracket */
+
+      SCIP_CALL( exprParse(blkmem, expr, subexpptr, subexplength, subexpendptr, nvars, varnames, vartable, recursiondepth + 1) );
+      ++str;
+   }
+   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   {
+      /* there is a number coming */
+      const char* varnameptr;
+
+      if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
+         return SCIP_READERROR;
+      }
+      str = nonconstendptr;
+
+      /* if a variable is following (with or without *) the number was a coefficient */
+      /* TODO */
+      varnameptr = str;
+
+      /* ignore whitespace */
+      while( isspace((unsigned char)*varnameptr) && varnameptr != lastchar )
+         ++varnameptr;
+
+      /* ignore multiplication sign to find out if a variable follows */
+      if( varnameptr[0] == '*' )
+      {
+         ++varnameptr;
+
+         /* ignore whitespace */
+         while( isspace((unsigned char)*varnameptr) && varnameptr != lastchar )
+            ++varnameptr;
+      }
+
+      if( varnameptr[0] == '<')
+      {
+         /* there is a variable coming, number is probably a coefficient */
+         const char * testptr;
+         testptr = varnameptr;
+
+         /* see if there is a power following the variable */
+         /* move one char behind the varname */
+         while( testptr[0] != '>')
+            ++testptr;
+         ++testptr;
+         /* ignore whitespace */
+         while( isspace((unsigned char)*testptr) && testptr != lastchar )
+            ++testptr;
+         if( testptr[0] != '^' )
+         {
+            /* no power, number is a coefficient */
+            str = varnameptr;
+            SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, vartable, number, NULL) );
+         }
+         else
+         {
+            /* variable following but operator outranking '*' following variable, so number is no coefficient after all */
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, number) );
+         }
+      }
+      else
+      {
+         /* no variable following, number is simply a constant */
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, number) );
+      }
+   }
+   else if( str[0] == '<' )
+   {
+      /* check if expressions begins with a variable */
+      SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, vartable, 1, NULL) );
+   }
+   else if(
+      strncmp(str, "abs", 3) == 0 ||
+      strncmp(str, "sqr", 3) == 0 ||  /* sqr or sqrt */
+      strncmp(str, "exp", 3) == 0 ||
+      strncmp(str, "log", 3) == 0
+   )
+   {
+      /* supported single argument operands (ordered descending by operator name length) */
+      SCIP_EXPR* arg;
+      const char* opname = str;
+
+      if( strncmp(str, "sqrt", 4) == 0 )
+      {
+         /* four character operators */
+         str += 4;
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length, lastchar) );
+         SCIP_CALL( exprParse(blkmem, &arg, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+         str = endptr + 1;
+
+         assert(strncmp(opname, "sqrt", 4) == 0);
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg) );
+      }
+      else if(
+         strncmp(str, "abs", 3) == 0 ||
+         strncmp(str, "cos", 3) == 0 ||
+         strncmp(str, "exp", 3) == 0 ||
+         strncmp(str, "log", 3) == 0 ||
+         strncmp(str, "sin", 3) == 0 ||
+         strncmp(str, "sqr", 3) == 0 ||
+         strncmp(str, "tan", 3) == 0
+      )
+      {
+         /* three character operators */
+
+         str += 3;
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length, lastchar) );
+         SCIP_CALL( exprParse(blkmem, &arg, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+         str = endptr + 1;
+
+         if( strncmp(opname, "abs", 3) == 0 )
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_ABS, arg) );
+         }
+         else if( strncmp(opname, "cos", 3) == 0 )
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_COS, arg) );
+         }
+         else if( strncmp(opname, "exp", 3) == 0 )
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_EXP, arg) );
+         }
+         else if( strncmp(opname, "log", 3) == 0 )
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_LOG, arg) );
+         }
+         else if( strncmp(opname, "sin", 3) == 0 )
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SIN, arg) );
+         }
+         else if( strncmp(opname, "sqr", 3) == 0 )
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQUARE, arg) );
+         }
+         else
+         {
+            assert(strncmp(opname, "tan", 3) == 0);
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg) );
+         }
+      }
+   }
+   /* Unsupported single argument operands */
+   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "intpower", 8) == 0  || strncmp(str, "signpower", 9) == 0 )
+   {
+      SCIPerrorMessage("parsing of expression %.*s not supported.\n", (int) (lastchar - str + 1), str);
+      return SCIP_READERROR;
+   }
+   else
+   {
+      /* check for a variable, that was not recognized earlier because somebody omitted the '<' and '>' we need for
+       * SCIPparseVarName, making everyones life harder
+       */
+      const char* varnamestartptr = str;
+
+      /* allow only variable names containing characters, digits, and underscores here */
+      while( isalnum(str[0]) || str[0] == '_' )
+         ++str;
+
+      SCIP_CALL( exprparseReadVariable(blkmem, &varnamestartptr, expr, nvars, varnames, vartable, 1.0, str) );
+   }
+
+   /* if we are one char behind lastchar, we are done */
+   if( str == lastchar + 1)
+   {
+      /*
+      SCIPdebugMessage("exprParse (%i): returns expression ", recursiondepth);
+      SCIPdebug( SCIPexprPrint(*expr, SCIPgetMessagehdlr(scip), NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPmessagePrintInfo(scip->messagehdlr, "\n") );
+      */
+      return SCIP_OKAY;
+   }
+
+   /* check if we are still in bounds */
+   if( str > lastchar + 1)
+   {
+      SCIPerrorMessage("error finding first expression in \"%.*s\" took us outside of given subexpression length\n", length, strstart);
+      return SCIP_READERROR;
+   }
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*str) && str != lastchar + 1 )
+      ++str;
+
+   /* maybe now we're done? */
+   if( str == lastchar + 1)
+   {
+      /*
+      SCIPdebugMessage("readExpression (%i): returns expression ", recursiondepth);
+      SCIPdebug( SCIPexprPrint(*expr, SCIPgetMessagehdlr(scip), NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPmessagePrintInfo(scip->messagehdlr, "\n") );
+      */
+      return SCIP_OKAY;
+   }
+
+   if( str[0] == '^' )
+   {
+      /* a '^' behind the found expression indicates a constant power */
+      SCIP_EXPR* arg1;
+      SCIP_EXPR* arg2;
+
+      arg1 = *expr;
+      ++str;
+      if( str[0] == '(' )
+      {
+         /* we use exprParse to evaluate the bracketed argument */
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length, lastchar) );
+         SCIP_CALL( exprParse(blkmem, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+
+         assert(SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST); /* everything else should be written as (int|real|sign)power(a,b)... */
+
+         str = endptr + 1;
+      }
+      else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+      {
+         /* there is a number coming */
+         if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
+         {
+            SCIPerrorMessage("error parsing number from <%s>\n", str);
+            return SCIP_READERROR;
+         }
+         SCIP_CALL( SCIPexprCreate(blkmem, &arg2, SCIP_EXPR_CONST, number) );
+         str = nonconstendptr;
+      }
+      else
+      {
+         SCIPerrorMessage("unexpected string following ^ in  %.*s\n", length, str);
+         return SCIP_READERROR;
+      }
+
+      /* expr^number is intpower or realpower */
+      if( EPSISINT(SCIPexprGetOpReal(arg2), 0.0) )
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)SCIPexprGetOpReal(arg2)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
+      }
+
+      /* ignore whitespace */
+      while( isspace((unsigned char)*str) && str != lastchar + 1 )
+         ++str;
+   }
+
+   /* check for a two argument operator that is not a multiplication */
+   if( str[0] == '+' || str[0] == '-' || str[0] == '/' || str[0] == '^' )
+   {
+      char operator;
+      SCIP_EXPR* arg1;
+      SCIP_EXPR* arg2;
+
+      operator = str[0];
+      arg1 = *expr;
+
+      /* step forward over the operator to go to the beginning of the second argument */
+      ++str;
+
+      SCIP_CALL( exprParse(blkmem, &arg2, str, (int) (lastchar - str + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+      str = lastchar + 1;
+
+      /* make new expression from two arguments */
+      if( operator == '+')
+      {
+         SCIP_CALL( SCIPexprAdd(blkmem, expr, 1.0, arg1, 1.0, arg2, 0.0) );
+      }
+      else if( operator == '-')
+      {
+         SCIP_CALL( SCIPexprAdd(blkmem, expr, 1.0, arg1, -1.0, arg2, 0.0) );
+      }
+      else if( operator == '*' )
+      {
+         if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
+         {
+            SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg2, SCIPexprGetOpReal(arg1)) );
+         }
+         else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
+         {
+            SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, SCIPexprGetOpReal(arg2)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_MUL, arg1, arg2) );
+         }
+      }
+      else
+      {
+         assert(operator == '/');
+
+         if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
+         {
+            SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, 1.0 / SCIPexprGetOpReal(arg2)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_DIV, arg1, arg2) );
+         }
+      }
+   }
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*str) )
+      ++str;
+
+   /* we are either done or we have a multiplication? */
+   if( str == lastchar + 1)
+   {
+      /*
+      SCIPdebugMessage("readExpression (%i): returns expression ",recursionDepth);
+      SCIPdebug( SCIPexprPrint(*expr, SCIPgetMessagehdlr(scip), NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPmessagePrintInfo(scip->messagehdlr, "\n") );
+      */
+      return SCIP_OKAY;
+   }
+
+   {
+      /* if there is a part of the string left to be parsed, we assume that this as a multiplication */
+      SCIP_EXPR* arg1;
+      SCIP_EXPR* arg2;
+      arg1 = *expr;
+
+      /* stepping over multiplication operator if needed */
+      if( str[0] != '*' )
+      {
+         ++str;
+      }
+      else if( str[0] != '(' )
+      {
+         SCIPdebugMessage("No operator found, assuming a multiplication before %.*s\n", (int) (lastchar - str + 1), str);
+      }
+
+      SCIP_CALL( exprParse(blkmem, &arg2, str, (int) (lastchar - str + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+
+      if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
+      {
+         SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg2, SCIPexprGetOpReal(arg1)) );
+      }
+      else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
+      {
+         SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, SCIPexprGetOpReal(arg2)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_MUL, arg1, arg2) );
+      }
+
+      /*
+      SCIPdebugMessage("readExpression (%i): returns expression ",recursionDepth);
+      SCIPdebug( SCIPexprPrint(*expr, SCIPgetMessagehdlr(scip), NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPmessagePrintInfo(scip->messagehdlr, "\n") );
+      */
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Expression methods */
@@ -7340,6 +7938,40 @@ void SCIPexprPrint(
    }
    }
 }
+
+/** parses an expression from a string */
+SCIP_RETCODE SCIPexprParse(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   const char*           str,                /**< pointer to the string to be parsed */
+   const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
+   int*                  nvars,              /**< buffer to store number of variables */
+   char*                 varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   )
+{
+   SCIP_HASHTABLE* vartable;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(str != NULL);
+   assert(lastchar != NULL);
+   assert(nvars != NULL);
+   assert(varnames != NULL);
+
+   *nvars = 0;
+
+   /* create a hash table for variable names and corresponding expression index
+    * for each variable, we store its name, prefixed with the assigned index in the first sizeof(int) bytes
+    */
+   SCIP_CALL( SCIPhashtableCreate(&vartable, blkmem, 10, exprparseVarTableGetKey, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
+
+   SCIP_CALL( exprParse(blkmem, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames, vartable, 0) );
+
+   SCIPhashtableFree(&vartable);
+
+   return SCIP_OKAY;
+}
+
 
 /**@} */
 

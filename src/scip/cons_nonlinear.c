@@ -16,6 +16,7 @@
 /**@file   cons_nonlinear.c
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ * @author Ingmar Vierhaus (consparse)
  *
  * @todo implement CONSPARSE callback
  */
@@ -24,6 +25,8 @@
 
 #include <assert.h>
 #include <math.h>
+#include <string.h>
+#include <ctype.h>
 
 /* for the MS compiler, the function finite(a) is named _finite(a) */
 #ifdef _MSC_VER
@@ -8429,6 +8432,191 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
    return SCIP_OKAY;
 }
 
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseNonlinear)
+{  /*lint --e{715}*/
+   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* expr;
+   SCIP_VAR** exprvars;
+   int        nvars;
+   SCIP_Real  lhs;
+   SCIP_Real  rhs;
+   const char* endptr;
+   char*       nonconstendptr;
+   const char* exprstart;
+   const char* exprlastchar;
+   char* varnames;
+   char* curvarname;
+   int i;
+
+   SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
+
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
+
+   /* return if string empty */
+   if( !*str )
+      return SCIP_OKAY;
+
+   endptr = str;
+
+   expr = NULL;
+   nvars = 0;
+
+   /* set left and right hand side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs =  SCIPinfinity(scip);
+
+   /* parse constraint to get lhs, rhs, and expression in between (from cons_linear.c::consparse, but parsing whole string first, then getting expression) */
+
+   /* check for left hand side */
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   {
+      /* there is a number coming, maybe it is a left-hand-side */
+      if( !SCIPstrToRealValue(str, &lhs, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
+         return SCIP_READERROR;
+      }
+      endptr = nonconstendptr;
+
+      /* ignore whitespace */
+      while( isspace((unsigned char)*endptr) )
+         ++endptr;
+
+      if( endptr[0] != '<' || endptr[1] != '=' )
+      {
+         /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
+         lhs = -SCIPinfinity(scip);
+      }
+      else
+      {
+         /* it was indeed a left-hand-side, so continue parsing after it */
+         str = endptr + 2;
+
+         /* ignore whitespace */
+         while( isspace((unsigned char)*str) )
+            ++str;
+      }
+   }
+
+   /* Move endptr forward until we find end of expression */
+   while( !(strncmp(endptr, "[free]", 6) == 0)    &&
+          !(endptr[0] == '<' && endptr[1] == '=') &&
+          !(endptr[0] == '=' && endptr[1] == '=') &&
+          !(endptr[0] == '>' && endptr[1] == '=') &&
+          !(endptr[0] == '\0') )
+      ++endptr;
+
+   exprstart = str;
+   exprlastchar = endptr - 1;
+
+   *success = FALSE;
+   str = endptr;
+
+   /* check for left or right hand side */
+   while( isspace((unsigned char)*str) )
+      ++str;
+
+   /* check for free constraint */
+   if( strncmp(str, "[free]", 6) == 0 )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIPerrorMessage("cannot have left hand side and [free] status \n");
+         return SCIP_OKAY;
+      }
+      (*success) = TRUE;
+   }
+   else
+   {
+      switch( *str )
+      {
+         case '<':
+            *success = SCIPstrToRealValue(str+2, &rhs, &nonconstendptr);
+            break;
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &rhs, &nonconstendptr);
+               lhs = rhs;
+            }
+            break;
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &lhs, &nonconstendptr);
+               break;
+            }
+         case '\0':
+            *success = TRUE;
+            break;
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *str);
+            return SCIP_OKAY;
+      }
+   }
+
+   /* alloc some space for variable names incl. indices; shouldn't be longer than expression string */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
+
+   /* parse expression */
+   SCIP_CALL( SCIPexprParse(SCIPblkmem(scip), &expr, exprstart, exprlastchar, &nvars, varnames) );
+
+   /* get SCIP variables corresponding to variable names stored in varnames buffer */
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
+
+   curvarname = varnames;
+   for( i = 0; i < nvars; ++i )
+   {
+      assert(*(int*)curvarname == i);
+      curvarname += sizeof(int);
+
+      exprvars[i] = SCIPfindVar(scip, curvarname);
+      if( exprvars[i] == NULL )
+      {
+         SCIPerrorMessage("Unknown SCIP variable <%s> encountered in expression.\n", curvarname);
+         return SCIP_READERROR;
+      }
+
+      curvarname += strlen(curvarname) + 1;
+   }
+
+   /* create expression tree */
+   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, nvars, 0, NULL) );
+   SCIP_CALL( SCIPexprtreeSetVars(exprtree, nvars, exprvars) );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, name,
+      0, NULL, NULL,
+      1, &exprtree, NULL,
+      lhs, rhs,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   SCIPdebugMessage("created nonlinear constraint:\n");
+   SCIPdebugPrintCons(scip, *cons, NULL);
+
+   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+   SCIPfreeBufferArray(scip, &exprvars);
+   SCIPfreeBufferArray(scip, &varnames);
+
+   return SCIP_OKAY;
+}
 
 /*
  * constraint specific interface methods
@@ -8477,6 +8665,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpNonlinear, consSepasolNonlinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransNonlinear) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseNonlinear) );
 
    /* add nonlinear constraint handler parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",

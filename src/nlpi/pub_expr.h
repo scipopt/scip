@@ -663,6 +663,16 @@ void SCIPexprPrint(
    SCIP_Real*            paramvals           /**< values of parameters, or NULL for not printing */
    );
 
+/** parses an expression from a string */
+EXTERN
+SCIP_RETCODE SCIPexprParse(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   const char*           str,                /**< pointer to the string to be parsed */
+   const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
+   int*                  nvars,              /**< buffer to store number of variables */
+   char*                 varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   );
 
 /**@} */
 
