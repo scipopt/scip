@@ -5398,9 +5398,10 @@ SCIP_RETCODE SCIPconsCreate(
 {
    assert(cons != NULL);
    assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(name != NULL);
    assert(conshdlr != NULL);
    assert(!original || deleteconsdata);
-   assert(set != NULL);
 
    /* constraints of constraint handlers that don't need constraints cannot be created */
    if( !conshdlr->needscons )
