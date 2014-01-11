@@ -1263,14 +1263,14 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
 static
 SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-
-   assert(heurdata != NULL);
-
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
+      SCIP_HEURDATA* heurdata;
+
+      heurdata = SCIPheurGetData(heur);
+
+      assert(heurdata != NULL);
+
       SCIPstatisticMessage(
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
