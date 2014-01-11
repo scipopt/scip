@@ -309,6 +309,35 @@ void SCIPexprFreeShallow(
    SCIP_EXPR**           expr                /**< pointer to expression to free */
    );
 
+/** creates an expression from the addition of two given expression, with coefficients, and a constant
+ *
+ * the given expressions may be modified or freed, otherwise it will be used a child expression
+ * favors creation and maintaining of SCIP_EXPR_LINEAR over SCIP_EXPR_PLUS or SCIP_EXPR_SUM
+ */
+EXTERN
+SCIP_RETCODE SCIPexprAdd(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to store pointer to created expression */
+   SCIP_Real             coef1,              /**< coefficient of first term */
+   SCIP_EXPR*            term1,              /**< expression of first term, or NULL */
+   SCIP_Real             coef2,              /**< coefficient of second term */
+   SCIP_EXPR*            term2,              /**< expression of second term, or NULL */
+   SCIP_Real             constant            /**< constant term to add */
+   );
+
+/** creates an expression from the multiplication of an expression with a constant
+ *
+ * the given expressions may be modified or freed, otherwise it will be used a child expression
+ * favors creation of SCIP_EXPR_LINEAR over SCIP_EXPR_MUP or SCIP_EXPR_PROD
+ */
+EXTERN
+SCIP_RETCODE SCIPexprMulConstant(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   SCIP_EXPR*            term,               /**< term to multiply by factor */
+   SCIP_Real             factor              /**< factor */
+   );
+
 /** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
 EXTERN
 SCIP_RETCODE SCIPexprCreateLinear(

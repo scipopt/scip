@@ -5310,6 +5310,266 @@ void SCIPexprFreeShallow(
    BMSfreeBlockMemory(blkmem, expr);
 }
 
+/** creates an expression from the addition of two given expression, with coefficients, and a constant
+ *
+ * the given expressions may be modified or freed, otherwise it will be used a child expression
+ * favors creation and maintaining of SCIP_EXPR_LINEAR over SCIP_EXPR_PLUS or SCIP_EXPR_SUM
+ */
+SCIP_RETCODE SCIPexprAdd(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to store pointer to created expression */
+   SCIP_Real             coef1,              /**< coefficient of first term */
+   SCIP_EXPR*            term1,              /**< expression of first term, or NULL */
+   SCIP_Real             coef2,              /**< coefficient of second term */
+   SCIP_EXPR*            term2,              /**< expression of second term, or NULL */
+   SCIP_Real             constant            /**< constant term to add */
+   )
+{
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   /* @todo could do something special with quadratic and polynomial expressions */
+
+   if( term1 != NULL && SCIPexprGetOperator(term1) == SCIP_EXPR_CONST )
+   {
+      constant += coef1 * SCIPexprGetOpReal(term1);
+      SCIPexprFreeDeep(blkmem, &term1);
+   }
+
+   if( term2 != NULL && SCIPexprGetOperator(term2) == SCIP_EXPR_CONST )
+   {
+      constant += coef2 * SCIPexprGetOpReal(term2);
+      SCIPexprFreeDeep(blkmem, &term2);
+   }
+
+   if( term1 == NULL && term2 == NULL )
+   {
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, constant) );
+      return SCIP_OKAY;
+   }
+
+   if( term1 != NULL && SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR && coef1 != 1.0 )
+   {
+      /* multiply coefficients and constant of linear expression term1 by coef1 */
+      SCIP_Real* data;
+      int i;
+
+      data = (SCIP_Real*)term1->data.data;
+      assert(data != NULL);
+
+      /* loop one more index to multiply also constant of linear expression */
+      for( i = 0; i <= term1->nchildren; ++i )
+         data[i] *= coef1;
+
+      coef1 = 1.0;
+   }
+
+   if( term2 != NULL && SCIPexprGetOperator(term2) == SCIP_EXPR_LINEAR && coef2 != 1.0 )
+   {
+      /* multiply coefficients and constant of linear expression term2 by coef2 */
+      SCIP_Real* data;
+      int i;
+
+      data = (SCIP_Real*)term2->data.data;
+      assert(data != NULL);
+
+      /* loop one more index to multiply also constant of linear expression */
+      for( i = 0; i <= term2->nchildren; ++i )
+         data[i] *= coef2;
+
+      coef2 = 1.0;
+   }
+
+   if( term1 == NULL || term2 == NULL )
+   {
+      if( term1 == NULL )
+      {
+         term1 = term2;
+         coef1 = coef2;
+      }
+      if( constant != 0.0 || coef1 != 1.0 )
+      {
+         if( SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR )
+         {
+            assert(coef1 == 1.0);
+
+            /* add constant to existing linear expression */
+            SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, 0, NULL, NULL, constant) );
+            *expr = term1;
+         }
+         else
+         {
+            /* create new linear expression for coef1 * term1 + constant */
+            SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 1, &term1, &coef1, constant) );
+         }
+      }
+      else
+      {
+         assert(constant == 0.0);
+         assert(coef1 == 1.0);
+         *expr = term1;
+      }
+
+      return SCIP_OKAY;
+   }
+
+   if( SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR && SCIPexprGetOperator(term2) == SCIP_EXPR_LINEAR )
+   {
+      /* add 2nd linear expression to first one */
+      assert(coef1 == 1.0);
+      assert(coef2 == 1.0);
+
+      SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, SCIPexprGetNChildren(term2), SCIPexprGetLinearCoefs(term2), SCIPexprGetChildren(term2), SCIPexprGetLinearConstant(term2) + constant) );
+      SCIPexprFreeShallow(blkmem, &term2);
+
+      *expr = term1;
+
+      return SCIP_OKAY;
+   }
+
+   if( SCIPexprGetOperator(term2) == SCIP_EXPR_LINEAR )
+   {
+      /* if only term2 is linear, then swap */
+      SCIP_EXPR* tmp;
+
+      tmp = term2;
+      assert(coef2 == 1.0);
+
+      term2 = term1;
+      coef2 = coef1;
+      term1 = tmp;
+      coef1 = 1.0;
+   }
+
+   if( SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR )
+   {
+      /* add coef2*term2 as extra child to linear expression term1 */
+      assert(coef1 == 1.0);
+
+      SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, 1, &coef2, &term2, constant) );
+      *expr = term1;
+
+      return SCIP_OKAY;
+   }
+
+   /* both terms are not linear, then create new linear term for sum */
+   {
+      SCIP_Real coefs[2];
+      SCIP_EXPR* children[2];
+
+      coefs[0] = coef1;
+      coefs[1] = coef2;
+      children[0] = term1;
+      children[1] = term2;
+
+      SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 2, children, coefs, constant) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates an expression from the multiplication of an expression with a constant
+ *
+ * the given expressions may be modified or freed, otherwise it will be used a child expression
+ * favors creation and maintaining SCIP_EXPR_LINEAR over SCIP_EXPR_PLUS or SCIP_EXPR_SUM
+ */
+SCIP_RETCODE SCIPexprMulConstant(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   SCIP_EXPR*            term,               /**< term to multiply by factor */
+   SCIP_Real             factor              /**< factor */
+   )
+{
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(term != NULL);
+
+   if( factor == 0.0 )
+   {
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, 0.0) );
+
+      SCIPexprFreeDeep(blkmem, &term);
+
+      return SCIP_OKAY;
+   }
+   if( factor == 1.0 )
+   {
+      *expr = term;
+      return SCIP_OKAY;
+   }
+
+   switch( SCIPexprGetOperator(term) )
+   {
+      case SCIP_EXPR_CONST :
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, factor * SCIPexprGetOpReal(term)) );
+         SCIPexprFreeDeep(blkmem, &term);
+         break;
+      }
+
+      case SCIP_EXPR_LINEAR :
+      {
+         SCIP_Real* data;
+         int i;
+
+         data = (SCIP_Real*)term->data.data;
+         assert(data != NULL);
+
+         /* loop one more index to multiply also constant of linear expression */
+         for( i = 0; i <= SCIPexprGetNChildren(term); ++i )
+            data[i] *= factor;
+
+         *expr = term;
+         break;
+      }
+
+      case SCIP_EXPR_QUADRATIC :
+      {
+         SCIP_EXPRDATA_QUADRATIC* data;
+         int i;
+
+         data = (SCIP_EXPRDATA_QUADRATIC*)term->data.data;
+
+         data->constant *= factor;
+
+         if( data->lincoefs != NULL )
+            for( i = 0; i < term->nchildren; ++i )
+               data->lincoefs[i] *= factor;
+
+         for( i = 0; i < data->nquadelems; ++i )
+            data->quadelems[i].coef *= factor;
+
+         *expr = term;
+         break;
+      }
+
+      case SCIP_EXPR_POLYNOMIAL :
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* data;
+         int i;
+
+         data = (SCIP_EXPRDATA_POLYNOMIAL*)term->data.data;
+
+         data->constant *= factor;
+
+         for( i = 0; i < data->nmonomials; ++i )
+            data->monomials[i]->coef *= factor;
+
+         *expr = term;
+         break;
+      }
+
+      default:
+      {
+         SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 1, &term, &factor, 0.0) );
+         break;
+      }
+
+   } /*lint !e788 */
+
+   return SCIP_OKAY;
+}
+
 /** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
 SCIP_RETCODE SCIPexprCreateLinear(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
