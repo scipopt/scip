@@ -5010,8 +5010,6 @@ SCIP_RETCODE exprParse(
    else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming */
-      const char* varnameptr;
-
       if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
@@ -5019,53 +5017,25 @@ SCIP_RETCODE exprParse(
       }
       str = nonconstendptr;
 
-      /* if a variable is following (with or without *) the number was a coefficient */
-      /* TODO */
-      varnameptr = str;
-
       /* ignore whitespace */
-      while( isspace((unsigned char)*varnameptr) && varnameptr != lastchar )
-         ++varnameptr;
+      while( isspace((unsigned char)*str) && str != lastchar )
+         ++str;
 
-      /* ignore multiplication sign to find out if a variable follows */
-      if( varnameptr[0] == '*' )
+      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '/' && str[0] != '^' )
       {
-         ++varnameptr;
-
-         /* ignore whitespace */
-         while( isspace((unsigned char)*varnameptr) && varnameptr != lastchar )
-            ++varnameptr;
-      }
-
-      if( varnameptr[0] == '<')
-      {
-         /* there is a variable coming, number is probably a coefficient */
-         const char * testptr;
-         testptr = varnameptr;
-
-         /* see if there is a power following the variable */
-         /* move one char behind the varname */
-         while( testptr[0] != '>')
-            ++testptr;
-         ++testptr;
-         /* ignore whitespace */
-         while( isspace((unsigned char)*testptr) && testptr != lastchar )
-            ++testptr;
-         if( testptr[0] != '^' )
+         if( str < lastchar )
          {
-            /* no power, number is a coefficient */
-            str = varnameptr;
-            SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, vartable, number, NULL) );
+            SCIP_CALL( exprParse(blkmem, expr, str, (int)(lastchar - str) + 1, lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+            SCIP_CALL( SCIPexprMulConstant(blkmem, expr, *expr, number) );
          }
          else
          {
-            /* variable following but operator outranking '*' following variable, so number is no coefficient after all */
             SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, number) );
          }
+         str = lastchar + 1;
       }
       else
       {
-         /* no variable following, number is simply a constant */
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, number) );
       }
    }
@@ -5076,9 +5046,12 @@ SCIP_RETCODE exprParse(
    }
    else if(
       strncmp(str, "abs", 3) == 0 ||
-      strncmp(str, "sqr", 3) == 0 ||  /* sqr or sqrt */
+      strncmp(str, "cos", 3) == 0 ||
       strncmp(str, "exp", 3) == 0 ||
-      strncmp(str, "log", 3) == 0
+      strncmp(str, "log", 3) == 0 ||
+      strncmp(str, "sin", 3) == 0 ||
+      strncmp(str, "sqr", 3) == 0 ||  /* sqr or sqrt */
+      strncmp(str, "tan", 3) == 0
    )
    {
       /* supported single argument operands (ordered descending by operator name length) */
@@ -5187,7 +5160,7 @@ SCIP_RETCODE exprParse(
       ++str;
 
    /* maybe now we're done? */
-   if( str == lastchar + 1)
+   if( str >= lastchar + 1)
    {
       /*
       SCIPdebugMessage("readExpression (%i): returns expression ", recursiondepth);
@@ -5307,7 +5280,7 @@ SCIP_RETCODE exprParse(
       ++str;
 
    /* we are either done or we have a multiplication? */
-   if( str == lastchar + 1)
+   if( str >= lastchar + 1)
    {
       /*
       SCIPdebugMessage("readExpression (%i): returns expression ",recursionDepth);
