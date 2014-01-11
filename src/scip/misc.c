@@ -7206,16 +7206,16 @@ int SCIPgetRandomInt(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   SCIP_Real rand;
+   SCIP_Real randnumber;
 
-   rand = (SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0);
-   assert(rand >= 0.0);
-   assert(rand < 1.0);
+   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0);
+   assert(randnumber >= 0.0);
+   assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by rand in order to avoid overflow if they are more than INT_MAX
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
     * apart
     */
-   return (int) (minrandval*(1.0 - rand) + maxrandval*rand + rand);
+   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
 }
 
 /** returns a random real between minrandval and maxrandval */
@@ -7225,16 +7225,16 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   SCIP_Real rand;
+   SCIP_Real randnumber;
 
-   rand = (SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
-   assert(rand >= 0.0);
-   assert(rand <= 1.0);
+   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+   assert(randnumber >= 0.0);
+   assert(randnumber <= 1.0);
 
-   /* we multiply minrandval and maxrandval separately by rand in order to avoid overflow if they are more than
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
     * SCIP_REAL_MAX apart
     */
-   return minrandval*(1.0 - rand) + maxrandval*rand;
+   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
 }
 
 
