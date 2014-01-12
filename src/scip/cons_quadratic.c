@@ -168,6 +168,7 @@ struct SCIP_ConshdlrData
    int                   replacebinaryprodlength; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
+   SCIP_Real             binreformmaxcoef;   /**< factor on 1/feastol to limit coefficients and coef range in linear constraints created by binary reformulation */
    SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
    SCIP_Real             mincutefficacyenfofac; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    char                  scaling;            /**< scaling method of constraints in feasibility check */
@@ -3482,27 +3483,27 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIPintervalMulScalar(SCIPinfinity(scip), &act1, act1, bilincoef);
 
             /* skip products that give rise to very large coefficients (big big-M's) */
-            if( SCIPfeastol(scip) * REALABS(act0.inf) >= 0.1 || SCIPfeastol(scip) * REALABS(act0.sup) >= 0.1 )
+            if( SCIPfeastol(scip) * REALABS(act0.inf) >= conshdlrdata->binreformmaxcoef || SCIPfeastol(scip) * REALABS(act0.sup) >= conshdlrdata->binreformmaxcoef )
             {
                SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 0.0\n",
                   bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act0), SCIPintervalGetSup(act0), SCIPvarGetName(y));
                continue;
             }
-            if( SCIPfeastol(scip) * REALABS(act1.inf) >= 0.1 || SCIPfeastol(scip) * REALABS(act1.sup) >= 0.1 )
+            if( SCIPfeastol(scip) * REALABS(act1.inf) >= conshdlrdata->binreformmaxcoef || SCIPfeastol(scip) * REALABS(act1.sup) >= conshdlrdata->binreformmaxcoef )
             {
                SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 1.0\n",
                   bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act1), SCIPintervalGetSup(act1), SCIPvarGetName(y));
                continue;
             }
             if( !SCIPisZero(scip, MIN(REALABS(act0.inf), REALABS(act0.sup))) &&
-               SCIPfeastol(scip) * MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)) >= 0.1 )
+               SCIPfeastol(scip) * MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)) >= conshdlrdata->binreformmaxcoef )
             {
                SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n",
                   bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)), SCIPvarGetName(y));
                continue;
             }
             if( !SCIPisZero(scip, MIN(REALABS(act1.inf), REALABS(act1.sup))) &&
-               SCIPfeastol(scip) * MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)) >= 0.1 )
+               SCIPfeastol(scip) * MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)) >= conshdlrdata->binreformmaxcoef )
             {
                SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n",
                   bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)), SCIPvarGetName(y));
@@ -11552,6 +11553,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/binreformmaxcoef",
+         "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",
+         &conshdlrdata->binreformmaxcoef, TRUE, 0.1, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
          "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
