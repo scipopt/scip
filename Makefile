@@ -882,9 +882,6 @@ endif
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
-ifneq ($(ZLIB),$(LAST_ZLIB))
-		@-touch $(ZLIBSRC)
-endif
 ifneq ($(GMP),$(LAST_GMP))
 		@-touch $(GMPSRC)
 endif
