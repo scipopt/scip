@@ -37,6 +37,7 @@ SCIP_RETCODE run(
 {
    SCIP* scip;
    char buffer[SCIP_MAXSTRLEN];
+   SCIP_Bool printstat;
 
    assert(nlfile != NULL);
 
@@ -49,13 +50,22 @@ SCIP_RETCODE run(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    SCIP_CALL( SCIPincludeReaderNl(scip) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
+      "whether to print statistics on a solve",
+      NULL, FALSE, FALSE, NULL, NULL) );
+
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 
-   /* setup commands to be executed by SCIP */
+   /* read setting file */
+   if( setfile != NULL )
+   {
+      SCIP_CALL( SCIPreadParams(scip, setfile) );
+   }
 
-   (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "set load %s", setfile != NULL ? setfile : "scip.set");
-   SCIP_CALL( SCIPaddDialogInputLine(scip, buffer) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "display/statistics", &printstat) );
+
+   /* setup commands to be executed by SCIP */
 
    SCIP_CALL( SCIPaddDialogInputLine(scip, "display param") );
 
@@ -71,7 +81,10 @@ SCIP_RETCODE run(
 
       SCIP_CALL( SCIPaddDialogInputLine(scip, "write amplsol") );
 
-      /* SCIP_CALL( SCIPaddDialogInputLine(scip, "display statistics") ); */
+      if( printstat )
+      {
+         SCIP_CALL( SCIPaddDialogInputLine(scip, "display statistics") );
+      }
 
       SCIP_CALL( SCIPaddDialogInputLine(scip, "quit") );
    }
@@ -92,7 +105,7 @@ int main(
 {
    SCIP_RETCODE retcode;
    SCIP_Bool interactive;
-   char* setfile;
+   const char* setfile;
    int i;
 
    assert(argc >= 1);
@@ -128,6 +141,9 @@ int main(
 
       setfile = argv[i];
    }
+
+   if( setfile == NULL && SCIPfileExists("scip.set") )
+      setfile = "scip.set";
 
    retcode = run(argv[1], setfile, interactive);
 

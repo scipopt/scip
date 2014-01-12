@@ -198,6 +198,7 @@ interface
 - the PRICERREDCOST callback has a new parameter stopearly, which is a bool pointer to store whether pricing should be
   stopped early although variables were generated, and early branching should be performed
 - new method SCIPcopyImplicationsCliques() that copies implications and cliques
+- add support for SOS1 and SOS2 constraints to AMPL interface (see interfaces/check/testset/SOS/sos?a.mod for example)
 
 parameters:
 - parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function
