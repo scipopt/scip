@@ -815,7 +815,7 @@
 =inf=	normalized-reduced-mps-v2-20-10-brandy
 =best=	normalized-reduced-mps-v2-20-10-capri	222748
 =unkn=	normalized-reduced-mps-v2-20-10-CMS750_4
-=best=	normalized-reduced-mps-v2-20-10-core2536-691	385
+=opt=	normalized-reduced-mps-v2-20-10-core2536-691	384
 =best=	normalized-reduced-mps-v2-20-10-core2586-950	533
 =best=	normalized-reduced-mps-v2-20-10-core4284-1064	613
 =best=	normalized-reduced-mps-v2-20-10-core4872-1529	902
@@ -915,7 +915,7 @@
 =opt=	normalized-reduced-mps-v2-20-10-nazareth	-174776
 =inf=	normalized-reduced-mps-v2-20-10-neos11
 =inf=	normalized-reduced-mps-v2-20-10-neos12
-=best=	normalized-reduced-mps-v2-20-10-neos13	-21024
+=best=	normalized-reduced-mps-v2-20-10-neos13	-21231
 =best=	normalized-reduced-mps-v2-20-10-neos14	87587
 =best=	normalized-reduced-mps-v2-20-10-neos15	256
 =inf=	normalized-reduced-mps-v2-20-10-neos17
@@ -980,7 +980,7 @@
 =unkn=	normalized-reduced-mps-v2-20-10-scfxm3
 =unkn=	normalized-reduced-mps-v2-20-10-scorpion
 =inf=	normalized-reduced-mps-v2-20-10-scrs8
-=best=	normalized-reduced-mps-v2-20-10-scsd1	4
+=opt=	normalized-reduced-mps-v2-20-10-scsd1	2
 =unkn=	normalized-reduced-mps-v2-20-10-scsd6
 =unkn=	normalized-reduced-mps-v2-20-10-scsd8
 =best=	normalized-reduced-mps-v2-20-10-sctap1	45
@@ -1002,7 +1002,7 @@
 =unkn=	normalized-reduced-mps-v2-20-10-ship12s
 =inf=	normalized-reduced-mps-v2-20-10-siena1
 =unkn=	normalized-reduced-mps-v2-20-10-sierra
-=best=	normalized-reduced-mps-v2-20-10-sp97ic	495
+=best=	normalized-reduced-mps-v2-20-10-sp97ic	494
 =best=	normalized-reduced-mps-v2-20-10-sp98ar	890
 =best=	normalized-reduced-mps-v2-20-10-sp98ic	501
 =inf=	normalized-reduced-mps-v2-20-10-stair
@@ -1071,7 +1071,7 @@
 =opt=	normalized-tanglegram2		443
 =best=	normalized-tanglegram3		13971
 =opt=	normalized-test1.r		110
-=best=	normalized-test4.pi 		95
+=best=	normalized-test4.pi 		94
 =best=	normalized-toll-like    	624
 =best=	normalized-vtxcov_v2000_e4000_0.opb.PB06	1037
 =best=	normalized-vtxcov_v2000_e4000_11.opb.PB06	1028

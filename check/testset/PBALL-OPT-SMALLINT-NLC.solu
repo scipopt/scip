@@ -30,7 +30,7 @@
 =best=	normalized-bsg_200_10_5	-58
 =best=	normalized-bsg_200_25_1	-32
 =best=	normalized-bsg_200_25_2	-32
-=best=	normalized-bsg_200_25_3	-32
+=best=	normalized-bsg_200_25_3	-33
 =best=	normalized-bsg_200_25_4	-32
 =best=	normalized-bsg_200_25_5	-32
 =best=	normalized-bsg_500_10_1	-146
@@ -99,13 +99,13 @@
 =best=	normalized-mds_500_10_4	52
 =best=	normalized-mds_500_10_5	52
 =best=	normalized-mds_500_25_1	27
-=best=	normalized-mds_500_25_2	28
+=best=	normalized-mds_500_25_2	27
 =best=	normalized-mds_500_25_3	27
 =best=	normalized-mds_500_25_4	27
 =best=	normalized-mds_500_25_5	28
 =best=	normalized-mds_500_60_1	14
 =best=	normalized-mds_500_60_2	14
-=best=	normalized-mds_500_60_3	15
+=best=	normalized-mds_500_60_3	14
 =best=	normalized-mds_500_60_4	14
 =best=	normalized-mds_500_60_5	14
 =opt=	normalized-mds_50_10_1	5
@@ -158,7 +158,7 @@
 =best=	normalized-mis_500_10_3	-126
 =best=	normalized-mis_500_10_4	-126
 =best=	normalized-mis_500_10_5	-123
-=best=	normalized-mis_500_25_1	-69
+=best=	normalized-mis_500_25_1	-70
 =best=	normalized-mis_500_25_2	-70
 =best=	normalized-mis_500_25_3	-70
 =best=	normalized-mis_500_25_4	-69
