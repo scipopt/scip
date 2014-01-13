@@ -6694,8 +6694,7 @@
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
- * \htmlinclude faqcss.inc
- * \htmlinclude faq.inc
+ * \htmlinclude faq_new.inc
  */
 
 
