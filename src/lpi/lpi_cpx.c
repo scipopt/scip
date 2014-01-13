@@ -965,8 +965,12 @@ SCIP_RETCODE restoreLPData(
     * after refactorization, it might be necessary to do a few extra pivot steps.
     */
    CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-   assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
-   assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+#ifndef NDEBUG
+   if ( CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) > CPX_REFACTORMAXITERS )
+      SCIPmessagePrintWarning(lpi->messagehdlr, "CPLEX needed %d phase 1 iterations to restore optimal basis.\n", CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp));
+   if ( CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) > CPX_REFACTORMAXITERS )
+      SCIPmessagePrintWarning(lpi->messagehdlr, "CPLEX needed %d iterations to restore optimal basis.\n", CPXgetitcnt(lpi->cpxenv, lpi->cpxlp));
+#endif
 
    return SCIP_OKAY;
 }
