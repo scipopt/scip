@@ -15468,6 +15468,10 @@ int SCIPvarGetConflictingBdchgDepth(
       if( SCIPsetIsGE(set, bound, var->locdom.lb) )
          return -1;
 
+      /* check if the bound is in conflict with the global bound */
+      if( SCIPsetIsLT(set, bound, var->glbdom.lb) )
+         return 0;
+
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nlbchginfos > 0);
       assert(SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
