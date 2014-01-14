@@ -4756,8 +4756,14 @@ SCIP_RETCODE separatePoint(
                efficacy = -feasibility / MAX(1.0, norm);
                break;
             case 's' :
-               efficacy = -feasibility / MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy = -feasibility / MAX(1.0, minval);
                break;
+            }
             default:
                efficacy = SCIP_INVALID;
                SCIPABORT();
