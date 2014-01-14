@@ -5872,8 +5872,6 @@ SCIP_RETCODE SCIPtreeStartProbing(
    assert(tree != NULL);
    assert(tree->probinglpistate == NULL);
    assert(tree->probinglpinorms == NULL);
-   assert(tree->probinglpwasprimfeas);
-   assert(tree->probinglpwasdualfeas);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
 
@@ -6224,8 +6222,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate,
                   tree->probinglpwasprimfeas, tree->probinglpwasdualfeas) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
-            tree->probinglpwasprimfeas = TRUE;
-            tree->probinglpwasdualfeas = TRUE;
 
             if( tree->probinglpinorms != NULL )
             {
@@ -6266,8 +6262,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
       lp->flushed = FALSE;
 
    assert(tree->probinglpistate == NULL);
-   assert(tree->probinglpwasprimfeas);
-   assert(tree->probinglpwasdualfeas);
 
    /* if no LP was solved during probing and the LP before probing was not solved, then it should not be solved now */
    assert(tree->probingsolvedlp || tree->probinglpwassolved || !lp->solved);
