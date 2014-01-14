@@ -7013,14 +7013,18 @@ SCIP_RETCODE generateCut(
          SCIProwGetNNonz(*row), viol, rowefficacy);  /*lint !e414 */
 
       if( efficacy != NULL )
+      {
          *efficacy = rowefficacy;
 
-      /* check that our computed efficacy is > feastol, iff efficacy computed by row is > feastol
-       * (they should be equal, but due to numerics...)
-       */
-      assert((conshdlrdata->scaling != 'g') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row)))));  /*lint !e666*/
-      assert((conshdlrdata->scaling != 's') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,MIN(REALABS(lhs),REALABS(rhs))))));  /*lint !e666*/
-      assert((conshdlrdata->scaling != 'o') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol))));  /*lint !e666*/
+         /* check that our computed efficacy is > feastol, iff efficacy computed by row is > feastol
+          * (they should be equal, but due to numerics...)
+          * computing efficacy w.r.t. the LP solution makes only sense if the LP was solved to optimality (see bug 612)
+          */
+         assert(sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+         assert((conshdlrdata->scaling != 'g') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row)))));  /*lint !e666*/
+         assert((conshdlrdata->scaling != 's') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,MIN(REALABS(lhs),REALABS(rhs))))));  /*lint !e666*/
+         assert((conshdlrdata->scaling != 'o') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol))));  /*lint !e666*/
+      }
    }
 
    SCIPfreeBufferArray(scip, &coef);
