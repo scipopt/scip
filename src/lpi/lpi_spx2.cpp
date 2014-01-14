@@ -966,6 +966,13 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
+   {
+      int verbosity = Param::verbose();
+      Param::setVerbose((*lpi)->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+      (*lpi)->spx->printVersion();
+      Param::setVerbose(verbosity);
+   }
+
    return SCIP_OKAY;
 }
 
