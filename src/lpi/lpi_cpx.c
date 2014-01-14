@@ -49,7 +49,6 @@
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPmessagePrintWarning((messagehdlr), "LP Error: CPLEX returned %d\n", _restat_); \
-         assert(0);\
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
