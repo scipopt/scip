@@ -3154,19 +3154,12 @@ SCIP_Bool SCIPlpiIsStable(
     */
    if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
    {
-#ifndef NDEBUG
-      SCIP_RETCODE retcode;
-#endif
       SCIP_Real kappa;
 
-#ifndef NDEBUG
-      retcode =
-#endif
-         SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
-      assert(kappa != SCIP_INVALID);
-      assert(retcode == SCIP_OKAY);
+      SCIP_CALL_ABORT( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa) );
 
-      if( kappa > lpi->conditionlimit )
+      /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
+      if( kappa != SCIP_INVALID || kappa > lpi->conditionlimit )
          return FALSE;
    }
 
@@ -3359,6 +3352,8 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
+   *quality = SCIP_INVALID;
+
    SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
 
    switch( qualityindicator )
@@ -3378,11 +3373,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
-   if( solntype == CPX_NO_SOLN )
-   {
-      *quality = SCIP_INVALID;
-   }
-   else
+   if( solntype != CPX_NO_SOLN && solntype != CPX_NONBASIC_SOLN )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
    }
