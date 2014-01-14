@@ -698,9 +698,13 @@ SCIP_RETCODE evalLhs(
 
       if( sol == NULL )
       {
-         assert(SCIPisFeasGE(scip, val, SCIPvarGetLbLocal(var)));
-         assert(SCIPisFeasLE(scip, val, SCIPvarGetUbLocal(var)));
-         val = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), val));
+         SCIP_Real lb = SCIPvarGetLbLocal(var);
+         SCIP_Real ub = SCIPvarGetUbLocal(var);
+         SCIP_Real minval = MIN(ub, val);
+
+         assert(SCIPisFeasGE(scip, val, lb));
+         assert(SCIPisFeasLE(scip, val, ub));
+         val = MAX(lb, minval);
       }
 
       val = consdata->coefs[i] * (val + consdata->offsets[i]);
@@ -795,9 +799,13 @@ SCIP_RETCODE computeViolation(
    }
    if( sol == NULL )
    {
-      assert(SCIPisFeasGE(scip, rhsval, SCIPvarGetLbLocal(consdata->rhsvar)));
-      assert(SCIPisFeasLE(scip, rhsval, SCIPvarGetUbLocal(consdata->rhsvar)));
-      rhsval = MAX(SCIPvarGetLbLocal(consdata->rhsvar), MIN(SCIPvarGetUbLocal(consdata->rhsvar), rhsval));
+      SCIP_Real lb = SCIPvarGetLbLocal(consdata->rhsvar);
+      SCIP_Real ub = SCIPvarGetUbLocal(consdata->rhsvar);
+      SCIP_Real minval = MIN(ub, rhsval);
+
+      assert(SCIPisFeasGE(scip, rhsval, lb));
+      assert(SCIPisFeasLE(scip, rhsval, ub));
+      rhsval = MAX(lb, minval);
    }
 
    consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
@@ -1200,8 +1208,14 @@ SCIP_RETCODE generateSparseCut(
                break;
             }
             case 's' :
-               efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(*row)), REALABS(SCIProwGetRhs(*row))));
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(*row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(*row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy /= MAX(1.0, minval);
                break;
+            }
             default:
                SCIPABORT();
          }
@@ -1325,8 +1339,14 @@ SCIP_RETCODE separatePoint(
                   break;
                }
                case 's' :
-                  efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+               {
+                  SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+                  SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+                  SCIP_Real minval = MIN(abslhs, absrhs);
+
+                  efficacy /= MAX(1.0, minval);
                   break;
+               }
                default: SCIPABORT();
             }
 
@@ -1448,8 +1468,14 @@ SCIP_RETCODE addLinearizationCuts(
                efficacy /= MAX(1.0, norm);
                break;
             case 's' :
-               efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy /= MAX(1.0, minval);
                break;
+            }
             default: SCIPABORT();
          }
 
