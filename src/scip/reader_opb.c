@@ -3326,6 +3326,7 @@ SCIP_RETCODE writeOpbConstraints(
    }
 
    retcode = SCIP_OKAY;
+   cons = NULL;
 
    /* loop over all constraint for printing */
    for( c = 0; c < nconss && retcode == SCIP_OKAY; ++c )
@@ -3991,8 +3992,6 @@ SCIP_RETCODE writeOpb(
    SCIP_CALL( writeOpbObjective(scip, file, vars, nvars, resvars, nresvars, andvars, nandvars,
          objsense, objscale, objoffset, multisymbol, existands, transformed) );
 
-   retcode = SCIP_OKAY;
-
    /* write constraints */
    retcode = writeOpbConstraints(scip, file, conss, nconss, vars, nvars, resvars, nresvars, andvars, nandvars,
       multisymbol, existandconshdlr, existands, transformed);
@@ -4110,7 +4109,7 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {  /*lint --e{715}*/
-   SCIP_RETCODE retcode;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    if( nvars != nbinvars && ncontvars + nimplvars + nbinvars != nvars && ncontvars + nimplvars != ( (SCIPfindConshdlr(scip, "indicator") != NULL) ? SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator")) : 0 ) )
    {
@@ -4255,7 +4254,7 @@ SCIP_RETCODE SCIPwriteOpb(
    if( retcode == SCIP_INVALIDDATA )
       return SCIP_WRITEERROR;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /*
