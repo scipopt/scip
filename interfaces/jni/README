@@ -1,0 +1,10 @@
+1) doxygen jniinterface.dxy
+   - generates xml documentation
+2) createJniInterface.py xml/*
+   - uses the xml documentation and creates JNI interface
+3) create softlinks to soplex and scip in "lib" folder
+4) make soplex
+   - creates shared library of Soplex
+5) make scip
+   - creates shared library of SCIP
+6) make

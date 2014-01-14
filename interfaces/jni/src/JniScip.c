@@ -7412,7 +7412,8 @@ JNIEXPORT
 void JNISCIP(startStrongbranch)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip               /**< SCIP data structure */
+   jlong                 jscip,              /**< SCIP data structure */
+   jboolean              jenablepropagation  /**< should propagation be done before solving the strong branching LP? */
    )
 {
    SCIP* scip;
@@ -7421,7 +7422,7 @@ void JNISCIP(startStrongbranch)(
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   JNISCIP_CALL( SCIPstartStrongbranch(scip) );
+   JNISCIP_CALL( SCIPstartStrongbranch(scip, (SCIP_Bool)jenablepropagation) );
 }
 
 /** end strong branching - call after any strong branching
