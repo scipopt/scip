@@ -2516,14 +2516,16 @@ SCIP_RETCODE printNLRow(
    {
       while( !SCIPisIntegral(scip, vals[v] * (*mult)) )
       {
-         assert(ABS(*mult) < ABS(*mult * 10));
+         if( ABS(*mult) > ABS(*mult * 10) )
+            return SCIP_INVALIDDATA;
          (*mult) *= 10;
       }
    }
 
    while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
-      assert(ABS(*mult) < ABS(*mult * 10));
+      if( ABS(*mult) > ABS(*mult * 10) )
+         return SCIP_INVALIDDATA;
       (*mult) *= 10;
    }
 
@@ -2631,6 +2633,7 @@ SCIP_RETCODE printNonLinearCons(
    SCIP_Real* activevals;
    SCIP_Real activeconstant;
    SCIP_Longint mult;
+   SCIP_RETCODE retcode;
    int v;
    int nactivevars;
 
@@ -2666,6 +2669,7 @@ SCIP_RETCODE printNonLinearCons(
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
 
    mult = 1;
+   retcode = SCIP_OKAY;
 
    /* print row(s) in OPB format */
    if( SCIPisEQ(scip, lhs, rhs) )
@@ -2673,16 +2677,16 @@ SCIP_RETCODE printNonLinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equality constraint */
-      SCIP_CALL( printNLRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, resvars, nresvars,
-            andvars, nandvars, weight, &mult, multisymbol) );
+      retcode = printNLRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, resvars,
+         nresvars, andvars, nandvars, weight, &mult, multisymbol);
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         SCIP_CALL( printNLRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, resvars, nresvars,
-               andvars, nandvars, weight, &mult, multisymbol) );
+         retcode = printNLRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, resvars,
+            nresvars, andvars, nandvars, weight, &mult, multisymbol);
       }
 
 
@@ -2691,8 +2695,8 @@ SCIP_RETCODE printNonLinearCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
-         SCIP_CALL( printNLRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, resvars, nresvars,
-               andvars, nandvars, weight, &mult, multisymbol) );
+         retcode = printNLRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, resvars,
+            nresvars, andvars, nandvars, weight, &mult, multisymbol);
       }
    }
 
@@ -2700,13 +2704,13 @@ SCIP_RETCODE printNonLinearCons(
    SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 
 /* print row in OPB format to file stream */
 static
-void printRow(
+SCIP_RETCODE printRow(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           type,               /**< row type ("=" or ">=") */
@@ -2735,21 +2739,23 @@ void printRow(
     * we can stop printing because it is an artificial constraint
     */
    if( nvars > 0 && strstr(SCIPvarGetName(vars[0]), INDICATORVARNAME) != NULL )
-      return;
+      return SCIP_OKAY;
 
    /* check if all coefficients are integral; if not commentstart multiplier */
    for( v = 0; v < nvars; ++v )
    {
       while( !SCIPisIntegral(scip, vals[v] * (*mult)) )
       {
-         assert(ABS(*mult) < ABS(*mult * 10));
+         if( ABS(*mult) > ABS(*mult * 10) )
+            return SCIP_INVALIDDATA;
          (*mult) *= 10;
       }
    }
 
    while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
-      assert(ABS(*mult) < ABS(*mult * 10));
+      if( ABS(*mult) > ABS(*mult * 10) )
+         return SCIP_INVALIDDATA;
       (*mult) *= 10;
    }
 
@@ -2792,6 +2798,8 @@ void printRow(
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
    writeBuffer(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
 }
 
 
@@ -2815,6 +2823,7 @@ SCIP_RETCODE printLinearCons(
    int nactivevars;
    SCIP_Real activeconstant;
    SCIP_Longint mult;
+   SCIP_RETCODE retcode;
    int v;
 
    assert( scip != NULL );
@@ -2846,6 +2855,7 @@ SCIP_RETCODE printLinearCons(
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
 
    mult = 1;
+   retcode = SCIP_OKAY;
 
    /* print row(s) in OPB format */
    if( SCIPisEQ(scip, lhs, rhs) )
@@ -2853,14 +2863,16 @@ SCIP_RETCODE printLinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equality constraint */
-      printRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult, multisymbol);
+      retcode = printRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult,
+         multisymbol);
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, weight, &mult, multisymbol);
+         retcode = printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, weight, &mult,
+            multisymbol);
       }
 
       if( !SCIPisInfinity(scip, rhs) )
@@ -2868,7 +2880,8 @@ SCIP_RETCODE printLinearCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
-         printRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult, multisymbol);
+         retcode = printRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult,
+            multisymbol);
       }
    }
 
@@ -2876,12 +2889,12 @@ SCIP_RETCODE printLinearCons(
    SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /* print row in OPB format to file stream */
 static
-void printPBRow(
+SCIP_RETCODE printPBRow(
    SCIP*const            scip,               /**< SCIP data structure */
    FILE*const            file,               /**< output file (or NULL for standard output) */
    const char*           type,               /**< row type ("=" or ">=") */
@@ -2922,14 +2935,15 @@ void printPBRow(
     * we can stop printing because it is an artificial constraint
     */
    if( ntermvals == 0 && nlinvars > 0 && strstr(SCIPvarGetName(linvars[0]), INDICATORVARNAME) != NULL ) /*lint !e613 */
-      return;
+      return SCIP_OKAY;
 
    /* check if all linear coefficients are internal; if not commentstart multiplier */
    for( v = 0; v < nlinvars; ++v )
    {
       while( !SCIPisIntegral(scip, linvals[v] * (*mult)) ) /*lint !e613 */
       {
-         assert(ABS(*mult) < ABS(*mult * 10));
+         if( ABS(*mult) > ABS(*mult * 10) )
+            return SCIP_INVALIDDATA;
          (*mult) *= 10;
       }
    }
@@ -2939,14 +2953,16 @@ void printPBRow(
    {
       while( !SCIPisIntegral(scip, termvals[v] * (*mult)) ) /*lint !e613 */
       {
-         assert(ABS(*mult) < ABS(*mult * 10));
+         if( ABS(*mult) > ABS(*mult * 10) )
+            return SCIP_INVALIDDATA;
          (*mult) *= 10;
       }
    }
 
    while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
-      assert(ABS(*mult) < ABS(*mult * 10));
+      if( ABS(*mult) > ABS(*mult * 10) )
+         return SCIP_INVALIDDATA;
       (*mult) *= 10;
    }
 
@@ -3008,6 +3024,8 @@ void printPBRow(
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
    writeBuffer(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
 }
 
 
@@ -3037,6 +3055,7 @@ SCIP_RETCODE printPseudobooleanCons(
    int nactivelinvars;
    SCIP_Real activelinconstant;
    SCIP_Longint mult;
+   SCIP_RETCODE retcode;
    int v;
 
    assert(scip != NULL);
@@ -3094,6 +3113,7 @@ SCIP_RETCODE printPseudobooleanCons(
    }
 
    mult = 1;
+   retcode = SCIP_OKAY;
 
    /* print row(s) in OPB format */
    if( SCIPisEQ(scip, lhs, rhs) )
@@ -3101,14 +3121,16 @@ SCIP_RETCODE printPseudobooleanCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equality constraint */
-      printPBRow(scip, file, "=", activelinvars, activelinvals, nactivelinvars, activetermvars, ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
+      retcode = printPBRow(scip, file, "=", activelinvars, activelinvals, nactivelinvars, activetermvars,
+         ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars, ntermvars, termvals, ntermvals, negatedarrays, indvar, lhs - activelinconstant, &mult, multisymbol);
+         retcode = printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars,
+            ntermvars, termvals, ntermvals, negatedarrays, indvar, lhs - activelinconstant, &mult, multisymbol);
       }
 
       if( !SCIPisInfinity(scip, rhs) )
@@ -3116,7 +3138,8 @@ SCIP_RETCODE printPseudobooleanCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
-         printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars, ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
+         retcode = printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars,
+            ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
       }
    }
 
@@ -3145,7 +3168,7 @@ SCIP_RETCODE printPseudobooleanCons(
       SCIPfreeBufferArray(scip, &activelinvals);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 #define HASHTABLESIZE_FACTOR 5
@@ -3173,6 +3196,7 @@ SCIP_RETCODE writeOpbConstraints(
    SCIP_CONS* cons;
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
+   SCIP_RETCODE retcode;
    int nconsvars;
    int v, c;
    SCIP_HASHMAP* linconssofindicatorsmap = NULL;
@@ -3301,8 +3325,10 @@ SCIP_RETCODE writeOpbConstraints(
       }
    }
 
+   retcode = SCIP_OKAY;
+
    /* loop over all constraint for printing */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && retcode == SCIP_OKAY; ++c )
    {
       SCIP_CONS* artcons;
 
@@ -3341,16 +3367,16 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    if( existands )
 	    {
-	       SCIP_CALL( printNonLinearCons(scip, file,
-		     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-		     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), resvars, nresvars, andvars, nandvars,
-		     0LL, transformed, multisymbol) );
+	       retcode = printNonLinearCons(scip, file,
+                  SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+                  SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), resvars, nresvars, andvars, nandvars,
+                  0LL, transformed, multisymbol);
 	    }
 	    else
 	    {
-	       SCIP_CALL( printLinearCons(scip, file,
-		     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-		     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0LL, transformed, multisymbol) );
+	       retcode = printLinearCons(scip, file,
+                  SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+                  SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0LL, transformed, multisymbol);
 	    }
 	 }
 	 else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -3366,39 +3392,39 @@ SCIP_RETCODE writeOpbConstraints(
 	    case SCIP_SETPPCTYPE_PARTITIONING :
 	       if( existands )
 	       {
-		  SCIP_CALL( printNonLinearCons(scip, file,
-			consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
+		  retcode = printNonLinearCons(scip, file, consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars,
+                     andvars, nandvars, 0LL, transformed, multisymbol);
 	       }
 	       else
 	       {
-		  SCIP_CALL( printLinearCons(scip, file,
-			consvars, NULL, nconsvars, 1.0, 1.0, 0LL, transformed, multisymbol) );
+		  retcode = printLinearCons(scip, file,
+                     consvars, NULL, nconsvars, 1.0, 1.0, 0LL, transformed, multisymbol);
 	       }
 	       break;
 	    case SCIP_SETPPCTYPE_PACKING :
 	       if( existands )
 	       {
-		  SCIP_CALL( printNonLinearCons(scip, file,
-			consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, resvars, nresvars, andvars, nandvars,
-			0LL, transformed, multisymbol) );
+		  retcode = printNonLinearCons(scip, file,
+                     consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, resvars, nresvars, andvars, nandvars,
+                     0LL, transformed, multisymbol);
 	       }
 	       else
 	       {
-		  SCIP_CALL( printLinearCons(scip, file,
-			consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, 0LL, transformed, multisymbol) );
+		  retcode = printLinearCons(scip, file,
+                     consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, 0LL, transformed, multisymbol);
 	       }
 	       break;
 	    case SCIP_SETPPCTYPE_COVERING :
 	       if( existands )
 	       {
-		  SCIP_CALL( printNonLinearCons(scip, file,
-			consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), resvars, nresvars, andvars, nandvars,
-			0LL, transformed, multisymbol) );
+		  retcode = printNonLinearCons(scip, file,
+                     consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), resvars, nresvars, andvars, nandvars,
+                     0LL, transformed, multisymbol);
 	       }
 	       else
 	       {
-		  SCIP_CALL( printLinearCons(scip, file,
-			consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
+		  retcode = printLinearCons(scip, file,
+                     consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol);
 	       }
 	       break;
 	    }
@@ -3410,15 +3436,15 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    if( existands )
 	    {
-	       SCIP_CALL( printNonLinearCons(scip, file,
-		     SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip),
-		     resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
+	       retcode = printNonLinearCons(scip, file,
+                  SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip),
+                  resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol);
 	    }
 	    else
 	    {
-	       SCIP_CALL( printLinearCons(scip, file,
-		     SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-		     1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
+	       retcode = printLinearCons(scip, file,
+                  SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
+                  1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol);
 	    }
 	 }
 	 else if( strcmp(conshdlrname, "knapsack") == 0 )
@@ -3439,14 +3465,14 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    if( existands )
 	    {
-	       SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
-		     (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), resvars, nresvars, andvars, nandvars,
-		     0LL, transformed, multisymbol) );
+	       retcode = printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
+                  (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), resvars, nresvars, andvars, nandvars,
+                  0LL, transformed, multisymbol);
 	    }
 	    else
 	    {
-	       SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
-		     (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0LL, transformed, multisymbol) );
+	       retcode = printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
+                  (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0LL, transformed, multisymbol);
 	    }
 
 	    SCIPfreeBufferArray(scip, &consvals);
@@ -3464,13 +3490,13 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    if( existands )
 	    {
-	       SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
-		     SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
+	       retcode = printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+                  SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol);
 	    }
 	    else
 	    {
-	       SCIP_CALL( printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
-		     SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol) );
+	       retcode = printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+		     SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol);
 	    }
 
 	    SCIPfreeBufferArray(scip, &consvars);
@@ -3516,9 +3542,9 @@ SCIP_RETCODE writeOpbConstraints(
 	    /* gets linear constraint of pseudoboolean constraint */
 	    SCIP_CALL( SCIPgetLinDatasWithoutAndPseudoboolean(scip, cons, linvars, lincoefs, &nlinvars) );
 
-	    SCIP_CALL( printPseudobooleanCons(scip, file, linvars, lincoefs, nlinvars,
-		  termvars, ntermvars, andcoefs, termvarssize, SCIPgetIndVarPseudoboolean(scip, cons),
-		  SCIPgetLhsPseudoboolean(scip, cons), SCIPgetRhsPseudoboolean(scip, cons), transformed, multisymbol) );
+	    retcode = printPseudobooleanCons(scip, file, linvars, lincoefs, nlinvars,
+               termvars, ntermvars, andcoefs, termvarssize, SCIPgetIndVarPseudoboolean(scip, cons),
+               SCIPgetLhsPseudoboolean(scip, cons), SCIPgetRhsPseudoboolean(scip, cons), transformed, multisymbol);
 
 	    /* free temporary memory */
 	    SCIPfreeBufferArray(scip, &lincoefs);
@@ -3632,16 +3658,16 @@ SCIP_RETCODE writeOpbConstraints(
 
 	       if( existands )
 	       {
-		  SCIP_CALL( printNonLinearCons(scip, file,
-			consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons),  SCIPgetRhsLinear(scip, lincons),
-			resvars, nresvars, andvars, nandvars,
-			weight, transformed, multisymbol) );
+		  retcode = printNonLinearCons(scip, file,
+                     consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons),  SCIPgetRhsLinear(scip, lincons),
+                     resvars, nresvars, andvars, nandvars,
+                     weight, transformed, multisymbol);
 	       }
 	       else
 	       {
-		  SCIP_CALL( printLinearCons(scip, file,
-			consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
-			weight, transformed, multisymbol) );
+		  retcode = printLinearCons(scip, file,
+                     consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
+                     weight, transformed, multisymbol);
 	       }
 
 	       /* free temporary memory */
@@ -3672,6 +3698,16 @@ SCIP_RETCODE writeOpbConstraints(
       }
    }
 
+   if( retcode == SCIP_INVALIDDATA )
+   {
+      assert(cons != NULL);
+
+      SCIPerrorMessage("Cannot print constraint %s with non-integral coefficient or sides in opb-format\n",
+         SCIPconsGetName(cons));
+      SCIP_CALL( SCIPprintCons(scip, cons, stderr) );
+      SCIPinfoMessage(scip, file, ";\n");
+   }
+
    if( linconssofpbsmap != NULL )
    {
       /* free hash map */
@@ -3683,7 +3719,7 @@ SCIP_RETCODE writeOpbConstraints(
       SCIPhashmapFree(&linconssofindicatorsmap);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /* write and constraints of inactive but relevant and-resultants and and variables which are fixed to one */
@@ -3934,6 +3970,7 @@ SCIP_RETCODE writeOpb(
 {
    char multisymbol[OPB_MAX_LINELEN];
    SCIP_Bool usesymbole;
+   SCIP_RETCODE retcode;
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
@@ -3954,11 +3991,13 @@ SCIP_RETCODE writeOpb(
    SCIP_CALL( writeOpbObjective(scip, file, vars, nvars, resvars, nresvars, andvars, nandvars,
          objsense, objscale, objoffset, multisymbol, existands, transformed) );
 
-   /* write constraints */
-   SCIP_CALL( writeOpbConstraints(scip, file, conss, nconss, vars, nvars, resvars, nresvars, andvars, nandvars,
-         multisymbol, existandconshdlr, existands, transformed) );
+   retcode = SCIP_OKAY;
 
-   if( existands )
+   /* write constraints */
+   retcode = writeOpbConstraints(scip, file, conss, nconss, vars, nvars, resvars, nresvars, andvars, nandvars,
+      multisymbol, existandconshdlr, existands, transformed);
+
+   if( existands && (retcode == SCIP_OKAY) )
    {
       /* write and constraints of inactive but relevant and-resultants and and-variables which are fixed to one
          with no fixed and resultant */
@@ -3966,7 +4005,8 @@ SCIP_RETCODE writeOpb(
    }
 
    *result = SCIP_SUCCESS;
-   return  SCIP_OKAY;
+
+   return retcode;
 }
 
 
@@ -4070,6 +4110,8 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    if( nvars != nbinvars && ncontvars + nimplvars + nbinvars != nvars && ncontvars + nimplvars != ( (SCIPfindConshdlr(scip, "indicator") != NULL) ? SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator")) : 0 ) )
    {
       SCIPwarningMessage(scip, "OPB format is only capable for binary problems.\n");
@@ -4107,8 +4149,8 @@ SCIP_RETCODE SCIPwriteOpb(
             assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);
          }
 #endif
-         SCIP_CALL( writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-               nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result) );
+         retcode = writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
+               nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result);
       }
       else
       {
@@ -4185,8 +4227,8 @@ SCIP_RETCODE SCIPwriteOpb(
                assert(sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) == 1 || strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) != NULL || strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) != NULL );
             }
 #endif
-            SCIP_CALL( writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-                  nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result) );
+            retcode = writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
+               nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result);
          }
       }
 
@@ -4209,6 +4251,9 @@ SCIP_RETCODE SCIPwriteOpb(
 
       *result = SCIP_SUCCESS;
    }
+
+   if( retcode == SCIP_INVALIDDATA )
+      return SCIP_WRITEERROR;
 
    return SCIP_OKAY;
 }
