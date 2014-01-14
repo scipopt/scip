@@ -4764,7 +4764,7 @@ SCIP_RETCODE exprsimplifyUnconvertPolynomials(
 
 static
 SCIP_DECL_HASHGETKEY( exprparseVarTableGetKey )
-{
+{  /*lint --e{715}*/
    return (void*)((char*)elem + sizeof(int));
 }
 
@@ -4871,8 +4871,7 @@ static
 SCIP_RETCODE exprparseFindClosingParenthesis(
    const char*           str,                /**< pointer to the string to be parsed */
    const char**          endptr,             /**< pointer to point to the closing parenthesis */
-   int                   length,             /**< length of the string to be parsed */
-   const char*           lastchar            /**< pointer to the last char of str that should be parsed */
+   int                   length              /**< length of the string to be parsed */
    )
 {
    int nopenbrackets;
@@ -5042,7 +5041,7 @@ SCIP_RETCODE exprParse(
    else if( str[0] == '<' )
    {
       /* check if expressions begins with a variable */
-      SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, vartable, 1, NULL) );
+      SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, vartable, 1.0, NULL) );
    }
    else if(
       strncmp(str, "abs", 3) == 0 ||
@@ -5062,7 +5061,7 @@ SCIP_RETCODE exprParse(
       {
          /* four character operators */
          str += 4;
-         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length, lastchar) );
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
          SCIP_CALL( exprParse(blkmem, &arg, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
          str = endptr + 1;
 
@@ -5082,7 +5081,7 @@ SCIP_RETCODE exprParse(
          /* three character operators */
 
          str += 3;
-         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length, lastchar) );
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
          SCIP_CALL( exprParse(blkmem, &arg, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
          str = endptr + 1;
 
@@ -5175,13 +5174,14 @@ SCIP_RETCODE exprParse(
       /* a '^' behind the found expression indicates a constant power */
       SCIP_EXPR* arg1;
       SCIP_EXPR* arg2;
+      SCIP_Real constant;
 
       arg1 = *expr;
       ++str;
       if( str[0] == '(' )
       {
          /* we use exprParse to evaluate the bracketed argument */
-         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length, lastchar) );
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
          SCIP_CALL( exprParse(blkmem, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
 
          assert(SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST); /* everything else should be written as (int|real|sign)power(a,b)... */
@@ -5205,8 +5205,10 @@ SCIP_RETCODE exprParse(
          return SCIP_READERROR;
       }
 
+      constant = SCIPexprGetOpReal(arg2);
+
       /* expr^number is intpower or realpower */
-      if( EPSISINT(SCIPexprGetOpReal(arg2), 0.0) )
+      if( EPSISINT(constant, 0.0) ) /*lint !e835*/
       {
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)SCIPexprGetOpReal(arg2)) );
       }
