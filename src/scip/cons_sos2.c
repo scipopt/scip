@@ -736,12 +736,12 @@ SCIP_RETCODE presolRoundSOS2(
    /* if there are exactly two fixed nonzero variables */
    else if ( nfixednonzeros == 2 )
    {
-      assert(0 <= lastFixedNonzero && lastFixedNonzero < consdata->nvars);
+      assert(0 < lastFixedNonzero && lastFixedNonzero < consdata->nvars);
       assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero])) ||
          SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero])));
-      /* the next variable need also to be nonzero */
-      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero + 1])) ||
-         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero + 1])));
+      /* the previous variable need also to be nonzero, otherwise the infeasibility should have been detected earlier */
+      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero - 1])) ||
+         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero - 1])));
 
       /* fix all variables before lastFixedNonzero to zero */
       for( j = 0; j < lastFixedNonzero - 1; ++j )
