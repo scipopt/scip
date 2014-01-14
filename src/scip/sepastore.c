@@ -829,9 +829,11 @@ SCIP_RETCODE sepastoreApplyBdchg(
       infeasibility /= REALABS(vals[0]);
 
       /* reduce relaxation feasibility tolerance */
-      if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) )
+      if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) ) /*lint !e777*/
       {
-         set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, SCIPsetEpsilon(set));
+         SCIP_Real epsilon = SCIPsetEpsilon(set);
+
+         set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, epsilon);
          SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
       }
    }
@@ -968,9 +970,11 @@ SCIP_RETCODE sepastoreApplyCut(
          }
 
          /* reduce relaxation feasibility tolerance */
-         if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) )
+         if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) ) /*lint !e777*/
          {
-            set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, SCIPsetEpsilon(set));
+            SCIP_Real epsilon = SCIPsetEpsilon(set);
+
+            set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, epsilon);
             SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
          }
       }
