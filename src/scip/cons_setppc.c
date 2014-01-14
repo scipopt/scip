@@ -247,8 +247,9 @@ int setppcCompare2(
    assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING && SCIP_SETPPCTYPE_PACKING < SCIP_SETPPCTYPE_COVERING);
 
    if( consdata1->setppctype < consdata2->setppctype ||
-      ((SCIP_SETPPCTYPE)consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars < consdata2->nvars) ||
-      ((SCIP_SETPPCTYPE)consdata2->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars > consdata2->nvars) )
+      ((SCIP_SETPPCTYPE)consdata1->setppctype != SCIP_SETPPCTYPE_COVERING &&
+         (((SCIP_SETPPCTYPE)consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars < consdata2->nvars) ||
+            ((SCIP_SETPPCTYPE)consdata2->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars > consdata2->nvars))) )
       return -1;
    else if( ((SCIP_SETPPCTYPE)consdata2->setppctype == SCIP_SETPPCTYPE_COVERING || (consdata1->setppctype == consdata2->setppctype && consdata1->nvars == consdata2->nvars)) )
       return 0;
@@ -5526,7 +5527,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &usefulconss, conss, nconss) );
    /* sort constraints */
-   SCIPsortDownPtr((void**)usefulconss, setppcConssSort2, nconss);
+   SCIPsortPtr((void**)usefulconss, setppcConssSort2, nconss);
 
    nlocaladdconss = 0;
    posreplacements = 0;
@@ -5554,18 +5555,18 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       if( SCIPconsIsDeleted(cons) )
          continue;
 
-      if( !SCIPconsIsChecked(cons) )
-         continue;
-
-      if( SCIPconsIsModifiable(cons) )
-         continue;
-
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* if we cannot find any constraint to perform a useful multi-aggregation, stop */
       if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
          break;
+
+      if( !SCIPconsIsChecked(cons) )
+         continue;
+
+      if( SCIPconsIsModifiable(cons) )
+         continue;
 
       /* update the variables */
       SCIP_CALL( applyFixings(scip, cons, &nlocaladdconss, ndelconss, nfixedvars, cutoff) );
@@ -8151,8 +8152,9 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
    }
 
-   /* add cliques first before lifting variables */
-   SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, nchgbds, &cutoff) );
+   /* add cliques after lifting variables */
+   SCIP_CALL( addCliques(scip, conss, nconss, MIN(firstclique, nconss), MIN(lastclique, nconss), nchgbds, &cutoff) );
+
    if( cutoff )
       *result = SCIP_CUTOFF;
 
