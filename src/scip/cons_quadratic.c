@@ -6850,7 +6850,7 @@ SCIP_RETCODE generateCut(
              * if required bound of x is not finite, then do nothing
              */
             roundcoef = SCIPround(scip, coef[j]);
-            if( SCIPisEQ(scip, coef[j], roundcoef) && coef[j] != roundcoef )
+            if( SCIPisEQ(scip, coef[j], roundcoef) && coef[j] != roundcoef ) /*lint !e777*/
             {
                SCIP_Real xbnd;
 
@@ -6984,12 +6984,25 @@ SCIP_RETCODE generateCut(
             rowefficacy /= MAX(1.0, maxcoef);
             break;
          case 's' :
-            rowefficacy /= SCIPisInfinity(scip, REALABS(lhs)) ? MAX(1.0, REALABS(rhs)) : MAX(1.0, REALABS(lhs));
+         {
+            SCIP_Real abslhs = REALABS(lhs);
+
+            if( !SCIPisInfinity(scip, abslhs) )
+               rowefficacy /= MAX(1.0, abslhs);
+            else
+            {
+               SCIP_Real absrhs = REALABS(rhs);
+
+               rowefficacy /= MAX(1.0, absrhs);
+            }
+
             break;
+         }
          default: SCIPABORT();
       }
    }
-   if( success && !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy )
+
+   if( success && !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy ) /*lint !e644*/
    {
       SCIPdebugMessage("skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), rowefficacy, minefficacy);
       success = FALSE;
@@ -7336,8 +7349,14 @@ SCIP_RETCODE separatePoint(
                      efficacy /= MAX(1.0, norm);
                      break;
                   case 's' :
-                     efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+                  {
+                     SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+                     SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+                     SCIP_Real minval = MIN(abslhs, absrhs);
+
+                     efficacy /= MAX(1.0, minval);
                      break;
+                  }
                   default: SCIPABORT();
                }
             }
@@ -7479,8 +7498,14 @@ SCIP_RETCODE addLinearizationCuts(
                efficacy /= MAX(1.0, norm);
                break;
             case 's' :
-               efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy /= MAX(1.0, minval);
                break;
+            }
             default:
                SCIPABORT();
          }
