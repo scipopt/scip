@@ -2573,13 +2573,6 @@ SCIP_RETCODE addExtraCliques(
    int const             ncliques,           /**< number of cliques in cliquepartition */
    SCIP_CONS**const      usefulconss,        /**< storage for created constraints */
    int*const             nusefulconss,       /**< pointer to store number of useful created constraints */
-   SCIP_VAR**const       usefulvars,         /**< storage for all found variables */
-   int*const             nusefulvars,        /**< pointer to store number of added variables */
-   SCIP_HASHMAP*const    vartoindex,         /**< hashmap mapping variables to indices */
-   int*const             varnconss,          /**< storage for remembering the number of constraints a variable occurs */
-   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurances of a variable */
-   int**const            varconsidxs,        /**< storage for constraint indices in which the corresponding variable exists */
-   int*const             maxnvars,           /**< pointer to store maximal number of variables of a constraint */
    int const             nrounds,            /**< actual presolving round */
    int*const             nfixedvars,         /**< pointer to count number of deleted variables */
    int*const             naddconss,          /**< pointer to count number of added constraints */
@@ -2590,7 +2583,6 @@ SCIP_RETCODE addExtraCliques(
 {
    SCIP_CONS* cliquecons;
    char name[SCIP_MAXSTRLEN];
-   int varindex;
    int lastclqidx;
    int nadded;
    int c;
@@ -2602,13 +2594,6 @@ SCIP_RETCODE addExtraCliques(
    assert(ncliques >= 0 && ncliques <= nbinvars);
    assert(usefulconss != NULL);
    assert(nusefulconss != NULL);
-   assert(usefulvars != NULL);
-   assert(nusefulvars != NULL);
-   assert(vartoindex != NULL);
-   assert(varnconss != NULL);
-   assert(maxnvarconsidx != NULL);
-   assert(varconsidxs != NULL);
-   assert(maxnvars != NULL);
    assert(nfixedvars != NULL);
    assert(naddconss != NULL);
    assert(ndelconss != NULL);
@@ -2642,7 +2627,7 @@ SCIP_RETCODE addExtraCliques(
 	    TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       /* add variables to clique constraint */
-      for( v = c; v < ncliques - 1; ++v )
+      for( v = c; v < nbinvars - 1; ++v )
       {
 	 if( cliquepartition[c] == cliquepartition[v] )
 	 {
@@ -2678,59 +2663,6 @@ SCIP_RETCODE addExtraCliques(
 	 if( !SCIPconsIsDeleted(cliquecons) && nadded - cliqueconsdata->nfixedzeros >= 2 )
 	 {
 	    assert(cliqueconsdata->nfixedones == 0);
-
-	    /* save maximal number of vars */
-	    if( cliqueconsdata->nvars > *maxnvars )
-	       *maxnvars = cliqueconsdata->nvars;
-
-	    /* adding variables and information about occurances to local data structure */
-	    for( v = cliqueconsdata->nvars - 1; v >= 0; --v )
-	    {
-	       SCIP_VAR* var;
-
-	       var = cliqueconsdata->vars[v];
-
-	       /* there should be no fixed variable to one in our new clique constraint */
-	       assert(SCIPvarGetLbLocal(var) < 0.5);
-
-	       if( SCIPvarGetUbLocal(var) < 0.5 )
-		  continue;
-
-	       if( !SCIPhashmapExists(vartoindex, (void*) var) )
-	       {
-		  SCIP_VAR* tmpvar;
-
-		  usefulvars[*nusefulvars] = var;
-		  ++(*nusefulvars);
-		  varindex = *nusefulvars;
-		  SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) var, (void*) (size_t) varindex) );
-
-		  /* get the maximal number of occurances of this variable, if this variables  */
-		  tmpvar = SCIPvarIsNegated(var) ? SCIPvarGetNegatedVar(var) : var;
-		  maxnvarconsidx[varindex] = SCIPvarGetNLocksDown(tmpvar) + SCIPvarGetNLocksUp(tmpvar);
-		  SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
-	       }
-	       else
-	       {
-		  assert(SCIPhashmapGetImage(vartoindex, (void*) var) != NULL);
-		  varindex = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
-
-		  /* the number of occurances of a variable is not limited by the locks (so maybe we have to increase
-		   * memory), because for examples converted cuts are not check and therefore they have no locks on
-		   * their variables */
-		  if( varnconss[varindex] == maxnvarconsidx[varindex] )
-		  {
-		     maxnvarconsidx[varindex] = SCIPcalcMemGrowSize(scip, maxnvarconsidx[varindex] + 1);
-		     SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
-		  }
-
-		  assert(varnconss[varindex] < maxnvarconsidx[varindex]);
-		  /* add the constraint number to the variable list */
-		  varconsidxs[varindex][varnconss[varindex]] = *nusefulconss;
-		  /* increase number of occurances for variables */
-		  ++(varnconss[varindex]);
-	       }
-	    }
 
 	    /* save the type and constraint */
 	    usefulconss[*nusefulconss] = cliquecons;
@@ -3684,6 +3616,7 @@ SCIP_RETCODE checkForOverlapping(
 	    /* delete second constraint */
 	    SCIPdebugMessage(" -> deleting constraint <%s> number <%d> because it includes the setpartitioning constraint <%s> number <%d>\n", SCIPconsGetName(cons1), c, SCIPconsGetName(cons), considx);
 
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons, cons1) );
 	    SCIP_CALL( SCIPdelCons(scip, cons1) );
 	    ++(*ndelconss);
 	 }
@@ -3692,6 +3625,8 @@ SCIP_RETCODE checkForOverlapping(
 	 {
 	    /* delete cons due to redundancy to cons1 */
 	    SCIPdebugMessage(" -> deleting constraint <%s> number <%d> due to inclusion in constraint <%s> number <%d>\n", SCIPconsGetName(cons), considx, SCIPconsGetName(cons1), c);
+
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons) );
 	    SCIP_CALL( SCIPdelCons(scip, cons) );
 	    ++(*ndelconss);
 	 }
@@ -3852,6 +3787,8 @@ SCIP_RETCODE checkForOverlapping(
 	       /* delete cons because it include another set partitioning constraint */
 	       SCIPdebugMessage(" -> deleting constraint <%s> number <%d> because it includes the setpartitioning constraint <%s> number <%d>\n", SCIPconsGetName(cons), considx, SCIPconsGetName(cons1), c);
 	       assert(SCIPconsIsActive(cons));
+
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons) );
 	       SCIP_CALL( SCIPdelCons(scip, cons) );
 	       ++(*ndelconss);
 	    }
@@ -3867,6 +3804,8 @@ SCIP_RETCODE checkForOverlapping(
 	    /* delete cons1 due to redundancy to cons */
 	    SCIPdebugMessage(" -> deleting constraint <%s> number <%d> due to inclusion in constraint <%s> number <%d>\n", SCIPconsGetName(cons1), c, SCIPconsGetName(cons), considx);
 	    assert(SCIPconsIsActive(cons1));
+
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons, cons1) );
 	    SCIP_CALL( SCIPdelCons(scip, cons1) );
 	    ++(*ndelconss);
 	 }
@@ -4042,6 +3981,8 @@ SCIP_RETCODE checkForOverlapping(
 	    /* delete constraint */
 	    SCIPdebugMessage(" -> deleting constraint <%s> number <%d> because it is dominated by constraint <%s>\n", SCIPconsGetName(cons1), c, SCIPconsGetName(cons));
 	    assert(SCIPconsIsActive(cons1));
+
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons, cons1) );
 	    SCIP_CALL( SCIPdelCons(scip, cons1) );
 	    ++(*ndelconss);
 	 }
@@ -4941,8 +4882,7 @@ SCIP_RETCODE preprocessCliques(
 
       /* add extra clique constraints resulting from the cliquepartition calculation to SCIP and to the local data structure */
       SCIP_CALL( addExtraCliques(scip, binvars, nbinvars, cliquepartition, ncliques, usefulconss, &nusefulconss,
-	    usefulvars, &nusefulvars, vartoindex, varnconss, maxnvarconsidx, varconsidxs, &maxnvars,
-	    nrounds, nfixedvars, &naddconss, ndelconss, nchgcoefs, cutoff) );
+            nrounds, nfixedvars, &naddconss, ndelconss, nchgcoefs, cutoff) );
 
       /* bad hack, we don't want to count these artificial created constraints if they got deleted, so ndelconss
        * can become negative which will be change to zero at the end of this method if it's still negative
