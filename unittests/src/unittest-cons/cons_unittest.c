@@ -397,8 +397,6 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
    assert(conshdlrdata != NULL);
 
    conshdlrdata->ncheck++;
-   printf("HIER IN CHECK!\n");
-
 
    val = SCIPgetSolVal(scip, sol, vars[0]) + SCIPgetSolVal(scip, sol, vars[1]);
 
