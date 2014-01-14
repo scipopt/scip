@@ -6804,7 +6804,8 @@ SCIP_RETCODE generateCut(
    mincoef = 0.0; /* only for lint */
    maxcoef = 0.0; /* only for compiler */
    viol = 0.0;    /* only for compiler */
-   if( success )
+   rowefficacy = SCIP_INVALID;
+   if( success && efficacy != NULL)
    {
       SCIP_Real constant;
       SCIP_Real abscoef;
@@ -6961,14 +6962,14 @@ SCIP_RETCODE generateCut(
       }
    }
 
-   if( success && SCIPisInfinity(scip, REALABS(lhs)) && SCIPisInfinity(scip, REALABS(rhs)) )
+   if( success && efficacy != NULL && SCIPisInfinity(scip, REALABS(lhs)) && SCIPisInfinity(scip, REALABS(rhs)) )
    {
       SCIPdebugMessage("skip cut for constraint <%s> because both sides are not finite: lhs = %g, rhs = %g\n", SCIPconsGetName(cons), lhs, rhs);
       success = FALSE;
    }
 
    /* check if reference point violates cut sufficiently */
-   if( success )
+   if( success && efficacy != NULL)
    {
       rowefficacy = viol;
       switch( conshdlrdata->scaling )
@@ -6989,7 +6990,7 @@ SCIP_RETCODE generateCut(
          default: SCIPABORT();
       }
    }
-   if( success && !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy )
+   if( success && efficacy != NULL && !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy )
    {
       SCIPdebugMessage("skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), rowefficacy, minefficacy);
       success = FALSE;
@@ -7013,14 +7014,16 @@ SCIP_RETCODE generateCut(
          SCIProwGetNNonz(*row), viol, rowefficacy);  /*lint !e414 */
 
       if( efficacy != NULL )
+      {
          *efficacy = rowefficacy;
 
-      /* check that our computed efficacy is > feastol, iff efficacy computed by row is > feastol
-       * (they should be equal, but due to numerics...)
-       */
-      assert((conshdlrdata->scaling != 'g') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row)))));  /*lint !e666*/
-      assert((conshdlrdata->scaling != 's') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,MIN(REALABS(lhs),REALABS(rhs))))));  /*lint !e666*/
-      assert((conshdlrdata->scaling != 'o') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol))));  /*lint !e666*/
+         /* check that our computed efficacy is > feastol, iff efficacy computed by row is > feastol
+          * (they should be equal, but due to numerics...)
+          */
+         assert((conshdlrdata->scaling != 'g') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row)))));  /*lint !e666*/
+         assert((conshdlrdata->scaling != 's') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,MIN(REALABS(lhs),REALABS(rhs))))));  /*lint !e666*/
+         assert((conshdlrdata->scaling != 'o') || (SCIPisFeasPositive(scip, rowefficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol))));  /*lint !e666*/
+      }
    }
 
    SCIPfreeBufferArray(scip, &coef);
