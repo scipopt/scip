@@ -4430,7 +4430,7 @@ SCIP_Real SCIPsetLpfeastol(
 {
    assert(set != NULL);
 
-   if( set->sepa_primfeastol != SCIP_INVALID )
+   if( set->sepa_primfeastol != SCIP_INVALID ) /*lint !e777*/
       return MIN(set->sepa_primfeastol, set->num_lpfeastol);
 
    return set->num_lpfeastol;
