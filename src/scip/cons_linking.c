@@ -557,6 +557,9 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->intvar, &(*consdata)->intvar) );
    }
 
+   /* mark integer variable to be not multi-aggregated */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->intvar) );
+
    /* capture variables */
    for( v = 0; v < nbinvars; ++v )
    {
