@@ -811,14 +811,16 @@ depend:		scipdepend lpidepend nlpidepend maindepend
 $(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		$(LINKCC) $(MAINOBJFILES) \
+		-$(LINKCC) $(MAINOBJFILES) \
 		$(LINKCC_L)$(LIBDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
+		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
+		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
-		$(LINKCXX) $(MAINOBJFILES) \
+		-$(LINKCXX) $(MAINOBJFILES) \
 		$(LINKCXX_L)$(LIBDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
+		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
+		|| ($(MAKE) errorhints && false)
 endif
 
 .PHONY: makesciplibfile
@@ -980,6 +982,21 @@ endif
 checklpsdefine:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
+endif
+
+.PHONY: errorhints
+errorhints:
+ifeq ($(GMP),false)
+ifeq ($(LPS),spx)
+		@echo
+		@echo "you used GMP=false with LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
+		@echo
+endif
+ifeq ($(LPS),spx2)
+		@echo
+		@echo "you used GMP=false with LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
+		@echo
+endif
 endif
 
 # --- EOF ---------------------------------------------------------------------
