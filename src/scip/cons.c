@@ -3073,24 +3073,21 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          && conshdlr->lastenfolpnode == stat->nnodes
          && conshdlr->lastenfolpresult != SCIP_CONSADDED )
       {
-         assert(conshdlr->lastenfolpresult != SCIP_DIDNOTRUN);
-         assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
-         assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
-         assert(conshdlr->lastenfolpresult != SCIP_REDUCEDDOM);
-         /* might this assert fail due to numerics? if yes, it should probably be treated like SCIP_INFEASIBLE */
-         assert(conshdlr->lastenfolpresult != SCIP_SEPARATED);
+         assert(conshdlr->lastenfolpresult == SCIP_FEASIBLE || conshdlr->lastenfolpresult == SCIP_INFEASIBLE
+            || conshdlr->lastenfolpresult == SCIP_SEPARATED );
 
          /* if we already enforced the same pseudo solution at this node, we will only enforce new constraints in the
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE )
+         if( conshdlr->lastenfolpresult == SCIP_FEASIBLE )
+            lastinfeasible = FALSE;
+         else
          {
+            assert(conshdlr->lastenfolpresult == SCIP_INFEASIBLE || conshdlr->lastenfolpresult == SCIP_SEPARATED);
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;
          }
-         else
-            lastinfeasible = FALSE;
 
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
