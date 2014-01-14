@@ -5985,7 +5985,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       if( lpistate != NULL )
       {
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate,
-               lpwasprimfeas, lpwasdualfeas) ); /*lint !e644*/
+               lpwasprimfeas, lpwasdualfeas) );
       }
 
       /* set the LP pricing norms */
