@@ -444,7 +444,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
       return;
 
    /* use shell sort on the remaining small list */
-   if( len <= SORTTPL_SHELLSORTMAX)
+   if( len <= SORTTPL_SHELLSORTMAX )
    {
       SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          (key,
