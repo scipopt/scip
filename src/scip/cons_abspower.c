@@ -1997,13 +1997,25 @@ SCIP_RETCODE computeViolation(
    /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
    if( sol == NULL )
    {
-      assert(SCIPisFeasGE(scip, xval, SCIPvarGetLbLocal(consdata->x)));
-      assert(SCIPisFeasLE(scip, xval, SCIPvarGetUbLocal(consdata->x)));
-      xval = MAX(SCIPvarGetLbLocal(consdata->x), MIN(SCIPvarGetUbLocal(consdata->x), xval));
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real minval;
 
-      assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
-      assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
-      zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+      lb = SCIPvarGetLbLocal(consdata->x);
+      ub = SCIPvarGetUbLocal(consdata->x);
+      minval = MIN(ub, xval);
+
+      assert(SCIPisFeasGE(scip, xval, lb));
+      assert(SCIPisFeasLE(scip, xval, ub));
+      xval = MAX(lb, minval);
+
+      lb = SCIPvarGetLbLocal(consdata->z);
+      ub = SCIPvarGetUbLocal(consdata->z);
+      minval = MIN(ub, zval);
+
+      assert(SCIPisFeasGE(scip, zval, lb));
+      assert(SCIPisFeasLE(scip, zval, ub));
+      zval = MAX(lb, minval);
    }
 
    xval += consdata->xoffset;
@@ -2048,12 +2060,20 @@ SCIP_RETCODE computeViolation(
 
       case 's' :
       {
+         SCIP_Real absval;
+
          /* scale by left/right hand side of constraint */
          if( consdata->lhsviol > 0.0 )
-            consdata->lhsviol /= MAX(1.0, REALABS(consdata->lhs));
+         {
+            absval = REALABS(consdata->lhs);
+            consdata->lhsviol /= MAX(1.0, absval);
+         }
 
          if( consdata->rhsviol > 0.0 )
-            consdata->rhsviol /= MAX(1.0, REALABS(consdata->rhs));
+         {
+            absval = REALABS(consdata->rhs);
+            consdata->rhsviol /= MAX(1.0, absval);
+         }
 
          break;
       }
@@ -3800,8 +3820,14 @@ SCIP_RETCODE separatePoint(
                efficacy = -feasibility / MAX(1.0, norm);
                break;
             case 's' :
-               efficacy = -feasibility / MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy = -feasibility / MAX(1.0, minval);
                break;
+            }
             default:
                efficacy = SCIP_INVALID;
                SCIPABORT();
@@ -3934,8 +3960,14 @@ SCIP_RETCODE addLinearizationCuts(
                efficacy /= MAX(1.0, norm);
                break;
             case 's' :
-               efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy /= MAX(1.0, minval);
                break;
+            }
             default: SCIPABORT();
          }
 
