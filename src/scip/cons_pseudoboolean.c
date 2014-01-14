@@ -4716,7 +4716,7 @@ SCIP_RETCODE updateConsanddataUses(
                && strlen(SCIPvarGetName(resvar)) > strlen(ARTIFICIALVARNAMEPREFIX) &&
                strncmp(SCIPvarGetName(resvar)+2, ARTIFICIALVARNAMEPREFIX, strlen(ARTIFICIALVARNAMEPREFIX)) == 0
 #endif
-               )
+               ) /*lint !e774*/
 	    {
                assert(!SCIPconsIsChecked(consanddata->cons));
 	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
