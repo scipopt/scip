@@ -15911,7 +15911,7 @@ SCIP_RETCODE SCIPlpGetSol(
             stilldualfeasible = !SCIPsetIsFeasNegative(set, compslack);
          }
 
-         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
             SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
             SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
@@ -15931,7 +15931,7 @@ SCIP_RETCODE SCIPlpGetSol(
          if( stilldualfeasible && SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
             stilldualfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
 
-         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
             SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
             SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
@@ -15986,7 +15986,7 @@ SCIP_RETCODE SCIPlpGetSol(
             stilldualfeasible = !SCIPsetIsFeasNegative(set, compslack);
          }
 
-         SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+         SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
@@ -16006,7 +16006,7 @@ SCIP_RETCODE SCIPlpGetSol(
          if( stilldualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
             stilldualfeasible = !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
 
-         SCIPdebugMessage(" row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%u/%u(%u)\n",
+         SCIPdebugMessage(" row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, lpirows[r]->activity, lpirows[r]->dualsol,
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
