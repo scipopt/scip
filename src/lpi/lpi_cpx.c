@@ -2731,6 +2731,11 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
       SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
       return SCIP_LPERROR;
    }
+   else if( retval == CPXERR_SINGULAR )
+   {
+      SCIPdebugMessage(" -> numerical troubles (basis singular)\n");
+      return SCIP_LPERROR;
+   }
    CHECK_ZERO( lpi->messagehdlr, retval );
    SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
 
