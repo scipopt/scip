@@ -38,6 +38,7 @@
 #include "scip/tree.h"
 #include "scip/solve.h"
 #include "scip/cons.h"
+#include "scip/cons_linear.h"
 #include "scip/nodesel.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
@@ -1542,6 +1543,34 @@ SCIP_RETCODE SCIPnodeDelCons(
    return SCIP_OKAY;
 }
 
+SCIP_RETCODE SCIPnodeGetAddedcons(
+      SCIP*                scip,
+      SCIP_NODE*           node,
+      SCIP_CONS**          addedcons
+)
+{
+   assert( node != NULL );
+   assert( node->conssetchg->naddedconss == 1 );
+
+   (*addedcons) = node->conssetchg->addedconss[0];
+
+   return SCIP_OKAY;
+}
+
+int SCIPnodeGetNAddedcons(
+      SCIP*                scip,
+      SCIP_NODE*           node
+)
+{
+   assert(scip != NULL);
+   assert(node != NULL);
+
+   if( node->conssetchg == NULL )
+      return 0;
+   else
+      return node->conssetchg->naddedconss;
+}
+
 /** adds the given bound change to the list of pending bound changes */
 static
 SCIP_RETCODE treeAddPendingBdchg(
@@ -1670,8 +1699,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
-   SCIPdebugMessage("adding boundchange at node at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
-      node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
+   SCIPdebugMessage("adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
+      node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       infercons != NULL ? "cons" : "prop", 
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
@@ -4291,7 +4320,10 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventqueue, tree, lp) );
       assert(tree->effectiverootdepth < tree->pathlen || *node == NULL || *cutoff);
 
-      if( tree->effectiverootdepth > appliedeffectiverootdepth && *node != NULL && !(*cutoff) )
+      /*
+       * currently disabled because of reoptimization
+       */
+      if( tree->effectiverootdepth > appliedeffectiverootdepth && *node != NULL && !(*cutoff) && FALSE )
       {
          int d;
 
@@ -4308,6 +4340,7 @@ SCIP_RETCODE SCIPnodeFocus(
             SCIPdebugMessage(" -> applying bound changes of depth %d\n", d);
             SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue,
                   &nodecutoff) );
+
             if( nodecutoff )
             {
                SCIPnodeCutoff(tree->path[d], set, stat, tree);
@@ -6609,6 +6642,137 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
    assert(node != NULL);
 
    return node->domchg;
+}
+
+int SCIPnodeGetNDomchg(
+   SCIP_NODE*            node                /**< node */
+   )
+{
+   int ndomchgs;
+
+   assert(node != NULL);
+
+   ndomchgs = 0;
+
+   while(SCIPnodeGetDepth(node) != 0)
+   {
+      if(node->domchg != NULL)
+         ndomchgs += node->domchg->domchgbound.nboundchgs;
+
+      node = node->parent;
+   }
+
+   return ndomchgs;
+}
+
+int SCIPnodeGetNPseudoBranchings(
+   SCIP_NODE*            node
+)
+{
+   SCIP_BOUNDCHG* boundchgs;
+   int i;
+   int nboundchgs;
+   int npseudobranchvars;
+
+   assert(node != NULL);
+
+   if( node->domchg == NULL )
+      return 0;
+
+   nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
+   boundchgs = node->domchg->domchgbound.boundchgs;
+
+   npseudobranchvars = 0;
+
+   assert(boundchgs != NULL);
+   assert(nboundchgs >= 0);
+
+   /* count the number of pseudo-branching decisions; pseudo-branching decisions have to be in the ending of the bound change
+    * array
+    */
+   for( i = nboundchgs-1; i >= 0; i--)
+   {
+      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
+         npseudobranchvars++;
+      else
+         break;
+   }
+
+   return npseudobranchvars;
+}
+
+/** returns the set of variable branchings that were performed in the parent node to create this node */
+void SCIPnodeGetPseudoBranchings(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            pseudobranchvars,   /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            pseudobranchbounds, /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
+   int*                  npseudobranchvars,  /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   pseudobranchvarssize/**< available slots in arrays */
+)
+{
+   SCIP_BOUNDCHG* boundchgs;
+   int nboundchgs;
+   int i;
+
+   assert(node != NULL);
+   assert(pseudobranchvars != NULL);
+   assert(pseudobranchbounds != NULL);
+   assert(boundtypes != NULL);
+   assert(npseudobranchvars != NULL);
+   assert(pseudobranchvarssize >= 0);
+
+   (*npseudobranchvars) = 0;
+
+   if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
+      return;
+
+   nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
+   boundchgs = node->domchg->domchgbound.boundchgs;
+
+   assert(boundchgs != NULL);
+   assert(nboundchgs >= 0);
+
+   /* count the number of pseudo-branching decisions; pseudo-branching decisions have to be in the ending of the bound change
+    * array
+    */
+   for( i = nboundchgs-1; i >= 0; i--)
+   {
+      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
+         (*npseudobranchvars)++;
+      else
+         break;
+   }
+
+#ifndef NDEBUG
+   /* check that the remaining bound change are only branching decisions */
+   for( i = nboundchgs - (*npseudobranchvars) - 1; i >= 0; i--)
+      assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING); /*lint !e641*/
+#endif
+
+   /* if the arrays have enough space store the branching decisions */
+   if( pseudobranchvarssize >= *npseudobranchvars )
+   {
+      for( i = nboundchgs-(*npseudobranchvars); i < nboundchgs; i++)
+      {
+         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
+         pseudobranchvars[i-nboundchgs+(*npseudobranchvars)] = boundchgs[i].var;
+         boundtypes[i-nboundchgs+(*npseudobranchvars)] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+         pseudobranchbounds[i-nboundchgs+(*npseudobranchvars)] = boundchgs[i].newbound;
+      }
+   }
+}
+
+/** a node is called pseudo-branched iff the number of bound changed is greater than the number of branching decisions */
+SCIP_Bool SCIPnodeIsPseudoBranched(
+   SCIP_NODE*            node                /**< node */
+)
+{
+   assert(node != NULL);
+
+   return ( SCIPnodeGetNPseudoBranchings(node) == 0 ? FALSE : TRUE );
 }
 
 /** gets the parent node of a node in the branch-and-bound tree, if any */

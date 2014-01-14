@@ -53,6 +53,7 @@
 #include "scip/sol.h"
 #include "scip/stat.h"
 #include "scip/tree.h"
+#include "scip/struct_scip.h"
 
 #include "scip/debug.h"
 
@@ -6972,17 +6973,25 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    )
 {
+   SCIP_EVENT event;
+
    /* apply bound change to the LP data */
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-      return SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound);
+      SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
+      break;
    case SCIP_BOUNDTYPE_UPPER:
-      return SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound);
+      SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
+      break;
    default:
       SCIPerrorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
+
+
+
+   return SCIP_OKAY;
 }
 
 /** appends LBTIGHTENED or LBRELAXED event to the event queue */

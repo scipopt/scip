@@ -618,7 +618,9 @@ int SCIPqueueNElems(
    assert(queue->firstfree >= 0 && queue->firstused < queue->size);
    assert(queue->firstused > -1 || queue->firstfree == 0);
 
-   if( queue->firstused < queue->firstfree )
+   if( queue->firstused == -1 )
+      return 0;
+   else if( queue->firstused < queue->firstfree )
       return queue->firstfree - queue->firstused;
    else if( queue->firstused == queue->firstfree )
       return queue->size;

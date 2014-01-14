@@ -16100,6 +16100,10 @@ SCIP_NODE* SCIPgetRootNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+int SCIPgetEffectiveRootDepth(
+   SCIP*                scip                /**< SCIP data structure */
+   );
+
 /** returns whether the current node is already solved and only propagated again
  *
  *  @return TRUE is returned if \SCIP performance repropagation, otherwise FALSE.

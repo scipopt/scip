@@ -11756,8 +11756,8 @@ SCIP_RETCODE SCIPtransformProb(
    if( nfeassols > 0 )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-         "%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
-         nfeassols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+         "%d/%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
+         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
    }
    else if( ncandsols > 0 )
    {
@@ -12840,7 +12840,7 @@ SCIP_RETCODE freeTransform(
    stored = TRUE;
    
    /* copy best primal solution to original solution candidate list */
-   for( s = 0; s < nsols && stored; ++s )
+   for( s = 0; s < nsols; ++s )
    {
       SCIP_SOL* sol;
 
@@ -31365,8 +31365,7 @@ SCIP_RETCODE SCIPaddSol(
       SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
 
-
-      if( *stored && (bestsol != SCIPgetBestSol(scip)) )
+      if( bestsol != SCIPgetBestSol(scip) )
       {
          SCIPstoreSolutionGap(scip);
       }
@@ -32079,6 +32078,16 @@ SCIP_NODE* SCIPgetRootNode(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRootNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIPtreeGetRootNode(scip->tree);
+}
+
+/** get the depth of the effective root node (i.e. the first depth level of a node with at least two children) */
+int SCIPgetEffectiveRootDepth(
+   SCIP*                scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetEffectiveRootDepth", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeGetEffectiveRootDepth(scip->tree);
 }
 
 /** returns whether the current node is already solved and only propagated again

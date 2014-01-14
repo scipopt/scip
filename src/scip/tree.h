@@ -162,6 +162,19 @@ SCIP_RETCODE SCIPnodeDelCons(
    SCIP_CONS*            cons                /**< constraint to locally delete */
    );
 
+extern
+SCIP_RETCODE SCIPnodeGetAddedcons(
+   SCIP*                scip,
+   SCIP_NODE*           node,
+   SCIP_CONS**          addecons
+   );
+
+extern
+int SCIPnodeGetNAddedcons(
+   SCIP*                scip,
+   SCIP_NODE*           node
+   );
+
 /** adds bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
  *  at most one of infercons and inferprop may be non-NULL
@@ -297,8 +310,32 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
+extern
+void SCIPnodeGetPseudoBranchings(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            pseudobranchvars,   /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            pseudobranchbounds, /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
+   int*                  npseudobranchvars,  /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   pseudobranchvarssize/**< available slots in arrays */
+   );
 
+extern
+int SCIPnodeGetNDomchg(
+   SCIP_NODE*            node                /**< node */
+   );
 
+extern
+SCIP_Bool SCIPnodeIsPseudoBranched(
+   SCIP_NODE*            node                /**< node */
+   );
+
+extern
+int SCIPnodeGetNPseudoBranchings(
+   SCIP_NODE*            node
+   );
 
 /*
  * Tree methods

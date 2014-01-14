@@ -4064,6 +4064,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
    nextnode = NULL;
    unbounded = FALSE;
+   eventthrown = FALSE;
 
    while( !SCIPsolveIsStopped(set, stat, TRUE) && !(*restart) )
    {
