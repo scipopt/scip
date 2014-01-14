@@ -3305,6 +3305,8 @@ SCIP_RETCODE propAndSolve(
       /* if an error occured during LP solving, switch to pseudo solution */
       if( *lperror )
       {
+         assert(SCIPtreeHasFocusNodeLP(tree));
+
          if( forcedlpsolve )
          {
             SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" cannot be dealt with\n",
@@ -3615,7 +3617,7 @@ SCIP_RETCODE solveNode(
       }
 
       /* check if heuristics leave us with an invalid LP */
-      if( lp->resolvelperror )
+      if( lp->resolvelperror && SCIPtreeHasFocusNodeLP(tree) )
       {
          if( forcedlpsolve )
          {
