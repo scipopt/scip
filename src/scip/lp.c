@@ -14192,8 +14192,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, dfeas=%d) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-               tightprimfeastol = !primalfeasible;
-               tightdualfeastol = !dualfeasible;
+               tightprimfeastol = tightprimfeastol || !primalfeasible;
+               tightdualfeastol = tightdualfeastol || !dualfeasible;
                goto SOLVEAGAIN;
             }
             else if( !fromscratch && !wasfromscratch && simplex )
