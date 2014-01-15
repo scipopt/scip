@@ -279,6 +279,7 @@ core:
 
 Makefile:
 - default flag for ZIMPL is now "auto", which means that it is built if and only if GMP is available (GMP=true)
+- fixed make install for older Mac systems where install command does not have option -t
 
 
 SCIP version 3.0.3
