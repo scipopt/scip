@@ -986,18 +986,27 @@ endif
 
 .PHONY: errorhints
 errorhints:
+		@echo
+		@echo "build failed"
+ifeq ($(READLINE),true)
+		@echo "- you used READLINE=true: if readline is not available, try building with READLINE=false"
+endif
+ifeq ($(ZLIB),true)
+		@echo "- you used ZLIB=true: if zlib is not available, try building with ZLIB=false"
+endif
+ifeq ($(GMP),true)
+		@echo "- you used GMP=true: if gmp is not available, try building with GMP=false (note that this will deactivate Zimpl support)"
+endif
 ifeq ($(GMP),false)
 ifeq ($(LPS),spx)
-		@echo
-		@echo "you used GMP=false with LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
-		@echo
+		@echo "- you used GMP=false with LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 ifeq ($(LPS),spx2)
-		@echo
-		@echo "you used GMP=false with LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
-		@echo
+		@echo "- you used GMP=false with LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 endif
+		@echo "for help on building SCIP consult the INSTALL file"
+		@echo
 
 # --- EOF ---------------------------------------------------------------------
 # DO NOT DELETE
