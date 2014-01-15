@@ -824,7 +824,7 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: makesciplibfile
-makesciplibfile: checklpsdefine touchexternal | $(LIBDIR) $(LIBOBJSUBDIRS) $(SCIPLIBFILE)
+makesciplibfile: checkdefines touchexternal | $(LIBDIR) $(LIBOBJSUBDIRS) $(SCIPLIBFILE)
 
 $(SCIPLIBFILE):	$(SCIPLIBOBJFILES)
 		@echo "-> generating library $@"
@@ -978,10 +978,35 @@ ifeq ($(MAKESOFTLINKS), true)
 			fi'
 endif
 
-.PHONY: checklpsdefine
-checklpsdefine:
+.PHONY: checkdefines
+checkdefines:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
+endif
+ifneq ($(GMP),true)
+ifneq ($(GMP),false)
+		$(error invalid GMP flag selected: GMP=$(GMP). Possible options are: true false)
+endif
+endif
+ifneq ($(ZIMPL),true)
+ifneq ($(ZIMPL),false)
+		$(error invalid ZIMPL flag selected: ZIMPL=$(ZIMPL). Possible options are: true false auto)
+endif
+endif
+ifneq ($(IPOPT),true)
+ifneq ($(IPOPT),false)
+		$(error invalid IPOPT flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+endif
+endif
+ifneq ($(READLINE),true)
+ifneq ($(READLINE),false)
+		$(error invalid READLINE flag selected: READLINE=$(READLINE). Possible options are: true false)
+endif
+endif
+ifneq ($(ZLIB),true)
+ifneq ($(ZLIB),false)
+		$(error invalid ZLIB flag selected: ZLIB=$(ZLIB). Possible options are: true false)
+endif
 endif
 
 .PHONY: errorhints
