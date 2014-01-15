@@ -22,7 +22,6 @@
 
 /**@todo should we only discard events catched from nodes that are not the current node's ancestors? */
 /**@todo improve computation of minactivity */
-/**@todo in exitpre, remove fixed, aggregated, negated, or multaggr vars from right-hand sides */
 /**@todo for multaggr vars on left-hand side, create a linear constraint, probably in exitpre */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1999,6 +1998,65 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 }
 
 
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+static
+SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIPdebugMessage("propexitpre in problem <%s>: removing fixed, aggregated, negated, and multi-aggregated variables from right-hand side\n",
+      SCIPgetProbName(scip));
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* there should be no events on the right-hand side variables */
+   assert(propdata->lbevents == NULL);
+   assert(propdata->ubevents == NULL);
+
+   for( i = 0; i < propdata->ngenvbounds; )
+   {
+      GENVBOUND* genvbound;
+      int requiredsize;
+
+      genvbound = propdata->genvboundstore[i];
+      assert(genvbound != NULL);
+
+      /* replace non-active by active variables and update constant */
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, genvbound->ncoefs, &genvbound->constant, &requiredsize, TRUE) );
+
+      /* if space was not enough we need to resize the buffers */
+      if( requiredsize > genvbound->ncoefs )
+      {
+         /* reallocate memory for arrays in genvbound to free unused memory */
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(genvbound->coefs), requiredsize) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(genvbound->vars), requiredsize) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize, TRUE) );
+         assert(requiredsize <= genvbound->ncoefs);
+      }
+
+      /* if the resulting genvbound is trivial, remove it */
+      if( genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef) )
+      {
+         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
+         --(propdata->ngenvbounds);
+         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
+      }
+      else
+         ++i;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecGenvbounds)
@@ -2273,6 +2331,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
 
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
+   SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
          PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
