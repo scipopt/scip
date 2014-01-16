@@ -5212,6 +5212,8 @@ SCIP_RETCODE addCliques(
    int                   nconss,             /**< number of constraints in constraint set */
    int                   firstclique,        /**< first constraint to start to add cliques */
    int                   lastclique,         /**< last constraint to start to add cliques */
+   int*                  naddconss,          /**< pointer to count number of added constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  nchgbds,            /**< pointer to count number of chnaged bounds */
    SCIP_Bool*            cutoff              /**< pointer to store if the problem is infeasible due to a fixing */
    )
@@ -5237,8 +5239,17 @@ SCIP_RETCODE addCliques(
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, &nlocalbdchgs, cutoff) );
+      *nchgbds += nlocalbdchgs;
+
+      if( *cutoff )
+         return SCIP_OKAY;
+
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
 
       if( !consdata->cliqueadded && consdata->nvars >= 2 )
       {
@@ -5510,9 +5521,13 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
       /* update the variables */
       SCIP_CALL( applyFixings(scip, cons, &nlocaladdconss, ndelconss, nfixedvars, cutoff) );
-      assert(!SCIPconsIsDeleted(cons));
-      assert(nlocaladdconss == 0);
-      assert(!*cutoff);
+
+      if( *cutoff )
+         break;
+
+      /* due to resolving multi-aggregations a constraint can become deleted */
+      if( SCIPconsIsDeleted(cons) )
+         continue;
 
       SCIP_CALL( processFixings(scip, cons, cutoff, nfixedvars, &addcut, &mustcheck) );
       assert(!addcut);
@@ -5974,11 +5989,15 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             posincons[image - 1] = -1;
             SCIP_CALL( SCIPhashmapRemove(vartoindex, (void*) SCIPvarGetNegatedVar(var)) );
 
-            /* if two variables in one constraint might be multi-aggregated, it might happen that this constraint was already removed */
+            /* if two variables in one constraint might be multi-aggregated, it might happen that this constraint was
+             * already removed
+             */
             if( SCIPconsIsDeleted(usefulconss[consindex]) )
                continue;
 
-            /* we already remove a variable before, so our positioning information might be wrong, so we need to walk over all variables again */
+            /* we already remove a variable before, so our positioning information might be wrong, so we need to walk
+             * over all variables again
+             */
             if( chgtype[consindex] )
             {
 #ifndef NDEBUG
@@ -6013,7 +6032,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
                assert(aggrconsdata != NULL);
 
-               /* @note it might have happened that we hav a variable at hand which exists actually in a set-packing
+               /* @note it might have happened that we have a variable at hand which exists actually in a set-packing
                 *       constraint and due to some other aggregation we increased the number of locks and reached this
                 *       part of the code, where we would expect only set-partitioning constraint in generally, so in
                 *       such a strange case we cannot aggregate anything
@@ -8024,12 +8043,14 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          *nchgcoefs == oldnchgcoefs && SCIPisPresolveFinished(scip) )
       {
          /* add cliques first before lifting variables */
-         SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, nchgbds, &cutoff) );
+         SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, naddconss, ndelconss, nchgbds, &cutoff) );
+
 	 if( cutoff )
 	 {
 	    *result = SCIP_CUTOFF;
 	    return SCIP_OKAY;
 	 }
+
          firstclique = nconss;
          lastclique = -1;
 
@@ -8093,7 +8114,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    }
 
    /* add cliques after lifting variables */
-   SCIP_CALL( addCliques(scip, conss, nconss, MIN(firstclique, nconss), MIN(lastclique, nconss), nchgbds, &cutoff) );
+   SCIP_CALL( addCliques(scip, conss, nconss, MIN(firstclique, nconss), MIN(lastclique, nconss), naddconss, ndelconss,
+         nchgbds, &cutoff) );
 
    if( cutoff )
       *result = SCIP_CUTOFF;
