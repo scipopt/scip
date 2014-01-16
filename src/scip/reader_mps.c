@@ -1872,19 +1872,23 @@ SCIP_RETCODE readQMatrix(
       SCIP_Real  lhs, rhs;
       SCIP_Real  minusone = -1.0;
 
-      /* standard settings for quadratic constraints: */
-      initial    = mpsi->initialconss;
+      /* determine settings; note that reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model
+       * constraints and variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary
+       * objective variable is loose with infinite best bound, triggering the problem that an LP that is unbounded
+       * because of loose variables with infinite best bound cannot be solved)
+       */
+      initial    = TRUE;
       separate   = TRUE;
       enforce    = TRUE;
       check      = TRUE;
       propagate  = TRUE;
       local      = FALSE;
       modifiable = FALSE;
-      dynamic    = mpsi->dynamicconss;
-      removable  = mpsi->dynamicrows;
+      dynamic    = FALSE;
+      removable  = FALSE;
 
       SCIP_CALL( SCIPcreateVar(scip, &qmatrixvar, "qmatrixvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-            SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, qmatrixvar) );
 
       if( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )

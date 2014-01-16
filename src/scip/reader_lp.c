@@ -1262,7 +1262,12 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
 
-      /* insert dummy variable and constraint to represent quadratic part of objective */
+      /* insert dummy variable and constraint to represent quadratic part of objective; note that
+       * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and variables, not
+       * to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective variable is loose
+       * with infinite best bound, triggering the problem that an LP that is unbounded because of loose variables with
+       * infinite best bound cannot be solved)
+       */
       if( nquadcoefs > 0 )
       {
          SCIP_VAR*  quadobjvar;
@@ -1272,7 +1277,7 @@ SCIP_RETCODE readObjective(
          SCIP_Real  minusone;
 
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if( lpinput->objsense == SCIP_OBJSENSE_MINIMIZE )
@@ -1288,7 +1293,7 @@ SCIP_RETCODE readObjective(
 
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               lpinput->initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, lpinput->dynamicconss, lpinput->dynamicrows) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));

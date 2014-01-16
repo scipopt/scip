@@ -1249,16 +1249,20 @@ SCIP_RETCODE readObjective(
 
    assert(pipinput != NULL);
 
-   /* determine settings */
-   initial = pipinput->initialconss;
+   /* determine settings; note that reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model
+    * constraints and variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary
+    * objective variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
+    * of loose variables with infinite best bound cannot be solved)
+    */
+   initial = TRUE;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = pipinput->dynamicconss;
-   removable = pipinput->dynamicrows;
+   dynamic = FALSE;
+   removable = FALSE;
 
    /* read the objective coefficients */
    SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
@@ -1331,7 +1335,7 @@ SCIP_RETCODE readObjective(
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
@@ -1375,7 +1379,7 @@ SCIP_RETCODE readObjective(
          SCIP_Real  rhs;
 
          SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
 
          minusone = -1.0;

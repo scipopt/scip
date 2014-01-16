@@ -1140,18 +1140,25 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          if( *objcons == NULL )
          {
-            /* create constraint to hold quadratic part of objective */
+            /* create constraint to hold quadratic part of objective; note that
+             * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and
+             * variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective
+             * variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
+             * of loose variables with infinite best bound cannot be solved)
+             */
+
             SCIP_VAR* objvar;
             SCIP_Real minusone;
 
-            SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+                  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, objvar) );
 
             minusone = -1.0;
             SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "objcons", 1, &objvar, &minusone, 0, NULL, NULL, NULL,
                   SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
                   SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-                  initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
             *objconstype = QUADRATIC;
 
             SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
@@ -1974,12 +1981,19 @@ SCIP_RETCODE readNonlinearExprs(
       /* add expression tree to objective or constraint */
       if( considx == -1 && *objcons == NULL )
       {
-         /* create constraint to hold nonlinear part of objective */
+         /* create constraint to hold nonlinear part of objective; note that
+          * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and variables,
+          * not to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective variable is
+          * loose with infinite best bound, triggering the problem that an LP that is unbounded because of loose
+          * variables with infinite best bound cannot be solved)
+          */
+
          SCIP_VAR* objvar;
          SCIP_Real minusone;
          SCIP_Real one;
 
-         SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, objvar) );
 
          minusone = -1.0;
