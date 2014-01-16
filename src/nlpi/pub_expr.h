@@ -671,7 +671,7 @@ SCIP_RETCODE SCIPexprParse(
    const char*           str,                /**< pointer to the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< buffer to store number of variables */
-   char*                 varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   int*                  varnames            /**< buffer to store variable names, prefixed by index (as int) */
    );
 
 /**@} */

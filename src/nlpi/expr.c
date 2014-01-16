@@ -1238,6 +1238,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
             /* @todo if there is an even number of factors in factormonomial that are negative, then they always multiply to something positive
              * however, we cannot expand them as below, since we cannot compute the single powers
              * since we do not have the bounds on the factors here, we skip expansion in this case
+             * MINLPLib instances tls2,4,6 are examples where we are loosing here (do not recognize convexity)
              */
             *success = FALSE;
             return SCIP_OKAY;
@@ -4778,7 +4779,7 @@ SCIP_RETCODE exprparseReadVariable(
    const char**          str,                /**< pointer to the string to be parsed */
    SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
    int*                  nvars,              /**< running number of encountered variables so far */
-   char**                varnames,           /**< pointer to buffer to store new variable names */
+   int**                 varnames,           /**< pointer to buffer to store new variable names */
    SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
    SCIP_Real             coefficient,        /**< coefficient to be used when creating the expression */
    const char*           varnameendptr       /**< if a <varname> should be parsed, set this to NULL. Then, str points to the '<'
@@ -4830,14 +4831,14 @@ SCIP_RETCODE exprparseReadVariable(
       varidx = *nvars;
 
       /* store index of variable and variable name in varnames buffer */
-      *(int*)*varnames = varidx;
-      strcpy(*varnames + sizeof(int), varname);
+      **varnames = varidx;
+      strcpy((char*)(*varnames + 1), varname);
 
       /* insert variable into hashtable */
       SCIP_CALL( SCIPhashtableInsert(vartable, (void*)*varnames) );
 
       ++*nvars;
-      *varnames += sizeof(int) + strlen(varname) + 1;
+      *varnames += 1 + (strlen(varname) + 1) / sizeof(int) + 1;
    }
 
    /* create VARIDX expression, put into LINEAR expression if we have coefficient != 1 */
@@ -4909,7 +4910,7 @@ SCIP_RETCODE exprParse(
    int                   length,             /**< length of the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< running number of encountered variables so far */
-   char**                varnames,           /**< pointer to buffer to store new variable names */
+   int**                 varnames,           /**< pointer to buffer to store new variable names */
    SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
    int                   recursiondepth      /**< current recursion depth */
    )
@@ -7921,7 +7922,7 @@ SCIP_RETCODE SCIPexprParse(
    const char*           str,                /**< pointer to the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< buffer to store number of variables */
-   char*                 varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   int*                  varnames            /**< buffer to store variable names, prefixed by index (as int) */
    )
 {
    SCIP_HASHTABLE* vartable;

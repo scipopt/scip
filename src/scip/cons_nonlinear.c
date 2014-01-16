@@ -8458,8 +8458,8 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    char*       nonconstendptr;
    const char* exprstart;
    const char* exprlastchar;
-   char* varnames;
-   char* curvarname;
+   int* varnames;
+   int* curvarname;
    int i;
 
    SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
@@ -8583,7 +8583,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       }
    }
 
-   /* alloc some space for variable names incl. indices; shouldn't be longer than expression string */
+   /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
 
    /* parse expression */
@@ -8595,17 +8595,17 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    curvarname = varnames;
    for( i = 0; i < nvars; ++i )
    {
-      assert(*(int*)curvarname == i);
-      curvarname += sizeof(int);
+      assert(*curvarname == i);
+      ++curvarname;
 
-      exprvars[i] = SCIPfindVar(scip, curvarname);
+      exprvars[i] = SCIPfindVar(scip, (char*)curvarname);
       if( exprvars[i] == NULL )
       {
-         SCIPerrorMessage("Unknown SCIP variable <%s> encountered in expression.\n", curvarname);
+         SCIPerrorMessage("Unknown SCIP variable <%s> encountered in expression.\n", (char*)curvarname);
          return SCIP_READERROR;
       }
 
-      curvarname += strlen(curvarname) + 1;
+      curvarname += (strlen((char*)curvarname) + 1)/sizeof(int) + 1;
    }
 
    /* create expression tree */
