@@ -2134,7 +2134,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
          /* switch off preprocessing */
          CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
-         SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
          retval = GRBoptimize(lpi->grbmodel);
          switch( retval  )
@@ -2152,8 +2151,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
          CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
          SCIPdebugMessage(" -> Gurobi returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
-         /* switch on preprocessing again */
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
+         /* reset parameters */
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, presolve) );
       }
 
       if( lpi->solstat == GRB_INF_OR_UNBD )
@@ -3712,12 +3711,12 @@ SCIP_RETCODE SCIPlpiGetState(
 
    if ( success )
    {
-      SCIPdebugMessage("storing Gurobi LPI state in %p (%d cols, %d rows)\n", (void*) *lpistate, ncols, nrows);
-
       /* allocate lpistate data */
       SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows) );
       (*lpistate)->ncols = ncols;
       (*lpistate)->nrows = nrows;
+
+      SCIPdebugMessage("stored Gurobi LPI state in %p (%d cols, %d rows)\n", (void*) *lpistate, ncols, nrows);
 
       /* pack LPi state data */
       lpistatePack(*lpistate, lpi->cstat, lpi->rstat);
