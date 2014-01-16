@@ -5239,6 +5239,7 @@ SCIP_RETCODE addCliques(
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      nlocalbdchgs = 0;
       SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, &nlocalbdchgs, cutoff) );
       *nchgbds += nlocalbdchgs;
 
