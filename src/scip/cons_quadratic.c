@@ -6818,7 +6818,7 @@ SCIP_RETCODE generateCut(
        * round almost integral coefficients in integers, since this will happen when adding coefs to row (see comments below)
        */
       refactivitylinpart = 0.0;
-#if !defined(SCIP_DEBUG) && defined(NDEBUG)
+#if !defined(SCIP_DEBUG)
       if( !SCIPisInfinity(scip, -minefficacy) || efficacy != NULL )
 #endif
          for( j = 0; j < consdata->nlinvars; ++j )
