@@ -2328,7 +2328,7 @@ SCIP_RETCODE presolveCumulativeCondition(
    /* use presolving of cumulative constraint handler to process cumulative condition */
    SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
          consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
-         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
+         irrelevants, nfixedvars, nchgsides, cutoff) );
 
    /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
     * consdataDeletePos()
