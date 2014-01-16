@@ -11975,20 +11975,31 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 
    while( SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL )
    {
-      /* if the variable has no parent variables, it was generated during solving and has no corresponding original var */
+      /* if the variable has no parent variables, it was generated during solving and has no corresponding original
+       * var
+       */
       if( (*var)->nparentvars == 0 )
       {
-         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED  
-            && SCIPvarGetStatus((*var)->negatedvar) == SCIP_VARSTATUS_ORIGINAL )
+         /* negated variables do not need to have a parent variables, and negated variables can exist in original
+          * space
+          */
+         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED )
          {
             *scalar *= -1.0;
             *constant -= (*var)->data.negate.constant * (*scalar);
             *var = (*var)->negatedvar;
+
+            continue;
          }
+         /* if the variables does not have any parent the variables was created during solving and has no original
+          * counterpart
+          */
          else
+         {
             *var = NULL;
-         
-         return SCIP_OKAY;
+
+            return SCIP_OKAY;
+         }
       }
 
       /* follow the link to the first parent variable */
@@ -11999,14 +12010,14 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
       {
       case SCIP_VARSTATUS_ORIGINAL:
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + b  ->  y = (x-b)/a,  s*y + c = (s/a)*x + c-b*s/a */
          assert(parentvar->data.aggregate.var == *var);
          assert(parentvar->data.aggregate.scalar != 0.0);
@@ -12026,7 +12037,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
          SCIPerrorMessage("unknown variable status\n");
          return SCIP_INVALIDDATA;
       }
-      
+
       assert( parentvar != NULL );
       *var = parentvar;
    }
