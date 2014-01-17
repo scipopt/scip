@@ -2748,7 +2748,6 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_MINUS:
          case SCIP_EXPR_SUM:
          case SCIP_EXPR_LINEAR:
-         {
             /* children have conflicting curvature, we can handle such sums in cons_nonlinear
              * thus, turn node into variable, if it has nonlinear parents */
             if( havenonlinparent )
@@ -2759,7 +2758,6 @@ SCIP_RETCODE reformulate(
             }
             ++i;
             break;
-         }
 
          /* quadratic operands */
          case SCIP_EXPR_MUL:
@@ -3733,49 +3731,42 @@ SCIP_RETCODE computeViolation(
 
    switch( conshdlrdata->scaling )
    {
-      case 'o' :
-      {
-         /* no scaling */
-         break;
-      }
+   case 'o' :
+      /* no scaling */
+      break;
 
-      case 'g' :
+   case 'g' :
+      /* scale by sup-norm of gradient in current point
+       * do only if we are linear or have expression trees, thus, not during presolve
+       */
+      if( (consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0) && (consdata->exprgraphnode == NULL || consdata->nexprtrees > 0) )
       {
-         /* scale by sup-norm of gradient in current point
-          * do only if we are linear or have expression trees, thus, not during presolve
-          */
-         if( (consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0) && (consdata->exprgraphnode == NULL || consdata->nexprtrees > 0) )
+         SCIP_Real norm;
+
+         SCIP_CALL( getGradientMaxElement(scip, conshdlrdata->exprinterpreter, cons, sol, FALSE, &norm) );
+
+         if( norm > 1.0 && !SCIPisInfinity(scip, norm) )
          {
-            SCIP_Real norm;
-
-            SCIP_CALL( getGradientMaxElement(scip, conshdlrdata->exprinterpreter, cons, sol, FALSE, &norm) );
-
-            if( norm > 1.0 && !SCIPisInfinity(scip, norm) )
-            {
-               consdata->lhsviol /= norm;
-               consdata->rhsviol /= norm;
-            }
+            consdata->lhsviol /= norm;
+            consdata->rhsviol /= norm;
          }
-         break;
       }
+      break;
 
-      case 's' :
-      {
-         /* scale by left/right hand side of constraint */
-         if( consdata->lhsviol > 0.0 )
-            consdata->lhsviol /= MAX(1.0, REALABS(consdata->lhs));
+   case 's' :
+      /* scale by left/right hand side of constraint */
+      if( consdata->lhsviol > 0.0 )
+         consdata->lhsviol /= MAX(1.0, REALABS(consdata->lhs));
 
-         if( consdata->rhsviol > 0.0 )
-            consdata->rhsviol /= MAX(1.0, REALABS(consdata->rhs));
+      if( consdata->rhsviol > 0.0 )
+         consdata->rhsviol /= MAX(1.0, REALABS(consdata->rhs));
 
-         break;
-      }
+      break;
 
-      default :
-      {
-         SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-         SCIPABORT();
-      }
+   default :
+      SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+      SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -4988,20 +4979,16 @@ SCIP_RETCODE generateCut(
          switch( SCIPexprtreeGetNVars(consdata->exprtrees[i]) )
          {
          case 1:
-         {
             SCIP_CALL( addConcaveEstimatorUnivariate(scip, cons, i, *row, &success) );
             break;
-         }
+
          case 2:
-         {
             SCIP_CALL( addConcaveEstimatorBivariate(scip, cons, i, x, *row, &success) );
             break;
-         }
+
          default:
-         {
             SCIP_CALL( addConcaveEstimatorMultivariate(scip, cons, i, x, *row, &success) );
             break;
-         }
          }
          if( !success )
          {
@@ -5217,30 +5204,33 @@ SCIP_RETCODE separatePoint(
 
          switch( conshdlrdata->scaling )
          {
-            case 'o' :
-               efficacy = -feasibility;
-               break;
-            case 'g' :
-               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-                * this avoid finding cuts efficient which are only very slightly violated
-                * CPLEX does not seem to scale row coefficients up too
-                * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-                */
-               norm = SCIPgetRowMaxCoef(scip, row);
-               efficacy = -feasibility / MAX(1.0, norm);
-               break;
-            case 's' :
-            {
-               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-               SCIP_Real minval = MIN(abslhs, absrhs);
+         case 'o' :
+            efficacy = -feasibility;
+            break;
 
-               efficacy = -feasibility / MAX(1.0, minval);
-               break;
-            }
-            default:
-               efficacy = SCIP_INVALID;
-               SCIPABORT();
+         case 'g' :
+            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too also
+             * we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
+             * scaling) */
+            norm = SCIPgetRowMaxCoef(scip, row);
+            efficacy = -feasibility / MAX(1.0, norm);
+            break;
+
+         case 's' :
+         {
+            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+            SCIP_Real minval = MIN(abslhs, absrhs);
+
+            efficacy = -feasibility / MAX(1.0, minval);
+            break;
+         }
+
+         default:
+            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+            SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
 
          if( SCIPisGT(scip, efficacy, minefficacy) ||
@@ -5360,27 +5350,31 @@ SCIP_RETCODE addLinearizationCuts(
          efficacy = -SCIPgetRowLPFeasibility(scip, row);
          switch( conshdlrdata->scaling )
          {
-            case 'o' :
-               break;
-            case 'g' :
-               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-                * this avoid finding cuts efficient which are only very slightly violated
-                * CPLEX does not seem to scale row coefficients up too
-                * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-                */
-               norm = SCIPgetRowMaxCoef(scip, row);
-               efficacy /= MAX(1.0, norm);
-               break;
-            case 's' :
-            {
-               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-               SCIP_Real minval = MIN(abslhs, absrhs);
+         case 'o' :
+            break;
 
-               efficacy /= MAX(1.0, minval);
-               break;
-            }
-            default: SCIPABORT();
+         case 'g' :
+            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too also
+             * we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
+             * scaling) */
+            norm = SCIPgetRowMaxCoef(scip, row);
+            efficacy /= MAX(1.0, norm);
+            break;
+
+         case 's' :
+         {
+            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+            SCIP_Real minval = MIN(abslhs, absrhs);
+
+            efficacy /= MAX(1.0, minval);
+            break;
+         }
+         default:
+            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+            SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
 
          if( efficacy >= minefficacy )

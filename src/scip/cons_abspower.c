@@ -2035,54 +2035,48 @@ SCIP_RETCODE computeViolation(
 
    switch( conshdlrdata->scaling )
    {
-      case 'o' :
+   case 'o' :
+      /* no scaling */
+      break;
+
+   case 'g' :
+      /* scale by sup-norm of gradient in current point */
+      if( consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0 )
       {
-         /* no scaling */
+         SCIP_Real norm;
+         norm = getGradientMaxElement(scip, cons, sol);
+         if( norm > 1.0 )
+         {
+            consdata->lhsviol /= norm;
+            consdata->rhsviol /= norm;
+         }
          break;
       }
 
-      case 'g' :
-      {
-         /* scale by sup-norm of gradient in current point */
-         if( consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0 )
-         {
-            SCIP_Real norm;
-            norm = getGradientMaxElement(scip, cons, sol);
-            if( norm > 1.0 )
-            {
-               consdata->lhsviol /= norm;
-               consdata->rhsviol /= norm;
-            }
-         }
+   case 's' :
+   {
+      SCIP_Real absval;
 
-         break;
+      /* scale by left/right hand side of constraint */
+      if( consdata->lhsviol > 0.0 )
+      {
+         absval = REALABS(consdata->lhs);
+         consdata->lhsviol /= MAX(1.0, absval);
       }
 
-      case 's' :
+      if( consdata->rhsviol > 0.0 )
       {
-         SCIP_Real absval;
-
-         /* scale by left/right hand side of constraint */
-         if( consdata->lhsviol > 0.0 )
-         {
-            absval = REALABS(consdata->lhs);
-            consdata->lhsviol /= MAX(1.0, absval);
-         }
-
-         if( consdata->rhsviol > 0.0 )
-         {
-            absval = REALABS(consdata->rhs);
-            consdata->rhsviol /= MAX(1.0, absval);
-         }
-
-         break;
+         absval = REALABS(consdata->rhs);
+         consdata->rhsviol /= MAX(1.0, absval);
       }
 
-      default :
-      {
-         SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-         SCIPABORT();
-      }
+      break;
+   }
+
+   default :
+      SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+      SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -3807,30 +3801,33 @@ SCIP_RETCODE separatePoint(
 
          switch( conshdlrdata->scaling )
          {
-            case 'o' :
-               efficacy = -feasibility;
-               break;
-            case 'g' :
-               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-                * this avoid finding cuts efficient which are only very slightly violated
-                * CPLEX does not seem to scale row coefficients up too
-                * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-                */
-               norm = SCIPgetRowMaxCoef(scip, row);
-               efficacy = -feasibility / MAX(1.0, norm);
-               break;
-            case 's' :
-            {
-               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-               SCIP_Real minval = MIN(abslhs, absrhs);
+         case 'o' :
+            efficacy = -feasibility;
+            break;
 
-               efficacy = -feasibility / MAX(1.0, minval);
-               break;
-            }
-            default:
-               efficacy = SCIP_INVALID;
-               SCIPABORT();
+         case 'g' :
+            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too
+             * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
+             * scaling) */
+            norm = SCIPgetRowMaxCoef(scip, row);
+            efficacy = -feasibility / MAX(1.0, norm);
+            break;
+
+         case 's' :
+         {
+            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+            SCIP_Real minval = MIN(abslhs, absrhs);
+
+            efficacy = -feasibility / MAX(1.0, minval);
+            break;
+         }
+
+         default:
+            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+            SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
 
          /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add */
@@ -3948,27 +3945,32 @@ SCIP_RETCODE addLinearizationCuts(
          efficacy = -SCIPgetRowLPFeasibility(scip, row);
          switch( conshdlrdata->scaling )
          {
-            case 'o' :
-               break;
-            case 'g' :
-               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-                * this avoid finding cuts efficient which are only very slightly violated
-                * CPLEX does not seem to scale row coefficients up too
-                * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-                */
-               norm = SCIPgetRowMaxCoef(scip, row);
-               efficacy /= MAX(1.0, norm);
-               break;
-            case 's' :
-            {
-               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-               SCIP_Real minval = MIN(abslhs, absrhs);
+         case 'o' :
+            break;
 
-               efficacy /= MAX(1.0, minval);
-               break;
-            }
-            default: SCIPABORT();
+         case 'g' :
+            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too
+             * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
+             * scaling) */
+            norm = SCIPgetRowMaxCoef(scip, row);
+            efficacy /= MAX(1.0, norm);
+            break;
+
+         case 's' :
+         {
+            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+            SCIP_Real minval = MIN(abslhs, absrhs);
+
+            efficacy /= MAX(1.0, minval);
+            break;
+         }
+
+         default:
+            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
+            SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
 
          if( efficacy >= minefficacy )
@@ -4495,7 +4497,6 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
    switch( SCIPexprgraphGetNodeOperator(node) )
    {
    case SCIP_EXPR_REALPOWER:
-   {
       /* realpower with exponent > 1.0 can always be signpower, since it assumes that argument is >= 0.0 */
       exponent = SCIPexprgraphGetNodeRealPowerExponent(node);
       if( exponent <= 1.0 )
@@ -4503,7 +4504,6 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
 
       assert(SCIPexprgraphGetNodeBounds(child).inf >= 0.0);
       break;
-   }
 
    case SCIP_EXPR_INTPOWER:
    {
@@ -4543,13 +4543,11 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
    }
 
    case SCIP_EXPR_SIGNPOWER:
-   {
       /* check if exponent > 1.0 */
       exponent = SCIPexprgraphGetNodeSignPowerExponent(node);
       if( exponent <= 1.0 )
          return SCIP_OKAY;
       break;
-   }
 
    case SCIP_EXPR_POLYNOMIAL:
    {
@@ -4839,7 +4837,6 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
    switch( SCIPexprgraphGetNodeOperator(node) )
    {
    case SCIP_EXPR_REALPOWER:
-   {
       /* realpower with exponent > 1.0 can always be absolute power, since it assumes that argument is >= 0.0
        * @todo we should also ensure that argument is >= 0.0
        */
@@ -4849,7 +4846,6 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
 
       assert(SCIPexprgraphGetNodeBounds(SCIPexprgraphGetNodeChildren(node)[0]).inf >= 0.0);
       break;
-   }
 
    case SCIP_EXPR_INTPOWER:
    {
@@ -4889,13 +4885,11 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
    }
 
    case SCIP_EXPR_SIGNPOWER:
-   {
       /* check if exponent > 1.0 */
       exponent = SCIPexprgraphGetNodeSignPowerExponent(node);
       if( exponent <= 1.0 )
          return SCIP_OKAY;
       break;
-   }
 
    case SCIP_EXPR_POLYNOMIAL:
    {
