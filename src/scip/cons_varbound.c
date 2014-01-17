@@ -935,24 +935,28 @@ SCIP_RETCODE separateCons(
    if( *result == SCIP_REDUCEDDOM )
       return SCIP_OKAY;
 
-   /* create LP relaxation if not yet existing */
-   if( consdata->row == NULL )
+   /* check constraint for feasibility and create row if constraint is violated */
+   if( !checkCons(scip, cons, sol, (sol != NULL)) )
    {
-      SCIP_CALL( createRelaxation(scip, cons) );
-   }
-   assert(consdata->row != NULL);
-
-   /* check non-LP rows for feasibility and add them as cut, if violated */
-   if( !SCIProwIsInLP(consdata->row) )
-   {
-      feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
-      if( SCIPisFeasNegative(scip, feasibility) )
+      /* create LP relaxation if not yet existing */
+      if( consdata->row == NULL )
       {
-         SCIP_Bool infeasible;
+         SCIP_CALL( createRelaxation(scip, cons) );
+      }
+      assert(consdata->row != NULL);
 
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
-         assert( ! infeasible );
-         *result = SCIP_SEPARATED;
+      /* check non-LP rows for feasibility and add them as cut, if violated */
+      if( !SCIProwIsInLP(consdata->row) )
+      {
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
+         if( SCIPisFeasNegative(scip, feasibility) )
+         {
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
+            assert( ! infeasible );
+            *result = SCIP_SEPARATED;
+         }
       }
    }
 
