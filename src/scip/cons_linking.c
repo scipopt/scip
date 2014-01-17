@@ -2898,11 +2898,11 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    int nbinvars;
    int v;
 
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a linking constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    (*valid) = TRUE;
@@ -3374,6 +3374,7 @@ SCIP_VAR* SCIPgetIntvarLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3397,6 +3398,7 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3438,6 +3440,7 @@ int SCIPgetNBinvarsLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return -1;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3458,6 +3461,7 @@ int* SCIPgetValsLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

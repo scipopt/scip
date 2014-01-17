@@ -2117,8 +2117,9 @@ int SCIPgetNVarsOr(
    {
       SCIPerrorMessage("constraint is not an or constraint\n");
       SCIPABORT();
+      return -1;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2137,6 +2138,7 @@ SCIP_VAR** SCIPgetVarsOr(
    {
       SCIPerrorMessage("constraint is not an or constraint\n");
       SCIPABORT();
+      return NULL;
    }
    
    consdata = SCIPconsGetData(cons);
@@ -2157,8 +2159,9 @@ SCIP_VAR* SCIPgetResultantOr(
    {
       SCIPerrorMessage("constraint is not a or constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    

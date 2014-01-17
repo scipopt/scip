@@ -2429,6 +2429,7 @@ int SCIPgetNVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return -1;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2453,6 +2454,7 @@ SCIP_VAR** SCIPgetVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2477,6 +2479,7 @@ SCIP_Real* SCIPgetWeightsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

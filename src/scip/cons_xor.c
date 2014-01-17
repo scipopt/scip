@@ -3521,6 +3521,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          default:
             SCIPerrorMessage("invalid comparison result\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
       }
 
@@ -4737,6 +4738,7 @@ int SCIPgetNVarsXor(
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
+      return -1;
    }
    
    consdata = SCIPconsGetData(cons);
@@ -4757,6 +4759,7 @@ SCIP_VAR** SCIPgetVarsXor(
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
+      return NULL;
    }
    
    consdata = SCIPconsGetData(cons);

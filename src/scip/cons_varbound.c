@@ -4599,6 +4599,7 @@ SCIP_Real SCIPgetLhsVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4619,6 +4620,7 @@ SCIP_Real SCIPgetRhsVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4639,6 +4641,7 @@ SCIP_VAR* SCIPgetVarVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4659,6 +4662,7 @@ SCIP_VAR* SCIPgetVbdvarVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4679,6 +4683,7 @@ SCIP_Real SCIPgetVbdcoefVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4699,8 +4704,9 @@ SCIP_Real SCIPgetDualsolVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4722,8 +4728,9 @@ SCIP_Real SCIPgetDualfarkasVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4747,6 +4754,7 @@ SCIP_ROW* SCIPgetRowVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

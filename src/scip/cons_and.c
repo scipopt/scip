@@ -3871,6 +3871,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
+      return SCIP_WRITEERROR;
    }
 
    /* create the variable mapping hash map */
@@ -4926,8 +4927,9 @@ int SCIPgetNVarsAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return -1;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4949,8 +4951,9 @@ SCIP_VAR** SCIPgetVarsAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4972,6 +4975,7 @@ SCIP_VAR* SCIPgetResultantAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4995,6 +4999,7 @@ SCIP_Bool SCIPisAndConsSorted(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return FALSE;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5018,6 +5023,7 @@ SCIP_RETCODE SCIPsortAndCons(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5049,6 +5055,7 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5080,6 +5087,7 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);

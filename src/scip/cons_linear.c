@@ -4175,6 +4175,7 @@ SCIP_RETCODE applyFixings(
          default:
             SCIPerrorMessage("unknown variable status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
       }
 
@@ -14955,6 +14956,7 @@ SCIP_Real SCIPgetLhsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -14978,6 +14980,7 @@ SCIP_Real SCIPgetRhsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15040,6 +15043,7 @@ int SCIPgetNVarsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return -1;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15063,6 +15067,7 @@ SCIP_VAR** SCIPgetVarsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15086,6 +15091,7 @@ SCIP_Real* SCIPgetValsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15110,6 +15116,7 @@ SCIP_Real SCIPgetActivityLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15137,6 +15144,7 @@ SCIP_Real SCIPgetFeasibilityLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15163,6 +15171,7 @@ SCIP_Real SCIPgetDualsolLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15189,6 +15198,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15217,6 +15227,7 @@ SCIP_ROW* SCIPgetRowLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

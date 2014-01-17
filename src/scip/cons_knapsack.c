@@ -13095,6 +13095,7 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return 0;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13147,6 +13148,7 @@ int SCIPgetNVarsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return -1;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13167,6 +13169,7 @@ SCIP_VAR** SCIPgetVarsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13187,6 +13190,7 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13207,6 +13211,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
    
    consdata = SCIPconsGetData(cons);
@@ -13230,8 +13235,9 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -13255,6 +13261,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
