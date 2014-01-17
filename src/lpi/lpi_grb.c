@@ -136,6 +136,7 @@ struct SCIP_LPi
    int                   rstatsize;          /**< size of rstat array */
    int                   iterations;         /**< number of iterations used in the last solving call */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             fromscratch;        /**< should each solve be performed without previous basis state? */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
@@ -1088,6 +1089,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->iterations = 0;
    (*lpi)->solisbasic = FALSE;
+   (*lpi)->fromscratch = FALSE;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->messagehdlr = messagehdlr;
    invalidateSolution(*lpi);
@@ -2086,6 +2088,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
+   if ( lpi->fromscratch )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBresetmodel(lpi->grbmodel) );
+   }
+
    SCIPdebugMessage("calling GRBoptimize() - primal\n");
 
    /* set primal simplex */
@@ -2191,6 +2198,11 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    invalidateSolution(lpi);
 
+   if ( lpi->fromscratch )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBresetmodel(lpi->grbmodel) );
+   }
+
    SCIPdebugMessage("calling GRBoptimize() - dual\n");
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
@@ -2289,6 +2301,11 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #endif
 
    invalidateSolution(lpi);
+
+   if ( lpi->fromscratch )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBresetmodel(lpi->grbmodel) );
+   }
 
    SCIPdebugMessage("calling GRBoptimize() - barrier\n");
 
@@ -2443,6 +2460,11 @@ SCIP_RETCODE lpiStrongbranch(
    SCIP_CALL( getBase(lpi, &success) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, &oldlb) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, &oldub) );
+
+   if ( lpi->fromscratch )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBresetmodel(lpi->grbmodel) );
+   }
 
    /* save old iteration limit and set iteration limit to strong branching limit */
    if( itlim > INT_MAX )
@@ -3983,7 +4005,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      return SCIP_PARAMETERUNKNOWN;
+      *ival = (int) lpi->fromscratch;
+      break;
    case SCIP_LPPAR_FASTMIP:
       /* maybe set perturbation */
       return SCIP_PARAMETERUNKNOWN;
@@ -4036,7 +4059,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    {
    case SCIP_LPPAR_FROMSCRATCH:
       assert(ival == TRUE || ival == FALSE);
-      return SCIP_PARAMETERUNKNOWN;
+      lpi->fromscratch = (SCIP_Bool) ival;
+      break;
    case SCIP_LPPAR_FASTMIP:
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
