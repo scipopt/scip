@@ -795,7 +795,7 @@ void invalidateSolution(
 
 /** converts SCIP's lhs/rhs pairs into Gurobi's sen/rhs */
 static
-void convertSides(
+SCIP_RETCODE convertSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
    const SCIP_Real*      lhs,                /**< left hand side vector */
@@ -839,14 +839,16 @@ void convertSides(
          /* Gurobi cannot handle ranged rows */
          SCIPerrorMessage("Gurobi cannot handle ranged rows.\n");
          SCIPABORT();
-         (*rngcount)++;
+         return SCIP_LPERROR;
+         /* (*rngcount)++; */
       }
    }
+   return SCIP_OKAY;
 }
 
 /** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs */
 static
-void reconvertBothSides(
+SCIP_RETCODE reconvertBothSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
    SCIP_Real*            lhs,                /**< buffer to store the left hand side vector */
@@ -860,7 +862,7 @@ void reconvertBothSides(
    assert(lhs != NULL);
    assert(rhs != NULL);
 
-   for(  i = 0; i < nrows; ++i )
+   for (i = 0; i < nrows; ++i)
    {
       switch( lpi->senarray[i] )
       {
@@ -882,14 +884,16 @@ void reconvertBothSides(
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
+         return SCIP_LPERROR;
       }
       assert(lhs[i] <= rhs[i]);
    }
+   return SCIP_OKAY;
 }
 
 /** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs, only storing the left hand side */
 static
-void reconvertLhs(
+SCIP_RETCODE reconvertLhs(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
    SCIP_Real*            lhs                 /**< buffer to store the left hand side vector */
@@ -901,7 +905,7 @@ void reconvertLhs(
    assert(nrows >= 0);
    assert(lhs != NULL);
 
-   for(  i = 0; i < nrows; ++i )
+   for (i = 0; i < nrows; ++i)
    {
       switch( lpi->senarray[i] )
       {
@@ -920,13 +924,15 @@ void reconvertLhs(
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
+         return SCIP_LPERROR;
       }
    }
+   return SCIP_OKAY;
 }
 
 /** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs, only storing the right hand side */
 static
-void reconvertRhs(
+SCIP_RETCODE reconvertRhs(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
    SCIP_Real*            rhs                 /**< buffer to store the right hand side vector */
@@ -938,7 +944,7 @@ void reconvertRhs(
    assert(nrows >= 0);
    assert(rhs != NULL);
 
-   for(  i = 0; i < nrows; ++i )
+   for (i = 0; i < nrows; ++i)
    {
       switch( lpi->senarray[i] )
       {
@@ -957,13 +963,15 @@ void reconvertRhs(
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
+         return SCIP_LPERROR;
       }
    }
+   return SCIP_OKAY;
 }
 
 /** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs */
 static
-void reconvertSides(
+SCIP_RETCODE reconvertSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
    SCIP_Real*            lhs,                /**< buffer to store the left hand side vector, or NULL */
@@ -971,11 +979,18 @@ void reconvertSides(
    )
 {
    if( lhs != NULL && rhs != NULL )
-      reconvertBothSides(lpi, nrows, lhs, rhs);
+   {
+      SCIP_CALL( reconvertBothSides(lpi, nrows, lhs, rhs) );
+   }
    else if( lhs != NULL )
-      reconvertLhs(lpi, nrows, lhs);
+   {
+      SCIP_CALL( reconvertLhs(lpi, nrows, lhs) );
+   }
    else if( rhs != NULL )
-      reconvertRhs(lpi, nrows, rhs);
+   {
+      SCIP_CALL( reconvertRhs(lpi, nrows, rhs) );
+   }
+   return SCIP_OKAY;
 }
 
 
@@ -1190,7 +1205,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   convertSides(lpi, nrows, lhs, rhs, &rngcount);
+   SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
    assert( rngcount == 0 );
 
    /* calculate column lengths */
@@ -1360,7 +1375,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   convertSides(lpi, nrows, lhs, rhs, &rngcount);
+   SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
    assert( rngcount == 0 );
 
    /* add rows to LP */
@@ -1527,7 +1542,7 @@ SCIP_RETCODE SCIPlpiChgSides(
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
-   convertSides(lpi, nrows, lhs, rhs, &rngcount);
+   SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
    assert( rngcount == 0 );
 
    /* change row sides */
@@ -1875,7 +1890,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
 
       /* convert sen and rhs into lhs/rhs tuples */
-      reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
+      SCIP_CALL( reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs) );
    }
 
    if( nnonz != NULL )
@@ -2025,7 +2040,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
 
    /* convert sen and rhs into lhs/rhs tuples */
-   reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss);
+   SCIP_CALL( reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss) );
 
    return SCIP_OKAY;
 }

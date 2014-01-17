@@ -35,6 +35,7 @@ fixed bugs:
 - nonlinear readers now create auxiliary objective variables and constraints always as initial and not removable
   in order to avoid unbounded LPs due to loose variables with infinite best bound
 - fixed bug in cons_superindicator concerning names of upgraded constraints
+- fixed several bugs in lpi_grb
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
