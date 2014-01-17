@@ -2143,6 +2143,10 @@ SCIP_RETCODE priceAndCutLoop(
             /* call propagators that are applicable during LP solving loop only if the node is not cut off */
             if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
             {
+               SCIP_Longint oldnboundchgs;
+
+               oldnboundchgs = stat->nboundchgs;
+
                SCIPdebugMessage(" -> LP solved: call propagators that are applicable during LP solving loop\n");
 
                SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
@@ -2171,6 +2175,23 @@ SCIP_RETCODE priceAndCutLoop(
                   SCIP_CALL( updatePrimalRay(blkmem, set, stat, transprob, primal, tree, lp, *lperror) );
 
                   mustprice = TRUE;
+               }
+               /* propagation might have changed the best bound of loose variables, thereby changing the loose objective value
+                * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
+                * bound of the node needs to be updated
+                */
+               else if( stat->nboundchgs > oldnboundchgs && !(*cutoff) && SCIPprobAllColsInLP(transprob, set, lp)
+                  && SCIPlpIsRelax(lp) )
+               {
+                  SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+                  SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
+                     SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
+
+                  /* update node estimate */
+                  SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+
+                  if( root && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+                     SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
                }
             }
          }
@@ -2320,6 +2341,23 @@ SCIP_RETCODE priceAndCutLoop(
                   /* propagate domains */
                   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
                   assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+                  /* propagation might have changed the best bound of loose variables, thereby changing the loose objective value
+                   * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
+                   * bound of the node needs to be updated
+                   */
+                  if( (!mustprice || mustsepa) && !(*cutoff) && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+                  {
+                     SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+                     SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
+                        SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
+
+                     /* update node estimate */
+                     SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+
+                     if( root && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+                        SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
+                  }
 
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
@@ -3244,6 +3282,23 @@ SCIP_RETCODE propAndSolve(
       /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
       if( stat->nboundchgs > oldnboundchgs )
       {
+         /* propagation might have changed the best bound of loose variables, thereby changing the loose objective value
+          * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
+          * bound of the node needs to be updated
+          */
+         if( !solvelp && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+         {
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+            SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
+               SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
+
+            /* update node estimate */
+            SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+
+            if( actdepth == 0 && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+               SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
+         }
+
          solverelax = TRUE;
          markRelaxsUnsolved(set, relaxation);
       }
