@@ -2218,6 +2218,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_Real lpobjval;
 
    assert(set != NULL);
+   assert(lp->flushed);
 
    /* in case of iteration or time limit, the LP value may not be a valid dual bound */
    /* @todo check for dual feasibility of LP solution and use sub-optimal solution if they are dual feasible */

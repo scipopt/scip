@@ -2342,23 +2342,6 @@ SCIP_RETCODE priceAndCutLoop(
                   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
                   assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-                  /* propagation might have changed the best bound of loose variables, thereby changing the loose objective value
-                   * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
-                   * bound of the node needs to be updated
-                   */
-                  if( (!mustprice || mustsepa) && !(*cutoff) && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
-                  {
-                     SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
-                     SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
-                        SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
-
-                     /* update node estimate */
-                     SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
-
-                     if( root && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-                        SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
-                  }
-
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
                   {
@@ -2384,6 +2367,24 @@ SCIP_RETCODE priceAndCutLoop(
                   if( !(*lperror) )
                   {
                      SCIP_Bool stalling;
+
+                     /* propagation might have changed the best bound of loose variables, thereby changing the loose objective value
+                      * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
+                      * bound of the node needs to be updated
+                      */
+                     if( stat->domchgcount != olddomchgcount && (!mustprice || mustsepa) && !(*cutoff)
+                        && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+                     {
+                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+                        SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
+                           SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
+
+                        /* update node estimate */
+                        SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+
+                        if( root && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+                           SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
+                     }
 
                      /* check if we are stalling
                       * If we have an LP solution, then we are stalling if
