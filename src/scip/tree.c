@@ -327,6 +327,8 @@ SCIP_RETCODE probingnodeUpdate(
    if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &probingnode->lpistate) );
+      probingnode->lpwasprimfeas = lp->primalfeasible;
+      probingnode->lpwasdualfeas = lp->dualfeasible;
    }
    else
       probingnode->lpistate = NULL;
