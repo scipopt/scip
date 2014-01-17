@@ -16381,6 +16381,11 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 {
    SCIP_Longint ndomreds;
 
+   assert(value != NULL);
+   assert(foundsol != NULL);
+   assert(cutoff != NULL);
+   assert(valid != NULL || *valid == FALSE);
+
    *foundsol = FALSE;
 
    /* check whether the strong branching child is already infeasible due to the bound change */
@@ -16473,7 +16478,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       {
          *value = SCIPinfinity(scip);
 
-         SCIPdebugMessage("%s branch of var <%s> detected infeasible during propagation\n", down ? "down" : "up", SCIPvarGetName(var));
+         SCIPdebugMessage("%s branch of var <%s> detected infeasible during propagation\n",
+            down ? "down" : "up", SCIPvarGetName(var));
       }
    }
 
@@ -16481,135 +16487,142 @@ SCIP_RETCODE performStrongbranchWithPropagation(
    if( !(*cutoff) )
    {
       SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, cutoff) );
+      assert(SCIPisLPRelax(scip));
 
       if( *cutoff )
+      {
+         assert(!(*lperror));
+         assert(SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
+            || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT ||
+            (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL
+               && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip))));
+
          *value = SCIPinfinity(scip);
-
-      switch( SCIPgetLPSolstat(scip) )
-      {
-      case SCIP_LPSOLSTAT_OPTIMAL:
-      {
-         *value = SCIPgetLPObjval(scip);
-
-         SCIPdebugMessage("probing LP solved to optimality, objective value: %16.9g\n", *value);
 
          if( valid != NULL )
             *valid = TRUE;
 
-         /* check the strong branching LP solution for feasibility */
-         if( scip->set->branch_checksbsol )
-         {
-            SCIP_SOL* sol;
-            SCIP_Bool rounded = TRUE;
-
-            /* start clock for strong branching solutions */
-            SCIPclockStart(scip->stat->sbsoltime, scip->set);
-
-            SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
-
-            /* try to round the strong branching solution */
-            if( scip->set->branch_roundsbsol )
-            {
-               SCIP_CALL( SCIProundSol(scip, sol, &rounded) );
-            }
-
-            /* check the solution for feasibility if rounding worked well (or was not tried) */
-            if( rounded )
-            {
-               SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPfreeSol(scip, &sol) );
-            }
-
-            if( *foundsol )
-            {
-               SCIPdebugMessage("found new solution in strong branching\n");
-
-               scip->stat->nsbsolsfound++;
-
-               if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
-                  *cutoff = TRUE;
-            }
-
-            /* stop clock for strong branching solutions */
-            SCIPclockStop(scip->stat->sbsoltime, scip->set);
-         }
-
-         break;
+         SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
+            down ? "down" : "up", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
       }
-      case SCIP_LPSOLSTAT_OBJLIMIT:
-      case SCIP_LPSOLSTAT_INFEASIBLE:
-         SCIPdebugMessage("probing LP %s\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT ? "hit objective limit" : "infeasible");
-
-         if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
-         {
-            SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
-               down ? "down" : "up", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
-            assert(*cutoff);
-         }
-         break;
-      case SCIP_LPSOLSTAT_ITERLIMIT:
-      case SCIP_LPSOLSTAT_TIMELIMIT:
+      else if( !(*lperror) )
       {
-         /* use LP value as estimate */
-         SCIP_LPI* lpi;
-         SCIP_Real objval;
-         SCIP_Real looseobjval;
-
-         SCIPdebugMessage("probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
-
-         /* we access the LPI directly, because when a time limit was hit, we cannot access objective value and dual
-          * feasibility using the SCIPlp... methods; we should try to avoid direct calls to the LPI, but this is rather
-          * uncritical here, because we are immediately after the SCIPsolveProbingLP() call, because we access the LPI
-          * read-only, and we check SCIPlpiWasSolved() first
-          */
-         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-
-         if( SCIPlpiWasSolved(lpi) )
+         switch( SCIPgetLPSolstat(scip) )
          {
-            SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-            looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
+         case SCIP_LPSOLSTAT_OPTIMAL:
+         {
+            *value = SCIPgetLPObjval(scip);
 
-            /* we need to compare the objective value obtained from the LPI with the infinity threshold of the LPI (not
-             * of SCIP); for the returned value, we must use SCIP's infinity value
-             */
-            if( SCIPlpiIsInfinity(lpi, objval) )
-               *value = SCIPinfinity(scip);
-            else if( SCIPisInfinity(scip, -looseobjval) )
-               *value = -SCIPinfinity(scip);
-            else
-               *value = objval + looseobjval;
+            SCIPdebugMessage("probing LP solved to optimality, objective value: %16.9g\n", *value);
 
-            if( SCIPlpiIsDualFeasible(lpi) )
-            {
+            if( valid != NULL )
                *valid = TRUE;
 
-               if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
-                  *cutoff = TRUE;
+            /* check the strong branching LP solution for feasibility */
+            if( scip->set->branch_checksbsol )
+            {
+               SCIP_SOL* sol;
+               SCIP_Bool rounded = TRUE;
+
+               /* start clock for strong branching solutions */
+               SCIPclockStart(scip->stat->sbsoltime, scip->set);
+
+               SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+
+               /* try to round the strong branching solution */
+               if( scip->set->branch_roundsbsol )
+               {
+                  SCIP_CALL( SCIProundSol(scip, sol, &rounded) );
+               }
+
+               /* check the solution for feasibility if rounding worked well (or was not tried) */
+               if( rounded )
+               {
+                  SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPfreeSol(scip, &sol) );
+               }
+
+               if( *foundsol )
+               {
+                  SCIPdebugMessage("found new solution in strong branching\n");
+
+                  scip->stat->nsbsolsfound++;
+
+                  if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
+                     *cutoff = TRUE;
+               }
+
+               /* stop clock for strong branching solutions */
+               SCIPclockStop(scip->stat->sbsoltime, scip->set);
             }
+
+            break;
          }
-         break;
+         case SCIP_LPSOLSTAT_ITERLIMIT:
+         case SCIP_LPSOLSTAT_TIMELIMIT:
+         {
+            /* use LP value as estimate */
+            SCIP_LPI* lpi;
+            SCIP_Real objval;
+            SCIP_Real looseobjval;
+
+            SCIPdebugMessage("probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
+
+            /* we access the LPI directly, because when a time limit was hit, we cannot access objective value and dual
+             * feasibility using the SCIPlp... methods; we should try to avoid direct calls to the LPI, but this is rather
+             * uncritical here, because we are immediately after the SCIPsolveProbingLP() call, because we access the LPI
+             * read-only, and we check SCIPlpiWasSolved() first
+             */
+            SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+
+            if( SCIPlpiWasSolved(lpi) )
+            {
+               SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+               looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
+
+               /* we need to compare the objective value obtained from the LPI with the infinity threshold of the LPI (not
+                * of SCIP); for the returned value, we must use SCIP's infinity value
+                */
+               if( SCIPlpiIsInfinity(lpi, objval) )
+                  *value = SCIPinfinity(scip);
+               else if( SCIPisInfinity(scip, -looseobjval) )
+                  *value = -SCIPinfinity(scip);
+               else
+                  *value = objval + looseobjval;
+
+               if( SCIPlpiIsDualFeasible(lpi) )
+               {
+                  *valid = TRUE;
+
+                  if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
+                     *cutoff = TRUE;
+               }
+            }
+            break;
+         }
+         case SCIP_LPSOLSTAT_ERROR:
+         case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+            *lperror = TRUE;
+            break;
+         case SCIP_LPSOLSTAT_NOTSOLVED: /* should only be the case for *cutoff = TRUE or *lperror = TRUE */
+         case SCIP_LPSOLSTAT_OBJLIMIT: /* in this case, *cutoff should be TRUE and we should not get here */
+         case SCIP_LPSOLSTAT_INFEASIBLE: /* in this case, *cutoff should be TRUE and we should not get here */
+         default:
+            SCIPerrorMessage("invalid LP solution status <%d>\n", SCIPgetLPSolstat(scip));
+            return SCIP_INVALIDDATA;
+         }  /*lint !e788*/
       }
-      case SCIP_LPSOLSTAT_NOTSOLVED:
-         assert(*cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
-
-         SCIPdebugMessage("probing LP infeasible\n");
-
-         if( conflict != NULL )
-            *conflict = TRUE;
-         break;
-      case SCIP_LPSOLSTAT_ERROR:
-      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         SCIPdebugMessage("error during probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
-         *lperror = TRUE;
-         break;
-      default:
-         SCIPerrorMessage("invalid LP solution status <%d>\n", SCIPgetLPSolstat(scip));
-         return SCIP_INVALIDDATA;
-      }  /*lint !e788*/
    }
+
+#ifndef NDEBUG
+   if( *lperror )
+   {
+      SCIPdebugMessage("error during strong branching probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
+   }
+#endif
 
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
@@ -16872,9 +16885,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             if( downinf != NULL )
                *downinf = TRUE;
 
-            if( downconflict != NULL )
+            if( downconflict != NULL &&
+               (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
             {
-               *downconflict = (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts);
+               *downconflict = TRUE;
             }
 
             if( !scip->set->branch_forceboth )
@@ -16907,9 +16921,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
             assert(upinf == NULL || (*upinf) == TRUE);
 
-            if( upconflict != NULL )
+            if( upconflict != NULL &&
+               (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
             {
-               *upconflict = (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts);
+               *upconflict = TRUE;
             }
 
             if( !scip->set->branch_forceboth )
