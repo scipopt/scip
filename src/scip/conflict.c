@@ -192,7 +192,7 @@ void confgraphWriteEdge(
 
 /** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
 static
-void confgraphCreate(
+SCIP_RETCODE confgraphCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -211,6 +211,7 @@ void confgraphCreate(
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
+      return SCIP_WRITEERROR;
    }
 
    SCIPgmlWriteOpening(confgraphfile, TRUE);
@@ -2630,7 +2631,7 @@ SCIP_RETCODE SCIPconflictInit(
 
 #ifdef SCIP_CONFGRAPH
    confgraphFree();
-   confgraphCreate(set, conflict);
+   SCIP_CALL( confgraphCreate(set, conflict) );
 #endif
 
    return SCIP_OKAY;

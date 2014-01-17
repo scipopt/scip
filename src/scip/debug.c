@@ -379,6 +379,7 @@ SCIP_RETCODE isSolutionInNode(
       {
          SCIPerrorMessage("wrong value in node hashmap\n");
          SCIPABORT();
+         return SCIP_ERROR;
       }
       *solcontained = *boolptr;
       return SCIP_OKAY;

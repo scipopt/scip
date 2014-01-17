@@ -1208,6 +1208,7 @@ void paramFree(
       break;
    default:
       SCIPerrorMessage("invalid parameter type\n");
+      /* just continuing the function in this case seems save */
       SCIPABORT();
    }
 
