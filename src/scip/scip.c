@@ -16492,10 +16492,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( *cutoff )
       {
          assert(!(*lperror));
-         assert(SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
-            || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT ||
-            (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL
-               && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip))));
 
          *value = SCIPinfinity(scip);
 
