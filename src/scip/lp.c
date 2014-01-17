@@ -604,7 +604,7 @@ SCIP_RETCODE SCIProwEnsureSize(
 
 
 #if 0
-static SCIP_Bool msgdisp = FALSE;
+static SCIP_Bool msgdisp_checkrow = FALSE;
 
 static
 void checkRow(
@@ -613,10 +613,10 @@ void checkRow(
 {
    int i;
 
-   if( !msgdisp )
+   if( !msgdisp_checkrow )
    {
-      SCIPmessagePrintWarning(messagehdlr, "LP ROW CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
-      msgdisp = TRUE;
+      printf("LP ROW CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      msgdisp_checkrow = TRUE;
    }
 
    /* validate sorting of LP part of row */
@@ -643,6 +643,81 @@ void checkRow(
 }
 #else
 #define checkRow(row) /**/
+#endif
+
+#if 0
+static
+void checkRowSqrnorm(
+   SCIP_ROW*             row
+   )
+{
+   SCIP_COL** cols;
+   SCIP_Real sqrnorm;
+   int c;
+
+   cols = row->cols;
+   assert(cols != NULL || row->len == 0);
+
+   sqrnorm = 0.0;
+
+   for( c = row->len - 1; c >= 0; --c )
+   {
+      if( cols[c]->lppos >= 0 )
+         sqrnorm += SQR(row->vals[c]);
+   }
+
+   assert(ABS(sqrnorm - row->sqrnorm) < 1e-06 * MAX(1.0,sqrnorm));
+}
+
+static
+void checkRowSumnorm(
+   SCIP_ROW*             row
+   )
+{
+   SCIP_COL** cols;
+   SCIP_Real sumnorm;
+   int c;
+
+   cols = row->cols;
+   assert(cols != NULL || row->len == 0);
+
+   sumnorm = 0.0;
+
+   for( c = row->len - 1; c >= 0; --c )
+   {
+      if( cols[c]->lppos >= 0 )
+         sumnorm += REALABS(row->vals[c]);
+   }
+
+   assert(ABS(sumnorm - row->sumnorm) < 1e-06 * MAX(1.0,sumnorm));
+}
+
+static
+void checkRowObjprod(
+   SCIP_ROW*             row
+   )
+{
+   SCIP_COL** cols;
+   SCIP_Real objprod;
+   int c;
+
+   cols = row->cols;
+   assert(cols != NULL || row->len == 0);
+
+   objprod = 0.0;
+
+   for( c = row->len - 1; c >= 0; --c )
+   {
+      if( cols[c]->lppos >= 0 )
+         objprod += row->vals[c] * cols[c]->obj;
+   }
+
+   assert(ABS(objprod - row->objprod) < 1e-06 * MAX(1.0,objprod));
+}
+#else
+#define checkRowSqrnorm(row) /**/
+#define checkRowSumnorm(row) /**/
+#define checkRowObjprod(row) /**/
 #endif
 
 /*
@@ -1431,7 +1506,7 @@ SCIP_RETCODE rowEventSideChanged(
 #define ASSERT(x) assert(x)
 #endif
 
-static SCIP_Bool msgdisp = FALSE;
+static SCIP_Bool msgdisp_checklinks = FALSE;
 
 
 static
@@ -1446,10 +1521,10 @@ void checkLinks(
 
    ASSERT(lp != NULL);
 
-   if( !msgdisp )
+   if( !msgdisp_checklinks )
    {
-      SCIPmessagePrintWarning(messagehdlr, "LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
-      msgdisp = TRUE;
+      printf("LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      msgdisp_checklinks = TRUE;
    }
 
    for( i = 0; i < lp->ncols; ++i )
@@ -1784,7 +1859,8 @@ void rowAddNorms(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COL*             col,                /**< column of added coefficient */
-   SCIP_Real             val                 /**< value of added coefficient */
+   SCIP_Real             val,                /**< value of added coefficient */
+   SCIP_Bool             updateidxvals       /**< update min/max idx and min/max val? */
    )
 {
    SCIP_Real absval;
@@ -1798,37 +1874,51 @@ void rowAddNorms(
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
 
-   /* update min/maxidx */
-   row->minidx = MIN(row->minidx, col->index);
-   row->maxidx = MAX(row->maxidx, col->index);
-
-   /* update squared Euclidean norm and sum norm */
-   row->sqrnorm += SQR(absval);
-   row->sumnorm += absval;
-
-   /* update objective function scalar product */
-   row->objprod += val * col->obj;
-
-   /* update maximal and minimal non-zero value */
-   if( row->nummaxval > 0 )
+   /* Euclidean norm, sum norm, and objective function scalar product only take into accout LP columns */
+   if( col->lppos >= 0 )
    {
-      if( SCIPsetIsGT(set, absval, row->maxval) )
-      {
-         row->maxval = absval;
-         row->nummaxval = 1;
-      }
-      else if( SCIPsetIsGE(set, absval, row->maxval) )
-         row->nummaxval++;
+      /* update squared Euclidean norm and sum norm */
+      row->sqrnorm += SQR(absval);
+      row->sumnorm += absval;
+
+      /* update objective function scalar product */
+      row->objprod += val * col->obj;
    }
-   if( row->numminval > 0 )
+
+   if( updateidxvals )
    {
-      if( SCIPsetIsLT(set, absval, row->minval) )
+      /* update min/maxidx */
+      row->minidx = MIN(row->minidx, col->index);
+      row->maxidx = MAX(row->maxidx, col->index);
+
+      /* update maximal and minimal non-zero value */
+      if( row->nummaxval > 0 )
       {
-         row->minval = absval;
-         row->numminval = 1;
+         if( SCIPsetIsGT(set, absval, row->maxval) )
+         {
+            row->maxval = absval;
+            row->nummaxval = 1;
+         }
+         else if( SCIPsetIsGE(set, absval, row->maxval) )
+            row->nummaxval++;
       }
-      else if( SCIPsetIsLE(set, absval, row->minval) )
-         row->numminval++;
+      if( row->numminval > 0 )
+      {
+         if( SCIPsetIsLT(set, absval, row->minval) )
+         {
+            row->minval = absval;
+            row->numminval = 1;
+         }
+         else if( SCIPsetIsLE(set, absval, row->minval) )
+            row->numminval++;
+      }
+   }
+   else
+   {
+      assert(row->minidx <= col->index);
+      assert(row->maxidx >= col->index);
+      assert(row->numminval <= 0 || SCIPsetIsGE(set, absval, row->minval));
+      assert(row->nummaxval <= 0 || SCIPsetIsLE(set, absval, row->maxval));
    }
 }
 
@@ -1839,7 +1929,8 @@ void rowDelNorms(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COL*             col,                /**< column of deleted coefficient */
    SCIP_Real             val,                /**< value of deleted coefficient */
-   SCIP_Bool             updateindex         /**< should the minimal/maximal column index of row be updated? */
+   SCIP_Bool             updateindex,        /**< should the minimal/maximal column index of row be updated? */
+   SCIP_Bool             updateval           /**< should the minimal/maximal value of row be updated? */
    )
 {
    SCIP_Real absval;
@@ -1859,25 +1950,32 @@ void rowDelNorms(
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
       row->validminmaxidx = FALSE;
 
-   /* update squared Euclidean norm and sum norm */
-   row->sqrnorm -= SQR(absval);
-   row->sqrnorm = MAX(row->sqrnorm, 0.0);
-   row->sumnorm -= absval;
-   row->sumnorm = MAX(row->sumnorm, 0.0);
-
-   /* update objective function scalar product */
-   row->objprod -= val * col->obj;
-
-   /* update maximal and minimal non-zero value */
-   if( row->nummaxval > 0 )
+   /* Euclidean norm, sum norm, and objective function scalar product only take into accout LP columns */
+   if( col->lppos >= 0 )
    {
-      if( SCIPsetIsGE(set, absval, row->maxval) )
-         row->nummaxval--;
+      /* update squared Euclidean norm and sum norm */
+      row->sqrnorm -= SQR(absval);
+      row->sqrnorm = MAX(row->sqrnorm, 0.0);
+      row->sumnorm -= absval;
+      row->sumnorm = MAX(row->sumnorm, 0.0);
+
+      /* update objective function scalar product */
+      row->objprod -= val * col->obj;
    }
-   if( row->numminval > 0 )
+
+   if( updateval )
    {
-      if( SCIPsetIsLE(set, absval, row->minval) )
-         row->numminval--;
+      /* update maximal and minimal non-zero value */
+      if( row->nummaxval > 0 )
+      {
+         if( SCIPsetIsGE(set, absval, row->maxval) )
+            row->nummaxval--;
+      }
+      if( row->numminval > 0 )
+      {
+         if( SCIPsetIsLE(set, absval, row->minval) )
+            row->numminval--;
+      }
    }
 }
 
@@ -2007,8 +2105,9 @@ SCIP_RETCODE rowAddCoef(
          row->nonlpcolssorted = row->nonlpcolssorted && (row->cols_index[row->len-2] < col->index);
       }
    }
-   
-   rowAddNorms(row, set, col, val);
+
+   /* update row norm */
+   rowAddNorms(row, set, col, val, TRUE);
 
    coefChanged(row, col, lp);
 
@@ -2070,7 +2169,8 @@ SCIP_RETCODE rowDelCoefPos(
    rowMoveCoef(row, row->len-1, pos);
    row->len--;
 
-   rowDelNorms(row, set, col, val, TRUE);
+   /* update norms */
+   rowDelNorms(row, set, col, val, TRUE, TRUE);
 
    coefChanged(row, col, lp);
 
@@ -2092,9 +2192,10 @@ SCIP_RETCODE rowChgCoefPos(
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
+   SCIP_COL* col;
+
    assert(row != NULL);
    assert(0 <= pos && pos < row->len);
-   assert(row->cols[pos] != NULL);
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
      row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
@@ -2107,6 +2208,8 @@ SCIP_RETCODE rowChgCoefPos(
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
    val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   col = row->cols[pos];
+   assert(row->cols[pos] != NULL);
 
    if( SCIPsetIsZero(set, val) )
    {
@@ -2120,14 +2223,14 @@ SCIP_RETCODE rowChgCoefPos(
       oldval = row->vals[pos];
       
       /* change existing coefficient */
-      rowDelNorms(row, set, row->cols[pos], row->vals[pos], FALSE);
+      rowDelNorms(row, set, col, row->vals[pos], FALSE, TRUE);
       row->vals[pos] = val;
-      row->integral = row->integral && SCIPcolIsIntegral(row->cols[pos]) && SCIPsetIsIntegral(set, val);
-      rowAddNorms(row, set, row->cols[pos], row->vals[pos]);
-      coefChanged(row, row->cols[pos], lp);
+      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+      rowAddNorms(row, set, col, row->vals[pos], TRUE);
+      coefChanged(row, col, lp);
       
       /* issue row coefficient changed event */
-      SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, row->cols[pos], oldval, val) );
+      SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, oldval, val) );
    }
 
    return SCIP_OKAY;
@@ -4384,7 +4487,7 @@ void rowCalcNorms(
       assert(row->linkpos[i] >= 0);
       assert(row->cols[i]->index == row->cols_index[i]);
 
-      rowAddNorms(row, set, row->cols[i], row->vals[i]);
+      rowAddNorms(row, set, row->cols[i], row->vals[i], TRUE);
       if( i > 0 )
       {
          assert(row->cols[i-1]->index == row->cols_index[i-1]);
@@ -4398,11 +4501,71 @@ void rowCalcNorms(
       assert(row->cols[i]->lppos == -1 || row->linkpos[i] == -1);
       assert(row->cols[i]->index == row->cols_index[i]);
 
-      rowAddNorms(row, set, row->cols[i], row->vals[i]);
+      rowAddNorms(row, set, row->cols[i], row->vals[i], TRUE);
       if( i > row->nlpcols )
       {
          assert(row->cols[i-1]->index == row->cols_index[i-1]);
          row->nonlpcolssorted = row->nonlpcolssorted && (row->cols_index[i-1] < row->cols_index[i]);
+      }
+   }
+}
+
+/** calculates min/maxval and min/maxidx from scratch */
+static
+void rowCalcIdxsAndVals(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_COL* col;
+   SCIP_Real absval;
+   int i;
+
+   assert(row != NULL);
+   assert(set != NULL);
+
+   row->maxval = 0.0;
+   row->nummaxval = 1;
+   row->minval = SCIPsetInfinity(set);
+   row->numminval = 1;
+   row->minidx = INT_MAX;
+   row->maxidx = INT_MIN;
+   row->validminmaxidx = TRUE;
+
+   /* calculate maxval, minval, minidx, and maxidx */
+   for( i = 0; i < row->len; ++i )
+   {
+      col = row->cols[i];
+      assert(col != NULL);
+      assert(!SCIPsetIsZero(set, row->vals[i]));
+
+      absval = REALABS(row->vals[i]);
+      assert(!SCIPsetIsZero(set, absval));
+
+      /* update min/maxidx */
+      row->minidx = MIN(row->minidx, col->index);
+      row->maxidx = MAX(row->maxidx, col->index);
+
+      /* update maximal and minimal non-zero value */
+      if( row->nummaxval > 0 )
+      {
+         if( SCIPsetIsGT(set, absval, row->maxval) )
+         {
+            row->maxval = absval;
+            row->nummaxval = 1;
+         }
+         else if( SCIPsetIsGE(set, absval, row->maxval) )
+            row->nummaxval++;
+      }
+      if( row->numminval > 0 )
+      {
+         if( SCIPsetIsLT(set, absval, row->minval) )
+         {
+            row->minval = absval;
+            row->numminval = 1;
+         }
+         else if( SCIPsetIsLE(set, absval, row->minval) )
+            row->numminval++;
       }
    }
 }
@@ -6154,7 +6317,7 @@ SCIP_Real SCIProwGetMaxval(
    assert(row != NULL);
    
    if( row->nummaxval == 0 )
-      rowCalcNorms(row, set);
+      rowCalcIdxsAndVals(row, set);
    assert(row->nummaxval > 0);
    assert(row->maxval >= 0.0 || row->len == 0);
 
@@ -6170,7 +6333,7 @@ SCIP_Real SCIProwGetMinval(
    assert(row != NULL);
    
    if( row->numminval == 0 )
-      rowCalcNorms(row, set);
+      rowCalcIdxsAndVals(row, set);
    assert(row->numminval >= 0);
    assert(row->minval >= 0.0 || row->len == 0);
 
@@ -6186,7 +6349,7 @@ int SCIProwGetMaxidx(
    assert(row != NULL);
    
    if( row->validminmaxidx == 0 )
-      rowCalcNorms(row, set);
+      rowCalcIdxsAndVals(row, set);
    assert(row->maxidx >= 0 || row->len == 0);
    assert(row->validminmaxidx);
 
@@ -6202,7 +6365,7 @@ int SCIProwGetMinidx(
    assert(row != NULL);
    
    if( row->validminmaxidx == 0 )
-      rowCalcNorms(row, set);
+      rowCalcIdxsAndVals(row, set);
    assert(row->minidx >= 0 || row->len == 0);
    assert(row->validminmaxidx);
 
@@ -7187,7 +7350,10 @@ SCIP_Real SCIProwGetObjParallelism(
 
    assert(!lp->objsqrnormunreliable);
    assert(lp->objsqrnorm >= 0.0);
-   
+
+   checkRowSqrnorm(row);
+   checkRowObjprod(row);
+
    prod = row->sqrnorm * lp->objsqrnorm;
 
    parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
@@ -8162,7 +8328,8 @@ SCIP_RETCODE SCIPlpMarkFlushed(
 /** updates link data after addition of column */
 static
 void colUpdateAddLP(
-   SCIP_COL*             col                 /**< LP column */
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    SCIP_ROW* row;
@@ -8186,10 +8353,14 @@ void colUpdateAddLP(
 
          row->nlpcols++;
          rowSwapCoefs(row, pos, row->nlpcols-1);
+         assert(row->cols[row->nlpcols-1] == col);
 
          /* if no swap was necessary, mark lpcols to be unsorted */
          if( pos == row->nlpcols-1 )
             row->lpcolssorted = FALSE;
+
+         /* update norms */
+         rowAddNorms(row, set, col, row->vals[row->nlpcols-1], FALSE);
       }
    }
 }
@@ -8232,7 +8403,8 @@ void rowUpdateAddLP(
 /** updates link data after removal of column */
 static
 void colUpdateDelLP(
-   SCIP_COL*             col                 /**< LP column */
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    SCIP_ROW* row;
@@ -8253,6 +8425,9 @@ void colUpdateDelLP(
          assert(row->linkpos[pos] == i);
          assert(row->cols[pos] == col);
          assert(0 <= pos && pos < row->nlpcols);
+
+         /* update norms */
+         rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE);
 
          row->nlpcols--;
          rowSwapCoefs(row, pos, row->nlpcols);
@@ -8713,7 +8888,7 @@ SCIP_RETCODE SCIPlpAddCol(
    lp->flushed = FALSE;
 
    /* update column arrays of all linked rows */
-   colUpdateAddLP(col);
+   colUpdateAddLP(col, set);
 
    checkLinks(lp);
 
@@ -8768,7 +8943,9 @@ SCIP_RETCODE SCIPlpAddRow(
    rowUpdateAddLP(row);
 
    checkLinks(lp);
-   
+
+   rowCalcNorms(row, set);
+
    /* check, if row addition to LP events are tracked
     * if so, issue ROWADDEDLP event
     */
@@ -8881,7 +9058,7 @@ SCIP_RETCODE SCIPlpShrinkCols(
             lp->nremovablecols--;
 
          /* update column arrays of all linked rows */
-         colUpdateDelLP(col);
+         colUpdateDelLP(col, set);
       }
       assert(lp->ncols == newncols);
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
@@ -16464,7 +16641,7 @@ SCIP_RETCODE lpDelColset(
 
          /* mark column to be deleted from the LPI and update column arrays of all linked rows */
          markColDeleted(col);
-         colUpdateDelLP(col);
+         colUpdateDelLP(col, set);
          col->lpdepth = -1;
 
          lp->cols[c] = NULL;
@@ -18356,6 +18533,8 @@ SCIP_Real SCIProwGetNorm(
 {
    assert(row != NULL);
 
+   checkRowSqrnorm(row);
+
    return sqrt(row->sqrnorm);
 }
 
@@ -18365,6 +18544,8 @@ SCIP_Real SCIProwGetSumNorm(
    )
 {
    assert(row != NULL);
+
+   checkRowSumnorm(row);
 
    return row->sumnorm;
 }
