@@ -2167,6 +2167,7 @@ SCIP_RETCODE rowSideChanged(
       default:
          SCIPerrorMessage("unknown row side type\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       }
 
       /* mark the current LP unflushed */

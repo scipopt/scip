@@ -2579,6 +2579,7 @@ SCIP_RETCODE separateHeur(
    default :
       SCIPerrorMessage("invalid sortswitch value\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
    assert(vars != NULL);
 
@@ -3452,6 +3453,7 @@ SCIP_RETCODE separateGLS(
    default :
       SCIPerrorMessage("invalid sortswitch value\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
    assert(vars != NULL);
 

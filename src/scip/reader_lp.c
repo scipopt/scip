@@ -2258,6 +2258,7 @@ SCIP_RETCODE readSos(
                   default: 
                      SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                      SCIPABORT();
+                     return SCIP_INVALIDDATA;
                   }
                   SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
                }

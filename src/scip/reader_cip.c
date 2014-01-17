@@ -822,6 +822,7 @@ SCIP_DECL_READERREAD(readerReadCip)
       default:
          SCIPerrorMessage("invalid CIP state\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       } /*lint !e788*/ 
    }
 

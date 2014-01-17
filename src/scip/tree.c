@@ -230,7 +230,7 @@ SCIP_RETCODE subrootReleaseLPIState(
 }
 
 /** increases the reference counter of the LP state in the fork or subroot node */
-void SCIPnodeCaptureLPIState(
+SCIP_RETCODE SCIPnodeCaptureLPIState(
    SCIP_NODE*            node,               /**< fork/subroot node */
    int                   nuses               /**< number to add to the usage counter */
    )
@@ -252,7 +252,9 @@ void SCIPnodeCaptureLPIState(
    default:
       SCIPerrorMessage("node for capturing the LPI state is neither fork nor subroot\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }  /*lint !e788*/
+   return SCIP_OKAY;
 }
 
 /** decreases the reference counter of the LP state in the fork or subroot node */
@@ -376,7 +378,9 @@ SCIP_RETCODE junctionInit(
 
    /* increase the LPI state usage counter of the current LP fork */
    if( tree->focuslpstatefork != NULL )
-      SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren);
+   {
+      SCIP_CALL( SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren) );
+   }
 
    return SCIP_OKAY;
 }
@@ -429,7 +433,9 @@ SCIP_RETCODE pseudoforkCreate(
 
    /* increase the LPI state usage counter of the current LP fork */
    if( tree->focuslpstatefork != NULL )
-      SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren);
+   {
+      SCIP_CALL( SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2434,7 +2440,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 
 /** updates the LP sizes of the active path starting at the given depth */
 static
-void treeUpdatePathLPSize(
+SCIP_RETCODE treeUpdatePathLPSize(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   startdepth          /**< depth to start counting */
    )
@@ -2493,15 +2499,19 @@ void treeUpdatePathLPSize(
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_CHILD:
          SCIPerrorMessage("child cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_LEAF:
          SCIPerrorMessage("leaf cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_DEADEND:
          SCIPerrorMessage("dead-end cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_PSEUDOFORK:
@@ -2522,13 +2532,16 @@ void treeUpdatePathLPSize(
       case SCIP_NODETYPE_REFOCUSNODE:
          SCIPerrorMessage("node cannot be of type REFOCUSNODE at this point\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       default:
          SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       }
       tree->pathnlpcols[i] = ncols;
       tree->pathnlprows[i] = nrows;
    }
+   return SCIP_OKAY;
 }
 
 /** finds the common fork node, the new LP state defining fork, and the new focus subroot, if the path is switched to
@@ -2930,7 +2943,7 @@ SCIP_RETCODE treeSwitchPath(
    }
 
    /* count the new LP sizes of the path */
-   treeUpdatePathLPSize(tree, forkdepth+1);
+   SCIP_CALL( treeUpdatePathLPSize(tree, forkdepth+1) );
 
    /* process the delayed events */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
@@ -3895,7 +3908,7 @@ SCIP_RETCODE focusnodeToSubroot(
    tree->focusnode->data.subroot = subroot;
 
    /* update the LP column and row counter for the converted node */
-   treeUpdatePathLPSize(tree, tree->focusnode->depth);
+   SCIP_CALL( treeUpdatePathLPSize(tree, tree->focusnode->depth) );
 
    /* release LPI state */
    if( tree->focuslpstatefork != NULL )
@@ -5846,7 +5859,7 @@ SCIP_RETCODE treeCreateProbingNode(
    tree->pathlen++;
 
    /* update the path LP size for the previous node and set the (initial) path LP size for the newly created node */
-   treeUpdatePathLPSize(tree, tree->pathlen-2);
+   SCIP_CALL( treeUpdatePathLPSize(tree, tree->pathlen-2) );
 
    /* mark the LP's size */
    SCIPlpMarkSize(lp);
