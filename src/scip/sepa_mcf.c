@@ -923,21 +923,22 @@ SCIP_RETCODE extractFlowRows(
          hasnegcoef = hasnegcoef || (rowvals[i] < 0.0);
          switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) )
          {
-            case SCIP_VARTYPE_BINARY:
-               nbinvars++;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               nintvars++;
-               break;
-            case SCIP_VARTYPE_IMPLINT:
-               nimplintvars++;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
+         case SCIP_VARTYPE_BINARY:
+            nbinvars++;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            nintvars++;
+            break;
+         case SCIP_VARTYPE_IMPLINT:
+            nimplintvars++;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
                ncontvars++;
                break;
-            default:
-               SCIPerrorMessage("unknown variable type\n");
-               SCIPABORT();
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
       }
       if( i == rowlen )
@@ -4570,21 +4571,22 @@ SCIP_RETCODE printFlowSystemInfo(
             colvisited[c] = TRUE;
             switch( SCIPvarGetType(SCIPcolGetVar(col)) )
             {
-               case SCIP_VARTYPE_BINARY:
-                  nbinflowvars++;
-                  break;
-               case SCIP_VARTYPE_INTEGER:
-                  nintflowvars++;
-                  break;
-               case SCIP_VARTYPE_IMPLINT:
-                  nintflowvars++;
-                  break;
+            case SCIP_VARTYPE_BINARY:
+               nbinflowvars++;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               nintflowvars++;
+               break;
+            case SCIP_VARTYPE_IMPLINT:
+               nintflowvars++;
+               break;
                case SCIP_VARTYPE_CONTINUOUS:
                   ncontflowvars++;
                   break;
-               default:
-                  SCIPerrorMessage("unknown variable type\n");
-                  SCIPABORT();
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               SCIPABORT();
+               return SCIP_INVALIDDATA;
             }
          }
       }
@@ -4615,21 +4617,22 @@ SCIP_RETCODE printFlowSystemInfo(
                   colvisited[c] = TRUE;
                   switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i]) ) )
                   {
-                     case SCIP_VARTYPE_BINARY:
-                        nbincapvars++;
-                        break;
-                     case SCIP_VARTYPE_INTEGER:
-                        nintcapvars++;
-                        break;
-                     case SCIP_VARTYPE_IMPLINT:
-                        nintcapvars++;
-                        break;
-                     case SCIP_VARTYPE_CONTINUOUS:
-                        ncontcapvars++;
-                        break;
-                     default:
-                        SCIPerrorMessage("unknown variable type\n");
-                        SCIPABORT();
+                  case SCIP_VARTYPE_BINARY:
+                     nbincapvars++;
+                     break;
+                  case SCIP_VARTYPE_INTEGER:
+                     nintcapvars++;
+                     break;
+                  case SCIP_VARTYPE_IMPLINT:
+                     nintcapvars++;
+                     break;
+                  case SCIP_VARTYPE_CONTINUOUS:
+                     ncontcapvars++;
+                     break;
+                  default:
+                     SCIPerrorMessage("unknown variable type\n");
+                     SCIPABORT();
+                     return SCIP_INVALIDDATA;
                   }
                }
             }
