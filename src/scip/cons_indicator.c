@@ -364,6 +364,7 @@ struct SCIP_ConflicthdlrData
    {                                                                                            \
       SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
       SCIPABORT();                                                                              \
+      return _restat_;                                                                          \
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )
@@ -1056,6 +1057,7 @@ SCIP_RETCODE checkIIS(
       SCIP_CALL( SCIPlpiWriteLP(lp, "check.lp") );
       SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "altdebug.lp") );
       SCIPABORT();
+      return SCIP_ERROR;
    }
    SCIPdebugMessage("Check successful!\n");
 
