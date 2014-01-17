@@ -533,7 +533,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
       assert(!SCIPisInfinity(scip, -maxact) );
       assert(!SCIPisInfinity(scip, maxact));
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linrhs", name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linrhs", SCIPconsGetName(cons));
 
       /* compute big-M */
       newvals[nvars] = maxact - rhs;
@@ -564,7 +564,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
       assert(!SCIPisInfinity(scip, minact));
       assert(!SCIPisInfinity(scip, -minact));
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linlhs", name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linlhs", SCIPconsGetName(cons));
 
       /* compute big-M */
       newvals[nvars] = minact - lhs;

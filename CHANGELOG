@@ -34,6 +34,7 @@ fixed bugs:
 - fixed bug in genvbounds propagator by replacing non-active variables on right-hand side after presolving
 - nonlinear readers now create auxiliary objective variables and constraints always as initial and not removable
   in order to avoid unbounded LPs due to loose variables with infinite best bound
+- fixed bug in cons_superindicator concerning names of upgraded constraints
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
