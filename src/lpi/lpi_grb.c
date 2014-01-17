@@ -73,6 +73,12 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 #define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
 
 
+/* At several places we need to guarantee to have a factorization of an optimal basis and call the simplex to produce
+ * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
+ * refactorization, it might be necessary to do a few extra pivot steps. */
+#define GRB_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
+
+
 /* Gurobi parameter lists which can be changed */
 #define NUMINTPARAM 4
 
@@ -993,6 +999,36 @@ SCIP_RETCODE reconvertSides(
    return SCIP_OKAY;
 }
 
+/** after restoring old LP data, need to resolve the LP to be able to retrieve correct information */
+static
+SCIP_RETCODE restoreLPData(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert( lpi != NULL );
+
+   /* set dual simplex */
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_DUAL) );
+   CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+
+#ifndef NDEBUG
+   {
+      double cnt;
+
+      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for Gurobi to be able to return
+       * the basis -> we have to resolve the LP;
+       *
+       * In a numerical perfect world, GRB_REFACTORMAXITERS below should be zero. However, due to numerical inaccuracies
+       * after refactorization, it might be necessary to do a few extra pivot steps.
+       */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+      if ( cnt > (double) GRB_REFACTORMAXITERS )
+         SCIPmessagePrintWarning(lpi->messagehdlr, "Gurobi needed %d iterations to restore optimal basis.\n", (int) cnt);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -3439,14 +3475,23 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int nrows;
    int ncols;
    int* bhead;
+   int status;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("getting basis information\n");
 
+   /* check whether we have to reoptimize */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+   if ( status == GRB_LOADED || status == GRB_INTERRUPTED || status == GRB_INPROGRESS )
+   {
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
+   }
+
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+
 
    /* get space for bhead */
    SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows+ncols) );
