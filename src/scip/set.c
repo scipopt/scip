@@ -66,7 +66,7 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
-#define SCIP_DEFAULT_BRANCH_FORCEBOTH     FALSE /**< should both strong branching children be regarded even if the first
+#define SCIP_DEFAULT_BRANCH_FORCEALL      FALSE /**< should all strong branching children be regarded even if
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
@@ -811,9 +811,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "branching/forcebothchildren",
-         "should both strong branching children be regarded even if the first one is detected to be infeasible? (only with propagation)",
-         &(*set)->branch_forceboth, TRUE, SCIP_DEFAULT_BRANCH_FORCEBOTH,
+         "branching/forceallchildren",
+         "should all strong branching children be regarded even if one is detected to be infeasible? (only with propagation)",
+         &(*set)->branch_forceall, TRUE, SCIP_DEFAULT_BRANCH_FORCEALL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/firstsbchild",

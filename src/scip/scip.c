@@ -16891,7 +16891,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                *downconflict = TRUE;
             }
 
-            if( !scip->set->branch_forceboth )
+            if( !scip->set->branch_forceall )
             {
                /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
                break;
@@ -16927,7 +16927,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                *upconflict = TRUE;
             }
 
-            if( !scip->set->branch_forceboth )
+            if( !scip->set->branch_forceall )
             {
                /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
                break;

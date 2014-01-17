@@ -251,7 +251,7 @@ parameters:
   removing superflous non-zeros?
 - new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binary to implicit binary
   variables, default is TRUE
-- new parameters "branching/firstsbchild" and "branching/forcebothchildren" to specify the first child node to be
+- new parameters "branching/firstsbchild" and "branching/forceall" to specify the first child node to be
   investigated during strong branching ('u'p,'d'down,'a'uto) and whether always both children should be solved (only for
   strong branching with domain propagation, per default, the second child is not looked at when the first is infeasible)
 - new parameters "branching/checksol" and "branching/heursbsol" to specify whether the strong branching LP solution
