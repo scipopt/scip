@@ -3744,7 +3744,8 @@ SCIP_RETCODE SCIPwriteLp(
                   consvals[cnt++] = linvals[v];
                }
             }
-            assert( nlinvars == 0 || cnt == nlinvars-1 );
+            /* if slackvariable is fixed, it might have been removed from constraint */
+            assert( nlinvars == 0 || cnt == nlinvars-1 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar)) );
 
             SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL, 0, NULL, 0, 
                   SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
