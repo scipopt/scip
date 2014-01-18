@@ -55,24 +55,24 @@
 
 /* default values for user parameters */
 /* boolean parameters */
-#define DEFAULT_FORCEIMPROVEMENTS   FALSE   /*< exit if objective doesn't improve */
-#define DEFAULT_ONLYCHEAPER         TRUE    /*< add constraint to ensure that discrete vars are improving */
-#define DEFAULT_ONLYLEAVES          FALSE   /*< disable the heuristic if it was not called at a leaf of the B&B tree */
-#define DEFAULT_RELAXINDICATORS     FALSE   /*< relax the indicator variables by introducing continuous copies */
-#define DEFAULT_RELAXCONTVARS       FALSE   /*< enable relaxation of continous variables */
+#define DEFAULT_FORCEIMPROVEMENTS   FALSE    /**< exit if objective doesn't improve */
+#define DEFAULT_ONLYCHEAPER         TRUE     /**< add constraint to ensure that discrete vars are improving */
+#define DEFAULT_ONLYLEAVES          FALSE    /**< disable the heuristic if it was not called at a leaf of the B&B tree */
+#define DEFAULT_RELAXINDICATORS     FALSE    /**< relax the indicator variables by introducing continuous copies */
+#define DEFAULT_RELAXCONTVARS       FALSE    /**< enable relaxation of continous variables */
 
 /* integer parameters */
-#define DEFAULT_HEURVERBLEVEL       0       /*< verblevel of the heuristic, default is 0 to display nothing */
-#define DEFAULT_NLPVERBLEVEL        0       /*< verblevel of the nlp solver, can be 0 or 1 */
-#define DEFAULT_RANKVALUE           10      /*< number of ranks that should be displayed when the heuristic is called */
-#define DEFAULT_MAXCALLS            25      /*< maximal number of recursive calls of the heuristic (if dynamicdepth is off) */
-#define DEFAULT_DYNAMICDEPTH        0       /*< says if and how the recursion depth is computed at runtime */
-#define DEFAULT_MAXEQUALRANKS       50      /*< maximal number of variables that may have maximal rank, quit if there are more, turn off by setting -1 */
+#define DEFAULT_HEURVERBLEVEL       0        /**< verblevel of the heuristic, default is 0 to display nothing */
+#define DEFAULT_NLPVERBLEVEL        0        /**< verblevel of the nlp solver, can be 0 or 1 */
+#define DEFAULT_RANKVALUE           10       /**< number of ranks that should be displayed when the heuristic is called */
+#define DEFAULT_MAXCALLS            25       /**< maximal number of recursive calls of the heuristic (if dynamicdepth is off) */
+#define DEFAULT_DYNAMICDEPTH        0        /**< says if and how the recursion depth is computed at runtime */
+#define DEFAULT_MAXEQUALRANKS       50       /**< maximal number of variables that may have maximal rank, quit if there are more, turn off by setting -1 */
 
 /* real value parameters */
-#define DEFAULT_MINGAP              5.0     /*< minimal gap for which we still run the heuristic, if gap is less we return without doing anything */
-#define DEFAULT_LAMBDASLACK         1.0     /*< value added to objective of slack variables, must not be zero */
-#define DEFAULT_LAMBDAOBJ           0.0     /*< scaling factor for the objective function */
+#define DEFAULT_MINGAP              5.0      /**< minimal gap for which we still run the heuristic, if gap is less we return without doing anything */
+#define DEFAULT_LAMBDASLACK         1.0      /**< value added to objective of slack variables, must not be zero */
+#define DEFAULT_LAMBDAOBJ           0.0      /**< scaling factor for the objective function */
 
 
 /**primal heuristic data */
@@ -82,8 +82,7 @@ struct SCIP_HeurData
    SCIP_VAR**            integervars;        /**< array of all binary and integer variables of the original scip */
    SCIP_HASHMAP*         varsciptosubscip;   /**< mapping variables in SCIP to sub-SCIP variables */
    SCIP_HASHMAP*         varsubsciptoscip;   /**< mapping variables in sub-SCIP to SCIP variables */
-   SCIP_HASHMAP*         origsubscipConsMap; /**< maps constraints from the transformed problem to corresponding
-                                                constraints in subproblem */
+   SCIP_HASHMAP*         origsubscipConsMap; /**< maps constraints from the transformed problem to corresponding constraints in subproblem */
    SCIP_HASHMAP*         switchedvars;       /**< stores the last value of switched var to avoid cycling */
    SCIP_HASHMAP*         switchedvars2;      /**< stores the second last value of switched vars to avoid cycling */
    SCIP_HASHMAP*         relaxcons;          /**< maps subscip variables to their relaxation constraints */
@@ -138,7 +137,7 @@ SCIP_DECL_EVENTINIT(eventInitLPsol)
    assert(eventhdlr != NULL);
 
    /* notify SCIP that your event handler wants to react on the event type best solution found */
-   SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -151,7 +150,7 @@ SCIP_DECL_EVENTEXIT(eventExitLPsol)
    assert(eventhdlr != NULL);
 
    /* notify SCIP that your event handler wants to drop the event type best solution found */
-   SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -214,9 +213,10 @@ SCIP_RETCODE SCIPincludeEventHdlrLPsol(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLR* eventhdlr = NULL;
+
    eventhdlrdata = (SCIP_EVENTHDLRDATA*)heurdata;
-   eventhdlr = NULL;
+
    /* create event handler */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLPsol, eventhdlrdata) );
    assert(eventhdlr != NULL);
@@ -420,7 +420,6 @@ SCIP_RETCODE addLogicOrConstraints(
       }
 
       /* logic or constraints: 1 == sum_j x_j */
-
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
@@ -459,7 +458,7 @@ SCIP_RETCODE addSetppcConstraints(
    assert(conshdlr != NULL);
 
    nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-   if( !nconss )
+   if( nconss == 0 )
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -550,7 +549,7 @@ SCIP_RETCODE addKnapsackConstraints(
    assert(conshdlr != NULL);
 
    nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-   if( !nconss )
+   if( nconss == 0 )
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -999,10 +998,10 @@ SCIP_RETCODE createSubSCIP(
       var = SCIPvarGetTransVar(vars[i]);
       assert( var != NULL );
 
-      if( !SCIPvarIsActive(var) )
+      if( ! SCIPvarIsActive(var) )
          continue;
 
-      if( !SCIPvarIsIntegral(var) )
+      if( ! SCIPvarIsIntegral(var) )
          continue;
 
       heurdata->integervars[j++] = vars[i];
@@ -1138,21 +1137,11 @@ SCIP_RETCODE createSubSCIP(
                   }
 
                   cons = NULL;
-                  SCIP_CALL( SCIPcreateConsIndicatorLinCons(heurdata->subscip,
-                                                            &cons,
-                                                            SCIPconsGetName(indicons),
-                                                            indicatorcopy,
-                                                            SCIPgetLinearConsIndicator(indicons),
-                                                            SCIPgetSlackVarIndicator(indicons),
-                                                            SCIPconsIsInitial(indicons),
-                                                            SCIPconsIsSeparated(indicons),
-                                                            SCIPconsIsEnforced(indicons),
-                                                            SCIPconsIsChecked(indicons),
-                                                            SCIPconsIsPropagated(indicons),
-                                                            SCIPconsIsLocal(indicons),
-                                                            SCIPconsIsDynamic(indicons),
-                                                            SCIPconsIsRemovable(indicons),
-                                                            SCIPconsIsStickingAtNode(indicons)) );
+                  SCIP_CALL( SCIPcreateConsIndicatorLinCons(heurdata->subscip, &cons, SCIPconsGetName(indicons), indicatorcopy,
+                        SCIPgetLinearConsIndicator(indicons), SCIPgetSlackVarIndicator(indicons), SCIPconsIsInitial(indicons),
+                        SCIPconsIsSeparated(indicons), SCIPconsIsEnforced(indicons), SCIPconsIsChecked(indicons),
+                        SCIPconsIsPropagated(indicons), SCIPconsIsLocal(indicons), SCIPconsIsDynamic(indicons),
+                        SCIPconsIsRemovable(indicons), SCIPconsIsStickingAtNode(indicons)) );
                   SCIP_CALL( SCIPaddCons(heurdata->subscip, cons) );
 
                   /* delete old indicator constraints so we can relax the indicator variables */
@@ -1254,7 +1243,7 @@ SCIP_RETCODE createSubSCIP(
          var = SCIPvarGetTransVar(vars[i]);
          assert( var != NULL );
 
-         if( !SCIPvarIsActive(var) )
+         if( ! SCIPvarIsActive(var) )
             continue;
 
          if( SCIPvarIsIntegral(var) )
@@ -1263,8 +1252,7 @@ SCIP_RETCODE createSubSCIP(
          if( SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var)) )
             continue;
 
-         if( (SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPinfinity(scip)))
-            && (SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), -SCIPinfinity(scip))) )
+         if( (SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPinfinity(scip))) && (SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), -SCIPinfinity(scip))) )
             continue;
 
          var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
@@ -1802,7 +1790,7 @@ SCIP_Real maximalslack(
       }
    }
    
-   if( !maxslackset )
+   if( ! maxslackset )
    {
       maxslack = 0;
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "could not find a variable with maximal slack!\n");
@@ -1830,14 +1818,13 @@ SCIP_RETCODE storeSolution(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* sol;
+   SCIP_SOL* sol = NULL;
    SCIP_Bool stored;
    SCIP_Real primalobj;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   sol = NULL;
    SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, bestsol) );
 
    /* if this happens, there was an ipopt error - stop the heuristic for there is no good starting point */
@@ -2042,7 +2029,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       return SCIP_OKAY;
    }
 
-   if( !SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
+   if( ! SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
    {
       SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
       SCIP_CALL( SCIPsolve(heurdata->subscip) );
@@ -2060,14 +2047,12 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* set starting values (=refpoint, if not NULL; otherwise LP solution (or pseudo solution)) */
       for( i = 0; i < SCIPgetNNLPVars(heurdata->subscip); ++i )
       {
-         SCIP_Real scalar;
-         SCIP_Real constant;
+         SCIP_Real scalar = 1.0;
+         SCIP_Real constant = 0.0;
 
          subvar = SCIPgetNLPVars(heurdata->subscip)[i];
 
          /* gets corresponding original variable */
-         scalar = 1.0;
-         constant = 0.0;
          SCIP_CALL( SCIPvarGetOrigvarSum(&subvar, &scalar, &constant) );
          if( subvar == NULL )
          {
@@ -2555,8 +2540,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolDualval)
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolDualval)
 {
-
    SCIP_HEURDATA* heurdata;
+
    assert(scip != NULL);
    assert(heur != NULL);
 
@@ -2589,6 +2574,7 @@ SCIP_DECL_HEUREXEC(heurExecDualval)
 
    assert(scip != NULL);
    assert(heur != NULL);
+   assert(result != NULL);
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
@@ -2597,8 +2583,7 @@ SCIP_DECL_HEUREXEC(heurExecDualval)
    /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
 
-   /* so far we have not found any solution, but now we are willing to search for one */
-   *result = SCIP_DIDNOTFIND;
+   /* init data */
    heurdata->usedcalls = 0;
    heurdata->prevInfeasible = FALSE;
    heurdata->solfound = FALSE;
@@ -2626,17 +2611,12 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata = NULL;
+   SCIP_HEUR* heur = NULL;
 
    /* create dualval primal heuristic data */
-   heurdata = NULL;
-
-   /* create Nlp primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
-
-   heur = NULL;
 
    /* include primal heuristic */
 
@@ -2654,26 +2634,32 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolDualval) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolDualval) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/forceimprovements", "exit if objective doesn't improve",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/forceimprovements",
+         "exit if objective doesn't improve",
          &heurdata->forceimprovements, TRUE, DEFAULT_FORCEIMPROVEMENTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlycheaper", "add constraint to ensure that discrete vars are improving",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlycheaper",
+         "add constraint to ensure that discrete vars are improving",
          &heurdata->onlycheaper, TRUE, DEFAULT_ONLYCHEAPER, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlyleaves", "disable the heuristic if it was not called at a leaf of the B&B tree",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlyleaves",
+         "disable the heuristic if it was not called at a leaf of the B&B tree",
          &heurdata->onlyleaves, FALSE, DEFAULT_ONLYLEAVES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxindicators", "relax the indicator variables by introducing continuous copies",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxindicators",
+         "relax the indicator variables by introducing continuous copies",
          &heurdata->relaxindicators, FALSE, DEFAULT_RELAXINDICATORS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxcontvars", "relax the continous variables ",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxcontvars",
+         "relax the continous variables ",
          &heurdata->relaxcontvars, FALSE, DEFAULT_RELAXCONTVARS, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/heurverblevel",
          "verblevel of the heuristic, default is 0 to display nothing",
          &heurdata->heurverblevel, FALSE, DEFAULT_HEURVERBLEVEL, 0, 4, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nlpverblevel", "verblevel of the nlp solver, can be 0 or 1",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nlpverblevel",
+         "verblevel of the nlp solver, can be 0 or 1",
          &heurdata->nlpverblevel, FALSE, DEFAULT_NLPVERBLEVEL, 0, 1, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/rankvalue",
