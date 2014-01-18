@@ -920,7 +920,7 @@ $(LINKSMARKERFILE):
 		@$(MAKE) links
 
 .PHONY: links
-links:		echosoftlinks $(SOFTLINKS) | $(LIBDIR) $(DIRECTORIES)
+links:		| $(LIBDIR) $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
 		@rm -f $(LINKSMARKERFILE)
 		@echo "this is only a marker" > $(LINKSMARKERFILE)
 
