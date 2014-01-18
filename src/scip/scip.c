@@ -13147,6 +13147,10 @@ SCIP_RETCODE freeTransform(
          else
             hasinfval = FALSE;
 
+         /* removing infinite fixings is turned off by the corresponding parameter */
+         if( !scip->set->misc_finitesolstore )
+            hasinfval = FALSE;
+
          if( !hasinfval )
          {
             /* add solution to original candidate solution storage */
@@ -31004,6 +31008,22 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       SCIP_Bool valid;
       SCIP_SOL* bestsol;
 
+      /* if one of the variables was fixed to infinity in the original problem, we stop here */
+      for( v = 0; v < norigvars; ++v )
+      {
+         var = origvars[v];
+
+         if( SCIPisInfinity(scip, SCIPvarGetLbOriginal(var)) || SCIPisInfinity(scip, -SCIPvarGetUbOriginal(var)) )
+         {
+            assert(SCIPisEQ(scip, SCIPvarGetLbOriginal(var), SCIPvarGetUbOriginal(var)));
+
+            SCIPdebugMessage("--> var <%s> is fixed to infinite value %g in the original problem, stop making solution finite\n",
+               SCIPvarGetName(var), SCIPvarGetLbOriginal(var));
+
+            goto TERMINATE;
+         }
+      }
+
       /* create sub-SCIP */
       SCIP_CALL( SCIPcreate(&subscip) );
 
@@ -31121,12 +31141,18 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       }
    }
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("created finites solution copy:\n");
+   SCIP_CALL( SCIPprintSol(scip, *sol, NULL, FALSE) );
+#endif
+
    /* the solution of the sub-SCIP should have the same objective value */
    if( *success && !SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
    {
       *success = FALSE;
    }
 
+ TERMINATE:
    SCIPfreeBufferArray(scip, &solvals);
 
    return SCIP_OKAY;

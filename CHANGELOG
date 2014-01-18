@@ -269,6 +269,8 @@ parameters:
   feasibility to applied cuts, i.e., allow relaxation solutions to have a primal infeasibility of at most this factor
   times the infeasibility applied cuts
 - changed parameter numerics/dualfeastol to 1e-7 for safer dual bounds from LP solver
+- new parameter "misc/finitesolutionstore" to switch whether infinite fixings should be removed from solutions before
+  copying them to the original solution store
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to

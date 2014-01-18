@@ -235,6 +235,9 @@
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
+#define SCIP_DEFAULT_MISC_FINITESOLSTORE   TRUE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+
+
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
@@ -1382,7 +1385,11 @@ SCIP_RETCODE SCIPsetCreate(
             "should SCIP calculate the primal dual integral value?",
             &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
             NULL, NULL) );
-
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/finitesolutionstore",
+            "should SCIP try to remove infinite fixings from solutions copied to the solution store?",
+            &(*set)->misc_finitesolstore, FALSE, SCIP_DEFAULT_MISC_FINITESOLSTORE,
+            NULL, NULL) );
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
