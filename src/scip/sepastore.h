@@ -139,6 +139,16 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    );
 
+/** indicates whether a cut is applicable
+ *
+ * A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
+ */
+extern
+SCIP_Bool SCIPsepastoreIsCutApplicable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< cut to check */
+   );
+
 /** get cuts in the separation storage */
 extern
 SCIP_ROW** SCIPsepastoreGetCuts(

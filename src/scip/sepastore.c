@@ -251,7 +251,12 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
    return FALSE;
 }
 
-/** checks whether a cut with only one variable can be applied as boundchange */
+/** checks whether a cut with only one variable can be applied as boundchange
+ *
+ * This is the case if the bound change would prove infeasibility (w.r.t feastol),
+ * or if the new bound is at least epsilon better than the old bound.
+ * In the latter case, also the opposite bound has to be taken into account.
+ */
 static
 SCIP_Bool sepastoreIsBdchgApplicable(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -264,6 +269,8 @@ SCIP_Bool sepastoreIsBdchgApplicable(
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Bool local;
+   SCIP_Real oldlb;
+   SCIP_Real oldub;
 
    assert(set != NULL);
    assert(!SCIProwIsModifiable(cut));
@@ -284,6 +291,9 @@ SCIP_Bool sepastoreIsBdchgApplicable(
 
    local = SCIProwIsLocal(cut);
 
+   oldlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+   oldub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+
    /* get the left hand side of the cut and convert it to a bound */
    lhs = SCIProwGetLhs(cut);
    if( !SCIPsetIsInfinity(set, -lhs) )
@@ -292,13 +302,21 @@ SCIP_Bool sepastoreIsBdchgApplicable(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> lhs corresponds to lower bound */
-         if( SCIPsetIsGT(set, lhs/vals[0], local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var)) )
+         SCIP_Real newlb;
+
+         newlb = lhs/vals[0];
+
+         if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
       }
       else
       {
          /* coefficient is negative -> lhs corresponds to upper bound */
-         if( SCIPsetIsLT(set, lhs/vals[0], local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var)) )
+         SCIP_Real newub;
+
+         newub = lhs/vals[0];
+
+         if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
       }
    }
@@ -311,13 +329,21 @@ SCIP_Bool sepastoreIsBdchgApplicable(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> rhs corresponds to upper bound */
-         if( SCIPsetIsLT(set, rhs/vals[0], local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var)) )
+         SCIP_Real newub;
+
+         newub = rhs/vals[0];
+
+         if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
       }
       else
       {
          /* coefficient is negative -> rhs corresponds to lower bound */
-         if( SCIPsetIsGT(set, rhs/vals[0], local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var)) )
+         SCIP_Real newlb;
+
+         newlb = rhs/vals[0];
+
+         if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
       }
    }
@@ -582,7 +608,7 @@ SCIP_RETCODE sepastoreApplyLb(
       /* apply the local bound change or detect a cutoff */
       if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
       {
-         SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
@@ -597,7 +623,7 @@ SCIP_RETCODE sepastoreApplyLb(
       }
       else
       {
-         SCIPdebugMessage(" -> ignoring bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> ignoring bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
       }
    }
@@ -606,7 +632,7 @@ SCIP_RETCODE sepastoreApplyLb(
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
       if( SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(var)) )
       {
-         SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
 
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
@@ -625,7 +651,7 @@ SCIP_RETCODE sepastoreApplyLb(
       }
       else
       {
-         SCIPdebugMessage(" -> ignoring global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> ignoring global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
       }
    }
@@ -662,7 +688,7 @@ SCIP_RETCODE sepastoreApplyUb(
       /* apply the local bound change or detect a cutoff */
       if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
       {
-         SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
 
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
@@ -677,7 +703,7 @@ SCIP_RETCODE sepastoreApplyUb(
       }
       else
       {
-         SCIPdebugMessage(" -> ignoring bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> ignoring bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
       }
    }
@@ -686,7 +712,7 @@ SCIP_RETCODE sepastoreApplyUb(
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
       if( SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(var)) )
       {
-         SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
 
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
@@ -705,7 +731,7 @@ SCIP_RETCODE sepastoreApplyUb(
       }
       else
       {
-         SCIPdebugMessage(" -> ignoring global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> ignoring global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
       }
    }
@@ -1280,6 +1306,18 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIPdebugMessage("removed %d non-efficacious cuts\n", cnt);
 
    return SCIP_OKAY;
+}
+
+/** indicates whether a cut is applicable
+ *
+ * A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
+ */
+SCIP_Bool SCIPsepastoreIsCutApplicable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< cut to check */
+   )
+{
+   return SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1 || sepastoreIsBdchgApplicable(set, cut);
 }
 
 /** get cuts in the separation storage */

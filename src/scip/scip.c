@@ -28039,6 +28039,23 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
    return norm;
 }
 
+/** indicates whether a cut is applicable, i.e., will modify the LP when applied
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return whether the cut is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon
+ */
+SCIP_Bool SCIPisCutApplicable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             cut                 /**< separated cut */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisCutApplicable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPsepastoreIsCutApplicable(scip->set, cut);
+}
+
 /** adds cut to separation storage
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
