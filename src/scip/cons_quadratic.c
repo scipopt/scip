@@ -7376,7 +7376,7 @@ SCIP_RETCODE separatePoint(
          if( row == NULL ) /* failed to generate cut */
             continue;
 
-         if( SCIPisGT(scip, efficacy, actminefficacy) )  /*lint !e644 */
+         if( SCIPisGT(scip, efficacy, actminefficacy) && SCIPisCutApplicable(scip, row) )  /*lint !e644 */
          {
             SCIP_Bool infeasible;
 

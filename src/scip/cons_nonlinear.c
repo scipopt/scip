@@ -5233,13 +5233,14 @@ SCIP_RETCODE separatePoint(
             return SCIP_INVALIDDATA;
          }
 
-         if( SCIPisGT(scip, efficacy, minefficacy) ||
-            (inenforcement &&
-               ( ( violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
+         if( (SCIPisGT(scip, efficacy, minefficacy) ||
+              (inenforcement &&
+                ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                   (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-               SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
-               )
-            )
+                SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
+              )
+             ) && SCIPisCutApplicable(scip, row)
+           )
          {
             SCIP_Bool infeasible;
 

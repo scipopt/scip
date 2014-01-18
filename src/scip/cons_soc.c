@@ -1361,7 +1361,7 @@ SCIP_RETCODE separatePoint(
                return SCIP_INVALIDDATA;
             }
 
-            if( SCIPisLE(scip, efficacy, minefficacy) )
+            if( SCIPisLE(scip, efficacy, minefficacy) || !SCIPisCutApplicable(scip, row) )
             {
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
                continue;

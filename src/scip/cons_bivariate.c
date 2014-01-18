@@ -4768,8 +4768,9 @@ SCIP_RETCODE separatePoint(
          SCIPdebug( printEstimator(scip, sol, conss[c], violside, row) );
 
          /* if cut is strong enough or it's weak but we separate on a convex function and accept weak cuts there, add cut to SCIP */
-         if( SCIPisGT(scip, efficacy, minefficacy) ||
-            (inenforcement && SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside)) )
+         if( (SCIPisGT(scip, efficacy, minefficacy) ||
+              (inenforcement && SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside))) &&
+             SCIPisCutApplicable(scip, row) )
          {
             SCIP_Bool infeasible;
 

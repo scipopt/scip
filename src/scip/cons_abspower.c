@@ -3830,8 +3830,11 @@ SCIP_RETCODE separatePoint(
             return SCIP_INVALIDDATA;
          }
 
-         /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add */
-         if( efficacy > minefficacy || (inenforcement && convex && (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPisPositive(scip, efficacy) : SCIPisFeasPositive(scip, efficacy))) )
+         /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add,
+          * unless it corresponds to a bound change that is too weak (<eps) to be added
+          */
+         if( (efficacy > minefficacy || (inenforcement && convex && (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPisPositive(scip, efficacy) : SCIPisFeasPositive(scip, efficacy)))) &&
+             SCIPisCutApplicable(scip, row) )
          {
             SCIP_Bool infeasible;
 
