@@ -2508,6 +2508,26 @@ SCIP_DECL_HEURINIT(heurInitDualval)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitDualval)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   if( heurdata->subscip != NULL )
+   {
+      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_HEURINITSOL(heurInitsolDualval)
@@ -2548,11 +2568,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolDualval)
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-
-   if( heurdata->subscip != NULL )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
-   }
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
@@ -2631,6 +2646,7 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeDualval) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitDualval) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitDualval) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolDualval) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolDualval) );
 
