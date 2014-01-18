@@ -112,8 +112,8 @@
 #define DEFAULT_ADDVIOLATIONCONS  FALSE /**< Add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?*/
 #define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< Add constraint handler to filter out violated cuts? */
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< Should the violation constraint handler use the norm of a cut to check for feasibility? */
-#define DEFAULT_USEOBJUB           TRUE /**< Use upper bound on objective function (via primal solution)? */
-#define DEFAULT_USEOBJLB           TRUE /**< Use lower bound on objective function (via lower bound)? */
+#define DEFAULT_USEOBJUB          FALSE /**< Use upper bound on objective function (via primal solution)? */
+#define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
 #define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
 #define DEFAULT_OUTPUT            FALSE /**< Should information about the sub-MIP and cuts be displayed? */
 
@@ -3922,7 +3922,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    /* check for parameters */
    if ( ( sepadata->useobjub || sepadata->useobjlb ) && ( sepadata->usecmir || sepadata->usestrongcg ) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Using objective function bounds and CMIR or Strong-CG functions is useless. Turning off usage of objective function bounds.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+         "WARNING - sepa_cgmip: Using objective function bounds and CMIR or Strong-CG functions is useless. Turning off usage of objective function bounds.\n");
       SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjub", FALSE) );
       SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjlb", FALSE) );
    }
