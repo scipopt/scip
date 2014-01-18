@@ -828,26 +828,37 @@ SCIP_RETCODE transformColumn(
 }
 
 
-/** compute objective coefficient for rows that are weighted by size */
+/** compute objective coefficient for rows that are weighted by size
+ *
+ *  The objective is computed by multiplying a default value by
+ *  \f[
+ *  1 - (r_{\mbox{max}} - r) \frac{1 - a}{r_{\mbox{max}} - r_{\mbox{min}}},
+ *  \f]
+ *  where \f$r\f$ is the size of the current row, \f$a \in [0,1]\f$ is a parameter, and \f$r_{\mbox{max}}\f$ and
+ *  \f$r_{\mbox{min}}\f$ are the maximal and minimal size of a row, respectively.
+ *
+ *  Thus, if \f$r = r_{\mbox{max}}\f$, we get 1 and if \f$r = r_{\mbox{min}}\f$, we get \f$a\f$.
+ */
 static
 SCIP_Real computeObjWeightSize(
-   int                   rowsize,            /**< size of rows */
+   int                   rowsize,            /**< size of current row */
    int                   minrowsize,         /**< maximal size of rows */
    int                   maxrowsize          /**< minimal size of rows */
    )
 {
    SCIP_Real a;
-   SCIP_Real b;
 
    assert( maxrowsize > 0 );
    assert( minrowsize < INT_MAX );
    assert( minrowsize <= maxrowsize );
    assert( minrowsize <= rowsize && rowsize <= maxrowsize );
 
-   a = (1.0 - OBJWEIGHTRANGE)/((SCIP_Real) (maxrowsize - minrowsize));
-   b = 1.0 - a * ((SCIP_Real) maxrowsize);
+   if ( minrowsize == maxrowsize )
+      return 1.0;
 
-   return a * ((SCIP_Real) rowsize) + b;
+   a = (1.0 - OBJWEIGHTRANGE)/((SCIP_Real) (maxrowsize - minrowsize));
+
+   return 1.0 - a * ((SCIP_Real) (maxrowsize - rowsize));
 }
 
 
