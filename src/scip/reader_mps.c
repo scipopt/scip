@@ -3821,6 +3821,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          /* store aggregated variables */
          binvar = SCIPgetBinaryVarIndicator(cons);
+         if( SCIPvarIsNegated(binvar) )
+            binvar = SCIPvarGetNegatedVar(binvar);
+         assert( binvar != NULL );
          SCIP_CALL( collectAggregatedVars(scip, &binvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
 
          /* indicator constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
