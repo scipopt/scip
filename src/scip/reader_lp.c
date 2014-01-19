@@ -3063,37 +3063,55 @@ SCIP_RETCODE printAndCons(
 static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR**            vars,               /**< variable array */
-   int*                  nAggregatedVars,    /**< number of aggregated variables on output */
-   SCIP_VAR***           aggregatedVars,     /**< array storing the aggregated variables on output */
-   SCIP_HASHTABLE**      varAggregated       /**< hashtable for checking duplicates */
+   int                   nvars,              /**< number of active variables in the problem */
+   SCIP_VAR***           aggvars,            /**< pointer to array storing the aggregated variables on output */
+   int*                  naggvars,           /**< pointer to number of aggregated variables on output */
+   int*                  saggvars,           /**< pointer to number of slots in aggvars array */
+   SCIP_HASHTABLE*       varAggregated       /**< hashtable for checking duplicates */
    )
 {
-   int j;
+   int v;
+
+   assert( scip != NULL );
+   assert( aggvars != NULL );
+   assert( naggvars != NULL );
+   assert( saggvars != NULL );
 
    /* check variables */
-   for( j = 0; j < nvars; ++j )
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_VARSTATUS status;
       SCIP_VAR* var;
 
-      var = vars[j];
+      var = vars[v];
       status = SCIPvarGetStatus(var);
 
       /* collect aggregated variables in a list */
       if( status >= SCIP_VARSTATUS_AGGREGATED )
       {
          assert( status == SCIP_VARSTATUS_AGGREGATED || status == SCIP_VARSTATUS_MULTAGGR || status == SCIP_VARSTATUS_NEGATED );
+         assert( varAggregated != NULL );
 
-         if( !SCIPhashtableExists(*varAggregated, (void*) var) )
+         if( ! SCIPhashtableExists(varAggregated, (void*) var) )
          {
-            (*aggregatedVars)[(*nAggregatedVars)++] = var;
-            SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
+            /* possibly enlarge array */
+            if ( *saggvars <= *naggvars )
+            {
+               int newsize;
+               newsize = SCIPcalcMemGrowSize(scip, *naggvars + 1);
+               assert( newsize > *saggvars );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggvars, *saggvars, newsize) );
+               *saggvars = newsize;
+            }
+
+            (*aggvars)[*naggvars] = var;
+            (*naggvars)++;
+            SCIP_CALL( SCIPhashtableInsert(varAggregated, (void*) var) );
+            assert( *naggvars <= *saggvars );
          }
       }
    }
-
    return SCIP_OKAY;
 }
 
@@ -3442,8 +3460,9 @@ SCIP_RETCODE SCIPwriteLp(
    int nConsIndicator = 0;
    char consname[LP_MAX_NAMELEN];
 
-   SCIP_VAR** aggregatedVars;
-   int nAggregatedVars = 0;
+   SCIP_VAR** aggvars;
+   int naggvars = 0;
+   int saggvars = 0;
    SCIP_HASHTABLE* varAggregated;
    SCIP_HASHMAP* consHidden;
 
@@ -3706,7 +3725,7 @@ SCIP_RETCODE SCIPwriteLp(
          assert( slackvar != NULL );
 
          rhs = 1;
-         if( SCIPvarGetStatus(binvar) == SCIP_VARSTATUS_NEGATED )
+         if ( SCIPvarIsNegated(binvar) )
          {
             rhs = 0;
             binvar = SCIPvarGetNegatedVar(binvar);
@@ -3794,9 +3813,12 @@ SCIP_RETCODE SCIPwriteLp(
       }
    }
 
+   /* allocate array for storing aggregated and negated variables (dynamically adjusted) */
+   saggvars = nvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
+
    /* create hashtable for storing aggregated variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 10 * nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
    for( c = 0; c < nConsSOS1; ++c )
@@ -3805,7 +3827,7 @@ SCIP_RETCODE SCIPwriteLp(
       consvars = SCIPgetVarsSOS1(scip, cons);
       nconsvars = SCIPgetNVarsSOS1(scip, cons);
 
-      SCIP_CALL( collectAggregatedVars(scip, nconsvars, consvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregated) );
    }
 
    /* check for aggregated variables in SOS2 constraints and output aggregations as linear constraints */
@@ -3815,7 +3837,7 @@ SCIP_RETCODE SCIPwriteLp(
       consvars = SCIPgetVarsSOS2(scip, cons);
       nconsvars = SCIPgetNVarsSOS2(scip, cons);
 
-      SCIP_CALL( collectAggregatedVars(scip, nconsvars, consvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregated) );
    }
    
    /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
@@ -3824,9 +3846,8 @@ SCIP_RETCODE SCIPwriteLp(
       cons = consQuadratic[c];
       for( v = 0; v < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++v )
       {
-         SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var,
-               &nAggregatedVars, &aggregatedVars, &varAggregated) );
-      }         
+         SCIP_CALL( collectAggregatedVars(scip, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var, 1, &aggvars, &naggvars, &saggvars, varAggregated) );
+      }
    }
 
    /* check for aggregated variables in second order cone constraints and output aggregations as linear constraints */
@@ -3834,10 +3855,9 @@ SCIP_RETCODE SCIPwriteLp(
    {
       cons = consSOC[c];
       
-      SCIP_CALL( collectAggregatedVars(scip, SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons),
-            &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(scip, SCIPgetLhsVarsSOC(scip, cons), SCIPgetNLhsVarsSOC(scip, cons), &aggvars, &naggvars, &saggvars, varAggregated) );
       var = SCIPgetRhsVarSOC(scip, cons);
-      SCIP_CALL( collectAggregatedVars(scip, 1, &var, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(scip, &var, 1, &aggvars, &naggvars, &saggvars, varAggregated) );
    }
 
    /* check for aggregated variables in indicator constraints and output aggregations as linear constraints */
@@ -3847,11 +3867,15 @@ SCIP_RETCODE SCIPwriteLp(
 
       cons = consIndicator[c];
       binvar = SCIPgetBinaryVarIndicator(cons);
-      SCIP_CALL( collectAggregatedVars(scip, 1, &binvar, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      if ( ! SCIPvarIsNegated(binvar) )
+      {
+         /* we take care of negated variables above, but not of aggregated variables */
+         SCIP_CALL( collectAggregatedVars(scip, &binvar, 1, &aggvars, &naggvars, &saggvars, varAggregated) );
+      }
    }
 
    /* print aggregation constraints */
-   SCIP_CALL( printAggregatedCons(scip, file, transformed, nvars, nAggregatedVars, aggregatedVars) );
+   SCIP_CALL( printAggregatedCons(scip, file, transformed, nvars, naggvars, aggvars) );
 
    /* print "Bounds" section */
    SCIPinfoMessage(scip, file, "Bounds\n");
@@ -3904,9 +3928,9 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* output aggregated variables as 'free' */
-   for( v = 0; v < nAggregatedVars; ++v )
+   for( v = 0; v < naggvars; ++v )
    {
-      var = aggregatedVars[v];
+      var = aggvars[v];
       assert( var != NULL );
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
 
@@ -3935,9 +3959,9 @@ SCIP_RETCODE SCIPwriteLp(
       }
 
       /* possibly output aggregated variables */
-      for( v = 0; v < nAggregatedVars; ++v )
+      for( v = 0; v < naggvars; ++v )
       {
-         var = aggregatedVars[v];
+         var = aggvars[v];
          assert( var != NULL );
 
          if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -3971,9 +3995,9 @@ SCIP_RETCODE SCIPwriteLp(
       }
 
       /* possibly output aggregated variables */
-      for( v = 0; v < nAggregatedVars; ++v )
+      for( v = 0; v < naggvars; ++v )
       {
-         var = aggregatedVars[v];
+         var = aggvars[v];
          assert( var != NULL );
 
          if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
@@ -3988,7 +4012,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* free space */
-   SCIPfreeBufferArray(scip, &aggregatedVars);
+   SCIPfreeBlockMemoryArray(scip, &aggvars, saggvars);
    SCIPhashtableFree(&varAggregated);
    if( conshdlrInd != NULL )
       SCIPhashmapFree(&consHidden);
