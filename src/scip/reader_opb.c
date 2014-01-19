@@ -2112,7 +2112,7 @@ SCIP_RETCODE writeOpbObjective(
    SCIP*const            scip,               /**< SCIP data structure */
    FILE*const            file,               /**< output file, or NULL if standard output should be used */
    SCIP_VAR**const       vars,               /**< array with active (binary) variables */
-   int const             nvars,              /**< number of mutable variables in the problem */
+   int const             nvars,              /**< number of active variables in the problem */
    SCIP_VAR** const      resvars,            /**< array of resultant variables */
    int const             nresvars,           /**< number of resultant variables */
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
@@ -3180,7 +3180,7 @@ SCIP_RETCODE writeOpbConstraints(
    SCIP_CONS**const      conss,              /**< array with constraints of the problem */
    int const             nconss,             /**< number of constraints in the problem */
    SCIP_VAR**const       vars,               /**< array with active (binary) variables */
-   int const             nvars,              /**< number of mutable variables in the problem */
+   int const             nvars,              /**< number of active variables in the problem */
    SCIP_VAR** const      resvars,            /**< array of resultant variables */
    int const             nresvars,           /**< number of resultant variables */
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
@@ -3957,7 +3957,7 @@ SCIP_RETCODE writeOpb(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of acitve variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_VAR** const      resvars,            /**< array of resultant variables */
@@ -4096,7 +4096,7 @@ SCIP_RETCODE SCIPwriteOpb(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */

@@ -15203,7 +15203,7 @@ SCIP_RETCODE lpUpdateVarProved(
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
-      SCIPerrorMessage("LP was informed of an objective change of a non-mutable variable\n");
+      SCIPerrorMessage("LP was informed of an objective change of a non-active variable\n");
       return SCIP_INVALIDDATA;
    }
 

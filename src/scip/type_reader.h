@@ -86,7 +86,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
                         extobj = objsense * objscale * (intobj + objoffset)
  *  - objoffset       : objective offset from bound shifting and fixing 
  *  - vars            : array with active variables ordered binary, integer, implicit, continuous 
- *  - nvars           : number of mutable variables in the problem
+ *  - nvars           : number of active variables in the problem
  *  - nbinvars        : number of binary variables
  *  - nintvars        : number of general integer variables
  *  - nimplvars       : number of implicit integer variables 

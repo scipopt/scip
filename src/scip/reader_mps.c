@@ -2756,7 +2756,7 @@ static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR***           aggvars,            /**< pointer to array storing the aggregated variables on output */
    int*                  naggvars,           /**< pointer to number of aggregated variables on output */
    int*                  saggvars,           /**< pointer to number of slots in aggvars array */

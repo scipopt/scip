@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPwritePip(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */

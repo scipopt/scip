@@ -3063,7 +3063,7 @@ SCIP_RETCODE printAndCons(
 static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR**            vars,               /**< variable array */
    int*                  nAggregatedVars,    /**< number of aggregated variables on output */
    SCIP_VAR***           aggregatedVars,     /**< array storing the aggregated variables on output */
@@ -3106,7 +3106,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nAggregatedVars,    /**< number of aggregated variables */
    SCIP_VAR**            aggregatedVars      /**< array storing the aggregated variables */
    )
@@ -3406,7 +3406,7 @@ SCIP_RETCODE SCIPwriteLp(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
