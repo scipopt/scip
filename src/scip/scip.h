@@ -13378,7 +13378,12 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
    int                   nvals               /**< number of values */
    );
 
-/** indicates whether a cut is applicable, i.e., will modify the LP when applied
+/** indicates whether a cut is applicable
+ *
+ *  If the cut has only one variable and this method returns FALSE, it may
+ *  still be possible that the cut can be added to the LP (as a row instead
+ *  of a boundchange), but it will be a very weak cut. The user is asked
+ *  to avoid such cuts.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
