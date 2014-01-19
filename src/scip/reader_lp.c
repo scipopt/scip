@@ -55,20 +55,20 @@
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
 #define READER_EXTENSION        "lp"
 
-#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the lp
-                                              *   file? */
-#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
+#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< Should possible \"and\"-constraints be linearized when writing the lp file? */
+#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< Should an aggregated linearization for and constraints be used? */
 
 /*
  * Data structures
  */
-#define LP_MAX_LINELEN       65536
-#define LP_MAX_PUSHEDTOKENS  2
-#define LP_INIT_COEFSSIZE    8192
-#define LP_INIT_QUADCOEFSSIZE 16
-#define LP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\\0' = 561*/
-#define LP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\\0' = 256 */
-#define LP_PRINTLEN          100
+
+#define LP_MAX_LINELEN         65536
+#define LP_MAX_PUSHEDTOKENS        2
+#define LP_INIT_COEFSSIZE       8192
+#define LP_INIT_QUADCOEFSSIZE     16
+#define LP_MAX_PRINTLEN          561         /**< the maximum length of any line is 560 + '\\0' = 561*/
+#define LP_MAX_NAMELEN           256         /**< the maximum length for any name is 255 + '\\0' = 256 */
+#define LP_PRINTLEN              100
 
 
 /** LP reading data */
@@ -3084,10 +3084,8 @@ SCIP_RETCODE collectAggregatedVars(
       /* collect aggregated variables in a list */
       if( status >= SCIP_VARSTATUS_AGGREGATED )
       {
-         assert( status == SCIP_VARSTATUS_AGGREGATED || 
-            status == SCIP_VARSTATUS_MULTAGGR ||
-            status == SCIP_VARSTATUS_NEGATED );
-         
+         assert( status == SCIP_VARSTATUS_AGGREGATED || status == SCIP_VARSTATUS_MULTAGGR || status == SCIP_VARSTATUS_NEGATED );
+
          if( !SCIPhashtableExists(*varAggregated, (void*) var) )
          {
             (*aggregatedVars)[(*nAggregatedVars)++] = var;
@@ -3098,7 +3096,6 @@ SCIP_RETCODE collectAggregatedVars(
 
    return SCIP_OKAY;
 }
-
 
 /** print aggregated variable-constraints */
 static
@@ -3542,8 +3539,8 @@ SCIP_RETCODE SCIPwriteLp(
       var = vars[v];
 
 #ifndef NDEBUG
-      /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
-      if( !transformed )
+      /* in case the original problem has to be written, the variables have to be either "original" or "negated" */
+      if( ! transformed )
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
       
@@ -3613,7 +3610,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-               NULL, 0, NULL, 0, SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
+               NULL, 0, NULL, 0, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), transformed) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
