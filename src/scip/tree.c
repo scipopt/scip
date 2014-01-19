@@ -3305,6 +3305,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 {
    SCIP_NODE* lpstatefork;
    SCIP_Bool updatefeas;
+   SCIP_Bool checkbdchgs;
    int lpstateforkdepth;
    int d;
 
@@ -3359,9 +3360,15 @@ SCIP_RETCODE SCIPtreeLoadLPState(
                lpstatefork->data.subroot->lpwasprimfeas, lpstatefork->data.subroot->lpwasdualfeas) );
       }
       updatefeas = !lp->solved || !lp->solisbasic;
+      checkbdchgs = TRUE;
    }
    else
+   {
       updatefeas = TRUE;
+
+      /* we do not need to check the bounds, since primalfeasible is updated anyway when flushing the LP */
+      checkbdchgs = FALSE;
+   }
 
    if( updatefeas )
    {
@@ -3372,10 +3379,13 @@ SCIP_RETCODE SCIPtreeLoadLPState(
          && (tree->pathnlpcols[tree->correctlpdepth] == tree->pathnlpcols[lpstateforkdepth]);
 
       /* check the path from LP fork to focus node for domain changes (destroying primal feasibility of LP basis) */
-      for( d = lpstateforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
+      if( checkbdchgs )
       {
-         assert(d < tree->pathlen);
-         lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
+         for( d = lpstateforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
+         {
+            assert(d < tree->pathlen);
+            lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
+         }
       }
    }
 
