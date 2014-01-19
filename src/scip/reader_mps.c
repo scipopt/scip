@@ -2764,8 +2764,6 @@ SCIP_RETCODE collectAggregatedVars(
    )
 {
    int v;
-   SCIP_VAR* var;
-   SCIP_VARSTATUS status;
 
    assert( scip != NULL );
    assert( aggvars != NULL );
@@ -2775,24 +2773,34 @@ SCIP_RETCODE collectAggregatedVars(
    /* check variables */
    for( v = 0; v < nvars; ++v )
    {
+      SCIP_VARSTATUS status;
+      SCIP_VAR* var;
+
       var = vars[v];
       status = SCIPvarGetStatus(var);
 
       /* collect aggregated variables in a list */
       if( status >= SCIP_VARSTATUS_AGGREGATED )
       {
-         assert(status == SCIP_VARSTATUS_AGGREGATED ||
-            status == SCIP_VARSTATUS_MULTAGGR ||
-            status == SCIP_VARSTATUS_NEGATED);
-	 assert(varAggregated != NULL);
+         assert( status == SCIP_VARSTATUS_AGGREGATED || status == SCIP_VARSTATUS_MULTAGGR || status == SCIP_VARSTATUS_NEGATED );
+         assert( varAggregated != NULL );
 
-         if( !SCIPhashtableExists(varAggregated, (void*) var) )
+         if( ! SCIPhashtableExists(varAggregated, (void*) var) )
          {
-            assert((*saggvars) > (*naggvars));
+            /* possibly enlarge array */
+            if ( *saggvars <= *naggvars )
+            {
+               int newsize;
+               newsize = SCIPcalcMemGrowSize(scip, *naggvars + 1);
+               assert( newsize > *saggvars );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggvars, *saggvars, newsize) );
+               *saggvars = newsize;
+            }
 
             (*aggvars)[*naggvars] = var;
             (*naggvars)++;
             SCIP_CALL( SCIPhashtableInsert(varAggregated, (void*) var) );
+            assert( *naggvars <= *saggvars );
          }
       }
    }
@@ -3553,11 +3561,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
-   /* create hashtable for storing aggregated variables */
+   /* nfixedvars counts all variables with status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, but not SCIP_VARSTATUS_NEGATED */
    saggvars = nfixedvars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
 
-   /* number of fixed variables contains all variable with the status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, SCIP_VARSTATUS_NEGATED */
+   /* create hashtable for storing aggregated variables */
    if( nfixedvars > 0 )
    {
       SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), 5 * nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
@@ -4536,7 +4544,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* free variable hashmap */
    SCIPhashmapFree(&varnameHashmap);
 
-   SCIPfreeBufferArray(scip, &aggvars);
+   SCIPfreeBlockMemoryArray(scip, &aggvars, saggvars);
    SCIPfreeBufferArray(scip, &rhss);
 
    /* free buffer arrays for SOS1, SOS2, and quadratic */
