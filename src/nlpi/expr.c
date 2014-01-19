@@ -4782,7 +4782,7 @@ SCIP_RETCODE exprparseReadVariable(
    int**                 varnames,           /**< pointer to buffer to store new variable names */
    SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
    SCIP_Real             coefficient,        /**< coefficient to be used when creating the expression */
-   const char*           varnameendptr       /**< if a '<varname>' should be parsed, set this to NULL. Then, str points to the '<'
+   const char*           varnameendptr       /**< if a \<varname\> should be parsed, set this to NULL. Then, str points to the '<'
                                                   else, str should point to the first letter of the varname, and varnameendptr should
                                                   point one char behind the last char of the variable name */
    )
