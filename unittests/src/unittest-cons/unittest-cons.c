@@ -587,8 +587,10 @@ main(
    CHECK_TEST( consCheckGetNCheckConss(conshdlr, 1) );
    CHECK_TEST( consCheckGetNConss(conshdlr, 1) );
 
-   /* this method can not be checked yet
-    * TODO: benny please write down the discussion */
+   /* We only count a call of the feasibility check method of a constraint handler if we check all constraints of a handler.
+    * We want to compare this against SCIPconshdlrGetNCheckCalls(), but SCIP might call the check method of the constraint
+    * handler to check a single constraint. In this case the counter for the number of check calls does not increase (for SCIP).
+    * So the total number of calls of the check method should be at least SCIPconshdlrGetNCheckCalls(). */
    /*CHECK_TEST( consCheckNCheckCalls(scip, conshdlr) ); */
 
 
