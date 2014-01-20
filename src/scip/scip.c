@@ -16412,7 +16412,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
          *cutoff = TRUE;
 
-         /* we do not regard the up branch; its valid pointer stays set to FALSE */
          return SCIP_OKAY;
       }
    }
@@ -16435,7 +16434,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
          *cutoff = TRUE;
 
-         /* we do not regard the down branch; its valid pointer stays set to FALSE */
          return SCIP_OKAY;
       }
    }
@@ -16512,6 +16510,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          case SCIP_LPSOLSTAT_OPTIMAL:
          {
             *value = SCIPgetLPObjval(scip);
+            assert(SCIPisLT(scip, *value, SCIPgetCutoffbound(scip)));
 
             SCIPdebugMessage("probing LP solved to optimality, objective value: %16.9g\n", *value);
 
@@ -16615,14 +16614,15 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             return SCIP_INVALIDDATA;
          }  /*lint !e788*/
       }
-   }
 
 #ifndef NDEBUG
-   if( *lperror )
-   {
-      SCIPdebugMessage("error during strong branching probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
-   }
+      if( *lperror )
+      {
+         SCIPdebugMessage("error during strong branching probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
+      }
 #endif
+   }
+
 
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
@@ -16794,7 +16794,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    if( newlb > SCIPvarGetUbLocal(var) + 0.5 )
    {
       *up = SCIPinfinity(scip);
-      *down = lpobjval;
 
       if( upinf != NULL )
          *upinf = TRUE;
@@ -16820,7 +16819,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    if( newub < SCIPvarGetLbLocal(var) - 0.5 )
    {
       *down = SCIPinfinity(scip);
-      *up = lpobjval;
 
       if( downinf != NULL )
          *downinf = TRUE;
@@ -29659,7 +29657,7 @@ SCIP_RETCODE solveProbingLP(
    if( initcutoff )
    {
       if( cutoff != NULL )
-         *cutoff = FALSE;
+         *cutoff = TRUE;
 
       return SCIP_OKAY;
    }
