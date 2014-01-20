@@ -2045,6 +2045,14 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       /* if the resulting genvbound is trivial, remove it */
       if( genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef) )
       {
+         SCIP_HASHMAP* hashmap;
+
+         hashmap = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? propdata->lbgenvbounds : propdata->ubgenvbounds;
+
+         /* remove genvbound from hashmap */
+         assert(SCIPhashmapExists(hashmap, genvbound->var));
+         SCIP_CALL( SCIPhashmapRemove(hashmap, genvbound->var) );
+
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
          --(propdata->ngenvbounds);
          propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
