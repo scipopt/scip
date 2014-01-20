@@ -39,15 +39,16 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-DISPFREQ=${10}
-CONTINUE=${11}
-QUEUETYPE=${12}
-QUEUE=${13}
-PPN=${14}
-CLIENTTMPDIR=${15}
-NOWAITCLUSTER=${16}
-EXCLUSIVE=${17}
-PERMUTE=${18}
+LPS=${10}
+DISPFREQ=${11}
+CONTINUE=${12}
+QUEUETYPE=${13}
+QUEUE=${14}
+PPN=${15}
+CLIENTTMPDIR=${16}
+NOWAITCLUSTER=${17}
+EXCLUSIVE=${18}
+PERMUTE=${19}
 
 # check if all variables defined (by checking the last one)
 if test -z $PERMUTE
@@ -55,13 +56,14 @@ then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
-    echo "SETNAMES       = $SETNAME"
+    echo "SETNAMES      = $SETNAME"
     echo "BINID         = $BINID"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
     echo "MEMLIMIT      = $MEMLIMIT"
     echo "THREADS       = $THREADS"
     echo "FEASTOL       = $FEASTOL"
+    echo "LPS           = $LPS"
     echo "DISPFREQ      = $DISPFREQ"
     echo "CONTINUE      = $CONTINUE"
     echo "QUEUETYPE     = $QUEUETYPE"
