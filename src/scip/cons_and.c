@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -91,6 +91,7 @@ struct SCIP_ConsData
    SCIP_VAR**            vars;               /**< variables in the and operation */
    SCIP_VAR*             resvar;             /**< resultant variable */
    SCIP_ROW**            rows;               /**< rows for linear relaxation of and constraint */
+   SCIP_ROW*             aggrrow;            /**< aggregated row for linear relaxation of and constraint */
    int                   nvars;              /**< number of variables in and operation */
    int                   varssize;           /**< size of vars array */
    int                   nrows;              /**< number of rows for linear relaxation of and constraint */
@@ -430,6 +431,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
    (*consdata)->resvar = resvar;
    (*consdata)->rows = NULL;
+   (*consdata)->aggrrow = NULL;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
    (*consdata)->nrows = 0;
@@ -492,6 +494,12 @@ SCIP_RETCODE consdataFreeRows(
       SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->nrows);
       
       consdata->nrows = 0;
+   }
+
+   if( consdata->aggrrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &consdata->aggrrow) );
+      consdata->aggrrow = NULL;
    }
 
    return SCIP_OKAY;
@@ -925,11 +933,9 @@ SCIP_RETCODE addRelaxation(
    SCIP_CONS*            cons                /**< constraint to check */
    )
 {
-   SCIP_Bool infeasible;
-   SCIP_ROW* aggrrow;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
 
-   char rowname[SCIP_MAXSTRLEN];
 
    /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
@@ -937,7 +943,7 @@ SCIP_RETCODE addRelaxation(
     *
     * during separation we separate the stronger relaxation which consists of n+1 row:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
-    *   - for each operator variable vi:  resvar - vi            <= 0
+    *   - for each operator variable vi:  resvar - vi            <= 0.0
     */
 
    consdata = SCIPconsGetData(cons);
@@ -949,15 +955,24 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( createRelaxation(scip, cons) );
    }
 
-   /* create/add/releas the row aggregated row */
-   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &aggrrow, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   SCIP_CALL( SCIPaddVarToRow(scip, aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
-   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, aggrrow, consdata->nvars, consdata->vars, -1.0) );
-   SCIP_CALL( SCIPaddCut(scip, NULL, aggrrow, FALSE, &infeasible) );
-   assert( ! infeasible );  /* this function is only called by initlp() -> the cuts should be feasible */
-   SCIP_CALL( SCIPreleaseRow(scip, &aggrrow) );
+   /* create the aggregated row */
+   if( consdata->aggrrow == NULL )
+   {
+      char rowname[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->aggrrow, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
+      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->aggrrow, consdata->nvars, consdata->vars, -1.0) );
+   }
+
+   /* insert aggregated LP row as cut */
+   if( !SCIProwIsInLP(consdata->aggrrow) )
+   {
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, &infeasible) );
+      assert(!infeasible);  /* this function is only called by initlp() -> the cuts should be feasible */
+   }
 
    /* add additional row */
    if( !SCIProwIsInLP(consdata->rows[0]) )
@@ -2599,6 +2614,9 @@ SCIP_RETCODE cliquePresolve(
       nvars = consdata->nvars;
    }
 
+   /* @todo when cliques are improved, we only need to collect all clique-ids for all variables and check for doubled
+    *       entries
+    */
    /* case 1 first part */
    /* check if two operands are in a clique */
    for( v = nvars - 1; v > 0; --v )
@@ -3586,6 +3604,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
    SCIP_CALL( SCIPaddVar(scip, var) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Bool debugval;
       SCIP_Real varval;
@@ -3852,6 +3871,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
+      return SCIP_WRITEERROR;
    }
 
    /* create the variable mapping hash map */
@@ -4269,7 +4289,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    cutoff = FALSE;
    delay = FALSE;
    firstchange = INT_MAX;
-   for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+   for( c = 0; c < nconss && !cutoff && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
@@ -4907,8 +4927,9 @@ int SCIPgetNVarsAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return -1;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4930,8 +4951,9 @@ SCIP_VAR** SCIPgetVarsAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4953,6 +4975,7 @@ SCIP_VAR* SCIPgetResultantAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4976,6 +4999,7 @@ SCIP_Bool SCIPisAndConsSorted(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return FALSE;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4999,6 +5023,7 @@ SCIP_RETCODE SCIPsortAndCons(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5030,6 +5055,7 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5061,6 +5087,7 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);

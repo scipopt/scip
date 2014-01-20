@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -208,6 +208,9 @@ struct SCIP_Conshdlr
    int                   startnactiveconss;  /**< number of active constraints existing when problem solving started */
    int                   initconsssize;      /**< size of initconss array */
    int                   ninitconss;         /**< number of active constraints that must enter the LP */
+   int                   ninitconsskept;     /**< number of active constraints that must enter the LP, but were not initialized at
+                                              *   their valid node, so that they have to be initialized at every node at which they
+                                              *   are active; these constraints come first in the initconss array */
    int                   sepaconsssize;      /**< size of sepaconss array */
    int                   nsepaconss;         /**< number of active constraints that may be separated during LP processing */
    int                   nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */

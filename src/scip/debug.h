@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/* #define SCIP_DEBUG_SOLUTION "neos.sol" */
+/* #define SCIP_DEBUG_SOLUTION "debug.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
@@ -181,6 +181,18 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
                                               */
    );
 
+/** set the main SCIP settings pointer */
+extern
+void SCIPdebugSetMainscipset(
+   SCIP_SET*             set                 /**< settings of SCIP instance */
+   );
+
+/** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */
+extern
+SCIP_Bool SCIPdebugIsMainscip(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** enabling solution debugging mechanism */
 extern
 void SCIPdebugSolEnable(
@@ -216,6 +228,7 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugSolIsValidInSubtree(scip,isvalidinsubtree) SCIP_OKAY
+#define SCIPdebugSetMainscipset(set) /**/
 #define SCIPdebugSolEnable(scip) /**/
 #define SCIPdebugSolDisable(scip) /**/
 #define SCIPdebugSolIsEnabled(scip) FALSE

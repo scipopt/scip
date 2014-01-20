@@ -1,13 +1,13 @@
-/* $Id: atan2.hpp 1369 2009-05-31 01:31:48Z bradbell $ */
+/* $Id: atan2.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ATAN2_INCLUDED
 # define CPPAD_ATAN2_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-08 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -32,7 +32,7 @@ $index atan2, AD$$
 $section AD Two Argument Inverse Tangent Function$$
 
 $head Syntax$$
-$syntax%%theta% = atan2(%y%, %x%)%$$
+$icode%theta% = atan2(%y%, %x%)%$$
 
 
 $head Purpose$$
@@ -46,37 +46,37 @@ $latex \[
 \] $$
 
 $head y$$
-The argument $italic y$$ has one of the following prototypes
-$syntax%
+The argument $icode y$$ has one of the following prototypes
+$codei%
 	const AD<%Base%>               &%y%
 	const VecAD<%Base%>::reference &%y%
 %$$ 
 
 $head x$$
-The argument $italic x$$ has one of the following prototypes
-$syntax%
+The argument $icode x$$ has one of the following prototypes
+$codei%
 	const AD<%Base%>               &%x%
 	const VecAD<%Base%>::reference &%x%
 %$$ 
 
 $head theta$$
-The result $italic theta$$ has prototype
-$syntax%
+The result $icode theta$$ has prototype
+$codei%
 	AD<%Base%> %theta%
 %$$
 
 $head Operation Sequence$$
-The AD of $italic Base$$
-operation sequence used to calculate $italic theta$$ is
-$xref/glossary/Operation/Independent/independent/1/$$
-of $italic x$$ and $italic y$$.
+The AD of $icode Base$$
+operation sequence used to calculate $icode theta$$ is
+$cref/independent/glossary/Operation/Independent/$$
+of $icode x$$ and $icode y$$.
 
 $head Example$$
 $children%
-	example/atan_2.cpp
+	example/atan2.cpp
 %$$
 The file
-$xref/Atan2.cpp/$$
+$cref atan2.cpp$$
 contains an example and test of this function.   
 It returns true if it succeeds and false otherwise.
 

@@ -1,13 +1,13 @@
-/* $Id: equal_op_seq.hpp 2091 2011-09-02 19:47:24Z bradbell $ */
+/* $Id: equal_op_seq.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_EQUAL_OP_SEQ_INCLUDED
 # define CPPAD_EQUAL_OP_SEQ_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -30,10 +30,10 @@ $index equal, operation sequence$$
 $section Check if Two Value are Identically Equal$$
 
 $head Syntax$$
-$syntax%%b% = EqualOpSeq(%x%, %y%)%$$
+$icode%b% = EqualOpSeq(%x%, %y%)%$$
 
 $head Purpose$$
-Determine if two $italic x$$ and $italic y$$ are identically equal; i.e.,
+Determine if two $icode x$$ and $icode y$$ are identically equal; i.e.,
 not only is $icode%x% == %y%$$ true, but
 if they are $cref/variables/glossary/Variable/$$,
 they correspond have the same
@@ -48,42 +48,42 @@ but when they are related to the
 $cref/independent variables/glossary/Tape/Independent Variable/$$ 
 by the same operation sequence.
 After the assignment
-$syntax%
+$codei%
 	%y% = %x%
 %$$
 these two AD objects would not only have equal values,
 but would also correspond to the same operation sequence.
 
 $head x$$
-The argument $italic x$$ has prototype
-$syntax%
+The argument $icode x$$ has prototype
+$codei%
 	const AD<%Base%> &%x%
 %$$
 
 $head y$$
-The argument $italic y$$ has prototype
-$syntax%
+The argument $icode y$$ has prototype
+$codei%
 	const AD<%Base%> &%y%
 %$$
 
 $head b$$
-The result $italic b$$ has prototype
-$syntax%
+The result $icode b$$ has prototype
+$codei%
 	bool %b%
 %$$
 The result is true if and only if one of the following cases holds:
 
 $list number$$
-Both $italic x$$ and $italic y$$ are variables 
+Both $icode x$$ and $icode y$$ are variables 
 and correspond to the same operation sequence.
 $lnext
-Both $italic x$$ and $italic y$$ are parameters,
-$italic Base$$ is an AD type,
-and $syntax%EqualOpSeq( Value(%x%) , Value(%y%) )%$$ is true.
+Both $icode x$$ and $icode y$$ are parameters,
+$icode Base$$ is an AD type,
+and $codei%EqualOpSeq( Value(%x%) , Value(%y%) )%$$ is true.
 $lnext
-Both $italic x$$ and $italic y$$ are parameters,
-$italic Base$$ is not an AD type,
-and $syntax%%x% == %y%%$$ is true.
+Both $icode x$$ and $icode y$$ are parameters,
+$icode Base$$ is not an AD type,
+and $icode%x% == %y%%$$ is true.
 $lend
 
 
@@ -92,7 +92,7 @@ $children%
 	example/equal_op_seq.cpp
 %$$
 The file
-$xref/EqualOpSeq.cpp/$$
+$cref equal_op_seq.cpp$$
 contains an example and test of $code EqualOpSeq$$.
 It returns true if it succeeds and false otherwise.
 

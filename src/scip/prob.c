@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -797,6 +797,7 @@ SCIP_RETCODE probRemoveVar(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
@@ -1674,7 +1675,9 @@ void SCIPprobUpdateBestRootSol(
    int v;
 
    assert(prob != NULL);
+   assert(lp != NULL);
    assert(prob->transformed);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* in case we have a zero objective fucntion, we skip the root reduced cost update */
    if( SCIPprobGetNObjVars(prob, set) == 0 )
@@ -1690,8 +1693,8 @@ void SCIPprobUpdateBestRootSol(
    {
       SCIP_VAR* var;
       SCIP_COL* col;
-      SCIP_Real rootsol;
-      SCIP_Real rootredcost;
+      SCIP_Real rootsol = 0.0;
+      SCIP_Real rootredcost = 0.0;
 
       var = prob->vars[v];
       assert(var != NULL);
@@ -1712,6 +1715,44 @@ void SCIPprobUpdateBestRootSol(
       }
       else
       {
+#if 1
+         SCIP_Real primsol;
+         SCIP_BASESTAT basestat;
+         SCIP_Bool lpissolbasic;
+
+         basestat = SCIPcolGetBasisStatus(col);
+         lpissolbasic = SCIPlpIsSolBasic(lp);
+         primsol = SCIPcolGetPrimsol(col);
+
+         if( (lpissolbasic && (basestat == SCIP_BASESTAT_LOWER || basestat == SCIP_BASESTAT_UPPER)) ||
+            (!lpissolbasic && (SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol) ||
+               SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol))) )
+         {
+            SCIP_Real lbrootredcost;
+            SCIP_Real ubrootredcost;
+
+            /* get reduced cost if the variable gets fixed to zero */
+            lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, lp);
+            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
+               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+            /* get reduced cost if the variable gets fixed to one */
+            ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, lp);
+            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
+               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+            if( -lbrootredcost > ubrootredcost )
+            {
+               rootredcost = lbrootredcost;
+               rootsol = 1.0;
+            }
+            else
+            {
+               rootredcost = ubrootredcost;
+               rootsol = 0.0;
+            }
+         }
+#else
          switch( SCIPcolGetBasisStatus(col) )
          {
          case SCIP_BASESTAT_LOWER:
@@ -1751,6 +1792,7 @@ void SCIPprobUpdateBestRootSol(
             SCIPABORT();
             return; /*lint !e527*/
          }
+#endif
       }
 
       /* update the current solution as best root solution in the problem variables if it is better */

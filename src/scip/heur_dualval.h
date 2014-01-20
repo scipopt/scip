@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,11 +48,9 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found, no solution
-                                              *   found, or fixing is infeasible (cutoff)
-                                              */
+                                              *   found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint            /**< point to take fixation of discrete variables from; if NULL, then LP
-                                              *   solution is used
-                                              */
+                                              *   solution is used */
    );
 
 #ifdef __cplusplus

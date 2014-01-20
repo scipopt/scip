@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -131,42 +131,42 @@ void SCIPpresolSetPriority(
 /** sets copy method of presolver */
 extern
 void SCIPpresolSetCopy(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
 /** sets destructor method of presolver */
 extern
 void SCIPpresolSetFree(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLFREE ((*presolfree))     /**< destructor of presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE  ((*presolfree))     /**< destructor of presolver */
    );
 
 /** sets initialization method of presolver */
 extern
 void SCIPpresolSetInit(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLINIT ((*presolinit))     /**< initialize presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
    );
 
 /** sets deinitialization method of presolver */
 extern
 void SCIPpresolSetExit(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLEXIT ((*presolexit))     /**< deinitialize presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit))     /**< deinitialize presolver */
    );
 
 /** sets solving process initialization method of presolver */
 extern
 void SCIPpresolSetInitpre(
-   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
    );
 
 /** sets solving process deinitialization method of presolver */
 extern
 void SCIPpresolSetExitpre(
-   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
    );
 

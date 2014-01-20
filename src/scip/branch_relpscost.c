@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
-#define DEFAULT_MAXPROPROUNDS    0      /**< maximum number of propagation rounds to be performed during strong branching
+#define DEFAULT_MAXPROPROUNDS   -2      /**< maximum number of propagation rounds to be performed during strong branching
                                          *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
@@ -275,6 +275,8 @@ SCIP_RETCODE execRelpscost(
    int bestcand;
 
    *result = SCIP_DIDNOTRUN;
+
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);

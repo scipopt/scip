@@ -166,12 +166,12 @@ public class JniKnapsack {
 
 	 scip = env.create();
 
-	 /* include default plugins od f SCIP */
+	 /* include default plugins of SCIP */
 	 env.includeDefaultPlugins(scip);
 
-	 env.readProb(scip, "test.lp", "");
+	 env.readProb(scip, "data/test.lp", "");
 
-	 env.readSol(scip, "solution.sol");
+	 env.readSol(scip, "data/solution.sol");
 
 	 long[] sols = env.getSols(scip);
 

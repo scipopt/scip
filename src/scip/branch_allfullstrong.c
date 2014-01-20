@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -304,6 +304,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    assert(bestupvalid != NULL);
    assert(provedbound != NULL);
    assert(result != NULL);
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);

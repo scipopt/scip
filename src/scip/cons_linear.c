@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -56,6 +56,7 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/debug.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -4246,6 +4247,7 @@ SCIP_RETCODE applyFixings(
          default:
             SCIPerrorMessage("unknown variable status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
       }
 
@@ -8131,6 +8133,15 @@ SCIP_RETCODE convertLongEquality(
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+            if( SCIPdebugIsMainscip(scip) )
+            {
+               SCIP_Real varval;
+               SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, absval * varval) );
+            }
+#endif
+
             /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
             SCIPdebugMessage("linear constraint <%s>: aggregating continuous variable <%s> to newly created implicit integer variable <%s>, aggregation factor = %g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(newvar), absval);
@@ -10953,7 +10964,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int minidx;
    int mididx;
    int maxidx;
-   int maxabsval;
+   int addval;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -10973,16 +10984,21 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
+   addval = (int) REALABS(consdata->vals[0]);
+   addval += (((int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
+   addval += (((int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
+
    maxabsrealval = consdataGetMaxAbsval(consdata);
    /* hash value depends on vectors of variable indices */
-   if( maxabsrealval > (SCIP_Real) INT_MAX )
-      maxabsval = 0;
-   else if( maxabsrealval < 1.0 )
-      maxabsval = (int) (MULTIPLIER * maxabsrealval);
-   else
-      maxabsval = (int) maxabsrealval;
+   if( maxabsrealval < (SCIP_Real) INT_MAX )
+   {
+      if( maxabsrealval < 1.0 )
+         addval += (int) (MULTIPLIER * maxabsrealval);
+      else
+         addval += (int) maxabsrealval;
+   }
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + maxabsval; /*lint !e701*/
+   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + addval; /*lint !e701*/
 
    return hashval;
 }
@@ -11031,6 +11047,10 @@ SCIP_RETCODE detectRedundantConstraints(
 
       if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
          continue;
+
+      /* check for interuption */
+      if( c % 1000 == 0 && SCIPisStopped(scip) )
+         break;
 
       /* sorts the constraint */
       consdata0 = SCIPconsGetData(cons0);
@@ -11153,6 +11173,10 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
+#ifdef  SCIP_MORE_DEBUG
+   SCIPinfoMessage(scip, NULL, "linear pairwise comparison hashtable statistics:\n");
+   SCIPhashtablePrintStatistics(hashtable, SCIPgetMessagehdlr(scip));
+#endif
 
    /* free hash table */
    SCIPhashtableFree(&hashtable);
@@ -12608,7 +12632,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
    }
 
    /* print statistics */
-   SCIPinfoMessage(scip, NULL, "\nNumber of constraints according to type:\n");
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Number of constraints according to type:\n");
    SCIPinfoMessage(scip, NULL, "----------------------------------------\n");
    SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_EMPTY        %6d\n",  0, counter[ 0]);
    SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_FREE         %6d\n",  1, counter[ 1]);
@@ -15003,6 +15028,7 @@ SCIP_Real SCIPgetLhsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15026,6 +15052,7 @@ SCIP_Real SCIPgetRhsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15088,6 +15115,7 @@ int SCIPgetNVarsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return -1;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15111,6 +15139,7 @@ SCIP_VAR** SCIPgetVarsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15134,6 +15163,7 @@ SCIP_Real* SCIPgetValsLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15158,6 +15188,7 @@ SCIP_Real SCIPgetActivityLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15185,6 +15216,7 @@ SCIP_Real SCIPgetFeasibilityLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15211,6 +15243,7 @@ SCIP_Real SCIPgetDualsolLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15237,6 +15270,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -15265,6 +15299,7 @@ SCIP_ROW* SCIPgetRowLinear(
    {
       SCIPerrorMessage("constraint is not linear\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

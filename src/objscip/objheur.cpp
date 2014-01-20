@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -179,7 +179,7 @@ SCIP_DECL_HEUREXEC(heurExecObj)
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, heurtiming, result) );
+   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, heurtiming, nodeinfeasible, result) );
 
    return SCIP_OKAY;
 }

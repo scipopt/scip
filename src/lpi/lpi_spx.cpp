@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1322,6 +1322,8 @@ struct SCIP_LPi
    SCIP_Bool             solved;             /**< was the current LP solved? */
    SLUFactor*            factorization;      /**< factorization possibly needed for basis inverse */
    SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -1607,6 +1609,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->factorization = 0;
    (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
@@ -3435,6 +3439,29 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+#if ((SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 172)
+   /* If the condition number of the basis should be checked, everything above the specified threshold is counted
+    * as instable.
+    */
+   if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+#ifndef NDEBUG
+      SCIP_RETCODE retcode;
+#endif
+      SCIP_Real kappa;
+
+#ifndef NDEBUG
+      retcode =
+#endif
+         SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      assert(kappa != SCIP_INVALID);
+      assert(retcode == SCIP_OKAY);
+
+      if( kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+#endif
+
    return (lpi->spx->getStatus() != SPxSolver::ERROR && lpi->spx->getStatus() != SPxSolver::SINGULAR);
 }
 
@@ -3657,7 +3684,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 /** gets information about the quality of an LP solution
  *
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
- *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quality is not available.
  */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3670,8 +3697,36 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   *quality = SCIP_INVALID;
+#if ((SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 172)
+   int maxiter;
+   Real tolerance;
 
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   SCIPdebugMessage("requesting solution quality from SoPlex: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         maxiter = 20;
+         tolerance = 1e-6;
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         maxiter = 10000;
+         tolerance = 1e-9;
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+   }
+
+   *quality = lpi->spx->basis().condition(maxiter, tolerance);
+#else
+   *quality = SCIP_INVALID;
+#endif
    return SCIP_OKAY;
 }
 
@@ -4803,6 +4858,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4844,6 +4902,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
       lpi->rowrepswitch = dval;
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1313,7 +1313,7 @@ SCIP_RETCODE readBounds(
             int l;
 
             /* check what might be missing, if field 3 is a number the bound name might be missing */
-            for( l = strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
+            for( l = (int) strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
             {
                if( mpsinputField3(mpsi)[l] != '.' && !isdigit(mpsinputField3(mpsi)[l]) )
                   break;
@@ -1701,6 +1701,7 @@ SCIP_RETCODE readSOS(
             default: 
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
+               return SCIP_INVALIDDATA;
             }
             SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }
@@ -1872,19 +1873,23 @@ SCIP_RETCODE readQMatrix(
       SCIP_Real  lhs, rhs;
       SCIP_Real  minusone = -1.0;
 
-      /* standard settings for quadratic constraints: */
-      initial    = mpsi->initialconss;
+      /* determine settings; note that reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model
+       * constraints and variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary
+       * objective variable is loose with infinite best bound, triggering the problem that an LP that is unbounded
+       * because of loose variables with infinite best bound cannot be solved)
+       */
+      initial    = TRUE;
       separate   = TRUE;
       enforce    = TRUE;
       check      = TRUE;
       propagate  = TRUE;
       local      = FALSE;
       modifiable = FALSE;
-      dynamic    = mpsi->dynamicconss;
-      removable  = mpsi->dynamicrows;
+      dynamic    = FALSE;
+      removable  = FALSE;
 
       SCIP_CALL( SCIPcreateVar(scip, &qmatrixvar, "qmatrixvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-            SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, qmatrixvar) );
 
       if( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )
@@ -2221,7 +2226,7 @@ SCIP_RETCODE readIndicators(
 
       /* check lhs/rhs */
       lhs = SCIPgetLhsLinear(scip, lincons);
-      rhs = SCIPgetLhsLinear(scip, lincons);
+      rhs = SCIPgetRhsLinear(scip, lincons);
       nlinvars = SCIPgetNVarsLinear(scip, lincons);
       linvars = SCIPgetVarsLinear(scip, lincons);
       linvals = SCIPgetValsLinear(scip, lincons);
@@ -2245,8 +2250,8 @@ SCIP_RETCODE readIndicators(
                SCIP_VAR** vars;
                SCIP_Real* vals;
 
-               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars+1) );
-               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars+1) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
                for( i = 0; i < nlinvars; ++i )
                {
                   vars[i] = linvars[i];
@@ -2257,7 +2262,7 @@ SCIP_RETCODE readIndicators(
                (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
 
                /* create indicator constraint */
-               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars+1, vars, vals, -lhs,
+               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars, vars, vals, -lhs,
                      initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
                SCIP_CALL( SCIPaddCons(scip, cons) );
                SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
@@ -2291,7 +2296,10 @@ SCIP_RETCODE readIndicators(
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
       /* create new name */
-      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
+      if ( SCIPisEQ(scip, lhs, rhs) )
+         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indrhs_%s", SCIPconsGetName(lincons));
+      else
+         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "ind_%s", SCIPconsGetName(lincons));
 
       /* create indicator constraint */
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, &cons, name, binvar, lincons, slackvar,
@@ -2748,7 +2756,7 @@ static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR***           aggvars,            /**< pointer to array storing the aggregated variables on output */
    int*                  naggvars,           /**< pointer to number of aggregated variables on output */
    int*                  saggvars,           /**< pointer to number of slots in aggvars array */
@@ -2756,8 +2764,6 @@ SCIP_RETCODE collectAggregatedVars(
    )
 {
    int v;
-   SCIP_VAR* var;
-   SCIP_VARSTATUS status;
 
    assert( scip != NULL );
    assert( aggvars != NULL );
@@ -2767,24 +2773,34 @@ SCIP_RETCODE collectAggregatedVars(
    /* check variables */
    for( v = 0; v < nvars; ++v )
    {
+      SCIP_VARSTATUS status;
+      SCIP_VAR* var;
+
       var = vars[v];
       status = SCIPvarGetStatus(var);
 
       /* collect aggregated variables in a list */
       if( status >= SCIP_VARSTATUS_AGGREGATED )
       {
-         assert(status == SCIP_VARSTATUS_AGGREGATED ||
-            status == SCIP_VARSTATUS_MULTAGGR ||
-            status == SCIP_VARSTATUS_NEGATED);
-	 assert(varAggregated != NULL);
+         assert( status == SCIP_VARSTATUS_AGGREGATED || status == SCIP_VARSTATUS_MULTAGGR || status == SCIP_VARSTATUS_NEGATED );
+         assert( varAggregated != NULL );
 
-         if( !SCIPhashtableExists(varAggregated, (void*) var) )
+         if( ! SCIPhashtableExists(varAggregated, (void*) var) )
          {
-            assert((*saggvars) > (*naggvars));
+            /* possibly enlarge array */
+            if ( *saggvars <= *naggvars )
+            {
+               int newsize;
+               newsize = SCIPcalcMemGrowSize(scip, *naggvars + 1);
+               assert( newsize > *saggvars );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggvars, *saggvars, newsize) );
+               *saggvars = newsize;
+            }
 
             (*aggvars)[*naggvars] = var;
             (*naggvars)++;
             SCIP_CALL( SCIPhashtableInsert(varAggregated, (void*) var) );
+            assert( *naggvars <= *saggvars );
          }
       }
    }
@@ -3316,7 +3332,7 @@ void printBoundSection(
       }
    }
 
-   /* output aggregated variables as 'free' */
+   /* output aggregated variables as 'free', except if they are binary */
    for( v = 0; v < naggvars; ++v )
    {
       if( !sectionName )
@@ -3332,10 +3348,20 @@ void printBoundSection(
       varname = varnames[nvars + v];
       assert(strncmp(varname, SCIPvarGetName(var), maxnamelen) == 0);
 
-      /* variable is free */
-      printStart(scip, file, "FR", "Bound", (int) maxnamelen);
-      printRecord(scip, file, varname, "", maxnamelen);
-      SCIPinfoMessage(scip, file, "\n");
+      /* take care of binary variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         printStart(scip, file, "BV", "Bound", (int) maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+      else
+      {
+         /* variable is free */
+         printStart(scip, file, "FR", "Bound", (int) maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
+      }
    }
 
    /* output all fixed variables */
@@ -3535,11 +3561,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
-   /* create hashtable for storing aggregated variables */
+   /* nfixedvars counts all variables with status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, but not SCIP_VARSTATUS_NEGATED */
    saggvars = nfixedvars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
 
-   /* number of fixed variables contains all variable with the status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, SCIP_VARSTATUS_NEGATED */
+   /* create hashtable for storing aggregated variables */
    if( nfixedvars > 0 )
    {
       SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), 5 * nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
@@ -3570,10 +3596,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       if( andconshdlr != NULL )
       {
-         /* need to check for and-constraints
-          *
-          * @note that in the original problem you cannot get the number of and-constraints by one call
-          */
+         /* need to check for and-constraints, note that in the original problem you cannot get the number of
+          * and-constraints by one call */
          for( c = nconss - 1; c >= 0; --c )
          {
             conshdlr = SCIPconsGetHdlr(conss[c]);
@@ -3584,13 +3608,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             if( strcmp(conshdlrname, "and") == 0 )
             {
                if( readerdata->aggrlinearizationands )
-               {
                   ++naddrows;
-               }
                else
-               {
                   naddrows += SCIPgetNVarsAnd(scip, conss[c]);
-               }
             }
          }
          assert(naddrows >= 0);
@@ -3651,8 +3671,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       }
    }
 
-   k = nconss;
    /* loop over all constraints */
+   k = nconss;
    for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
@@ -3694,8 +3714,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             assert( !SCIPisInfinity(scip, rhss[c]) );
 
             /* compute column entries */
-            SCIP_CALL( getLinearCoeffs(scip, consname,
-                  SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
+            SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                   SCIPgetNVarsLinear(scip, cons), transformed, matrix, &rhss[c]) );
          }
       }
@@ -3718,8 +3737,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          rhss[c] = 1.0;
 
          /* compute column entries */
-         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsSetppc(scip, cons), NULL,
-               SCIPgetNVarsSetppc(scip, cons), transformed, matrix, &rhss[c]) );
+         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsSetppc(scip, cons), NULL, SCIPgetNVarsSetppc(scip, cons), transformed, matrix, &rhss[c]) );
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
       {
@@ -3729,8 +3747,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          rhss[c] = 1.0;
 
          /* compute column entries */
-         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsLogicor(scip, cons), NULL,
-               SCIPgetNVarsLogicor(scip, cons), transformed, matrix, &rhss[c]) );
+         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), transformed, matrix, &rhss[c]) );
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -3750,8 +3767,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          rhss[c] = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons);
 
          /* compute column entries */
-         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsKnapsack(scip, cons), vals,
-               nconsvars, transformed, matrix, &rhss[c]) );
+         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsKnapsack(scip, cons), vals, nconsvars, transformed, matrix, &rhss[c]) );
 
          SCIPfreeBufferArray(scip, &vals);
       }
@@ -3796,6 +3812,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_VAR* slackvar;
+         SCIP_VAR* binvar;
 
          /* store slack variable in hash */
          slackvar = SCIPgetSlackVarIndicator(cons);
@@ -3803,6 +3820,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          assert( indicatorSlackHash != NULL );
          assert( !SCIPhashtableExists(indicatorSlackHash, (void*) slackvar) );
          SCIP_CALL( SCIPhashtableInsert(indicatorSlackHash, (void*) slackvar) );
+
+         /* if slackvariable is aggregated, we store it in the list of aggregated variables */
+         if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_CALL( collectAggregatedVars(scip, &slackvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
+         }
+
+         /* store aggregated variables */
+         binvar = SCIPgetBinaryVarIndicator(cons);
+         if( SCIPvarIsNegated(binvar) )
+            binvar = SCIPvarGetNegatedVar(binvar);
+         assert( binvar != NULL );
+         SCIP_CALL( collectAggregatedVars(scip, &binvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
+
+         /* indicator constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
+         rhss[c] = SCIPinfinity(scip);
 
          /* store constraint */
          consIndicator[nConsIndicator++] = cons;
@@ -3828,8 +3861,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* store constraint */
          consSOS2[nConsSOS2++] = cons;
 
-         /* check for aggregated variables in SOS2 constraints for later output
-          * aggregations as linear constraints */
+         /* check for aggregated variables in SOS2 constraints for later output aggregations as linear constraints */
          consvars = SCIPgetVarsSOS2(scip, cons);
          nconsvars = SCIPgetNVarsSOS2(scip, cons);
 
@@ -3848,7 +3880,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          consQuadratic[nConsQuadratic++] = cons;
 
          /* collect linear coefficients of quadratic part */
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars,        SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
          for( j = 0; j < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++j )
          {
@@ -3876,13 +3908,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             assert( !SCIPisInfinity(scip, rhss[c]) );
 
             /* compute column entries for linear part */
-            SCIP_CALL( getLinearCoeffs(scip, consname,
-                  SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+            SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
                   SCIPgetNLinearVarsQuadratic(scip, cons), transformed, matrix, &rhss[c]) );
 
             /* compute column entries for linear part in quadratic part */
-            SCIP_CALL( getLinearCoeffs(scip, consname,
-                  quadvars, quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons),
+            SCIP_CALL( getLinearCoeffs(scip, consname, quadvars, quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons),
                   transformed, matrix, &rhss[c]) );
          }
 
@@ -3899,7 +3929,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          /* SOC constraints are of the form lhsconstant + sum_i (lhscoef_i*(lhsvar_i+lhsoffset_i))^2 <= (rhscoef*(rhsvar+rhsoffset))^2 */
-
          SCIP_Real* lincoefs;
          SCIP_Real  coef;
          SCIP_Real  offset;
@@ -3924,8 +3953,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             rhs -= offset * offset * coef * coef;
          }
 
-         SCIP_CALL( getLinearCoeffs(scip, consname,
-               SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
+         SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
 
          SCIPfreeBufferArray(scip, &lincoefs);
 
@@ -3988,8 +4016,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                rowvals[1] = -1.0;
 
                /* compute maximal length for rowname */
-               n = (int) log10((double)nrowvars) + 1;
-               n += l;
+               n = (int) log10((double)nrowvars) + 1 + l;
 
                /* assure maximal allowed value */
                if( n >= MPS_MAX_NAMELEN )
@@ -4030,8 +4057,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                   rhss[k] = 0.0;
 
                   /* compute column entries */
-                  SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals,
-                        2, transformed, matrix, &rhss[k]) );
+                  SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals, 2, transformed, matrix, &rhss[k]) );
                   ++k;
                }
             }
@@ -4078,8 +4104,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                rhss[k] = 0.0;
 
                /* compute column entries */
-               SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals,
-                     nrowvars + 1, transformed, matrix, &rhss[k]) );
+               SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals, nrowvars + 1, transformed, matrix, &rhss[k]) );
 
                printf("%g, %g\n", rowvals[1], rhss[k]);
                ++k;
@@ -4093,8 +4118,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             rhss[c] = -nrowvars + 1.0;
 
             /* compute column entries */
-            SCIP_CALL( getLinearCoeffs(scip, consname, rowvars, rowvals,
-                  nrowvars + 1, transformed, matrix, &rhss[c]) );
+            SCIP_CALL( getLinearCoeffs(scip, consname, rowvars, rowvals, nrowvars + 1, transformed, matrix, &rhss[c]) );
 
             /* free buffer array */
             SCIPfreeBufferArray(scip, &rowvals);
@@ -4123,12 +4147,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          faulty, MPS_MAX_NAMELEN - 1);
    }
 
-
+   /* free hash table */
    if( varFixedHash != NULL )
-   {
-      /* free hash table */
       SCIPhashtableFree(&varFixedHash);
-   }
 
    if( indicatorSlackHash != NULL && nConsIndicator == 0 )
    {
@@ -4138,14 +4159,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( naggvars > 0 )
    {
-      /* construct variables name of the needed aggregated variables and
-       * the constraint names for the aggregation constraints */
+      /* construct variables name of the needed aggregated variables and the constraint names for the aggregation constraints */
 
       /* realloc memory */
       SCIP_CALL( SCIPreallocBufferArray(scip, &consnames, nconss + naddrows + naggvars) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &rhss, nconss + naddrows + naggvars) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &varnames, nvars + naggvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 1) );
 
       for( c = 0; c < naggvars; ++c )
       {
@@ -4169,20 +4188,17 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
 
          /* output row type (it is an equation) */
-         SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_VALUELEN) );
-         (void) SCIPsnprintf(namestr, MPS_MAX_VALUELEN, "aggr%d", c );
+         SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) ); /* note that namestr above is freed via varnames */
+         (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(var));
          printRowType(scip, file, 1.0, 1.0, namestr);
 
          l = strlen(namestr);
          maxnamelen = MAX(maxnamelen, (unsigned int) l);
-
          consnames[nconss + naddrows + c] = namestr;
-
-         consvars[0] = aggvars[c];
          rhss[nconss + naddrows + c] = 0.0;
 
          /* compute column entries */
-         SCIP_CALL( getLinearCoeffs(scip, namestr, consvars, NULL, 1, transformed, matrix, &rhss[nconss + naddrows + c]) );
+         SCIP_CALL( getLinearCoeffs(scip, namestr, &(aggvars[c]), NULL, 1, transformed, matrix, &rhss[nconss + naddrows + c]) );
 
          /* add the aggregated variables to the sparse matrix */
          SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
@@ -4191,11 +4207,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          matrix->rows[matrix->nentries] = namestr;
          matrix->nentries++;
       }
-      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* collect also fixed variables, because they might not be removed from all constraints */
-   /* todo only collect fixed variables in the non-linear constraint types, where they (could not be)/(were not) removed */
+   /* @todo only collect fixed variables in the non-linear constraint types, where they (could not be)/(were not) removed */
    if( nfixedvars > 0 )
    {
       int startpos = nvars + naggvars;
@@ -4209,13 +4224,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       for( v = nfixedvars - 1; v >= 0; --v )
       {
-         size_t l;
-
          /* create variable name */
          var = fixedvars[v];
 
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
 	 {
+            size_t l;
 	    l = strlen(SCIPvarGetName(var));
 	    if( l >= MPS_MAX_NAMELEN )
 	       maxnamelen = MPS_MAX_NAMELEN - 1;
@@ -4247,7 +4261,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
 
    /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows, consnames, rhss, maxnamelen);
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen);
 
    /* output RANGES section */
    if( needRANGES )
@@ -4339,8 +4353,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    {
       SCIP_QUADVARTERM* quadvarterms;
       SCIP_BILINTERM*   bilinterms;
-      int         nbilin;
       const char* varname2;
+      int nbilin;
 
       SCIPdebugMessage("start printing QCMATRIX sections for quadratic constraints\n");
       SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
@@ -4350,8 +4364,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          cons = consQuadratic[c];
          nconsvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
          quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
-         nbilin     = SCIPgetNBilinTermsQuadratic(scip, cons);
          bilinterms = SCIPgetBilinTermsQuadratic(scip, cons);
+         nbilin = SCIPgetNBilinTermsQuadratic(scip, cons);
 
          (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 
@@ -4376,9 +4390,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             SCIPinfoMessage(scip, file, "\n", valuestr);
          }
 
-         /* print bilinear terms
-          * CPLEX format expects a symmetric matrix with all coefficients specified
-          * I.e., we have to split bilinear coefficients into two off diagonal elements */
+         /* print bilinear terms; CPLEX format expects a symmetric matrix with all coefficients specified,
+          * i.e., we have to split bilinear coefficients into two off diagonal elements */
          for( v = 0; v < nbilin; ++v )
          {
             if( bilinterms[v].coef == 0.0 )
@@ -4470,18 +4483,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* print indicator section */
    if( nConsIndicator > 0 )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
+
       SCIPinfoMessage(scip, file, "INDICATORS\n");
       SCIPdebugMessage("start printing INDICATOR section\n");
 
       /* output each indicator constraint */
       for( c = 0; c < nConsIndicator; ++c )
       {
-         SCIP_VAR* binvar;
          SCIP_CONS* lincons;
+         SCIP_VAR* slackvar;
+         SCIP_VAR* binvar;
 
          cons = consIndicator[c];
          binvar = SCIPgetBinaryVarIndicator(cons);
          lincons = SCIPgetLinearConsIndicator(cons);
+         slackvar = SCIPgetSlackVarIndicator(cons);
 
          /* create variable and value strings */
          if( SCIPvarIsNegated(binvar) )
@@ -4499,10 +4516,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          }
 
          /* write records */
-         printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
-         printRecord(scip, file, varname, valuestr, maxnamelen);
-         SCIPinfoMessage(scip, file, "\n");
+         if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            /* for aggregated variables output name of aggregating constraint */
+            (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(slackvar));
+            printStart(scip, file, "IF", namestr, (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+         }
+         else
+         {
+            printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+         }
       }
+      SCIPfreeBufferArray(scip, &namestr);
    }
 
    /* free matrix data structure */
@@ -4515,7 +4544,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* free variable hashmap */
    SCIPhashmapFree(&varnameHashmap);
 
-   SCIPfreeBufferArray(scip, &aggvars);
+   SCIPfreeBlockMemoryArray(scip, &aggvars, saggvars);
    SCIPfreeBufferArray(scip, &rhss);
 
    /* free buffer arrays for SOS1, SOS2, and quadratic */
@@ -4527,15 +4556,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    /* free variable and constraint name array */
    for( v = nvars + naggvars + nfixvars - 1; v >= 0; --v )
-   {
       SCIPfreeBufferArray(scip, &varnames[v]);
-   }
    SCIPfreeBufferArray(scip, &varnames);
 
    for( c = nconss + naddrows + naggvars - 1; c >= 0; --c )
-   {
       SCIPfreeBufferArray(scip, &consnames[c]);
-   }
    SCIPfreeBufferArray(scip, &consnames);
 
    /* print end of data line */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -5129,8 +5129,9 @@ int SCIPgetNVarsLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return -1;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5149,8 +5150,9 @@ SCIP_VAR** SCIPgetVarsLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5169,8 +5171,9 @@ SCIP_Real SCIPgetDualsolLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5192,8 +5195,9 @@ SCIP_Real SCIPgetDualfarkasLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5217,6 +5221,7 @@ SCIP_ROW* SCIPgetRowLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -796,8 +796,12 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, transprob, origprob);
-      assert( SCIPsetIsLE(set, solobj, obj) );
-     
+
+      /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
+       * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
+       */
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
+
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
    
@@ -818,7 +822,11 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, transprob, origprob);
-      assert( SCIPsetIsGE(set, solobj, obj) );
+
+      /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
+       * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
+       */
+      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
 
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
@@ -1437,6 +1445,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
+   SCIP_Bool hasinfval;
    int i;
 
    assert(primal != NULL);
@@ -1445,7 +1454,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    {
       if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ZERO )
       {
-         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob) );
+         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob, &hasinfval) );
       }
    }
 

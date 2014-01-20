@@ -14,3 +14,5 @@ endif
 ifeq ($(SHARED),true)
 LIBBUILDFLAGS   =	-dynamiclib -undefined suppress -flat_namespace
 endif
+
+CXXFLAGS		=	-std=c++0x

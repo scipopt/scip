@@ -23,7 +23,3 @@ SCIPGITHASH	=	$(shell git describe --always --dirty  | sed -re 's/^.+-g//')
 .PHONY: githash
 githash::	# do not remove the double-colon
 		@echo "#define SCIP_GITHASH \"$(SCIPGITHASH)\"" > $(SCIPGITHASHFILE)
-
-# rule for generating the githash.c
-$(SCIPGITHASHFILE): githash
-

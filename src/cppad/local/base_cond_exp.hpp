@@ -1,13 +1,13 @@
-/* $Id: base_cond_exp.hpp 2057 2011-08-11 14:07:11Z bradbell $ */
+/* $Id: base_cond_exp.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_BASE_COND_EXP_INCLUDED
 # define CPPAD_BASE_COND_EXP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -16,6 +16,7 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 /* 
 $begin base_cond_exp$$
 $spell
+	alloc
 	Rel
 	hpp
 	enum
@@ -42,13 +43,12 @@ $index require, base CondExp$$
 
 $head Purpose$$
 These definitions are required by the user's code to support the 
-$codei%AD<%Base%>%$$ type for $cref/CondExp/$$ operations:
+$codei%AD<%Base%>%$$ type for $cref CondExp$$ operations:
 
 $head CompareOp$$
 The following $code enum$$ type is used in the specifications below:
-$codep */
+$codep
 namespace CppAD {
-
 	// The conditional expression operator enum type
 	enum CompareOp 
 	{	CompareLt, // less than
@@ -59,7 +59,7 @@ namespace CppAD {
 		CompareNe  // not equal
 	};
 }
-/* $$
+$$
 
 $head CondExpTemplate$$
 The type $icode Base$$ must support the syntax
@@ -68,7 +68,7 @@ $codei%
 		%cop%, %left%, %right%, %exp_if_true%, %exp_if_false%
 	)
 %$$
-which computes implements the corresponding $cref/CondExp/$$ 
+which computes implements the corresponding $cref CondExp$$ 
 function when the result has prototype
 $codei%
 	%Base% %result%
@@ -104,7 +104,7 @@ namespace CppAD {
 }
 %$$
 For example, see 
-$cref/double CondExpOp/base_float.hpp/CondExpOp/$$.
+$cref/double CondExpOp/base_alloc.hpp/CondExpOp/$$.
 For an example of and implementation of $code CondExpOp$$ with
 a more involved $icode Base$$ type see
 $cref/adolc CondExpOp/base_adolc.hpp/CondExpOp/$$.
@@ -148,16 +148,16 @@ $codei%
 where the arguments have type $icode Base$$.
 This should be done inside of the CppAD namespace.
 For example, see
-$cref/float/base_float.hpp/CondExpRel/$$,
-$cref/double/base_double.hpp/CondExpRel/$$, and
-$cref/complex/base_complex.hpp/CondExpRel/$$.
+$cref/base_alloc/base_alloc.hpp/CondExpRel/$$.
 
 $end
 */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 
 /*!
+\defgroup base_cond_exp_hpp base_cond_exp.hpp
+\{
 \file base_cond_exp.hpp
 CondExp operations that aid in meeting Base type requirements.
 */
@@ -282,5 +282,6 @@ ResultType CondExpTemplate(
 	return returnValue;
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,7 +54,8 @@ enum SCIP_LPParam
    SCIP_LPPAR_MARKOWITZ      = 13,      /**< Markowitz tolerance */
    SCIP_LPPAR_ROWREPSWITCH   = 14,      /**< simplex algorithm shall use row representation of the basis
                                          *   if number of rows divided by number of columns exceeds this value */
-   SCIP_LPPAR_THREADS        = 15       /**< number of threads used to solve the LP */
+   SCIP_LPPAR_THREADS        = 15,      /**< number of threads used to solve the LP */
+   SCIP_LPPAR_CONDITIONLIMIT = 16       /**< maximum condition number of LP basis counted as stable */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 

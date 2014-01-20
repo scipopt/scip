@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1639,7 +1639,8 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
    )
 {
    SCIP_VAR** transvars;
@@ -1660,8 +1661,11 @@ SCIP_RETCODE SCIPsolRetransform(
    assert(sol->solorigin == SCIP_SOLORIGIN_ZERO);
    assert(origprob != NULL);
    assert(transprob != NULL);
+   assert(hasinfval != NULL);
    assert(!origprob->transformed);
    assert(transprob->transformed);
+
+   *hasinfval = FALSE;
 
    /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
     * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much
@@ -1716,10 +1720,12 @@ SCIP_RETCODE SCIPsolRetransform(
       if( SCIPsetIsInfinity(set, solvals[v]) )
       {
          solvals[v] = SCIPsetInfinity(set);
+         *hasinfval = TRUE;
       }
       else if( SCIPsetIsInfinity(set, -solvals[v]) )
       {
          solvals[v] = -SCIPsetInfinity(set);
+         *hasinfval = TRUE;
       }
    }
 
@@ -1955,7 +1961,6 @@ SCIP_RETCODE SCIPsolPrint(
 
    return SCIP_OKAY;
 }
-
 
 /** outputs non-zero elements of solution representing a ray to file stream */
 SCIP_RETCODE SCIPsolPrintRay(

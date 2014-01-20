@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1900,8 +1900,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             !SCIPisFeasZero(scip, 1.0 - coef * consdata1->vbdcoef) )
          {
             SCIP_Bool tightened = FALSE;
-            SCIP_Real scalar = 0.0;
             SCIP_Real bnd = SCIP_UNKNOWN;
+            SCIP_Real scalar;
             SCIP_Real newbnd;
 
             scalar = (1.0 - coef * consdata1->vbdcoef);
@@ -1925,7 +1925,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                      bnd = (lhs - coef * consdata1->lhs)/scalar;
                }
 
-               if ( bnd != SCIP_UNKNOWN )
+               if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/
                {
                   if ( SCIPisFeasPositive(scip, scalar) )
                   {
@@ -1968,7 +1968,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                      bnd = (rhs - coef * consdata1->rhs)/scalar;
                }
 
-               if ( bnd != SCIP_UNKNOWN )
+               if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/
                {
                   if ( SCIPisFeasPositive(scip, scalar) )
                   {
@@ -2012,7 +2012,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                      bnd = (consdata1->lhs - consdata1->vbdcoef * lhs)/scalar;
                }
 
-               if ( bnd != SCIP_UNKNOWN )
+               if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/
                {
                   if ( SCIPisFeasPositive(scip, scalar) )
                   {
@@ -2055,7 +2055,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                      bnd = (consdata1->lhs - consdata1->vbdcoef * rhs)/scalar;
                }
 
-               if ( bnd != SCIP_UNKNOWN )
+               if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/
                {
                   if ( SCIPisFeasPositive(scip, scalar) )
                   {
@@ -4599,6 +4599,7 @@ SCIP_Real SCIPgetLhsVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4619,6 +4620,7 @@ SCIP_Real SCIPgetRhsVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4639,6 +4641,7 @@ SCIP_VAR* SCIPgetVarVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4659,6 +4662,7 @@ SCIP_VAR* SCIPgetVbdvarVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4679,6 +4683,7 @@ SCIP_Real SCIPgetVbdcoefVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4699,8 +4704,9 @@ SCIP_Real SCIPgetDualsolVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4722,8 +4728,9 @@ SCIP_Real SCIPgetDualfarkasVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4747,6 +4754,7 @@ SCIP_ROW* SCIPgetRowVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);

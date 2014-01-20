@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -146,7 +146,7 @@ BEGIN {
    firstpb = +infty;
    db = -infty;
    dbset = 0;
-   rootdb = -infty;
+   dbforobjsense = -infty;
    simpiters = 0;
    bbnodes = 0;
    primlps = 0;
@@ -190,6 +190,8 @@ BEGIN {
    # get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
+   else if( $13 == "SoPlex2" )
+      lpsname = "spx2";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
    else if( $13 == "NONE]" )
@@ -411,17 +413,14 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^Dual Bound         :/ {
+/^  Dual Bound       :/ {
    if( $4 != "-" && $4 != "-\r" ) {
       db = $4;
       dbset = 1;
    }
 }
-/^  Root Dual Bound  :/ {
-   if( $5 != "-" && $5 != "-\r" )
-      rootdb = $5;
-   else
-       rootdb = db;  # SCIP most likely finished during root node, perhaps due to a solution limit. the rootdb is NOT printed then, but needed later
+/^Dual Bound         :/ {
+    dbforobjsense = $4; # in old SCIP log files, this value is used to detect the objective sense
 }
 #
 # iterations
@@ -540,8 +539,8 @@ BEGIN {
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
-      temp = rootdb;
-      rootdb = 1.0*temp;
+      temp = dbforobjsense;
+      dbforobjsense = 1.0*temp;
       
       # if objsense could not be determined so far (output is maybe too old)
       if ( objsense == 0 )
@@ -549,14 +548,14 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-	 # firstpb and rootdb are used to detect the direction of optimization (min or max)
+	 # firstpb and dbforobjsense are used to detect the direction of optimization (min or max)
 	 if( timetofirst < 0.0 )
 	    temp = pb;
 	 else
 	    temp = firstpb;
 	 firstpb = 1.0*temp;
 
-	 if ( firstpb - rootdb > max(abstol,reltol) )
+	 if ( firstpb - dbforobjsense > max(abstol,reltol) )
 	    objsense = 1;   # minimize
 	 else
 	    objsense = -1;  # maximize

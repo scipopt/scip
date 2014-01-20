@@ -725,6 +725,7 @@ SCIP_RETCODE makeExprtree(
             break;
          }
 
+#if 1
          case nlDiv: /* divide */
          {
             SCIPdebugPrintf("divide\n");
@@ -738,6 +739,42 @@ SCIP_RETCODE makeExprtree(
             SCIP_CALL( SCIPexprCreate(blkmem, &e, SCIP_EXPR_DIV, term2, term1) );
             break;
          }
+#elif 1
+         case nlDiv: /* divide */
+         {
+            SCIP_EXPRDATA_MONOMIAL* monomial;
+            SCIP_EXPR* children[2];
+            double exps[2] = { -1.0, 1.0 };
+
+            SCIPdebugPrintf("divide\n");
+
+            assert(stackpos >= 2);
+            children[0] = stack[stackpos-1];
+            --stackpos;
+            children[1] = stack[stackpos-1];
+            --stackpos;
+
+            SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 2, NULL, exps) );
+            SCIP_CALL( SCIPexprCreatePolynomial(blkmem, &e, 2, children, 1, &monomial, 0.0, FALSE) );
+            break;
+         }
+#else
+         case nlDiv: /* divide */
+         {
+            SCIPdebugPrintf("divide\n");
+
+            assert(stackpos >= 2);
+            term1 = stack[stackpos-1];
+            --stackpos;
+            term2 = stack[stackpos-1];
+            --stackpos;
+
+            SCIP_CALL( SCIPexprCreate(blkmem, &term1, SCIP_EXPR_INTPOWER, term1, -1) );
+
+            SCIP_CALL( SCIPexprCreate(blkmem, &e, SCIP_EXPR_MUL, term2, term1) );
+            break;
+         }
+#endif
 
          case nlDivV: /* divide variable */
          {
@@ -1458,8 +1495,7 @@ SCIP_RETCODE createProblem(
          sprintf(buffer, "x%d", i);
       SCIP_CALL( SCIPcreateVar(scip, &vars[i], buffer, lb, ub, coefs[i], vartype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, vars[i]) );
-      SCIPdebugMessage("added variable ");
-      SCIPdebug( SCIPprintVar(scip, vars[i], NULL) );
+      SCIPdebugMessage("added variable <%s>\n", SCIPvarGetName(vars[i]));
       
       if( gmoPriorOpt(gmo) && minprior < maxprior && gmoGetVarTypeOne(gmo, i) != (int) gmovar_X )
       {
@@ -1497,8 +1533,8 @@ SCIP_RETCODE createProblem(
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, bndvars, bndtypes, bnds,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIPdebugMessage("added constraint ");
-         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(cons));
+         SCIPdebugPrintCons(scip, cons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
@@ -1544,8 +1580,8 @@ SCIP_RETCODE createProblem(
          }
          
          SCIP_CALL( SCIPaddCons(scip, con) );
-         SCIPdebugMessage("added constraint ");
-         SCIPdebug( SCIPprintCons(scip, con, NULL) );
+         SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(con));
+         SCIPdebugPrintCons(scip, con, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &con) );
       }
       
@@ -1688,8 +1724,8 @@ SCIP_RETCODE createProblem(
                   if( !SCIPisInfinity(scip, -lhs) )
                   {
                      SCIP_CALL( SCIPaddCons(scip, con) );
-                     SCIPdebugMessage("added constraint ");
-                     SCIPdebug( SCIPprintCons(scip, con, NULL) );
+                     SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(con));
+                     SCIPdebugPrintCons(scip, con, NULL);
                      SCIP_CALL( SCIPreleaseCons(scip, &con) );
                      con = NULL;
                   }
@@ -1785,8 +1821,8 @@ SCIP_RETCODE createProblem(
       
       assert(con != NULL);
       SCIP_CALL( SCIPaddCons(scip, con) );      
-      SCIPdebugMessage("added constraint ");
-      SCIPdebug( SCIPprintCons(scip, con, NULL) );
+      SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(con));
+      SCIPdebugPrintCons(scip, con, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &con) );
 
       /* @todo do something about this */
@@ -1807,8 +1843,7 @@ SCIP_RETCODE createProblem(
 
       SCIP_CALL( SCIPcreateVar(scip, &probdata->objvar, "xobj", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->objvar) );
-      SCIPdebugMessage("added objective variable ");
-      SCIPdebug( SCIPprintVar(scip, probdata->objvar, NULL) );
+      SCIPdebugMessage("added objective variable <%s>\n", SCIPvarGetName(probdata->objvar));
 
       if( gmoGetObjOrder(gmo) != (int) gmoorder_NL )
       {
@@ -1902,8 +1937,8 @@ SCIP_RETCODE createProblem(
       }
 
       SCIP_CALL( SCIPaddCons(scip, con) );
-      SCIPdebugMessage("added objective constraint ");
-      SCIPdebug( SCIPprintCons(scip, con, NULL) );
+      SCIPdebugMessage("added objective constraint <%s>\n", SCIPconsGetName(con));
+      SCIPdebugPrintCons(scip, con, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &con) );
    }
    else if( !SCIPisZero(scip, gmoObjConst(gmo)) )
@@ -1911,8 +1946,7 @@ SCIP_RETCODE createProblem(
       /* handle constant term in linear objective by adding a fixed variable */
       SCIP_CALL( SCIPcreateVar(scip, &probdata->objconst, "objconst", 1.0, 1.0, gmoObjConst(gmo), SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->objconst) );
-      SCIPdebugMessage("added variable for objective constant: ");
-      SCIPdebug( SCIPprintVar(scip, probdata->objconst, NULL) );
+      SCIPdebugMessage("added variable for objective constant: <%s>\n", SCIPvarGetName(probdata->objconst));
    }
 
    if( gmoSense(gmo) == (int) gmoObj_Max )

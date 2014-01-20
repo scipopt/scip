@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -207,6 +207,7 @@ struct SCIP_Stat
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */
    SCIP_Bool             inrestart;          /**< are we currently restarting the system? */
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
+   SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
 };
 
 #ifdef __cplusplus

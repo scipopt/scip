@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3790,8 +3790,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    if( *nvars == 0 )
       return SCIP_OKAY;
 
+   assert(vars != NULL);
+
    /* handle the "easy" case of just one variable and avoid memory allocation if the variable is already active */
-   if( *nvars == 1 && (vars[0]->varstatus == SCIP_VARSTATUS_COLUMN || vars[0]->varstatus == SCIP_VARSTATUS_LOOSE) )
+   if( *nvars == 1 && (vars[0]->varstatus == ((int) SCIP_VARSTATUS_COLUMN) || vars[0]->varstatus == ((int) SCIP_VARSTATUS_LOOSE)) )
    {
       *requiredsize = 1;
 
@@ -11973,20 +11975,31 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 
    while( SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL )
    {
-      /* if the variable has no parent variables, it was generated during solving and has no corresponding original var */
+      /* if the variable has no parent variables, it was generated during solving and has no corresponding original
+       * var
+       */
       if( (*var)->nparentvars == 0 )
       {
-         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED  
-            && SCIPvarGetStatus((*var)->negatedvar) == SCIP_VARSTATUS_ORIGINAL )
+         /* negated variables do not need to have a parent variables, and negated variables can exist in original
+          * space
+          */
+         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED )
          {
             *scalar *= -1.0;
             *constant -= (*var)->data.negate.constant * (*scalar);
             *var = (*var)->negatedvar;
+
+            continue;
          }
+         /* if the variables does not have any parent the variables was created during solving and has no original
+          * counterpart
+          */
          else
+         {
             *var = NULL;
-         
-         return SCIP_OKAY;
+
+            return SCIP_OKAY;
+         }
       }
 
       /* follow the link to the first parent variable */
@@ -11997,14 +12010,14 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
       {
       case SCIP_VARSTATUS_ORIGINAL:
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + b  ->  y = (x-b)/a,  s*y + c = (s/a)*x + c-b*s/a */
          assert(parentvar->data.aggregate.var == *var);
          assert(parentvar->data.aggregate.scalar != 0.0);
@@ -12024,7 +12037,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
          SCIPerrorMessage("unknown variable status\n");
          return SCIP_INVALIDDATA;
       }
-      
+
       assert( parentvar != NULL );
       *var = parentvar;
    }
@@ -12585,6 +12598,7 @@ SCIP_Real SCIPvarGetRootSol(
 /** returns for given variable the reduced cost */
 SCIP_Real SCIPvarGetRedcost(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
@@ -12593,19 +12607,50 @@ SCIP_Real SCIPvarGetRedcost(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
    {
       SCIP_COL* col;
+      SCIP_Real primsol;
+      SCIP_BASESTAT basestat;
+      SCIP_Bool lpissolbasic;
 
       col = SCIPvarGetCol(var);
       assert(col != NULL);
 
+#if 1
+      basestat = SCIPcolGetBasisStatus(col);
+      lpissolbasic = SCIPlpIsSolBasic(lp);
+      primsol = SCIPcolGetPrimsol(col);
+
+      if( (lpissolbasic && (basestat == SCIP_BASESTAT_LOWER || basestat == SCIP_BASESTAT_UPPER)) ||
+         (!lpissolbasic && (SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol) || SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol))) )
+      {
+         SCIP_Real redcost = SCIPcolGetRedcost(col, stat, lp);
+
+         assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsFeasNegative(set, redcost) ||
+                  SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
+         assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsFeasPositive(set, redcost) ||
+                  SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
+
+         if( (varfixing && ((lpissolbasic && basestat == SCIP_BASESTAT_LOWER) ||
+                  (!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)))) ||
+            (!varfixing && ((lpissolbasic && basestat == SCIP_BASESTAT_UPPER) ||
+                  (!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)))) )
+            return redcost;
+         else
+            return 0.0;
+      }
+
+      return 0.0;
+#else
       switch( SCIPcolGetBasisStatus(col) )
       {
       case SCIP_BASESTAT_LOWER:
-         if( varfixing == TRUE )
+         if( varfixing )
             return SCIPcolGetRedcost(col, stat, lp);
          break;
 
       case SCIP_BASESTAT_UPPER:
-         if( varfixing == FALSE )
+         if( !varfixing )
             return SCIPcolGetRedcost(col, stat, lp);
          break;
 
@@ -12618,6 +12663,7 @@ SCIP_Real SCIPvarGetRedcost(
          SCIPABORT();
          return 0.0; /*lint !e527*/
       }
+#endif
    }
 
    return 0.0;
@@ -12646,7 +12692,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* get reduced cost of given variable */
-   implredcost = SCIPvarGetRedcost(var, varfixing, stat, lp);
+   implredcost = SCIPvarGetRedcost(var, set, varfixing, stat, lp);
 
    /* collect binary implication information */
    nbinvars = SCIPimplicsGetNBinImpls(var->implics, varfixing);
@@ -12666,9 +12712,9 @@ SCIP_Real SCIPvarGetImplRedcost(
       assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
 
       if( (SCIP_Bool)boundtypes[v] != varfixing )
-         redcost = SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+         redcost = SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
       else
-         redcost = -SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+         redcost = -SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
 
       if( !SCIPsetIsFeasZero(set, redcost) )
          implredcost += redcost;
@@ -15433,6 +15479,10 @@ int SCIPvarGetConflictingBdchgDepth(
       if( SCIPsetIsGE(set, bound, var->locdom.lb) )
          return -1;
 
+      /* check if the bound is in conflict with the global bound */
+      if( SCIPsetIsLT(set, bound, var->glbdom.lb) )
+         return 0;
+
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nlbchginfos > 0);
       assert(SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
@@ -15749,7 +15799,10 @@ SCIP_HOLELIST* SCIPholelistGetNext(
    return holelist->next;
 }
 
-/** get name of variable */
+/** returns the name of the variable
+ *
+ *  @note to change the name of a variable, use SCIPchgVarName() from scip.h
+ */
 const char* SCIPvarGetName(
    SCIP_VAR*             var                 /**< problem variable */
    )

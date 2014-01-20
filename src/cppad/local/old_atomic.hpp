@@ -1,20 +1,18 @@
-/* $Id: user_atomic.hpp 2210 2011-11-24 21:56:53Z bradbell $ */
-# ifndef CPPAD_USER_ATOMIC_INCLUDED
-# define CPPAD_USER_ATOMIC_INCLUDED
-
+/* $Id: old_atomic.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
+# ifndef CPPAD_OLD_ATOMIC_INCLUDED
+# define CPPAD_OLD_ATOMIC_INCLUDED
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
-
 /*
-$begin user_atomic$$
+$begin old_atomic$$
 $spell
 	hes
 	std
@@ -43,6 +41,8 @@ $index operation, user atomic$$
 $index function, user atomic$$
 
 $head Syntax$$
+Using $code CPPAD_USER_ATOMIC$$ has been deprecated. 
+Use $cref atomic_base$$ instead.
 
 $subhead Define Function$$
 $codei%CPPAD_USER_ATOMIC(%afun%, %Tvector%, %Base%, 
@@ -75,25 +75,30 @@ of a function
 $latex \[
 	y = f(x) \; {\rm where} \; f : B^n \rightarrow B^m 
 \] $$
-more efficiently than by coding it $codei%AD<%Base%>%$$ 
+more efficiently than by coding it using $codei%AD<%Base%>%$$ 
 $cref/atomic/glossary/Operation/Atomic/$$ operations
 and letting CppAD do the rest.
 In this case, $code CPPAD_USER_ATOMIC$$ can be used
 add the user code for $latex f(x)$$, and its derivatives,
 to the set of $codei%AD<%Base%>%$$ atomic operations. 
+$pre
+
+$$
+Another possible purpose is to reduce the size of the tape; 
+see $cref/use AD/old_atomic/Example/Use AD/$$
 
 $head Partial Implementation$$
 The routines 
-$cref/forward/user_atomic/forward/$$,
-$cref/reverse/user_atomic/reverse/$$,
-$cref/for_jac_sparse/user_atomic/for_jac_sparse/$$,
-$cref/rev_jac_sparse/user_atomic/rev_jac_sparse/$$, and
-$cref/rev_hes_sparse/user_atomic/rev_hes_sparse/$$,
+$cref/forward/old_atomic/forward/$$,
+$cref/reverse/old_atomic/reverse/$$,
+$cref/for_jac_sparse/old_atomic/for_jac_sparse/$$,
+$cref/rev_jac_sparse/old_atomic/rev_jac_sparse/$$, and
+$cref/rev_hes_sparse/old_atomic/rev_hes_sparse/$$,
 must be defined by the user.
 The $icode forward$$ the routine, 
 for the case $icode%k% = 0%$$, must be implemented.
 Functions with the correct prototype,
-that just return $icode false$$, 
+that just return $code false$$, 
 can be used for the other cases 
 (unless they are required by your calculations). 
 For example, you need not implement
@@ -152,8 +157,8 @@ $codei%
 	size_t %k%
 %$$
 The value $icode%k%$$ is the order of the Taylor coefficient that
-we are evaluating ($cref/forward/user_atomic/forward/$$)
-or taking the derivative of ($cref/reverse/user_atomic/reverse/$$).
+we are evaluating ($cref/forward/old_atomic/forward/$$)
+or taking the derivative of ($cref/reverse/old_atomic/reverse/$$).
 
 $head n$$
 For all routines documented below, 
@@ -201,12 +206,12 @@ $latex \[
 \] $$
 
 $head ty$$
-In calls to $cref/forward/user_atomic/forward/$$, 
+In calls to $cref/forward/old_atomic/forward/$$, 
 the argument $icode ty$$ has prototype
 $codei%
 	CppAD::vector<%Base%>& %ty%
 %$$
-while in calls to $cref/reverse/user_atomic/reverse/$$ it has prototype
+while in calls to $cref/reverse/old_atomic/reverse/$$ it has prototype
 $codei%
 	const CppAD::vector<%Base%>& %ty%
 %$$
@@ -231,6 +236,15 @@ $latex \[
 	y_j^\ell = \frac{1}{ \ell ! } Y_j^{(\ell)} (0)
 \] $$
 
+$subhead forward$$
+In the case of $icode forward$$,
+for $latex i = 0 , \ldots , m-1$$, $latex ty[ i *( k  + 1) + k ]$$ is an output
+and all the other components of $icode ty$$ are inputs.
+
+$subhead reverse$$
+In the case of $icode reverse$$,
+all the components of $icode ty$$ are inputs.
+
 $head afun$$
 The macro argument $icode afun$$,
 is the name of the AD function corresponding to this atomic
@@ -252,7 +266,7 @@ It is the argument vector $latex x \in B^n$$
 at which the $codei%AD<%Base%>%$$ version of 
 $latex y = f(x)$$ is to be evaluated.
 The dimension of the domain space for $latex y = f (x)$$
-is specified by $cref/n/user_atomic/n/$$ $codei%= %ax%.size()%$$,
+is specified by $cref/n/old_atomic/n/$$ $codei%= %ax%.size()%$$,
 which must be greater than zero.
 
 $subhead ay$$
@@ -260,21 +274,25 @@ The $icode afun$$ result $icode ay$$ has prototype
 $codei%
 	%Tvector%< AD<%Base%> >& %ay%
 %$$
-The input values of its elements do not matter.
+The input values of its elements 
+are not specified (must not matter).
 Upon return, it is the $codei%AD<%Base%>%$$ version of the 
 result vector $latex y = f(x)$$.
 The dimension of the range space for $latex y = f (x)$$
-is specified by $cref/m/user_atomic/m/$$ $codei%= %ay%.size()%$$,
+is specified by $cref/m/old_atomic/m/$$ $codei%= %ay%.size()%$$,
 which must be greater than zero.
 
 $subhead Parallel Mode$$
-$index parallel, user_atomic$$
-$index user_atomic, parallel$$
+$index parallel, old_atomic$$
+$index old_atomic, parallel$$
 The first call to 
 $codei%
 	%afun%(%id%, %ax%, %ay%)
 %$$
 must not be in $cref/parallel/ta_in_parallel/$$ mode.
+In addition, the
+$cref/old_atomic clear/old_atomic/clear/$$
+routine cannot be called while in parallel mode.
 
 $head forward$$
 The macro argument $icode forward$$ is a
@@ -297,7 +315,16 @@ y_i^0 & = & Y(0)
 \\
 y_i^1 & = & Y^{(1)} ( 0 ) 
         = f_i^{(1)} ( x^0 ) X^{(1)} ( 0 ) 
-        =  f_i^{(1)} ( x^0 ) x^1 
+        = f_i^{(1)} ( x^0 ) x^1 
+\\
+y_i^2 
+& = & \frac{1}{2 !} Y^{(2)} (0)
+\\
+& = & \frac{1}{2} X^{(1)} (0)^\R{T} f_i^{(2)} ( x^0 ) X^{(1)} ( 0 )
+  +   \frac{1}{2} f_i^{(1)} ( x^0 ) X^{(2)} ( 0 )
+\\
+& = & \frac{1}{2} (x^1)^\R{T} f_i^{(2)} ( x^0 ) x^1 
+  +    f_i^{(1)} ( x^0 ) x^2
 \end{array}
 \] $$
 Then, for $latex i = 0 , \ldots , m-1$$, it sets
@@ -348,7 +375,8 @@ $codei%
 If $icode%vy%.size() == 0%$$, it should not be used.
 Otherwise, 
 $icode%k% == 0%$$ and $icode%vy%.size() >= %m%$$.
-The input values of the elements of $icode vy$$ do not matter.
+The input values of the elements of $icode vy$$ 
+are not specified (must not matter).
 Upon return, for $latex j = 0 , \ldots , m-1$$,
 $icode%vy%[%i%]%$$ is true if and only if
 $icode%ay%[%j%]%$$ is a variable.
@@ -369,7 +397,7 @@ to denote these Taylor coefficients where the implicit range indices are
 $latex i = 0 , \ldots , m-1$$,
 $latex j = 0 , \ldots , n-1$$,
 $latex \ell = 0 , \ldots , k$$.
-Using the calculations done by $cref/forward/user_atomic/forward/$$,
+Using the calculations done by $cref/forward/old_atomic/forward/$$,
 the Taylor coefficients $latex \{ y_i^\ell \}$$ are a function of the Taylor
 coefficients for $latex \{ x_j^\ell \}$$; i.e., given $latex y = f(x)$$
 we define the function
@@ -413,26 +441,29 @@ $codei%
 	CppAD::vector<%Base%>& %px%
 %$$
 and $icode%px%.size() >= (%k% + 1) * %n%$$.
-The input values of the elements of $icode px$$ do not matter.
+The input values of the elements of $icode px$$ 
+are not specified (must not matter).
 Upon return,
-for $latex j = 0 , \ldots , n-1$$ and $latex \ell = 0 , \ldots , k$$,
+for $latex j = 0 , \ldots , n-1$$ and $latex p = 0 , \ldots , k$$,
 $latex \[
 \begin{array}{rcl}
-px [ j * (k + 1) + \ell ] & = & \partial H / \partial x_j^\ell
+px [ j * (k + 1) + p ] & = & \partial H / \partial x_j^p
 \\
 & = & 
 ( \partial G / \partial \{ y_i^\ell \} ) 
-	( \partial \{ y_i^\ell \} / \partial x_j^\ell )
+	( \partial \{ y_i^\ell \} / \partial x_j^p )
 \\
 & = & 
 \sum_{i=0}^{m-1} \sum_{\ell=0}^k
-( \partial G / \partial y_i^\ell ) ( \partial y_i^\ell / \partial x_j^\ell )
+( \partial G / \partial y_i^\ell ) ( \partial y_i^\ell / \partial x_j^p )
 \\
 & = & 
-\sum_{i=0}^{m-1} \sum_{\ell=0}^k
-py[ i * (k + 1 ) + \ell ] ( \partial F_i^\ell / \partial x_j^\ell )
+\sum_{i=0}^{m-1} \sum_{\ell=p}^k
+py[ i * (k + 1 ) + \ell ] ( \partial F_i^\ell / \partial x_j^p )
 \end{array}
 \] $$
+Note that we have used the fact that for $latex \ell < p$$,
+$latex \partial F_i^\ell / \partial x_j^p = 0$$.
 If $icode%px%.size() > (%k% + 1) * %n%$$,
 the other components of $icode px$$ are not specified and should not be used.
 
@@ -452,7 +483,7 @@ Given a $cref/sparsity pattern/glossary/Sparsity Pattern/$$ for $latex R$$,
 $icode for_jac_sparse$$ computes a sparsity pattern for $latex S(x)$$.
 
 $subhead Usage$$
-This routine is used by calls to $cref/ForSparseJac/$$.
+This routine is used by calls to $cref ForSparseJac$$.
 
 $subhead q$$
 The $icode for_jac_sparse$$ argument $icode q$$ has prototype
@@ -480,7 +511,8 @@ $codei%
 	CppAD::vector< std::set<size_t> >& %s%
 %$$
 and $icode%s%.size() >= %m%%$$.
-The input values of its sets do not matter. Upon return 
+The input values of its sets 
+are not specified (must not matter). Upon return 
 for $latex i = 0 , \ldots , m-1$$,
 all the elements of $icode%s%[%i%]%$$ are between
 zero and $icode%q%-1%$$ inclusive.
@@ -502,8 +534,8 @@ Given a $cref/sparsity pattern/glossary/Sparsity Pattern/$$ for $latex S$$,
 $icode rev_jac_sparse$$ computes a sparsity pattern for $latex R(x)$$.
 
 $subhead Usage$$
-This routine is used by calls to $cref/RevSparseJac/$$
-and to $cref/optimize/$$.
+This routine is used by calls to $cref RevSparseJac$$
+and to $cref optimize$$.
 
 
 $subhead q$$
@@ -522,9 +554,9 @@ $codei%
 %$$
 and $icode%s%.size() >= %m%$$.
 For $latex i = 0 , \ldots , m-1$$, 
-all the elements of $icode%s%[%i%}%$$
+all the elements of $icode%s%[%i%]%$$
 are between zero and $icode%q%-1%$$ inclusive.
-This specifies a sparsity pattern for the matrix $latex S^\T$$.
+This specifies a sparsity pattern for the matrix $latex S^\R{T}$$.
 
 $subhead r$$
 The $icode rev_jac_sparse$$ return value $icode r$$ has prototype
@@ -532,11 +564,12 @@ $codei%
 	CppAD::vector< std::set<size_t> >& %r%
 %$$
 and $icode%r%.size() >= %n%$$.
-The input values of its sets do not matter.
+The input values of its sets 
+are not specified (must not matter).
 Upon return for $latex j = 0 , \ldots , n-1$$,
 all the elements of $icode%r%[%j%]%$$
 are between zero and $icode%q%-1%$$ inclusive.
-This represents a sparsity pattern for the matrix $latex R(x)^\T$$.
+This represents a sparsity pattern for the matrix $latex R(x)^\R{T}$$.
 
 $head rev_hes_sparse$$
 The macro argument $icode rev_hes_sparse$$
@@ -554,7 +587,7 @@ $latex \[
 \] $$
 
 $subhead Usage$$
-This routine is used by calls to $cref/RevSparseHes/$$.
+This routine is used by calls to $cref RevSparseHes$$.
 
 $subhead q$$
 The $icode rev_hes_sparse$$ argument $icode q$$ has prototype
@@ -577,7 +610,7 @@ This specifies a sparsity pattern for the matrix $latex R \in B^{n \times q}$$.
 $subhead s$$
 The $icode rev_hes_sparse$$ argument $icode s$$ has prototype
 $codei%
-     const CppAD::vector<bool> >& %s%
+     const CppAD::vector<bool>& %s%
 %$$
 and $icode%s%.size() >= %m%$$.
 This specifies a sparsity pattern for the matrix 
@@ -586,12 +619,16 @@ $latex S(x) = g^{(1)} (y) \in B^{1 \times m}$$.
 $subhead t$$
 The $icode rev_hes_sparse$$ argument $icode t$$ has prototype
 $codei%
-     CppAD::vector<bool> >& %t%
+     CppAD::vector<bool>& %t%
 %$$
 and $icode%t%.size() >= %n%$$.
-The input values of its elements do not matter.
+The input values of its elements 
+are not specified (must not matter).
 Upon return it represents a sparsity pattern for the matrix 
-$latex T(x) = (g \circ f)^{(1)} (x) \in B^{1 \times n}$$.
+$latex T(x) \in B^{1 \times n}$$ defined by
+$latex \[
+T(x)  =  (g \circ f)^{(1)} (x) =  S(x) * f^{(1)} (x)
+\] $$
 
 $subhead u$$
 The $icode rev_hes_sparse$$ argument $icode u$$ has prototype
@@ -624,7 +661,8 @@ $codei%
      CppAD::vector< std::set<size_t> >& %v%
 %$$
 and $icode%v%.size() >= %n%$$.
-The input values of its elements do not matter.
+The input values of its elements 
+are not specified (must not matter).
 Upon return, for $latex j = 0, \ldots , n-1$$,
 all the elements of $icode%v%[%j%]%$$
 are between zero and $icode%q%-1%$$ inclusive.
@@ -641,6 +679,16 @@ V(x)
 \\
 & = &
 (g \circ f)^{(2)}( x ) R
+\\
+& = &
+f^{(1)} (x)^\R{T} g^{(2)} ( y ) f^{(1)} (x)  R
++
+\sum_{i=1}^m [ g^{(1)} (y) ]_i \; f_i^{(2)} (x) R
+\\
+& = &
+f^{(1)} (x)^\R{T} U(x)
++
+\sum_{i=1}^m S(x)_i \; f_i^{(2)} (x) R
 \end{array}
 \] $$
 
@@ -655,18 +703,37 @@ for other uses by the same thread.
 This should be called when you are done using the 
 user atomic functions for a specific value of $icode Base$$.
 
+$subhead Restriction$$
+The user atomic $code clear$$ routine cannot be called
+while in $cref/parallel/ta_in_parallel/$$ execution mode.
+
 $children%
-	example/user_tan.cpp%
-	example/mat_mul.cpp
+	example/atomic/old_reciprocal.cpp%
+	example/atomic/old_usead_1.cpp%
+	example/atomic/old_usead_2.cpp%
+	example/atomic/old_tan.cpp%
+	example/atomic/old_mat_mul.cpp
 %$$
 $head Example$$
 
+$subhead Simple$$
+The file $cref old_reciprocal.cpp$$ contains the simplest example and test
+of a user atomic operation.
+
+$subhead Use AD$$
+The examples 
+$cref old_usead_1.cpp$$ and $cref old_usead_2.cpp$$
+use AD to compute the derivatives 
+inside a user defined atomic function.
+This may have the advantage of reducing the size of the tape, because
+a repeated section of code would only be taped once.
+
 $subhead Tangent Function$$
-The file $cref/user_tan.cpp/$$ contains an example and test
+The file $cref old_tan.cpp$$ contains an example and test
 implementation of the tangent function as a user atomic operation.
 
 $subhead Matrix Multiplication$$
-The file  $cref/mat_mul.cpp/$$ contains an example and test
+The file  $cref old_mat_mul.cpp$$ contains an example and test
 implementation of matrix multiplication a a user atomic operation.
 
 $end
@@ -678,9 +745,11 @@ $end
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/thread_alloc.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\file user_atomic.hpp
+\defgroup old_atomic_hpp old_atomic.hpp
+\{
+\file old_atomic.hpp
 user defined atomic operations.
 */
 
@@ -723,10 +792,9 @@ name of the user defined routine that computes corresponding
 results during reverse mode Hessian sparsity sweeps.
 
 \par memory allocation
-Note that user_atomic is used as a static object, so its objects
+Note that old_atomic is used as a static object, so its objects
 do note get deallocated until the program terminates. 
 */
-
 # define CPPAD_USER_ATOMIC(                                           \
      afun            ,                                                \
      Tvector         ,                                                \
@@ -743,7 +811,7 @@ inline void afun (                                                    \
      Tvector< CppAD::AD<Base> >&          ay                          \
 )                                                                     \
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;                            \
-	static CppAD::user_atomic<Base> fun(                             \
+	static CppAD::old_atomic<Base> fun(                              \
           #afun          ,                                            \
           forward        ,                                            \
           reverse        ,                                            \
@@ -751,17 +819,29 @@ inline void afun (                                                    \
           rev_jac_sparse ,                                            \
           rev_hes_sparse                                              \
      );                                                               \
-     fun.ad(id, ax, ay);                                              \
+     fun(id, ax, ay);                                                 \
 }
+
+/// link so that user_atomic<Base>::clear() still works
+template <class Base> class user_atomic : public atomic_base<Base> {
+};
 
 /*!
 Class that actually implements the <tt>afun(id, ax, ay)</tt> calls.
 
-A new user_atomic object is generated each time the user invokes
+A new old_atomic object is generated each time the user invokes
 the CPPAD_USER_ATOMIC macro; see static object in that macro.
 */
 template <class Base>
-class user_atomic {
+class old_atomic : public atomic_base<Base> {
+public:
+	/// disable old_atomic<Base>::clear(void)
+	static void clear(void)
+	{	CPPAD_ASSERT_KNOWN(
+			false,
+			"Depreacted API uses user_atomic<Base>::clear()"
+		);
+	}
 	/// type for user routine that computes forward mode results
 	typedef bool (*F) (
 		size_t                  id ,
@@ -815,8 +895,8 @@ class user_atomic {
 		vector< std::set<size_t> >&       v 
 	);
 private:
-	/// users name for the AD version of this atomic operation
-	const std::string     name_;
+	/// id value corresponding to next virtual callback
+	size_t                  id_;
 	/// user's implementation of forward mode
 	const F                  f_;
 	/// user's implementation of reverse mode
@@ -827,28 +907,13 @@ private:
 	const RJS              rjs_;
 	/// user's implementation of reverse Hessian sparsity calculations
 	const RHS              rhs_;
-	/// index of this object in the vector of all objects in this class
-	const size_t         index_;
 
-	/// temporary work space used to avoid memory allocation/deallocation
-	/// extra information to be passed to the functions
-	vector<bool>            vx_;
-	vector<bool>            vy_;
-	vector<Base>             x_;
-	vector<Base>             y_;
-
-	/// List of all objects in this class.
-	static std::vector<user_atomic *>& List(void)
-	{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-		static std::vector<user_atomic *> list;
-		return list;
-	}
 public:
 	/*!
  	Constructor called for each invocation of CPPAD_USER_ATOMIC.
 
 	Put this object in the list of all objects for this class and set
-	the constant private data name_, f_, r_, and index_.
+	the constant private data f_, r_, fjs_, rjs_, rhs_.
 
 	\param afun
 	is the user's name for the AD version of this atomic operation.
@@ -870,24 +935,17 @@ public:
 
 	\par
 	This constructor can not be used in parallel mode because
-	the object it constructs is static. In addition, it changes the
-	static object \c List.
+	atomic_base has this restriction.
 	*/
-	user_atomic(const char* afun, F f, R r, FJS fjs, RJS rjs, RHS rhs) : 
-	name_(afun)
+	old_atomic(const char* afun, F f, R r, FJS fjs, RJS rjs, RHS rhs) : 
+	atomic_base<Base>(afun) // name = afun
 	, f_(f)
 	, r_(r)
 	, fjs_(fjs)
 	, rjs_(rjs)
 	, rhs_(rhs)
-	, index_( List().size() )
-	{	CPPAD_ASSERT_KNOWN(
-			! thread_alloc::in_parallel() ,
-			"First call to the function *afun is in parallel mode."
-		);
-		List().push_back(this);
+	{	this->option( atomic_base<Base>::set_sparsity_enum );
 	}
-
 	/*!
  	Implement the user call to <tt>afun(id, ax, ay)</tt>.
 
@@ -905,426 +963,134 @@ public:
 	\param ay
 	is the result vector for this call,
 	<tt>ay.size()</tt> determines the number of results.
-
-	This routine is not \c const because it may modify the works
-	space vectors \c x_ and \c y_.
  	*/
 	template <class ADVector>
-	void ad(size_t id, const ADVector& ax, ADVector& ay)
-	{	size_t i, j, k;
-		size_t n = ax.size();
-		size_t m = ay.size();
-# ifndef NDEBUG
-		bool ok;
-		std::string msg = "user_atomoc: ";
-# endif
-		//
-		if( x_.size() < n )
-		{	x_.resize(n);
-			vx_.resize(n);
-		}
-		if( y_.size() < m )
-		{	y_.resize(m);
-			vy_.resize(m);
-		}
-		// 
-		// Determine if we are going to have to tape this operation
-		size_t tape_id     = 0;
-		ADTape<Base>* tape = CPPAD_NULL;
-		for(j = 0; j < n; j++)
-		{	x_[j]   = ax[j].value_;
-			vx_[j]  = Variable( ax[j] );
-			if ( (tape == CPPAD_NULL) & vx_[j] )
-			{	tape    = ax[j].tape_this();
-				tape_id = ax[j].id_;
-			}
-# ifndef NDEBUG
-			ok = (tape_id == 0) | Parameter(ax[j]) | (tape_id == ax[j].id_);
-			if( ! ok )
-			{	msg = msg + name_ + 
-				": ax contains variables from different OpenMP threads.";
-				CPPAD_ASSERT_KNOWN(false, msg.c_str());
-			}
-# endif
-		}
-		// Use zero order forward mode to compute values
-		k  = 0;
-# if NDEBUG
-		f_(id, k, n, m, vx_, vy_, x_, y_);  
-# else
-		ok = f_(id, k, n, m, vx_, vy_, x_, y_);  
-		if( ! ok )
-		{	msg = msg + name_ + ": ok returned false from "
-				"zero order forward mode calculation.";
-			CPPAD_ASSERT_KNOWN(false, msg.c_str());
-		}
-# endif
-		// pass back values
-		for(i = 0; i < m; i++)
-		{	ay[i].value_ = y_[i];
-
-			// initialize entire vector as a constant (not on tape)
-			ay[i].id_    = CPPAD_MAX_NUM_THREADS;
-			ay[i].taddr_ = 0;
-		}
-		// if tape is not null, ay is on the tape
-		if( tape != CPPAD_NULL )
-		{
-			// Note the actual number of results is m
-			CPPAD_ASSERT_UNKNOWN( NumRes(UserOp) == 0 );
-			CPPAD_ASSERT_UNKNOWN( NumArg(UserOp) == 4 );
-
-			// Begin operators corresponding to one user_atomic operation.
-			// Put function index, domain size, range size, and id in tape
-			tape->Rec_.PutArg(index_, id, n, m);
-			tape->Rec_.PutOp(UserOp);
-			// n + m operators follow for this one atomic operation
-
-			// Now put the information for the argument vector in the tape
-			CPPAD_ASSERT_UNKNOWN( NumRes(UsravOp) == 0 );
-			CPPAD_ASSERT_UNKNOWN( NumRes(UsrapOp) == 0 );
-			CPPAD_ASSERT_UNKNOWN( NumArg(UsravOp) == 1 );
-			CPPAD_ASSERT_UNKNOWN( NumArg(UsrapOp) == 1 );
-			for(j = 0; j < n; j++)
-			{	if( vx_[j] )
-				{	// information for an argument that is a variable
-					tape->Rec_.PutArg(ax[j].taddr_);
-					tape->Rec_.PutOp(UsravOp);
-				}
-				else
-				{	// information for an arugment that is parameter
-					addr_t p = tape->Rec_.PutPar(ax[j].value_);
-					tape->Rec_.PutArg(p);
-					tape->Rec_.PutOp(UsrapOp);
-				}
-			}
-
-			// Now put the information for the results in the tape
-			CPPAD_ASSERT_UNKNOWN( NumArg(UsrrpOp) == 1 );
-			CPPAD_ASSERT_UNKNOWN( NumRes(UsrrpOp) == 0 );
-			CPPAD_ASSERT_UNKNOWN( NumArg(UsrrvOp) == 0 );
-			CPPAD_ASSERT_UNKNOWN( NumRes(UsrrvOp) == 1 );
-			for(i = 0; i < m; i++)
-			{	if( vy_[i] )
-				{	ay[i].taddr_ = tape->Rec_.PutOp(UsrrvOp);
-					ay[i].id_    = tape_id;
-				}
-				else
-				{	addr_t p = tape->Rec_.PutPar(ay[i].value_);
-					tape->Rec_.PutArg(p);
-					tape->Rec_.PutOp(UsrrpOp);
-				}
-			}
-
-			// Put a duplicate UserOp at end of UserOp sequence
-			tape->Rec_.PutArg(index_, id, n, m);
-			tape->Rec_.PutOp(UserOp);
-		} 
+	void operator()(size_t id, const ADVector& ax, ADVector& ay)
+	{	// call atomic_base function object
+		this->atomic_base<Base>::operator()(ax, ay, id);
 		return;
 	}
-
-	/// Name corresponding to a user_atomic object
-	static const char* name(size_t index)
-	{	return List()[index]->name_.c_str(); }
 	/*!
- 	Link from forward mode sweep to users routine.
-
-	\param index
-	index for this function in the list of all user_atomic objects
+	Store id for next virtual function callback
 
 	\param id
-	extra information vector that is just passed through by CppAD,
-	and possibly used by user's routines.
+	id value corresponding to next virtual callback
+	*/
+	virtual void set_id(size_t id)
+	{	id_ = id; }
+	/*!
+ 	Link from old_atomic to forward mode 
 
-	\param k
-	order for this forward mode calculation.
-
-	\param n
-	domain space size for this calcualtion.
-
-	\param m
-	range space size for this calculation.
-
-	\param tx
-	Taylor coefficients corresponding to \c x for this calculation.
-
-	\param ty
-	Taylor coefficient corresponding to \c y for this calculation
-
-	See the forward mode in user's documentation for user_atomic 
+	\copydetails atomic_base::forward
  	*/
-	static void forward(
-		size_t                index , 
-		size_t                   id ,
-		size_t                    k ,
-		size_t                    n , 
-		size_t                    m , 
+	virtual bool forward(
+		size_t                    q ,
+		size_t                    p ,
+		const vector<bool>&      vx , 
+		      vector<bool>&      vy , 
 		const vector<Base>&      tx ,
-		vector<Base>&            ty )
-	{	
-# ifdef _OPENMP
-		vector<bool> empty(0);
-# else
-		static vector<bool> empty(0);
-# endif
-		
-		CPPAD_ASSERT_UNKNOWN( tx.size() >= n * k );
-		CPPAD_ASSERT_UNKNOWN( ty.size() >= m * k );
+		      vector<Base>&      ty )
+	{	CPPAD_ASSERT_UNKNOWN( tx.size() % (p+1) == 0 );
+		CPPAD_ASSERT_UNKNOWN( ty.size() % (p+1) == 0 );
+		size_t n = tx.size() / (p+1);
+		size_t m = ty.size() / (p+1);
+		size_t i, j, k, ell;
 
-		CPPAD_ASSERT_UNKNOWN(index < List().size() );
-		user_atomic* op = List()[index];
+		vector<Base> x(n * (p+1));
+		vector<Base> y(m * (p+1));
+		vector<bool> empty;
 
-		bool ok = op->f_(id, k, n, m, empty, empty, tx, ty);
-		if( ! ok )
-		{	std::stringstream ss;
-			ss << k;
-			std::string msg = "user_atomic: ";
-			msg = msg + op->name_ + ": ok returned false from " + ss.str()
-			    + " order forward mode calculation";
-			CPPAD_ASSERT_KNOWN(false, msg.c_str());
+		// old_atomic interface can only handel one order at a time
+		// so must just throuh hoops to get multiple orders at one time.
+		bool ok = true;
+		for(k = q; k <= p; k++)
+		{	for(j = 0; j < n; j++)
+				for(ell = 0; ell <= k; ell++)
+					x[ j * (k+1) + ell ] = tx[ j * (p+1) + ell ];
+			for(i = 0; i < m; i++)
+				for(ell = 0; ell < k; ell++)
+					y[ i * (k+1) + ell ] = ty[ i * (p+1) + ell ];
+			if( k == 0 )
+				ok &= f_(id_, k, n, m, vx, vy, x, y);
+			else
+				ok &= f_(id_, k, n, m, empty, empty, x, y);
+			for(i = 0; i < m; i++)
+				ty[ i * (p+1) + k ] = y[ i * (k+1) + k];
 		}
+		return ok;
 	}
-
-
 	/*!
- 	Link from reverse mode sweep to users routine.
+ 	Link from old_atomic to reverse mode
 
-	\param index
-	index in the list of all user_atomic objects
-	corresponding to this function.
-
-
-	\param id
-	extra information vector that is just passed through by CppAD,
-	and possibly used by user's routines.
-
-	\param k
-	order for this forward mode calculation.
-
-	\param n
-	domain space size for this calcualtion.
-
-	\param m
-	range space size for this calculation.
-
-	\param tx
-	Taylor coefficients corresponding to \c x for this calculation.
-
-	\param ty
-	Taylor coefficient corresponding to \c y for this calculation
-
-	\param px
-	Partials w.r.t. the \c x Taylor coefficients.
-
-	\param py
-	Partials w.r.t. the \c y Taylor coefficients.
-
-	See reverse mode documentation for user_atomic 
+	\copydetails atomic_base::reverse
  	*/
-	static void reverse(
-		size_t               index , 
-		size_t                  id ,
-		size_t                   k ,
-		size_t                   n , 
-		size_t                   m , 
+	virtual bool reverse(
+		size_t                   p ,
 		const vector<Base>&     tx ,
 		const vector<Base>&     ty ,
-		vector<Base>&           px ,
+		      vector<Base>&     px ,
 		const vector<Base>&     py )
-	{
-		CPPAD_ASSERT_UNKNOWN(index < List().size() );
-		CPPAD_ASSERT_UNKNOWN( tx.size() >= n * k );
-		CPPAD_ASSERT_UNKNOWN( px.size() >= n * k );
-		CPPAD_ASSERT_UNKNOWN( ty.size() >= m * k );
-		CPPAD_ASSERT_UNKNOWN( py.size() >= m * k );
-		user_atomic* op = List()[index];
-
-		bool ok = op->r_(id, k, n, m, tx, ty, px, py);
-		if( ! ok )
-		{	std::stringstream ss;
-			ss << k;
-			std::string msg = "user_atomic: ";
-			msg = op->name_ + ": ok returned false from " + ss.str() 
-			    + " order reverse mode calculation";
-			CPPAD_ASSERT_KNOWN(false, msg.c_str());
-		}
+	{	CPPAD_ASSERT_UNKNOWN( tx.size() % (p+1) == 0 );
+		CPPAD_ASSERT_UNKNOWN( ty.size() % (p+1) == 0 );
+		size_t n = tx.size() / (p+1);
+		size_t m = ty.size() / (p+1);
+		bool   ok = r_(id_, p, n, m, tx, ty, px, py);
+		return ok;
 	}
-
 	/*!
- 	Link from forward Jacobian sparsity sweep to users routine.
+ 	Link from forward Jacobian sparsity sweep to old_atomic
 
-	\param index
-	index in the list of all user_atomic objects
-	corresponding to this function.
-
-	\param id
-	extra information vector that is just passed through by CppAD,
-	and possibly used by user's routines.
-
-	\param n
-	domain space size for this calcualtion.
-
-	\param m
-	range space size for this calculation.
-
-	\param q
-	is the column dimension for the Jacobian sparsity partterns.
-
-	\param r
-	is the Jacobian sparsity pattern for the argument vector x
-
-	\param s
-	is the Jacobian sparsity pattern for the result vector y
+	\copydetails atomic_base::for_sparse_jac
 	*/
-	static void for_jac_sparse(
-		size_t                            index ,
-		size_t                               id ,
-		size_t                                n , 
-		size_t                                m , 
+	virtual bool for_sparse_jac(
 		size_t                                q ,
 		const vector< std::set<size_t> >&     r ,
-		vector< std::set<size_t> >&           s )
-	{
-		CPPAD_ASSERT_UNKNOWN(index < List().size() );
-		CPPAD_ASSERT_UNKNOWN( r.size() >= n );
-		CPPAD_ASSERT_UNKNOWN( s.size() >= m );
-		user_atomic* op = List()[index];
-
-		bool ok = op->fjs_(id, n, m, q, r, s);
-		if( ! ok )
-		{	std::string msg = "user_atomic: ";
-			msg = msg + op->name_ 
-			    + ": ok returned false from for_jac_sparse calculation";
-			CPPAD_ASSERT_KNOWN(false, msg.c_str());
-		}
+		      vector< std::set<size_t> >&     s )
+	{	size_t n = r.size();
+		size_t m = s.size();
+		bool ok  = fjs_(id_, n, m, q, r, s);
+		return ok;
 	}
 
 	/*!
- 	Link from reverse Jacobian sparsity sweep to users routine.
+ 	Link from reverse Jacobian sparsity sweep to old_atomic.
 
-	\param index
-	index in the list of all user_atomic objects
-	corresponding to this function.
-
-	\param id
-	extra information vector that is just passed through by CppAD,
-	and possibly used by user's routines.
-
-	\param n
-	domain space size for this calcualtion.
-
-	\param m
-	range space size for this calculation.
-
-	\param q
-	is the row dimension for the Jacobian sparsity partterns.
-
-	\param r
-	is the Jacobian sparsity pattern for the argument vector x
-
-	\param s
-	is the Jacobian sparsity pattern for the result vector y
+	\copydetails atomic_base::rev_sparse_jac
 	*/
-	static void rev_jac_sparse(
-		size_t                            index ,
-		size_t                               id ,
-		size_t                                n , 
-		size_t                                m , 
-		size_t                                q ,
-		vector< std::set<size_t> >&           r ,
-		const vector< std::set<size_t> >&     s )
-	{
-		CPPAD_ASSERT_UNKNOWN(index < List().size() );
-		CPPAD_ASSERT_UNKNOWN( r.size() >= n );
-		CPPAD_ASSERT_UNKNOWN( s.size() >= m );
-		user_atomic* op = List()[index];
-
-		bool ok = op->rjs_(id, n, m, q, r, s);
-		if( ! ok )
-		{	std::string msg = "user_atomic: ";
-			msg = msg + op->name_ 
-			    + ": ok returned false from rev_jac_sparse calculation";
-			CPPAD_ASSERT_KNOWN(false, msg.c_str());
-		}
+	virtual bool rev_sparse_jac(
+		size_t                               q  ,
+		const vector< std::set<size_t> >&    rt ,
+		      vector< std::set<size_t> >&    st )
+	{	size_t n = st.size();
+		size_t m = rt.size();
+		bool ok  = rjs_(id_, n, m, q, st, rt);
+		return ok;
 	}
-
 	/*!
- 	Link from reverse Hessian sparsity sweep to users routine.
+ 	Link from reverse Hessian sparsity sweep to old_atomic
 
-	\param index
-	index in the list of all user_atomic objects
-	corresponding to this function.
-
-	\param id
-	extra information vector that is just passed through by CppAD,
-	and possibly used by user's routines.
-
-	\param n
-	domain space size for this calcualtion.
-
-	\param m
-	range space size for this calculation.
-
-	\param q
-	is the column dimension for the sparsity partterns.
-
-	\param r
-	is the forward Jacobian sparsity pattern w.r.t the argument vector x
-
-	\param s
-	is the reverse Jacobian sparsity pattern w.r.t the result vector y.
-
-	\param t
-	is the reverse Jacobian sparsity pattern w.r.t the argument vector x.
-
-	\param u
-	is the Hessian sparsity pattern w.r.t the result vector y.
-
-	\param v
-	is the Hessian sparsity pattern w.r.t the argument vector x.
+	\copydetails atomic_base::rev_sparse_hes
 	*/
-	static void rev_hes_sparse(
-		size_t                            index ,
-		size_t                               id ,
-		size_t                                n , 
-		size_t                                m , 
-		size_t                                q ,
-		vector< std::set<size_t> >&           r ,
+	virtual bool rev_sparse_hes(
+		const vector<bool>&                   vx,
 		const vector<bool>&                   s ,
-		vector<bool>&                         t ,
+		      vector<bool>&                   t ,
+		size_t                                q ,
+		const vector< std::set<size_t> >&     r ,
 		const vector< std::set<size_t> >&     u ,
-		vector< std::set<size_t> >&           v )
-	{
-		CPPAD_ASSERT_UNKNOWN(index < List().size() );
-		CPPAD_ASSERT_UNKNOWN( r.size() >= n );
-		CPPAD_ASSERT_UNKNOWN( s.size() >= m );
-		CPPAD_ASSERT_UNKNOWN( t.size() >= n );
-		CPPAD_ASSERT_UNKNOWN( u.size() >= m );
-		CPPAD_ASSERT_UNKNOWN( v.size() >= n );
-		user_atomic* op = List()[index];
-
-		bool ok = op->rhs_(id, n, m, q, r, s, t, u, v);
-		if( ! ok )
-		{	std::string msg = "user_atomic: ";
-			msg = msg + op->name_ 
-			    + ": ok returned false from rev_jac_sparse calculation";
-			CPPAD_ASSERT_KNOWN(false, msg.c_str());
-		}
-	}
-
-	/// Free static CppAD::vector memory used by this class (work space)
-	static void clear(void)
-	{	size_t i = List().size();
-		while(i--)
-		{	user_atomic* op = List()[i];
-			op->vx_.resize(0);
-			op->vy_.resize(0);
-			op->x_.resize(0);
-			op->y_.resize(0);
-		}
-		return;
+		      vector< std::set<size_t> >&     v )
+	{	size_t m = u.size();
+		size_t n = v.size();
+		CPPAD_ASSERT_UNKNOWN( r.size() == n );
+		CPPAD_ASSERT_UNKNOWN( s.size() == m );
+		CPPAD_ASSERT_UNKNOWN( t.size() == n );
+		//
+		// old interface used id instead of vx
+		bool ok = rhs_(id_, n, m, q, r, s, t, u, v);
+		return ok;
 	}
 };
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

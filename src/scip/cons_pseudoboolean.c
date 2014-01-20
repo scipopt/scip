@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -183,6 +183,7 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool             decomposenormalpbcons;/**< decompose the pseudo boolean constraint into a "linear" constraint "and" constrainst */
    SCIP_Bool             decomposeindicatorpbcons;/**< decompose the indicator pseudo boolean constraint into a "linear" constraint "and" constrainst */
+   SCIP_Bool             inithashmapandtable;/**< flag to store if the hashmap and -table is initialized */
    int                   nlinconss;          /**< for counting number of created linear constraints */
    int                   noriguses;          /**< how many consanddata objects are used by original constraints */
 };
@@ -357,6 +358,40 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndConsDatas)
    return (cdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
 }
 
+/** initializes the hashmap and -table used in this constraint handler data for artificial variables and specific
+ *  and-constraint data objects
+ */
+static
+SCIP_RETCODE inithashmapandtable(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   )
+{
+   if( ((*conshdlrdata)->inithashmapandtable) )
+   {
+      assert((*conshdlrdata)->hashtable != NULL);
+      assert((*conshdlrdata)->hashmap != NULL);
+
+      return SCIP_OKAY;
+   }
+
+   assert((*conshdlrdata)->hashtable == NULL);
+   assert((*conshdlrdata)->hashmap == NULL);
+
+   /* create a hash table for and-constraint data objects */
+   (*conshdlrdata)->hashtablesize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
+   SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->hashtablesize,
+         hashGetKeyAndConsDatas, hashKeyEqAndConsDatas, hashKeyValAndConsDatas, (void*) scip) );
+
+   /* create a hash table for and-resultant to and-constraint data objects */
+   (*conshdlrdata)->hashmapsize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
+   SCIP_CALL( SCIPhashmapCreate(&((*conshdlrdata)->hashmap), SCIPblkmem(scip), (*conshdlrdata)->hashmapsize) );
+
+   (*conshdlrdata)->inithashmapandtable = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** creates constraint handler data for pseudo boolean constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
@@ -375,14 +410,12 @@ SCIP_RETCODE conshdlrdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*conshdlrdata)->allconsanddatas), (*conshdlrdata)->sallconsanddatas ) );
 
-   /* create a hash table for and-constraint data objects */
-   (*conshdlrdata)->hashtablesize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
-   SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->hashtablesize,
-         hashGetKeyAndConsDatas, hashKeyEqAndConsDatas, hashKeyValAndConsDatas, (void*) scip) );
-
-   /* create a hash table for and-resultant to and-constraint data objects */
-   (*conshdlrdata)->hashmapsize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
-   SCIP_CALL( SCIPhashmapCreate(&((*conshdlrdata)->hashmap), SCIPblkmem(scip), (*conshdlrdata)->hashmapsize) );
+   /* set hashmap and -table to NULL, mark them as uninitialized */
+   (*conshdlrdata)->inithashmapandtable = FALSE;
+   (*conshdlrdata)->hashtable = NULL;
+   (*conshdlrdata)->hashtablesize = 0;
+   (*conshdlrdata)->hashmap = NULL;
+   (*conshdlrdata)->hashmapsize = 0;
 
    /* for constraint names count number of created constraints */
    (*conshdlrdata)->nlinconss = 0;
@@ -429,11 +462,20 @@ SCIP_RETCODE conshdlrdataFree(
       }
    }
 
-   /* free hash table */
-   SCIPhashmapFree(&((*conshdlrdata)->hashmap));
-   (*conshdlrdata)->hashmapsize = 0;
-   SCIPhashtableFree(&((*conshdlrdata)->hashtable));
-   (*conshdlrdata)->hashtablesize = 0;
+   /* free hash table if necessary */
+   if( (*conshdlrdata)->inithashmapandtable )
+   {
+      SCIPhashmapFree(&((*conshdlrdata)->hashmap));
+      (*conshdlrdata)->hashmapsize = 0;
+      SCIPhashtableFree(&((*conshdlrdata)->hashtable));
+      (*conshdlrdata)->hashtablesize = 0;
+   }
+   else
+   {
+      assert((*conshdlrdata)->hashmap == NULL);
+      assert((*conshdlrdata)->hashtable == NULL);
+   }
+   (*conshdlrdata)->inithashmapandtable = FALSE;
 
    SCIPfreeBlockMemoryArray(scip, &allconsanddatas, sallconsanddatas );
 
@@ -479,11 +521,20 @@ SCIP_RETCODE conshdlrdataClear(
       }
    }
 
-   /* clear hash map */
-   SCIP_CALL( SCIPhashmapRemoveAll((*conshdlrdata)->hashmap) );
+   /* free hash table if necessary */
+   if( (*conshdlrdata)->inithashmapandtable )
+   {
+      /* clear hash map */
+      SCIP_CALL( SCIPhashmapRemoveAll((*conshdlrdata)->hashmap) );
 
-   /* clear hash table */
-   SCIPhashtableRemoveAll((*conshdlrdata)->hashtable);
+      /* clear hash table */
+      SCIPhashtableRemoveAll((*conshdlrdata)->hashtable);
+   }
+   else
+   {
+      assert((*conshdlrdata)->hashmap == NULL);
+      assert((*conshdlrdata)->hashtable == NULL);
+   }
 
    /* reset number of consanddata elements */
    (*conshdlrdata)->nallconsanddatas = 0;
@@ -1475,6 +1526,7 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPaddVar(scip, resultant) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real val;
          int v;
@@ -3350,7 +3402,7 @@ SCIP_RETCODE removeOldLocks(
                                               *   capture of the corresponding and-constraint */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
    SCIP_Real const       lhs,                /**< left hand side which led to old locks */
-   SCIP_Real const       rhs                /**< right hand side which led to old locks */
+   SCIP_Real const       rhs                 /**< right hand side which led to old locks */
    )
 {
    assert(scip != NULL);
@@ -4664,7 +4716,7 @@ SCIP_RETCODE updateConsanddataUses(
                && strlen(SCIPvarGetName(resvar)) > strlen(ARTIFICIALVARNAMEPREFIX) &&
                strncmp(SCIPvarGetName(resvar)+2, ARTIFICIALVARNAMEPREFIX, strlen(ARTIFICIALVARNAMEPREFIX)) == 0
 #endif
-               )
+               ) /*lint !e774*/
 	    {
                assert(!SCIPconsIsChecked(consanddata->cons));
 	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
@@ -8576,6 +8628,10 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   /* initial hashmap and -table */
+   SCIP_CALL( inithashmapandtable(scip, &conshdlrdata) );
+
    assert(conshdlrdata->hashmap != NULL);
    assert(conshdlrdata->hashtable != NULL);
    assert(conshdlrdata->allconsanddatas != NULL);
@@ -8761,6 +8817,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** andress;
@@ -8792,6 +8849,13 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
       return SCIP_INVALIDDATA;
    }
 #endif
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* initial hashmap and -table */
+   SCIP_CALL( inithashmapandtable(scip, &conshdlrdata) );
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &andconss, nterms) );
@@ -9076,10 +9140,16 @@ int SCIPgetNLinVarsWithoutAndPseudoboolean(
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
+      return -1;
    }
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( checkConsConsistency(scip, cons) );
+   {
+      SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
+
+      if( retcode != SCIP_OKAY )
+         return -1;
+   }
 #endif
 
    consdata = SCIPconsGetData(cons);
@@ -9218,12 +9288,15 @@ int SCIPgetNAndsPseudoboolean(
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
+      return -1;
    }
 
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return -1;
    }
 #endif
 
@@ -9354,7 +9427,9 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
    }
 #endif
 
@@ -9382,7 +9457,9 @@ SCIP_Real SCIPgetRhsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
    }
 #endif
 

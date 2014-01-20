@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3521,6 +3521,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          default:
             SCIPerrorMessage("invalid comparison result\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA;
          }
       }
 
@@ -4736,6 +4737,7 @@ int SCIPgetNVarsXor(
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
+      return -1;
    }
    
    consdata = SCIPconsGetData(cons);
@@ -4756,6 +4758,7 @@ SCIP_VAR** SCIPgetVarsXor(
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
+      return NULL;
    }
    
    consdata = SCIPconsGetData(cons);

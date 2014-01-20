@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -7412,7 +7412,8 @@ JNIEXPORT
 void JNISCIP(startStrongbranch)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip               /**< SCIP data structure */
+   jlong                 jscip,              /**< SCIP data structure */
+   jboolean              jenablepropagation  /**< should propagation be done before solving the strong branching LP? */
    )
 {
    SCIP* scip;
@@ -7421,7 +7422,7 @@ void JNISCIP(startStrongbranch)(
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   JNISCIP_CALL( SCIPstartStrongbranch(scip) );
+   JNISCIP_CALL( SCIPstartStrongbranch(scip, (SCIP_Bool)jenablepropagation) );
 }
 
 /** end strong branching - call after any strong branching

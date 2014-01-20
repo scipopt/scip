@@ -1,13 +1,13 @@
-/* $Id: jacobian.hpp 1598 2009-12-03 02:59:52Z bradbell $ */
+/* $Id: jacobian.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
 # ifndef CPPAD_JACOBIAN_INCLUDED
 # define CPPAD_JACOBIAN_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-09 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -31,49 +31,49 @@ $index driver, Jacobian$$
 $section Jacobian: Driver Routine$$
 
 $head Syntax$$
-$syntax%%jac% = %f%.Jacobian(%x%)%$$
+$icode%jac% = %f%.Jacobian(%x%)%$$
 
 
 $head Purpose$$
 We use $latex F : B^n \rightarrow B^m$$ to denote the
-$xref/glossary/AD Function/AD function/$$ corresponding to $italic f$$.
-The syntax above sets $italic jac$$ to the
-Jacobian of $italic F$$ evaluated at $italic x$$; i.e.,
+$cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
+The syntax above sets $icode jac$$ to the
+Jacobian of $icode F$$ evaluated at $icode x$$; i.e.,
 $latex \[
 	jac = F^{(1)} (x)
 \] $$
 
 $head f$$
-The object $italic f$$ has prototype
-$syntax%
+The object $icode f$$ has prototype
+$codei%
 	ADFun<%Base%> %f%
 %$$
-Note that the $xref/ADFun/$$ object $italic f$$ is not $code const$$
+Note that the $cref ADFun$$ object $icode f$$ is not $code const$$
 (see $cref/Forward or Reverse/Jacobian/Forward or Reverse/$$ below).
 
 $head x$$
-The argument $italic x$$ has prototype
-$syntax%
+The argument $icode x$$ has prototype
+$codei%
 	const %Vector% &%x%
 %$$
-(see $xref/Jacobian/Vector/Vector/$$ below)
+(see $cref/Vector/Jacobian/Vector/$$ below)
 and its size 
-must be equal to $italic n$$, the dimension of the
-$xref/seq_property/Domain/domain/$$ space for $italic f$$.
+must be equal to $icode n$$, the dimension of the
+$cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
 that point at which to evaluate the Jacobian.
 
 $head jac$$
-The result $italic jac$$ has prototype
-$syntax%
+The result $icode jac$$ has prototype
+$codei%
 	%Vector% %jac%
 %$$
-(see $xref/Jacobian/Vector/Vector/$$ below)
+(see $cref/Vector/Jacobian/Vector/$$ below)
 and its size is $latex m * n$$; i.e., the product of the
-$xref/seq_property/Domain/domain/$$
+$cref/domain/seq_property/Domain/$$
 and
-$xref/seq_property/Range/range/$$
-dimensions for $italic f$$.
+$cref/range/seq_property/Range/$$
+dimensions for $icode f$$.
 For $latex i = 0 , \ldots , m - 1 $$ 
 and $latex j = 0 , \ldots , n - 1$$
 $latex \[.
@@ -82,28 +82,30 @@ $latex \[.
 
 
 $head Vector$$
-The type $italic Vector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
-$italic Base$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
+$icode Base$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Forward or Reverse$$
 This will use order zero Forward mode and either
 order one Forward or order one Reverse to compute the Jacobian
 (depending on which it estimates will require less work).
-After each call to $xref/Forward/$$,
-the object $italic f$$ contains the corresponding 
-$xref/glossary/Taylor Coefficient/Taylor coefficients/$$.
-After each call to $code Jacobian$$,
-the previous calls to $xref/Forward/$$ are unspecified.
+After each call to $cref Forward$$,
+the object $icode f$$ contains the corresponding 
+$cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
+After a call to $code Jacobian$$,
+the zero order Taylor coefficients correspond to
+$icode%f%.Forward(0, %x%)%$$
+and the other coefficients are unspecified.
 
 $head Example$$
 $children%
 	example/jacobian.cpp
 %$$
 The routine 
-$xref/Jacobian.cpp//Jacobian/$$ is both an example and test.
+$cref/Jacobian/jacobian.cpp/$$ is both an example and test.
 It returns $code true$$, if it succeeds and $code false$$ otherwise.
 
 $end
@@ -124,8 +126,8 @@ void JacobianFor(ADFun<Base> &f, const Vector &x, Vector &jac)
 	// check Vector is Simple Vector class with Base type elements
 	CheckSimpleVector<Base, Vector>();
 
-	CPPAD_ASSERT_UNKNOWN( x.size()   == f.Domain() );
-	CPPAD_ASSERT_UNKNOWN( jac.size() == f.Range() * f.Domain() );
+	CPPAD_ASSERT_UNKNOWN( size_t(x.size())   == f.Domain() );
+	CPPAD_ASSERT_UNKNOWN( size_t(jac.size()) == f.Range() * f.Domain() );
 
 	// argument and result for forward mode calculations
 	Vector u(m);
@@ -159,8 +161,8 @@ void JacobianRev(ADFun<Base> &f, const Vector &x, Vector &jac)
 	size_t m = f.Domain();
 	size_t n = f.Range();
 
-	CPPAD_ASSERT_UNKNOWN( x.size()   == f.Domain() );
-	CPPAD_ASSERT_UNKNOWN( jac.size() == f.Range() * f.Domain() );
+	CPPAD_ASSERT_UNKNOWN( size_t(x.size())   == f.Domain() );
+	CPPAD_ASSERT_UNKNOWN( size_t(jac.size()) == f.Range() * f.Domain() );
 
 	// argument and result for reverse mode calculations
 	Vector u(m);
@@ -203,7 +205,7 @@ Vector ADFun<Base>::Jacobian(const Vector &x)
 	size_t n = Range();
 
 	CPPAD_ASSERT_KNOWN(
-		x.size() == m,
+		size_t(x.size()) == m,
 		"Jacobian: length of x not equal domain dimension for F"
 	); 
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -869,6 +869,17 @@ char SCIPparamGetChar(
       return param->data.charparam.curvalue;
 }
 
+/** returns allowed values of char parameter, or NULL if everything is allowed */
+char* SCIPparamGetCharAllowedValues(
+   SCIP_PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+
+   return param->data.charparam.allowedvalues;
+}
+
 /** returns default value of char parameter */
 char SCIPparamGetCharDefault(
    SCIP_PARAM*           param               /**< parameter */
@@ -1197,6 +1208,7 @@ void paramFree(
       break;
    default:
       SCIPerrorMessage("invalid parameter type\n");
+      /* just continuing the function in this case seems save */
       SCIPABORT();
    }
 

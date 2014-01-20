@@ -26,7 +26,7 @@ $(OBJDIR)/queens_main.o: src/queens_main.cpp src/queens.hpp ../../src/scip/scip.
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -67,11 +67,11 @@ $(OBJDIR)/queens_main.o: src/queens_main.cpp src/queens.hpp ../../src/scip/scip.
  ../../src/scip/cons_xor.h ../../src/scip/disp_default.h \
  ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_clique.h \
  ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
- ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_zeroobj.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dins.h ../../src/scip/heur_dualval.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_zeroobj.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \
@@ -142,7 +142,7 @@ $(OBJDIR)/queens.o: src/queens.cpp src/queens.hpp ../../src/scip/scip.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -183,11 +183,11 @@ $(OBJDIR)/queens.o: src/queens.cpp src/queens.hpp ../../src/scip/scip.h \
  ../../src/scip/cons_xor.h ../../src/scip/disp_default.h \
  ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_clique.h \
  ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
- ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_zeroobj.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dins.h ../../src/scip/heur_dualval.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_zeroobj.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \

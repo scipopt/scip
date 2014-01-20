@@ -1,13 +1,13 @@
-/* $Id: memory_leak.hpp 2233 2011-12-20 19:34:24Z bradbell $ */
+/* $Id: memory_leak.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_MEMORY_LEAK_INCLUDED
 # define CPPAD_MEMORY_LEAK_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -15,6 +15,7 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 /*
 $begin memory_leak$$
 $spell
+	num
 	alloc
 	hpp
 	bool
@@ -25,27 +26,68 @@ $section Memory Leak Detection$$
 $index memory_leak$$
 $index leak, memory$$
 $index check, memory leak$$
+$index static, memory leak check$$
+
+$head Deprecated$$
+$index deprecated, memory leak$$
+This routine has been deprecated.
+You should instead use the routine $cref ta_free_all$$.
 
 $head Syntax$$
-$icode%flag% = %memory_leak()%$$
+$icode%flag% = %memory_leak()
+%$$
+$icode%flag% = %memory_leak(%add_static%)%$$
+
+$head Purpose$$
+This routine checks that the are no memory leaks 
+caused by improper use of $cref thread_alloc$$ memory allocator.
+The deprecated memory allocator $cref TrackNewDel$$ is also checked.
+Memory errors in the deprecated $cref omp_alloc$$ allocator are
+reported as being in $code thread_alloc$$.
+
+$head thread$$
+It is assumed that $cref/in_parallel()/ta_in_parallel/$$ is false
+and $cref/thread_num/ta_thread_num/$$ is zero when
+$code memory_leak$$ is called.
+
+$head add_static$$
+This argument has prototype
+$codei%
+	size_t %add_static%
+%$$
+and its default value is zero.
+Static variables hold onto memory forever.
+If the argument $icode add_static$$ is present (and non-zero),
+$code memory_leak$$ adds this amount of memory to the
+$cref/inuse/ta_inuse/$$ sum that corresponds to 
+static variables in the program.
+A call with $icode add_static$$ should be make after
+a routine that has static variables which
+use $cref/get_memory/ta_get_memory/$$ to allocate memory.
+The value of $icode add_static$$ should be the difference of
+$codei%
+	thread_alloc::inuse(0)
+%$$
+before and after the call.
+Since multiple statics may be allocated in different places in the program,
+it is expected that there will be multiple calls
+that use this option.
 
 $head flag$$
 The return value $icode flag$$ has prototype
 $codei%
 	bool %flag%
 %$$
-
-$head Purpose$$
-This routine checks that the are no memory leaks 
-caused by improper use of $cref thread_alloc$$ memory allocator.
-The deprecated memory allocator $cref/TrackNewDel/$$ is also checked.
-Memory errors in the deprecated allocator $cref omp_alloc$$ are
-reported as being in $code thread_alloc$$.
+If $icode add_static$$ is non-zero,
+the return value for $code memory_leak$$ is false.
+Otherwise, the return value for $code memory_leak$$ should be false
+(indicating that the only allocated memory corresponds to static variables).
 
 $head inuse$$
 It is assumed that, when $code memory_leak$$ is called,
 there should not be any memory
-$cref/inuse/ta_inuse/$$ or $cref omp_inuse$$ for any thread.
+$cref/inuse/ta_inuse/$$ or $cref omp_inuse$$ for any thread
+(except for inuse memory corresponding to static variables).
 If there is, a message is printed and $code memory_leak$$ returns false.
 
 $head available$$
@@ -53,7 +95,7 @@ It is assumed that, when $code memory_leak$$ is called,
 there should not be any memory
 $cref/available/ta_available/$$ or $cref omp_available$$ for any thread;
 i.e., it all has been returned to the system.
-If there is memory still available for a thread,
+If there is memory still available for any thread,
 $code memory_leak$$ returns false. 
 
 $head TRACK_COUNT$$
@@ -63,12 +105,9 @@ If it returns a non-zero value,
 $code memory_leak$$ returns false.
 
 $head Error Message$$
-If this routine returns false, it prints a message
-to standard output describing the condition before returning false.
-
-$head Multi-Threading$$
-This routine cannot be used in $cref/in_parallel/ta_in_parallel/$$
-execution mode.
+If this is the first call to $code memory_leak$$, no message is printed.
+Otherwise, if it returns true, an error message is printed
+to standard output describing the memory leak that was detected.
 
 $end
 */
@@ -78,8 +117,10 @@ $end
 # include <cppad/thread_alloc.hpp>
 # include <cppad/track_new_del.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup memory_leak_hpp memory_leak.hpp
+\{
 \file memory_leak.hpp
 File that implements a memory check at end of a CppAD program
 */
@@ -87,52 +128,80 @@ File that implements a memory check at end of a CppAD program
 /*!
 Function that checks 
 allocator \c thread_alloc for misuse that results in memory leaks.
-The deprecated routines 
-in track_new_del.hpp and omp_alloc.hpp are also checked.
+Deprecated routines in track_new_del.hpp and omp_alloc.hpp are also checked.
+
+\param add_static [in]
+The amount specified by \c add_static is added to the amount
+of memory that is expected to be used by thread zero for static variables.
 
 \return
-returns \c true, if no error is detected and \c false otherwise.
+If \c add_static is non-zero, the return value is \c false.
+Otherwise, if one of the following errors is detected,
+the return value is \c true:
+
+\li
+Thread zero does not have the expected amount of inuse memory
+(for static variables).
+\li
+A thread, other than thread zero, has any inuse memory.
+\li
+Any thread has available memory.
 
 \par
 If an error is detected, diagnostic information is printed to standard
 output.
 */
-inline bool memory_leak(void)
-{
-	bool leak = false;
-	size_t thread;
+inline bool memory_leak(size_t add_static = 0)
+{	// CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL not necessary given asserts below
+	static size_t thread_zero_static_inuse     = 0;
 	using std::cout;
 	using std::endl;
 	using CppAD::thread_alloc;
 	using CppAD::omp_alloc;
 	// --------------------------------------------------------------------
-	// check thead_alloc
 	CPPAD_ASSERT_KNOWN(
 		! thread_alloc::in_parallel(),
-		"attempt to use thread_leak in parallel execution mode."
+		"memory_leak: in_parallel() is true."
 	);
 	CPPAD_ASSERT_KNOWN(
-		! thread_alloc::in_parallel(),
-		"attempt to use thread_leak in parallel execution mode."
+		thread_alloc::thread_num() == 0,
+		"memory_leak: thread_num() is not zero."
 	);
-	CPPAD_ASSERT_KNOWN(
-		thread_alloc::num_threads() == 1,
-		"attempt to use thread_leak while num_threads > 1."
-	);
-	for(thread = 0; thread < CPPAD_MAX_NUM_THREADS; thread++)
+	if( add_static != 0 )
+	{	thread_zero_static_inuse += add_static;
+		return false;
+	} 
+	bool leak                 = false;
+	size_t thread             = 0;
+
+	// check that memory in use for thread zero corresponds to statics
+	size_t num_bytes = thread_alloc::inuse(thread);
+	if( num_bytes != thread_zero_static_inuse )
+	{	leak = true;
+		cout << "thread zero: static inuse = " << thread_zero_static_inuse;
+		cout << "current inuse(thread)     = " << num_bytes << endl;
+	}
+	// check that no memory is currently available for this thread
+	num_bytes = thread_alloc::available(thread);
+	if( num_bytes != 0 )
+	{	leak = true;
+		cout << "thread zero: available    = ";
+		cout << num_bytes << endl;
+	}
+	for(thread = 1; thread < CPPAD_MAX_NUM_THREADS; thread++)
 	{
 		// check that no memory is currently in use for this thread
-		size_t num_bytes = thread_alloc::inuse(thread);
+		num_bytes = thread_alloc::inuse(thread);
 		if( num_bytes != 0 )
 		{	leak = true;
-			cout << "thread_alloc::inuse(thread) = ";
+			cout << "thread " << thread << ": inuse(thread) = ";
 			cout << num_bytes << endl;
 		}
 		// check that no memory is currently available for this thread
 		num_bytes = thread_alloc::available(thread);
 		if( num_bytes != 0 )
 		{	leak = true;
-			cout << "thread_alloc::available(thread) = ";
+			cout << "thread " << thread << ": available(thread) = ";
 			cout << num_bytes << endl;
 		}
 	}
@@ -145,5 +214,6 @@ inline bool memory_leak(void)
 	return leak;
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

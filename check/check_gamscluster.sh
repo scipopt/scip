@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -139,7 +139,7 @@ then
 fi
 
 # setup solver option file
-# create directory $OPTDIR and put optionfile <solvername>.opt there
+# copy optionfile <solvername>.opt to $OPTFILE
 if test "$SETNAME" != "default"
 then
   SETDIR=`cd ../settings ; pwd`
@@ -151,26 +151,6 @@ then
     echo "${m} settings file $SETDIR/${SETNAME}.gamsset not found"
     exit 1
   fi
-fi
-
-# setup examiner option file
-if test $EXAMINER = 1
-then
-  mkdir -p $OPTDIR
-  echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
-  if test "$SETNAME" != "default"
-  then
-    echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
-  else
-    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
-  fi
-  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
-  echo   "scaled yes" >> $OPTDIR/examiner2.opt
-  echo "unscaled yes" >> $OPTDIR/examiner2.opt
-  echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt
-  echo "examinesolvpoint yes" >> $OPTDIR/examiner2.opt
-  echo "examinegamspoint no"  >> $OPTDIR/examiner2.opt
-  echo "examineinitpoint no"  >> $OPTDIR/examiner2.opt
 fi
 
 # add information on solver and limits for eval script
@@ -397,13 +377,13 @@ do
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;
       qsub )
         # -V to copy all environment variables
-        qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N GAMS$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null rungamscluster.sh 
+        qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N $SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null rungamscluster.sh 
         ;;
       local )
         echo "Running $GMSFILE locally."

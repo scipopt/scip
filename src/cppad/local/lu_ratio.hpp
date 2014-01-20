@@ -1,13 +1,13 @@
-/* $Id: lu_ratio.hpp 1369 2009-05-31 01:31:48Z bradbell $ */
+/* $Id: lu_ratio.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_LU_RATIO_INCLUDED
 # define CPPAD_LU_RATIO_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-08 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -40,15 +40,15 @@ $head Syntax$$
 $code# include <cppad/cppad.hpp>$$
 $pre
 $$
-$syntax%%sign% = LuRatio(%ip%, %jp%, %LU%, %ratio%)%$$
+$icode%sign% = LuRatio(%ip%, %jp%, %LU%, %ratio%)%$$
 
 
 $head Description$$
-Computes an LU factorization of the matrix $italic A$$ 
-where $italic A$$ is a square matrix.
-A measure of the numerical stability called $italic ratio$$ is calculated.
+Computes an LU factorization of the matrix $icode A$$ 
+where $icode A$$ is a square matrix.
+A measure of the numerical stability called $icode ratio$$ is calculated.
 This ratio is useful when the results of $code LuRatio$$ are
-used as part of an $xref/ADFun/$$ object.
+used as part of an $cref ADFun$$ object.
 
 $head Include$$
 This routine is designed to be used with AD objects and
@@ -66,139 +66,139 @@ $latex \[
 \] $$
 
 $head sign$$
-The return value $italic sign$$ has prototype
-$syntax%
+The return value $icode sign$$ has prototype
+$codei%
 	int %sign%
 %$$
-If $italic A$$ is invertible, $italic sign$$ is plus or minus one
+If $icode A$$ is invertible, $icode sign$$ is plus or minus one
 and is the sign of the permutation corresponding to the row ordering
-$italic ip$$ and column ordering $italic jp$$.
-If $italic A$$ is not invertible, $italic sign$$ is zero.
+$icode ip$$ and column ordering $icode jp$$.
+If $icode A$$ is not invertible, $icode sign$$ is zero.
 
 $head ip$$
-The argument $italic ip$$ has prototype
-$syntax%
+The argument $icode ip$$ has prototype
+$codei%
 	%SizeVector% &%ip%
 %$$
-(see description of $xref/LuFactor/SizeVector/SizeVector/$$ below).
-The size of $italic ip$$ is referred to as $italic n$$ in the
+(see description of $cref/SizeVector/LuFactor/SizeVector/$$ below).
+The size of $icode ip$$ is referred to as $icode n$$ in the
 specifications below.
-The input value of the elements of $italic ip$$ does not matter.
-The output value of the elements of $italic ip$$ determine
+The input value of the elements of $icode ip$$ does not matter.
+The output value of the elements of $icode ip$$ determine
 the order of the rows in the permuted matrix.
 
 $head jp$$
-The argument $italic jp$$ has prototype
-$syntax%
+The argument $icode jp$$ has prototype
+$codei%
 	%SizeVector% &%jp%
 %$$
-(see description of $xref/LuFactor/SizeVector/SizeVector/$$ below).
-The size of $italic jp$$ must be equal to $italic n$$.
-The input value of the elements of $italic jp$$ does not matter.
-The output value of the elements of $italic jp$$ determine
+(see description of $cref/SizeVector/LuFactor/SizeVector/$$ below).
+The size of $icode jp$$ must be equal to $icode n$$.
+The input value of the elements of $icode jp$$ does not matter.
+The output value of the elements of $icode jp$$ determine
 the order of the columns in the permuted matrix.
 
 $head LU$$
-The argument $italic LU$$ has the prototype
-$syntax%
+The argument $icode LU$$ has the prototype
+$codei%
 	%ADvector% &%LU%
 %$$
-and the size of $italic LU$$ must equal $latex n * n$$
-(see description of $xref/LuRatio/ADvector/ADvector/$$ below).
+and the size of $icode LU$$ must equal $latex n * n$$
+(see description of $cref/ADvector/LuRatio/ADvector/$$ below).
 
 $subhead A$$
-We define $italic A$$ as the matrix corresponding to the input 
-value of $italic LU$$.
+We define $icode A$$ as the matrix corresponding to the input 
+value of $icode LU$$.
 
 $subhead P$$
-We define the permuted matrix $italic P$$ in terms of $italic A$$ by
-$syntax%
+We define the permuted matrix $icode P$$ in terms of $icode A$$ by
+$codei%
 	%P%(%i%, %j%) = %A%[ %ip%[%i%] * %n% + %jp%[%j%] ]
 %$$
 
 $subhead L$$
-We define the lower triangular matrix $italic L$$ in terms of the 
-output value of $italic LU$$.
-The matrix $italic L$$ is zero above the diagonal
+We define the lower triangular matrix $icode L$$ in terms of the 
+output value of $icode LU$$.
+The matrix $icode L$$ is zero above the diagonal
 and the rest of the elements are defined by
-$syntax%
+$codei%
 	%L%(%i%, %j%) = %LU%[ %ip%[%i%] * %n% + %jp%[%j%] ]
 %$$
 for $latex i = 0 , \ldots , n-1$$ and $latex j = 0 , \ldots , i$$.
 
 $subhead U$$
-We define the upper triangular matrix $italic U$$ in terms of the
-output value of $italic LU$$.
-The matrix $italic U$$ is zero below the diagonal,
+We define the upper triangular matrix $icode U$$ in terms of the
+output value of $icode LU$$.
+The matrix $icode U$$ is zero below the diagonal,
 one on the diagonal,
 and the rest of the elements are defined by
-$syntax%
+$codei%
 	%U%(%i%, %j%) = %LU%[ %ip%[%i%] * %n% + %jp%[%j%] ]
 %$$
 for $latex i = 0 , \ldots , n-2$$ and $latex j = i+1 , \ldots , n-1$$.
 
 $subhead Factor$$
-If the return value $italic sign$$ is non-zero,
-$syntax%
+If the return value $icode sign$$ is non-zero,
+$codei%
 	%L% * %U% = %P%
 %$$
-If the return value of $italic sign$$ is zero,
-the contents of $italic L$$ and $italic U$$ are not defined. 
+If the return value of $icode sign$$ is zero,
+the contents of $icode L$$ and $icode U$$ are not defined. 
 
 $subhead Determinant$$
 $index determinant$$
-If the return value $italic sign$$ is zero,
-the determinant of $italic A$$ is zero.
-If $italic sign$$ is non-zero,
-using the output value of $italic LU$$
-the determinant of the matrix $italic A$$ is equal to
-$syntax%
+If the return value $icode sign$$ is zero,
+the determinant of $icode A$$ is zero.
+If $icode sign$$ is non-zero,
+using the output value of $icode LU$$
+the determinant of the matrix $icode A$$ is equal to
+$codei%
 %sign% * %LU%[%ip%[0], %jp%[0]] * %...% * %LU%[%ip%[%n%-1], %jp%[%n%-1]] 
 %$$
 
 $head ratio$$
-The argument $italic ratio$$ has prototype
-$syntax%
+The argument $icode ratio$$ has prototype
+$codei%
         AD<%Base%> &%ratio%
 %$$
-On input, the value of $italic ratio$$ does not matter.
+On input, the value of $icode ratio$$ does not matter.
 On output it is a measure of how good the choice of pivots is.
 For $latex p = 0 , \ldots , n-1$$, 
 the $th p$$ pivot element is the element of maximum absolute value of a 
 $latex (n-p) \times (n-p)$$ sub-matrix.
 The ratio of each element of sub-matrix divided by the pivot element
 is computed.
-The return value of $italic ratio$$ is the maximum absolute value of
+The return value of $icode ratio$$ is the maximum absolute value of
 such ratios over with respect to all elements and all the pivots.
 
 $subhead Purpose$$
 Suppose that the execution of a call to $code LuRatio$$ 
-is recorded in the $syntax%ADFun<%Base%>%$$ object $italic F$$.
-Then a call to $xref/Forward/$$ of the form
-$syntax%
+is recorded in the $codei%ADFun<%Base%>%$$ object $icode F$$.
+Then a call to $cref Forward$$ of the form
+$codei%
 	%F%.Forward(%k%, %xk%)
 %$$
-with $italic k$$ equal to zero will revaluate this Lu factorization
-with the same pivots and a new value for $italic A$$.
-In this case, the resulting $italic ratio$$ may not be one.
-If $italic ratio$$ is too large (the meaning of too large is up to you), 
-the current pivots do not yield a stable LU factorization of $italic A$$.
-A better choice for the pivots (for this value of $italic A$$)
+with $icode k$$ equal to zero will revaluate this Lu factorization
+with the same pivots and a new value for $icode A$$.
+In this case, the resulting $icode ratio$$ may not be one.
+If $icode ratio$$ is too large (the meaning of too large is up to you), 
+the current pivots do not yield a stable LU factorization of $icode A$$.
+A better choice for the pivots (for this value of $icode A$$)
 will be made if you recreate the $code ADFun$$ object
-starting with the $xref/Independent/$$ variable values
-that correspond to the vector $italic xk$$.
+starting with the $cref Independent$$ variable values
+that correspond to the vector $icode xk$$.
 
 $head SizeVector$$
-The type $italic SizeVector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type size_t/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode SizeVector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type size_t/SimpleVector/Elements of Specified Type/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head ADvector$$
-The type $italic ADvector$$ must be a 
-$xref/SimpleVector//simple vector class/$$ with elements of type
-$syntax%AD<%Base%>%$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode ADvector$$ must be a 
+$cref/simple vector class/SimpleVector/$$ with elements of type
+$codei%AD<%Base%>%$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 
@@ -206,7 +206,7 @@ $head Example$$
 $children%
 	example/lu_ratio.cpp
 %$$
-The file $xref/LuRatio.cpp/$$
+The file $cref lu_ratio.cpp$$
 contains an example and test of using $code LuRatio$$.
 It returns true if it succeeds and false otherwise.
 
@@ -240,13 +240,13 @@ int LuRatio(SizeVector &ip, SizeVector &jp, ADvector &LU, AD<Base> &ratio) //
 	Float   pivot;         // pivot element
 
 	// -------------------------------------------------------
-	size_t n = ip.size();
+	size_t n = size_t(ip.size());
 	CPPAD_ASSERT_KNOWN(
-		jp.size() == n,
+		size_t(jp.size()) == n,
 		"Error in LuFactor: jp must have size equal to n"
 	);
 	CPPAD_ASSERT_KNOWN(
-		LU.size() == n * n,
+		size_t(LU.size()) == n * n,
 		"Error in LuFactor: LU must have size equal to n * m"
 	);
 	// -------------------------------------------------------

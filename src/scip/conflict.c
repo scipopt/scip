@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -192,7 +192,7 @@ void confgraphWriteEdge(
 
 /** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
 static
-void confgraphCreate(
+SCIP_RETCODE confgraphCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -211,6 +211,7 @@ void confgraphCreate(
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
+      return SCIP_WRITEERROR;
    }
 
    SCIPgmlWriteOpening(confgraphfile, TRUE);
@@ -2630,7 +2631,7 @@ SCIP_RETCODE SCIPconflictInit(
 
 #ifdef SCIP_CONFGRAPH
    confgraphFree();
-   confgraphCreate(set, conflict);
+   SCIP_CALL( confgraphCreate(set, conflict) );
 #endif
 
    return SCIP_OKAY;
@@ -5959,8 +5960,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(lp != NULL);
    assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
-   if( success != NULL )
-      *success = FALSE;
+   assert(success == NULL || *success == FALSE);
 
    /* check, if infeasible LP conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useinflp )
@@ -6028,8 +6028,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    assert(!SCIPlpDivingObjChanged(lp));
    assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
-   if( success != NULL )
-      *success = FALSE;
+   assert(success == NULL || *success == FALSE);
 
    /* check, if bound exceeding LP conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useboundlp )
@@ -6091,10 +6090,22 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    int c;
    int r;
 
+   if( success != NULL )
+      *success = FALSE;
+
+   /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
+    * happens when a new incumbent which cuts off the current node is found during the LP solving loop; in this case the
+    * LP has status objlimit, but if diving has been used, the LPI only has the basis information, but is not solved
+    *
+    * @todo: alternatively, solve the LPI
+    */
+   if( !SCIPlpiWasSolved(SCIPlpGetLPI(lp)) )
+      return SCIP_OKAY;
+
    /* LP conflict analysis is only valid, if all variables are known */
    assert( SCIPprobAllColsInLP(transprob, set, lp) );
    assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
-      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff) );
+      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
 
    /* save status */
    storedsolvals.lpsolstat = lp->lpsolstat;
@@ -6129,8 +6140,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          storedrowsolvals[r].dualsol = row->dualfarkas;
       else
       {
-         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
-            || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff) );
+         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+            (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
          storedrowsolvals[r].dualsol = row->dualsol;
       }
       storedrowsolvals[r].activity = row->activity;

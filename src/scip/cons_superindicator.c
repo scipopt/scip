@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -533,7 +533,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
       assert(!SCIPisInfinity(scip, -maxact) );
       assert(!SCIPisInfinity(scip, maxact));
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linrhs", name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linrhs", SCIPconsGetName(cons));
 
       /* compute big-M */
       newvals[nvars] = maxact - rhs;
@@ -564,7 +564,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
       assert(!SCIPisInfinity(scip, minact));
       assert(!SCIPisInfinity(scip, -minact));
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linlhs", name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upgd_linlhs", SCIPconsGetName(cons));
 
       /* compute big-M */
       newvals[nvars] = minact - lhs;
