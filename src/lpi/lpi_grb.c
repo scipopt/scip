@@ -3549,11 +3549,19 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    int ind;
    int k;
    int i;
+   int status
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("getting binv-row %d\n", r);
+
+   /* check whether we have to reoptimize */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+   if ( status == GRB_LOADED || status == GRB_INTERRUPTED || status == GRB_INPROGRESS )
+   {
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
+   }
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
@@ -3611,11 +3619,19 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int ind;
    int k;
    int i;
+   int status;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
+
+   /* check whether we have to reoptimize */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+   if ( status == GRB_LOADED || status == GRB_INTERRUPTED || status == GRB_INPROGRESS )
+   {
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
+   }
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
@@ -3668,11 +3684,19 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int nrows;
    int k;
    int j;
+   int status;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("getting binv-row %d\n", r);
+
+   /* check whether we have to reoptimize */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+   if ( status == GRB_LOADED || status == GRB_INTERRUPTED || status == GRB_INPROGRESS )
+   {
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
+   }
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
@@ -3714,11 +3738,19 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int nrows;
    int k;
    int j;
+   int status;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
+
+   /* check whether we have to reoptimize */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+   if ( status == GRB_LOADED || status == GRB_INTERRUPTED || status == GRB_INPROGRESS )
+   {
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
+   }
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
