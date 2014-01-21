@@ -837,6 +837,7 @@ SCIP_RETCODE applyFixings(
 
    /* all multi-aggregations should be resolved */
    consdata->existmultaggr = FALSE;
+   consdata->presolved = TRUE;
 
    /* remove zeros and mark constraint redundant when found one variable fixed to one */
    while( v < consdata->nvars )
@@ -1048,6 +1049,8 @@ SCIP_RETCODE applyFixings(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &negarray);
    SCIPfreeBufferArray(scip, &vars);
+
+   consdata->presolved = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3874,7 +3877,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
       {
          /* we are not allowed to detect infeasibility in the exitpre stage */
          SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &redundant, &nchgcoefs, NULL, NULL) );
-         consdata->presolved = TRUE;
       }
    }
 
@@ -4344,8 +4346,6 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
       if( SCIPconsIsDeleted(cons) )
          continue;
-
-      consdata->presolved = TRUE;
 
       /* find pairs of negated variables in constraint: constraint is redundant */
       /* find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
