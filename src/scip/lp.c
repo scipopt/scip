@@ -17500,14 +17500,15 @@ SCIP_RETCODE SCIPlpEndDive(
    lp->diving = FALSE;
    lp->divingobjchg = FALSE;
 
-   /* if the LP was solved before starting the dive, but not to optimality or unboundedness, then we need to solve the
+   /* if the LP was solved before starting the dive, but not to optimality (or unboundedness), then we need to solve the
     * LP again to reset the solution (e.g. we do not save the Farkas proof for infeasible LPs, because we assume that we
     * are not called in this case, anyway); restoring by solving the LP again in either case can be forced by setting
     * the parameter resolverestore to TRUE
+    * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
     */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || (lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL && lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY)) )
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL) )
    {
       SCIP_Bool lperror;
 
