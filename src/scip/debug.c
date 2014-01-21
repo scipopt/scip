@@ -46,6 +46,7 @@ static SCIP_Real* solvals = NULL;
 static int nsolvals = 0;
 static int solsize = 0;
 static SCIP_SET* mainscipset = NULL;
+static SCIP_SOL* debugsol = NULL;
 static SCIP_HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static SCIP_Bool falseptr = FALSE;
 static SCIP_Bool trueptr = TRUE;
@@ -53,6 +54,15 @@ static SCIP_Bool solisachieved = FALSE;      /**< means if current best solution
 static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solution */
 static SCIP_Bool debugsoldisabled = FALSE;   /**< flag indicating if debugging of solution was disabled or not */
 
+
+#if SCIP_MORE_DEBUG
+/** comparison method for sorting variables w.r.t. to their name */
+static
+SCIP_DECL_SORTPTRCOMP(sortVarsAfterNames)
+{
+   return strcmp(SCIPvarGetName((SCIP_VAR*)elem1), SCIPvarGetName((SCIP_VAR*)elem2));
+}
+#endif
 
 /** returns whether the settings are the one of the SCIP instance that is debugged */
 static
@@ -74,8 +84,11 @@ SCIP_RETCODE readSolfile(
    int*                  valssize            /**< pointer to store the length of the variable names and solution values arrays */
    )
 {
+   SCIP_VAR** vars;
+   SCIP_Real* solvalues;
    FILE* file;
    int nonvalues;
+   int nfound;
    int i;
 
    assert(set != NULL);
@@ -162,22 +175,52 @@ SCIP_RETCODE readSolfile(
       (*nvals)++;
    }
 
+   /* get memory for SCIP solution */
+   SCIP_ALLOC( BMSallocMemoryArray(&vars, *valssize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&solvalues, *valssize) );
+
    debugsolval = 0.0;
+   nfound = 0;
 
    /* get solution value */
-   for( i = *nvals - 1; i >= 0; --i)
+   for( i = 0; i < *nvals; ++i)
    {
       SCIP_VAR* var;
       var = SCIPfindVar(set->scip, (*names)[i]);
       if( var != NULL )
+      {
+         vars[nfound] = var;
+         solvalues[nfound] = (*vals)[i];
+         ++nfound;
          debugsolval += (*vals)[i] * SCIPvarGetObj(var);
+      }
    }
    SCIPdebugMessage("Debug Solution value is %g.\n", debugsolval);
+
+#if SCIP_MORE_DEBUG
+   SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
+
+   for( i = 0; i < nfound - 1; ++i)
+   {
+      assert(strcmp(SCIPvarGetName(vars[i]), SCIPvarGetName(vars[i + 1])) != 0);
+   }
+#endif
+
+   assert(debugsol == NULL);
+
+   /* create SCIP solution */
+   SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
+
+   /* set SCIP solution values */
+   SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
+
+   BMSfreeMemoryArray(&vars);
+   BMSfreeMemoryArray(&solvalues);
 
    /* close file */
    fclose(file);
 
-   printf("***** debug: read %d non-zero entries\n", *nvals);
+   printf("***** debug: read %d non-zero entries (%d variables found)\n", *nvals, nfound);
 
    return SCIP_OKAY;
 }
@@ -467,6 +510,76 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
 
    if( solinnode != NULL)
       SCIPhashmapFree(&solinnode);
+
+   if( debugsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(set->scip, &debugsol) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks for validity of the debugging solution in given constraints */
+SCIP_RETCODE SCIPdebugCheckConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to check for validity */
+   int                   nconss              /**< number of given constraints */
+   )
+{
+   SCIP_RESULT result;
+   int c;
+
+   assert(conss != NULL || nconss == 0);
+   assert(debugsol != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(scip->set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug
+    * solution
+    */
+   if( debugSolIsAchieved(scip->set) )
+      return SCIP_OKAY;
+
+   assert(scip->set == mainscipset);
+
+   result = SCIP_FEASIBLE;
+
+   /* checking each given constraint against the debugging solution */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      assert(conss[c] != NULL);
+
+      if( !SCIPconsIsActive(conss[c]) )
+         continue;
+
+      assert(SCIPconsGetActiveDepth(conss[c]) <= SCIPgetDepth(scip));
+
+      /* if the cons is only locally valid, check whether the debugging solution is contained in the local subproblem */
+      if( SCIPconsIsLocal(conss[c]) )
+      {
+         SCIP_Bool solcontained;
+
+         SCIP_CALL( isSolutionInNode(SCIPblkmem(set->scip), set, SCIPgetCurrentNode(set->scip), &solcontained) );
+         if( !solcontained )
+            return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPcheckCons(scip, conss[c], debugsol, TRUE, TRUE, TRUE, &result) );
+
+      SCIPdebugMessage(" -> checking of constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
+
+      if( result != SCIP_FEASIBLE )
+      {
+         SCIPerrorMessage("constraint %s violates the debugging solution\n", SCIPconsGetName(conss[c]));
+         SCIPABORT();
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1426,6 +1539,14 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    /* update objective function value of debug solution */
    debugsolval += solvals[i] * SCIPvarGetObj(var);
    SCIPdebugMessage("Debug Solution value is now %g.\n", debugsolval);
+
+   assert(debugsol != NULL);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      /* add values to SCIP debug solution */
+      SCIP_CALL( SCIPsetSolVal(scip, debugsol, var, solvals[i] ) );
+   }
 
    return SCIP_OKAY;
 }

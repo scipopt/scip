@@ -34,6 +34,11 @@ LPS=${12}        # - LP solver to use
 DISPFREQ=${13}   # - display frequency for chronological output table
 SOLUFILE=${14}   # - solu file, only necessary if $SETCUTOFF is 1
 
+#args=("$@")
+#for ((i=0; i < $#; i++)) {
+#   echo "argument $((i+1)): ${args[$i]}"
+#}
+
 # new environment variables after running this script
 # -None
 

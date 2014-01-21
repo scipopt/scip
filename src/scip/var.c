@@ -7114,7 +7114,11 @@ SCIP_RETCODE varProcessChgLbLocal(
    int i;
 
    assert(var != NULL);
-   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+      || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
@@ -7266,9 +7270,11 @@ SCIP_RETCODE varProcessChgUbLocal(
    int i;
 
    assert(var != NULL);
-   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    assert(set != NULL);
    assert(var->scip == set->scip);
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+      || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
@@ -13316,6 +13322,12 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
+      /* add globally fixed variables as constant */
+      if( SCIPsetIsEQ(set, var->glbdom.lb, var->glbdom.ub) )
+      {
+         SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, val * var->glbdom.lb) );
+         return SCIP_OKAY;
+      }
       /* convert loose variable into column */
       SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);

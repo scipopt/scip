@@ -5996,6 +5996,17 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             if( SCIPconsIsDeleted(usefulconss[consindex]) )
                continue;
 
+            aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
+            assert(aggrconsdata != NULL);
+
+            /* must not multi-aggregate variables that are locked more then twice by all setppc constraints */
+            if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING &&
+               (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING && nuplocks + ndownlocks > 2 )
+               continue;
+
+            assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ||
+               (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+
             /* we already remove a variable before, so our positioning information might be wrong, so we need to walk
              * over all variables again
              */
@@ -6004,8 +6015,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 #ifndef NDEBUG
                int v2;
 
-               aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
-               assert(aggrconsdata != NULL);
                assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING);
 
                /* negated variables needs to be still in the upgraded set-packing constraint */
@@ -6030,9 +6039,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             }
             else
             {
-               aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
-               assert(aggrconsdata != NULL);
-
                /* @note it might have happened that we have a variable at hand which exists actually in a set-packing
                 *       constraint and due to some other aggregation we increased the number of locks and reached this
                 *       part of the code, where we would expect only set-partitioning constraint in generally, so in

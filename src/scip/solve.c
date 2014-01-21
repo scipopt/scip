@@ -2183,6 +2183,9 @@ SCIP_RETCODE priceAndCutLoop(
                else if( stat->nboundchgs > oldnboundchgs && !(*cutoff) && SCIPprobAllColsInLP(transprob, set, lp)
                   && SCIPlpIsRelax(lp) )
                {
+                  assert(lp->flushed);
+                  assert(lp->solved);
+
                   SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
                   SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                      SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
@@ -3287,7 +3290,7 @@ SCIP_RETCODE propAndSolve(
           * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
           * bound of the node needs to be updated
           */
-         if( !solvelp && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+         if( !solvelp && lp->flushed && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -3361,8 +3364,6 @@ SCIP_RETCODE propAndSolve(
       /* if an error occured during LP solving, switch to pseudo solution */
       if( *lperror )
       {
-         assert(SCIPtreeHasFocusNodeLP(tree));
-
          if( forcedlpsolve )
          {
             SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" cannot be dealt with\n",
@@ -3569,7 +3570,10 @@ SCIP_RETCODE solveNode(
 
    /* if diving produced an LP error, switch back to non-LP node */
    if( lp->resolvelperror )
+   {
       SCIPtreeSetFocusNodeLP(tree, FALSE);
+      lp->resolvelperror = FALSE;
+   }
 
    /* external node solving loop:
     *  - propagate domains
@@ -3673,7 +3677,7 @@ SCIP_RETCODE solveNode(
       }
 
       /* check if heuristics leave us with an invalid LP */
-      if( lp->resolvelperror && SCIPtreeHasFocusNodeLP(tree) )
+      if( lp->resolvelperror )
       {
          if( forcedlpsolve )
          {
@@ -3682,6 +3686,7 @@ SCIP_RETCODE solveNode(
             return SCIP_LPERROR;
          }
          SCIPtreeSetFocusNodeLP(tree, FALSE);
+         lp->resolvelperror = FALSE;
          nlperrors++;
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead (loop %d)\n",

@@ -5972,8 +5972,8 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       SCIP_NODE* node;
       SCIP_LPISTATE* lpistate;
       SCIP_LPINORMS* lpinorms;
-      SCIP_Bool lpwasprimfeas;
-      SCIP_Bool lpwasdualfeas;
+      SCIP_Bool lpwasprimfeas = FALSE;
+      SCIP_Bool lpwasdualfeas = FALSE;
 
       /* get the current probing node */
       node = SCIPtreeGetCurrentNode(tree);

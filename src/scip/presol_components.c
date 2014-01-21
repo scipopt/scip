@@ -49,6 +49,7 @@
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
                                               *   to allow running again (1.0: do not run again) */
+#define DEFAULT_FEASTOLFACTOR       1.0      /**< default value for parameter to increase the feasibility tolerance in all sub-SCIPs */
 
 #ifdef SCIP_STATISTIC
 static int NCATEGORIES = 6;
@@ -62,20 +63,21 @@ static int CATLIMITS[] = {0,20,50,100,500};
 /** control parameters */
 struct SCIP_PresolData
 {
-   SCIP_Bool             didsearch;          /** did the presolver already search for components? */
-   SCIP_Bool             pluginscopied;      /** was the copying of the plugins successful? */
-   SCIP_Bool             writeproblems;      /** should the single components be written as an .lp-file? */
-   int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
+   SCIP*                 subscip;            /** sub-SCIP used to solve single components */
    SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
    SCIP_Real             intfactor;          /** the weight of an integer variable compared to binary variables */
    SCIP_Real             reldecrease;        /** percentage by which the number of variables has to be decreased after the last component solving
                                               *  to allow running again (1.0: do not run again) */
+   SCIP_Real             feastolfactor;      /** parameter to increase the feasibility tolerance in all sub-SCIPs */
+   SCIP_Bool             didsearch;          /** did the presolver already search for components? */
+   SCIP_Bool             pluginscopied;      /** was the copying of the plugins successful? */
+   SCIP_Bool             writeproblems;      /** should the single components be written as an .lp-file? */
+   int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    int                   lastnvars;          /** number of variables after last run of the presolver */
-   SCIP*                 subscip;            /** sub-SCIP used to solve single components */
 #ifdef SCIP_STATISTIC
    int*                  compspercat;        /** number of components of the different categories */
-   int                   nsinglevars;        /** number of components with a single variable without constraint */
    SCIP_Real             subsolvetime;       /** total solving time of the subproblems */
+   int                   nsinglevars;        /** number of components with a single variable without constraint */
 #endif
 };
 
@@ -244,6 +246,7 @@ SCIP_RETCODE copyAndSolveComponent(
    SCIP_CONS* newcons;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
+   SCIP_Real feastol;
    SCIP_Bool success;
    int i;
 
@@ -346,6 +349,13 @@ SCIP_RETCODE copyAndSolveComponent(
       if( !SCIPisParamFixed(subscip, "misc/usesmalltables") )
       {
          SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+      }
+
+      /* increase feasibility tolerance if asked for */
+      if( !SCIPisEQ(scip, presoldata->feastolfactor, 1.0) )
+      {
+         SCIP_CALL( SCIPgetRealParam(scip, "numerics/feastol", &feastol) );
+         SCIP_CALL( SCIPsetRealParam(subscip, "numerics/feastol", feastol * presoldata->feastolfactor) );
       }
 
       /* do not catch control-C */
@@ -492,11 +502,15 @@ SCIP_RETCODE copyAndSolveComponent(
                    */
                   if( SCIPisGT(scip, fixvals[i], gub) )
                   {
+                     SCIPdebugMessage("variable <%s> fixval: %f violates global upperbound: %f\n",
+                        SCIPvarGetName(vars[i]), fixvals[i], gub);
                      fixvals[i] = gub;
                      feasible = FALSE;
                   }
                   else if( SCIPisLT(scip, fixvals[i], glb) )
                   {
+                     SCIPdebugMessage("variable <%s> fixval: %f violates global lowerbound: %f\n",
+                        SCIPvarGetName(vars[i]), fixvals[i], glb);
                      fixvals[i] = glb;
                      feasible = FALSE;
                   }
@@ -1448,7 +1462,10 @@ SCIP_RETCODE SCIPincludePresolComponents(
          "presolving/components/reldecrease",
          "percentage by which the number of variables has to be decreased after the last component solving to allow running again (1.0: do not run again)",
          &presoldata->reldecrease, FALSE, DEFAULT_RELDECREASE, 0.0, 1.0, NULL, NULL) );
-
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/components/feastolfactor",
+         "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
+         &presoldata->feastolfactor, TRUE, DEFAULT_FEASTOLFACTOR, 0.0, 1000000.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

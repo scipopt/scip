@@ -640,6 +640,18 @@ SCIP_RETCODE execRelpscost(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
+         /* Strong branching might have found a new primal solution which updated the cutoffbound. In this case, the
+          * provedbound computed before can be higher than the cutoffbound and the current node can be cut off
+          */
+         if( SCIPisGE(scip, provedbound, SCIPgetCutoffbound(scip)) )
+         {
+            SCIPdebugMessage(" -> strong branching on variable <%s> lead to a new incumbent, node can be cut off\n",
+               SCIPvarGetName(branchcands[c]));
+            *result = SCIP_CUTOFF;
+            break; /* terminate initialization loop, because node is infeasible */
+         }
+
+
          /* @todo: store pseudo cost only for valid bounds? and also if the other sb child was infeasible? */
          if( !downinf && !upinf )
          {
@@ -655,6 +667,7 @@ SCIP_RETCODE execRelpscost(
             
             minbound = MIN(down, up);
             provedbound = MAX(provedbound, minbound);
+            assert((downinf && upinf) || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
             /* save probing-like bounds detected during strong branching */
             if( probingbounds )
