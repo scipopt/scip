@@ -909,7 +909,7 @@ SCIP_RETCODE computeViolation(
    default :
       SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -4762,7 +4762,7 @@ SCIP_RETCODE separatePoint(
          default:
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          SCIPdebug( printEstimator(scip, sol, conss[c], violside, row) );

@@ -2305,7 +2305,7 @@ SCIP_RETCODE readSOScons(
       default:
          SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
 
       varcount = 0;
@@ -2341,7 +2341,7 @@ SCIP_RETCODE readSOScons(
           default:
              SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
              SCIPABORT();
-             return SCIP_INVALIDDATA;
+             return SCIP_INVALIDDATA;  /*lint !e527*/
           }
       } /* Close loop over variables in sos constraint */
 

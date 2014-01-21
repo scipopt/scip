@@ -2741,7 +2741,7 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_CONST:
             SCIPerrorMessage("node with operator %d cannot have unknown curvature\n", SCIPexprgraphGetNodeOperator(node));
             SCIPABORT();
-            break;
+            break;  /*lint !e527*/
 
             /* linear operands */
          case SCIP_EXPR_PLUS:
@@ -3766,7 +3766,7 @@ SCIP_RETCODE computeViolation(
    default :
       SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -5230,7 +5230,7 @@ SCIP_RETCODE separatePoint(
          default:
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( (SCIPisGT(scip, efficacy, minefficacy) ||
@@ -5375,7 +5375,7 @@ SCIP_RETCODE addLinearizationCuts(
          default:
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( efficacy >= minefficacy )

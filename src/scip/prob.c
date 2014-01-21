@@ -797,7 +797,7 @@ SCIP_RETCODE probRemoveVar(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */

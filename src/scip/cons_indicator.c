@@ -364,7 +364,7 @@ struct SCIP_ConflicthdlrData
    {                                                                                            \
       SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
       SCIPABORT();                                                                              \
-      return _restat_;                                                                          \
+      return _restat_;  /*lint !e527*/                                                          \
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )

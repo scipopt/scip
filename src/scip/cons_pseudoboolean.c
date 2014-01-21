@@ -9140,7 +9140,7 @@ int SCIPgetNLinVarsWithoutAndPseudoboolean(
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
 #ifdef SCIP_DEBUG
@@ -9288,7 +9288,7 @@ int SCIPgetNAndsPseudoboolean(
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
 #ifdef SCIP_DEBUG

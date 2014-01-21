@@ -9055,7 +9055,7 @@ int SCIPgetNVarsSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9076,7 +9076,7 @@ SCIP_VAR** SCIPgetVarsSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9117,7 +9117,7 @@ SCIP_Real SCIPgetDualsolSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9141,7 +9141,7 @@ SCIP_Real SCIPgetDualfarkasSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9167,7 +9167,7 @@ SCIP_ROW* SCIPgetRowSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9188,7 +9188,7 @@ int SCIPgetNFixedonesSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9210,7 +9210,7 @@ int SCIPgetNFixedzerosSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

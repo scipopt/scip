@@ -938,7 +938,7 @@ SCIP_RETCODE extractFlowRows(
          default:
             SCIPerrorMessage("unknown variable type\n");
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
       }
       if( i == rowlen )
@@ -4586,7 +4586,7 @@ SCIP_RETCODE printFlowSystemInfo(
             default:
                SCIPerrorMessage("unknown variable type\n");
                SCIPABORT();
-               return SCIP_INVALIDDATA;
+               return SCIP_INVALIDDATA;  /*lint !e527*/
             }
          }
       }
@@ -4632,7 +4632,7 @@ SCIP_RETCODE printFlowSystemInfo(
                   default:
                      SCIPerrorMessage("unknown variable type\n");
                      SCIPABORT();
-                     return SCIP_INVALIDDATA;
+                     return SCIP_INVALIDDATA;  /*lint !e527*/
                   }
                }
             }

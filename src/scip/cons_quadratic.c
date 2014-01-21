@@ -4957,7 +4957,7 @@ SCIP_RETCODE computeViolation(
    default :
       SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -6994,7 +6994,7 @@ SCIP_RETCODE generateCut(
       default:
          SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
 
@@ -7358,7 +7358,7 @@ SCIP_RETCODE separatePoint(
                default:
                   SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
                   SCIPABORT();
-                  return SCIP_INVALIDDATA;
+                  return SCIP_INVALIDDATA;  /*lint !e527*/
                }
             }
          }
@@ -7512,7 +7512,7 @@ SCIP_RETCODE addLinearizationCuts(
          default:
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( efficacy >= minefficacy )

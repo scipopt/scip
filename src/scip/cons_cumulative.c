@@ -13704,7 +13704,7 @@ int SCIPgetHminCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return 0;
+      return 0;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13748,7 +13748,7 @@ int SCIPgetHmaxCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return 0;
+      return 0;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13769,7 +13769,7 @@ SCIP_VAR** SCIPgetVarsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13790,7 +13790,7 @@ int SCIPgetNVarsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13811,7 +13811,7 @@ int SCIPgetCapacityCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13832,7 +13832,7 @@ int* SCIPgetDurationsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13853,7 +13853,7 @@ int* SCIPgetDemandsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
