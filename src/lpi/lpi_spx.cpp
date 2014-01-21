@@ -279,6 +279,7 @@ public:
       m_cpxlp = CPXcreateprob(m_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
       (void) CPXsetintparam(m_cpxenv, CPX_PARAM_SCRIND, 0);
       m_checknum = 0;
+      m_doublecheck = false;
 #endif
    }
 

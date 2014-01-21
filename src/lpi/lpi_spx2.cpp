@@ -190,7 +190,9 @@ public:
       SCIP_MESSAGEHDLR*  messagehdlr = NULL, /**< message handler */
       const char*        probname = NULL     /**< name of problem */
       )
-      : _probname(NULL),
+      : _lpinfo(false),
+        _fromscratch(false),
+        _probname(NULL),
         _colStat(NULL),
         _rowStat(NULL),
         _messagehdlr(messagehdlr)
@@ -200,11 +202,12 @@ public:
 
 #ifdef WITH_LPSCHECK
       int cpxstat;
+      _checknum = 0;
+      _doublecheck = false;
       _cpxenv = CPXopenCPLEX(&cpxstat);
       assert(_cpxenv != NULL);
       _cpxlp = CPXcreateprob(_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
       (void) CPXsetintparam(_cpxenv, CPX_PARAM_SCRIND, 0);
-      _checknum = 0;
 #endif
    }
 
