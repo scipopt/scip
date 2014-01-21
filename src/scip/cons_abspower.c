@@ -2050,8 +2050,8 @@ SCIP_RETCODE computeViolation(
             consdata->lhsviol /= norm;
             consdata->rhsviol /= norm;
          }
-         break;
       }
+      break;
 
    case 's' :
    {
@@ -2076,7 +2076,7 @@ SCIP_RETCODE computeViolation(
    default :
       SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -3827,7 +3827,7 @@ SCIP_RETCODE separatePoint(
          default:
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add,
@@ -3973,7 +3973,7 @@ SCIP_RETCODE addLinearizationCuts(
          default:
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( efficacy >= minefficacy )
