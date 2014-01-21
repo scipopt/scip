@@ -153,7 +153,7 @@ SECTION: General Questions about SCIP
     <p>
       Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a>
       and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first
-      line of the corresponding *.c file, recompile, let it run again. This will print debug messages from that piece of code.
+      line of the corresponding *.c file, recompile and let it run again. This will print debug messages from that piece of code.
       Find a short debugging tutorial <a href="DEBUG.shtml">here</a>.
     </p>
 
@@ -195,7 +195,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
         Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
-        will first apply presolving and then hand this presolved problem to the underlying LP solver. If solved to
+        will first apply presolving and then hand this presolved problem to the underlying LP solver. If the LP is solved to
         optimality, you can query the optimal solution values as always.
     </p>
     <p>
@@ -338,7 +338,7 @@ SECTION: Using SCIP as a standalone solver
     LABEL:displaystatistics
     ANSWER:
     <p>
-        you can look at the statistics (type <code>display statistics</code> in the
+        You can look at the statistics (type <code>display statistics</code> in the
         interactive shell or call SCIPprintStatistics() when using SCIP as a library).
         This way you can see, which of the presolvers, propagators or constraint
         handlers performed the reductions.
@@ -500,7 +500,7 @@ SECTION: Using SCIP included in another source code
     LABEL:scipstages
     ANSWER:
     <p>
-        There are ten different stages during a run of SCIP.
+        There are fourteen different stages during a run of SCIP.
         <!--,
             a flow chart can be seen here: ????????. -->
         There are some methods which cannot be called in all stages, consider for example <code>SCIPtrySol()</code>
@@ -602,7 +602,7 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         solutions. If you delete a model constraint, some infeasible integral vectors would
         suddenly become feasible in the reduced model.
         A cutting plane is redundant w.r.t. integral solutions. The set of feasible integral
-        vectors does not change if the cutting plane is removed. You can, however, relax this
+        vectors does not change if a cutting plane is removed. You can, however, relax this
         condition slightly and add cutting planes that do cut off feasible solutions, as long as
         at least one of the optimal solutions remains feasible.
     </p>
@@ -799,7 +799,7 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         If you need to solve a separate LP, creating a sub-SCIP is not recommended because of the overhead involved
         and because dual information is not accessible (compare <a href="#scipaslpsolver">here</a>). Instead you can use SCIP's LP
         interface. For this you should include <code>lpi/lpi.h</code> and call the methods provided therein.
-        Note that the LPi can be used independently from SCIP.
+        Note that the LPI can be used independently from SCIP.
     </p>
 
 SECTION: Specific questions about Column Generation and Branch-And-Price with SCIP
@@ -924,7 +924,7 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     LABEL:problematicplugins
     ANSWER:
     <p>
-        In most cases, you should deactivate separators, since cutting planes that are added to your master problem may
+        In most cases you should deactivate separators since cutting planes that are added to your master problem may
         destroy your pricing problem. Additionally, it may be necessary to deactivate some presolvers, mainly the dual
         fixing presolver. This can be done by not including these plugins into SCIP, namely by not calling
         <code>SCIPincludeSepaXyz()</code> and <code>SCIPincludePresolXyz()</code> in your own plugins-including
