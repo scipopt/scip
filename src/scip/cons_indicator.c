@@ -357,14 +357,14 @@ struct SCIP_ConflicthdlrData
 
 
 /* Macro for parameters */
-#define SCIP_CALL_PARAM(x) do                                                                   \
+#define SCIP_CALL_PARAM(x) /*lint -e527 */ do                                                   \
 {                                                                                               \
    SCIP_RETCODE _restat_;                                                                       \
    if ( (_restat_ = (x)) != SCIP_OKAY && (_restat_ != SCIP_PARAMETERUNKNOWN) )                  \
    {                                                                                            \
       SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
       SCIPABORT();                                                                              \
-      return _restat_;  /*lint !e527*/                                                          \
+      return _restat_;                                                                          \
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )
