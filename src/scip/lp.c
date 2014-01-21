@@ -1426,7 +1426,7 @@ SCIP_RETCODE rowEventSideChanged(
 #if 0
 
 #ifdef NDEBUG
-#define ASSERT(x) do { if( !(x) ) SCIPABORT(); } while( FALSE )
+#define ASSERT(x) do { if( !(x) ) abort(); } while( FALSE )
 #else
 #define ASSERT(x) assert(x)
 #endif
@@ -2167,7 +2167,7 @@ SCIP_RETCODE rowSideChanged(
       default:
          SCIPerrorMessage("unknown row side type\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
 
       /* mark the current LP unflushed */
