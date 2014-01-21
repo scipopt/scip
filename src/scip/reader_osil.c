@@ -997,10 +997,6 @@ SCIP_RETCODE readQuadraticCoefs(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
-   SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
-   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
-   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
-   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
    )
 {
@@ -1859,10 +1855,6 @@ SCIP_RETCODE readNonlinearExprs(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
-   SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
-   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
-   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
-   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
@@ -2484,12 +2476,12 @@ SCIP_DECL_READERREAD(readerReadOsil)
       goto CLEANUP;
 
    /* read quadratic coefficients (turns linear constraints into quadratic ones, may create objcons) */
-   SCIP_CALL( readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, initialconss, dynamicconss, dynamicrows, dynamiccols, &doingfine) );
+   SCIP_CALL( readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
 
    /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
-   SCIP_CALL( readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, initialconss, dynamicconss, dynamicrows, dynamiccols, &doingfine) );
+   SCIP_CALL( readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
 
