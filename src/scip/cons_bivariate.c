@@ -4333,7 +4333,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    assert(SCIPisFinite(cutcoeff[0]));
    assert(SCIPisFinite(cutcoeff[1]));
    assert(SCIPisFinite(cutcoeff[2]));
-   assert(finite(cutcoeff[3]));
+   assert(SCIPisFinite(cutcoeff[3]));
    assert(SCIPisPositive(scip, cutcoeff[2])); /* assert gamma > 0 */
 
    if( SCIPisInfinity(scip, REALABS(cutcoeff[0]/cutcoeff[2])) ||
