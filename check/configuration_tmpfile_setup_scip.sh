@@ -66,21 +66,6 @@ then
     echo set misc permutationseed $p   >> $TMPFILE
 fi
 
-# set objective limit: optimal solution value from solu file, if existent
-if test $SETCUTOFF = 1
-then
-    if test $SOLUFILE=""
-    then
-        echo Exiting test because no solu file can be found for this test
-        exit
-    fi
-    CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
-    if test ""$CUTOFF != ""
-    then
-        echo set limits objective $CUTOFF      >> $TMPFILE
-    fi
-fi
-
 # avoid solving LPs in case of LPS=none
 if test "$LPS" = "none"
 then
@@ -98,6 +83,21 @@ echo set save $SETFILE                 >> $TMPFILE
 
 # read and solve the instance
 echo read $SCIPPATH/$INSTANCE         >> $TMPFILE
+
+# set objective limit: optimal solution value from solu file, if existent
+if test $SETCUTOFF = 1
+then
+    if test $SOLUFILE == ""
+    then
+        echo Exiting test because no solu file can be found for this test
+        exit
+    fi
+    CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+    if test ""$CUTOFF != ""
+    then
+        echo set limits objective $CUTOFF      >> $TMPFILE
+    fi
+fi
 
 echo optimize                          >> $TMPFILE
 echo display statistics                >> $TMPFILE
