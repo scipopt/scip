@@ -2614,6 +2614,10 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       const char* heurname;
       heurname = SCIPheurGetName(heurs[i]);
 
+      /* dualval heuristic should stay disabled */
+      if( strcmp(heurname, "dualval") == 0 )
+         continue;
+
       /* get frequency parameter of heuristic */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
       param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
@@ -3184,7 +3188,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
       const char* sepaname;
       sepaname = SCIPsepaGetName(sepas[i]);
 
-      /* intobj separator should stay disabled */
+      /* intobj and cgmip separators should stay disabled */
       if( strcmp(sepaname, "intobj") == 0 || strcmp(sepaname, "cgmip") == 0 )
          continue;
 
