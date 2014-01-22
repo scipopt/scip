@@ -3549,7 +3549,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    int ind;
    int k;
    int i;
-   int status
+   int status;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
