@@ -28,18 +28,6 @@
 #include <string.h>
 #include <ctype.h>
 
-/* for the MS compiler, the function finite(a) is named _finite(a) */
-#ifdef _MSC_VER
-#define finite(a) _finite(a)
-#endif
-
-/* on SunOS, the function finite(a) is declared in ieeefp.h
- * but this header does not exist on every system, so include only if __sun is defined
- */
-#ifdef __sun
-#include <ieeefp.h>
-#endif
-
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_trysol.h"
@@ -3686,7 +3674,7 @@ SCIP_RETCODE computeViolation(
          SCIPfreeBufferArray(scip, &x);
       }
 
-      if( SCIPisInfinity(scip, REALABS(val)) || !finite(val) )
+      if( SCIPisInfinity(scip, REALABS(val)) || !SCIPisFinite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3707,7 +3695,7 @@ SCIP_RETCODE computeViolation(
       val = SCIPexprgraphGetNodeVal(consdata->exprgraphnode);
       assert(val != SCIP_INVALID);  /*lint !e777*/
 
-      if( !finite(val) || SCIPisInfinity(scip, REALABS(val)) )
+      if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3894,14 +3882,14 @@ SCIP_RETCODE addLinearization(
    {
       /* get value and gradient */
       SCIP_CALL( SCIPexprintGrad(exprint, exprtree, x, newx, &val, grad) );
-      if( finite(val) && !SCIPisInfinity(scip, REALABS(val)) )
+      if( SCIPisFinite(val) && !SCIPisInfinity(scip, REALABS(val)) )
       {
          val *= treecoef;
          /* check gradient entries and compute constant f(refx) - grad * refx */
          constant = val;
          for( i = 0; i < nvars; ++i )
          {
-            if( !finite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
+            if( !SCIPisFinite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
                break;
 
             grad[i] *= treecoef;
@@ -4053,7 +4041,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    assert(SCIPisLE(scip, xlb, xub));
 
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
-   if( !finite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
+   if( !SCIPisFinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
@@ -4061,7 +4049,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    vallb *= treecoef;
 
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
-   if( !finite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
+   if( !SCIPisFinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
@@ -4237,7 +4225,7 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    {
       SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
 
-      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) )
+      if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4256,7 +4244,7 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
 
       SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p4, &p4val) );
-      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !finite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
+      if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !SCIPisFinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4275,7 +4263,7 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
 
       SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p2, &p2val) );
-      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !finite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) )
+      if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !SCIPisFinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4302,8 +4290,8 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
       SCIP_CALL( SCIPexprtreeEval(exprtree, p2, &p2val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p3, &p3val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p4, &p4val) );
-      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !finite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) ||
-         ! finite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !finite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
+      if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !SCIPisFinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) ||
+         ! SCIPisFinite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !SCIPisFinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4622,7 +4610,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
       SCIP_CALL( SCIPexprtreeEval(exprtree, &val[i*ncols], &funcval) );
       SCIPdebugPrintf(") = %g\n", funcval);
 
-      if( !finite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
+      if( !SCIPisFinite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
       {
          SCIPdebugMessage("cannot compute underestimator for concave because constaint <%s> cannot be evaluated\n", SCIPconsGetName(cons));
          goto TERMINATE;
@@ -4831,7 +4819,7 @@ SCIP_RETCODE addIntervalGradientEstimator(
 
    /* evaluate in reference point */
    SCIP_CALL( SCIPexprintEval(exprint, exprtree, x, &val) );
-   if( !finite(val) )
+   if( !SCIPisFinite(val) )
    {
       SCIPdebugMessage("Got nonfinite function value from evaluation of constraint %s tree %d. skipping interval gradient estimator.\n", SCIPconsGetName(cons), exprtreeidx);
       goto INTGRADESTIMATOR_CLEANUP;

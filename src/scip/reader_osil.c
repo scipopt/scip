@@ -25,18 +25,6 @@
 #include <string.h>
 #include <math.h>
 
-/* for the MS compiler, the function finite(a) is named _finite(a) */
-#ifdef _MSC_VER
-#define finite(a) _finite(a)
-#endif
-
-/* on SunOS, the function finite(a) is declared in ieeefp.h
- * but this header does not exist on every system, so include only if __sun is defined
- */
-#ifdef __sun
-#include <ieeefp.h>
-#endif
-
 #include "scip/reader_osil.h"
 #include "scip/scip.h"
 #include "scip/cons_bounddisjunction.h"
@@ -636,7 +624,7 @@ void readMultIncr(
    if( incrreal != NULL )
    {
       *incrreal = strtod(attrval, (char**)&attrval);
-      if( *attrval != '\0' || !finite(*incrreal) )
+      if( *attrval != '\0' || !SCIPisFinite(*incrreal) )
       {
          SCIPerrorMessage("Invalid value '%s' in \"incr\" attribute of node.\n", xmlGetAttrval(node, "incr"));
          *doingfine = FALSE;
@@ -894,7 +882,7 @@ SCIP_RETCODE readLinearCoefs(
 
       val[count] = strtod(xmlGetData(xmlFirstChild(elnode)), (char**)&attrval);
 
-      if( *attrval != '\0' || !finite(val[count]) )
+      if( *attrval != '\0' || !SCIPisFinite(val[count]) )
       {
          SCIPerrorMessage("Invalid value '%s' in <el> node under <value> node in <linearConstraintCoefficients>.\n", xmlGetData(elnode));
          *doingfine = FALSE;
@@ -1254,7 +1242,7 @@ SCIP_RETCODE readExpression(
       if( attrval != NULL )
       {
          coef = strtod(attrval, (char**)&attrval);
-         if( *attrval != '\0' || !finite(coef) )
+         if( *attrval != '\0' || !SCIPisFinite(coef) )
          {
             SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of <variable> node in nonlinear expression.\n", xmlGetAttrval(node, "coef"));
             *doingfine = FALSE;
@@ -1300,7 +1288,7 @@ SCIP_RETCODE readExpression(
       if( attrval != NULL )
       {
          val = strtod(attrval, (char**)&attrval);
-         if( *attrval != '\0' || !finite(val) )
+         if( *attrval != '\0' || !SCIPisFinite(val) )
          {
             SCIPerrorMessage("Invalid value '%s' in \"value\" attribute of <number> node in nonlinear expression.\n", xmlGetAttrval(node, "value"));
             *doingfine = FALSE;
