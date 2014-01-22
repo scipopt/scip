@@ -3462,7 +3462,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    SCIP_VAR** aggvars;
    int naggvars = 0;
-   int saggvars = 0;
+   int saggvars;
    SCIP_HASHTABLE* varAggregated;
    SCIP_HASHMAP* consHidden;
 
