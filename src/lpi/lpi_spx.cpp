@@ -2804,8 +2804,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
 
-   /* Since SoPlex does not support barrier we switch to DUAL */
-   return SCIPlpiSolveDual(lpi);
+   /* SoPlex does not support barrier (yet) */
+   SCIPerrorMessage("SCIPlpiSolveBarrier() not supported by SoPlex\n");
+   return SCIP_INVALIDCALL;
 }
 
 /** start strong branching - call before any strongbranching */
