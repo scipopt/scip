@@ -1572,8 +1572,15 @@ SCIP_RETCODE SCIPsolRound(
          break;
 
       /* if solution value is already integral, there is nothing to do */
-      if( SCIPsetIsFeasIntegral(set, solval) )
+      if( SCIPsetIsIntegral(set, solval) )
          continue;
+
+      /* if solution value is already integral with feastol, round to nearest integral value */
+      if( SCIPsetIsFeasIntegral(set, solval) )
+      {
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, SCIPsetRound(set, solval)) );
+         continue;
+      }
 
       /* get rounding possibilities */
       mayrounddown = SCIPvarMayRoundDown(var);
