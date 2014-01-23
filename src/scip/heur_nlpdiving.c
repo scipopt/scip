@@ -1921,7 +1921,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       case 'c':
          SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
-         assert(bestcand != -1);
          if( bestcand >= 0 )
          {
             var = nlpcands[bestcand];
@@ -1931,7 +1930,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       case 'v':
          SCIP_CALL( chooseVeclenVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
-         assert(bestcand != -1);
          if( bestcand >= 0 )
          {
             var = nlpcands[bestcand];
@@ -1941,7 +1939,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       case 'p':
          SCIP_CALL( choosePscostVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
-         assert(bestcand != -1);
          if( bestcand >= 0 )
          {
             var = nlpcands[bestcand];
@@ -1951,7 +1948,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       case 'g':
          SCIP_CALL( chooseGuidedVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, bestsol, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
-         assert(bestcand != -1);
          if( bestcand >= 0 )
          {
             var = nlpcands[bestcand];
@@ -1971,7 +1967,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             SCIP_CALL( SCIPgetSolVals(scip, heurdata->sol, npseudocands, pseudocands, pseudocandsnlpsol) );
             SCIP_CALL( chooseDoubleVar(scip, heurdata, pseudocands, pseudocandsnlpsol, pseudocandslpsol, npseudocands,
                   varincover, covercomputed, &bestcand, &bestboundval, &bestcandmayround, &bestcandroundup) );
-            assert(bestcand != -1);
             if( bestcand >= 0 )
                var = pseudocands[bestcand];
             break;
@@ -1982,7 +1977,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       case 'f':
          SCIP_CALL( chooseFracVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
-         assert(bestcand != -1);
          if( bestcand >= 0 )
          {
             var = nlpcands[bestcand];
@@ -1994,13 +1988,13 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          return SCIP_INVALIDDATA;
       }
 
-      /* this should never happen */
-      if( bestcand < 0 )
-         break;
-      assert(var != NULL);
-
-      /* if all candidates are roundable, try to round the solution */
-      if( bestcandmayround && backtrackdepth == -1 )
+      /* if all candidates are roundable, try to round the solution
+       * if var == NULL (i.e., bestcand == -1), then all solution candidates are outside bounds
+       *   this should only happen if they are slightly outside bounds (i.e., still within feastol, relative tolerance),
+       *   but far enough out to be considered as fractional (within feastol, but using absolute tolerance)
+       *   in this case, we also try our luck with rounding
+       */
+      if( (var == NULL || bestcandmayround) && backtrackdepth == -1 )
       {
          SCIP_Bool success;
 
@@ -2027,6 +2021,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          }
       }
 
+      /* if all variables have been found to be essentially integral (even though there is some numerical doubt, see comment above), then stop */
+      if( var == NULL )
+         break;
+
       do
       {
          SCIP_Real frac;
@@ -2034,7 +2032,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
          if( backtracked && backtrackdepth > 0 )
          {
-	    assert(backtrackvar != NULL);
+            assert(backtrackvar != NULL);
 
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
              * occured or variable was fixed by propagation while backtracking => Abort diving!
@@ -2082,7 +2080,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          }
          else
          {
-	    assert(var != NULL);
+            assert(var != NULL);
 
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
              * occured or variable was fixed by propagation while backtracking => Abort diving!
@@ -2441,7 +2439,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    }
    else
    {
-      SCIPdebugPrintf("UNKNOWN, very mysterical reason\n");
+      SCIPdebugPrintf("UNKNOWN, very mysterical reason\n");  /* see also special case var == NULL (bestcand == -1) after choose*Var above */
    }
 
    /* check if a solution has been found */
