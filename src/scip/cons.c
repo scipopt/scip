@@ -3254,7 +3254,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       SCIP_Bool pschanged;
       SCIP_Bool lastinfeasible;
 
-      /* check, if this LP solution was already enforced at this node */
+      /* check, if this pseudo solution was already enforced at this node */
       if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount
          && conshdlr->lastenfopsnode == stat->nnodes
          && conshdlr->lastenfopsresult != SCIP_CONSADDED

@@ -2964,7 +2964,7 @@ SCIP_RETCODE enforceConstraints(
       else
       {
          SCIP_CALL( SCIPconshdlrEnforcePseudoSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, branchcand, *infeasible,
-               objinfeasible,forced, &result) );
+               objinfeasible, forced, &result) );
          if( SCIPsepastoreGetNCuts(sepastore) != 0 )
          {
             SCIPerrorMessage("pseudo enforcing method of constraint handler <%s> separated cuts\n",
@@ -3396,13 +3396,13 @@ SCIP_RETCODE propAndSolve(
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
        * we have to forget about the LP and use the pseudo solution instead
        */
-      if( !(*cutoff) && !(*lperror) && set->misc_exactsolve && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+      if( !(*cutoff) && !(*lperror) && (set->misc_exactsolve || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
          && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
       {
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT", all variables are fixed, %d continuous vars\n",
-               stat->nnodes, stat->nlps, transprob->ncontvars);
+            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT" (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
+               stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, transprob->ncontvars);
             SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
             /**@todo call PerPlex */
             return SCIP_LPERROR;
@@ -3410,9 +3410,11 @@ SCIP_RETCODE propAndSolve(
          else
          {
             SCIPtreeSetFocusNodeLP(tree, FALSE);
+            *forcedenforcement = TRUE;
+
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution (%d unfixed vars) instead\n",
-               stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
+               "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT" (exactsolve=%u, pricingaborted=%u) -- using pseudo solution (%d unfixed vars) instead\n",
+               stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
          }
       }
 
