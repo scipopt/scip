@@ -866,6 +866,7 @@ SCIP_RETCODE catchEvent(
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
    {
       consdata->nfixedzeros++;
+      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) && consdata->nfixedzeros >= consdata->nvars - 1 )
       {
@@ -875,6 +876,7 @@ SCIP_RETCODE catchEvent(
    else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
    {
       consdata->nfixedones++;
+      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) )
       {
@@ -1211,6 +1213,12 @@ SCIP_RETCODE dualPresolving(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   /* modifiable non-covering constraints cannot be deleted if one variable is fixed to one, because the propagation for
+    * newly inserted variables must be considered later
+    */
+   if( consdata->nfixedones == 1 && SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
 
    /* all fixed variables should be removed at that point */
    assert(consdata->nfixedones == 0);
@@ -1887,11 +1895,17 @@ SCIP_RETCODE applyFixings(
             /* check, if the variable should be replaced with the representative */
             if( repvar != var )
             {
+#ifndef NDEBUG
+               int oldnfixedzeros = consdata->nfixedzeros;
+               int oldnfixedones = consdata->nfixedones;
+#endif
                /* delete old (aggregated) variable */
                SCIP_CALL( delCoefPos(scip, cons, v) );
 
                /* add representative instead */
                SCIP_CALL( addCoef(scip, cons, repvar) );
+               assert(consdata->nfixedzeros == oldnfixedzeros);
+               assert(consdata->nfixedones == oldnfixedones);
             }
             else
                ++v;
