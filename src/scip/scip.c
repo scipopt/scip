@@ -22562,7 +22562,7 @@ SCIP_RETCODE SCIPsetConsInitial(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetConsInitial", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconsSetInitial(cons, scip->set, initial) );
+   SCIP_CALL( SCIPconsSetInitial(cons, scip->set, scip->stat, initial) );
 
    return SCIP_OKAY;
 }

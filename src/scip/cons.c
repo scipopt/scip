@@ -802,6 +802,7 @@ static
 SCIP_RETCODE conshdlrAddInitcons(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons                /**< constraint to add */
    )
 {
@@ -821,6 +822,7 @@ SCIP_RETCODE conshdlrAddInitcons(
 
    conshdlr->initconss[insertpos] = cons;
    conshdlr->ninitconss++;
+   stat->ninitconssadded++;
 
    /* if the constraint is kept, we keep the stored position at the beginning of the array */
    if( cons->initconsspos == -1 )
@@ -1561,7 +1563,7 @@ SCIP_RETCODE conshdlrActivateCons(
    /* add constraint to the initconss array if the constraint is initial and added to the focus node */
    if( cons->initial )
    {
-      SCIP_CALL( conshdlrAddInitcons(conshdlr, set, cons) );
+      SCIP_CALL( conshdlrAddInitcons(conshdlr, set, stat, cons) );
    }
 
    /* call constraint handler's activation notification method */
@@ -2506,7 +2508,7 @@ SCIP_RETCODE SCIPconshdlrInitpre(
          if( conshdlr->conss[c]->addarraypos >= 0 && !conshdlr->conss[c]->deleted &&
             conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
          {
-            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
+            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, stat, conshdlr->conss[c]) );
          }
       }
    }
@@ -2672,8 +2674,13 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       int oldninitconss;
       int c;
 
-      SCIPdebugMessage("initializing LP with %d initial constraints of handler <%s>\n", 
-         conshdlr->ninitconss, conshdlr->name);
+      SCIPdebugMessage("initializing LP with %d initial constraints of handler <%s> (ninitconss=%d, kept=%d, initkept=%u)\n",
+         initkeptconss ? conshdlr->ninitconss : conshdlr->ninitconss - conshdlr->ninitconsskept, conshdlr->name,
+         conshdlr->ninitconss, conshdlr->ninitconsskept, initkeptconss);
+
+      /* no constraints to initialize (or only kept constraints which do not need to be initialized this time) -> return */
+      if( conshdlr->ninitconss == 0 || (!initkeptconss && conshdlr->ninitconss == conshdlr->ninitconsskept) )
+         return SCIP_OKAY;
 
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -2682,7 +2689,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       conshdlrDelayUpdates(conshdlr);
 
       oldninitconss = conshdlr->ninitconss;
-      
+
       /* start timing */
       SCIPclockStart(conshdlr->sepatime, set);
 
@@ -2696,7 +2703,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 
             if( SCIPconsIsActive(conshdlr->initconss[c]) )
             {
-               SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->initconss[c]) );
+               SCIP_CALL( conshdlrAddInitcons(conshdlr, set, stat, conshdlr->initconss[c]) );
             }
          }
       }
@@ -6014,6 +6021,7 @@ SCIP_RETCODE SCIPconsTransform(
 SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             initial             /**< new value */
    )
 {
@@ -6028,7 +6036,7 @@ SCIP_RETCODE SCIPconsSetInitial(
       {
          if( cons->initial )
          {
-            SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, cons) );
+            SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, stat, cons) );
          }
          else
          {

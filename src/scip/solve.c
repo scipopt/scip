@@ -2144,14 +2144,24 @@ SCIP_RETCODE priceAndCutLoop(
             if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
             {
                SCIP_Longint oldnboundchgs;
+               SCIP_Longint oldninitconssadded;
 
                oldnboundchgs = stat->nboundchgs;
+               oldninitconssadded = stat->ninitconssadded;
 
                SCIPdebugMessage(" -> LP solved: call propagators that are applicable during LP solving loop\n");
 
                SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
                      SCIP_PROPTIMING_DURINGLPLOOP, cutoff) );
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+               if( stat->ninitconssadded != oldninitconssadded )
+               {
+                  SCIPdebugMessage("new initial constraints added during propagation: old=%lld, new=%lld\n", oldninitconssadded, stat->ninitconssadded);
+
+                  SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
+                        eventqueue, eventfilter, FALSE, FALSE, cutoff) );
+               }
 
                /* if we found something, solve LP again */
                if( !lp->flushed && !(*cutoff) )
@@ -2339,11 +2349,23 @@ SCIP_RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
+                  SCIP_Longint oldninitconssadded;
+
+                  oldninitconssadded = stat->ninitconssadded;
+
                   SCIPdebugMessage(" -> separation changed bound: call propagators that are applicable before LP is solved\n");
 
                   /* propagate domains */
                   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
                   assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+                  if( stat->ninitconssadded != oldninitconssadded )
+                  {
+                     SCIPdebugMessage("new initial constraints added during propagation: old=%lld, new=%lld\n", oldninitconssadded, stat->ninitconssadded);
+
+                     SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
+                           eventqueue, eventfilter, FALSE, FALSE, cutoff) );
+                  }
 
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
@@ -3267,9 +3289,11 @@ SCIP_RETCODE propAndSolve(
    {
       SCIP_Bool lpwasflushed;
       SCIP_Longint oldnboundchgs;
+      SCIP_Longint oldninitconssadded;
 
       lpwasflushed = lp->flushed;
       oldnboundchgs = stat->nboundchgs;
+      oldninitconssadded = stat->ninitconssadded;
 
       SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation, timingmask, cutoff) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
@@ -3280,8 +3304,10 @@ SCIP_RETCODE propAndSolve(
       /* check, if the path was cutoff */
       *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
-      /* if the LP was flushed and is now no longer flushed, a bound change occurred, and the LP has to be resolved */
-      solvelp = solvelp || (lpwasflushed && !lp->flushed);
+      /* if the LP was flushed and is now no longer flushed, a bound change occurred, and the LP has to be resolved;
+       * we also have to solve the LP if new intial constraints were added which need to be added to the LP
+       */
+      solvelp = solvelp || (lpwasflushed && (!lp->flushed || stat->ninitconssadded != oldninitconssadded));
 
       /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
       if( stat->nboundchgs > oldnboundchgs )
