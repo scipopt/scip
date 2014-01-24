@@ -2186,12 +2186,12 @@ SCIP_RETCODE priceAndCutLoop(
 
                   mustprice = TRUE;
                }
-               /* propagation might have changed the best bound of loose variables, thereby changing the loose objective value
-                * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
-                * bound of the node needs to be updated
+               /* propagation might have changed the best bound of loose variables, thereby changing the loose objective
+                * value which is added to the LP value; because of the loose status, the LP might not be reoptimized,
+                * but the lower bound of the node needs to be updated
                 */
-               else if( stat->nboundchgs > oldnboundchgs && !(*cutoff) && SCIPprobAllColsInLP(transprob, set, lp)
-                  && SCIPlpIsRelax(lp) )
+               else if( lp->solved && stat->nboundchgs > oldnboundchgs && !(*cutoff) &&
+                  SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
                {
                   assert(lp->flushed);
                   assert(lp->solved);
@@ -3316,7 +3316,7 @@ SCIP_RETCODE propAndSolve(
           * which is added to the LP value; because of the loose status, the LP might not be reoptimized, but the lower
           * bound of the node needs to be updated
           */
-         if( !solvelp && lp->flushed && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+         if( !solvelp && lp->flushed && lp->solved && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
