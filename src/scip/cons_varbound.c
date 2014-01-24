@@ -4343,7 +4343,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
             *success = FALSE;
          }
       }
-      else if( !strncmp(str, "[free]", 6) == 0 )
+      else if( strncmp(str, "[free]", 6) != 0 )
          *success = FALSE;
    }
 
