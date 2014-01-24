@@ -12761,7 +12761,9 @@ SCIP_RETCODE lpLexDualSimplex(
       SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &redcost, lp->nlpicols) );
       if( chooseBasic )
+      {
          SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
+      }
       else
          primsol = NULL;
 
@@ -12825,6 +12827,7 @@ SCIP_RETCODE lpLexDualSimplex(
             assert(primsol == NULL);
             SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
          }
+         assert(primsol != NULL);
          SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
          SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
 
@@ -13041,6 +13044,7 @@ SCIP_RETCODE lpLexDualSimplex(
                   assert(primsol == NULL);
                   SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
                }
+               assert(primsol != NULL);
                SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
 
                for( j = 0; j < lp->nlpicols; ++j )

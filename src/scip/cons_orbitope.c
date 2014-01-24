@@ -261,7 +261,7 @@ SCIP_RETCODE printSCI(
    SCIP_CALL( SCIPallocBufferArray(scip, &M, p) );
    for (k = 0; k < p; ++k)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &M[k], q) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &M[k], q) ); /*lint !e866*/
       for (l = 0; l < q; ++l)
          M[k][l] = 0;
    }

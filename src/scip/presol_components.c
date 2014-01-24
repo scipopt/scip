@@ -992,7 +992,7 @@ SCIP_RETCODE splitProblem(
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
 
 #ifdef COMPONENTS_PRINT_STRUCTURE
-   printStructure(scip, vars, conss, components, conscomponent, nvars, nconss, ncomponents);
+   SCIP_CALL( printStructure(scip, vars, conss, components, conscomponent, nvars, nconss, ncomponents) );
 #endif
 
    compvarsstart = 0;

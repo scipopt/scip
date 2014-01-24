@@ -597,7 +597,7 @@ SCIP_RETCODE subrootCreate(
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = SCIPlpGetNCols(lp);
    (*subroot)->nrows = SCIPlpGetNRows(lp);
-   (*subroot)->nchildren = tree->nchildren;
+   (*subroot)->nchildren = (unsigned int) tree->nchildren;
    SCIP_CALL( SCIPlpGetState(lp, blkmem, &((*subroot)->lpistate)) );
    (*subroot)->lpwasprimfeas = lp->primalfeasible;
    (*subroot)->lpwasdualfeas = lp->dualfeasible;

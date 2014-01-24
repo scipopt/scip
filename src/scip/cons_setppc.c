@@ -7436,9 +7436,9 @@ SCIP_RETCODE branchLP(
 	 tmp = SCIPcalcChildEstimate(scip, sortcands[nselcands], 1.0);;
 	 minestone = MIN(minestone, tmp);
       }
-      assert(minestzero != SCIP_INVALID);
-      assert(minestone != SCIP_INVALID);
-      assert(minprio != SCIP_INVALID);
+      assert(minestzero != SCIP_INVALID); /*lint !e777*/
+      assert(minestone != SCIP_INVALID); /*lint !e777*/
+      assert(minprio != SCIP_INVALID); /*lint !e777*/
       assert(nselcands > 0);
       branchweight -= solval;
 
@@ -7596,7 +7596,7 @@ SCIP_RETCODE branchPseudo(
 	 minestzero = MIN(minestzero, tmp);
 	 estone[i] = SCIPcalcChildEstimate(scip, branchcands[i], 1.0);
       }
-      assert(minestzero != SCIP_INVALID);
+      assert(minestzero != SCIP_INVALID); /*lint !e777*/
 
       /* branch on the first part of the sorted candidates:
        * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1

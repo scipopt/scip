@@ -538,7 +538,7 @@ SCIP_RETCODE initMatrix(
       constant = SCIProwGetConstant(row);
 
       SCIPdebugMessage(" %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
-      SCIPdebug( SCIPprintRow(scip, row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       assert(!SCIPisInfinity(scip, constant));
 
       matrix->rowmatbegin[i] = currentpointer;

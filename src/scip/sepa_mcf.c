@@ -4651,14 +4651,13 @@ SCIP_RETCODE printFlowSystemInfo(
          }
       }
 
-   MCFdebugMessage("----- network %i -----\n",m);
-   MCFdebugMessage("   nof flowrows: %5d\n", nflowrows);
-   MCFdebugMessage("   nof caprows:  %5d\n", ncaprows);
-   MCFdebugMessage("   nof flowvars: %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
-                   nflowvars, ncontflowvars, nintflowvars, nbinflowvars);
-   MCFdebugMessage("   nof capvars:  %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
-                   ncapvars, ncontcapvars, nintcapvars, nbincapvars);
-
+      MCFdebugMessage("----- network %i -----\n",m);
+      MCFdebugMessage("   nof flowrows: %5d\n", nflowrows);
+      MCFdebugMessage("   nof caprows:  %5d\n", ncaprows);
+      MCFdebugMessage("   nof flowvars: %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
+         nflowvars, ncontflowvars, nintflowvars, nbinflowvars);
+      MCFdebugMessage("   nof capvars:  %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
+         ncapvars, ncontcapvars, nintcapvars, nbincapvars);
    }
 
 
@@ -4970,13 +4969,13 @@ SCIP_RETCODE nodepairqueueCreate(
             /* sum up flow on arc a*/
             if(colcommodity[c] >= 0)
             {
-               SCIPdebugMessage("  flow  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), ABS(SCIPcolGetPrimsol(rowcols[i])) );
-               totalflow += ABS(SCIPcolGetPrimsol(rowcols[i]));
+               SCIPdebugMessage("  flow  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), REALABS(SCIPcolGetPrimsol(rowcols[i])) );
+               totalflow += REALABS(SCIPcolGetPrimsol(rowcols[i]));
             }
             else
             {
-               SCIPdebugMessage("  cap  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), ABS(SCIPcolGetPrimsol(rowcols[i])) );
-               totalcap += ABS(SCIPcolGetPrimsol(rowcols[i]));
+               SCIPdebugMessage("  cap  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), REALABS(SCIPcolGetPrimsol(rowcols[i])) );
+               totalcap += REALABS(SCIPcolGetPrimsol(rowcols[i]));
             }
          }
 

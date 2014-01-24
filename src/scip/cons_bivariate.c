@@ -6294,6 +6294,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
             typename = "convex-concave";
             break;
          case SCIP_BIVAR_UNKNOWN:
+         default:
             typename = "unknown";
             break;
          }

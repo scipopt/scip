@@ -12299,13 +12299,13 @@ SCIP_Bool isFiniteNonnegativeIntegral(
 static
 SCIP_DECL_CONSINITPRE(consInitpreLinear)
 {  /*lint --e{715}*/
-   int counter[SCIP_CONSTYPE_GENERAL + 1];
+   int counter[(int)SCIP_CONSTYPE_GENERAL + 1];
    int c;
 
    assert(scip != NULL);
 
    /* initialize counter for constraint types to zero */
-   BMSclearMemoryArray(counter, SCIP_CONSTYPE_GENERAL + 1);
+   BMSclearMemoryArray(counter, (int)SCIP_CONSTYPE_GENERAL + 1);
 
    /* loop through all constraints */
    for( c = 0; c < nconss; c++ )
@@ -12597,7 +12597,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
    SCIPinfoMessage(scip, NULL, "  INTKNAP");
    SCIPinfoMessage(scip, NULL, "   MIXBIN");
    SCIPinfoMessage(scip, NULL, "      GEN\n");
-   for( c = 0; c <= SCIP_CONSTYPE_GENERAL; c++ )
+   for( c = 0; c <= (int)SCIP_CONSTYPE_GENERAL; c++ )
    {
       SCIPinfoMessage(scip, NULL, "%9d", counter[c]);
    }

@@ -210,7 +210,7 @@ SCIP_RETCODE confgraphCreate(
    if( confgraphfile == NULL )
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
-      SCIPABORT();
+      SCIPABORT(); /*lint !e527*/
       return SCIP_WRITEERROR;
    }
 
