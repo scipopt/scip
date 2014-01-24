@@ -183,7 +183,7 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
-#if 1
+#ifndef SCIP_CONFGRAPH_EDGE
    SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
 #else
    SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
@@ -219,6 +219,8 @@ SCIP_RETCODE confgraphCreate(
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
+
+   return SCIP_OKAY;
 }
 
 /** closes conflict graph file */
