@@ -5226,11 +5226,11 @@ SCIP_RETCODE exprParse(
    /* check for a two argument operator that is not a multiplication */
    if( str[0] == '+' || str[0] == '-' || str[0] == '/' || str[0] == '^' )
    {
-      char operator;
+      char op;
       SCIP_EXPR* arg1;
       SCIP_EXPR* arg2;
 
-      operator = str[0];
+      op = str[0];
       arg1 = *expr;
 
       /* step forward over the operator to go to the beginning of the second argument */
@@ -5240,15 +5240,15 @@ SCIP_RETCODE exprParse(
       str = lastchar + 1;
 
       /* make new expression from two arguments */
-      if( operator == '+')
+      if( op == '+')
       {
          SCIP_CALL( SCIPexprAdd(blkmem, expr, 1.0, arg1, 1.0, arg2, 0.0) );
       }
-      else if( operator == '-')
+      else if( op == '-')
       {
          SCIP_CALL( SCIPexprAdd(blkmem, expr, 1.0, arg1, -1.0, arg2, 0.0) );
       }
-      else if( operator == '*' )
+      else if( op == '*' )
       {
          if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
@@ -5265,7 +5265,7 @@ SCIP_RETCODE exprParse(
       }
       else
       {
-         assert(operator == '/');
+         assert(op == '/');
 
          if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
