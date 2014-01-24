@@ -12074,10 +12074,16 @@ SCIP_RETCODE SCIPtransformProb(
    /* in case the permutation seed is different to -1, permute the transformed problem */
    if( scip->set->misc_permutationseed > -1 )
    {
+      SCIP_Bool permuteconss;
+      SCIP_Bool permutevars;
+
+      permuteconss = scip->set->misc_permuteconss;
+      permutevars = scip->set->misc_permutevars;
+
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "permute problem using random seed %d\n", scip->set->misc_permutationseed);
       
-      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
    }
 
    if( scip->set->misc_estimexternmem )

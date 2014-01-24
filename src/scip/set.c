@@ -224,6 +224,8 @@
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
+#define SCIP_DEFAULT_MISC_PERMUTECONSS     TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
+#define SCIP_DEFAULT_MISC_PERMUTEVARS     FALSE /**< should order of variables be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
@@ -1352,6 +1354,18 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/permutationseed",
          "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
          &(*set)->misc_permutationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/permuteconss",
+         "should order of constraints be permuted (depends on permutationseed)?",
+         &(*set)->misc_permuteconss, TRUE, SCIP_DEFAULT_MISC_PERMUTECONSS,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/permutevars",
+         "should order of variables be permuted (depends on permutationseed)?",
+         &(*set)->misc_permutevars, TRUE, SCIP_DEFAULT_MISC_PERMUTEVARS,
          NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

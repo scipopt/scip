@@ -275,6 +275,8 @@ parameters:
   copying them to the original solution store
 - new advanced parameter "presolving/components/feastolfactor" to increase the feasibility tolerance in all sub-SCIPs,
   when solving a component
+- new advanced parameters "misc/permuteconss" and "misc/permutevars" to control whether variables and/or constraints
+  should be permuted, if permutationseed != -1
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
