@@ -435,7 +435,7 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   return "Clp "CLP_VERSION;
+   return "Clp " CLP_VERSION;
 }
 
 /** gets description of LP solver (developer, webpage, ...) */
