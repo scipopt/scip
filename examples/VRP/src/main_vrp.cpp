@@ -433,7 +433,7 @@ int main(int argc, char** argv)
    /**************
     * Statistics *
     *************/
-   //SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
