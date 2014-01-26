@@ -12564,7 +12564,6 @@ SCIP_Real SCIPvarGetRedcost(
       col = SCIPvarGetCol(var);
       assert(col != NULL);
 
-#if 1
       basestat = SCIPcolGetBasisStatus(col);
       lpissolbasic = SCIPlpIsSolBasic(lp);
       primsol = SCIPcolGetPrimsol(col);
@@ -12591,29 +12590,6 @@ SCIP_Real SCIPvarGetRedcost(
       }
 
       return 0.0;
-#else
-      switch( SCIPcolGetBasisStatus(col) )
-      {
-      case SCIP_BASESTAT_LOWER:
-         if( varfixing )
-            return SCIPcolGetRedcost(col, stat, lp);
-         break;
-
-      case SCIP_BASESTAT_UPPER:
-         if( !varfixing )
-            return SCIPcolGetRedcost(col, stat, lp);
-         break;
-
-      case SCIP_BASESTAT_BASIC:
-      case SCIP_BASESTAT_ZERO:
-         break;
-
-      default:
-         SCIPerrorMessage("invalid basis state\n");
-         SCIPABORT();
-         return 0.0; /*lint !e527*/
-      }
-#endif
    }
 
    return 0.0;
