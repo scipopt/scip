@@ -3313,8 +3313,8 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
                      
-         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution)\n",
-            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old");
+         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, objinfeasible=%u)\n",
+            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old", objinfeasible);
 
          /* remember the number of processed constraints on the current pseudo solution */
          conshdlr->lastenfopsdomchgcount = stat->domchgcount;

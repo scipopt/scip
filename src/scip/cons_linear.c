@@ -13041,9 +13041,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
 
    checkrelmaxabs = conshdlrdata->checkrelmaxabs;
 
+   SCIPdebugMessage("Enfops method of linear constraints\n");
+
    /* if the solution is infeasible anyway due to objective value, skip the enforcement */
    if( objinfeasible )
    {
+      SCIPdebugMessage("-> pseudo solution is objective infeasible, return.\n");
+
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
@@ -13059,6 +13063,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
       *result = SCIP_INFEASIBLE;
    else
       *result = SCIP_FEASIBLE;
+
+   SCIPdebugMessage("-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
 
    return SCIP_OKAY;
 }
