@@ -170,7 +170,7 @@ GENVBOUND* getGenVBound(
 
    hashmap = boundtype == SCIP_BOUNDTYPE_LOWER ? propdata->lbgenvbounds : propdata->ubgenvbounds;
 
-   return SCIPhashmapExists(hashmap, var) ? (GENVBOUND*) SCIPhashmapGetImage(hashmap, var) : NULL;
+   return (GENVBOUND*) SCIPhashmapGetImage(hashmap, var);
 }
 
 #ifdef SCIP_DEBUG
@@ -343,7 +343,10 @@ SCIP_Real getGenVBoundsBound(
    if( SCIPisInfinity(scip, -boundval) )
       return (genvbound->boundtype == SCIP_BOUNDTYPE_LOWER) ? -SCIPinfinity(scip) : SCIPinfinity(scip);
 
-   boundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound) + genvbound->constant;
+   if( genvbound->cutoffcoef != 0.0 )
+      boundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+
+   boundval += genvbound->constant;
 
    if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
       boundval *= -1.0;
