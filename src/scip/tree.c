@@ -1620,14 +1620,14 @@ SCIP_RETCODE treeAddPendingBdchg(
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
 	 /* check bound on debugging solution */
-	 SCIP_CALL( SCIPdebugCheckLbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+	 SCIP_CALL( SCIPdebugCheckLbGlobal(set->scip, var, newbound) ); /*lint !e506 !e774*/
       }
       else
       {
 	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
 	 /* check bound on debugging solution */
-	 SCIP_CALL( SCIPdebugCheckUbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+	 SCIP_CALL( SCIPdebugCheckUbGlobal(set->scip, var, newbound) ); /*lint !e506 !e774*/
       }
    }
 

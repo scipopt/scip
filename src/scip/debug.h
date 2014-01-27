@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
 /** checks whether given global lower bound is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckLbGlobal(
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             lb                  /**< lower bound */
    );
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
 /** checks whether given global upper bound is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckUbGlobal(
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             ub                  /**< upper bound */
    );
@@ -224,8 +224,8 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
-#define SCIPdebugCheckLbGlobal(set,var,lb) SCIP_OKAY
-#define SCIPdebugCheckUbGlobal(set,var,ub) SCIP_OKAY
+#define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
+#define SCIPdebugCheckUbGlobal(scip,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
