@@ -969,6 +969,17 @@ SCIP_RETCODE findNewBounds(
 
                SCIPdebugMessage("      var <%s>, LP value: %f\n", SCIPvarGetName(var), bound->newval);
 
+#ifdef SCIP_DEBUG_SOLUTION
+               if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( SCIPdebugCheckLbGlobal(scip, var, bound->newval) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPdebugCheckUbGlobal(scip, var, bound->newval) );
+               }
+#endif
+
                /* in root node we may want to create a genvbound (independent of tightening success) */
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
                {

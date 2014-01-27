@@ -389,15 +389,13 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
    SCIP_CALL( SCIPdebugGetSolVal(scip, genvbound->var, &solval) );
    if( solval != SCIP_UNKNOWN || solval != SCIP_INVALID )
    {
-      if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, solval, activity) )
+      if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
       {
-         printf("***** debug: genvbound cuts off debug solution: %.9g < %.9g\n", solval, activity);
-         SCIPABORT();
+         SCIP_CALL( SCIPdebugCheckLbGlobal(scip, genvbound->var, activity) );
       }
-      else if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, solval, -activity) )
+      else if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
       {
-         printf("***** debug: genvbound cuts off debug solution: %.9g > %.9g\n", solval, -activity);
-         SCIPABORT();
+         SCIP_CALL( SCIPdebugCheckUbGlobal(scip, genvbound->var, -activity) );
       }
    }
 
