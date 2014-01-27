@@ -185,7 +185,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
         Yes. SCIP can be used as a pure CP-Solver by typing
-        "set emphasis cpsolver" in the shell or by using the function <code>SCIPsetEmphasis()</code>.
+        <code>set emphasis cpsolver</code> in the shell or by using the function <code>SCIPsetEmphasis()</code>.
         Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
         See <a href="#howtochangebehaviour">here</a> for more on changing the behavior of SCIP.
     </p>
@@ -301,7 +301,7 @@ SECTION: Using SCIP as a standalone solver
     ANSWER:
     <p>
         In the interactive shell you can set the width of the output with the following command
-        &quot;set display width&quot; followed by an appropriate number.
+        <code>set display width</code> followed by an appropriate number.
         See also the <a href="#displaycolumns">next question</a>.
     </p>
 
@@ -310,12 +310,12 @@ SECTION: Using SCIP as a standalone solver
     LABEL:displaycolumns
     ANSWER:
     <p>
-        Type "display display" in the interactive shell to get an explanation of them.<br>
+        Type <code>display display</code> in the interactive shell to get an explanation of them.<br>
         By the way: If a letter appears in front of a display row, it indicates,
         which heuristic found the new primal bound, a star representing an integral LP-relaxation.<br>
-        Typing "display statistics" after finishing or interrupting the solving process gives
+        Typing <code>display statistics</code> after finishing or interrupting the solving process gives
         you plenty of extra information about the solving process.<br>
-        (Typing "display heuristics" gives you a list of the heuristics including their letters.)
+        (Typing <code>display heuristics</code> gives you a list of the heuristics including their letters.)
     </p>
 
     QUESTION: How do I change the behavior of SCIP?
@@ -323,14 +323,14 @@ SECTION: Using SCIP as a standalone solver
     ANSWER:
     <p>
         You can switch the settings for all presolving, heuristics, and separation plugins to three different modes
-        via the "set {presolving, heuristics, separation} emphasis" parameters in the interactive shell.
-        "off" turns off the respective type of plugins, "fast" chooses settings that lead to less time spent
-        in this type of plugins, decreasing their impact, and "aggressive" increases the impact
+        via the <code>set {presolving, heuristics, separation} emphasis</code> parameters in the interactive shell.
+        <code>off</code> turns off the respective type of plugins, <code>fast</code> chooses settings that lead to less time spent
+        in this type of plugins, decreasing their impact, and <code>aggressive</code> increases the impact
         of this type of plugins.
         You can combine these general settings for cuts, presolving, and heuristics arbitrarily.<br>
-        "display parameters" shows you which settings currently differ from their default,
-        "set default" resets them all.
-        Furthermore, there are complete settings that can be set by "set emphasis", i.e. settings for pure
+        <code>display parameters</code> shows you which settings currently differ from their default,
+        <code>set default</code> resets them all.
+        Furthermore, there are complete settings that can be set by <code>set emphasis</code>, i.e. settings for pure
         feasibility problems, solution counting, and CP like search.
     </p>
 
@@ -430,10 +430,10 @@ SECTION: Using SCIP as a standalone solver
     <p>
         Search <code>SCIPdialogExecOptimize</code> in src/scip/dialog_default.c to see how
         the functionality of the "optimize" command is invoked.
-        Also, in cons_countsols, you can see an example of a dialog handler
+        Also, in src/scip/cons_countsols.c, you can see an example of a dialog handler
         being added to SCIP.
         If this is the way you go, please check the <a href="DIALOG.shtml">How to add dialogs section</a>
-        of the doxygen docu.
+        of the doxygen documentation.
     </p>
 
     QUESTION: How can I input a MINLP into SCIP?
@@ -587,8 +587,8 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
     LABEL:howtoaddplugins
     ANSWER:
     <p>
-        See the <a href="index.shtml">doxygen documentation</a> for a list of
-        plugin types. There is a HowTo for each of them.
+        See the <a href="modules.shtml">doxygen documentation</a> for a list of
+        plugin types. There is a <a href="index.shtml#HOWTOADD">HowTo</a> for each of them.
     </p>
 
     QUESTION: When should I implement a constraint handler, when should I implement a separator?
@@ -668,11 +668,11 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
     LABEL:toggledisplaycolumns
     ANSWER:
     <p>
-        Setting the status of a display column to 0 turns it off. E.g., type "set display memused status 0" in the
+        Setting the status of a display column to 0 turns it off. E.g., type <code>set display memused status 0</code> in the
         interactive shell to disable the memory information column, or include the line <code>SCIPsetIntParam(scip,
         &quot;display/memused/status&quot;, 0)</code> into your source code.  Adding your own display column can be done
         by calling the <code>SCIPincludeDisp()</code> method, see the <a href="DISP.shtml">doxygen
-        documentation</a>.<br> The statistic display, which is shown by "display statistics" and
+        documentation</a>.<br> The statistic display, which is shown by <code>display statistics</code> and
         <code>SCIPprintStatistics()</code>, respectively, cannot be changed.
     </p>
 
