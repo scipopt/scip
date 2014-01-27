@@ -1981,7 +1981,7 @@ SCIP_RETCODE detectImpliedBounds(
          int nvars;
 #endif
 
-         assert(bdchginfos == conflictset->bdchginfos;
+         assert(bdchginfos == conflictset->bdchginfos);
          assert(relaxedbds == conflictset->relaxedbds);
          assert(sortvals == conflictset->sortvals);
 
