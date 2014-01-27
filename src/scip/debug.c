@@ -55,7 +55,7 @@ static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solu
 static SCIP_Bool debugsoldisabled = FALSE;   /**< flag indicating if debugging of solution was disabled or not */
 
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
 /** comparison method for sorting variables w.r.t. to their name */
 static
 SCIP_DECL_SORTPTRCOMP(sortVarsAfterNames)
@@ -197,7 +197,7 @@ SCIP_RETCODE readSolfile(
    }
    SCIPdebugMessage("Debug Solution value is %g.\n", debugsolval);
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
 
    for( i = 0; i < nfound - 1; ++i)
@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPdebugCheckConss(
       {
          SCIP_Bool solcontained;
 
-         SCIP_CALL( isSolutionInNode(SCIPblkmem(set->scip), set, SCIPgetCurrentNode(set->scip), &solcontained) );
+         SCIP_CALL( isSolutionInNode(SCIPblkmem(scip), scip->set, SCIPgetCurrentNode(scip), &solcontained) );
          if( !solcontained )
             return SCIP_OKAY;
       }
