@@ -141,7 +141,7 @@ SCIP_Real getCutoffboundGenVBound(
    assert(genvbound != NULL);
 
    SCIPdebugMessage("cutoff = %.9g (%.9g + %.9g * %.9g)\n",
-      SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) * SCIPgetTransObjscale(scip)),
+      (SCIPgetCutoffbound(scip) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip),
       SCIPgetCutoffbound(scip), SCIPgetTransObjoffset(scip), SCIPgetTransObjscale(scip));
 
    /* the cutoff bound is valid w.r.t. the current objective function in the transformed problem; during presolving,
@@ -150,7 +150,7 @@ SCIP_Real getCutoffboundGenVBound(
     * contribution of the cutoff bound in the generalized variable bound to the original problem as described in
     * function SCIPgenVBoundAdd()
     */
-   return SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) * SCIPgetTransObjscale(scip));
+   return (SCIPgetCutoffbound(scip) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip);
 }
 
 /** returns corresponding genvbound in genvboundstore if there is one, NULL otherwise */
