@@ -2963,7 +2963,7 @@ $(LIBOBJDIR)/scip/prop_obbt.o: src/scip/prop_obbt.c src/scip/prop_obbt.h src/sci
  src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
  src/scip/pub_tree.h src/scip/pub_var.h src/lpi/lpi.h src/nlpi/pub_expr.h \
  src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
- src/scip/presolve.h src/scip/prop_genvbounds.h
+ src/scip/presolve.h src/scip/prop_genvbounds.h src/scip/debug.h
 $(LIBOBJDIR)/scip/prop_probing.o: src/scip/prop_probing.c src/scip/prop_probing.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \

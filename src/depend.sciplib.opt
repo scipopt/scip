@@ -3834,7 +3834,8 @@ $(LIBOBJDIR)/scip/prop_obbt.o: src/scip/prop_obbt.c src/scip/prop_obbt.h src/sci
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/scip/prop_genvbounds.h
+ src/scip/event.h src/scip/struct_event.h src/scip/prop_genvbounds.h \
+ src/scip/debug.h
 $(LIBOBJDIR)/scip/prop_probing.o: src/scip/prop_probing.c src/scip/prop_probing.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
