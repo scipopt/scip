@@ -16588,10 +16588,11 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
                looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
 
-               /* we need to compare the objective value obtained from the LPI with the infinity threshold of the LPI (not
-                * of SCIP); for the returned value, we must use SCIP's infinity value
-                */
-               if( SCIPlpiIsInfinity(lpi, objval) )
+               /* the infinity value in the LPI should not be smaller than SCIP's infinity value */
+               assert(!SCIPlpiIsInfinity(lpi, objval) || SCIPisInfinity(scip, objval));
+
+               /* we use SCIP's infinity value here because a value larger than this is counted as infeasible by SCIP */
+               if( SCIPisInfinity(scip, objval) )
                   *value = SCIPinfinity(scip);
                else if( SCIPisInfinity(scip, -looseobjval) )
                   *value = -SCIPinfinity(scip);
