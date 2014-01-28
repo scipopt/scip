@@ -39,6 +39,7 @@
 
 #include "scip/prop_obbt.h"
 #include "scip/prop_genvbounds.h"
+#include "scip/debug.h"
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
