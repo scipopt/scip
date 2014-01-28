@@ -362,6 +362,7 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
    GENVBOUND*            genvbound           /**< generalized variable bound */
    )
 {
+   SCIP_SOL* debugsol;
    SCIP_Real activity;
    SCIP_Real solval;
    int i;
@@ -383,7 +384,10 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
             solval == SCIP_UNKNOWN ? "unknown" : "invalid");
    }
 
-   activity += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+   /* the genvbound must be valid for all cutoff bounds greater equal the objective value of the debug solution */
+   SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+   activity += genvbound->cutoffcoef *
+      (SCIPgetSolTransObj(scip, debugsol) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip);
    activity += genvbound->constant;
 
    SCIP_CALL( SCIPdebugGetSolVal(scip, genvbound->var, &solval) );
@@ -993,9 +997,6 @@ SCIP_RETCODE applyGenVBound(
       printGenVBound(scip, genvbound);
       SCIPdebugMessage("    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
    }
-#endif
-#ifdef SCIP_DEBUG_SOLUTION
-   SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
 #endif
 
    /* tighten bound globally */

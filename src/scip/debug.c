@@ -332,9 +332,27 @@ SCIP_RETCODE getSolutionValue(
    return SCIP_OKAY;
 }
 
-/** gets value for a variable in the debug solution
- * if no value is stored for the variable, gives 0.0
- */
+/** gets pointer to the debug solution */
+SCIP_RETCODE SCIPdebugGetSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol                 /**< buffer to store pointer to the debug solution */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL( readSolution(scip->set) );
+   if( debugsol == NULL )
+   {
+      *sol = NULL;
+      return SCIP_ERROR;
+   }
+
+   *sol = debugsol;
+   return SCIP_OKAY;
+}
+
+/** gets value for a variable in the debug solution if no value is stored for the variable, gives 0.0 */
 SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to get the value */

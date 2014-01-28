@@ -170,9 +170,14 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    SCIP_Real             val                 /**< solution value for variable */
    );
 
-/** gets value for a variable in the debug solution
- * if no value is stored for the variable, gives 0.0
- */
+/** gets pointer to the debug solution */
+extern
+SCIP_RETCODE SCIPdebugGetSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol                 /**< buffer to store pointer to the debug solution */
+   );
+
+/** gets value for a variable in the debug solution if no value is stored for the variable, gives 0.0 */
 extern
 SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
