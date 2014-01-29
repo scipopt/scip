@@ -17,7 +17,7 @@ LASTYEAR=`expr $NEWYEAR - 1`
 
 DIRECTORIES=(check doc src src/* examples examples/* examples/*/src examples/*/doc interfaces/jni/src)
 EXTENSIONS=(sh awk h c hpp cpp html)
-EXTRAFILES=(Makefile INSTALL make/make.project make/make.detecthost)
+EXTRAFILES=(Makefile INSTALL make/make.install make/make.project make/make.detecthost)
 
 echo ""
 echo "This script reports *all* files which have not a correct COPYRIGHT."
@@ -86,11 +86,14 @@ do
 	    grep "2002-2" $FILE
 	    grep "1996-2" $FILE	  
 	else
-	    echo $FILE
+	    echo "updating date in $FILE"
   
 	    mv $FILE $FILE.olddate
 	    sed 's!2002-'$LASTYEAR'!2002-'$NEWYEAR'!g 
                    s!1996-'$LASTYEAR'!1996-'$NEWYEAR'!g' $FILE.olddate > $FILE
+
+            # change file permissions back, since piping might create the file with different file permissions
+            chmod --reference $FILE.olddate $FILE
 	fi
     fi
 done

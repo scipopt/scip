@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -895,6 +895,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    success = FALSE;
 
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    /* create a new problem, which fixes variables with same value in a certain set of solutions */
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
 
@@ -918,7 +919,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
 #ifdef SCIP_DEBUG
    /* for debugging DINS, enable MIP output */

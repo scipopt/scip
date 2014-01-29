@@ -5,7 +5,7 @@
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -55,6 +55,11 @@ function fracceil(x,f)
 function fracfloor(x,f)
 {
    return floor(x/f)*f;
+}
+
+function sign(x)
+{
+   return (x >= 0 ? 1.0 : -1.0);
 }
 
 function mod(x,m)
@@ -169,6 +174,424 @@ function texsolvername(s, sname)
 
    return sname;
 }
+
+# McNemar statistical test
+#
+# input: two arrays of Boolean values whose difference should be tested for statistical significance and the length of
+#        both arrays
+#
+# output: the chi_squared value, (which needs to be transformed to the desired p-value, see also function chi_to_p
+function mcnemar(ref_array, solver_array, problistlen)
+{
+   chi_squared = 0.0;
+   b = 0;
+   c = 0;
+
+   # count the number of entries for which both arrays differ,
+   # separately for both possible differences (TRUE/FALSE and FALSE/TRUE)
+   for( i = 0; i < problistlen; ++i )
+   {
+      if( ref_array[i] && !solver_array[i] )
+	 b++;
+      else if( !ref_array[i] && solver_array[i] )
+	 c++;
+   }
+
+   # textbook McNemar formula, the square of the differences of both counters divided by their sum is supposed to be
+   # chi-square distributed for a random experiment
+   if( b + c > 0 )
+      chi_squared = (b-c)*(b-c)/(1.0*(b+c));
+
+   return chi_squared;
+}
+
+# a brute-force table lookup for determining in which range the p-value of a given chi-square value will be (in
+# particular whether it will be below 0.05)
+function chi_to_p(chi)
+{
+   if(chi> 1e+20)
+      chi = 1e+20;
+
+   p_val[0]=1;
+   p_val[1]=0.25;
+   p_val[2]=0.20;
+   p_val[3]=0.15;
+   p_val[4]=0.10;
+   p_val[5]=0.05;
+   p_val[6]=0.025;
+   p_val[7]=0.02;
+   p_val[8]=0.01;
+   p_val[9]=0.005;
+   p_val[10]=0.0025;
+   p_val[11]=0.001;
+   p_val[12]=0.0005;
+   p_val[13]=0.0000;
+
+   chi2[0]=0.0;
+   chi2[1]=1.32;
+   chi2[2]=1.64;
+   chi2[3]=2.07;
+   chi2[4]=2.71;
+   chi2[5]=3.84;
+   chi2[6]=5.02;
+   chi2[7]=5.41;
+   chi2[8]=6.63;
+   chi2[9]=7.88;
+   chi2[10]=9.14;
+   chi2[11]=10.83;
+   chi2[12]=12.12;
+   chi2[13]=2e+20;
+
+   i = 1;
+
+   while( chi > chi2[i] )
+      i++;
+  printf(" -> p < %6.4f", p_val[i]);
+
+   if( p_val[i-1] > 0.05 )
+      printf("    X   ");
+   else if( p_val[i-1] > 0.005 )
+      printf("    !   ");
+   else if( p_val[i-1] > 0.0005 )
+      printf("   !!   ");
+   else
+      printf("  !!!   ");
+}
+
+# swaps position i and j of array a
+function swap(a, i, j) {
+   t = a[i]; a[i] = a[j]; a[j] = t;
+}
+
+
+# quicksort algorithm that sorts by the absolute values in non-increasing order
+function qsort(a, left, right) 
+{
+   # stop recursion
+   if (left >= right)
+      return;
+
+   # use a random pivot element
+   swap(a, left, left+int((right-left+1)*rand()));
+   last = left;
+
+   for( i = left+1; i <= right; i++ )
+   {
+      if( abs(a[i]) < abs(a[left]) )
+	 swap(a, ++last, i);
+   }
+
+   # swap back pivot, recursive calls
+   swap(a, left, last);
+   qsort(a, left, last-1);
+   qsort(a, last+1, right);
+}
+
+# copy time array
+function parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen)
+{
+   s = printorder[o];
+   p0 = printorder[0];
+   n = 0;
+
+   for( i = 0; i < problistlen; i++ )
+   {
+      p = problist[i];
+      if(probidx[p,p0] != "" && probidx[p,s] != "")
+      {
+	 ref_array[n] = time[p0,probidx[p,p0]];
+	 solver_array[n] = time[s,probidx[p,s]];
+	 n++;
+      }
+   }
+}
+
+# copy node array
+function parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,status,infinity)
+{
+   n = 0;
+
+   for( i = 0; i < problistlen; i++ )
+   {
+      p = problist[i];
+      if(probidx[p,p0] != "" && probidx[p,s] != "")
+      {
+	 ref_array[n] = nodes[p0,probidx[p,p0]];
+	 solver_array[n] = nodes[s,probidx[p,s]];
+	 if( status[p0,probidx[p,p0]] == "timeout" || status[p0,probidx[p,p0]] == "memlimit" )
+	    ref_array[n] = infinity;
+	 if( status[p0,probidx[p,s]] == "timeout" || status[p0,probidx[p,s]] == "memlimit" )
+	    solver_array[n] = infinity;
+	 n++;
+      }
+   }
+}
+
+# filter results for Wilcoxon test, only keep data for instances for which both, the relative difference and the
+# absolute difference are larger than the given thresholds rel_epsilon and abs_delta
+function filter(ref_array, solver_array, problistlen, rel_epsilon, abs_delta)
+{
+   n = 0;
+
+   for( i = 0; i <= problistlen; i++ )
+   {
+      if( abs(solver_array[i]-ref_array[i]) > abs_delta &&
+	  (ref_array[i] == 0.0 || solver_array[i]/ref_array[i] > 1.0+rel_epsilon || solver_array[i]/ref_array[i] < 1.0/(1.0+rel_epsilon) ) )
+      {
+	 ref_array[n] = ref_array[i];
+	 solver_array[n] = solver_array[i];
+	 n++;
+      }
+   }
+
+   return n;
+}
+
+# computes the improvement/degradation factors (always >= 1) and marks them by opposite signs
+function factorize(ref_array, solver_array, n, maxval)
+{
+   for( i = 0; i < n; ++i )
+   {
+      if( ref_array[i] >= maxval &&  solver_array[i] < maxval )
+	 ref_array[i] = -1.0*maxval;
+      else if( ref_array[i] < maxval &&  solver_array[i] >= maxval )
+	 ref_array[i] = maxval;
+      else if( ref_array[i] == 0.0 )
+	 ref_array[i] = -1.0*maxval;
+      else if( solver_array[i]/ref_array[i]  < 1.0 )
+      {
+	 if( solver_array[i] == 0.0 )
+	    ref_array[i] = -1.0*maxval;
+	 else
+	    ref_array[i] = -1.0*ref_array[i]/solver_array[i];
+      }
+      else
+	 ref_array[i] = solver_array[i]/ref_array[i];
+
+      solver_array[i] = 0.0;
+   }
+}
+
+
+# Wilcoxon signed rank test
+#
+# input: two arrays of real values whose difference should be tested for statistical significance, the length of
+#        both arrays, and the employed timelimit (to rank instances for which one solver hit the timelimit equally)
+#
+# output: the z value, (which needs to be transformed to the desired p-value, see also function z_to_p
+#
+# note: to get meaningful results, some form of filtering should be applied to remove nearly-identical results from the
+#       test set, see also the filter() function 
+function wilcoxon(ref_array, solver_array, problistlen, timelimit)
+{
+   w_minus = 0;
+   w_plus = 0;
+
+   # calculate difference
+   for( i = 0; i < problistlen; i++ )
+   {
+      differences[i] = ref_array[i]-solver_array[i];
+      if( (ref_array[i] >= timelimit) != (solver_array[i] >= timelimit) )
+	 differences[i] = sign(differences[i]) * timelimit;
+   }
+
+   # sort differences by their absolute values
+   qsort(differences, 0, problistlen);
+
+   i = 0;
+
+   # calculate rank sums
+   while( i < problistlen )
+   {
+      i_start = i;
+      i_end = i;
+      i_sum = 0;
+
+      # use average in case of tied samples (identical differences)
+      while(abs((abs(differences[i_start]) - abs(differences[i_end]))) < 1e-06 && i_end <= problistlen)
+      {
+	 i_sum += i_end;
+	 i_end++;
+      }
+
+      i_sum = i_sum/(i_end-i_start);
+
+      # add (average) rank values to rank sums
+      #
+      # in the default case that the value is unique, this loop and the previous loop are traversed exactly once, s.t.
+      # the value is simply added to one of the sums
+      for( i = i_start; i < i_end; i++ )
+      {
+	 if( differences[i] < 0 )
+	    w_minus += (i_sum+1);
+	 else if( differences[i] > 0 )
+	    w_plus += (i_sum+1);
+      }
+   }
+
+   ++problistlen;
+
+   # apply Wilcoxon formula
+   w = 1.0*min(w_minus, w_plus);
+   z = (w - 0.25 * problistlen*(problistlen+1)) / sqrt(problistlen*(problistlen+1)*(2*problistlen+1)/24.0);
+
+   return z;
+}
+
+
+# a brute-force table lookup for determining in which range the p-value of a given z-value will be (in
+# particular whether it will be below 0.05)
+function z_to_p(z)
+{
+   if( z > 1e+20)
+      z = 1e+20;
+   else if( z < -1e+20 )
+      z = -1e+20;
+
+z_val[0]  = -2e+20;
+z_val[1]  = -2.9;
+z_val[2]  = -2.8;
+z_val[3]  = -2.7;
+z_val[4]  = -2.6;
+z_val[5]  = -2.5;
+z_val[6]  = -2.4;
+z_val[7]  = -2.3;
+z_val[8]  = -2.2;
+z_val[9]  = -2.1;
+z_val[10] = -2.0;
+z_val[11] = -1.9;
+z_val[12] = -1.8;
+z_val[13] = -1.7;
+z_val[14] = -1.6;
+z_val[15] = -1.5;
+z_val[16] = -1.4;
+z_val[17] = -1.3;
+z_val[18] = -1.2;
+z_val[19] = -1.1;
+z_val[20] = -1.0;
+z_val[21] = -0.9;
+z_val[22] = -0.8;
+z_val[23] = -0.7;
+z_val[24] = -0.6;
+z_val[25] = -0.5;
+z_val[26] = -0.4;
+z_val[27] = -0.3;
+z_val[28] = -0.2;
+z_val[29] = -0.1;
+z_val[30] = -0.0;
+z_val[31] = 0.0;
+z_val[32] = 0.1;
+z_val[33] = 0.2;
+z_val[34] = 0.3;
+z_val[35] = 0.4;
+z_val[36] = 0.5;
+z_val[37] = 0.6;
+z_val[38] = 0.7;
+z_val[39] = 0.8;
+z_val[40] = 0.9;
+z_val[41] = 1.0;
+z_val[42] = 1.1;
+z_val[43] = 1.2;
+z_val[44] = 1.3;
+z_val[45] = 1.4;
+z_val[46] = 1.5;
+z_val[47] = 1.6;
+z_val[48] = 1.7;
+z_val[49] = 1.8;
+z_val[50] = 1.9;
+z_val[51] = 2.0;
+z_val[52] = 2.1;
+z_val[53] = 2.2;
+z_val[54] = 2.3;
+z_val[55] = 2.4;
+z_val[56] = 2.5;
+z_val[57] = 2.6;
+z_val[58] = 2.7;
+z_val[59] = 2.8;
+z_val[60] = 2.9;
+z_val[61] = 2e+20;
+
+p_val[0]  = 0.0000;
+p_val[1]  = 0.0019;
+p_val[2]  = 0.0026;
+p_val[3]  = 0.0035;
+p_val[4]  = 0.0047;
+p_val[5]  = 0.0062;
+p_val[6]  = 0.0082;
+p_val[7]  = 0.0107;
+p_val[8]  = 0.0139;
+p_val[9]  = 0.0179;
+p_val[10] = 0.0228;
+p_val[11] = 0.0287;
+p_val[12] = 0.0359;
+p_val[13] = 0.0446;
+p_val[14] = 0.0548;
+p_val[15] = 0.0668;
+p_val[16] = 0.0808;
+p_val[17] = 0.0968;
+p_val[18] = 0.1151;
+p_val[19] = 0.1357;
+p_val[20] = 0.1587;
+p_val[21] = 0.1841;
+p_val[22] = 0.2119;
+p_val[23] = 0.2420;
+p_val[24] = 0.2743;
+p_val[25] = 0.3085;
+p_val[26] = 0.3446;
+p_val[27] = 0.3821;
+p_val[28] = 0.4207;
+p_val[29] = 0.4602;
+p_val[30] = 0.5000;
+p_val[31] = 0.5000;
+p_val[32] = 0.5398;
+p_val[33] = 0.5793;
+p_val[34] = 0.6179;
+p_val[35] = 0.6554;
+p_val[36] = 0.6915;
+p_val[37] = 0.7257;
+p_val[38] = 0.7580;
+p_val[39] = 0.7881;
+p_val[40] = 0.8159;
+p_val[41] = 0.8413;
+p_val[42] = 0.8643;
+p_val[43] = 0.8849;
+p_val[44] = 0.9032;
+p_val[45] = 0.9192;
+p_val[46] = 0.9332;
+p_val[47] = 0.9452;
+p_val[48] = 0.9554;
+p_val[49] = 0.9641;
+p_val[50] = 0.9713;
+p_val[51] = 0.9772;
+p_val[52] = 0.9821;
+p_val[53] = 0.9861;
+p_val[54] = 0.9893;
+p_val[55] = 0.9918;
+p_val[56] = 0.9938;
+p_val[57] = 0.9953;
+p_val[58] = 0.9965;
+p_val[59] = 0.9974;
+p_val[60] = 0.9981;
+p_val[61] = 1.0000;
+
+   i = 1;
+
+   while( z > z_val[i] )
+      i++;
+#  printf(" -> %6.4f < p < %6.4f", p_val[i-1], p_val[i]);
+  printf(" -> p < %6.4f", p_val[i]);
+
+   if( p_val[i-1] < 0.95 &&  p_val[i-1] > 0.05)
+      printf("    X   ");
+   else if( p_val[i-1] < 0.995 &&  p_val[i-1] > 0.005)
+      printf("    !   ");
+   else if( p_val[i-1] < 0.9995 &&  p_val[i-1] > 0.0005)
+      printf("   !!   ");
+   else
+      printf("  !!!   ");
+
+}
+
 
 BEGIN {
 
@@ -744,6 +1167,10 @@ END {
          pidx = probidx[p,s];
          processed = (pidx != "");
 
+	 # arrays for applying McNemar tests
+	 solfound[s,pidx] = 0;
+	 optproven[s,pidx] = 0;
+
          if( processed && name[s,pidx] != p )
             printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
 
@@ -760,6 +1187,8 @@ END {
                   nsolved[s,0]++;
                   nsolved[s,category[s]]++;
                   nthissolved++;
+		  # fill array for  McNemar test "optimality proven?"
+		  optproven[s,pidx] = 1;
                }
             }
             else if( hitlimit[s,pidx] )
@@ -793,7 +1222,11 @@ END {
          }
 
          if( primalbound[s,pidx] < infinity )
+  	 {
             feasmark = " ";
+	    # fill the array for McNemar test "solution found?"
+	    solfound[s,pidx] = 1;
+	 }
          else
             feasmark = "#";
 
@@ -1235,6 +1668,105 @@ END {
    besttimeshiftedgeom = max(besttimeshiftedgeom, 1.0);
    
    printf("\n");
+   printhline(nsolver,short, printsoltimes);
+
+   # compute and print result for McNemar test to "solution found?"  w.r.t. reference setting
+   printf("%-20s ","McNemar (feas)");
+   printf("%-19s  ","               ");
+   for( o = 1; o < nsolver; ++o )
+   {
+      # copy two-indexed arrays to one-indexed arrays
+      for( i = 0; i < problistlen; ++i )
+      {
+	 s = printorder[o];
+	 ref_array[i] = solfound[printorder[0],i];
+	 solver_array[i] = solfound[s,i];
+      }
+
+      # compute chi-squared value and convert to p-value
+      chi_squared = mcnemar(ref_array, solver_array, problistlen);
+      printf("   x2 %7.5f",chi_squared);
+      chi_to_p(chi_squared);
+   }
+   printf("\n");
+
+   # compute and print result for McNemar test to "optimality proven?" w.r.t. reference setting
+   printf("%-20s ","McNemar (opt)");
+   printf("%-19s  ","               ");
+   for( o = 1; o < nsolver; ++o )
+   {
+      # copy two-indexed arrays to one-indexed arrays
+      for( i = 0; i < problistlen; ++i )
+      {
+	 s = printorder[o];
+	 ref_array[i] = optproven[printorder[0],i];
+	 solver_array[i] = optproven[s,i];
+      }
+
+      # compute chi-squared value and convert to p-value
+      chi_squared = mcnemar(ref_array, solver_array, problistlen);
+      printf("   x2 %7.5f",chi_squared);
+      chi_to_p(chi_squared);
+   }
+   printf("\n");
+
+   # compute and print result for Wilcoxon signed rank test for time to optimality w.r.t. reference setting
+   printf("%-20s ","Wilcoxon (time)");
+   printf("%-19s  ","               ");
+   for( o = 1; o < nsolver; ++o )
+   {
+      s = printorder[o];
+
+      parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen);
+      n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+      factorize(ref_array, solver_array, n, timelimit[s])
+
+      z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+      printf("   z %8.5f",z);
+      z_to_p(z);
+   }
+   printf("\n");
+
+
+   # compute and print result for Wilcoxon signed rank test for time to first solution w.r.t. reference setting
+   if( printsoltimes )
+   {
+      printf("%-20s ","Wilcoxon (first)");
+      printf("%-19s  ","               ");
+      for( o = 1; o < nsolver; ++o )
+      {
+	 s = printorder[o];
+
+	 parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
+	 n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+	 factorize(ref_array, solver_array, n, timelimit[s])
+
+	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+	 printf("   z %8.5f",z);
+	 z_to_p(z);
+      }
+      printf("\n");
+   }
+
+   # compute and print result for Wilcoxon signed rank test for number of nodes w.r.t. reference setting
+   printf("%-20s ","Wilcoxon (nodes)");
+   printf("%-19s  ","               ");
+   for( o = 1; o < nsolver; ++o )
+   {
+      s = printorder[o];
+      p0 = printorder[0];
+
+      parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,status,infinity);
+      n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+      factorize(ref_array, solver_array, n, infinity)
+
+      z = wilcoxon(ref_array, solver_array, n, infinity);
+      printf("   z %8.5f",z);
+      z_to_p(z);
+   }
+   printf("\n");
+
+
 
    #since the rows of the quotients are not printed, print the quotients of the geometric means
    if( short )

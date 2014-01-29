@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -223,7 +223,6 @@ void SCIPcolSetStrongbranchData(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real             lpobjval,           /**< objective value of the current LP */
    SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
@@ -241,7 +240,6 @@ void SCIPcolInvalidateStrongbranchData(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp                  /**< LP data */
    );
 
@@ -1029,7 +1027,6 @@ extern
 SCIP_RETCODE SCIPlpSetNorms(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPINORMS*        lpinorms            /**< LP pricing norms information */
    );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13095,6 +13095,7 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return 0;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13147,6 +13148,7 @@ int SCIPgetNVarsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13167,6 +13169,7 @@ SCIP_VAR** SCIPgetVarsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13187,6 +13190,7 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13207,6 +13211,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
    }
    
    consdata = SCIPconsGetData(cons);
@@ -13230,8 +13235,9 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -13255,6 +13261,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

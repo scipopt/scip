@@ -1,13 +1,13 @@
-/* $Id: ad.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: ad.hpp 3064 2013-12-28 18:01:30Z bradbell $ */
 # ifndef CPPAD_AD_INCLUDED
 # define CPPAD_AD_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -23,7 +23,13 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 # include <cppad/local/player.hpp>
 # include <cppad/local/ad_tape.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
+
+typedef enum {
+	tape_manage_new, 
+	tape_manage_delete, 
+	tape_manage_clear
+} tape_manage_job;
 
 template <class Base>
 class AD {
@@ -94,8 +100,8 @@ class AD {
 	// classes
 	friend class ADTape<Base>;
 	friend class ADFun<Base>;
+	friend class atomic_base<Base>;
 	friend class discrete<Base>;
-	friend class user_atomic<Base>;
 	friend class VecAD<Base>;
 	friend class VecAD_reference<Base>;
 
@@ -123,6 +129,10 @@ class AD {
 	friend bool operator != <Base>
 		(const AD<Base> &left, const AD<Base> &right);
 
+	// input operator
+	friend std::istream& operator >> <Base>
+		(std::istream &is, AD<Base> &x);
+
 	// output operations
 	friend std::ostream& operator << <Base>
 		(std::ostream &os, const AD<Base> &x);
@@ -136,23 +146,30 @@ public:
 	// type of value
 	typedef Base value_type;
 
-	// default constructor
+	// implicit default constructor
 	inline AD(void);
 
-	// use default copy constructor and assignment operator
+	// use default implicit copy constructor and assignment operator
 	// inline AD(const AD &x);
 	// inline AD& operator=(const AD &x);
 
-	// construction and assingment from base type
+	// implicit construction and assingment from base type
 	inline AD(const Base &b);
 	inline AD& operator=(const Base &b); 
 
-	// contructor and assignment from VecAD<Base>::reference
+	// implicit contructor and assignment from VecAD<Base>::reference
 	inline AD(const VecAD_reference<Base> &x);
 	inline AD& operator=(const VecAD_reference<Base> &x);
 
-	// construction and assignment from some other type
+# if CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
+	// implicit construction from some other type (depricated)
 	template <class T> inline AD(const T &t);
+# else
+	// explicit construction from some other type (depricated)
+	template <class T> inline explicit AD(const T &t);
+# endif
+
+	// assignment from some other type
 	template <class T> inline AD& operator=(const T &right);
 
 	// base type corresponding to an AD object
@@ -180,6 +197,7 @@ public:
 	inline AD cos(void) const;
 	inline AD cosh(void) const;
 	inline AD exp(void) const;
+	inline AD fabs(void) const;
 	inline AD log(void) const;
 	inline AD sin(void) const;
 	inline AD Sign(void) const;
@@ -215,10 +233,7 @@ private:
 	Base value_;
 
 	// Tape identifier corresponding to taddr
-	// This is a variable if and only if id_ == *id_handle()
-	// For parameters id_ is CPPAD_MAX_NUM_THREADS, so that following hold
-	// id_ != 0 , id_ % CPPAD_MAX_NUM_THREADS == 0, id_ != *id_handle().
-	CPPAD_TAPE_ID_TYPE id_;
+	tape_id_t tape_id_;
 
 	// taddr_ in tape for this variable 
 	addr_t taddr_;
@@ -227,7 +242,7 @@ private:
 	//
 	void make_parameter(void)
 	{	CPPAD_ASSERT_UNKNOWN( Variable(*this) );  // currently a var
-		id_ = CPPAD_MAX_NUM_THREADS;
+		tape_id_ = 0;
 	}
 	//
 	// Make this parameter a new variable 
@@ -236,26 +251,26 @@ private:
 	{	CPPAD_ASSERT_UNKNOWN( Parameter(*this) ); // currently a par
 		CPPAD_ASSERT_UNKNOWN( taddr > 0 );        // sure valid taddr
 
-		taddr_ = taddr;
-		id_    = id;
+		taddr_   = taddr;
+		tape_id_ = id;
 	}
 	// ---------------------------------------------------------------
 	// tape linking functions
 	// 
 	// not static
-	inline ADTape<Base> *tape_this(void) const;
+	inline ADTape<Base>* tape_this(void) const;
 	//
 	// static 
-	inline static size_t        *id_handle (size_t thread);
-	inline static ADTape<Base> **tape_handle(size_t thread);
-	static size_t                tape_new(void);
-	static void                  tape_delete(size_t id);
-	inline static ADTape<Base>  *tape_ptr(void);
-	inline static ADTape<Base>  *tape_ptr(size_t id);
+	inline static tape_id_t**    tape_id_handle(size_t thread);
+	inline static tape_id_t*     tape_id_ptr(size_t thread);
+	inline static ADTape<Base>** tape_handle(size_t thread);
+	static ADTape<Base>*         tape_manage(tape_manage_job job);
+	inline static ADTape<Base>*  tape_ptr(void);
+	inline static ADTape<Base>*  tape_ptr(tape_id_t tape_id);
 }; 
 // ---------------------------------------------------------------------------
 
-CPPAD_END_NAMESPACE
+} // END_CPPAD_NAMESPACE
 
 // tape linking private functions
 # include <cppad/local/tape_link.hpp>

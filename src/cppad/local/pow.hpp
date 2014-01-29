@@ -1,13 +1,13 @@
-/* $Id: pow.hpp 2057 2011-08-11 14:07:11Z bradbell $ */
+/* $Id: pow.hpp 2939 2013-10-14 11:06:18Z bradbell $ */
 # ifndef CPPAD_POW_INCLUDED
 # define CPPAD_POW_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -29,7 +29,10 @@ $index exponent, AD function$$
 $section The AD Power Function$$
 
 $head Syntax$$
-$syntax%%z% = pow(%x%, %y%)%$$
+$icode%z% = pow(%x%, %y%)%$$
+
+$head See Also$$
+$cref pow_int$$
 
 
 $head Purpose$$
@@ -39,66 +42,51 @@ $latex \[
 \] $$
 This version of the $code pow$$ function may use
 logarithms and exponentiation to compute derivatives.
-This will not work if $italic x$$ is less than or equal zero.
-If the value of $italic y$$ is an integer, 
-the $cref/pow_int/$$ function is used to compute this value 
-using only multiplication (and division if $italic y$$ is negative). 
-(This will work even if $italic x$$ is less than or equal zero.)
+This will not work if $icode x$$ is less than or equal zero.
+If the value of $icode y$$ is an integer, 
+the $cref pow_int$$ function is used to compute this value 
+using only multiplication (and division if $icode y$$ is negative). 
+(This will work even if $icode x$$ is less than or equal zero.)
 
 $head x$$
-The argument $italic x$$ has the following prototype
-$syntax%
-	const %Type% &%x%
+The argument $icode x$$ has one of the following prototypes
+$codei%
+	const %Base%&                    %x%
+	const AD<%Base%>&                %x%
+	const VecAD<%Base%>::reference&  %x%
 %$$
-where $italic Type$$ is
-$syntax%VecAD<%Base%>::reference%$$,
-$syntax%AD<%Base%>%$$,
-$syntax%%Base%$$,
-$syntax%double%$$,
-or
-$syntax%int%$$.
 
 $head y$$
-The argument $italic y$$ has the following prototype
-$syntax%
-	const %Type% &%y%
+The argument $icode y$$ has one of the following prototypes
+$codei%
+	const %Base%&                    %y%
+	const AD<%Base%>&                %y%
+	const VecAD<%Base%>::reference&  %y%
 %$$
-where $italic Type$$ is
-$syntax%VecAD<%Base%>::reference%$$,
-$syntax%AD<%Base%>%$$,
-$syntax%%Base%$$,
-$syntax%double%$$,
-or
-$syntax%int%$$.
 
 $head z$$
-The result $italic z$$ has prototype
-$syntax%
+If both $icode x$$ and $icode y$$ are $icode Base$$ objects,
+the result $icode z$$ is also a $icode Base$$ object.
+Otherwise, it has prototype
+$codei%
 	AD<%Base%> %z%
 %$$
 
-$head Standard Types$$
-A definition for the $code pow$$ function is included
-in the CppAD namespace for the case where both $italic x$$
-and $italic y$$ have the same type and that type is
-$code float$$ or $code double$$.
- 
 $head Operation Sequence$$
-This is an AD of $italic Base$$
-$xref/glossary/Operation/Atomic/atomic operation/1/$$
+This is an AD of $icode Base$$
+$cref/atomic operation/glossary/Operation/Atomic/$$
 and hence is part of the current
-AD of $italic Base$$
-$xref/glossary/Operation/Sequence/operation sequence/1/$$.
+AD of $icode Base$$
+$cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $head Example$$
 $children%
-	example/pow.cpp%
-	example/pow_int.cpp
+	example/pow.cpp
 %$$
-The files
-$xref/Pow.cpp/$$, $cref/pow_int.cpp/$$
-contain an examples and tests of this function.   
-They returns true if they succeed and false otherwise.
+The file
+$cref pow.cpp$$
+is an examples and tests of this function.   
+It returns true if it succeeds and false otherwise.
 
 $end
 -------------------------------------------------------------------------------
@@ -109,27 +97,23 @@ namespace CppAD {
  
 // case where x and y are AD<Base> -----------------------------------------
 template <class Base> AD<Base> 
-pow(const AD<Base> &x, const AD<Base> &y)
-{	ADTape<Base> *tape = AD<Base>::tape_ptr();
-	size_t tape_id = 0;
-	if( tape != CPPAD_NULL )
-		tape_id = tape->id_;
-
-	// id_ setting for parameters cannot match 0
-	bool var_x = x.id_  == tape_id;
-	bool var_y = y.id_ == tape_id;
-	CPPAD_ASSERT_KNOWN(
-		Parameter(x) || var_x ,
-		"pow: first argument is a variable for a different thread"
-	);
-	CPPAD_ASSERT_KNOWN(
-		Parameter(y) || var_y ,
-		"pow: second argument is a variable for a different thread"
-	);
-
+pow(const AD<Base>& x, const AD<Base>& y)
+{
+	// compute the Base part
 	AD<Base> result;
 	result.value_  = pow(x.value_, y.value_);
 	CPPAD_ASSERT_UNKNOWN( Parameter(result) );
+
+	// check if there is a recording in progress
+	ADTape<Base>* tape = AD<Base>::tape_ptr();
+	if( tape == CPPAD_NULL )
+		return result;
+	tape_id_t tape_id = tape->id_;
+
+	// tape_id cannot match the default value for tape_id_; i.e., 0
+	CPPAD_ASSERT_UNKNOWN( tape_id > 0 );
+	bool var_x = x.tape_id_ == tape_id;
+	bool var_y = y.tape_id_ == tape_id;
 
 	if( var_x )
 	{	if( var_y )
@@ -144,7 +128,7 @@ pow(const AD<Base> &x, const AD<Base> &y)
 			result.taddr_ = tape->Rec_.PutOp(PowvvOp);
 
 			// make result a variable
-			result.id_ = tape_id;
+			result.tape_id_ = tape_id;
 		}
 		else if( IdenticalZero( y.value_ ) )
 		{	// result = variable^0
@@ -162,7 +146,7 @@ pow(const AD<Base> &x, const AD<Base> &y)
 			result.taddr_ = tape->Rec_.PutOp(PowvpOp);
 
 			// make result a variable
-			result.id_ = tape_id;
+			result.tape_id_ = tape_id;
 		}
 	}
 	else if( var_y )
@@ -182,80 +166,80 @@ pow(const AD<Base> &x, const AD<Base> &y)
 			result.taddr_ = tape->Rec_.PutOp(PowpvOp);
 
 			// make result a variable
-			result.id_ = tape_id;
+			result.tape_id_ = tape_id;
 		}
 	}
 	return result;
 }
 // =========================================================================
-// Fold operations in same way as CPPAD_FOLD_AD_VALUED_BINARY_OPERATION(Op)
+// Fold operations in same way as CPPAD_FOLD_AD_VALUED_BINARY_OPERATOR(Op)
 // -------------------------------------------------------------------------
 // Operations with VecAD_reference<Base> and AD<Base> only
 
 template <class Base> AD<Base>
-pow(const AD<Base> &x, const VecAD_reference<Base> &y)
+pow(const AD<Base>& x, const VecAD_reference<Base>& y)
 {	return pow(x, y.ADBase()); }
 
 template <class Base> AD<Base> 
-pow(const VecAD_reference<Base> &x, const VecAD_reference<Base> &y) 
+pow(const VecAD_reference<Base>& x, const VecAD_reference<Base>& y) 
 {	return pow(x.ADBase(), y.ADBase()); }
 
 template <class Base> AD<Base>
-pow(const VecAD_reference<Base> &x, const AD<Base> &y)
+pow(const VecAD_reference<Base>& x, const AD<Base>& y)
 {	return pow(x.ADBase(), y); }
 // -------------------------------------------------------------------------
 // Operations with Base
 
 template <class Base> AD<Base>
-pow(const Base &x, const AD<Base> &y)
+pow(const Base& x, const AD<Base>& y)
 {	return pow(AD<Base>(x), y); }
 
 template <class Base> AD<Base>
-pow(const Base &x, const VecAD_reference<Base> &y)
+pow(const Base& x, const VecAD_reference<Base>& y)
 {	return pow(AD<Base>(x), y.ADBase()); }
 
 template <class Base> AD<Base>
-pow(const AD<Base> &x, const Base &y)
+pow(const AD<Base>& x, const Base& y)
 {	return pow(x, AD<Base>(y)); }
 
 template <class Base> AD<Base>
-pow(const VecAD_reference<Base> &x, const Base &y)
+pow(const VecAD_reference<Base>& x, const Base& y)
 {	return pow(x.ADBase(), AD<Base>(y)); }
 // -------------------------------------------------------------------------
 // Operations with double
 
 template <class Base> AD<Base>
-pow(const double &x, const AD<Base> &y)
+pow(const double& x, const AD<Base>& y)
 {	return pow(AD<Base>(x), y); }
 
 template <class Base> AD<Base>
-pow(const double &x, const VecAD_reference<Base> &y)
+pow(const double& x, const VecAD_reference<Base>& y)
 {	return pow(AD<Base>(x), y.ADBase()); }
 
 template <class Base> AD<Base>
-pow(const AD<Base> &x, const double &y)
+pow(const AD<Base>& x, const double& y)
 {	return pow(x, AD<Base>(y)); }
 
 template <class Base> AD<Base>
-pow(const VecAD_reference<Base> &x, const double &y)
+pow(const VecAD_reference<Base>& x, const double& y)
 {	return pow(x.ADBase(), AD<Base>(y)); }
 // -------------------------------------------------------------------------
 // Special case to avoid ambuigity when Base is double
 
 inline AD<double>
-pow(const double &x, const AD<double> &y)
+pow(const double& x, const AD<double>& y)
 {	return pow(AD<double>(x), y); }
 
 inline AD<double>
-pow(const double &x, const VecAD_reference<double> &y)
+pow(const double& x, const VecAD_reference<double>& y)
 {	return pow(AD<double>(x), y.ADBase()); }
 
 inline AD<double>
-pow(const AD<double> &x, const double &y)
+pow(const AD<double>& x, const double& y)
 {	return pow(x, AD<double>(y)); }
 
 inline AD<double>
-pow(const VecAD_reference<double> &x, const double &y)
+pow(const VecAD_reference<double>& x, const double& y)
 {	return pow(x.ADBase(), AD<double>(y)); }
 
 // =========================================================================
@@ -263,11 +247,11 @@ pow(const VecAD_reference<double> &x, const double &y)
 // but let cppad/pow_int.hpp handle the cases where y is an int.
 // -------------------------------------------------------------------------
 template <class Base> AD<Base> pow
-(const int &x, const VecAD_reference<Base> &y)
+(const int& x, const VecAD_reference<Base>& y)
 {	return pow(AD<Base>(x), y.ADBase()); }
 
 template <class Base> AD<Base> pow
-(const int &x, const AD<Base> &y)
+(const int& x, const AD<Base>& y)
 {	return pow(AD<Base>(x), y); }
 
 } // END CppAD namespace

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,7 +66,7 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
-#define SCIP_DEFAULT_BRANCH_FORCEBOTH     FALSE /**< should both strong branching children be regarded even if the first
+#define SCIP_DEFAULT_BRANCH_FORCEALL      FALSE /**< should all strong branching children be regarded even if
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
@@ -193,7 +193,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
-#define SCIP_DEFAULT_LP_DISABLECUTOFF     FALSE /**< disables the cutoff bound in the LP solver */
+#define SCIP_DEFAULT_LP_DISABLECUTOFF         2 /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
 #define SCIP_DEFAULT_LP_ROWREPSWITCH       -1.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
@@ -224,6 +224,8 @@
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
+#define SCIP_DEFAULT_MISC_PERMUTECONSS     TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
+#define SCIP_DEFAULT_MISC_PERMUTEVARS     FALSE /**< should order of variables be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
@@ -235,6 +237,9 @@
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
+#define SCIP_DEFAULT_MISC_FINITESOLSTORE   TRUE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+
+
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
@@ -303,6 +308,7 @@
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            0 /**< separation frequency for the global cut pool */
+#define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 
 
 /* Timing */
@@ -776,6 +782,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->mem_externestim = 0;
+   (*set)->sepa_primfeastol = SCIP_INVALID;
 
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -809,9 +816,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "branching/forcebothchildren",
-         "should both strong branching children be regarded even if the first one is detected to be infeasible? (only with propagation)",
-         &(*set)->branch_forceboth, TRUE, SCIP_DEFAULT_BRANCH_FORCEBOTH,
+         "branching/forceallchildren",
+         "should all strong branching children be regarded even if one is detected to be infeasible? (only with propagation)",
+         &(*set)->branch_forceall, TRUE, SCIP_DEFAULT_BRANCH_FORCEALL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/firstsbchild",
@@ -1237,11 +1244,11 @@ SCIP_RETCODE SCIPsetCreate(
          "turn on the lex dual algorithm only when stalling?",
          &(*set)->lp_lexdualstalling, TRUE, SCIP_DEFAULT_LP_LEXDUALSTALLING,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/disablecutoff",
-         "disables the cutoff bound in the LP solver",
+         "disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto)",
          &(*set)->lp_disablecutoff, TRUE, SCIP_DEFAULT_LP_DISABLECUTOFF,
-         NULL, NULL) );
+         0, 2, NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "lp/rowrepswitch",
          "simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value (-1.0 to disable row representation)",
@@ -1350,6 +1357,18 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/permuteconss",
+         "should order of constraints be permuted (depends on permutationseed)?",
+         &(*set)->misc_permuteconss, TRUE, SCIP_DEFAULT_MISC_PERMUTECONSS,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/permutevars",
+         "should order of variables be permuted (depends on permutationseed)?",
+         &(*set)->misc_permutevars, TRUE, SCIP_DEFAULT_MISC_PERMUTEVARS,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
          "should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
@@ -1380,7 +1399,11 @@ SCIP_RETCODE SCIPsetCreate(
             "should SCIP calculate the primal dual integral value?",
             &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
             NULL, NULL) );
-
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/finitesolutionstore",
+            "should SCIP try to remove infinite fixings from solutions copied to the solution store?",
+            &(*set)->misc_finitesolstore, FALSE, SCIP_DEFAULT_MISC_FINITESOLSTORE,
+            NULL, NULL) );
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -1638,6 +1661,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/poolfreq",
          "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
          &(*set)->sepa_poolfreq, FALSE, SCIP_DEFAULT_SEPA_POOLFREQ, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/feastolfac",
+         "factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off)",
+         &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
          NULL, NULL) );
 
    /* timing parameters */
@@ -4007,6 +4035,9 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPdispInitsol(set->disps[i], set) );
    }
 
+   /* reset feasibility tolerance for relaxations */
+   set->sepa_primfeastol = SCIP_INVALID;
+
    return SCIP_OKAY;
 }
 
@@ -4285,6 +4316,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
 #undef SCIPsetLpfeastol
+#undef SCIPsetSepaprimfeastol
 #undef SCIPsetDualfeastol
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
@@ -4419,7 +4451,18 @@ SCIP_Real SCIPsetLpfeastol(
 {
    assert(set != NULL);
 
+   if( set->sepa_primfeastol != SCIP_INVALID ) /*lint !e777*/
+      return MIN(set->sepa_primfeastol, set->num_lpfeastol);
+
    return set->num_lpfeastol;
+}
+
+/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
+SCIP_Real SCIPsetSepaprimfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   return set->sepa_primfeastol;
 }
 
 /** returns convergence tolerance used in barrier algorithm */

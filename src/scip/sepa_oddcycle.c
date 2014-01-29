@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2579,6 +2579,7 @@ SCIP_RETCODE separateHeur(
    default :
       SCIPerrorMessage("invalid sortswitch value\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
    assert(vars != NULL);
 
@@ -3452,6 +3453,7 @@ SCIP_RETCODE separateGLS(
    default :
       SCIPerrorMessage("invalid sortswitch value\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
    assert(vars != NULL);
 

@@ -1,13 +1,13 @@
-/* $Id: ode_gear_control.hpp 2057 2011-08-11 14:07:11Z bradbell $ */
+/* $Id: ode_gear_control.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ODE_GEAR_CONTROL_INCLUDED
 # define CPPAD_ODE_GEAR_CONTROL_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -46,16 +46,16 @@ $index equation, Ode Gear control$$
 $section An Error Controller for Gear's Ode Solvers$$
 
 $head Syntax$$
-$syntax%# include <cppad/ode_gear_control.hpp>
+$codei%# include <cppad/ode_gear_control.hpp>
 %$$
-$syntax%%xf% = OdeGearControl(%F%, %M%, %ti%, %tf%, %xi%,
+$icode%xf% = OdeGearControl(%F%, %M%, %ti%, %tf%, %xi%,
 	%smin%, %smax%, %sini%, %eabs%, %erel%, %ef% , %maxabs%, %nstep% )%$$
 
 
 $head Purpose$$
-Let $latex \R$$ denote the real numbers
-and let $latex f : \R \times \R^n \rightarrow \R^n$$ be a smooth function.
-We define $latex X : [ti , tf] \rightarrow \R^n$$ by 
+Let $latex \B{R}$$ denote the real numbers
+and let $latex f : \B{R} \times \B{R}^n \rightarrow \B{R}^n$$ be a smooth function.
+We define $latex X : [ti , tf] \rightarrow \B{R}^n$$ by 
 the following initial value problem:
 $latex \[
 \begin{array}{rcl}
@@ -63,7 +63,7 @@ $latex \[
 	X'(t)  & = & f[t , X(t)] 
 \end{array}
 \] $$
-The routine $cref/OdeGear/$$ is a stiff multi-step method that
+The routine $cref OdeGear$$ is a stiff multi-step method that
 can be used to approximate the solution to this equation.
 The routine $code OdeGearControl$$ sets up this multi-step method
 and controls the error during such an approximation.
@@ -75,121 +75,121 @@ but it can also be included separately with out the rest of
 the $code CppAD$$ routines.
 
 $head Notation$$
-The template parameter types $xref/OdeGearControl/Scalar/Scalar/$$ and
-$xref/OdeGearControl/Vector/Vector/$$ are documented below.
+The template parameter types $cref/Scalar/OdeGearControl/Scalar/$$ and
+$cref/Vector/OdeGearControl/Vector/$$ are documented below.
 
 $head xf$$
-The return value $italic xf$$ has the prototype
-$syntax%
+The return value $icode xf$$ has the prototype
+$codei%
 	%Vector% %xf%
 %$$
-and the size of $italic xf$$ is equal to $italic n$$
-(see description of $xref/OdeGear/Vector/Vector/$$ below).
+and the size of $icode xf$$ is equal to $icode n$$
+(see description of $cref/Vector/OdeGear/Vector/$$ below).
 It is the approximation for $latex X(tf)$$.
 
 $head Fun$$
-The class $italic Fun$$ 
-and the object $italic F$$ satisfy the prototype
-$syntax%
+The class $icode Fun$$ 
+and the object $icode F$$ satisfy the prototype
+$codei%
 	%Fun% &%F%
 %$$
 This must support the following set of calls
-$syntax%
+$codei%
 	%F%.Ode(%t%, %x%, %f%)
 	%F%.Ode_dep(%t%, %x%, %f_x%)
 %$$
 
 $subhead t$$
-The argument $italic t$$ has prototype
-$syntax%
+The argument $icode t$$ has prototype
+$codei%
 	const %Scalar% &%t%
 %$$
-(see description of $xref/OdeGear/Scalar/Scalar/$$ below). 
+(see description of $cref/Scalar/OdeGear/Scalar/$$ below). 
 
 $subhead x$$
-The argument $italic x$$ has prototype
-$syntax%
+The argument $icode x$$ has prototype
+$codei%
 	const %Vector% &%x%
 %$$
-and has size $italic N$$
-(see description of $xref/OdeGear/Vector/Vector/$$ below). 
+and has size $icode N$$
+(see description of $cref/Vector/OdeGear/Vector/$$ below). 
 
 $subhead f$$
-The argument $italic f$$ to $syntax%%F%.Ode%$$ has prototype
-$syntax%
+The argument $icode f$$ to $icode%F%.Ode%$$ has prototype
+$codei%
 	%Vector% &%f%
 %$$
-On input and output, $italic f$$ is a vector of size $italic N$$
-and the input values of the elements of $italic f$$ do not matter.
+On input and output, $icode f$$ is a vector of size $icode N$$
+and the input values of the elements of $icode f$$ do not matter.
 On output,
-$italic f$$ is set equal to $latex f(t, x)$$
-(see $italic f(t, x)$$ in $xref/OdeGear/Purpose/Purpose/$$). 
+$icode f$$ is set equal to $latex f(t, x)$$
+(see $icode f(t, x)$$ in $cref/Purpose/OdeGear/Purpose/$$). 
 
 $subhead f_x$$
-The argument $italic f_x$$ has prototype
-$syntax%
+The argument $icode f_x$$ has prototype
+$codei%
 	%Vector% &%f_x%
 %$$
-On input and output, $italic f_x$$ is a vector of size $latex N * N$$
-and the input values of the elements of $italic f_x$$ do not matter.
+On input and output, $icode f_x$$ is a vector of size $latex N * N$$
+and the input values of the elements of $icode f_x$$ do not matter.
 On output, 
 $latex \[
 	f\_x [i * n + j] = \partial_{x(j)} f_i ( t , x )
 \] $$ 
 
 $subhead Warning$$
-The arguments $italic f$$, and $italic f_x$$
+The arguments $icode f$$, and $icode f_x$$
 must have a call by reference in their prototypes; i.e.,
 do not forget the $code &$$ in the prototype for 
-$italic f$$ and $italic f_x$$.
+$icode f$$ and $icode f_x$$.
 
 $head M$$
-The argument $italic M$$ has prototype
-$syntax%
+The argument $icode M$$ has prototype
+$codei%
 	size_t %M%
 %$$
 It specifies the order of the multi-step method; i.e.,
 the order of the approximating polynomial
 (after the initialization process).
-The argument $italic M$$ must greater than or equal one.
+The argument $icode M$$ must greater than or equal one.
 
 $head ti$$
-The argument $italic ti$$ has prototype
-$syntax%
+The argument $icode ti$$ has prototype
+$codei%
 	const %Scalar% &%ti%
 %$$
 It specifies the initial time for the integration of 
 the differential equation.
 
 $head tf$$
-The argument $italic tf$$ has prototype
-$syntax%
+The argument $icode tf$$ has prototype
+$codei%
 	const %Scalar% &%tf%
 %$$
 It specifies the final time for the integration of 
 the differential equation.
 
 $head xi$$
-The argument $italic xi$$ has prototype
-$syntax%
+The argument $icode xi$$ has prototype
+$codei%
 	const %Vector% &%xi%
 %$$
-and size $italic n$$.
+and size $icode n$$.
 It specifies value of $latex X(ti)$$.
 
 $head smin$$
-The argument $italic smin$$ has prototype
-$syntax%
+The argument $icode smin$$ has prototype
+$codei%
 	const %Scalar% &%smin%
 %$$
 The minimum value of $latex T[M] -  T[M-1]$$ in a call to $code OdeGear$$
 will be $latex smin$$ except for the last two calls where it may be
 as small as $latex smin / 2$$.
-The value of $italic smin$$ must be less than or equal $italic smax$$.
+The value of $icode smin$$ must be less than or equal $icode smax$$.
 
 $head smax$$
-The argument $italic smax$$ has prototype
-$syntax%
+The argument $icode smax$$ has prototype
+$codei%
 	const %Scalar% &%smax%
 %$$
 It specifies the maximum step size to use during the integration; 
@@ -197,63 +197,63 @@ i.e., the maximum value for $latex T[M] - T[M-1]$$
 in a call to $code OdeGear$$.
 
 $head sini$$
-The argument $italic sini$$ has prototype
-$syntax%
+The argument $icode sini$$ has prototype
+$codei%
 	%Scalar% &%sini%
 %$$
-The value of $italic sini$$ is the minimum 
+The value of $icode sini$$ is the minimum 
 step size to use during initialization of the multi-step method; i.e.,
 for calls to $code OdeGear$$ where $latex m < M$$.
-The value of $italic sini$$ must be less than or equal $italic smax$$
-(and can also be less than $italic smin$$).
+The value of $icode sini$$ must be less than or equal $icode smax$$
+(and can also be less than $icode smin$$).
 
 $head eabs$$
-The argument $italic eabs$$ has prototype
-$syntax%
+The argument $icode eabs$$ has prototype
+$codei%
 	const %Vector% &%eabs%
 %$$
-and size $italic n$$.
-Each of the elements of $italic eabs$$ must be 
+and size $icode n$$.
+Each of the elements of $icode eabs$$ must be 
 greater than or equal zero.
 It specifies a bound for the absolute
-error in the return value $italic xf$$ as an approximation for $latex X(tf)$$.
+error in the return value $icode xf$$ as an approximation for $latex X(tf)$$.
 (see the 
-$xref/OdeGearControl/Error Criteria Discussion/error criteria discussion/$$ 
+$cref/error criteria discussion/OdeGearControl/Error Criteria Discussion/$$ 
 below). 
 
 $head erel$$
-The argument $italic erel$$ has prototype
-$syntax%
+The argument $icode erel$$ has prototype
+$codei%
 	const %Scalar% &%erel%
 %$$
 and is greater than or equal zero.
 It specifies a bound for the relative 
-error in the return value $italic xf$$ as an approximation for $latex X(tf)$$
+error in the return value $icode xf$$ as an approximation for $latex X(tf)$$
 (see the 
-$xref/OdeGearControl/Error Criteria Discussion/error criteria discussion/$$ 
+$cref/error criteria discussion/OdeGearControl/Error Criteria Discussion/$$ 
 below). 
 
 $head ef$$
-The argument value $italic ef$$ has prototype
-$syntax%
+The argument value $icode ef$$ has prototype
+$codei%
 	%Vector% &%ef%
 %$$
-and size $italic n$$.
+and size $icode n$$.
 The input value of its elements does not matter.
 On output, 
 it contains an estimated bound for the 
-absolute error in the approximation $italic xf$$; i.e.,
+absolute error in the approximation $icode xf$$; i.e.,
 $latex \[
 	ef_i > | X( tf )_i - xf_i |
 \] $$
 
 $head maxabs$$
-The argument $italic maxabs$$ is optional in the call to $code OdeGearControl$$.
+The argument $icode maxabs$$ is optional in the call to $code OdeGearControl$$.
 If it is present, it has the prototype
-$syntax%
+$codei%
 	%Vector% &%maxabs%
 %$$
-and size $italic n$$.
+and size $icode n$$.
 The input value of its elements does not matter.
 On output, 
 it contains an estimate for the 
@@ -265,24 +265,24 @@ $latex \[
 \] $$
 
 $head nstep$$
-The argument $italic nstep$$ has the prototype
-$syntax%
+The argument $icode nstep$$ has the prototype
+$codei%
 	%size_t% &%nstep%
 %$$
 Its input value does not matter and its output value
-is the number of calls to $xref/OdeGear/$$
+is the number of calls to $cref OdeGear$$
 used by $code OdeGearControl$$.
 
 $head Error Criteria Discussion$$
-The relative error criteria $italic erel$$ and
-absolute error criteria $italic eabs$$ are enforced during each step of the
+The relative error criteria $icode erel$$ and
+absolute error criteria $icode eabs$$ are enforced during each step of the
 integration of the ordinary differential equations.
 In addition, they are inversely scaled by the step size so that
 the total error bound is less than the sum of the error bounds.
 To be specific, if $latex \tilde{X} (t)$$ is the approximate solution
 at time $latex t$$, 
-$italic ta$$ is the initial step time,
-and $italic tb$$ is the final step time,
+$icode ta$$ is the initial step time,
+and $icode tb$$ is the final step time,
 $latex \[
 \left| \tilde{X} (tb)_j  - X (tb)_j \right| 
 \leq 
@@ -293,43 +293,43 @@ If $latex X(tb)_j$$ is near zero for some $latex tb \in [ti , tf]$$,
 and one uses an absolute error criteria $latex eabs[j]$$ of zero,
 the error criteria above will force $code OdeGearControl$$
 to use step sizes equal to 
-$xref/OdeGearControl/smin/smin/$$
+$cref/smin/OdeGearControl/smin/$$
 for steps ending near $latex tb$$.
-In this case, the error relative to $italic maxabs$$ can be judged after
+In this case, the error relative to $icode maxabs$$ can be judged after
 $code OdeGearControl$$ returns.
-If $italic ef$$ is to large relative to $italic maxabs$$, 
+If $icode ef$$ is to large relative to $icode maxabs$$, 
 $code OdeGearControl$$ can be called again 
-with a smaller value of $italic smin$$.
+with a smaller value of $icode smin$$.
 
 $head Scalar$$
-The type $italic Scalar$$ must satisfy the conditions
-for a $xref/NumericType/$$ type.
-The routine $xref/CheckNumericType/$$ will generate an error message
+The type $icode Scalar$$ must satisfy the conditions
+for a $cref NumericType$$ type.
+The routine $cref CheckNumericType$$ will generate an error message
 if this is not the case.
 In addition, the following operations must be defined for 
-$italic Scalar$$ objects $italic a$$ and $italic b$$:
+$icode Scalar$$ objects $icode a$$ and $icode b$$:
 
 $table
 $bold Operation$$ $cnext $bold Description$$  $rnext
-$syntax%%a% <= %b%$$ $cnext
-	returns true (false) if $italic a$$ is less than or equal 
-	(greater than) $italic b$$.
+$icode%a% <= %b%$$ $cnext
+	returns true (false) if $icode a$$ is less than or equal 
+	(greater than) $icode b$$.
 $rnext
-$syntax%%a% == %b%$$ $cnext
-	returns true (false) if $italic a$$ is equal to $italic b$$.
+$icode%a% == %b%$$ $cnext
+	returns true (false) if $icode a$$ is equal to $icode b$$.
 $rnext
-$syntax%log(%a%)%$$ $cnext
-	returns a $italic Scalar$$ equal to the logarithm of $italic a$$
+$codei%log(%a%)%$$ $cnext
+	returns a $icode Scalar$$ equal to the logarithm of $icode a$$
 $rnext
-$syntax%exp(%a%)%$$ $cnext
-	returns a $italic Scalar$$ equal to the exponential of $italic a$$
+$codei%exp(%a%)%$$ $cnext
+	returns a $icode Scalar$$ equal to the exponential of $icode a$$
 $tend
 
 
 $head Vector$$
-The type $italic Vector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type Scalar/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type Scalar/SimpleVector/Elements of Specified Type/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Example$$
@@ -337,7 +337,7 @@ $children%
 	example/ode_gear_control.cpp
 %$$
 The file
-$xref/OdeGearControl.cpp/$$
+$cref ode_gear_control.cpp$$
 contains an example and test a test of using this routine.
 It returns true if it succeeds and false otherwise.
 
@@ -395,7 +395,7 @@ Vector OdeGearControl(
 	CheckSimpleVector<Scalar, Vector>();
 
 	// dimension of the state space
-	size_t n = xi.size();
+	size_t n = size_t(xi.size());
 
 	CPPAD_ASSERT_KNOWN(
 		M >= 1,
@@ -410,11 +410,11 @@ Vector OdeGearControl(
 		"Error in OdeGearControl: sini is greater than smax"
 	);
 	CPPAD_ASSERT_KNOWN(
-		eabs.size() == n,
+		size_t(eabs.size()) == n,
 		"Error in OdeGearControl: size of eabs is not equal to n"
 	);
 	CPPAD_ASSERT_KNOWN(
-		maxabs.size() == n,
+		size_t(maxabs.size()) == n,
 		"Error in OdeGearControl: size of maxabs is not equal to n"
 	);
 

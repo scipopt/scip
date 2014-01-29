@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2614,6 +2614,9 @@ SCIP_RETCODE cliquePresolve(
       nvars = consdata->nvars;
    }
 
+   /* @todo when cliques are improved, we only need to collect all clique-ids for all variables and check for doubled
+    *       entries
+    */
    /* case 1 first part */
    /* check if two operands are in a clique */
    for( v = nvars - 1; v > 0; --v )
@@ -3601,6 +3604,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
    SCIP_CALL( SCIPaddVar(scip, var) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Bool debugval;
       SCIP_Real varval;
@@ -3867,6 +3871,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
+      return SCIP_WRITEERROR;   /*lint !e527*/
    }
 
    /* create the variable mapping hash map */
@@ -4284,7 +4289,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    cutoff = FALSE;
    delay = FALSE;
    firstchange = INT_MAX;
-   for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+   for( c = 0; c < nconss && !cutoff && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
@@ -4922,8 +4927,9 @@ int SCIPgetNVarsAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4945,8 +4951,9 @@ SCIP_VAR** SCIPgetVarsAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4968,6 +4975,7 @@ SCIP_VAR* SCIPgetResultantAnd(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4991,6 +4999,7 @@ SCIP_Bool SCIPisAndConsSorted(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return FALSE;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5014,6 +5023,7 @@ SCIP_RETCODE SCIPsortAndCons(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5045,6 +5055,7 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5076,6 +5087,7 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

@@ -1,21 +1,23 @@
-/* $Id: sqrt_op.hpp 1641 2010-02-01 16:39:45Z bradbell $ */
+/* $Id: sqrt_op.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_SQRT_OP_INCLUDED
 # define CPPAD_SQRT_OP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-10 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup sqrt_op_hpp sqrt_op.hpp
+\{
 \file sqrt_op.hpp
 Forward and reverse mode calculations for z = sqrt(x).
 */
@@ -33,7 +35,8 @@ The C++ source code corresponding to this operation is
 */
 template <class Base>
 inline void forward_sqrt_op(
-	size_t j           ,
+	size_t q           ,
+	size_t p           ,
 	size_t i_z         ,
 	size_t i_x         ,
 	size_t nc_taylor   , 
@@ -43,17 +46,24 @@ inline void forward_sqrt_op(
 	CPPAD_ASSERT_UNKNOWN( NumArg(SqrtOp) == 1 );
 	CPPAD_ASSERT_UNKNOWN( NumRes(SqrtOp) == 1 );
 	CPPAD_ASSERT_UNKNOWN( i_x < i_z );
-	CPPAD_ASSERT_UNKNOWN( j < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( p < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( q <= p );
 
 	// Taylor coefficients corresponding to argument and result
 	Base* x = taylor + i_x * nc_taylor;
 	Base* z = taylor + i_z * nc_taylor;
 
 	size_t k;
-	if( j == 0 )
-		z[j] = sqrt( x[0] );
-	else
+	if( q == 0 )
+	{	z[0] = sqrt( x[0] );
+		q++;
+	}
+	for(size_t j = q; j <= p; j++)
 	{
+		CPPAD_ASSERT_KNOWN(
+			x[0] != Base(0),
+			"Forward: attempt to take derivatve of square root of zero"
+		)
 		z[j] = Base(0);
 		for(k = 1; k < j; k++)
 			z[j] -= Base(k) * z[k] * z[j-k];
@@ -127,11 +137,18 @@ inline void reverse_sqrt_op(
 	const Base* z  = taylor  + i_z * nc_taylor;
 	Base* pz       = partial + i_z * nc_partial;
 
+	CPPAD_ASSERT_KNOWN(
+		z[0] != Base(0),
+		"Reverse: attempt to take derivatve of square root of zero"
+	)
+
 	// number of indices to access
 	size_t j = d;
 	size_t k;
 	while(j)
-	{	// scale partial w.r.t. z[j]
+	{
+
+		// scale partial w.r.t. z[j]
 		pz[j]   /= z[0];
 
 		pz[0]   -= pz[j] * z[j];
@@ -143,5 +160,6 @@ inline void reverse_sqrt_op(
 	px[0] += pz[0] / (Base(2) * z[0]);
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

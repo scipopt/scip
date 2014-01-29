@@ -25,8 +25,21 @@ fixed bugs:
 - improved handling of initial constraints: constraints which are initial, but added during the search to an already
   treated node are kept and added to the LP at every node where they are active
 - fixed bug where a limit on presolving rounds was exceeded by 1
+- fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
+- fixed rare bug with conflict analysis and LP/LPI having different stati after diving
+- fixed bug in genvbounds propagator occurring when objective offset or scale changes after a restart
+- fixed bug in flowcover separator to exclude unconstrained rows in aggregation
+- fixed bug in prop_dualfix w.r.t. to fixing of variables to infinity after presolving
+- fixed bug in random generators SCIPgetRandomInt() and SCIPgetRandomReal() for large intervals
+- fixed bug in genvbounds propagator by replacing non-active variables on right-hand side after presolving
+- nonlinear readers now create auxiliary objective variables and constraints always as initial and not removable
+  in order to avoid unbounded LPs due to loose variables with infinite best bound
+- fixed bug in cons_superindicator concerning names of upgraded constraints
+- fixed several bugs in lpi_grb
+- fixed bug in sepa_cgmip computeObjWeightSize() w.r.t. equal sized rows
+- fixed several minor bug with handling of memory when writing aggregated variables (reader_lp, reader_mps)
 
-data structures
+data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
 - hash tables will now increase dynamically
 
@@ -106,6 +119,10 @@ features:
   SCIPcreateFiniteSolCopy()
 - new initial constraints are now added to the LP before solving a probing LP
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface
+- added McNemar tests and Wilcoxon signed rank tests to cmpres.awk evaluation scripts
+- a pricer can now return that no further pricing should be done but rather early branching, even if it added variables
+- dual solution can now be displayed for pure LPs when no presolving was performed
+- first implementation of parsing for nonlinear constraints in cip format
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -124,6 +141,7 @@ performance improvements:
 - added upgradability for implicit binary variable cases for linear constraints
 - improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
 - improved merging of constraints in cons_and.c
+- faster feasibility check of LP solutions (controlled by parameter lp/checkfeas)
 
 interface
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
@@ -183,6 +201,11 @@ interface
   be used as an objective estimate, e.g., if strong branching is simulated using the probing mode
 - the HEUREXEC callback has a new parameter nodeinfeasible which denotes whether the current node was already detected
   to be infeasible
+- dropped support for Ipopt < 3.10
+- the PRICERREDCOST callback has a new parameter stopearly, which is a bool pointer to store whether pricing should be
+  stopped early although variables were generated, and early branching should be performed
+- new method SCIPcopyImplicationsCliques() that copies implications and cliques
+- add support for SOS1 and SOS2 constraints to AMPL interface (see interfaces/check/testset/SOS/sos?a.mod for example)
 
 parameters:
 - parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function
@@ -230,7 +253,7 @@ parameters:
   removing superflous non-zeros?
 - new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binary to implicit binary
   variables, default is TRUE
-- new parameters "branching/firstsbchild" and "branching/forcebothchildren" to specify the first child node to be
+- new parameters "branching/firstsbchild" and "branching/forceall" to specify the first child node to be
   investigated during strong branching ('u'p,'d'down,'a'uto) and whether always both children should be solved (only for
   strong branching with domain propagation, per default, the second child is not looked at when the first is infeasible)
 - new parameters "branching/checksol" and "branching/heursbsol" to specify whether the strong branching LP solution
@@ -239,6 +262,21 @@ parameters:
 - new parameter "write/genericnamesoffset" when writing a generic problem now it is possible to define an offset on the
   variable name, that normally starts with "0"
 - remove parameter "separating/closecuts/relintnormtype"
+- added parameter "constraints/abspower/scaling" and "constraints/nonlinear/scaling"
+- changed type of parameters "constraints/bivariate/scaling", "constraints/quadratic/scaling", "constraints/soc/scaling"
+  from boolean to character
+- changed default for "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling" to off
+- new parameter "propagating/obbt/conditionlimit" to discard instable LP bases
+- new parameter "separating/feastolfac" to allow dynamic decrease of relaxation feasibility tolerance depending on
+  feasibility to applied cuts, i.e., allow relaxation solutions to have a primal infeasibility of at most this factor
+  times the infeasibility applied cuts
+- changed parameter numerics/dualfeastol to 1e-7 for safer dual bounds from LP solver
+- new parameter "misc/finitesolutionstore" to switch whether infinite fixings should be removed from solutions before
+  copying them to the original solution store
+- new advanced parameter "presolving/components/feastolfactor" to increase the feasibility tolerance in all sub-SCIPs,
+  when solving a component
+- new advanced parameters "misc/permuteconss" and "misc/permutevars" to control whether variables and/or constraints
+  should be permuted, if permutationseed != -1
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -248,13 +286,26 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
+- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
+- return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
 
+Makefile:
+- default flag for ZIMPL is now "auto", which means that it is built if and only if GMP is available (GMP=true)
+- fixed make install for older Mac systems where install command does not have option -t
+
+Misc:
+- added SCIPdebugCheckConss() to the debugging mechanism and therefor created a SCIP_SOL in (original space) in debug.c
 
 SCIP version 3.0.3
 ==================
 
 fixed bugs:
 - fixed bug in handling max-functions in ampl interface
+- fixed bug in cons_indicator with trying to create solution in problem stage
+- fixed bug in cons_orbitope with fixing upper right triangle in non-root nodes
+- fixed bug in reader_lp when writing bilinear terms (product sign was missing)
+- allow again branching on continuous variables with hugh bounds
+- fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
 
 
 SCIP version 3.0.2
@@ -319,7 +370,6 @@ fixed bugs:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - fixed bug in presol_domcol: locks are now checked to see whether rounding was forbidden for a variable
 - updated get.ASL script to cope with broken ftp access to netlib server
-- fixed bug in cons_indicator with trying to create solution in problem stage
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

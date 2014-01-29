@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -87,6 +87,9 @@ void SCIPretcodePrint(
    case SCIP_MAXDEPTHLEVEL:
       SCIPmessageFPrintInfo(messagehdlr, file, "maximal branching depth level exceeded");
       break;
+   case SCIP_BRANCHERROR:
+      SCIPmessageFPrintInfo(messagehdlr, file, "branching could not be performed (e.g. too large values in variable domain)");
+      break;
    default:
       SCIPmessageFPrintInfo(messagehdlr, file, "unknown error code");
       break;
@@ -153,6 +156,9 @@ void SCIPretcodePrintError(
       break;
    case SCIP_MAXDEPTHLEVEL:
       SCIPmessagePrintError("maximal branching depth level exceeded");
+      break;
+   case SCIP_BRANCHERROR:
+      SCIPmessagePrintError("branching could not be performed (e.g. too large values in variable domain)");
       break;
    default:
       SCIPmessagePrintError("unknown error code");

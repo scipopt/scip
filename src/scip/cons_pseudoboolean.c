@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1526,6 +1526,7 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPaddVar(scip, resultant) );
 
 #ifdef SCIP_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real val;
          int v;
@@ -3401,7 +3402,7 @@ SCIP_RETCODE removeOldLocks(
                                               *   capture of the corresponding and-constraint */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
    SCIP_Real const       lhs,                /**< left hand side which led to old locks */
-   SCIP_Real const       rhs                /**< right hand side which led to old locks */
+   SCIP_Real const       rhs                 /**< right hand side which led to old locks */
    )
 {
    assert(scip != NULL);
@@ -4715,7 +4716,7 @@ SCIP_RETCODE updateConsanddataUses(
                && strlen(SCIPvarGetName(resvar)) > strlen(ARTIFICIALVARNAMEPREFIX) &&
                strncmp(SCIPvarGetName(resvar)+2, ARTIFICIALVARNAMEPREFIX, strlen(ARTIFICIALVARNAMEPREFIX)) == 0
 #endif
-               )
+               ) /*lint !e774*/
 	    {
                assert(!SCIPconsIsChecked(consanddata->cons));
 	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
@@ -9139,10 +9140,16 @@ int SCIPgetNLinVarsWithoutAndPseudoboolean(
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( checkConsConsistency(scip, cons) );
+   {
+      SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
+
+      if( retcode != SCIP_OKAY )
+         return -1;
+   }
 #endif
 
    consdata = SCIPconsGetData(cons);
@@ -9281,12 +9288,15 @@ int SCIPgetNAndsPseudoboolean(
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return -1;
    }
 #endif
 
@@ -9417,7 +9427,9 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
    }
 #endif
 
@@ -9445,7 +9457,9 @@ SCIP_Real SCIPgetRhsPseudoboolean(
 #ifdef SCIP_DEBUG
    {
       SCIP_RETCODE retcode = checkConsConsistency(scip, cons);
-      assert(retcode == SCIP_OKAY);
+
+      if( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
    }
 #endif
 

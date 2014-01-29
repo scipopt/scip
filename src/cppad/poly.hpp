@@ -1,13 +1,13 @@
-/* $Id: poly.hpp 1370 2009-05-31 05:31:50Z bradbell $ */
+/* $Id: poly.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_POLY_INCLUDED
 # define CPPAD_POLY_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-07 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -38,7 +38,7 @@ $head Syntax$$
 $code # include <cppad/poly.hpp>$$
 $pre
 $$
-$syntax%%p% = Poly(%k%, %a%, %z%)%$$
+$icode%p% = Poly(%k%, %a%, %z%)%$$
 
 
 $head Description$$
@@ -46,7 +46,7 @@ Computes the $th k$$ derivative of the polynomial
 $latex \[
 	P(z) = a_0 + a_1 z^1 + \cdots + a_d z^d
 \] $$
-If $italic k$$ is equal to zero, the return value is $latex P(z)$$.
+If $icode k$$ is equal to zero, the return value is $latex P(z)$$.
 
 $head Include$$
 The file $code cppad/poly.hpp$$ is included by $code cppad/cppad.hpp$$
@@ -56,34 +56,34 @@ Including this file defines
 $code Poly$$ within the $code CppAD$$ namespace.
 
 $head k$$
-The argument $italic k$$ has prototype
-$syntax%
+The argument $icode k$$ has prototype
+$codei%
 	size_t %k%
 %$$
 It specifies the order of the derivative to calculate.
 
 $head a$$
-The argument $italic a$$ has prototype
-$syntax%
+The argument $icode a$$ has prototype
+$codei%
 	const %Vector% &%a%
 %$$
-(see $xref/Poly/Vector/Vector/$$ below).
+(see $cref/Vector/Poly/Vector/$$ below).
 It specifies the vector corresponding to the polynomial $latex P(z)$$.
 
 $head z$$
-The argument $italic z$$ has prototype
-$syntax%
+The argument $icode z$$ has prototype
+$codei%
 	const %Type% &%z%
 %$$
-(see $italic Type$$ below).
+(see $icode Type$$ below).
 It specifies the point at which to evaluate the polynomial
 
 $head p$$
-The result $italic p$$  has prototype
-$syntax%
+The result $icode p$$  has prototype
+$codei%
 	%Type% %p%
 %$$
-(see $xref/Poly/Type/Type/$$ below)
+(see $cref/Type/Poly/Type/$$ below)
 and it is equal to the $th k$$ derivative of $latex P(z)$$; i.e., 
 $latex \[
 p = \frac{k !}{0 !} a_k 
@@ -92,39 +92,39 @@ p = \frac{k !}{0 !} a_k
   + \frac{d !}{(d - k) !} a_d z^{d - k}
 \]
 $$
-If $latex k > d$$, $syntax%%p% = %Type%(0)%$$.
+If $latex k > d$$, $icode%p% = %Type%(0)%$$.
 
 $head Type$$
-The type $italic Type$$ is determined by the argument $italic z$$.
+The type $icode Type$$ is determined by the argument $icode z$$.
 It is assumed that
-multiplication and addition of $italic Type$$ objects
+multiplication and addition of $icode Type$$ objects
 are commutative.
 
 $subhead Operations$$
 The following operations must be supported where
-$italic x$$ and $italic y$$ are objects of type $italic Type$$
-and $italic i$$ is an $code int$$:
+$icode x$$ and $icode y$$ are objects of type $icode Type$$
+and $icode i$$ is an $code int$$:
 $table
-$syntax%%x%  = %i%$$   $cnext assignment     $rnext
-$syntax%%x%  = %y%$$   $cnext assignment     $rnext
-$syntax%%x% *= %y%$$   $cnext multiplication computed assignment $rnext
-$syntax%%x% += %y%$$   $cnext addition computed assignment
+$icode%x%  = %i%$$   $cnext assignment     $rnext
+$icode%x%  = %y%$$   $cnext assignment     $rnext
+$icode%x% *= %y%$$   $cnext multiplication computed assignment $rnext
+$icode%x% += %y%$$   $cnext addition computed assignment
 
 $tend
 
 
 $head Vector$$
-The type $italic Vector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
-$italic Type$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
+$icode Type$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Operation Sequence$$
-The $italic Type$$ operation sequence used to calculate $italic p$$ is 
-$xref/glossary/Operation/Independent/independent/1/$$
-of $italic z$$ and the elements of $italic a$$
-(it does depend on the size of the vector $italic a$$).
+The $icode Type$$ operation sequence used to calculate $icode p$$ is 
+$cref/independent/glossary/Operation/Independent/$$
+of $icode z$$ and the elements of $icode a$$
+(it does depend on the size of the vector $icode a$$).
 
 
 $children%
@@ -134,18 +134,18 @@ $children%
 
 $head Example$$
 The file
-$xref/Poly.cpp/$$
+$cref poly.cpp$$
 contains an example and test of this routine.
 It returns true if it succeeds and false otherwise.
 
 $head Source$$
-The file $cref/poly.hpp/$$ contains the 
+The file $cref poly.hpp$$ contains the 
 current source code that implements these specifications.
 
 $end
 ------------------------------------------------------------------------------
 */
-// BEGIN PROGRAM
+// BEGIN C++
 # include <cstddef>  // used to defined size_t
 # include <cppad/check_simple_vector.hpp>
 
@@ -194,5 +194,5 @@ Type Poly(size_t k, const Vector &a, const Type &z)
 	return sum;
 }
 } // END CppAD namespace
-// END PROGRAM
+// END C++
 # endif

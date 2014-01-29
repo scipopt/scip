@@ -1,13 +1,13 @@
-/* $Id: near_equal_ext.hpp 2091 2011-09-02 19:47:24Z bradbell $ */
+/* $Id: near_equal_ext.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_NEAR_EQUAL_EXT_INCLUDED
 # define CPPAD_NEAR_EQUAL_EXT_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -30,30 +30,30 @@ $section Compare AD and Base Objects for Nearly Equal$$
 $index NearEqual, AD with Base$$
 
 $head Syntax$$
-$syntax%%b% = NearEqual(%x%, %y%, %r%, %a%)%$$
+$icode%b% = NearEqual(%x%, %y%, %r%, %a%)%$$
 
 
 $head Purpose$$
-The routine $xref/NearEqual/$$ determines if two objects of
+The routine $cref NearEqual$$ determines if two objects of
 the same type are nearly.
 This routine is extended to the case where one object can have type
-$italic Type$$ while the other can have type
-$syntax%AD<%Type%>%$$ or
-$syntax%AD< std::complex<%Type%> >%$$.
+$icode Type$$ while the other can have type
+$codei%AD<%Type%>%$$ or
+$codei%AD< std::complex<%Type%> >%$$.
 
 $head x$$
-The arguments $italic x$$ 
+The arguments $icode x$$ 
 has one of the following possible prototypes:
-$syntax%
+$codei%
 	const %Type%                     &%x%
 	const AD<%Type%>                 &%x%
 	const AD< std::complex<%Type%> > &%x%
 %$$
 
 $head y$$
-The arguments $italic y$$ 
+The arguments $icode y$$ 
 has one of the following possible prototypes:
-$syntax%
+$codei%
 	const %Type%                     &%y%
 	const AD<%Type%>                 &%y%
 	const AD< std::complex<%Type%> > &%x%
@@ -61,8 +61,8 @@ $syntax%
 
 
 $head r$$
-The relative error criteria $italic r$$ has prototype
-$syntax%
+The relative error criteria $icode r$$ has prototype
+$codei%
 	const %Type% &%r%
 %$$
 It must be greater than or equal to zero.
@@ -72,8 +72,8 @@ $latex \[
 \] $$
 
 $head a$$
-The absolute error criteria $italic a$$ has prototype
-$syntax%
+The absolute error criteria $icode a$$ has prototype
+$codei%
 	const %Type% &%a%
 %$$
 It must be greater than or equal to zero.
@@ -83,43 +83,43 @@ $latex \[
 \] $$
 
 $head b$$
-The return value $italic b$$ has prototype
-$syntax%
+The return value $icode b$$ has prototype
+$codei%
 	bool %b%
 %$$
-If either $italic x$$ or $italic y$$ is infinite or not a number, 
+If either $icode x$$ or $icode y$$ is infinite or not a number, 
 the return value is false.
 Otherwise, if either the relative or absolute error 
 condition (defined above) is satisfied, the return value is true.
 Otherwise, the return value is false.
 
 $head Type$$
-The type $italic Type$$ must be a
-$xref/NumericType/$$.
-The routine $xref/CheckNumericType/$$ will generate
+The type $icode Type$$ must be a
+$cref NumericType$$.
+The routine $cref CheckNumericType$$ will generate
 an error message if this is not the case.
-If $italic a$$ and $italic b$$ have type $italic Type$$,
+If $icode a$$ and $icode b$$ have type $icode Type$$,
 the following operation must be defined 
 $table
 $bold Operation$$     $cnext 
 	$bold Description$$ $rnext
-$syntax%%a% <= %b%$$  $cnext 
+$icode%a% <= %b%$$  $cnext 
 	less that or equal operator (returns a $code bool$$ object)
 $tend
 
 $head Operation Sequence$$
 The result of this operation is not an
-$xref/glossary/AD of Base/AD of Base/$$ object.
+$cref/AD of Base/glossary/AD of Base/$$ object.
 Thus it will not be recorded as part of an
-AD of $italic Base$$
-$xref/glossary/Operation/Sequence/operation sequence/1/$$.
+AD of $icode Base$$
+$cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $head Example$$
 $children%
 	example/near_equal_ext.cpp
 %$$
-The file $xref/NearEqualExt.cpp/$$ contains an example
-and test of this extension of $xref/NearEqual/$$.
+The file $cref near_equal_ext.cpp$$ contains an example
+and test of this extension of $cref NearEqual$$.
 It return true if it succeeds and false otherwise.
 
 $end

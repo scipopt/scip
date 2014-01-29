@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -400,33 +400,6 @@ jlong JNISCIPCONSINDICATOR(getSlackVarIndicator)(
    slackvar = SCIPgetSlackVarIndicator(cons);
 
    return (jlong)(size_t) slackvar;
-}
-
-/** sets slack variable corresponding to indicator constraint */
-JNIEXPORT
-void JNISCIPCONSINDICATOR(setSlackVarIndicator)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jlong                 jcons,              /**< indicator constraint */
-   jlong                 jslackvar           /**< slack variable */
-   )
-{
-   SCIP* scip;
-   SCIP_CONS* cons;
-   SCIP_VAR* slackvar;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   cons = (SCIP_CONS*) (size_t) jcons;
-   assert(cons != NULL);
-
-   slackvar = (SCIP_VAR*) (size_t) jslackvar;
-   assert(slackvar != NULL);
-
-   JNISCIP_CALL( SCIPsetSlackVarIndicator(scip, cons, slackvar) );
 }
 
 /** checks whether indicator constraint is violated w.r.t. sol */

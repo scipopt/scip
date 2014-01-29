@@ -1,13 +1,13 @@
-/* $Id: discrete.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: discrete.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_DISCRETE_INCLUDED
 # define CPPAD_DISCRETE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -114,8 +114,8 @@ AD of $icode Base$$
 $cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $head Derivatives$$
-During a zero order $cref/Forward/$$ operation,
-an $cref/ADFun/$$ object will compute the value of $icode name$$
+During a zero order $cref Forward$$ operation,
+an $cref ADFun$$ object will compute the value of $icode name$$
 using the user provided $icode Base$$ version of this routine.
 All the derivatives of $icode name$$ will be evaluated as zero.
 
@@ -136,15 +136,15 @@ $children%
 	example/interp_retape.cpp
 %$$
 The file
-$cref/TapeIndex.cpp/$$
+$cref tape_index.cpp$$
 contains an example and test that uses a discrete function 
-to vary an array index during $cref/Forward/$$ mode calculations.
+to vary an array index during $cref Forward$$ mode calculations.
 The file
-$cref/interp_onetape.cpp/$$
+$cref interp_onetape.cpp$$
 contains an example and test that uses discrete
 functions to avoid retaping a calculation that requires interpolation.
 (The file
-$cref/interp_retape.cpp/$$
+$cref interp_retape.cpp$$
 shows how interpolation can be done with retaping.)
 
 $head Deprecated$$
@@ -163,8 +163,10 @@ $end
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/thread_alloc.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup discrete_hpp discrete.hpp
+\{
 \file discrete.hpp
 user define discrete functions
 */
@@ -277,7 +279,7 @@ public:
 			// put operator in the tape
 			ay.taddr_ = tape->Rec_.PutOp(DisOp);
 			// make result a variable
-			ay.id_    = tape->id_;
+			ay.tape_id_    = tape->id_;
 
 			CPPAD_ASSERT_UNKNOWN( Variable(ay) );
 		} 
@@ -305,5 +307,6 @@ public:
 	}
 };
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

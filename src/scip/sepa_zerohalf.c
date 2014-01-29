@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2443,7 +2443,7 @@ SCIP_Bool hasMatrixMax2EntriesPerColumn(
       nentries = 0;
       for( r = 0; r < mod2data->nrowsind ; ++r )
       {
-         if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[r]], mod2data->colsind[c]) )
+         if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[r]], mod2data->colsind[c]) ) /*lint !e701*/
          {
             nentries++;
             if( nentries > 2 )
@@ -4044,12 +4044,12 @@ SCIP_RETCODE decomposeProblem(
     
       for( i = unprocessedrowidx ; i < problem->nrrows ; ++i)
       {
-         if( BITARRAYBITISSET(processedrows, i) )
+         if( BITARRAYBITISSET(processedrows, i) ) /*lint !e701*/
             unprocessedrowidx++;
          else
             break;
       }
-      BITARRAYBITSET(processedrows, i);
+      BITARRAYBITSET(processedrows, i); /*lint !e701*/
     
       queue[0] = i;
       queuefirst = 0;
@@ -4092,7 +4092,7 @@ SCIP_RETCODE decomposeProblem(
             if( nprocessedcols == problem->nrcols )
                continue;
         
-            if( BITARRAYBITISSET(processedcols, rcolsidx) )
+            if( BITARRAYBITISSET(processedcols, rcolsidx) ) /*lint !e701*/
                continue;
 
             if( ISEVEN(scip, colvals[cidx]) )
@@ -4100,7 +4100,7 @@ SCIP_RETCODE decomposeProblem(
         
             rcolsinsubprob[nrcolsinsubprob] = rcolsidx;
             nrcolsinsubprob++;
-            BITARRAYBITSET(processedcols, rcolsidx);
+            BITARRAYBITSET(processedcols, rcolsidx); /*lint !e701*/
         
             rowsofcol = SCIPcolGetRows(colsofrow[cidx]);
             rowvals = SCIPcolGetVals(colsofrow[cidx]);
@@ -4114,24 +4114,24 @@ SCIP_RETCODE decomposeProblem(
                if( lpdata->subproblemsindexofrow[lppos] == problemindex
                   && rrowsidx >= 0 )
                {
-                  if( !BITARRAYBITISSET(processedrows, rrowsidx) )
+                  if( !BITARRAYBITISSET(processedrows, rrowsidx) ) /*lint !e701*/
                      if( ISODD(scip, rowvals[ridx]) )
                      {
                         queue[queuelast] = rrowsidx;
                         queuelast++;
-                        BITARRAYBITSET(processedrows, rrowsidx);
+                        BITARRAYBITSET(processedrows, rrowsidx); /*lint !e701*/
                      }
                }
                rrowsidx = lpdata->rrowsindexofrightrow[lppos];
                if(  lpdata->subproblemsindexofrow[lppos] == problemindex
                   && rrowsidx >= 0 )
                {
-                  if( !BITARRAYBITISSET(processedrows, rrowsidx) )
+                  if( !BITARRAYBITISSET(processedrows, rrowsidx) ) /*lint !e701*/
                      if( ISODD(scip, rowvals[ridx]) )
                      {
                         queue[queuelast] = rrowsidx;
                         queuelast++;
-                        BITARRAYBITSET(processedrows, rrowsidx);
+                        BITARRAYBITSET(processedrows, rrowsidx); /*lint !e701*/
                      }
                }
             }
@@ -6590,11 +6590,6 @@ SCIP_RETCODE process(
    assert(mod2data->rowsind != NULL);
    assert(mod2data->colsind != NULL);
 
-#ifdef ZEROHALF__PRINT_STATISTICS
-   nsepacutsinitial = *nsepacuts;
-   nzerohalfcutsinitial = *nzerohalfcuts;
-#endif
-
    if( sepadata->nsepamethods == -1 )
    {
       sepadata->nsepamethods = (int) strlen(sepadata->sepamethods);
@@ -6759,7 +6754,6 @@ SCIP_RETCODE process(
 static
 void printZerohalfCutsStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata,           /**< separator data */     
    ZEROHALF_CUTDATA**    zerohalfcuts,       /**< array of zerohalf cuts */
    int                   nzerohalfcuts,      /**< number of zerohalf cuts */
    int*                  zerohalfcutsindices,/**< sorted index set (or NULL) */
@@ -7200,7 +7194,7 @@ s=============================================\n");
   
 #ifdef ZEROHALF__PRINT_STATISTICS
    if( !sepadata->usezhcutpool ) 
-      printZerohalfCutsStatistics(scip, sepadata, zerohalfcuts, nzerohalfcuts, NULL, NULL, NULL, nsepacuts);
+      printZerohalfCutsStatistics(scip, zerohalfcuts, nzerohalfcuts, NULL, NULL, NULL, nsepacuts);
 #endif
   
    if( ! cutoff && sepadata->usezhcutpool )
@@ -7275,7 +7269,7 @@ s=============================================\n");
       nsepacuts -= nignoredcuts;
 
 #ifdef ZEROHALF__PRINT_STATISTICS
-      printZerohalfCutsStatistics(scip, sepadata, zerohalfcuts, nzerohalfcuts, sortedzerohalfcuts,
+      printZerohalfCutsStatistics(scip, zerohalfcuts, nzerohalfcuts, sortedzerohalfcuts,
          zerohalfcutpriorities, NULL, nsepacuts);
 #endif
 #else /* new cutpool version: does not seem to be better */
@@ -7403,7 +7397,7 @@ s=============================================\n");
          nsepacuts -= nignoredcuts;
 
 #ifdef ZEROHALF__PRINT_STATISTICS
-         printZerohalfCutsStatistics(scip, sepadata, zerohalfcuts, ncutpoolold, sortedzerohalfcuts,
+         printZerohalfCutsStatistics(scip, zerohalfcuts, ncutpoolold, sortedzerohalfcuts,
             zerohalfcutpriorities, zerohalfcutminortho, nsepacuts);
 #endif
       }      

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -276,42 +276,42 @@ void SCIPnodeselSetMemsavePriority(
 /** sets copy method of node selector */
 extern
 void SCIPnodeselSetCopy(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_DECL_NODESELCOPY ((*nodeselcopy))   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))    /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
 /** sets destructor method of node selector */
 extern
 void SCIPnodeselSetFree(
-   SCIP_NODESEL*         nodesel,           /**< node selector */
-   SCIP_DECL_NODESELFREE ((*nodeselfree))   /**< destructor of node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))    /**< destructor of node selector */
    );
 
 /** sets initialization method of node selector */
 extern
 void SCIPnodeselSetInit(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_DECL_NODESELINIT ((*nodeselinit))   /**< initialize node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))    /**< initialize node selector */
    );
 
 /** sets deinitialization method of node selector */
 extern
 void SCIPnodeselSetExit(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_DECL_NODESELEXIT ((*nodeselexit))   /**< deinitialize node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))    /**< deinitialize node selector */
    );
 
 /** sets solving process initialization method of node selector */
 extern
 void SCIPnodeselSetInitsol(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
    SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
    );
 
 /** sets solving process deinitialization method of node selector */
 extern
 void SCIPnodeselSetExitsol(
-   SCIP_NODESEL*         nodesel,           /**< node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
    SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
    );
 

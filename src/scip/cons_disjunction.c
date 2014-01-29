@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -903,16 +903,12 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
    int nconss;
    int c;
 
+   *valid = TRUE;
+
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
    nconss = sourcedata->nconss;
-
-   if( nconss == 0 && !SCIPconsIsModifiable(sourcecons) )
-   {
-      *valid = TRUE;
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
    sourceconss = sourcedata->conss;
@@ -957,7 +953,7 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
    }
 
    /* release the copied constraints */
-   for(; c >= 0; --c )
+   for( c = (*valid ? c - 1 : c - 2); c >= 0; --c )
    {
       assert(conss[c] != NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );

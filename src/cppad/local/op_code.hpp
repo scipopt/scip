@@ -1,13 +1,13 @@
-/* $Id: op_code.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: op_code.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_OP_CODE_INCLUDED
 # define CPPAD_OP_CODE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -22,8 +22,10 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/thread_alloc.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*! 
+\defgroup op_code_hpp op_code.hpp
+\{
 \file op_code.hpp
 Defines the OpCode enum type and functions related to it.
 
@@ -53,11 +55,37 @@ enum OpCode {
 	AsinOp,   // asin(variable)
 	AtanOp,   // atan(variable)
 	BeginOp,  // used to mark the beginning of the tape
-	CExpOp,   // CondExp(cop, left, right, trueCase, falseCase)
+	CExpOp,   // CondExpRel(left, right, trueCase, falseCase)
+	// arg[0]     = the Rel operator: Lt, Le, Eq, Ge, Gt, or Ne
+	// arg[1] & 1 = is left a variable
+	// arg[1] & 2 = is right a variable
+	// arg[1] & 4 = is trueCase a variable
+	// arg[1] & 8 = is falseCase a variable
+	// arg[2]     = index correspoding to left 
+	// arg[3]     = index correspoding to right 
+	// arg[4]     = index correspoding to trueCase 
+	// arg[5]     = index correspoding to falseCase 
 	ComOp,    // Compare(cop, result, left, right)
 	CosOp,    //  cos(variable)
 	CoshOp,   // cosh(variable)
-	CSumOp,   // Cummulative summation (has variable number of arguments)
+	CSkipOp,  // Conditional skip
+	// arg[0]     = the Rel operator: Lt, Le, Eq, Ge, Gt, or Ne
+	// arg[1] & 1 = is left a variable
+	// arg[1] & 2 = is right a variable
+	// arg[2]     = index correspoding to left 
+	// arg[3]     = index correspoding to right 
+	// arg[4] = number of operations to skip if CExpOp comparision is true
+	// arg[5] = number of operations to skip if CExpOp comparision is false
+	// arg[6] -> arg[5+arg[4]]               = skip operations if true
+	// arg[6+arg[4]] -> arg[5+arg[4]+arg[5]] = skip operations if false
+	// arg[6+arg[4]+arg[5]] = arg[4] + arg[5]
+	CSumOp,   // Cummulative summation 
+	// arg[0] = number of addition variables in summation
+	// arg[1] = number of subtraction variables in summation
+	// arg[2] = index of parameter that initializes summation
+	// arg[3] -> arg[2+arg[0]] = index for positive variables
+	// arg[3+arg[0]] -> arg[2+arg[0]+arg[1]] = index for minus variables 
+	// arg[3+arg[0]+arg[1]] = arg[0] + arg[1]
 	DisOp,    //  discrete::eval(index, variable)
 	DivpvOp,  //      parameter  / variable
 	DivvpOp,  //      variable   / parameter
@@ -88,13 +116,20 @@ enum OpCode {
 	SubvvOp,  //      variable   - variable
 	TanOp,    //  tan(variable)
 	TanhOp,   //  tan(variable)
-	// user atomic operation codes (note yet implemented)
+	// user atomic operation codes
 	UserOp,   //  start of a user atomic operaiton
+	// arg[0] = index of the operation if atomic_base<Base> class
+	// arg[1] = extra information passed trough by deprecated old atomic class
+	// arg[2] = number of arguments to this atomic function
+	// arg[3] = number of results for this atomic function
 	UsrapOp,  //  this user atomic argument is a parameter
 	UsravOp,  //  this user atomic argument is a variable
 	UsrrpOp,  //  this user atomic result is a parameter
-	UsrrvOp   //  this user atomic result is a variable
+	UsrrvOp,  //  this user atomic result is a variable
+	NumberOp
 };
+// Note that bin/check_op_code.sh assumes the pattern '^\tNumberOp$' occurs
+// at the end of this list and only at the end of this list.
 
 /*!
 Table containing number of arguments for the corresponding operator.
@@ -117,11 +152,12 @@ const size_t NumArgTable[] = {
 	2, // AddvvOp
 	1, // AsinOp
 	1, // AtanOp
-	0, // BeginOp
+	1, // BeginOp  offset first real argument to have index 1
 	6, // CExpOp
 	4, // ComOp
 	1, // CosOp
 	1, // CoshOp
+	0, // CSkipOp  (actually has a variable number of arguments, not zero)
 	0, // CSumOp   (actually has a variable number of arguments, not zero)
 	2, // DisOp
 	2, // DivpvOp
@@ -169,7 +205,7 @@ Number of arguments corresponding to the specified operator.
 \param op 
 Operator for which we are fetching the number of arugments.
 
-- Check that \c UsrrvOp is the last defined operator.
+- Check that argument taple size equal to NumberOp
 - Check that \c CPPAD_OP_CODE_TYPE can support all the operator codes.
 - Check that \c op is a valid operator value.
 */
@@ -179,16 +215,16 @@ inline size_t NumArg( OpCode op)
 	// only do these checks once to save time
 	static bool first = true;
 	if( first )
-	{	CPPAD_ASSERT_UNKNOWN( size_t(UsrrvOp) == 
-			sizeof(NumArgTable) / sizeof(NumArgTable[0]) - 1
+	{	CPPAD_ASSERT_UNKNOWN( size_t(NumberOp) ==
+			sizeof(NumArgTable) / sizeof(NumArgTable[0])
 		);
-		CPPAD_ASSERT_UNKNOWN( size_t(UsrrvOp) <=
+		CPPAD_ASSERT_UNKNOWN( size_t(NumberOp) <=
 			std::numeric_limits<CPPAD_OP_CODE_TYPE>::max()
 		);
 		first = false;
 	}
 	// do this check every time
-	CPPAD_ASSERT_UNKNOWN( size_t(op) <= size_t(UsrrvOp) );
+	CPPAD_ASSERT_UNKNOWN( size_t(op) < size_t(NumberOp) );
 # endif
 
 	return NumArgTable[(size_t) op];
@@ -220,6 +256,7 @@ const size_t NumResTable[] = {
 	0, // ComOp
 	2, // CosOp
 	2, // CoshOp
+	0, // CSkipOp
 	1, // CSumOp
 	1, // DisOp
 	1, // DivpvOp
@@ -270,11 +307,11 @@ Operator for which we are fetching the number of result variables.
 */
 inline size_t NumRes(OpCode op)
 {	// check ensuring conversion to size_t is as expected
-	CPPAD_ASSERT_UNKNOWN( size_t(UsrrvOp) == 
-		sizeof(NumResTable) / sizeof(NumResTable[0]) - 2
+	CPPAD_ASSERT_UNKNOWN( size_t(NumberOp) == 
+		sizeof(NumResTable) / sizeof(NumResTable[0]) - 1
 	);
 	// this test ensures that all indices are within the table
-	CPPAD_ASSERT_UNKNOWN( size_t(op) <= size_t(UsrrvOp) );
+	CPPAD_ASSERT_UNKNOWN( size_t(op) < size_t(NumberOp) );
 
 	return NumResTable[(size_t) op];
 }
@@ -357,7 +394,12 @@ Determines the type of the values that we are printing.
 is the output stream that the information is printed on.
 
 \param Rec
+2DO: change this name from Rec to play (becuase it is a player 
+and not a recorder).
 Is the entire recording for the tape that this operator is in.
+
+\param i_op
+is the index for the operator corresponding to this operation.
 
 \param i_var
 is the index for the variable corresponding to the result of this operation
@@ -389,11 +431,15 @@ that correspond to this operation
 points to the first reverse calculated value
 that correspond to this operation
 (ignored if NumRes(op) == 0).
+
+\par 2DO
+print the operator index (in addition to the variables index).
 */
 template <class Base, class Value>
 void printOp(
 	std::ostream          &os     , 
 	const player<Base>   *Rec     ,
+	size_t                 i_op   , 
 	size_t                 i_var  , 
 	OpCode                 op     ,
 	const addr_t          *ind    ,
@@ -421,6 +467,7 @@ void printOp(
 		"Com"   ,
 		"Cos"   ,
 		"Cosh"  ,
+		"CSkip" ,
 		"CSum"  ,
 		"Dis"   ,
 		"Divpv" ,
@@ -459,25 +506,64 @@ void printOp(
 		"Usrrv"
 	};
 	CPPAD_ASSERT_UNKNOWN( 
-		size_t(UsrrvOp) == sizeof(OpName) / sizeof(OpName[0]) - 1
+		size_t(NumberOp) == sizeof(OpName) / sizeof(OpName[0])
 	);
 
 	// print operator
-	printOpField(os,  "i=",      i_var, 5);
-	if( op == CExpOp )
-	{	printOpField(os, "op=", OpName[op], 4); 
+	printOpField(os,  "o=",      i_op,  5);
+	printOpField(os,  "v=",      i_var, 5);
+	if( op == CExpOp || op == CSkipOp || op == ComOp )
+	{	printOpField(os, "", OpName[op], 5); 
 		printOpField(os, "", CompareOpName[ ind[0] ], 3);
 	}
-	else if( op == ComOp )
-	{	printOpField(os, "op=", OpName[op], 3); 
-		printOpField(os, "", CompareOpName[ ind[0] ], 4);
-	}
-	else	printOpField(os, "op=", OpName[op], 7); 
+	else	printOpField(os, "", OpName[op], 8); 
 
 	// print other fields
 	size_t ncol = 5;
 	switch( op )
 	{
+		case CSkipOp:
+		/*
+		ind[0]     = the Rel operator: Lt, Le, Eq, Ge, Gt, or Ne
+		ind[1] & 1 = is left a variable
+		ind[1] & 2 = is right a variable
+		ind[2]     = index correspoding to left 
+		ind[3]     = index correspoding to right 
+		ind[4] = number of operations to skip if CExpOp comparision is true
+		ind[5] = number of operations to skip if CExpOp comparision is false
+		ind[6] -> ind[5+ind[4]]               = skip operations if true
+		ind[6+ind[4]] -> ind[5+ind[4]+ind[5]] = skip operations if false
+		ind[6+ind[4]+ind[5]] = ind[4] + ind[5]
+		*/
+		CPPAD_ASSERT_UNKNOWN( ind[6+ind[4]+ind[5]] == ind[4]+ind[5] );
+		CPPAD_ASSERT_UNKNOWN(ind[1] != 0);
+		if( ind[1] & 1 )
+			printOpField(os, " vl=", ind[2], ncol);
+		else	printOpField(os, " pl=", Rec->GetPar(ind[2]), ncol);
+		if( ind[1] & 2 )
+			printOpField(os, " vr=", ind[3], ncol);
+		else	printOpField(os, " pr=", Rec->GetPar(ind[3]), ncol);
+		if( size_t(ind[4]) < 3 )
+		{	for(i = 0; i < size_t(ind[4]); i++)
+			 	printOpField(os, " ot=", ind[6+i], ncol);
+		}
+		else
+		{	printOpField(os, "\n\tot=", ind[6+0], ncol);
+			for(i = 1; i < size_t(ind[4]); i++)
+			 	printOpField(os, " ot=", ind[6+i], ncol);
+		}
+		if( size_t(ind[5]) < 3 )
+		{	for(i = 0; i < size_t(ind[5]); i++)
+				printOpField(os, " of=", ind[6+ind[4]+i], ncol);
+		}
+		else
+		{	printOpField(os, "\n\tof=", ind[6+ind[4]+0], ncol);
+			{	for(i = 1; i < size_t(ind[5]); i++)
+					printOpField(os, " of=", ind[6+ind[4]+i], ncol);
+			}
+		}
+		break;
+
 		case CSumOp:
 		/*
 		ind[0] = number of addition variables in summation
@@ -485,13 +571,13 @@ void printOp(
 		ind[2] = index of parameter that initializes summation
 		ind[3], ... , ind[2+ind[0]] = index for positive variables
 		ind[3+ind[0]], ..., ind[2+ind[0]+ind[1]] = negative variables 
-		ind[3+ind[0]+ind[1]] = ind[0] + ind[1]
+		ind[3+ind[0]+ind[1]] == ind[0] + ind[1]
 		*/
 		CPPAD_ASSERT_UNKNOWN( ind[3+ind[0]+ind[1]] == ind[0]+ind[1] );
 		printOpField(os, " pr=", Rec->GetPar(ind[2]), ncol);
-		for(i = 0; i < ind[0]; i++)
+		for(i = 0; i < size_t(ind[0]); i++)
 			 printOpField(os, " +v=", ind[3+i], ncol);
-		for(i = 0; i < ind[1]; i++)
+		for(i = 0; i < size_t(ind[1]); i++)
 			 printOpField(os, " -v=", ind[3+ind[0]+i], ncol);
 		break;
 
@@ -591,8 +677,8 @@ void printOp(
 
 		case UserOp:
 		CPPAD_ASSERT_UNKNOWN( NumArg(op) == 4 );
-		{	const char* name = user_atomic<Base>::name(ind[0]);
-			printOpField(os, " f=",   name, ncol);
+		{	std::string name =  atomic_base<Base>::class_name(ind[0]);
+			printOpField(os, " f=",   name.c_str(), ncol);
 			printOpField(os, " i=", ind[1], ncol);
 			printOpField(os, " n=", ind[2], ncol);
 			printOpField(os, " m=", ind[3], ncol);
@@ -672,5 +758,6 @@ void printOp(
 	std::cout << std::endl;
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

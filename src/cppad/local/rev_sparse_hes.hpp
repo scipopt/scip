@@ -1,13 +1,13 @@
-/* $Id: rev_sparse_hes.hpp 2023 2011-07-25 17:44:12Z bradbell $ */
+/* $Id: rev_sparse_hes.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_REV_SPARSE_HES_INCLUDED
 # define CPPAD_REV_SPARSE_HES_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -37,22 +37,30 @@ $index sparse, reverse Hessian$$
 $index pattern, reverse Hessian$$
 
 $head Syntax$$
-$icode%h% = %f%.RevSparseHes(%q%, %s%)%$$
+$icode%h% = %f%.RevSparseHes(%q%, %s%)
+%$$
+$icode%h% = %f%.RevSparseHes(%q%, %s%, %transpose%)%$$
 
 
 $head Purpose$$
-We use $latex F : \R^n \rightarrow \R^m$$ to denote the
-$xref/glossary/AD Function/AD function/$$ corresponding to $icode f$$.
-We define the matrix $latex H(x) \in \R^{q \times n}$$
-as the partial with respect to $latex x$$,
-of the partial with respect to $latex u$$ (at $latex u = 0$$),
-of $latex S * F[ x + R * u ]$$ where
-$latex R \in \R^{n \times q}$$ and $latex S \in \R^{1 \times m}$$; i.e.,
+We use $latex F : \B{R}^n \rightarrow \B{R}^m$$ to denote the
+$cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
+For a fixed matrix $latex R \in \B{R}^{n \times q}$$ 
+and a fixed vector $latex S \in \B{R}^{1 \times m}$$,
+we define 
 $latex \[
-	H(x)  =  R^\T (S * F)^{(2)} ( x )
+\begin{array}{rcl}
+H(x) 
+& = & \partial_x \left[ \partial_u S * F[ x + R * u ] \right]_{u=0}
+\\
+& = & R^\R{T} * (S * F)^{(2)} ( x )
+\\
+H(x)^\R{T} 
+& = & (S * F)^{(2)} ( x ) * R
+\end{array}
 \] $$
 Given a
-$xref/glossary/Sparsity Pattern/sparsity pattern/$$ 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
 for the matrix $latex R$$ and the vector $latex S$$,
 $code RevSparseHes$$ returns a sparsity pattern for the $latex H(x)$$.
 
@@ -64,29 +72,37 @@ $codei%
 
 $head x$$
 the sparsity pattern is valid for all values of the independent
-variables in $latex x \in \R^n$$
-(even if it has $cref/CondExp/$$ or $cref/VecAD/$$ operations).
+variables in $latex x \in \B{R}^n$$
+(even if it has $cref CondExp$$ or $cref VecAD$$ operations).
 
 $head q$$
 The argument $icode q$$ has prototype
 $codei%
 	size_t %q%
 %$$
-It specifies the number of columns in $latex R \in \R^{n \times q}$$
-and the number of rows in 
-$latex H(x) \in \R^{q \times n}$$.
-It must be the same value as in the previous $xref/ForSparseJac/$$ call 
+It specifies the number of columns in $latex R \in \B{R}^{n \times q}$$
+and the number of rows in $latex H(x) \in \B{R}^{q \times n}$$.
+It must be the same value as in the previous $cref ForSparseJac$$ call 
 $codei%
-	%f%.ForSparseJac(%q%, %r%)
+	%f%.ForSparseJac(%q%, %r%, %r_transpose%)
 %$$
+Note that if $icode r_transpose$$ is true, $icode r$$ in the call above
+corresponding to $latex R^\R{T} \in \B{R}^{q \times n}$$
+
+$head transpose$$
+The argument $icode transpose$$ has prototype
+$codei%
+	bool %transpose%
+%$$
+The default value $code false$$ is used when $icode transpose$$ is not present.
+
 
 $head r$$
-The argument $icode r$$ in the previous call
+The matrix $latex R$$ is specified by the previous call
 $codei%
-	%f%.ForSparseJac(%q%, %r%)
+	%f%.ForSparseJac(%q%, %r%, %transpose%)
 %$$
-is a $xref/glossary/Sparsity Pattern/sparsity pattern/$$
-for the matrix $latex R$$ above.
+see $cref/r/ForSparseJac/r/$$.
 The type of the elements of
 $cref/VectorSet/RevSparseHes/VectorSet/$$ must be the 
 same as the type of the elements of $icode r$$.
@@ -96,14 +112,14 @@ The argument $icode s$$ has prototype
 $codei%
 	const %VectorSet%& %s%
 %$$
-(see $xref/RevSparseHes/VectorSet/VectorSet/$$ below)
+(see $cref/VectorSet/RevSparseHes/VectorSet/$$ below)
 If it has elements of type $code bool$$,
 its size is $latex m$$.
 If it has elements of type $code std::set<size_t>$$,
 its size is one and all the elements of $icode%s%[0]%$$
 are between zero and $latex m - 1$$.
 It specifies a 
-$xref/glossary/Sparsity Pattern/sparsity pattern/$$ 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
 for the vector $icode S$$.
 
 $head h$$
@@ -111,18 +127,31 @@ The result $icode h$$ has prototype
 $codei%
 	%VectorSet%& %h%
 %$$
-(see $xref/RevSparseHes/VectorSet/VectorSet/$$ below).
-If it has elements of type $code bool$$,
+(see $cref/VectorSet/RevSparseHes/VectorSet/$$ below).
+
+$subhead transpose false$$
+If $icode h$$ has elements of type $code bool$$,
 its size is $latex q * n$$.
 If it has elements of type $code std::set<size_t>$$,
-its size is $latex q$$.
+its size is $latex q$$ and all the set elements are between
+zero and $icode%n%-1%$$ inclusive.
 It specifies a 
-$xref/glossary/Sparsity Pattern/sparsity pattern/$$ 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
 for the matrix $latex H(x)$$.
 
+$subhead transpose true$$
+If $icode h$$ has elements of type $code bool$$,
+its size is $latex n * q$$.
+If it has elements of type $code std::set<size_t>$$,
+its size is $latex n$$ and all the set elements are between
+zero and $icode%q%-1%$$ inclusive.
+It specifies a 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
+for the matrix $latex H(x)^\R{T}$$.
+
 $head VectorSet$$
-The type $icode VectorSet$$ must be a $cref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
+The type $icode VectorSet$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
 $code bool$$ or $code std::set<size_t>$$;
 see $cref/sparsity pattern/glossary/Sparsity Pattern/$$ for a discussion
 of the difference.
@@ -132,9 +161,9 @@ same as the type of the elements of $icode r$$.
 
 $head Entire Sparsity Pattern$$
 Suppose that $latex q = n$$ and
-$latex R \in \R^{n \times n}$$ is the $latex n \times n$$ identity matrix.
+$latex R \in \B{R}^{n \times n}$$ is the $latex n \times n$$ identity matrix.
 Further suppose that the $latex S$$ is the $th k$$
-$xref/glossary/Elementary Vector/elementary vector/$$; i.e.
+$cref/elementary vector/glossary/Elementary Vector/$$; i.e.
 $latex \[
 S_j = \left\{ \begin{array}{ll}
 	1  & {\rm if} \; j = k 
@@ -145,14 +174,14 @@ S_j = \left\{ \begin{array}{ll}
 In this case,
 the corresponding value $icode h$$ is a 
 sparsity pattern for the Hessian matrix
-$latex F_k^{(2)} (x) \in \R^{n \times n}$$.
+$latex F_k^{(2)} (x) \in \B{R}^{n \times n}$$.
 
 $head Example$$
 $children%
 	example/rev_sparse_hes.cpp
 %$$
 The file
-$xref/RevSparseHes.cpp/$$
+$cref rev_sparse_hes.cpp$$
 contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 
@@ -163,8 +192,10 @@ $end
 # include <cppad/local/pod_vector.hpp>
 # include <cppad/local/std_set.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup rev_sparse_hes_hpp rev_sparse_hes.hpp
+\{
 \file rev_sparse_hes.hpp
 Reverse mode Hessian sparsity patterns.
 */
@@ -184,7 +215,16 @@ is the base type for this recording.
 is a simple vector with elements of type \c bool.
 
 \tparam Sparsity
-is either \c sparse_pack or \c sparse_set. 
+is either \c sparse_pack, \c sparse_set, or \c sparse_list. 
+
+\param transpose
+is true (false) if \c is is equal to \f$ H(x) \f$ (\f$ H(x)^T \f$)
+where
+\f[
+	H(x) = R^T (S * F)^{(2)} (x)
+\f]
+where \f$ F \f$ is the function corresponding to the operation sequence
+and \a x is any argument value.
 
 \param q
 is the value of \a q in the 
@@ -203,12 +243,8 @@ corresponding to the operation sequence stored in \a play.
 \param h
 the input value of \a h must be a vector with size \c q*n.
 The input value of its elements does not matter.
-On output, \a h is the sparsity pattern for the matrix
-\f[
-	H(x) = R^T (S * F)^{(2)} (x)
-\f]
-where \f$ F \f$ is the function corresponding to the operation sequence
-and \a x is any argument value.
+On output, \a h is the sparsity pattern for the matrix \f$ H(x) \f$
+or \f$ H(x)^T \f$ depending on \c transpose.
 
 \param total_num_var
 is the total number of variables in this recording.
@@ -233,6 +269,7 @@ $latex R$$ for all of the variables on the tape.
 
 template <class Base, class VectorSet, class Sparsity>
 void RevSparseHesBool(
+	bool                      transpose         ,
 	size_t                    q                 ,
 	const VectorSet&          s                 ,
 	VectorSet&                h                 ,
@@ -254,12 +291,12 @@ void RevSparseHesBool(
 
 	CPPAD_ASSERT_KNOWN(
 		q == for_jac_sparsity.end(),
-		"RevSparseHes: q (first argument) is not equal to its value\n"
+		"RevSparseHes: q is not equal to its value\n"
 		"in the previous call to ForSparseJac with this ADFun object."
 	);
 	CPPAD_ASSERT_KNOWN(
-		s.size() == m,
-		"RevSparseHes: s (second argument) length is not equal to\n"
+		size_t(s.size()) == m,
+		"RevSparseHes: size of s is not equal to\n"
 		"range dimension for ADFun object."
 	);
 
@@ -273,7 +310,6 @@ void RevSparseHesBool(
 	{	CPPAD_ASSERT_UNKNOWN( dep_taddr[i] < total_num_var );
 		RevJac[ dep_taddr[i] ] = s[i];
 	}
-
 
 	// vector of sets that will hold reverse Hessain values
 	Sparsity       rev_hes_sparsity;
@@ -290,7 +326,14 @@ void RevSparseHesBool(
 	);
 
 	// return values corresponding to independent variables
-	CPPAD_ASSERT_UNKNOWN( h.size() == n * q );
+	CPPAD_ASSERT_UNKNOWN( size_t(h.size()) == n * q );
+	for(j = 0; j < n; j++)
+	{	for(i = 0; i < q; i++) 
+		{	if( transpose )
+				h[ j * q + i ] = false;
+			else	h[ i * n + j ] = false;
+		}
+	}
 
 	// j is index corresponding to reverse mode partial
 	for(j = 0; j < n; j++)
@@ -301,13 +344,13 @@ void RevSparseHesBool(
 		CPPAD_ASSERT_UNKNOWN( play.GetOp( ind_taddr[j] ) == InvOp );
 
 		// extract the result from rev_hes_sparsity
-		for(i = 0; i < q; i++) 
-			h[ i * n + j ] = false;
 		CPPAD_ASSERT_UNKNOWN( rev_hes_sparsity.end() == q );
 		rev_hes_sparsity.begin(j + 1);
 		i = rev_hes_sparsity.next_element();
 		while( i < q )
-		{	h[ i * n + j ] = true;
+		{	if( transpose )
+				h[ j * q + i ] = true;
+			else	h[ i * n + j ] = true;
 			i = rev_hes_sparsity.next_element();
 		}
 	}
@@ -330,7 +373,16 @@ is the base type for this recording.
 is a simple vector with elements of type \c std::set<size_t>.
 
 \tparam Sparsity
-is either \c sparse_pack or \c sparse_set. 
+is either \c sparse_pack, \c sparse_set, or \c sparse_list. 
+
+\param transpose
+is true (false) if \c is is equal to \f$ H(x) \f$ (\f$ H(x)^T \f$)
+where
+\f[
+	H(x) = R^T (S * F)^{(2)} (x)
+\f]
+where \f$ F \f$ is the function corresponding to the operation sequence
+and \a x is any argument value.
 
 \param q
 is the value of \a q in the 
@@ -347,15 +399,11 @@ where \c m is the number of dependent variables
 corresponding to the operation sequence stored in \a play. 
 
 \param h
-the input value of \a h must be a vector with size \a q.
+If \c transpose, the input value of \a h must be a vector with size \a q.
+Otherwise, its input value must have size \c n;
 On input, each element of \a h must be an empty set.
-The input value of its elements does not matter.
-On output, \a h is the sparsity pattern for the matrix
-\f[
-	H(x) = R^T (S * F)^{(2)} (x)
-\f]
-where \f$ F \f$ is the function corresponding to the operation sequence
-and \a x is any argument value.
+On output, \a h is the sparsity pattern for the matrix \f$ H(x) \f$
+or \f$ H(x)^T \f$ depending on \c transpose.
 
 \param total_num_var
 is the total number of variables in this recording.
@@ -380,6 +428,7 @@ $latex R$$ for all of the variables on the tape.
 
 template <class Base, class VectorSet, class Sparsity>
 void RevSparseHesSet(
+	bool                      transpose         ,
 	size_t                    q                 ,
 	const VectorSet&          s                 ,
 	VectorSet&                h                 ,
@@ -406,12 +455,12 @@ void RevSparseHesSet(
 
 	CPPAD_ASSERT_KNOWN(
 		q == for_jac_sparsity.end(),
-		"RevSparseHes: q (first argument) is not equal to its value\n"
+		"RevSparseHes: q is not equal to its value\n"
 		"in the previous call to ForSparseJac with this ADFun object."
 	);
 	CPPAD_ASSERT_KNOWN(
 		s.size() == 1,
-		"RevSparseHes: s (second argument) length is not equal to one."
+		"RevSparseHes: size of s is not equal to one."
 	);
 
 	// Array that will hold reverse Jacobian dependency flag.
@@ -449,7 +498,8 @@ void RevSparseHesSet(
 
 	// return values corresponding to independent variables
 	// j is index corresponding to reverse mode partial
-	CPPAD_ASSERT_UNKNOWN( h.size() == q );
+	CPPAD_ASSERT_UNKNOWN( size_t(h.size()) == q || transpose );
+	CPPAD_ASSERT_UNKNOWN( size_t(h.size()) == n || ! transpose );
 	for(j = 0; j < n; j++)
 	{	CPPAD_ASSERT_UNKNOWN( ind_taddr[j] < total_num_var );
 		CPPAD_ASSERT_UNKNOWN( ind_taddr[j] == j + 1 );
@@ -461,7 +511,9 @@ void RevSparseHesSet(
 		rev_hes_sparsity.begin(j+1);
 		i = rev_hes_sparsity.next_element();
 		while( i < q )
-		{	h[i].insert(j);
+		{	if( transpose )
+				h[j].insert(i);
+			else	h[i].insert(j);
 			i = rev_hes_sparsity.next_element();
 		}
 	}
@@ -486,6 +538,15 @@ is the base type for this recording.
 is a simple vector with elements of type \c bool
 or \c std::set<size_t>.
 
+\param transpose
+is true (false) if \c is is equal to \f$ H(x) \f$ (\f$ H(x)^T \f$)
+where
+\f[
+	H(x) = R^T (S * F)^{(2)} (x)
+\f]
+where \f$ F \f$ is the function corresponding to the operation sequence
+and \a x is any argument value.
+
 \param q
 is the value of \a q in the 
 by the previous call of the form 
@@ -503,8 +564,8 @@ where \c m is the number of dependent variables
 corresponding to the operation sequence stored in \a play. 
 
 \return
-is a vector with size \c q*n.
-containing a sparsity pattern for the matrix
+If \c transpose is false (true), 
+the return vector is a sparsity pattern for \f$ H(x) \f$ (\f$ H(x)^T \f$).
 \f[
 	H(x) = R^T ( S * F)^{(2)} (x)
 \f]
@@ -514,7 +575,9 @@ and \a x is any argument value.
 
 template <class Base>
 template <class VectorSet>
-VectorSet ADFun<Base>::RevSparseHes(size_t q,  const VectorSet& s)
+VectorSet ADFun<Base>::RevSparseHes(
+	size_t q,  const VectorSet& s, bool transpose
+)
 {	VectorSet h;
 	typedef typename VectorSet::value_type Set_type;
 
@@ -522,6 +585,7 @@ VectorSet ADFun<Base>::RevSparseHes(size_t q,  const VectorSet& s)
 	// forward sparse Jacobian.
 	RevSparseHesCase(
 		Set_type()    ,
+		transpose     ,
 		q             ,
 		s             ,
 		h
@@ -540,6 +604,9 @@ applies.
 is a \c bool value. This argument is used to dispatch to the proper source
 code depending on the vlaue of \c VectorSet::value_type.
 
+\param transpose
+See \c RevSparseHes(q, s).
+
 \param q
 See \c RevSparseHes(q, s).
 
@@ -553,6 +620,7 @@ template <class Base>
 template <class VectorSet>
 void ADFun<Base>::RevSparseHesCase(
 	bool              set_type         ,
+	bool              transpose        ,  
 	size_t            q                ,  
 	const VectorSet&  s                ,
 	VectorSet&        h                )
@@ -569,6 +637,7 @@ void ADFun<Base>::RevSparseHesCase(
 	
 	// use sparse_pack for the calculation
 	CppAD::RevSparseHesBool( 
+		transpose                ,
 		q                        ,
 		s                        ,
 		h                        ,
@@ -591,6 +660,9 @@ is a \c std::set<size_t> value.
 This argument is used to dispatch to the proper source
 code depending on the vlaue of \c VectorSet::value_type.
 
+\param transpose
+See \c RevSparseHes(q, s).
+
 \param q
 See \c RevSparseHes(q, s).
 
@@ -604,10 +676,14 @@ template <class Base>
 template <class VectorSet>
 void ADFun<Base>::RevSparseHesCase(
 	const std::set<size_t>&   set_type         ,
+	bool                      transpose        ,  
 	size_t                    q                ,  
 	const VectorSet&          s                ,
 	VectorSet&                h                )
-{	h.resize(q);
+{	size_t n = Domain();
+	if( transpose )
+		h.resize(n);
+	else	h.resize(q);
 
 	CPPAD_ASSERT_KNOWN( 
 		for_jac_sparse_set_.n_set() > 0,
@@ -619,6 +695,7 @@ void ADFun<Base>::RevSparseHesCase(
 	
 	// use sparse_pack for the calculation
 	CppAD::RevSparseHesSet( 
+		transpose                ,
 		q                        ,
 		s                        ,
 		h                        ,
@@ -630,5 +707,6 @@ void ADFun<Base>::RevSparseHesCase(
 	);
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

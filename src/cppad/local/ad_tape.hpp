@@ -1,20 +1,20 @@
-/* $Id: ad_tape.hpp 2038 2011-07-31 23:56:44Z bradbell $ */
+/* $Id: ad_tape.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_AD_TAPE_INCLUDED
 # define CPPAD_AD_TAPE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 # include <cppad/local/define.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 
 /*!
 Class used to hold tape that records AD<Base> operations.
@@ -30,8 +30,8 @@ class ADTape {
 	// classes -------------------------------------------------------------
 	friend class AD<Base>;
 	friend class ADFun<Base>;
+	friend class atomic_base<Base>;
 	friend class discrete<Base>;
-	friend class user_atomic<Base>;
 	friend class VecAD<Base>;
 	friend class VecAD_reference<Base>;
 
@@ -96,7 +96,7 @@ private:
 	been deleted). In addition, id_ % CPPAD_MAX_NUM_THREADS is the thread 
 	number for this tape. Set by Independent and effectively const
 	*/
-	size_t                       id_;
+	tape_id_t                    id_;
 	/// Number of independent variables in this tapes reconding.
 	/// Set by Independent and effectively const
 	size_t         size_independent_;
@@ -133,13 +133,7 @@ private:
 	);
 
 public:
-	// constructor
-	ADTape(size_t id) : id_(id)
-	{ }
-
-	// destructor
-	~ADTape(void)
-	{	Rec_.Erase(); }
+	// default constructor and destructor
 
 	// public function only used by CppAD::Independent
 	template <typename VectorADBase>
@@ -216,6 +210,6 @@ size_t ADTape<Base>::AddVec(size_t length, const pod_vector<Base>& data)
 	return start;
 }
 
-CPPAD_END_NAMESPACE
+} // END_CPPAD_NAMESPACE
 
 # endif

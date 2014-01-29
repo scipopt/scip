@@ -1,20 +1,22 @@
-/* $Id: rev_hes_sweep.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: rev_hes_sweep.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_REV_HES_SWEEP_INCLUDED
 # define CPPAD_REV_HES_SWEEP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup rev_hes_sweep_hpp rev_hes_sweep.hpp
+\{
 \file rev_hes_sweep.hpp
 Compute Reverse mode Hessian sparsity patterns.
 */
@@ -40,7 +42,7 @@ using AD< \a Base > and computations by this routine are done using type
 
 \tparam Vector_set
 is the type used for vectors of sets. It can be either
-\c sparse_pack or \c sparse_set.
+\c sparse_pack, \c sparse_set, or \c sparse_list.
 
 \param n
 is the number of independent variables on the tape.
@@ -112,7 +114,7 @@ void RevHesSweep(
 	size_t         i_op;
 	size_t        i_var;
 
-	const addr_t*   arg = 0;
+	const addr_t*   arg = CPPAD_NULL;
 
 	// length of the parameter vector (used by CppAD assert macros)
 	const size_t num_par = play->num_rec_par();
@@ -165,22 +167,34 @@ void RevHesSweep(
 	}
 
 	// work space used by UserOp.
+	vector<size_t>     user_ix;  // variable indices for argument vector x
 	typedef std::set<size_t> size_set;
-	const size_t user_q = limit; // maximum element plus one
 	size_set::iterator set_itr;  // iterator for a standard set
 	size_set::iterator set_end;  // end of iterator sequence
-	vector<size_t>     user_ix;  // variable indices for argument vector x
-	vector< size_set > user_r;   // forward Jacobian sparsity pattern for x
+	vector< size_set > set_r;    // forward Jacobian sparsity for x
+	vector< size_set > set_u;    // reverse Hessian sparsity for y
+	vector< size_set > set_v;    // reverse Hessian sparsity for x
+	//
+	vector<bool>       bool_r;   // bool forward Jacobian sparsity for x
+	vector<bool>       bool_u;   // bool reverse Hessian sparsity for y
+	vector<bool>       bool_v;   // bool reverse Hessian sparsity for x
+	//
+	vector<bool>       user_vx;  // which components of x are variables
 	vector<bool>       user_s;   // reverse Jacobian sparsity for y
 	vector<bool>       user_t;   // reverse Jacobian sparsity for x
-	vector< size_set > user_u;   // reverse Hessian sparsity for y
-	vector< size_set > user_v;   // reverse Hessian sparsity for x
-	size_t user_index = 0;       // indentifier for this user_atomic operation
+	const size_t user_q = limit; // maximum element plus one
+	size_t user_index = 0;       // indentifier for this atomic operation
 	size_t user_id    = 0;       // user identifier for this call to operator
 	size_t user_i     = 0;       // index in result vector
 	size_t user_j     = 0;       // index in argument vector
 	size_t user_m     = 0;       // size of result vector
 	size_t user_n     = 0;       // size of arugment vector
+	//
+	atomic_base<Base>* user_atom = CPPAD_NULL; // user's atomic op calculator
+	bool               user_bool = false;      // use bool or set sparsity ?
+# ifndef NDEBUG
+	bool               user_ok   = false;      // atomic op return value
+# endif
 	// next expected operator in a UserOp sequence
 	enum { user_start, user_arg, user_ret, user_end } user_state = user_end;
 
@@ -193,7 +207,8 @@ void RevHesSweep(
 	CppAD::vectorBool zf_value(limit);
 	CppAD::vectorBool zh_value(limit);
 # endif
-	while(op != BeginOp)
+	bool more_operators = true;
+	while(more_operators)
 	{
 		// next op
 		play->next_reverse(op, arg, i_op, i_var);
@@ -259,7 +274,16 @@ void RevHesSweep(
 			// -------------------------------------------------
 
 			case BeginOp:
-			CPPAD_ASSERT_NARG_NRES(op, 0, 1)
+			CPPAD_ASSERT_NARG_NRES(op, 1, 1)
+			more_operators = false;
+			break;
+			// -------------------------------------------------
+
+			case CSkipOp:
+			// CSkipOp has a variable number of arguments and
+			// next_reverse thinks it one has one argument.
+			// We must inform next_reverse of this special case.
+			play->reverse_cskip(op, arg, i_op, i_var);
 			break;
 			// -------------------------------------------------
 
@@ -561,15 +585,55 @@ void RevHesSweep(
 				user_id    = arg[1];
 				user_n     = arg[2];
 				user_m     = arg[3];
-				if(user_ix.size() < user_n)
-				{	user_ix.resize(user_n);
-					user_r.resize(user_n);
-					user_t.resize(user_n);
-					user_v.resize(user_n);
+				user_atom  = atomic_base<Base>::class_object(user_index);
+# ifndef NDEBUG
+				if( user_atom == CPPAD_NULL )
+				{	std::string msg = 
+						atomic_base<Base>::class_name(user_index)
+						+ ": atomic_base function has been deleted";
+					CPPAD_ASSERT_KNOWN(false, msg.c_str() );
 				}
-				if(user_s.size() < user_m)
-				{	user_s.resize(user_m);
-					user_u.resize(user_m);
+# endif
+				user_bool  = user_atom->sparsity() ==
+							atomic_base<Base>::bool_sparsity_enum;
+				user_ix.resize(user_n);
+				user_vx.resize(user_n);
+				user_s.resize(user_m);
+				user_t.resize(user_n);
+
+				// simpler to initialize all sparsity patterns as empty
+				for(i = 0; i < user_m; i++)
+					user_s[i] = false;
+				for(i = 0; i < user_n; i++)
+					user_t[i] = false;
+				if( user_bool )
+				{	bool_r.resize(user_n * user_q);
+					bool_u.resize(user_m * user_q);
+					bool_v.resize(user_n * user_q);
+					// simpler to initialize all patterns as empty
+					for(i = 0; i < user_m; i++)
+					{
+						for(j = 0; j < user_q; j++)
+							bool_u[ i * user_q + j] = false;
+					}
+					for(i = 0; i < user_n; i++)
+					{
+						for(j = 0; j < user_q; j++)
+						{	bool_r[ i * user_q + j] = false;
+							bool_v[ i * user_q + j] = false;
+						}
+					}
+				}
+				else
+				{	set_r.resize(user_n);
+					set_u.resize(user_m);
+					set_v.resize(user_n);
+					for(i = 0; i < user_m; i++)
+						set_u[i].clear();
+					for(i = 0; i < user_n; i++)
+					{	set_r[i].clear();
+						set_v[i].clear();
+					}
 				}
 				user_j     = user_n;
 				user_i     = user_m;
@@ -584,17 +648,50 @@ void RevHesSweep(
 				user_state = user_end;
 
 				// call users function for this operation
-				user_atomic<Base>::rev_hes_sparse(user_index, user_id,
-					user_n, user_m, 
-					user_q, user_r, user_s, user_t, user_u, user_v
+				user_atom->set_id(user_id);
+# ifdef NDEBUG
+			 	if( user_bool )
+					user_atom->rev_sparse_hes(user_vx,
+						user_s, user_t, user_q, bool_r, bool_u, bool_v
 				);
-				for(j = 0; j < user_n; j++) if( user_ix[j] > 0 )
-				{	size_t i_x = user_ix[j];
-					RevJac[i_x] = user_t[j];
-					set_itr = user_v[j].begin();
-					set_end = user_v[j].end();
-					while( set_itr != set_end )
-						rev_hes_sparse.add_element(i_x, *set_itr++);
+				else
+					user_atom->rev_sparse_hes(user_vx,
+						user_s, user_t, user_q, set_r, set_u, set_v
+				);
+# else
+			 	if( user_bool )
+					user_ok = user_atom->rev_sparse_hes(user_vx,
+						user_s, user_t, user_q, bool_r, bool_u, bool_v
+				);
+				else
+					user_ok = user_atom->rev_sparse_hes(user_vx,
+						user_s, user_t, user_q, set_r, set_u, set_v
+				);
+				if( ! user_ok )
+				{	std::string msg = 
+						atomic_base<Base>::class_name(user_index)
+						+ ": atomic_base.rev_sparse_hes: returned false";
+					CPPAD_ASSERT_KNOWN(false, msg.c_str() );
+				}
+# endif
+				for(i = 0; i < user_n; i++) if( user_ix[i] > 0 )
+				{
+					size_t  i_x = user_ix[i];
+					if( user_t[i] )
+						RevJac[i_x] = true;
+					if( user_bool )
+					{
+						for(j = 0; j < user_q; j++)
+							if( bool_v[ i * user_q + j ] )
+								rev_hes_sparse.add_element(i_x, j);
+					}
+					else
+					{
+						set_itr = set_v[i].begin();
+						set_end = set_v[i].end();
+						while( set_itr != set_end )
+							rev_hes_sparse.add_element(i_x, *set_itr++);
+					}
 				}
                }
 			break;
@@ -607,7 +704,7 @@ void RevHesSweep(
 			CPPAD_ASSERT_UNKNOWN( size_t(arg[0]) < num_par );
 			--user_j;
 			user_ix[user_j] = 0;
-			user_r[user_j].clear();
+			user_vx[user_j] = false;
 			if( user_j == 0 )
 				user_state = user_start;
 			break;
@@ -621,11 +718,14 @@ void RevHesSweep(
 			CPPAD_ASSERT_UNKNOWN( 0 < arg[0] );
 			--user_j;
 			user_ix[user_j] = arg[0];
-			user_r[user_j].clear();
+			user_vx[user_j] = true;
 			for_jac_sparse.begin(arg[0]);
 			i = for_jac_sparse.next_element();
 			while( i < user_q )
-			{	user_r[user_j].insert(i);
+			{	if( user_bool )
+					bool_r[ user_j * user_q + i ] = true;
+				else
+					set_r[user_j].insert(i);
 				i = for_jac_sparse.next_element();
 			}
 			if( user_j == 0 )
@@ -639,8 +739,6 @@ void RevHesSweep(
 			CPPAD_ASSERT_UNKNOWN( NumArg(op) == 1 );
 			CPPAD_ASSERT_UNKNOWN( size_t(arg[0]) < num_par );
 			--user_i;
-			user_s[user_i] = false;
-			user_u[user_i].clear();
 			if( user_i == 0 )
 				user_state = user_arg;
 			break;
@@ -650,13 +748,18 @@ void RevHesSweep(
 			CPPAD_ASSERT_UNKNOWN( user_state == user_ret );
 			CPPAD_ASSERT_UNKNOWN( 0 < user_i && user_i <= user_m );
 			--user_i;
-			user_s[user_i] = RevJac[i_var];
-			user_u[user_i].clear();
+			if( RevJac[i_var] )
+			{
+				user_s[user_i] = true;
+			}
 			rev_hes_sparse.begin(i_var);
-			i = rev_hes_sparse.next_element();
-			while( i < user_q )
-			{	user_u[user_i].insert(i);
-				i = rev_hes_sparse.next_element();
+			j = rev_hes_sparse.next_element();
+			while( j < user_q )
+			{	if( user_bool )
+					bool_u[user_i * user_q + j] = true;
+				else
+					set_u[user_i].insert(j);
+				j = rev_hes_sparse.next_element();
 			}
 			if( user_i == 0 )
 				user_state = user_arg;
@@ -689,6 +792,7 @@ void RevHesSweep(
 		printOp(
 			std::cout, 
 			play,
+			i_op,
 			i_var,
 			op, 
 			arg,
@@ -705,7 +809,8 @@ void RevHesSweep(
 
 	return;
 }
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 
 // preprocessor symbols that are local to this file
 # undef CPPAD_REV_HES_SWEEP_TRACE

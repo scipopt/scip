@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,12 +25,12 @@
 
 
 #include "scip/def.h"
-#include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_tree.h"
 #include "scip/type_cons.h"
 #include "scip/type_nodesel.h"
+#include "lpi/type_lpi.h"
 
 
 #ifdef __cplusplus

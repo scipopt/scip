@@ -193,7 +193,8 @@ def convertEnumsType(enumtype):
         'SCIP_DOMCHGTYPE',
         'SCIP_BOUNDCHGTYPE',
         'SCIP_VBCCOLOR',
-        'TCLIQUE_STATUS'
+        'TCLIQUE_STATUS',
+        'SCIP_LINEARCONSTYPE'
         ]
 
     for enum in reversed(enumtypes):

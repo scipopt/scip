@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -229,10 +229,10 @@ SCIP_RETCODE updateBestCandidate(
    assert(candbrpoint >= SCIPvarGetLbLocal(cand));
    assert(candbrpoint <= SCIPvarGetUbLocal(cand));
 
-   /* we cannot branch on a huge value, because we simply cannot enumerate such huge integer values in floating point
+   /* we cannot branch on a huge value for a discrete variable, because we simply cannot enumerate such huge integer values in floating point
     * arithmetics
     */
-   if( SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint) )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS && (SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint)) )
       return SCIP_OKAY;
 
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
@@ -432,7 +432,7 @@ SCIP_RETCODE selectBranchVar(
       /* set i to last occurrence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
       i = j-1;
       assert(candssorted[i] == cand);
-      
+
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol) );
    }
@@ -445,7 +445,7 @@ SCIP_RETCODE selectBranchVar(
    {
       SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
       SCIPABORT();
-      return SCIP_BRANCHERROR;
+      return SCIP_BRANCHERROR; /*lint !e527*/
    }
 
    /* free buffer arrays */

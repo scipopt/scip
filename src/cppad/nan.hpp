@@ -1,13 +1,13 @@
-/* $Id: nan.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: nan.hpp 2939 2013-10-14 11:06:18Z bradbell $ */
 # ifndef CPPAD_NAN_INCLUDED
 # define CPPAD_NAN_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -46,10 +46,6 @@ is $code nan$$ if and only if the following returns true
 $codei%
 	%a% != %a%
 %$$ 
-Some systems do not get this correct, so we also use the fact that
-zero divided by zero should result in a $code nan$$.
-To be specific, if a value is not equal to itself or 
-if it is equal to zero divided by zero, it is considered to be a $code nan$$.
 
 $head Include$$
 The file $code cppad/nan.hpp$$ is included by $code cppad/cppad.hpp$$
@@ -102,7 +98,7 @@ It is true if the value $icode s$$ is $code nan$$.
 
 $head hasnan$$
 This routine determines if a 
-$cref/SimpleVector/$$ has an element that is $code nan$$.
+$cref SimpleVector$$ has an element that is $code nan$$.
 
 $subhead v$$
 The argument $icode v$$ has prototype
@@ -131,30 +127,19 @@ $rnext
 $icode%a% != %b%$$ $cnext
 	not equality operator (returns a $code bool$$ object)
 $tend
-Note that the division operator will be used with $icode a$$ and $italic b$$
+Note that the division operator will be used with $icode a$$ and $icode b$$
 equal to zero. For some types (e.g. $code int$$) this may generate
 an exception. No attempt is made to catch any such exception.
 
 $head Vector$$
-The type $icode Vector$$ must be a $cref/SimpleVector/$$ class with
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
 elements of type $icode Scalar$$.
-
-$head Parallel Mode$$
-$index parallel, user_atomic$$
-$index user_atomic, parallel$$
-For each type $icode Scalar$$,
-the first call to
-$codei%
-	%b% = isnan(%s%)
-%$$
-must not be $cref/parallel/ta_in_parallel/$$ execution mode; 
-see $code isnan$$ in $cref/parallel_ad/parallel_ad/isnan/$$.
 
 $children%
 	example/nan.cpp
 %$$
 $head Example$$
-The file $cref/nan.cpp/$$
+The file $cref nan.cpp$$
 contains an example and test of this routine.
 It returns true if it succeeds and false otherwise.
 
@@ -167,9 +152,16 @@ $end
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/thread_alloc.hpp>
 
+/*
+# define nan There must be a define for every CppAD undef
+*/
 # ifdef nan
 # undef nan
 # endif
+
+/*
+# define isnan There must be a define for every CppAD undef
+*/
 # ifdef isnan
 # undef isnan
 # endif
@@ -183,16 +175,12 @@ inline Scalar nan(const Scalar &zero)
 
 template <class Scalar>
 inline bool isnan(const Scalar &s)
-{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;	
-	static Scalar scalar_nan = nan( Scalar(0) );	
-	return (s != s) | (s == scalar_nan);
+{	return (s != s);
 }
 
 template <class Vector>
 bool hasnan(const Vector &v)
 {
-	typedef typename Vector::value_type Scalar;
-
 	bool found_nan;
 	size_t i;
 	i   = v.size();

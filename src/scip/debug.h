@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/* #define SCIP_DEBUG_SOLUTION "neos.sol" */
+/* #define SCIP_DEBUG_SOLUTION "debug.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
@@ -48,6 +48,14 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** checks for validity of the debugging solution in given constraints */
+extern
+SCIP_RETCODE SCIPdebugCheckConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to check for validity */
+   int                   nconss              /**< number of given constraints */
+   );
+
 /** checks whether given row is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckRow(
@@ -58,7 +66,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
 /** checks whether given global lower bound is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckLbGlobal(
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             lb                  /**< lower bound */
    );
@@ -66,7 +74,7 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
 /** checks whether given global upper bound is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckUbGlobal(
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             ub                  /**< upper bound */
    );
@@ -162,9 +170,14 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    SCIP_Real             val                 /**< solution value for variable */
    );
 
-/** gets value for a variable in the debug solution
- * if no value is stored for the variable, gives 0.0
- */
+/** gets pointer to the debug solution */
+extern
+SCIP_RETCODE SCIPdebugGetSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol                 /**< buffer to store pointer to the debug solution */
+   );
+
+/** gets value for a variable in the debug solution if no value is stored for the variable, gives 0.0 */
 extern
 SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -184,7 +197,13 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
 /** set the main SCIP settings pointer */
 extern
 void SCIPdebugSetMainscipset(
-   SCIP_SET*             set                  /**< settings of SCIP instance */
+   SCIP_SET*             set                 /**< settings of SCIP instance */
+   );
+
+/** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */
+extern
+SCIP_Bool SCIPdebugIsMainscip(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** enabling solution debugging mechanism */
@@ -208,9 +227,10 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #else
 
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
+#define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
-#define SCIPdebugCheckLbGlobal(set,var,lb) SCIP_OKAY
-#define SCIPdebugCheckUbGlobal(set,var,ub) SCIP_OKAY
+#define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
+#define SCIPdebugCheckUbGlobal(scip,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY

@@ -27,7 +27,7 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -79,10 +79,11 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/disp_default.h ../../src/scip/heur_actconsdiving.h \
  ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
  ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
- ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
- ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_zeroobj.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
+ ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_zeroobj.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \
@@ -156,7 +157,7 @@ $(OBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -217,7 +218,7 @@ $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -277,7 +278,7 @@ $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -339,7 +340,7 @@ $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -399,7 +400,7 @@ $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -460,7 +461,7 @@ $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -520,7 +521,7 @@ $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
  ../../src/scip/struct_history.h ../../src/scip/pub_implics.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
- ../../src/scip/type_stat.h ../../src/scip/type_lpi.h \
+ ../../src/scip/type_stat.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
  ../../src/scip/pub_misc.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -582,7 +583,7 @@ $(OBJDIR)/Heur2opt.o: src/Heur2opt.cpp ../../src/objscip/objscip.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \

@@ -102,9 +102,8 @@ SCIP_RETCODE runUnittest(void)
    SCIP_CALL( SCIPlpiFree(&lpi) );
 
    /* for automatic testing output the following */
-   printf("Test passed.\n\n");
+   printf("SCIP Status        : test passed\n");
    printf("Ignore the following:\n");
-   printf("SCIP Status        : problem is solved [optimal solution found]\n");
    printf("  solving          : 0.00\n");
    printf("  nodes (total)    : 0\n");
    printf("  Primal Bound     : 0.0\n");

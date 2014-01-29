@@ -1,13 +1,13 @@
-/* $Id: near_equal.hpp 1370 2009-05-31 05:31:50Z bradbell $ */
+/* $Id: near_equal.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_NEAR_EQUAL_INCLUDED
 # define CPPAD_NEAR_EQUAL_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-07 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -42,33 +42,33 @@ $head Syntax$$
 $code # include <cppad/near_equal.hpp>$$
 $pre
 $$
-$syntax%%b% = NearEqual(%x%, %y%, %r%, %a%)%$$
+$icode%b% = NearEqual(%x%, %y%, %r%, %a%)%$$
 
 
 $head Purpose$$
 Returns true,
-if $italic x$$ and $italic y$$ are nearly equal,
+if $icode x$$ and $icode y$$ are nearly equal,
 and false otherwise.
 
 $head x$$
-The argument $italic x$$ 
+The argument $icode x$$ 
 has one of the following possible prototypes
-$syntax%
+$codei%
 	const %Type%               &%x%,
 	const std::complex<%Type%> &%x%, 
 %$$
 
 $head y$$
-The argument $italic y$$ 
+The argument $icode y$$ 
 has one of the following possible prototypes
-$syntax%
+$codei%
 	const %Type%               &%y%,
 	const std::complex<%Type%> &%y%, 
 %$$
 
 $head r$$
-The relative error criteria $italic r$$ has prototype
-$syntax%
+The relative error criteria $icode r$$ has prototype
+$codei%
 	const %Type% &%r%
 %$$
 It must be greater than or equal to zero.
@@ -78,8 +78,8 @@ $latex \[
 \] $$
 
 $head a$$
-The absolute error criteria $italic a$$ has prototype
-$syntax%
+The absolute error criteria $icode a$$ has prototype
+$codei%
 	const %Type% &%a%
 %$$
 It must be greater than or equal to zero.
@@ -89,27 +89,27 @@ $latex \[
 \] $$
 
 $head b$$
-The return value $italic b$$ has prototype
-$syntax%
+The return value $icode b$$ has prototype
+$codei%
 	bool %b%
 %$$
-If either $italic x$$ or $italic y$$ is infinite or not a number, 
+If either $icode x$$ or $icode y$$ is infinite or not a number, 
 the return value is false.
 Otherwise, if either the relative or absolute error 
 condition (defined above) is satisfied, the return value is true.
 Otherwise, the return value is false.
 
 $head Type$$
-The type $italic Type$$ must be a
-$xref/NumericType/$$.
-The routine $xref/CheckNumericType/$$ will generate
+The type $icode Type$$ must be a
+$cref NumericType$$.
+The routine $cref CheckNumericType$$ will generate
 an error message if this is not the case.
 In addition, the following operations must be defined objects
-$italic a$$ and $italic b$$ of type $italic Type$$:
+$icode a$$ and $icode b$$ of type $icode Type$$:
 $table
 $bold Operation$$     $cnext 
 	$bold Description$$ $rnext
-$syntax%%a% <= %b%$$  $cnext 
+$icode%a% <= %b%$$  $cnext 
 	less that or equal operator (returns a $code bool$$ object)
 $tend
 
@@ -122,7 +122,7 @@ $head Example$$
 $children%
 	example/near_equal.cpp
 %$$
-The file $xref/Near_Equal.cpp/$$ contains an example
+The file $cref near_equal.cpp$$ contains an example
 and test of $code NearEqual$$.
 It return true if it succeeds and false otherwise.
 

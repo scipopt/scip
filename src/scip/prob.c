@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -797,6 +797,7 @@ SCIP_RETCODE probRemoveVar(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
@@ -1692,8 +1693,8 @@ void SCIPprobUpdateBestRootSol(
    {
       SCIP_VAR* var;
       SCIP_COL* col;
-      SCIP_Real rootsol;
-      SCIP_Real rootredcost;
+      SCIP_Real rootsol = 0.0;
+      SCIP_Real rootredcost = 0.0;
 
       var = prob->vars[v];
       assert(var != NULL);
@@ -1714,10 +1715,17 @@ void SCIPprobUpdateBestRootSol(
       }
       else
       {
-         switch( SCIPcolGetBasisStatus(col) )
-         {
-         case SCIP_BASESTAT_LOWER:
-         case SCIP_BASESTAT_UPPER:
+         SCIP_Real primsol;
+         SCIP_BASESTAT basestat;
+         SCIP_Bool lpissolbasic;
+
+         basestat = SCIPcolGetBasisStatus(col);
+         lpissolbasic = SCIPlpIsSolBasic(lp);
+         primsol = SCIPcolGetPrimsol(col);
+
+         if( (lpissolbasic && (basestat == SCIP_BASESTAT_LOWER || basestat == SCIP_BASESTAT_UPPER)) ||
+            (!lpissolbasic && (SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol) ||
+               SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol))) )
          {
             SCIP_Real lbrootredcost;
             SCIP_Real ubrootredcost;
@@ -1742,16 +1750,6 @@ void SCIPprobUpdateBestRootSol(
                rootredcost = ubrootredcost;
                rootsol = 0.0;
             }
-            break;
-         }
-         case SCIP_BASESTAT_BASIC:
-         case SCIP_BASESTAT_ZERO:
-            continue;
-
-         default:
-            SCIPerrorMessage("invalid basis state\n");
-            SCIPABORT();
-            return; /*lint !e527*/
          }
       }
 

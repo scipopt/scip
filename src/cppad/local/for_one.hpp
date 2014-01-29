@@ -1,13 +1,13 @@
-/* $Id: for_one.hpp 1598 2009-12-03 02:59:52Z bradbell $ */
+/* $Id: for_one.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
 # ifndef CPPAD_FOR_ONE_INCLUDED
 # define CPPAD_FOR_ONE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-09 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -34,13 +34,13 @@ $index partial, easy$$
 $section First Order Partial Derivative: Driver Routine$$
 
 $head Syntax$$
-$syntax%%dy% = %f%.ForOne(%x%, %j%)%$$
+$icode%dy% = %f%.ForOne(%x%, %j%)%$$
 
 
 $head Purpose$$
 We use $latex F : B^n \rightarrow B^m$$ to denote the
-$xref/glossary/AD Function/AD function/$$ corresponding to $italic f$$.
-The syntax above sets $italic dy$$ to the
+$cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
+The syntax above sets $icode dy$$ to the
 partial of $latex F$$ with respect to $latex x_j$$; i.e.,
 $latex \[
 dy 
@@ -51,45 +51,45 @@ dy
 \] $$
 
 $head f$$
-The object $italic f$$ has prototype
-$syntax%
+The object $icode f$$ has prototype
+$codei%
 	ADFun<%Base%> %f%
 %$$
-Note that the $xref/ADFun/$$ object $italic f$$ is not $code const$$
-(see $xref/ForOne/ForOne Uses Forward/ForOne Uses Forward/$$ below).
+Note that the $cref ADFun$$ object $icode f$$ is not $code const$$
+(see $cref/ForOne Uses Forward/ForOne/ForOne Uses Forward/$$ below).
 
 $head x$$
-The argument $italic x$$ has prototype
-$syntax%
+The argument $icode x$$ has prototype
+$codei%
 	const %Vector% &%x%
 %$$
-(see $xref/ForOne/Vector/Vector/$$ below)
+(see $cref/Vector/ForOne/Vector/$$ below)
 and its size 
-must be equal to $italic n$$, the dimension of the
-$xref/seq_property/Domain/domain/$$ space for $italic f$$.
+must be equal to $icode n$$, the dimension of the
+$cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
 that point at which to evaluate the partial derivative.
 
 $head j$$
-The argument $italic j$$ has prototype
-$syntax%
+The argument $icode j$$ has prototype
+$codei%
 	size_t %j%
 %$$
-an is less than $italic n$$,
-$xref/seq_property/Domain/domain/$$ space for $italic f$$.
-It specifies the component of $italic F$$ 
+an is less than $icode n$$,
+$cref/domain/seq_property/Domain/$$ space for $icode f$$.
+It specifies the component of $icode F$$ 
 for which we are computing the partial derivative.
 
 $head dy$$
-The result $italic dy$$ has prototype
-$syntax%
+The result $icode dy$$ has prototype
+$codei%
 	%Vector% %dy%
 %$$
-(see $xref/ForOne/Vector/Vector/$$ below)
+(see $cref/Vector/ForOne/Vector/$$ below)
 and its size is $latex m$$, the dimension of the
-$xref/seq_property/Range/range/$$ space for $italic f$$.
-The value of $italic dy$$ is the partial of $latex F$$ with respect to
-$latex x_j$$ evaluated at $italic x$$; i.e.,
+$cref/range/seq_property/Range/$$ space for $icode f$$.
+The value of $icode dy$$ is the partial of $latex F$$ with respect to
+$latex x_j$$ evaluated at $icode x$$; i.e.,
 for $latex i = 0 , \ldots , m - 1$$
 $latex \[.
 	dy[i] = \D{ F_i }{ x_j } ( x )
@@ -97,25 +97,27 @@ $latex \[.
 
 
 $head Vector$$
-The type $italic Vector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
-$italic Base$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
+$icode Base$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head ForOne Uses Forward$$
-After each call to $xref/Forward/$$,
-the object $italic f$$ contains the corresponding 
-$xref/glossary/Taylor Coefficient/Taylor coefficients/$$.
-After $code ForOne$$,
-the previous calls to $xref/Forward/$$ are undefined.
+After each call to $cref Forward$$,
+the object $icode f$$ contains the corresponding 
+$cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
+After a call to $code ForOne$$,
+the zero order Taylor coefficients correspond to
+$icode%f%.Forward(0,%x%)%$$
+and the other coefficients are unspecified.
 
 $head Example$$
 $children%
 	example/for_one.cpp
 %$$
 The routine 
-$xref/ForOne.cpp//ForOne/$$ is both an example and test.
+$cref/ForOne/for_one.cpp/$$ is both an example and test.
 It returns $code true$$, if it succeeds and $code false$$ otherwise.
 
 $end

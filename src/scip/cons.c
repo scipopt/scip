@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -802,6 +802,7 @@ static
 SCIP_RETCODE conshdlrAddInitcons(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons                /**< constraint to add */
    )
 {
@@ -821,6 +822,7 @@ SCIP_RETCODE conshdlrAddInitcons(
 
    conshdlr->initconss[insertpos] = cons;
    conshdlr->ninitconss++;
+   stat->ninitconssadded++;
 
    /* if the constraint is kept, we keep the stored position at the beginning of the array */
    if( cons->initconsspos == -1 )
@@ -1561,7 +1563,7 @@ SCIP_RETCODE conshdlrActivateCons(
    /* add constraint to the initconss array if the constraint is initial and added to the focus node */
    if( cons->initial )
    {
-      SCIP_CALL( conshdlrAddInitcons(conshdlr, set, cons) );
+      SCIP_CALL( conshdlrAddInitcons(conshdlr, set, stat, cons) );
    }
 
    /* call constraint handler's activation notification method */
@@ -2194,7 +2196,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
          &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/timingmask", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS)", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
          (int*)(&(*conshdlr)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
@@ -2506,7 +2508,7 @@ SCIP_RETCODE SCIPconshdlrInitpre(
          if( conshdlr->conss[c]->addarraypos >= 0 && !conshdlr->conss[c]->deleted &&
             conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
          {
-            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
+            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, stat, conshdlr->conss[c]) );
          }
       }
    }
@@ -2656,8 +2658,11 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,                /**< dynamic problem statistics */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+                                              *   but were not activated there? Should be FALSE for repeated calls at
+                                              *   one node or if the current focusnode is a child of the former one */
    )
 {
    assert(conshdlr != NULL);
@@ -2669,8 +2674,13 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       int oldninitconss;
       int c;
 
-      SCIPdebugMessage("initializing LP with %d initial constraints of handler <%s>\n", 
-         conshdlr->ninitconss, conshdlr->name);
+      SCIPdebugMessage("initializing LP with %d initial constraints of handler <%s> (ninitconss=%d, kept=%d, initkept=%u)\n",
+         initkeptconss ? conshdlr->ninitconss : conshdlr->ninitconss - conshdlr->ninitconsskept, conshdlr->name,
+         conshdlr->ninitconss, conshdlr->ninitconsskept, initkeptconss);
+
+      /* no constraints to initialize (or only kept constraints which do not need to be initialized this time) -> return */
+      if( conshdlr->ninitconss == 0 || (!initkeptconss && conshdlr->ninitconss == conshdlr->ninitconsskept) )
+         return SCIP_OKAY;
 
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -2679,19 +2689,22 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       conshdlrDelayUpdates(conshdlr);
 
       oldninitconss = conshdlr->ninitconss;
-      
+
       /* start timing */
       SCIPclockStart(conshdlr->sepatime, set);
 
-      /* add all kept initial constraints which are currently active to the second part of the initconss array */
-      /* @todo keep track of where a constraint was already initialized (e.g., in the conssetchg)? */
-      for( c = 0; c < conshdlr->ninitconsskept; ++c )
+      if( initkeptconss )
       {
-         assert(conshdlr->initconss[c]->initconsspos == c);
-
-         if( SCIPconsIsActive(conshdlr->initconss[c]) )
+         /* add all kept initial constraints which are currently active to the second part of the initconss array */
+         /* @todo keep track of where a constraint was already initialized (e.g., in the conssetchg)? */
+         for( c = 0; c < conshdlr->ninitconsskept; ++c )
          {
-            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->initconss[c]) );
+            assert(conshdlr->initconss[c]->initconsspos == c);
+
+            if( SCIPconsIsActive(conshdlr->initconss[c]) )
+            {
+               SCIP_CALL( conshdlrAddInitcons(conshdlr, set, stat, conshdlr->initconss[c]) );
+            }
          }
       }
 
@@ -3067,24 +3080,21 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          && conshdlr->lastenfolpnode == stat->nnodes
          && conshdlr->lastenfolpresult != SCIP_CONSADDED )
       {
-         assert(conshdlr->lastenfolpresult != SCIP_DIDNOTRUN);
-         assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
-         assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
-         assert(conshdlr->lastenfolpresult != SCIP_REDUCEDDOM);
-         /* might this assert fail due to numerics? if yes, it should probably be treated like SCIP_INFEASIBLE */
-         assert(conshdlr->lastenfolpresult != SCIP_SEPARATED);
+         assert(conshdlr->lastenfolpresult == SCIP_FEASIBLE || conshdlr->lastenfolpresult == SCIP_INFEASIBLE
+            || conshdlr->lastenfolpresult == SCIP_SEPARATED );
 
          /* if we already enforced the same pseudo solution at this node, we will only enforce new constraints in the
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE )
+         if( conshdlr->lastenfolpresult == SCIP_FEASIBLE )
+            lastinfeasible = FALSE;
+         else
          {
+            assert(conshdlr->lastenfolpresult == SCIP_INFEASIBLE || conshdlr->lastenfolpresult == SCIP_SEPARATED);
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;
          }
-         else
-            lastinfeasible = FALSE;
 
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -3251,7 +3261,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       SCIP_Bool pschanged;
       SCIP_Bool lastinfeasible;
 
-      /* check, if this LP solution was already enforced at this node */
+      /* check, if this pseudo solution was already enforced at this node */
       if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount
          && conshdlr->lastenfopsnode == stat->nnodes
          && conshdlr->lastenfopsresult != SCIP_CONSADDED
@@ -3303,8 +3313,8 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
                      
-         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution)\n",
-            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old");
+         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, objinfeasible=%u)\n",
+            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old", objinfeasible);
 
          /* remember the number of processed constraints on the current pseudo solution */
          conshdlr->lastenfopsdomchgcount = stat->domchgcount;
@@ -3449,7 +3459,9 @@ SCIP_RETCODE SCIPconshdlrCheck(
 
       /* update statistics */
       conshdlr->ncheckcalls++;
-      
+
+
+
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
@@ -5390,9 +5402,10 @@ SCIP_RETCODE SCIPconsCreate(
 {
    assert(cons != NULL);
    assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(name != NULL);
    assert(conshdlr != NULL);
    assert(!original || deleteconsdata);
-   assert(set != NULL);
 
    /* constraints of constraint handlers that don't need constraints cannot be created */
    if( !conshdlr->needscons )
@@ -6008,6 +6021,7 @@ SCIP_RETCODE SCIPconsTransform(
 SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             initial             /**< new value */
    )
 {
@@ -6022,7 +6036,7 @@ SCIP_RETCODE SCIPconsSetInitial(
       {
          if( cons->initial )
          {
-            SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, cons) );
+            SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, stat, cons) );
          }
          else
          {
@@ -7505,7 +7519,10 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
 
-/** returns the name of the constraint */
+/** returns the name of the constraint 
+ *
+ *  @note to change the name of a constraint, use SCIPchgConsName() from scip.h
+ */
 const char* SCIPconsGetName(
    SCIP_CONS*            cons                /**< constraint */
    )

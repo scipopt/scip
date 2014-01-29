@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,7 @@
 
 #include "scip/prop_obbt.h"
 #include "scip/prop_genvbounds.h"
+#include "scip/debug.h"
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -54,6 +55,7 @@
                                                     *   auxiliary LPs? */
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
+#define DEFAULT_CONDITIONLIMIT           1e12      /**< maximum condition limit used in LP solver (-1.0: no limit) */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
@@ -99,6 +101,7 @@ struct SCIP_PropData
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
    SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
                                               *   used if SCIP's dual feastol is greater */
+   SCIP_Real             conditionlimit;     /**< maximum condition limit used in LP solver (-1.0: no limit) */
    SCIP_Real             itlimitfactor;      /**< LP iteration limit for obbt will be this factor times total LP
                                               *   iterations in root node */
    SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
@@ -813,6 +816,8 @@ SCIP_RETCODE createGenVBound(
                idx++;
 
                /* if redcost > 0, then redcost = alpha_k, otherwise redcost = - beta_k */
+               assert(redcost <= 0 || !SCIPisInfinity(scip, -SCIPgetVarLbDive(scip, xk)));
+               assert(redcost >= 0 || !SCIPisInfinity(scip, SCIPgetVarUbDive(scip, xk)));
                c -= redcost > 0 ? redcost * SCIPgetVarLbDive(scip, xk) : redcost * SCIPgetVarUbDive(scip, xk);
             }
          }
@@ -965,6 +970,17 @@ SCIP_RETCODE findNewBounds(
 
                SCIPdebugMessage("      var <%s>, LP value: %f\n", SCIPvarGetName(var), bound->newval);
 
+#ifdef SCIP_DEBUG_SOLUTION
+               if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( SCIPdebugCheckLbGlobal(scip, var, bound->newval) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPdebugCheckUbGlobal(scip, var, bound->newval) );
+               }
+#endif
+
                /* in root node we may want to create a genvbound (independent of tightening success) */
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
                {
@@ -998,6 +1014,8 @@ SCIP_RETCODE applyObbt(
    )
 {
    SCIP_Longint nolditerations;
+   SCIP_Bool hasconditionlimit;
+   SCIP_Real oldconditionlimit;
    SCIP_Real olddualfeastol;
    int nfiltered;
    int i;
@@ -1008,7 +1026,6 @@ SCIP_RETCODE applyObbt(
 
    *result = SCIP_DIDNOTFIND;
    nolditerations = SCIPgetNLPIterations(scip);
-   olddualfeastol = SCIPdualfeastol(scip);
    nfiltered = 0;
 
    /* reset bound data structure flags; fixed variables are marked as filtered */
@@ -1025,10 +1042,22 @@ SCIP_RETCODE applyObbt(
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   /* set dual feastol */
+   /* tighten dual feastol */
+   olddualfeastol = SCIPdualfeastol(scip);
    if( propdata->dualfeastol < olddualfeastol )
    {
       SCIP_CALL( SCIPchgDualfeastol(scip, propdata->dualfeastol) );
+   }
+
+   /* tighten condition limit */
+   hasconditionlimit = (SCIPgetRealParam(scip, "lp/conditionlimit", &oldconditionlimit) == SCIP_OKAY);
+   if( !hasconditionlimit )
+   {
+      SCIPwarningMessage(scip, "obbt propagator could not set condition limit in LP solver - running without\n");
+   }
+   else if( propdata->conditionlimit > 0.0 && (oldconditionlimit < 0.0 || propdata->conditionlimit < oldconditionlimit) )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "lp/conditionlimit", propdata->conditionlimit) );
    }
 
    /* add objective cutoff */
@@ -1051,8 +1080,12 @@ SCIP_RETCODE applyObbt(
    /* try to find new bounds and store them in the bound data structure */
    SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
 
-   /* reset dual feastol */
+   /* reset dual feastol and condition limit */
    SCIP_CALL( SCIPchgDualfeastol(scip, olddualfeastol) );
+   if( hasconditionlimit )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "lp/conditionlimit", oldconditionlimit) );
+   }
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
@@ -1580,6 +1613,10 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/dualfeastol",
          "feasibility tolerance for reduced costs used in obbt; this value is used if SCIP's dual feastol is greater",
          &propdata->dualfeastol, FALSE, DEFAULT_DUALFEASTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/conditionlimit",
+         "maximum condition limit used in LP solver (-1.0: no limit)",
+         &propdata->conditionlimit, FALSE, DEFAULT_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

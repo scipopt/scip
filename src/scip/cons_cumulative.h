@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -272,8 +272,6 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );

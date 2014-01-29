@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1012,7 +1012,7 @@ SCIP_RETCODE solveSubNLP(
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
        */
-      if( !SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
+      if( retcode == SCIP_OKAY && SCIPgetStage(heurdata->subscip) != SCIP_STAGE_SOLVED && !SCIPisNLPConstructed(heurdata->subscip) )
       {
          SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
          retcode = SCIPsolve(heurdata->subscip);

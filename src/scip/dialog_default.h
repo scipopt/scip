@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -134,6 +134,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
 /** dialog execution method for the display solution command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
+
+/** dialog execution method for the display dual solution command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution);
 
 /** dialog execution method for the display of solutions in the pool command */
 EXTERN

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -422,8 +422,8 @@ SCIP_RETCODE createRows(
 /** frees the subproblem */
 static
 SCIP_RETCODE deleteSubproblem(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*       heurdata            /**< heuristic data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    /* free remaining memory from heuristic execution */
@@ -579,10 +579,6 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   /* do not call heuristic of node was already detected to be infeasible */
-   if( nodeinfeasible )
-      return SCIP_OKAY;
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
