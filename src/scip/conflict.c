@@ -2120,13 +2120,14 @@ SCIP_RETCODE conflictAddConflictCons(
    }
 
    /* in case the conflict set contains only one bound change which is globally valid we apply that bound change
-    * directly (except if we are in strong branching - in this case a bound change would yield an unflushed LP)
+    * directly (except if we are in strong branching or diving - in this case a bound change would yield an unflushed LP
+    * and is not handled when restoring the information)
     *
     * @note A bound change can only be applied if it is are related to the active node or if is a global bound
     *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
     *       data structure
     */
-   if( conflictset->nbdchginfos == 1 && insertdepth == 0 && ! lp->strongbranching )
+   if( conflictset->nbdchginfos == 1 && insertdepth == 0 && !lp->strongbranching && !lp->diving )
    {
       SCIP_VAR* var;
       SCIP_Real bound;
