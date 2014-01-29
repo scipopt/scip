@@ -8582,7 +8582,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
 
    /* parse expression */
-   SCIP_CALL( SCIPexprParse(SCIPblkmem(scip), &expr, exprstart, exprlastchar, &nvars, varnames) );
+   SCIP_CALL( SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames) );
 
    /* get SCIP variables corresponding to variable names stored in varnames buffer */
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
