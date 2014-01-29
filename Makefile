@@ -47,6 +47,7 @@ VERSION		=	3.0.2.1
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
+TOUCHLINKS	=	false
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
@@ -878,6 +879,15 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR)
 
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) | $(LIBOBJDIR)
+ifeq ($(TOUCHLINKS),true)
+		@-touch $(ZLIBSRC)
+		@-touch $(GMPSRC)
+		@-touch $(READLINESRC)
+		@-touch $(ZIMPLSRC)
+		@-touch $(LPSCHECKSRC)
+		@-touch $(LPILIBSRC)
+		@-touch $(NLPILIBSRC)
+endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
 		@-$(MAKE) githash
 endif
@@ -1011,27 +1021,23 @@ endif
 
 .PHONY: errorhints
 errorhints:
-		@echo
-		@echo "build failed"
 ifeq ($(READLINE),true)
-		@echo "- you used READLINE=true: if readline is not available, try building with READLINE=false"
+		@echo "build failed with READLINE=true: if readline is not available, try building with READLINE=false"
 endif
 ifeq ($(ZLIB),true)
-		@echo "- you used ZLIB=true: if zlib is not available, try building with ZLIB=false"
+		@echo "build failed with ZLIB=true: if ZLIB is not available, try building with ZLIB=false"
 endif
 ifeq ($(GMP),true)
-		@echo "- you used GMP=true: if gmp is not available, try building with GMP=false (note that this will deactivate Zimpl support)"
+		@echo "build failed with GMP=true: if GMP is not available, try building with GMP=false (note that this will deactivate Zimpl support)"
 endif
 ifeq ($(GMP),false)
 ifeq ($(LPS),spx)
-		@echo "- you used GMP=false with LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
+		@echo "build failed with GMP=false and LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 ifeq ($(LPS),spx2)
-		@echo "- you used GMP=false with LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
+		@echo "build failed with GMP=false and LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 endif
-		@echo "for help on building SCIP consult the INSTALL file"
-		@echo
 
 # --- EOF ---------------------------------------------------------------------
 # DO NOT DELETE
