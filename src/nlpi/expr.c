@@ -5045,14 +5045,11 @@ SCIP_RETCODE exprParse(
    /* four character operators */
    else if( strncmp(str, "sqrt", 4) == 0 )
    {
-      const char* opname = str;
-
       str += 4;
       SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
       SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
       str = endptr + 1;
 
-      assert(strncmp(opname, "sqrt", 4) == 0);
       SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg1) );
    }
    /* three character operators */
