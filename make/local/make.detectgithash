@@ -17,7 +17,6 @@
 #@brief   SCIP sub Makefile
 #@author  Stefan Heinz
 
-SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPGITHASH	=	$(shell git describe --always --dirty  | sed 's/^.*-g//')
 
 .PHONY: githash
