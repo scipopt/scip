@@ -5206,7 +5206,7 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
  src/scip/event.h src/scip/struct_event.h src/scip/cons_linear.h \
- src/scip/scipdefplugins.h src/scip/branch_allfullstrong.h \
+ src/scip/lp.h src/scip/scipdefplugins.h src/scip/branch_allfullstrong.h \
  src/scip/branch_cloud.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_leastinf.h \
  src/scip/branch_mostinf.h src/scip/branch_pscost.h \
@@ -5261,7 +5261,8 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
- src/scip/sepa_strongcg.h src/scip/scipshell.h src/nlpi/nlpi_ipopt.h
+ src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
+ src/nlpi/nlpi_ipopt.h
 $(LIBOBJDIR)/scip/branch.o: src/scip/branch.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/set.h src/scip/buffer.h \
