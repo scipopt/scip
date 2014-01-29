@@ -50,6 +50,9 @@ $NAME/check/check_count.sh $NAME/check/evalcheck_count.sh $NAME/check/check_coun
 $NAME/check/testset/short.test $NAME/check/testset/short.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
+$NAME/check/configuration_set.sh $NAME/check/configuration_logfiles.sh \
+$NAME/check/configuration_tmpfile_setup_scip.sh \
+$NAME/check/run.sh $NAME/check/evalcheck_cluster.sh \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp \
