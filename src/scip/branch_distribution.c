@@ -548,7 +548,7 @@ SCIP_RETCODE getScore(
 }
 
 
-/* calculate the branching score of a variable, depending on the chosen score parameter */
+/** calculate the branching score of a variable, depending on the chosen score parameter */
 static
 SCIP_RETCODE calcBranchScore(
    SCIP*                 scip,               /**< current SCIP */
@@ -618,6 +618,7 @@ SCIP_RETCODE calcBranchScore(
    *downscore = 0.0;
 
    onlyactiverows = branchruledata->onlyactiverows;
+
    /* loop over the variable rows and calculate the up and down score */
    for( i = 0; i < ncolrows; ++i )
    {
@@ -653,7 +654,7 @@ SCIP_RETCODE calcBranchScore(
          rowCalculateGauss(scip, branchruledata, row, &branchruledata->rowmeans[rowpos], &branchruledata->rowvariances[rowpos],
                &branchruledata->rowinfinitiesdown[rowpos], &branchruledata->rowinfinitiesup[rowpos]);
       }
-#ifndef NDEBUG
+#if 0
       {
          rowCalculateGauss(scip, branchruledata, row, &rowmean, &rowvariance, &rowinfinitiesdown, &rowinfinitiesup);
          assert(rowinfinitiesdown == branchruledata->rowinfinitiesdown[rowpos]);
@@ -663,6 +664,7 @@ SCIP_RETCODE calcBranchScore(
       }
 #endif
 
+      /* retrieve the row distribution parameters from the branch rule data*/
       rowmean = branchruledata->rowmeans[rowpos];
       rowvariance = branchruledata->rowvariances[rowpos];
       rowinfinitiesdown = branchruledata->rowinfinitiesdown[rowpos];
@@ -675,14 +677,18 @@ SCIP_RETCODE calcBranchScore(
       /* get variable's current expected contribution to row activity */
       squaredcoeff = SQUARED(rowvals[i]);
 
-      /* first, get the probability change for the row if the variable is branched on upwards */
+      /* first, get the probability change for the row if the variable is branched on upwards. The probability
+       * can only be affected if the variable upper bound is finite
+       */
       if( !SCIPisInfinity(scip, varub) )
       {
          int rowinftiesdownafterbranch;
          int rowinftiesupafterbranch;
 
+         /* calculate how branching would affect the row parameters */
          changedrowmean = rowmean + rowvals[i] * (meanup - currentmean);
          changedrowvariance = rowvariance + squaredcoeff * (squaredbounddiffup - squaredbounddiff);
+         changedrowvariance = MAX(0.0, changedrowvariance);
 
          rowinftiesdownafterbranch = rowinfinitiesdown;
          rowinftiesupafterbranch = rowinfinitiesup;
@@ -709,6 +715,7 @@ SCIP_RETCODE calcBranchScore(
 
          changedrowmean = rowmean + rowvals[i] * (meandown - currentmean);
          changedrowvariance = rowvariance + squaredcoeff * (squaredbounddiffdown - squaredbounddiff);
+         changedrowvariance = MAX(0.0, changedrowvariance);
 
          rowinftiesdownafterbranch = rowinfinitiesdown;
          rowinftiesupafterbranch = rowinfinitiesup;
@@ -742,7 +749,7 @@ SCIP_RETCODE calcBranchScore(
 static
 SCIP_RETCODE branchruledataFreeArrays(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULEDATA*  branchruledata      /**< branchruledata */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
    assert(branchruledata->memsize == 0 || branchruledata->rowmeans != NULL);
@@ -778,7 +785,11 @@ void branchruledataAddBoundChangeVar(
    assert(var != NULL);
 
    varindex = SCIPvarGetProbindex(var);
-   assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
+   assert(-1 <= varindex && varindex < branchruledata->varpossmemsize);
+
+   /* if variable is not active, it should not be watched */
+   if( varindex == -1 )
+      return;
    varpos = branchruledata->varposs[varindex];
    assert(varpos < branchruledata->nupdatedvars);
 
@@ -856,6 +867,7 @@ SCIP_RETCODE varProcessBoundChanges(
    int ncolrows;
    int r;
    int varindex;
+
    /* skip event execution if SCIP is in Probing mode because these bound changes will be undone anyway before branching
     * rule is called again
     */
@@ -919,7 +931,7 @@ SCIP_RETCODE varProcessBoundChanges(
          /* update variable contribution to row activity distribution */
          branchruledata->rowmeans[rowpos] += coeff * (newmean - oldmean);
          branchruledata->rowvariances[rowpos] += coeffsquared * (newvariance - oldvariance);
-         assert(SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
+         branchruledata->rowvariances[rowpos] = MAX(0.0, branchruledata->rowvariances[rowpos]);
 
          /* account for changes of the infinite contributions to row activities */
          if( SCIPisPositive(scip, coeff) )
@@ -1224,6 +1236,10 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
 
    branchruledata = eventhdlrdata->branchruledata;
    var = SCIPeventGetVar(event);
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      SCIP_CALL( varProcessBoundChanges(scip, branchruledata, var) );
+      return SCIP_OKAY;
 
    /* add the variable to the queue of unprocessed variables; method itself ensures that every variable is added
     * at most once
