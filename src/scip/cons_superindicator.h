@@ -125,7 +125,7 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 EXTERN
 SCIP_RETCODE SCIPtransformMinUC(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            success             /**< could all constraints be transformed? */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints could be transformed? */
    );
 
 

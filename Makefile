@@ -43,7 +43,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.0.2.1
+VERSION		=	3.1.0a
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
@@ -469,6 +469,8 @@ SCIPLIBSHORTLINK = 	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 ALLSRC		+=	$(SCIPLIBSRC)
 
+SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
+
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
 #-----------------------------------------------------------------------------
@@ -888,6 +890,11 @@ endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
 		@-$(MAKE) githash
 endif
+		@$(SHELL) -ec 'if test ! -e $(SCIPGITHASHFILE) ; \
+			then \
+				echo "-> generating $(SCIPGITHASHFILE)" ; \
+				@-$(MAKE) githash ; \
+			fi'
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
