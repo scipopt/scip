@@ -250,9 +250,6 @@ ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 
 ifeq ($(ZIMPL),true)
-ifeq ($(ZLIB),false)
-$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
-endif
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
 endif
