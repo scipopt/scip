@@ -272,8 +272,9 @@ SCIP_RETCODE printActiveVariables(
    SCIP_Real activeconstant = 0.0;
 
    assert( scip != NULL );
-   assert( nvars == 0 || vars != NULL );
-   assert( nvars > 0 || (vars == NULL && vals == NULL) );
+   assert( vars != NULL || nvars == 0 );
+   assert( vals != NULL || nvars == 0 );
+
 
    if( *linecnt == 0 )
       /* we start a new line; therefore we tab this line */
@@ -2054,7 +2055,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool signpowerallowed;
 
    assert( scip != NULL );
-   assert( nvars > 0 );
+   assert( vars != NULL || nvars == 0 );
 
    /* check if the variable names are not too long */
    SCIP_CALL( checkVarnames(scip, vars, nvars) );
