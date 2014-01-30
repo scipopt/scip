@@ -84,24 +84,24 @@
 #define DEFAULT_MAXCUTSROOT        1000 /**< maximal number of {0,1/2}-cuts determined per separation round
                                          *   in the root node (this includes separated but inefficacious cuts) */
 #define DEFAULT_SUBSCIPOBJECTIVE    'v' /**< auxiliary IP objective function type */
-#define DEFAULT_RELAXCONTVARS    FALSE /**< should continuous variables be relaxed by adding variable bounds? */
-#define DEFAULT_SCALEFRACCOEFFS   TRUE /**< should rows be scaled to make fractional coefficients integer? */
-#define DEFAULT_SUBSCIPSETTINGS    "-" /**< optional settings file of the auxiliary IP (-: none) */
-#define DEFAULT_SUBSCIPSOLLIMIT     -1 /**< limits/solutions setting of the auxiliary IP */
-#define DEFAULT_SUBSCIPUSEALLSOLS TRUE /**< should all (proper) solutions of the auxiliary IP be used to generate
-                                        *   cuts instead of using only the best? */
-#define DEFAULT_PPDELTA          0.500 /**< value of delta parameter used in preprocessing method 'd' */
-#define DEFAULT_SUBSCIPOBJPEN    0.001 /**< penalty factor used with objective function 'p' of auxiliary IP */
+#define DEFAULT_RELAXCONTVARS     FALSE /**< should continuous variables be relaxed by adding variable bounds? */
+#define DEFAULT_SCALEFRACCOEFFS    TRUE /**< should rows be scaled to make fractional coefficients integer? */
+#define DEFAULT_SUBSCIPSETTINGS     "-" /**< optional settings file of the auxiliary IP (-: none) */
+#define DEFAULT_SUBSCIPSOLLIMIT      -1 /**< limits/solutions setting of the auxiliary IP */
+#define DEFAULT_SUBSCIPUSEALLSOLS  TRUE /**< should all (proper) solutions of the auxiliary IP be used to generate
+                                         *   cuts instead of using only the best? */
+#define DEFAULT_PPDELTA           0.500 /**< value of delta parameter used in preprocessing method 'd' */
+#define DEFAULT_SUBSCIPOBJPEN     0.001 /**< penalty factor used with objective function 'p' of auxiliary IP */
 
-#define DEFAULT_PPMETHODS     "CXGXIM" /**< preprocessing methods and ordering */
-#define DEFAULT_SEPAMETHODS       "2g" /**< preprocessing methods and ordering */
-#define DEFAULT_MAXNCALLS         -1LL /**< maximal number of calls (-1: unlimited) */
-#define DEFAULT_IGNOREPREVIOUSZHCUTS FALSE /**< should zerohalf cuts found in previous callbacks ignored? */
-#define DEFAULT_ONLYORIGROWS     FALSE /**< should only original LP rows be considered (i.e. ignore previously added LP rows)? */
-#define DEFAULT_USEZHCUTPOOL      TRUE /**< should zerohalf cuts be filtered using a cutpool */
-
-#define DEFAULT_MAXTESTDELTA        10 /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
-#define DEFAULT_TRYNEGSCALING     TRUE /**< should negative values also be tested in scaling for cmir? */
+#define DEFAULT_PPMETHODS      "CXGXIM" /**< preprocessing methods and ordering */
+#define DEFAULT_SEPAMETHODS        "2g" /**< preprocessing methods and ordering */
+#define DEFAULT_MAXNCALLS          -1LL /**< maximal number of calls (-1: unlimited) */
+#define DEFAULT_IGNOREPREVIOUSZHCUTS FALSE /**< should zerohalf cuts found in previous callbacks be ignored? */
+#define DEFAULT_ONLYORIGROWS      FALSE /**< should only original LP rows be considered (i.e. ignore previously added LP rows)? */
+#define DEFAULT_USEZHCUTPOOL       TRUE /**< should zerohalf cuts be filtered using a cutpool */
+#define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
+#define DEFAULT_MAXTESTDELTA         10 /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
+#define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling for cmir? */
 
 /* cut pool management */
 #define ORTHOFUNC                   'e' 
@@ -402,7 +402,8 @@ struct SCIP_SepaData
    SCIP_Bool             ignoreprevzhcuts;   /**< should zerohalf cuts found within previous callbacks considered as well? */
    SCIP_Bool             onlyorigrows;       /**< should only original LP rows be considered (i.e. ignore previously added LP rows)? */
    SCIP_Bool             usezhcutpool;       /**< should zerohalf cuts be filtered using a cutpool? */
-  
+   SCIP_Bool             delayedcuts;        /**< should cuts be added to the delayed cut pool? */
+
    SCIP_Real             maxslack;           /**< initial: 1.0 - 2.0 * minviolation */
    int                   norigrows;          /**< number of original LP rows */
    int*                  origrows;           /**< set of SCIP_ROW->index of all original LP rows */
@@ -7244,17 +7245,25 @@ s=============================================\n");
          /* add cut to LP */
          if( hasminorthogonality && cutdatai->addedtolp )
          {
-            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp, &cutoff) );
-            if ( cutoff )
+            /* use delayed cutpool for globally valid cuts */
+            if( sepadata->delayedcuts && !cutdatai->islocal )
             {
-               *result = SCIP_CUTOFF;
-               break;
+               SCIP_CALL( SCIPaddDelayedPoolCut(scip, cutdatai->cut) );
             }
-            if( !cutdatai->islocal )
+            else
             {
-               SCIP_CALL(SCIPaddPoolCut(scip, cutdatai->cut));
+               SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp, &cutoff) );
+               if ( cutoff )
+               {
+                  *result = SCIP_CUTOFF;
+                  break;
+               }
+               if( !cutdatai->islocal )
+               {
+                  SCIP_CALL(SCIPaddPoolCut(scip, cutdatai->cut));
+               }
+               cutdatai->addedtolp = TRUE;
             }
-            cutdatai->addedtolp = TRUE;
          }
          else
          {
@@ -7604,6 +7613,10 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/zerohalf/usezhcutpool",
          "should zerohalf cuts be filtered using a cutpool?",
          &(sepadata->usezhcutpool), TRUE, DEFAULT_USEZHCUTPOOL, NULL, NULL));
+   SCIP_CALL(SCIPaddBoolParam(scip,
+         "separating/zerohalf/delayedcuts",
+         "should cuts be added to the delayed cut pool?",
+         &sepadata->delayedcuts, TRUE, DEFAULT_DELAYEDCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/zerohalf/maxtestdelta",
          "maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1)",

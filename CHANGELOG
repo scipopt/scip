@@ -277,6 +277,7 @@ parameters:
   when solving a component
 - new advanced parameters "misc/permuteconss" and "misc/permutevars" to control whether variables and/or constraints
   should be permuted, if permutationseed != -1
+- new parameter "separating/zerohalf/delayedcuts" to use the delayed cutpool for the zerohalf separator
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
