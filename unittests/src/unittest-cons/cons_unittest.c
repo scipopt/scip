@@ -65,9 +65,9 @@
 /* TODO: fill in the necessary constraint data */
 
 /** constraint data for unittest constraints */
-struct SCIP_ConsData
+/*struct SCIP_ConsData
 {
-};
+};*/
 
 /** constraint handler data */
 struct SCIP_ConshdlrData

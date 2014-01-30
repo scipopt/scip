@@ -465,14 +465,14 @@ SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
    return SCIP_OKAY;
 }
 
-static
+/*
 SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
 
    return SCIP_OKAY;
 }
-
+*/
 
 /** main function */
 int
