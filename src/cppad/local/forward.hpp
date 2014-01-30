@@ -170,7 +170,7 @@ Vector ADFun<Base>::Forward(
 			ok = ! hasnan(y_p);
 		else if( n_order != 1 )
 		{	for(i = 0; i < m; i++)
-			ok &= ! isnan( y_p[ i * n_order + 0 ] );
+			ok &= ! CppAD::isnan( y_p[ i * n_order + 0 ] );
 		} 
 		CPPAD_ASSERT_KNOWN(ok,
 			"y_p = f.Forward(p, x): has a zero order Taylor coefficient "
@@ -181,7 +181,7 @@ Vector ADFun<Base>::Forward(
 		else if( n_order != 1 )
 		{	for(i = 0; i < m; i++)
 			{	for(k = 1; k < n_order; k++)
-					ok &= ! isnan( y_p[ i * n_order + k ] );
+					ok &= ! CppAD::isnan( y_p[ i * n_order + k ] );
 			}
 		}
 		CPPAD_ASSERT_KNOWN(ok,
