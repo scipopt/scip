@@ -2803,7 +2803,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
          SCIPstatistic(
             if( ncovers == 0 && success )
-               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100.0*coversize /(SCIP_Real)nvars);
             );
 
          assert(coversize >= 0);

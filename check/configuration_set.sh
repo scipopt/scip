@@ -55,11 +55,14 @@ then
     mkdir $SCIPPATH/results
 fi
 
+# create settings directory if non-existent
+if test ! -d $SCIPPATH/../settings/
+then
+    echo Create directory settings
+    mkdir $SCIPPATH/../settings
+fi
+
 # check if all settings files exist
-
-
-
-
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do

@@ -935,24 +935,28 @@ SCIP_RETCODE separateCons(
    if( *result == SCIP_REDUCEDDOM )
       return SCIP_OKAY;
 
-   /* create LP relaxation if not yet existing */
-   if( consdata->row == NULL )
+   /* check constraint for feasibility and create row if constraint is violated */
+   if( !checkCons(scip, cons, sol, (sol != NULL)) )
    {
-      SCIP_CALL( createRelaxation(scip, cons) );
-   }
-   assert(consdata->row != NULL);
-
-   /* check non-LP rows for feasibility and add them as cut, if violated */
-   if( !SCIProwIsInLP(consdata->row) )
-   {
-      feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
-      if( SCIPisFeasNegative(scip, feasibility) )
+      /* create LP relaxation if not yet existing */
+      if( consdata->row == NULL )
       {
-         SCIP_Bool infeasible;
+         SCIP_CALL( createRelaxation(scip, cons) );
+      }
+      assert(consdata->row != NULL);
 
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
-         assert( ! infeasible );
-         *result = SCIP_SEPARATED;
+      /* check non-LP rows for feasibility and add them as cut, if violated */
+      if( !SCIProwIsInLP(consdata->row) )
+      {
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
+         if( SCIPisFeasNegative(scip, feasibility) )
+         {
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
+            assert( ! infeasible );
+            *result = SCIP_SEPARATED;
+         }
       }
    }
 
@@ -4339,7 +4343,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
             *success = FALSE;
          }
       }
-      else if( !strncmp(str, "[free]", 6) == 0 )
+      else if( strncmp(str, "[free]", 6) != 0 )
          *success = FALSE;
    }
 
@@ -4599,7 +4603,7 @@ SCIP_Real SCIPgetLhsVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4620,7 +4624,7 @@ SCIP_Real SCIPgetRhsVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4641,7 +4645,7 @@ SCIP_VAR* SCIPgetVarVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4662,7 +4666,7 @@ SCIP_VAR* SCIPgetVbdvarVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4683,7 +4687,7 @@ SCIP_Real SCIPgetVbdcoefVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4704,7 +4708,7 @@ SCIP_Real SCIPgetDualsolVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4728,7 +4732,7 @@ SCIP_Real SCIPgetDualfarkasVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -4754,7 +4758,7 @@ SCIP_ROW* SCIPgetRowVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

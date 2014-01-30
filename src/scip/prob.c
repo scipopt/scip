@@ -797,7 +797,7 @@ SCIP_RETCODE probRemoveVar(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
@@ -1715,7 +1715,6 @@ void SCIPprobUpdateBestRootSol(
       }
       else
       {
-#if 1
          SCIP_Real primsol;
          SCIP_BASESTAT basestat;
          SCIP_Bool lpissolbasic;
@@ -1752,47 +1751,6 @@ void SCIPprobUpdateBestRootSol(
                rootsol = 0.0;
             }
          }
-#else
-         switch( SCIPcolGetBasisStatus(col) )
-         {
-         case SCIP_BASESTAT_LOWER:
-         case SCIP_BASESTAT_UPPER:
-         {
-            SCIP_Real lbrootredcost;
-            SCIP_Real ubrootredcost;
-
-            /* get reduced cost if the variable gets fixed to zero */
-            lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, lp);
-            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
-               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-
-            /* get reduced cost if the variable gets fixed to one */
-            ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, lp);
-            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
-               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-
-            if( -lbrootredcost > ubrootredcost )
-            {
-               rootredcost = lbrootredcost;
-               rootsol = 1.0;
-            }
-            else
-            {
-               rootredcost = ubrootredcost;
-               rootsol = 0.0;
-            }
-            break;
-         }
-         case SCIP_BASESTAT_BASIC:
-         case SCIP_BASESTAT_ZERO:
-            continue;
-
-         default:
-            SCIPerrorMessage("invalid basis state\n");
-            SCIPABORT();
-            return; /*lint !e527*/
-         }
-#endif
       }
 
       /* update the current solution as best root solution in the problem variables if it is better */

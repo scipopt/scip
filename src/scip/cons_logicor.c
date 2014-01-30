@@ -5129,7 +5129,7 @@ int SCIPgetNVarsLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5150,7 +5150,7 @@ SCIP_VAR** SCIPgetVarsLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5171,7 +5171,7 @@ SCIP_Real SCIPgetDualsolLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5195,7 +5195,7 @@ SCIP_Real SCIPgetDualfarkasLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -5221,7 +5221,7 @@ SCIP_ROW* SCIPgetRowLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

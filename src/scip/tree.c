@@ -252,7 +252,7 @@ SCIP_RETCODE SCIPnodeCaptureLPIState(
    default:
       SCIPerrorMessage("node for capturing the LPI state is neither fork nor subroot\n");
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }  /*lint !e788*/
    return SCIP_OKAY;
 }
@@ -597,7 +597,7 @@ SCIP_RETCODE subrootCreate(
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = SCIPlpGetNCols(lp);
    (*subroot)->nrows = SCIPlpGetNRows(lp);
-   (*subroot)->nchildren = tree->nchildren;
+   (*subroot)->nchildren = (unsigned int) tree->nchildren;
    SCIP_CALL( SCIPlpGetState(lp, blkmem, &((*subroot)->lpistate)) );
    (*subroot)->lpwasprimfeas = lp->primalfeasible;
    (*subroot)->lpwasdualfeas = lp->dualfeasible;
@@ -1620,14 +1620,14 @@ SCIP_RETCODE treeAddPendingBdchg(
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
 	 /* check bound on debugging solution */
-	 SCIP_CALL( SCIPdebugCheckLbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+	 SCIP_CALL( SCIPdebugCheckLbGlobal(set->scip, var, newbound) ); /*lint !e506 !e774*/
       }
       else
       {
 	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
 	 /* check bound on debugging solution */
-	 SCIP_CALL( SCIPdebugCheckUbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+	 SCIP_CALL( SCIPdebugCheckUbGlobal(set->scip, var, newbound) ); /*lint !e506 !e774*/
       }
    }
 
@@ -2502,19 +2502,19 @@ SCIP_RETCODE treeUpdatePathLPSize(
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be in the active path\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_CHILD:
          SCIPerrorMessage("child cannot be in the active path\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_LEAF:
          SCIPerrorMessage("leaf cannot be in the active path\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_DEADEND:
          SCIPerrorMessage("dead-end cannot be in the active path\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_PSEUDOFORK:
@@ -2535,11 +2535,11 @@ SCIP_RETCODE treeUpdatePathLPSize(
       case SCIP_NODETYPE_REFOCUSNODE:
          SCIPerrorMessage("node cannot be of type REFOCUSNODE at this point\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       default:
          SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
       tree->pathnlpcols[i] = ncols;
       tree->pathnlprows[i] = nrows;

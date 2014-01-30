@@ -534,7 +534,7 @@
 =opt=	normalized-m50_100_50_50.r	3
 =opt=	normalized-m50_100_70_70.r	2
 =opt=	normalized-m50_100_90_90.r	2
-=best=	normalized-macrophage		379
+=best=	normalized-macrophage		377
 =opt=	normalized-maincont.r		7
 =inf=	normalized-market-split_4_30_1
 =inf=	normalized-market-split_4_30_2
@@ -816,7 +816,7 @@
 =best=	normalized-reduced-mps-v2-20-10-capri	222748
 =unkn=	normalized-reduced-mps-v2-20-10-CMS750_4
 =opt=	normalized-reduced-mps-v2-20-10-core2536-691	384
-=best=	normalized-reduced-mps-v2-20-10-core2586-950	533
+=best=	normalized-reduced-mps-v2-20-10-core2586-950	532
 =best=	normalized-reduced-mps-v2-20-10-core4284-1064	613
 =best=	normalized-reduced-mps-v2-20-10-core4872-1529	902
 =best=	normalized-reduced-mps-v2-20-10-cycle	-1
@@ -1088,21 +1088,21 @@
 =best=	normalized-vtxcov_v2000_e4000_6.opb.PB06	1036
 =best=	normalized-vtxcov_v2000_e4000_7.opb.PB06	1035
 =best=	normalized-vtxcov_v2000_e4000_8.opb.PB06	1038
-=best=	normalized-wnq_n100_mw99_0.opb.PB06	434
-=best=	normalized-wnq_n100_mw99_10.opb.PB06	480
-=best=	normalized-wnq_n100_mw99_11.opb.PB06	443
-=best=	normalized-wnq_n100_mw99_12.opb.PB06	419
-=best=	normalized-wnq_n100_mw99_13.opb.PB06	412
-=best=	normalized-wnq_n100_mw99_14.opb.PB06	453
-=best=	normalized-wnq_n100_mw99_1.opb.PB06	329
-=best=	normalized-wnq_n100_mw99_2.opb.PB06	436
-=best=	normalized-wnq_n100_mw99_3.opb.PB06	386
-=best=	normalized-wnq_n100_mw99_4.opb.PB06	466
-=best=	normalized-wnq_n100_mw99_5.opb.PB06	474
-=best=	normalized-wnq_n100_mw99_6.opb.PB06	371
-=best=	normalized-wnq_n100_mw99_7.opb.PB06	396
-=best=	normalized-wnq_n100_mw99_8.opb.PB06	397
-=best=	normalized-wnq_n100_mw99_9.opb.PB06	419
+=best=	normalized-wnq_n100_mw99_0.opb.PB06	254
+=best=	normalized-wnq_n100_mw99_10.opb.PB06	240
+=best=	normalized-wnq_n100_mw99_11.opb.PB06	265
+=best=	normalized-wnq_n100_mw99_12.opb.PB06	257
+=best=	normalized-wnq_n100_mw99_13.opb.PB06	246
+=best=	normalized-wnq_n100_mw99_14.opb.PB06	252
+=best=	normalized-wnq_n100_mw99_1.opb.PB06	285
+=best=	normalized-wnq_n100_mw99_2.opb.PB06	249
+=best=	normalized-wnq_n100_mw99_3.opb.PB06	270
+=best=	normalized-wnq_n100_mw99_4.opb.PB06	279
+=best=	normalized-wnq_n100_mw99_5.opb.PB06	258
+=best=	normalized-wnq_n100_mw99_6.opb.PB06	255
+=best=	normalized-wnq_n100_mw99_7.opb.PB06	270
+=best=	normalized-wnq_n100_mw99_8.opb.PB06	237
+=best=	normalized-wnq_n100_mw99_9.opb.PB06	273
 =opt=	normalized-ws97-5		2642
 =opt=   normalized-ped2.B.recomb1-0.01-1        7
 =opt=   normalized-ped2.B.recomb1-0.01-2        7

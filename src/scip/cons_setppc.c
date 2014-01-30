@@ -866,6 +866,7 @@ SCIP_RETCODE catchEvent(
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
    {
       consdata->nfixedzeros++;
+      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) && consdata->nfixedzeros >= consdata->nvars - 1 )
       {
@@ -875,6 +876,7 @@ SCIP_RETCODE catchEvent(
    else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
    {
       consdata->nfixedones++;
+      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) )
       {
@@ -1211,6 +1213,12 @@ SCIP_RETCODE dualPresolving(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   /* modifiable non-covering constraints cannot be deleted if one variable is fixed to one, because the propagation for
+    * newly inserted variables must be considered later
+    */
+   if( consdata->nfixedones == 1 && SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
 
    /* all fixed variables should be removed at that point */
    assert(consdata->nfixedones == 0);
@@ -1887,11 +1895,17 @@ SCIP_RETCODE applyFixings(
             /* check, if the variable should be replaced with the representative */
             if( repvar != var )
             {
+#ifndef NDEBUG
+               int oldnfixedzeros = consdata->nfixedzeros;
+               int oldnfixedones = consdata->nfixedones;
+#endif
                /* delete old (aggregated) variable */
                SCIP_CALL( delCoefPos(scip, cons, v) );
 
                /* add representative instead */
                SCIP_CALL( addCoef(scip, cons, repvar) );
+               assert(consdata->nfixedzeros == oldnfixedzeros);
+               assert(consdata->nfixedones == oldnfixedones);
             }
             else
                ++v;
@@ -7422,9 +7436,9 @@ SCIP_RETCODE branchLP(
 	 tmp = SCIPcalcChildEstimate(scip, sortcands[nselcands], 1.0);;
 	 minestone = MIN(minestone, tmp);
       }
-      assert(minestzero != SCIP_INVALID);
-      assert(minestone != SCIP_INVALID);
-      assert(minprio != SCIP_INVALID);
+      assert(minestzero != SCIP_INVALID); /*lint !e777*/
+      assert(minestone != SCIP_INVALID); /*lint !e777*/
+      assert(minprio != SCIP_INVALID); /*lint !e777*/
       assert(nselcands > 0);
       branchweight -= solval;
 
@@ -7582,7 +7596,7 @@ SCIP_RETCODE branchPseudo(
 	 minestzero = MIN(minestzero, tmp);
 	 estone[i] = SCIPcalcChildEstimate(scip, branchcands[i], 1.0);
       }
-      assert(minestzero != SCIP_INVALID);
+      assert(minestzero != SCIP_INVALID); /*lint !e777*/
 
       /* branch on the first part of the sorted candidates:
        * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
@@ -9055,7 +9069,7 @@ int SCIPgetNVarsSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9076,7 +9090,7 @@ SCIP_VAR** SCIPgetVarsSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9117,7 +9131,7 @@ SCIP_Real SCIPgetDualsolSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9141,7 +9155,7 @@ SCIP_Real SCIPgetDualfarkasSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9167,7 +9181,7 @@ SCIP_ROW* SCIPgetRowSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9188,7 +9202,7 @@ int SCIPgetNFixedonesSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9210,7 +9224,7 @@ int SCIPgetNFixedzerosSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return -1;
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

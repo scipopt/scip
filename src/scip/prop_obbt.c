@@ -39,6 +39,7 @@
 
 #include "scip/prop_obbt.h"
 #include "scip/prop_genvbounds.h"
+#include "scip/debug.h"
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -968,6 +969,17 @@ SCIP_RETCODE findNewBounds(
                bound->found = TRUE;
 
                SCIPdebugMessage("      var <%s>, LP value: %f\n", SCIPvarGetName(var), bound->newval);
+
+#ifdef SCIP_DEBUG_SOLUTION
+               if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( SCIPdebugCheckLbGlobal(scip, var, bound->newval) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPdebugCheckUbGlobal(scip, var, bound->newval) );
+               }
+#endif
 
                /* in root node we may want to create a genvbound (independent of tightening success) */
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )

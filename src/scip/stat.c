@@ -252,6 +252,7 @@ void SCIPstatReset(
    stat->solindex = 0;
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
+   stat->ninitconssadded = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;

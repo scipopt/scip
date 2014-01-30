@@ -7620,7 +7620,7 @@ SCIP_Bool SCIPstrToIntValue(
    /* init errno to detect possible errors */
    errno = 0;
 
-   *value = strtol(str, endptr, 10);
+   *value = (int) strtol(str, endptr, 10);
 
    if( *endptr != str && *endptr != NULL )
    {

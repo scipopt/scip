@@ -30,7 +30,11 @@
 #ifndef __SCIP_PUB_MISC_H__
 #define __SCIP_PUB_MISC_H__
 
-
+/* on SunOS, the function finite(a) (for the SCIPisFinite macro below) is declared in ieeefp.h */
+#ifdef __sun
+#include <ieeefp.h>
+#endif
+#include <math.h>
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -4960,6 +4964,23 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
    );
+
+/* The C99 standard defines the function (or macro) isfinite.
+ * On MacOS X, isfinite is also available.
+ * From the BSD world, there comes a function finite.
+ * On SunOS, finite is also available.
+ * In the MS compiler world, there is a function _finite.
+ * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
+ */
+#if _XOPEN_SOURCE >= 600 || _ISOC99_SOURCE || _POSIX_C_SOURCE >= 200112L || __APPLE__
+#define SCIPisFinite isfinite
+#elif defined(_BSD_SOURCE) || defined(__sun)
+#define SCIPisFinite finite
+#elif defined(_MSC_VER)
+#define SCIPisFinite _finite
+#else
+#define SCIPisFinite(x) ((x) == (x))
+#endif
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.

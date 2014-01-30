@@ -82,8 +82,8 @@
 
 /**@todo update this check to version 2.0 */
 /* check version */
-#if (SOPLEX_VERSION < 172 || (SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION < 7))
-#error "This interface is not compatible with SoPlex versions prior to 2.0"
+#if (SOPLEX_VERSION < 172 || (SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION < 8))
+#error "This interface is not compatible with SoPlex versions prior to 1.7.2.8"
 #endif
 
 #include "spxgithash.h"
@@ -228,7 +228,7 @@ public:
    /** return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol()
    {
-      return (Real) rationalParam(FEASTOL);
+      return realParam(FEASTOL);
    }
 
    /** set feastol and store value in case SoPlex only accepts a larger tolerance */
@@ -236,13 +236,13 @@ public:
       const Real d
       )
    {
-      setRationalParam(FEASTOL, (Rational) d);
+      setRealParam(FEASTOL, d);
    }
 
    /** return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real opttol()
    {
-      return (Real) rationalParam(OPTTOL);
+      return realParam(OPTTOL);
    }
 
    /** set opttol and store value in case SoPlex only accepts a larger tolerance */
@@ -250,7 +250,7 @@ public:
       const Real d
       )
    {
-      setRationalParam(OPTTOL, (Rational) d);
+      setRealParam(OPTTOL, d);
    }
 
    /** get objective limit according to objective sense */

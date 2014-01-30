@@ -2258,7 +2258,7 @@ SCIP_RETCODE readSos(
                   default: 
                      SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                      SCIPABORT();
-                     return SCIP_INVALIDDATA;
+                     return SCIP_INVALIDDATA;  /*lint !e527*/
                   }
                   SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
                }
@@ -3462,7 +3462,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    SCIP_VAR** aggvars;
    int naggvars = 0;
-   int saggvars = 0;
+   int saggvars;
    SCIP_HASHTABLE* varAggregated;
    SCIP_HASHMAP* consHidden;
 

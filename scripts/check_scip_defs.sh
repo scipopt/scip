@@ -20,7 +20,7 @@ OUTFILE=`pwd`/check_scip_defs.out
 cd $SCIPDIR
 rm -f $OUTFILE
 
-DEFS=`grep -h 'ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
+DEFS=`grep -h '#ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
 
 # IMPLINTSARECONT, BETTERWEIGHTFORDEMANDNODES, MAKECUTINTEGRAL, and SEPARATEROWS are defined by default
 # ALLDIFFERENT and WITHEQKNAPSACK are excluded because they need non-default plugins

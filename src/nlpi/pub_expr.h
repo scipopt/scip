@@ -667,6 +667,7 @@ void SCIPexprPrint(
 EXTERN
 SCIP_RETCODE SCIPexprParse(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
    const char*           str,                /**< pointer to the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */

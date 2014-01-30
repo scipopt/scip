@@ -2694,8 +2694,14 @@ void ScipNLP::finalize_solution(
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
    case INTERNAL_ERROR:
+   case INVALID_OPTION:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+      break;
+
+   case OUT_OF_MEMORY:
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
       break;
 
    default:

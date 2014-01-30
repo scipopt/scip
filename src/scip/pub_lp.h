@@ -212,7 +212,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
 #define SCIPcolGetMinPrimsol(col)       ((col)->minprimsol)
 #define SCIPcolGetMaxPrimsol(col)       ((col)->maxprimsol)
-#define SCIPcolGetBasisStatus(col)      ((col)->basisstatus)
+#define SCIPcolGetBasisStatus(col)      ((SCIP_BASESTAT)(col)->basisstatus)
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolGetIndex(col)            (col)->index
 #define SCIPcolIsIntegral(col)          (col)->integral

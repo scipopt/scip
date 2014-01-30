@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.0.1.5"
+VERSION="3.1.0a"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -63,8 +63,9 @@ $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h
 $NAME/examples/Scheduler/data/*.cmin \
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile, Makefile.nmake, and makedist.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
 grep "^VERSION" Makefile
+grep "^VERSION" Makefile.nmake
 tail src/scip/githash.c

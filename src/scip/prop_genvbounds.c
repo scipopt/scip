@@ -141,7 +141,7 @@ SCIP_Real getCutoffboundGenVBound(
    assert(genvbound != NULL);
 
    SCIPdebugMessage("cutoff = %.9g (%.9g + %.9g * %.9g)\n",
-      SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) * SCIPgetTransObjscale(scip)),
+      (SCIPgetCutoffbound(scip) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip),
       SCIPgetCutoffbound(scip), SCIPgetTransObjoffset(scip), SCIPgetTransObjscale(scip));
 
    /* the cutoff bound is valid w.r.t. the current objective function in the transformed problem; during presolving,
@@ -150,7 +150,7 @@ SCIP_Real getCutoffboundGenVBound(
     * contribution of the cutoff bound in the generalized variable bound to the original problem as described in
     * function SCIPgenVBoundAdd()
     */
-   return SCIPgetCutoffbound(scip) + (SCIPgetTransObjoffset(scip) * SCIPgetTransObjscale(scip));
+   return (SCIPgetCutoffbound(scip) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip);
 }
 
 /** returns corresponding genvbound in genvboundstore if there is one, NULL otherwise */
@@ -170,7 +170,7 @@ GENVBOUND* getGenVBound(
 
    hashmap = boundtype == SCIP_BOUNDTYPE_LOWER ? propdata->lbgenvbounds : propdata->ubgenvbounds;
 
-   return SCIPhashmapExists(hashmap, var) ? (GENVBOUND*) SCIPhashmapGetImage(hashmap, var) : NULL;
+   return (GENVBOUND*) SCIPhashmapGetImage(hashmap, var);
 }
 
 #ifdef SCIP_DEBUG
@@ -343,7 +343,10 @@ SCIP_Real getGenVBoundsBound(
    if( SCIPisInfinity(scip, -boundval) )
       return (genvbound->boundtype == SCIP_BOUNDTYPE_LOWER) ? -SCIPinfinity(scip) : SCIPinfinity(scip);
 
-   boundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound) + genvbound->constant;
+   if( genvbound->cutoffcoef != 0.0 )
+      boundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+
+   boundval += genvbound->constant;
 
    if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
       boundval *= -1.0;
@@ -359,6 +362,7 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
    GENVBOUND*            genvbound           /**< generalized variable bound */
    )
 {
+   SCIP_SOL* debugsol;
    SCIP_Real activity;
    SCIP_Real solval;
    int i;
@@ -380,21 +384,22 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
             solval == SCIP_UNKNOWN ? "unknown" : "invalid");
    }
 
-   activity += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+   /* the genvbound must be valid for all cutoff bounds greater equal the objective value of the debug solution */
+   SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+   activity += genvbound->cutoffcoef *
+      (SCIPgetSolTransObj(scip, debugsol) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip);
    activity += genvbound->constant;
 
    SCIP_CALL( SCIPdebugGetSolVal(scip, genvbound->var, &solval) );
    if( solval != SCIP_UNKNOWN || solval != SCIP_INVALID )
    {
-      if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, solval, activity) )
+      if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
       {
-         printf("***** debug: genvbound cuts off debug solution: %.9g < %.9g\n", solval, activity);
-         SCIPABORT();
+         SCIP_CALL( SCIPdebugCheckLbGlobal(scip, genvbound->var, activity) );
       }
-      else if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, solval, -activity) )
+      else if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
       {
-         printf("***** debug: genvbound cuts off debug solution: %.9g > %.9g\n", solval, -activity);
-         SCIPABORT();
+         SCIP_CALL( SCIPdebugCheckUbGlobal(scip, genvbound->var, -activity) );
       }
    }
 
@@ -992,9 +997,6 @@ SCIP_RETCODE applyGenVBound(
       printGenVBound(scip, genvbound);
       SCIPdebugMessage("    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
    }
-#endif
-#ifdef SCIP_DEBUG_SOLUTION
-   SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
 #endif
 
    /* tighten bound globally */
@@ -2053,9 +2055,14 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
          assert(SCIPhashmapExists(hashmap, genvbound->var));
          SCIP_CALL( SCIPhashmapRemove(hashmap, genvbound->var) );
 
+         /* free genvbound and fill gap */
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
          --(propdata->ngenvbounds);
          propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
+         propdata->genvboundstore[i]->index = i;
+
+         /* mark genvbounds array to be resorted */
+         propdata->issorted = FALSE;
       }
       else
          ++i;

@@ -55,7 +55,7 @@ static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solu
 static SCIP_Bool debugsoldisabled = FALSE;   /**< flag indicating if debugging of solution was disabled or not */
 
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
 /** comparison method for sorting variables w.r.t. to their name */
 static
 SCIP_DECL_SORTPTRCOMP(sortVarsAfterNames)
@@ -197,7 +197,7 @@ SCIP_RETCODE readSolfile(
    }
    SCIPdebugMessage("Debug Solution value is %g.\n", debugsolval);
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
 
    for( i = 0; i < nfound - 1; ++i)
@@ -332,7 +332,28 @@ SCIP_RETCODE getSolutionValue(
    return SCIP_OKAY;
 }
 
+/** gets pointer to the debug solution */
+SCIP_RETCODE SCIPdebugGetSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol                 /**< buffer to store pointer to the debug solution */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL( readSolution(scip->set) );
+   if( debugsol == NULL )
+   {
+      *sol = NULL;
+      return SCIP_ERROR;
+   }
+
+   *sol = debugsol;
+   return SCIP_OKAY;
+}
+
 /** gets value for a variable in the debug solution
+ *
  * if no value is stored for the variable, gives 0.0
  */
 SCIP_RETCODE SCIPdebugGetSolVal(
@@ -565,7 +586,7 @@ SCIP_RETCODE SCIPdebugCheckConss(
       {
          SCIP_Bool solcontained;
 
-         SCIP_CALL( isSolutionInNode(SCIPblkmem(set->scip), set, SCIPgetCurrentNode(set->scip), &solcontained) );
+         SCIP_CALL( isSolutionInNode(SCIPblkmem(scip), scip->set, SCIPgetCurrentNode(scip), &solcontained) );
          if( !solcontained )
             return SCIP_OKAY;
       }
@@ -688,14 +709,14 @@ SCIP_RETCODE SCIPdebugCheckRow(
 
 /** checks whether given global lower bound is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckLbGlobal(
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             lb                  /**< lower bound */
    )
 {
    SCIP_Real varsol;
 
-   assert(set != NULL);
+   assert(scip != NULL);
    assert(var != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
@@ -703,19 +724,19 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
       return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
+   if( !isMainscipset(scip->set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
-   if( debugSolIsAchieved(set) )
+   if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
 
    /* get solution value of variable */
-   SCIP_CALL( getSolutionValue(set, var, &varsol) );
+   SCIP_CALL( getSolutionValue(scip->set, var, &varsol) );
    SCIPdebugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasLT(set, varsol, lb) ) /*lint !e777*/
+   if( varsol != SCIP_UNKNOWN && SCIPisFeasLT(scip, varsol, lb) ) /*lint !e777*/
    {
       SCIPerrorMessage("invalid global lower bound: <%s>[%.15g] >= %.15g\n", SCIPvarGetName(var), varsol, lb);
       SCIPABORT();
@@ -726,14 +747,14 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
 
 /** checks whether given global upper bound is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckUbGlobal(
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             ub                  /**< upper bound */
    )
 {
    SCIP_Real varsol;
 
-   assert(set != NULL);
+   assert(scip != NULL);
    assert(var != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
@@ -741,19 +762,19 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
       return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
+   if( !isMainscipset(scip->set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
-   if( debugSolIsAchieved(set) )
+   if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
 
    /* get solution value of variable */
-   SCIP_CALL( getSolutionValue(set, var, &varsol) );
+   SCIP_CALL( getSolutionValue(scip->set, var, &varsol) );
    SCIPdebugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasGT(set, varsol, ub) ) /*lint !e777*/
+   if( varsol != SCIP_UNKNOWN && SCIPisFeasGT(scip, varsol, ub) ) /*lint !e777*/
    {
       SCIPerrorMessage("invalid global upper bound: <%s>[%.15g] <= %.15g\n", SCIPvarGetName(var), varsol, ub);
       SCIPABORT();

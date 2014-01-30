@@ -852,7 +852,7 @@ SCIP_RETCODE computeViolation(
       {
          SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
 
@@ -1223,7 +1223,7 @@ SCIP_RETCODE generateSparseCut(
          default:
             SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( SCIPisGT(scip, efficacy, goodefficacy) ||
@@ -1358,7 +1358,7 @@ SCIP_RETCODE separatePoint(
             default:
                SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
                SCIPABORT();
-               return SCIP_INVALIDDATA;
+               return SCIP_INVALIDDATA;  /*lint !e527*/
             }
 
             if( SCIPisLE(scip, efficacy, minefficacy) || !SCIPisCutApplicable(scip, row) )
@@ -1492,7 +1492,7 @@ SCIP_RETCODE addLinearizationCuts(
          default:
             SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
             SCIPABORT();
-            return SCIP_INVALIDDATA;
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( efficacy >= minefficacy )
