@@ -1058,7 +1058,7 @@ SCIP_Bool SCIPisPresolveFinished(
 #endif
 
    /* abort if maximal number of presolving rounds is reached */
-   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
+   finished = finished || (scip->stat->npresolrounds + 1 >= maxnrounds);
 
    return finished;
 }
@@ -12705,9 +12705,6 @@ SCIP_RETCODE presolve(
       /* check whether problem is infeasible or unbounded */
       finished = finished || *unbounded || *infeasible;
 
-      /* check whether we will reach the limit on presolving rounds */
-      finished = finished || (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds+1 >= scip->set->presol_maxrounds);
-
       /* if the presolving will be terminated, call the delayed presolvers */
       while( delayed && finished && !(*unbounded) && !(*infeasible) )
       {
@@ -12721,9 +12718,6 @@ SCIP_RETCODE presolve(
 
          /* check whether problem is infeasible or unbounded */
          finished = finished || *unbounded || *infeasible;
-
-         /* check whether we will reach the limit on presolving rounds */
-         finished = finished || (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds+1 >= scip->set->presol_maxrounds);
       }
 
       /* increase round number */
