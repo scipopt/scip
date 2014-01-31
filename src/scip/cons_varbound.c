@@ -954,8 +954,10 @@ SCIP_RETCODE separateCons(
             SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
-            assert( ! infeasible );
-            *result = SCIP_SEPARATED;
+            if ( infeasible )
+               *result = SCIP_CUTOFF;
+            else
+               *result = SCIP_SEPARATED;
          }
       }
    }
