@@ -5623,7 +5623,19 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMessage("adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      /* if presolving is turned off, the row might be trivial */
+      if ( ! SCIPisInfinity(scip, -consdata->lhs) || ! SCIPisInfinity(scip, consdata->rhs) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      }
+#ifndef NDEBUG
+      else
+      {
+         int r;
+         SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/maxprerounds", &r) );
+         assert( r == 0 );
+      }
+#endif
    }
 
    return SCIP_OKAY;

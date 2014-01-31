@@ -37,7 +37,8 @@ fixed bugs:
 - fixed bug in cons_superindicator concerning names of upgraded constraints
 - fixed several bugs in lpi_grb
 - fixed bug in sepa_cgmip computeObjWeightSize() w.r.t. equal sized rows
-- fixed several minor bug with handling of memory when writing aggregated variables (reader_lp, reader_mps)
+- fixed several minor bugs with handling of memory when writing aggregated variables (reader_lp, reader_mps)
+- fixed minor bug in cons_linear w.r.t. disabled presolving
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
