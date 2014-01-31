@@ -828,9 +828,9 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: makesciplibfile
-makesciplibfile: checkdefines touchexternal | $(LIBDIR) $(LIBOBJSUBDIRS) $(SCIPLIBFILE)
+makesciplibfile: checkdefines touchexternal $(SCIPLIBFILE)
 
-$(SCIPLIBFILE):	$(SCIPLIBOBJFILES)
+$(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES)
