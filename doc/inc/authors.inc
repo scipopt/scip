@@ -238,6 +238,16 @@
 	      <td>
 	      </td>
 	    </tr>
+	    <tr>
+	      <td>
+		 <a href="http://people.sutd.edu.sg/~nannicini/">Giacomo Nannicini</a>
+	      </td>
+	      <td>
+	         Textbook Gomory mixed integer cut example.
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
             <tr>
 	      <td>
                  Michael Perregaard
