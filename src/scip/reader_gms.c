@@ -2083,7 +2083,7 @@ SCIP_RETCODE SCIPwriteGms(
    clearLine(linebuffer, &linecnt);
 
    /* auxiliary objective variable */
-   SCIPinfoMessage(scip, file, " objvar,\n");
+   SCIPinfoMessage(scip, file, " objvar%c\n", nvars > 0 ? ',' : ';');
 
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
@@ -2263,7 +2263,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "Equations\n");
    clearLine(linebuffer, &linecnt);
 
-   SCIPinfoMessage(scip, file, " objequ%s\n", (nconss > 0) ? "," : ";");
+   SCIPinfoMessage(scip, file, " objequ%c\n", (nconss > 0) ? ',' : ';');
 
    /* declare equations */
    for( c = 0; c < nconss; ++c )
