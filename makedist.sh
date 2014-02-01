@@ -82,6 +82,11 @@ $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
+$NAME/examples/GMI/Makefile \
+$NAME/examples/GMI/doc/xternal.c $NAME/examples/GMI/doc/gmi.dxy $NAME/examples/GMI/doc/header.html \
+$NAME/examples/GMI/check/testset/short.test $NAME/examples/GMI/check/testset/short.solu \
+$NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
+$NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
 $NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.test $NAME/examples/LOP/check/testset/short.solu \
 $NAME/examples/LOP/src/depend.* \
