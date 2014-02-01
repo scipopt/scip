@@ -155,6 +155,9 @@ Here is what you have to do to get SCIP running:
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
 
+   - "GAMS=true"       to enable reading of GAMS model files (needs GAMS; only for models that do one solve)
+   - "GAMS=false"      to disable GAMS interface (default)
+
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
 
@@ -252,11 +255,11 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 3 (CLP, IPOPT, CppAD, no ZIMPL):
+   Example 3 (CLP, IPOPT, no ZIMPL):
    ========================================
 
-   Typing "make LPS=clp ZIMPL=false IPOPT=true EXPRINT=cppad" uses CLP as LP solver, and activates
-   the interfaces to IPOPT and CppAD. You will be asked the following questions on
+   Typing "make LPS=clp ZIMPL=false IPOPT=true" uses CLP as LP solver, and activates
+   the interface to IPOPT. You will be asked the following questions on
    the first call to "make" (example answers are already given):
 
 ---
@@ -418,9 +421,8 @@ make[1]: Leaving directory `/sw/scip'
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
          and the directory share/coin/doc/Ipopt (Ipopt >= 3.9.0) or share/doc/coin/Ipopt (Ipopt < 3.9.0) with the ipopt_addlibs_cpp.txt file.
 
-   (i) to use CppAD as expressions interpreter
-       - ln -s <path to CppAD's header files> <path to SCIP>/lib/cppad
-         (e.g. "cd scip; ln -s /CppAD/cppad lib/cppad")
+   (i) to use GAMS
+       - ln -s <path to GAMS system directory> <path to SCIP>/lib/gams.$(OSTYPE).$(ARCH).$(COMP)
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version

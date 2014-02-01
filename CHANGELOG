@@ -185,6 +185,7 @@ interface
 - SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 - SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
 - added a copy of the GAMS/SCIP interface to interfaces/gams
+- added reading capability to GAMS reader (if compiling with GAMS=true, requires a GAMS system)
 - added SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to either add/decrease the counter on upgrade-locks on
   a constraint or get the current number of upgrade-locks
 - added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates

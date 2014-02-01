@@ -80,6 +80,7 @@ LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
+GAMS		=	false
 
 #compiler and linker parameters
 CC		=	gcc
@@ -124,7 +125,6 @@ GUROBI          =       gurobi_cl
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
-GAMS            =       gams
 
 #system parameters
 SHELL		= 	bash
@@ -348,6 +348,9 @@ LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
 endif
 
+ifeq ($(GAMS),true)
+LDFLAGS		+=	-ldl -lpthread
+endif
 
 #-----------------------------------------------------------------------------
 # SHARED Libaries
