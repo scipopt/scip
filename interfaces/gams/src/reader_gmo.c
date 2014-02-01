@@ -1318,6 +1318,7 @@ SCIP_RETCODE createProblem(
    int* indiccols;
    int* indiconvals;
    int indicidx;
+   size_t namemem;
    
    assert(scip != NULL);
    assert(readerdata != NULL);
@@ -1351,8 +1352,7 @@ SCIP_RETCODE createProblem(
    probdata->gmo = gmo;
    probdata->gev = gev;
 
-   (void) gmoNameInput(gmo, buffer);
-   SCIP_CALL( SCIPcreateProb(scip, buffer,
+   SCIP_CALL( SCIPcreateProb(scip, "gamsprob",
       probdataDelOrigGmo, probdataTransGmo, probdataDelTransGmo,
       probdataInitSolGmo, probdataExitSolGmo, probdataCopyGmo,
       probdata) );
@@ -1366,7 +1366,6 @@ SCIP_RETCODE createProblem(
    indicrows = NULL;
    indiccols = NULL;
    indiconvals = NULL;
-#if GMOAPIVERSION >= 10
    if( readerdata->indicatorfile != NULL && *readerdata->indicatorfile != '\0' )
    {
       optHandle_t opt;
@@ -1378,15 +1377,13 @@ SCIP_RETCODE createProblem(
          return SCIP_ERROR;
       }
 
+#if GMOAPIVERSION < 13
       (void) gevGetStrOpt(gev, gevNameSysDir, buffer);
-      if( strlen(buffer) > 500 )
-      {
-         SCIPerrorMessage("*** Path to GAMS system directory too long.");
-         return SCIP_ERROR;
-      }
       strcat(buffer, "optscip.def");
-
       if( optReadDefinition(opt, buffer) )
+#else
+      if( optReadDefinitionFromPChar(opt, (char*)"indic indicator\ngeneral group 1 1 Dot options and indicators") )
+#endif
       {
          for( i = 1; i <= optMessageCount(opt); ++i )
          {
@@ -1421,10 +1418,11 @@ SCIP_RETCODE createProblem(
 
       (void) optFree(&opt);
    }
-#endif
    assert(indicrows != NULL || nindics == 0);
    assert(indiccols != NULL || nindics == 0);
    assert(indiconvals != NULL || nindics == 0);
+
+   namemem = (gmoN(gmo) + gmoM(gmo)) * sizeof(char*);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, gmoN(gmo)) ); /*lint !e666*/
    vars = probdata->vars;
@@ -1433,7 +1431,7 @@ SCIP_RETCODE createProblem(
    minprior = SCIPinfinity(scip);
    maxprior = 0.0;
    if( gmoPriorOpt(gmo) && gmoNDisc(gmo) > 0 )
-   { 
+   {
       for (i = 0; i < gmoN(gmo); ++i)
       {
          if( gmoGetVarTypeOne(gmo, i) == (int) gmovar_X )
@@ -1490,12 +1488,17 @@ SCIP_RETCODE createProblem(
             return SCIP_INVALIDDATA;
       }
       if( gmoDict(gmo) )
+      {
          (void) gmoGetVarNameOne(gmo, i, buffer);
+         if( nindics == 0 )
+            namemem += strlen(buffer) + 1;
+      }
       else
          sprintf(buffer, "x%d", i);
       SCIP_CALL( SCIPcreateVar(scip, &vars[i], buffer, lb, ub, coefs[i], vartype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, vars[i]) );
-      SCIPdebugMessage("added variable <%s>\n", SCIPvarGetName(vars[i]));
+      SCIPdebugMessage("added variable ");
+      SCIPdebug( SCIPprintVar(scip, vars[i], NULL) );
       
       if( gmoPriorOpt(gmo) && minprior < maxprior && gmoGetVarTypeOne(gmo, i) != (int) gmovar_X )
       {
@@ -1533,8 +1536,8 @@ SCIP_RETCODE createProblem(
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, bndvars, bndtypes, bnds,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(cons));
-         SCIPdebugPrintCons(scip, cons, NULL);
+         SCIPdebugMessage("added constraint ");
+         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
@@ -1580,8 +1583,8 @@ SCIP_RETCODE createProblem(
          }
          
          SCIP_CALL( SCIPaddCons(scip, con) );
-         SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(con));
-         SCIPdebugPrintCons(scip, con, NULL);
+         SCIPdebugMessage("added constraint ");
+         SCIPdebug( SCIPprintCons(scip, con, NULL) );
          SCIP_CALL( SCIPreleaseCons(scip, &con) );
       }
       
@@ -1600,14 +1603,14 @@ SCIP_RETCODE createProblem(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &nlflag, gmoN(gmo)) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, gmoMaxQnz(gmo)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, gmoMaxQnz(gmo)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, gmoMaxQnz(gmo)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &qrow, gmoMaxQnz(gmo)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &qcol, gmoMaxQnz(gmo)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, gmoMaxQNZ(gmo)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, gmoMaxQNZ(gmo)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, gmoMaxQNZ(gmo)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &qrow, gmoMaxQNZ(gmo)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &qcol, gmoMaxQNZ(gmo)) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &opcodes, gmoMaxSingleFNL(gmo)+1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &fields, gmoMaxSingleFNL(gmo)+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &opcodes, gmoNLCodeSizeMaxRow(gmo)+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &fields, gmoNLCodeSizeMaxRow(gmo)+1) );
       SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, gmoPPool(gmo), gmoNLConst(gmo)) );
 
       /* translate special GAMS constants into SCIP variants (gmo does not seem to do this...) */
@@ -1681,7 +1684,11 @@ SCIP_RETCODE createProblem(
       }
 
       if( gmoDict(gmo) )
+      {
          (void) gmoGetEquNameOne(gmo, i, buffer);
+         if( nindics == 0 )
+            namemem += strlen(buffer) + 1;
+      }
       else
          sprintf(buffer, "e%d", i);
 
@@ -1724,8 +1731,8 @@ SCIP_RETCODE createProblem(
                   if( !SCIPisInfinity(scip, -lhs) )
                   {
                      SCIP_CALL( SCIPaddCons(scip, con) );
-                     SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(con));
-                     SCIPdebugPrintCons(scip, con, NULL);
+                     SCIPdebugMessage("added constraint ");
+                     SCIPdebug( SCIPprintCons(scip, con, NULL) );
                      SCIP_CALL( SCIPreleaseCons(scip, &con) );
                      con = NULL;
                   }
@@ -1821,8 +1828,8 @@ SCIP_RETCODE createProblem(
       
       assert(con != NULL);
       SCIP_CALL( SCIPaddCons(scip, con) );      
-      SCIPdebugMessage("added constraint <%s>\n", SCIPconsGetName(con));
-      SCIPdebugPrintCons(scip, con, NULL);
+      SCIPdebugMessage("added constraint ");
+      SCIPdebug( SCIPprintCons(scip, con, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &con) );
 
       /* @todo do something about this */
@@ -1843,7 +1850,8 @@ SCIP_RETCODE createProblem(
 
       SCIP_CALL( SCIPcreateVar(scip, &probdata->objvar, "xobj", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->objvar) );
-      SCIPdebugMessage("added objective variable <%s>\n", SCIPvarGetName(probdata->objvar));
+      SCIPdebugMessage("added objective variable ");
+      SCIPdebug( SCIPprintVar(scip, probdata->objvar, NULL) );
 
       if( gmoGetObjOrder(gmo) != (int) gmoorder_NL )
       {
@@ -1937,8 +1945,8 @@ SCIP_RETCODE createProblem(
       }
 
       SCIP_CALL( SCIPaddCons(scip, con) );
-      SCIPdebugMessage("added objective constraint <%s>\n", SCIPconsGetName(con));
-      SCIPdebugPrintCons(scip, con, NULL);
+      SCIPdebugMessage("added objective constraint ");
+      SCIPdebug( SCIPprintCons(scip, con, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &con) );
    }
    else if( !SCIPisZero(scip, gmoObjConst(gmo)) )
@@ -1946,7 +1954,8 @@ SCIP_RETCODE createProblem(
       /* handle constant term in linear objective by adding a fixed variable */
       SCIP_CALL( SCIPcreateVar(scip, &probdata->objconst, "objconst", 1.0, 1.0, gmoObjConst(gmo), SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->objconst) );
-      SCIPdebugMessage("added variable for objective constant: <%s>\n", SCIPvarGetName(probdata->objconst));
+      SCIPdebugMessage("added variable for objective constant: ");
+      SCIPdebug( SCIPprintVar(scip, probdata->objconst, NULL) );
    }
 
    if( gmoSense(gmo) == (int) gmoObj_Max )
@@ -2014,6 +2023,12 @@ SCIP_RETCODE createProblem(
    /* deinitialize QMaker, if nonlinear */
    if( gmoNLNZ(gmo) > 0 || objnonlinear )
       gmoUseQSet(gmo, 0);
+
+   if( namemem > 1024 * 1024 && nindics == 0 )
+   {
+      namemem <<= 1;  /* transformed problem has copy of names, so duplicate estimate */
+      SCIPinfoMessage(scip, NULL, "Space for names approximately %0.2f MB.\nUse statement '<modelname>.dictfile=0;' to turn dictionary off.\n", namemem/(1024.0*1024.0));
+   }
 
    return SCIP_OKAY;
 }
@@ -2146,27 +2161,27 @@ SCIP_RETCODE writeGmoSolution(
          break;
       case SCIP_STATUS_USERINTERRUPT: /* the user interrupted the solving process (by pressing Ctrl-C) */
          gmoSolveStatSet(gmo, (int) gmoSolveStat_User);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_Feasible) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_NODELIMIT:      /* the solving process was interrupted because the node limit was reached */
       case SCIP_STATUS_STALLNODELIMIT: /* the solving process was interrupted because the node limit was reached */
       case SCIP_STATUS_TOTALNODELIMIT:
          gmoSolveStatSet(gmo, (int) gmoSolveStat_Iteration);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_Feasible) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_TIMELIMIT: /* the solving process was interrupted because the time limit was reached */
       case SCIP_STATUS_MEMLIMIT:  /* the solving process was interrupted because the memory limit was reached */
          gmoSolveStatSet(gmo, (int) gmoSolveStat_Resource);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_Feasible) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_GAPLIMIT: /* the solving process was interrupted because the gap limit was reached */
          gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
-         gmoModelStatSet(gmo, nrsol > 0 ? (SCIPgetGap(scip) > 0.0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_OptimalGlobal) : (int) gmoModelStat_NoSolutionReturned);
+         gmoModelStatSet(gmo, nrsol > 0 ? (SCIPgetGap(scip) > 0.0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_Feasible) : (int) gmoModelStat_OptimalGlobal): (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_SOLLIMIT: /* the solving process was interrupted because the solution limit was reached */
       case SCIP_STATUS_BESTSOLLIMIT: /* the solving process was interrupted because the solution improvement limit was reached */
          gmoSolveStatSet(gmo, (int) gmoSolveStat_Resource);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_Feasible) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_OPTIMAL: /* the problem was solved to optimality, an optimal solution is available */
          gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
@@ -2278,6 +2293,7 @@ SCIP_RETCODE writeGmoSolution(
    {
       SCIP_SOL* sol;
       SCIP_Real* collev;
+      SCIP_Real primalbound;
 
       sol = SCIPgetBestSol(scip);
       assert(sol != NULL);
@@ -2302,6 +2318,7 @@ SCIP_RETCODE writeGmoSolution(
 #else
       (void) gmoSetSolutionPrimal(gmo, collev);
 #endif
+      primalbound = SCIPgetPrimalbound(scip);
 
       SCIPfreeBufferArray(scip, &collev);
 
@@ -2351,8 +2368,8 @@ SCIP_RETCODE writeGmoSolution(
                resolvenlp = FALSE;
             }
 
-            /* try up to 10 best SCIP solutions */
-            nsols = MIN(10, SCIPgetNSols(scip)); /*lint !e666*/
+            /* try SCIP solutions (limited by limits/maxsol or limits/maxorigsol) */
+            nsols = SCIPgetNSols(scip);
             SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nsols) );
             SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nsols) );
             for( s = 0; s < nsols; ++s )
@@ -2422,6 +2439,7 @@ SCIP_RETCODE writeGmoSolution(
 #endif
                /* update reevaluated objective value */
                objvals[s] = gmoGetHeadnTail(gmo, (int) gmoHobjval);
+               primalbound = objvals[s];
 
                SCIPinfoMessage(scip, NULL, "Solution #%0.2d feasible. Reevaluated objective value = %.15e.\n", s, objvals[s]);
 
@@ -2474,10 +2492,10 @@ SCIP_RETCODE writeGmoSolution(
             /* couldn't get a feasible solution, report intermediate infeasible */
             gmoModelStatSet(gmo, (int) gmoModelStat_InfeasibleIntermed);
          }
-         else if( !SCIPisEQ(scip, gmoGetHeadnTail(gmo, (int) gmoHobjval), gmoGetHeadnTail(gmo, (int) gmoTmipbest)) )
+         else if( !SCIPisEQ(scip, primalbound, dualbound) )
          {
             /* feasible, but gap not closed, so only local optimum */
-            gmoModelStatSet(gmo, gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal);
+            gmoModelStatSet(gmo, gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_Feasible);
          }
          else
          {
@@ -2493,7 +2511,7 @@ SCIP_RETCODE writeGmoSolution(
       {
          case gmoModelStat_OptimalGlobal:
          case gmoModelStat_OptimalLocal:
-         case gmoModelStat_NonOptimalIntermed:
+         case gmoModelStat_Feasible:
          case gmoModelStat_Integer:
             gmoModelStatSet(gmo, (int) gmoModelStat_Solved);
       } /*lint !e744*/

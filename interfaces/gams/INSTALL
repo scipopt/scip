@@ -26,8 +26,8 @@ To build and install your own GAMS/SCIP interface, you have to do the following:
    the directory of your GAMS distribution
  - if you use SoPlex, build SoPlex with the flag SHARED=true and make sure
    that SCIPDIR/lib/libsoplex.*.so points to the created SoPlex shared library
- - build SCIP with the flags SHARED=true ZIMPL=false and your favorite other
-   flags (e.g., IPOPT=true ...)
+ - build SCIP with the flags SHARED=true ZIMPL=false READLINE=false and your
+   favorite other flags (e.g., IPOPT=true ...)
  - build the GAMS/SCIP interface in this directory by executing make with
    the same flags that were used to build the SCIP library, i.e.,
    SHARED=true ZIMPL=false and your favorites
@@ -37,9 +37,11 @@ To build and install your own GAMS/SCIP interface, you have to do the following:
    to use solver SCIPDEV for your modeltype
 
 Notes:
- - You can also build SCIP and GAMS/SCIP with ZIMPL=false, but that requires
+ - You can also build SCIP and GAMS/SCIP with ZIMPL=true but that requires
    to have build ZIMPL with SHARED=true and having SCIPDIR/lib/libzimpl.*.so
    to point to the ZIMPL shared library (analog to SoPlex)
+ - READLINE=false can be necessary to avoid confusion about functions having
+   the same name in the readline library and a GAMS library
  - For documentation on the GAMS/SCIP interface, see
    http://www.gams.com/dd/docs/solvers/scip.pdf
    However, the lp/solver option to choose an LP solver by parameter is
