@@ -41,15 +41,15 @@
  * - Nonbasic rows can be at lower or upper bound. Non-ranged nonbasic rows are always at the lower bound. SCIP always
  *   adds slack/surplus variables with a coefficient of +1: the variable is nonnegative in case of a <= constraint, it
  *   is nonpositive in case of a >= or ranged constraint. Therefore, slack variables corresponding to >= or ranged
- *   constraints must be flipped if they are at the lower bound. (Ranged constraint at the upper bound must not be
- *   flipped because the variable is nonpositive.)
+ *   constraints must be flipped if they are at the lower bound. (Ranged constraints at the upper bound do not have to
+ *   be flipped because the variable is nonpositive.)
  *
  * Generated cuts are modified and their numerical properties are checked before being added to the LP relaxation.
  * Default parameters for cut modification and checking procedures are taken from the paper
  *
- * G. Cornuejols, F. Margot and G. Nannicini:@n
+ * G. Cornuejols, F. Margot, and G. Nannicini:@n
  * On the safety of Gomory cut generators.@n
- * Preprint 2012.
+ * Mathematical Programming Computation 5, No. 4 (2013), pp. 345-395.
  *
  * In addition to the routines described in the paper above, here we additionally check the support of the cutting
  * plane.
@@ -165,9 +165,8 @@ SCIP_Bool modifyAndPackCut(
          {
             /* If we would have to modify the rhs by a multiple of infinity, discard the cut altogether. */
             if( SCIPisInfinity(scip, -SCIPcolGetLb(col)) )
-            {
                return FALSE;
-            }
+
             /* Zero out coefficient and modify rhs to preserve validity and possibly strengthen the cut */
             *cutrhs -= densecoefs[i] * SCIPcolGetLb(cols[c]);
          }
@@ -175,9 +174,8 @@ SCIP_Bool modifyAndPackCut(
          {
             /* If we would have to modify the rhs by a multiple of infinity, discard the cut altogether. */
             if( SCIPisInfinity(scip, SCIPcolGetUb(col)) )
-            {
                return FALSE;
-            }
+
             /* Zero out coefficient and modify rhs to preserve validity and possibly strengthen the cut */
             *cutrhs -= densecoefs[i] * SCIPcolGetUb(cols[c]);
          }
@@ -384,9 +382,7 @@ SCIP_Bool getGMIFromRow(
             *cutrhs += cutelem * SCIPcolGetUb(col);
          }
          else
-         {
             *cutrhs += cutelem * SCIPcolGetLb(col);
-         }
 
          /* Add coefficient to cut in dense form. */
          workcoefs[SCIPcolGetLPPos(col)] = cutelem;
@@ -407,9 +403,7 @@ SCIP_Bool getGMIFromRow(
          rowelem = binvrow[SCIProwGetLPPos(row)];
          /* But if this is a >= or ranged constraint, we have to flip the row element. */
          if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
-         {
             rowelem = -rowelem;
-         }
          break;
       case SCIP_BASESTAT_UPPER:
          /* Take element if nonbasic at upper bound - see notes at beginning of file: only nonpositive slack variables
@@ -466,25 +460,24 @@ SCIP_Bool getGMIFromRow(
          SCIP_Real rrhs;
          SCIP_Real rhsslack;
 
-
-         /* calculate lhs/rhs & slacks */
-         act = SCIPgetRowLPActivity(scip, row);
+         /* get lhs/rhs */
          rlhs = SCIProwGetLhs(row);
          rrhs = SCIProwGetRhs(row);
          assert( SCIPisLE(scip, rlhs, rrhs) );
+         assert( ! SCIPisInfinity(scip, rlhs) || ! SCIPisInfinity(scip, rrhs) );
 
+         /* If the slack variable is fixed, we can ignore this cut coefficient */
          if( SCIPisFeasZero(scip, rrhs - rlhs) )
-         {
-            /* The slack variable is fixed, so we can ignore this cut coefficient */
             continue;
-         }
 
-         rhsslack = SCIPisFeasZero(scip, rrhs - act) ? 0.0 : rrhs - act;
+         act = SCIPgetRowLPActivity(scip, row);
+         rhsslack = rrhs - act;
 
          /* Unflip slack variable and adjust rhs if necessary */
-         if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER && !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+         if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
          {
             /* If >= or ranged constraint, flip element back to original */
+            assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
             cutelem = -cutelem;
          }
 
@@ -493,10 +486,15 @@ SCIP_Bool getGMIFromRow(
 
          /* Eliminate slack variable */
          for( i = 0; i < SCIProwGetNLPNonz(row); ++i )
-         {
             workcoefs[SCIPcolGetLPPos(rowcols[i])] -= cutelem * rowvals[i];
+
+         if ( SCIPisFeasZero(scip, rhsslack) )
+            *cutrhs -= cutelem * (rrhs - SCIProwGetConstant(row));
+         else
+         {
+            assert( SCIPisFeasZero(scip, act - rlhs) );
+            *cutrhs -= cutelem * (rlhs - SCIProwGetConstant(row));
          }
-         *cutrhs -= (cutelem * ((SCIPisFeasZero(scip, rhsslack) ? rrhs : rlhs) - SCIProwGetConstant(row)));
       }
    } /* for( c = 0; c < nrows; ++ c) */
 
@@ -660,8 +658,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
       tryrow = FALSE;
       c = basisind[i];
 
-      SCIPdebugMessage("Row %d basic variable %d with value %f\n", i, basisind[i],
-         (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
+      SCIPdebugMessage("Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
       if( c >= 0 )
       {
          SCIP_VAR* var;
@@ -688,10 +685,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
          {
             /* Compute value of the slack variable (we only care about the correct fractionality) */
-            primsol = SCIPisInfinity(scip, SCIProwGetRhs(row)) ? SCIPgetRowLPActivity(scip, row) - SCIProwGetLhs(row) : SCIProwGetRhs(row) - SCIPgetRowLPActivity(scip, row);
+            if ( SCIPisInfinity(scip, SCIProwGetRhs(row)) )
+               primsol = SCIPgetRowLPActivity(scip, row) - SCIProwGetLhs(row);
+            else
+               primsol = SCIProwGetRhs(row) - SCIPgetRowLPActivity(scip, row);
+
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1 - sepadata->away) )
             {
                SCIPdebugMessage("trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                tryrow = TRUE;
             }
          }
