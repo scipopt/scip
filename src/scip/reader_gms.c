@@ -1944,7 +1944,7 @@ SCIP_DECL_READERCOPY(readerCopyGms)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderGms(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -2208,7 +2208,7 @@ SCIP_RETCODE SCIPwriteGms(
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
+      var = vars[v]; /*lint !e613*/
       assert( var != NULL );
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
@@ -2230,10 +2230,10 @@ SCIP_RETCODE SCIPwriteGms(
    {
       SCIPinfoMessage(scip, file, "Binary variables\n");
       clearLine(linebuffer, &linecnt);
-   
+
       for( v = 0; v < nbinvars; ++v )
       {
-         var = vars[v];
+         var = vars[v]; /*lint !e613*/
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nbinvars - 1) ? "," : ";");
@@ -2250,10 +2250,10 @@ SCIP_RETCODE SCIPwriteGms(
    {
       SCIPinfoMessage(scip, file, "Integer variables\n");
       clearLine(linebuffer, &linecnt);
-   
+
       for( v = 0; v < nintvars; ++v )
       {
-         var = vars[nbinvars + v];
+         var = vars[nbinvars + v]; /*lint !e613*/
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nintvars - 1) ? "," : ";");
@@ -2272,7 +2272,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
+      var = vars[v]; /*lint !e613*/
       assert( var != NULL );
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
@@ -2449,10 +2449,10 @@ SCIP_RETCODE SCIPwriteGms(
             appendLine(scip, file, linebuffer, &linecnt, ";");
       }
    }
-      
+
    endLine(scip, file, linebuffer, &linecnt);
    SCIPinfoMessage(scip, file, "\n");
-   
+
    /* print objective function equation */
    clearLine(linebuffer, &linecnt);
    if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
@@ -2465,7 +2465,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
+      var = vars[v]; /*lint !e613*/
       assert( var != NULL );
 
       /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
