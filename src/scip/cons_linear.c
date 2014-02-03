@@ -6337,9 +6337,10 @@ SCIP_RETCODE extractCliques(
 
             i = 0;
             j = i + 1;
+#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasLE(scip, binvarvals[i], threshold));
-
+#endif
             /* check if at least two variables are in a clique */
             if( SCIPisFeasGT(scip, binvarvals[i] + binvarvals[j], threshold) )
             {
@@ -6485,9 +6486,10 @@ SCIP_RETCODE extractCliques(
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
+#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasGE(scip, binvarvals[i], threshold));
-
+#endif
             /* check if two variables are in a clique */
             if( SCIPisFeasLT(scip, binvarvals[i] + binvarvals[j], threshold) )
             {
