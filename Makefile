@@ -970,7 +970,7 @@ endif
 ifneq ($(SHARED),$(LAST_SHARED))
 		@-touch $(ALLSRC)
 endif
-ifneq ($(USRFLAGS),$(LAST_USRLAGS))
+ifneq ($(USRFLAGS),$(LAST_USRFLAGS))
 		@-touch $(ALLSRC)
 endif
 ifneq ($(USROFLAGS),$(LAST_USROFLAGS))
