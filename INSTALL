@@ -172,6 +172,9 @@ Here is what you have to do to get SCIP running:
      (b) the library file(s) "lib*.a" or/and "lib*.so"
    You will need either the .a or the .so files and can skip the others by just pressing return.
 
+   On some MAC systems, GMP is installed under /sw/include and /sw/lib.  If these are not contained in the
+   library and include paths, you have to add them explicitly.
+
 2. Installing SCIP
    After compiling you can install the headers, the libraries, and the binay. Therefore you use the command:
 
