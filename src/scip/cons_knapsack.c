@@ -8750,6 +8750,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                newweight = dualcapacity - minweight;
                startv = v;
+               assert(v < nvars);
 
                /* @todo check for further reductions, when two times the minweight exceeds the dualcapacity */
                /* shrink big coefficients */
@@ -8764,11 +8765,17 @@ SCIP_RETCODE dualWeightsTightening(
 
                /* skip unchangable weights */
                while( weights[v] + minweight == dualcapacity )
+               {
+                  assert(v < nvars);
                   ++v;
+               }
 
                --end;
+               /* skip same end weights */
+               while( end >= 0 && weights[end] == weights[end + 1] )
+                  --end;
 
-               if( end <= 0 )
+               if( v >= end )
                   goto TERMINATE;
 
                minweight = weights[end];
@@ -8783,6 +8790,7 @@ SCIP_RETCODE dualWeightsTightening(
                minweight = sumcoef;
                newweight = dualcapacity - minweight;
                startv = v;
+               assert(v < nvars);
 
                /* shrink big coefficients */
                while( weights[v] + minweight > dualcapacity && 2 * minweight <= dualcapacity )
@@ -8796,7 +8804,10 @@ SCIP_RETCODE dualWeightsTightening(
 
                /* skip unchangable weights */
                while( weights[v] + minweight == dualcapacity )
+               {
+                  assert(v < nvars);
                   ++v;
+               }
             }
 
             if( v >= end )
@@ -10454,22 +10465,33 @@ SCIP_RETCODE tightenWeights(
 
       /* calculate clique partition */
       SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[pos]), len, clqpart, &nclq) );
+      assert(nclq <= len);
+
+#ifndef NDEBUG
+      /* clique numbers must be at least as high as the index */
+      for( w = 0; w < nclq; ++w )
+         assert(clqpart[w] <= w);
+#endif
 
       SCIPdebugMessage("Disaggregating knapsack constraint <%s> due to clique information.\n", SCIPconsGetName(cons));
 
       /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &clqvars, len - nclq + 2) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &clqvars, pos + len - nclq + 1) );
 
+      /* copy corresponding variables with big coefficients */
       for( w = pos - 1; w >= 0; --w )
          clqvars[w] = consdata->vars[w];
 
+      /* create for each clique a set-packing constraint */
       for( c = 0; c < nclq; ++c )
       {
          nclqvars = pos;
-         for( w = 0; w < len; ++w )
+
+         for( w = c; w < len; ++w )
          {
             if( clqpart[w] == c )
             {
+               assert(nclqvars < pos + len - nclq + 1);
                clqvars[nclqvars] = consdata->vars[w + pos];
                ++nclqvars;
             }
