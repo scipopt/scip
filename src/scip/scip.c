@@ -8698,9 +8698,48 @@ SCIP_RETCODE SCIPreadProb(
             scip->origprob->nimplvars, scip->origprob->ncontvars,
             scip->origprob->nconss);
 
+         /* in full verbose mode we will also print the number of constraints per constraint handler */
+         if( scip->set->disp_verblevel == SCIP_VERBLEVEL_FULL )
+         {
+            int* nconss;
+            int c;
+            int h;
+
+            SCIP_CALL( SCIPallocClearMemoryArray(scip, &nconss, scip->set->nconshdlrs) );
+
+            /* loop over all constraints and constraint-handlers to count for each type the amount of original
+             * constraints
+             */
+            for( c = scip->origprob->nconss - 1; c >= 0; --c )
+            {
+               for( h = scip->set->nconshdlrs - 1; h >= 0; --h )
+               {
+                  if( scip->origprob->conss[c]->conshdlr == scip->set->conshdlrs[h] )
+                  {
+                     ++(nconss[h]);
+                     break;
+                  }
+               }
+               /* constraint handler should be found */
+               assert(h >= 0);
+            }
+
+            /* loop over all constraints handlers for printing the number of original constraints */
+            for( h = 0; h < scip->set->nconshdlrs; ++h )
+            {
+               if( nconss[h] > 0 )
+               {
+                  SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                     "%7d constraints of type <%s>\n", nconss[h], SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+               }
+            }
+
+            SCIPfreeMemoryArray(scip, &nconss);
+         }
+
          /* get reading time */
          readingtime = SCIPgetReadingTime(scip);
-         
+
          /* display timing statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "Reading Time: %.2f\n", readingtime);
