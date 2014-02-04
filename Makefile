@@ -944,7 +944,7 @@ endif
 		@$(SHELL) -ec 'if test ! -e $(SCIPGITHASHFILE) ; \
 			then \
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
-				@-$(MAKE) githash ; \
+				$(MAKE) githash ; \
 			fi'
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
