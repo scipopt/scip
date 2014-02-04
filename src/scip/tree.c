@@ -555,7 +555,7 @@ SCIP_RETCODE forkFree(
    assert(lp != NULL);
 
    /* release the added rows */
-   for( i = 0; i < (*fork)->naddedrows; ++i )
+   for( i = (*fork)->naddedrows - 1; i >= 0; --i )
    {
       SCIP_CALL( SCIProwRelease(&(*fork)->addedrows[i], blkmem, set, lp) );
    }

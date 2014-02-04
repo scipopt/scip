@@ -756,7 +756,7 @@ SCIP_RETCODE consDropAllEvents(
    assert(consdata->eventdatas != NULL);
 
    /* drop event of every single variable */
-   for( i = 0; i < consdata->nvars; ++i )
+   for( i = consdata->nvars - 1; i >= 0; --i )
    {
       SCIP_CALL( consDropEvent(scip, cons, eventhdlr, i) );
    }
@@ -12261,7 +12261,7 @@ SCIP_DECL_CONSEXIT(consExitLinear)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* drop events for the constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_CONSDATA* consdata;
 
