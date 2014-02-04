@@ -6040,7 +6040,10 @@ SCIP_RETCODE SCIPconsSetInitial(
          }
          else
          {
-            conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+            if( cons->initconsspos >= 0 )
+            {
+               conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+            }
          }
       }
    }
