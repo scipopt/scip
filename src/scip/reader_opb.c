@@ -3099,11 +3099,21 @@ SCIP_RETCODE printPseudobooleanCons(
       for( v = ntermvals - 1; v >= 0; --v )
       {
          assert(ntermvars[v] > 0); /*lint !e613 */
-         SCIP_CALL( SCIPallocBufferArray(scip, &(activetermvars[v]), ntermvars[v]) ); /*lint !e866 */
-         SCIP_CALL( SCIPallocBufferArray(scip, &(negatedarrays[v]), ntermvars[v]) ); /*lint !e866 */
 
-         /* get binary representatives of binary variables in non-linear terms */
-         SCIP_CALL( SCIPgetBinvarRepresentatives(scip, ntermvars[v], termvars[v], activetermvars[v], negatedarrays[v]) );
+         if( transformed )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &(activetermvars[v]), ntermvars[v]) ); /*lint !e866 */
+            SCIP_CALL( SCIPallocBufferArray(scip, &(negatedarrays[v]), ntermvars[v]) ); /*lint !e866 */
+
+            /* get binary representatives of binary variables in non-linear terms */
+            SCIP_CALL( SCIPgetBinvarRepresentatives(scip, ntermvars[v], termvars[v], activetermvars[v], negatedarrays[v]) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPduplicateBufferArray(scip, &(activetermvars[v]), termvars[v], ntermvars[v]) ); /*lint !e866 */
+            SCIP_CALL( SCIPallocBufferArray(scip, &(negatedarrays[v]), ntermvars[v]) ); /*lint !e866 */
+            BMSclearMemoryArray(negatedarrays[v], ntermvars[v]); /*lint !e866 */
+         }
       }
    }
    else
