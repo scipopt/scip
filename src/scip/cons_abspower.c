@@ -2005,16 +2005,20 @@ SCIP_RETCODE computeViolation(
       ub = SCIPvarGetUbLocal(consdata->x);
       minval = MIN(ub, xval);
 
+#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
       assert(SCIPisFeasGE(scip, xval, lb));
       assert(SCIPisFeasLE(scip, xval, ub));
+#endif
       xval = MAX(lb, minval);
 
       lb = SCIPvarGetLbLocal(consdata->z);
       ub = SCIPvarGetUbLocal(consdata->z);
       minval = MIN(ub, zval);
 
+#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
       assert(SCIPisFeasGE(scip, zval, lb));
       assert(SCIPisFeasLE(scip, zval, ub));
+#endif
       zval = MAX(lb, minval);
    }
 
