@@ -55,6 +55,7 @@
 #define DEFAULT_FIXBINLOCKS       FALSE /**< should binary variables with no locks in one direction be fixed to that direction? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
+#define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -88,6 +89,7 @@ struct SCIP_HeurData
    SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
    SCIP_Bool             normalize;          /**< should coefficients and left/right hand sides be normalized by max row coeff? */
    SCIP_Bool             updateweights;      /**< should row weight be increased every time the row is violated? */
+   SCIP_Bool             impliscontinuous;   /**< should implicit integer variables be treated as continuous variables? */
    SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
@@ -149,6 +151,25 @@ struct SCIP_EventData
  * Local methods
  */
 
+/** returns whether a given variable is counted as discrete, depending on the parameter impliscontinuous */
+static
+SCIP_Bool varIsDiscrete(
+   SCIP_VAR*             var,                /**< variable to check for discreteness */
+   SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
+   )
+{
+   return SCIPvarIsIntegral(var) && (SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT || !impliscontinuous);
+}
+
+/** returns whether a given column is counted as discrete, depending on the parameter impliscontinuous */
+static
+SCIP_Bool colIsDiscrete(
+   SCIP_COL*             col,                /**< column to check for discreteness */
+   SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
+   )
+{
+   return SCIPcolIsIntegral(col) && (!impliscontinuous || SCIPvarGetType(SCIPcolGetVar(col)) != SCIP_VARTYPE_IMPLINT);
+}
 
 /** returns nonzero values and corresponding columns of given row */
 static
@@ -238,7 +259,6 @@ void relaxVar(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    varcol = SCIPvarGetCol(var);
    assert(varcol != NULL);
@@ -446,6 +466,7 @@ SCIP_RETCODE initMatrix(
 {
    SCIP_ROW** lprows;
    SCIP_COL** lpcols;
+   SCIP_Bool impliscontinuous;
    int i;
    int j;
    int currentpointer;
@@ -471,6 +492,7 @@ SCIP_RETCODE initMatrix(
    matrix->normalized = FALSE;
    matrix->ndiscvars = 0;
    *nmaxrows = 0;
+   impliscontinuous = heurdata->impliscontinuous;
 
    /* count the number of nonzeros of the LP constraint matrix */
    for( j = 0; j < ncols; ++j )
@@ -478,7 +500,7 @@ SCIP_RETCODE initMatrix(
       assert(lpcols[j] != NULL);
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
 
-      if( SCIPcolIsIntegral(lpcols[j]) )
+      if( colIsDiscrete(lpcols[j], impliscontinuous) )
       {
          matrix->nnonzs += SCIPcolGetNLPNonz(lpcols[j]);
          ++matrix->ndiscvars;
@@ -579,7 +601,7 @@ SCIP_RETCODE initMatrix(
       /* row coefficients are normalized and copied to heuristic matrix */
       for( j = 0; j < nrowlpnonz; ++j )
       {
-         if( !SCIPcolIsIntegral(cols[j]) )
+         if( !colIsDiscrete(cols[j], impliscontinuous) )
             continue;
          assert(SCIPcolGetLPPos(cols[j]) >= 0);
          assert(currentpointer < matrix->nnonzs);
@@ -615,7 +637,7 @@ SCIP_RETCODE initMatrix(
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
 
       currentcol = lpcols[j];
-      assert(SCIPcolIsIntegral(currentcol));
+      assert(colIsDiscrete(currentcol, impliscontinuous));
 
       colvals = SCIPcolGetVals(currentcol);
       rows = SCIPcolGetRows(currentcol);
@@ -661,7 +683,7 @@ SCIP_RETCODE initMatrix(
       SCIP_COL* col;
 
       col = lpcols[j];
-      if( SCIPcolIsIntegral(col) )
+      if( colIsDiscrete(col, impliscontinuous) )
       {
          matrix->transformshiftvals[j] = 0.0;
          transformVariable(scip, matrix, heurdata, j);
@@ -670,7 +692,7 @@ SCIP_RETCODE initMatrix(
       {
          SCIP_VAR* var;
          var = SCIPcolGetVar(col);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         assert(!varIsDiscrete(var, impliscontinuous));
          relaxVar(scip, var, matrix, normalize);
       }
    }
@@ -819,7 +841,6 @@ SCIP_Real retransformVariable(
 
    status = matrix->transformstatus[varindex];
    assert(status != TRANSFORMSTATUS_NONE);
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
    /* check if original variable has different bounds and transform solution value correspondingly */
    if( status == TRANSFORMSTATUS_LB )
@@ -1394,6 +1415,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_Bool cutoff;              /* has current probing node been cutoff? */
    SCIP_Bool probing;             /* should probing be applied or not? */
    SCIP_Bool infeasible;          /* FALSE as long as currently infeasible rows have variables left */
+   SCIP_Bool impliscontinuous;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1448,6 +1470,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->lpcols, nlpcols) );
    heurdata->nlpcols = nlpcols;
 
+   impliscontinuous = heurdata->impliscontinuous;
+
 #ifndef NDEBUG
    BMSclearMemoryArray(heurdata->lpcols, nlpcols);
 #endif
@@ -1469,10 +1493,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       col = heurdata->lpcols[c];
       assert(col != NULL);
-      colvar =SCIPcolGetVar(col);
+      colvar = SCIPcolGetVar(col);
       assert(colvar != NULL);
 
-      if( SCIPvarGetType(colvar) != SCIP_VARTYPE_CONTINUOUS )
+      if( varIsDiscrete(colvar, impliscontinuous) )
          ++ndiscvars;
       if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
          ++nbinvars;
@@ -1801,6 +1825,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             marksuspicious = TRUE;
 
          /* retransform the solution value from the heuristic transformation space */
+         assert(varIsDiscrete(var, impliscontinuous));
          origsolval = retransformVariable(scip, matrix, var, permutedvarindex, optimalshiftvalue);
       }
       assert(SCIPisFeasGE(scip, origsolval, lb) && SCIPisFeasLE(scip, origsolval, ub));
@@ -1930,7 +1955,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* get the column position of the variable */
          permutedvarindex = permutation[v];
          var = SCIPcolGetVar(heurdata->lpcols[permutedvarindex]);
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+         assert(varIsDiscrete(var, impliscontinuous));
 
          /* update the transformation of the variable, since the bound might have changed after the last update. */
          if( heurdata->probing )
@@ -1938,6 +1963,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), violatedrows, violatedrowpos, &nviolatedrows);
 
          /* retransform the solution value from the heuristic transformed space, set the solution value accordingly */
+         assert(varIsDiscrete(var, impliscontinuous));
          origsolval = retransformVariable(scip, matrix, var, permutedvarindex, 0.0);
          assert(SCIPisFeasGE(scip, origsolval, SCIPvarGetLbLocal(var))
             && SCIPisFeasLE(scip, origsolval, SCIPvarGetUbLocal(var)));
@@ -2197,12 +2223,14 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/preferbinaries", "Should binary variables be shifted first?",
          &heurdata->preferbinaries, TRUE, DEFAULT_PREFERBINARIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/nozerofixing", "should variables with a zero shifting value be delayed instead of being fixed?",
-            &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
+         &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/fixbinlocks", "should binary variables with no locks in one direction be fixed to that direction?",
-            &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
+         &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
-               &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
+         &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights", "should row weight be increased every time the row is violated?",
-                  &heurdata->updateweights, TRUE, DEFAULT_UPDATEWEIGHTS, NULL, NULL) );
+         &heurdata->updateweights, TRUE, DEFAULT_UPDATEWEIGHTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/impliscontinuous", "should implicit integer variables be treated as continuous variables?",
+         &heurdata->impliscontinuous, TRUE, DEFAULT_IMPLISCONTINUOUS, NULL, NULL) );
    return SCIP_OKAY;
 }
