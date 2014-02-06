@@ -16236,6 +16236,8 @@ SCIP_RETCODE SCIPlpGetSol(
          SCIPsetIsFeasGE(set, dualbound, lp->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
    }
 
+   stilldualfeasible = TRUE;
+
    if( primalfeasible != NULL )
       *primalfeasible = stillprimalfeasible;
    if( dualfeasible != NULL )
