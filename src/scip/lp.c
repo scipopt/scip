@@ -1929,6 +1929,7 @@ void rowDelNorms(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COL*             col,                /**< column of deleted coefficient */
    SCIP_Real             val,                /**< value of deleted coefficient */
+   SCIP_Bool             forcenormupdate,    /**< should the norms be updated even if lppos of column is -1? */
    SCIP_Bool             updateindex,        /**< should the minimal/maximal column index of row be updated? */
    SCIP_Bool             updateval           /**< should the minimal/maximal value of row be updated? */
    )
@@ -1951,7 +1952,7 @@ void rowDelNorms(
       row->validminmaxidx = FALSE;
 
    /* Euclidean norm, sum norm, and objective function scalar product only take into accout LP columns */
-   if( col->lppos >= 0 )
+   if( forcenormupdate || col->lppos >= 0 )
    {
       /* update squared Euclidean norm and sum norm */
       row->sqrnorm -= SQR(absval);
@@ -2170,7 +2171,7 @@ SCIP_RETCODE rowDelCoefPos(
    row->len--;
 
    /* update norms */
-   rowDelNorms(row, set, col, val, TRUE, TRUE);
+   rowDelNorms(row, set, col, val, FALSE, TRUE, TRUE);
 
    coefChanged(row, col, lp);
 
@@ -2223,7 +2224,7 @@ SCIP_RETCODE rowChgCoefPos(
       oldval = row->vals[pos];
       
       /* change existing coefficient */
-      rowDelNorms(row, set, col, row->vals[pos], FALSE, TRUE);
+      rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE, TRUE);
       row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
       rowAddNorms(row, set, col, row->vals[pos], TRUE);
@@ -8427,7 +8428,7 @@ void colUpdateDelLP(
          assert(0 <= pos && pos < row->nlpcols);
 
          /* update norms */
-         rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE);
+         rowDelNorms(row, set, col, row->vals[pos], TRUE, FALSE, FALSE);
 
          row->nlpcols--;
          rowSwapCoefs(row, pos, row->nlpcols);
