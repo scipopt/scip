@@ -560,12 +560,27 @@ ifeq ($(VERBOSE),false)
 		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(MAINLINK) $(MAINSHORTLINK) \
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
+MAKE		+= -s
 endif
 
-all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+.PHONY: all
+all:		libs
+		@-$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
-libs: 		$(LINKSMARKERFILE) makesciplibfile $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+libs:     	preprocess
+		@-$(MAKE) makesciplibfile $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+
+.PHONY: preprocess
+preprocess:     checkdefines
+		@$(SHELL) -ec 'if test ! -e $(LINKSMARKERFILE) ; \
+			then \
+				echo "-> generating necessary links" ; \
+				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
+			fi'
+		@-$(MAKE) touchexternal
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -865,7 +880,8 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: makesciplibfile
-makesciplibfile: checkdefines touchexternal $(SCIPLIBFILE)
+makesciplibfile: preprocess
+		@-$(MAKE) $(SCIPLIBFILE)
 
 $(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
