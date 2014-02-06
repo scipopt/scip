@@ -260,7 +260,8 @@ struct SCIP_Set
    SCIP_Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
    SCIP_Bool             lp_checkstability;  /**< should LP solver's return status be checked for stability? */
    SCIP_Real             lp_conditionlimit;  /**< maximum condition number of LP basis counted as stable (-1.0: no check) */
-   SCIP_Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
+   SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
+   SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
    SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */

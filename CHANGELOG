@@ -142,7 +142,7 @@ performance improvements:
 - added upgradability for implicit binary variable cases for linear constraints
 - improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
 - improved merging of constraints in cons_and.c
-- faster feasibility check of LP solutions (controlled by parameter lp/checkfeas)
+- faster feasibility check of LP solutions (controlled by parameters lp/checkprimfeas and lp/checkdualfeas)
 
 interface
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
@@ -282,6 +282,8 @@ parameters:
 - new parameter "separating/zerohalf/delayedcuts" to use the delayed cutpool for the zerohalf separator
 - new parameter "heuristics/shiftandpropagate/impliscontinuous" to decide whether implicit integer variables are treated
   as continuous variables
+- parameter lp/checkfeas was replaced by two parameters lp/checkprimfeas and lp/checkdualfeas to decide primal and dual
+  feasibility check individually
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -291,7 +293,7 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
-- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
+- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkdualfeas)
 - return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
 
 Makefile:

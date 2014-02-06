@@ -14282,6 +14282,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    if( !lp->solved )
    {
+      SCIP_Bool* primalfeaspointer;
+      SCIP_Bool* dualfeaspointer;
       SCIP_Bool primalfeasible;
       SCIP_Bool dualfeasible;
       SCIP_Bool rayfeasible;
@@ -14320,19 +14322,25 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
-         if( set->lp_checkfeas )
-         {
-            /* get LP solution and check the solution's feasibility again */
-            SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
-         }
+         /* get LP solution and possibly check the solution's feasibility again */
+         if( set->lp_checkprimfeas )
+            primalfeaspointer = &primalfeasible;
          else
          {
-            /* get LP solution believing in the feasibility of the LP solution */
-            SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
-
+            /* believe in the primal feasibility of the LP solution */
             primalfeasible = TRUE;
-            dualfeasible = TRUE;
+            primalfeaspointer = NULL;
          }
+         if( set->lp_checkdualfeas )
+            dualfeaspointer = &dualfeasible;
+         else
+         {
+            /* believe in the dual feasibility of the LP solution */
+            dualfeasible = TRUE;
+            dualfeaspointer = NULL;
+         }
+
+         SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -14425,19 +14433,25 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         if( set->lp_checkfeas )
-         {
-            /* get unbounded LP solution and check the solution's feasibility again */
-            SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
-         }
+         /* get LP solution and possibly check the solution's feasibility again */
+         if( set->lp_checkprimfeas )
+            primalfeaspointer = &primalfeasible;
          else
          {
-            /* get unbounded LP solution believing in the feasibility of the LP solution */
-            SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
-
+            /* believe in the primal feasibility of the LP solution */
             primalfeasible = TRUE;
-            rayfeasible = TRUE;
+            primalfeaspointer = NULL;
          }
+         if( set->lp_checkdualfeas )
+            dualfeaspointer = &dualfeasible;
+         else
+         {
+            /* believe in the dual feasibility of the LP solution */
+            dualfeasible = TRUE;
+            dualfeaspointer = NULL;
+         }
+
+         SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -14598,19 +14612,25 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT)
                      && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) ) )
                {
-                  if( set->lp_checkfeas )
-                  {
-                     /* get LP solution and check the solution's feasibility again */
-                     SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
-                  }
+                  /* get LP solution and possibly check the solution's feasibility again */
+                  if( set->lp_checkprimfeas )
+                     primalfeaspointer = &primalfeasible;
                   else
                   {
-                     /* get LP solution believing in the feasibility of the LP solution */
-                     SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
-
+                     /* believe in the primal feasibility of the LP solution */
                      primalfeasible = TRUE;
-                     dualfeasible = TRUE;
+                     primalfeaspointer = NULL;
                   }
+                  if( set->lp_checkdualfeas )
+                     dualfeaspointer = &dualfeasible;
+                  else
+                  {
+                     /* believe in the dual feasibility of the LP solution */
+                     dualfeasible = TRUE;
+                     dualfeaspointer = NULL;
+                  }
+
+                  SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
                   /* in debug mode, check that lazy bounds (if present) are not violated by an optimal LP solution */
                   if( solstat == SCIP_LPSOLSTAT_OPTIMAL )
@@ -14655,14 +14675,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* unbounded solution */
                else if( solstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
                {
-                  if( set->lp_checkfeas )
+                  if( set->lp_checkprimfeas )
                   {
                      /* get unbounded LP solution and check the solution's feasibility again */
                      SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
                   }
                   else
                   {
-                     /* get LP solution believing in the feasibility of the LP solution */
+                     /* get unbounded LP solution believing in its feasibility */
                      SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
 
                      primalfeasible = TRUE;
