@@ -4756,11 +4756,10 @@ SCIP_RETCODE correctConshdlrdata(
       if( consanddata->nvars == 0 )
       {
          SCIP_VAR* resvar = SCIPgetResultantAnd(scip, consanddata->cons);
-         int oldnuses = consanddata->nuses;
 
          /* if we have no old variables, than also no new variables */
          assert(consanddata->nnewvars == 0);
-         assert(oldnuses > 0);
+         assert(consanddata->nuses > 0);
          assert(resvar != NULL);
 
          /* delete and-constraint */
@@ -4894,9 +4893,8 @@ SCIP_RETCODE correctConshdlrdata(
       if( SCIPconsIsDeleted(cons) )
       {
          SCIP_VAR* resvar = SCIPgetResultantAnd(scip, consanddata->cons);
-         int oldnuses = consanddata->nuses;
 
-         assert(oldnuses > 0);
+         assert(consanddata->nuses > 0);
          assert(resvar != NULL);
 
          SCIP_CALL( transformToOrig(scip, consanddata, conshdlrdata) );
