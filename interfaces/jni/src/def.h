@@ -265,6 +265,7 @@
       assert(SCIP_PARAMETERWRONGVAL == JNIPACKAGENAME(JniScipRetcode_SCIP_PARAMETERWRONGVAL)); \
       assert(SCIP_KEYALREADYEXISTING == JNIPACKAGENAME(JniScipRetcode_SCIP_KEYALREADYEXISTING)); \
       assert(SCIP_MAXDEPTHLEVEL == JNIPACKAGENAME(JniScipRetcode_SCIP_MAXDEPTHLEVEL)); \
+      assert(SCIP_BRANCHERROR == JNIPACKAGENAME(JniScipRetcode_SCIP_BRANCHERROR)); \
                                                                         \
       if( (_restat_ = (x)) != SCIP_OKAY )                               \
       {                                                                 \
