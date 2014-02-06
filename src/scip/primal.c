@@ -800,7 +800,7 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;

@@ -5053,8 +5053,13 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg1) );
    }
    /* three character operators */
-   else if( strncmp(str, "abs", 3) == 0 || strncmp(str, "cos", 3) == 0 || strncmp(str, "exp", 3) == 0 ||
-      strncmp(str, "log", 3) == 0 || strncmp(str, "sin", 3) == 0 || strncmp(str, "sqr", 3) == 0 ||
+   else if(
+      strncmp(str, "abs", 3) == 0 ||
+      strncmp(str, "cos", 3) == 0 ||
+      strncmp(str, "exp", 3) == 0 ||
+      strncmp(str, "log", 3) == 0 ||
+      strncmp(str, "sin", 3) == 0 ||
+      strncmp(str, "sqr", 3) == 0 ||
       strncmp(str, "tan", 3) == 0 )
    {
       const char* opname = str;
@@ -5099,6 +5104,20 @@ SCIP_RETCODE exprParse(
    {
       SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
       return SCIP_READERROR;
+   }
+   else if( isalpha(*str) || *str == '_' )
+   {
+      /* check for a variable, that was not recognized earlier because somebody omitted the '<' and '>' we need for
+       * SCIPparseVarName, making everyones life harder;
+       * we allow only variable names starting with a character or underscore here
+       */
+      const char* varnamestartptr = str;
+
+      /* allow only variable names containing characters, digits, and underscores here */
+      while( isalnum(str[0]) || str[0] == '_' )
+         ++str;
+
+      SCIP_CALL( exprparseReadVariable(blkmem, &varnamestartptr, expr, nvars, varnames, vartable, 1.0, str) );
    }
    else
    {

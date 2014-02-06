@@ -44,10 +44,10 @@ protected:
 public:
    virtual ~GamsSolver() {};
 
-   /** sets number of threads to use in linear algebra routines (Blas, Lapack) */
-   static void setNumThreadsLinearAlgebra(
+   /** sets number of OpenMP/GotoBlas threads */
+   static void setNumThreads(
       struct gevRec*      gev,                /**< GAMS environment */
-      int                 nthreads            /**< number of threads for linear algebra routines */
+      int                 nthreads            /**< number of threads for OpenMP/GotoBlas */
    );
 
    /** ensure that GMO library has been loaded

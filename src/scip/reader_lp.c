@@ -3814,11 +3814,11 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* allocate array for storing aggregated and negated variables (dynamically adjusted) */
-   saggvars = nvars;
+   saggvars = MAX(10, nvars);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
 
    /* create hashtable for storing aggregated variables */
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 10 * nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 10 * saggvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
    for( c = 0; c < nConsSOS1; ++c )

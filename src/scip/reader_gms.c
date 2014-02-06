@@ -19,7 +19,6 @@
  * @author Stefan Vigerske
  *
  * @todo Check for words reserved for GAMS.
- * @todo Routines for reading.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -27,6 +26,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+
+#ifdef WITH_GAMS
+#include <sys/stat.h>
+
+#include "gmomcc.h"
+#include "gevmcc.h"
+
+#include "reader_gmo.h"
+#endif
 
 #include "scip/reader_gms.h"
 #include "scip/cons_knapsack.h"
@@ -47,9 +55,6 @@
 #define READER_EXTENSION        "gms"
 
 
-/*
- * Data structures
- */
 #define GMS_MAX_LINELEN      256
 #define GMS_MAX_PRINTLEN     256       /**< the maximum length of any line is 255 + '\\0' = 256*/
 #define GMS_MAX_NAMELEN      64        /**< the maximum length for any name is 63 + '\\0' = 64 */
@@ -57,6 +62,7 @@
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
 #define GMS_DEFAULT_SIGNPOWER FALSE
+#define GMS_LOGOPTION        3
 
 /*
  * Local methods (for writing)
@@ -1938,10 +1944,109 @@ SCIP_DECL_READERCOPY(readerCopyGms)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderGms(scip) );
- 
+
    return SCIP_OKAY;
 }
 
+#ifdef WITH_GAMS
+/** problem reading method of reader */
+static
+SCIP_DECL_READERREAD(readerReadGms)
+{
+   SCIP_RETCODE ret;
+   FILE* convertdopt;
+   char gamscall[SCIP_MAXSTRLEN];
+   char buffer[GMS_SSSIZE];
+   int rc;
+   gmoHandle_t gmo = NULL;
+   gevHandle_t gev = NULL;
+
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(filename != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+   ret = SCIP_ERROR;
+
+   /* create temporary directory */
+   mkdir("loadgms.tmp", S_IRWXU);
+
+   /* create empty convertd options file */
+   convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
+   if( convertdopt == NULL )
+   {
+      SCIPerrorMessage("Could not create convertd options file. Do you have write permissions in execution directory?\n");
+      goto TERMINATE;
+   }
+   fputs(" ", convertdopt);
+   fclose(convertdopt);
+
+   /* call GAMS with convertd solver to get compiled model instance in temporary directory */
+   SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d", filename, GMS_LOGOPTION);
+   SCIPdebugMessage(gamscall);
+   rc = system(gamscall);
+   if( rc != 0 )
+   {
+      SCIPerrorMessage("GAMS call returned with code %d\n", rc);
+      /* likely the GAMS model could not be compiled, which we could report as a readerror */
+      ret = SCIP_READERROR;
+      goto TERMINATE;
+   }
+
+   /* initialize GEV library and create GEV */
+   if( !gevCreateDD(&gev, WITH_GAMS, buffer, sizeof(buffer)) )
+   {
+      SCIPerrorMessage(buffer);
+      goto TERMINATE;
+   }
+
+   /* initialize GMO library and create GMO */
+   if( !gmoCreateDD(&gmo, WITH_GAMS, buffer, sizeof(buffer)) )
+   {
+      SCIPerrorMessage(buffer);
+      goto TERMINATE;
+   }
+
+   /* load control file */
+   if( gevInitEnvironmentLegacy(gev, "loadgms.tmp/gamscntr.dat") )
+   {
+      SCIPerrorMessage("Could not load control file loadgms.tmp/gamscntr.dat\n");
+      goto TERMINATE;
+   }
+
+   /* tell GMO about GEV */
+   if( gmoRegisterEnvironment(gmo, gev, buffer) )
+   {
+      SCIPerrorMessage("Error registering GAMS Environment: %s\n", buffer);
+      goto TERMINATE;
+   }
+
+   /* load GAMS model instance into GMO */
+   if( gmoLoadDataLegacy(gmo, buffer) )
+   {
+      SCIPerrorMessage("Could not load model data.\n");
+      goto TERMINATE;
+   }
+
+   /* create SCIP problem out of GMO, using the magic from reader_gmo in interfaces/gams */
+   SCIP_CALL( SCIPcreateProblemReaderGmo(scip, gmo, NULL, FALSE) );
+   *result = SCIP_SUCCESS;
+
+   ret = SCIP_OKAY;
+
+TERMINATE:
+   if( gmo != NULL )
+      gmoFree(&gmo);
+   if( gev != NULL )
+      gevFree(&gev);
+
+   /* remove temporary directory content (should have only files) and directory itself) */
+   system("rm loadgms.tmp/* && rmdir loadgms.tmp");
+
+   return ret;
+}
+#endif
 
 /** problem writing method of reader */
 static
@@ -1953,6 +2058,17 @@ SCIP_DECL_READERWRITE(readerWriteGms)
    return SCIP_OKAY;
 }
 
+#ifdef WITH_GAMS
+/** destructor of reader to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeGms)
+{
+   gmoLibraryUnload();
+   gevLibraryUnload();
+
+   return SCIP_OKAY;
+}
+#endif
 
 /*
  * reader specific interface methods
@@ -1974,6 +2090,10 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );
+#ifdef WITH_GAMS
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadGms) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeGms) );
+#endif
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteGms) );
 
    /* add gms reader parameters for writing routines*/
@@ -2083,12 +2203,12 @@ SCIP_RETCODE SCIPwriteGms(
    clearLine(linebuffer, &linecnt);
 
    /* auxiliary objective variable */
-   SCIPinfoMessage(scip, file, " objvar,\n");
+   SCIPinfoMessage(scip, file, " objvar%c\n", nvars > 0 ? ',' : ';');
 
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
+      var = vars[v]; /*lint !e613*/
       assert( var != NULL );
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
@@ -2110,10 +2230,10 @@ SCIP_RETCODE SCIPwriteGms(
    {
       SCIPinfoMessage(scip, file, "Binary variables\n");
       clearLine(linebuffer, &linecnt);
-   
+
       for( v = 0; v < nbinvars; ++v )
       {
-         var = vars[v];
+         var = vars[v]; /*lint !e613*/
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nbinvars - 1) ? "," : ";");
@@ -2130,10 +2250,10 @@ SCIP_RETCODE SCIPwriteGms(
    {
       SCIPinfoMessage(scip, file, "Integer variables\n");
       clearLine(linebuffer, &linecnt);
-   
+
       for( v = 0; v < nintvars; ++v )
       {
-         var = vars[nbinvars + v];
+         var = vars[nbinvars + v]; /*lint !e613*/
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nintvars - 1) ? "," : ";");
@@ -2152,7 +2272,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
+      var = vars[v]; /*lint !e613*/
       assert( var != NULL );
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
@@ -2263,7 +2383,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "Equations\n");
    clearLine(linebuffer, &linecnt);
 
-   SCIPinfoMessage(scip, file, " objequ%s\n", (nconss > 0) ? "," : ";");
+   SCIPinfoMessage(scip, file, " objequ%c\n", (nconss > 0) ? ',' : ';');
 
    /* declare equations */
    for( c = 0; c < nconss; ++c )
@@ -2329,10 +2449,10 @@ SCIP_RETCODE SCIPwriteGms(
             appendLine(scip, file, linebuffer, &linecnt, ";");
       }
    }
-      
+
    endLine(scip, file, linebuffer, &linecnt);
    SCIPinfoMessage(scip, file, "\n");
-   
+
    /* print objective function equation */
    clearLine(linebuffer, &linecnt);
    if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
@@ -2345,7 +2465,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
+      var = vars[v]; /*lint !e613*/
       assert( var != NULL );
 
       /* in case the original problem has to be posted the variables have to be either "original" or "negated" */

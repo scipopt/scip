@@ -702,8 +702,10 @@ SCIP_RETCODE evalLhs(
          SCIP_Real ub = SCIPvarGetUbLocal(var);
          SCIP_Real minval = MIN(ub, val);
 
+#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
          assert(SCIPisFeasGE(scip, val, lb));
          assert(SCIPisFeasLE(scip, val, ub));
+#endif
          val = MAX(lb, minval);
       }
 
@@ -803,8 +805,10 @@ SCIP_RETCODE computeViolation(
       SCIP_Real ub = SCIPvarGetUbLocal(consdata->rhsvar);
       SCIP_Real minval = MIN(ub, rhsval);
 
+#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
       assert(SCIPisFeasGE(scip, rhsval, lb));
       assert(SCIPisFeasLE(scip, rhsval, ub));
+#endif
       rhsval = MAX(lb, minval);
    }
 

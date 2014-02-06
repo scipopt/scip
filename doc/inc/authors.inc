@@ -114,14 +114,6 @@
 	    </tr>
 	    <tr>
 	      <td>
-              Robert Waniek
-	      </td>
-	      <td>
-                Former student assistant
-              </td>
-	    </tr>
-	    <tr>
-	      <td>
 		<a href="http://www.mso.math.fau.de/de/wirtschaftsmathematik/team/weninger-dieter">Dieter Weninger</a>
 	      </td>
 	      <td>
@@ -172,7 +164,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://www3.math.tu-berlin.de/coga/people/bley/">Andreas Bley</a>
+                <a href="http://www.mathematik.uni-kassel.de/~abley/Andreas_Bley/Prof._Dr._Andreas_Bley.html">Andreas Bley</a>
 	      </td>
 	      <td>
                  VRP example
@@ -202,7 +194,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://www3.mathematik.tu-darmstadt.de/hp/optimierung/gellermann-thorsten/startseite.html">Thorsten Gellermann</a>
+                <a href="http://www.mso.math.uni-erlangen.de/index.php?id=231">Thorsten Gellermann</a>
 	      </td>
 	      <td>
                  Generic NLP interface
@@ -230,10 +222,20 @@
 	    </tr>
            <tr>
 	      <td>
-		 <a href="http://www.ifor.math.ethz.ch/~dennism">Dennis Michaels</a>
+		 <a href="http://www.mathematik.uni-dortmund.de/lsv/people/michaels/">Dennis Michaels</a>
 	      </td>
 	      <td>
                  Constraint Handler for bivariate nonlinear constraints
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+		 <a href="http://people.sutd.edu.sg/~nannicini/">Giacomo Nannicini</a>
+	      </td>
+	      <td>
+	         Textbook Gomory mixed integer cut example.
 	      </td>
 	      <td>
 	      </td>
@@ -329,6 +331,14 @@
 	      </td>
 	      <td>
 	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+              Robert Waniek
+	      </td>
+	      <td>
+                Former student assistant
+              </td>
 	    </tr>
             <tr>
 	      <td>

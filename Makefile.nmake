@@ -103,13 +103,13 @@ LPIINSTMSG		=
 !if "$(LPS)" == "spx"
 CPPFLAGS		=	$(CPPFLAGS) /Ilib\spxinc
 LPILIBOBJ		=	$(LIBOBJDIR)\lpi\lpi_spx.obj $(LIBOBJDIR)\scip\bitencode.obj $(LIBOBJDIR)\blockmemshell\memory.obj $(LIBOBJDIR)\scip\message.obj
-LDFLAGS			=	lib\libsoplex.$(BASE).lib $(LDFLAGS)
+LDFLAGS			=	lib\libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).lib $(LDFLAGS)
 !endif
 
 !if "$(LPS)" == "spx2"
 CPPFLAGS		=	$(CPPFLAGS) /Ilib\spxinc
 LPILIBOBJ		=	$(LIBOBJDIR)\lpi\lpi_spx2.obj $(LIBOBJDIR)\scip\bitencode.obj $(LIBOBJDIR)\blockmemshell\memory.obj $(LIBOBJDIR)\scip\message.obj
-LDFLAGS			=	lib\libsoplex.$(BASE).lib $(LDFLAGS)
+LDFLAGS			=	lib\libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).lib $(LDFLAGS)
 !endif
 
 !if "$(LPS)" == "none"
@@ -158,17 +158,17 @@ NLPILIBDEP		=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAME
 
 !if "$(ZIMPL)" == "true"
 CPPFLAGS		=	$(CPPFLAGS) /DWITH_ZIMPL /Ilib /Ilib\zimpl\WIN
-LDFLAGS			=	lib\libzimpl.$(BASE).lib lib\libpcre.$(ARCH).$(OPT).lib $(LDFLAGS)
+LDFLAGS			=	lib\libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).lib lib\libpcre.$(ARCH).opt.lib $(LDFLAGS)
 !endif
 
 !if "$(GMP)" == "true"
 CPPFLAGS		=	$(CPPFLAGS) /DWITH_GMP /Ilib\mpir.$(ARCH).opt # /Ilib
-LDFLAGS			=	lib\libmpir.$(ARCH).$(OPT).lib $(LDFLAGS)
+LDFLAGS			=	lib\libmpir.$(ARCH).opt.lib $(LDFLAGS)
 !endif
 
 !if "$(ZLIB)" == "true"
 CPPFLAGS		=	$(CPPFLAGS) /DWITH_ZLIB /Ilib\zlib
-LDFLAGS			=	lib\libz.$(ARCH).$(OPT).lib $(LDFLAGS) /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD
+LDFLAGS			=	lib\libz.$(ARCH).opt.lib $(LDFLAGS) /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD
 !endif
 
 #-----------------------------------------------------------------------------

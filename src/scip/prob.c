@@ -402,12 +402,13 @@ SCIP_RETCODE SCIPprobFree(
    assert(prob != NULL);
    assert(*prob != NULL);
    assert(set != NULL);
-   
+
    /* remove all constraints from the problem */
    while( (*prob)->nconss > 0 )
    {
+      /*@todo for debug mode it even might sense, to sort them downwards after their arraypos */
       assert((*prob)->conss != NULL);
-      SCIP_CALL( SCIPprobDelCons(*prob, blkmem, set, stat, (*prob)->conss[0]) );
+      SCIP_CALL( SCIPprobDelCons(*prob, blkmem, set, stat, (*prob)->conss[(*prob)->nconss - 1]) );
    }
 
    if( (*prob)->transformed )
@@ -426,7 +427,7 @@ SCIP_RETCODE SCIPprobFree(
 
    /* free constraint array */
    BMSfreeMemoryArrayNull(&(*prob)->conss);
-   
+
    /* free user problem data */
    if( (*prob)->transformed )
    {
@@ -444,7 +445,7 @@ SCIP_RETCODE SCIPprobFree(
    }
 
    /* release problem variables */
-   for( v = 0; v < (*prob)->nvars; ++v )
+   for( v = (*prob)->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, set, TRUE) );
@@ -453,7 +454,7 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->vars);
 
    /* release fixed problem variables */
-   for( v = 0; v < (*prob)->nfixedvars; ++v )
+   for( v = (*prob)->nfixedvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
@@ -474,7 +475,7 @@ SCIP_RETCODE SCIPprobFree(
    }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
-   
+
    return SCIP_OKAY;
 }
 
