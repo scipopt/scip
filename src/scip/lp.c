@@ -14433,25 +14433,19 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         /* get LP solution and possibly check the solution's feasibility again */
          if( set->lp_checkprimfeas )
-            primalfeaspointer = &primalfeasible;
+         {
+            /* get unbounded LP solution and check the solution's feasibility again */
+            SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
+         }
          else
          {
-            /* believe in the primal feasibility of the LP solution */
-            primalfeasible = TRUE;
-            primalfeaspointer = NULL;
-         }
-         if( set->lp_checkdualfeas )
-            dualfeaspointer = &dualfeasible;
-         else
-         {
-            /* believe in the dual feasibility of the LP solution */
-            dualfeasible = TRUE;
-            dualfeaspointer = NULL;
-         }
+            /* get unbounded LP solution believing in the feasibility of the LP solution */
+            SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
 
-         SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
+            primalfeasible = TRUE;
+            rayfeasible = TRUE;
+         }
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
