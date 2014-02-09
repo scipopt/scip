@@ -1983,12 +1983,13 @@ SCIP_DECL_READERREAD(readerReadGms)
    fclose(convertdopt);
 
    /* call GAMS with convertd solver to get compiled model instance in temporary directory */
-   SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d", filename, GMS_LOGOPTION);
+   SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d",
+      filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? 3 : 0);
    SCIPdebugMessage(gamscall);
    rc = system(gamscall);
    if( rc != 0 )
    {
-      SCIPerrorMessage("GAMS call returned with code %d\n", rc);
+      SCIPerrorMessage("GAMS call returned with code %d, check loadgms.tmp/listing for details.\n", rc);
       /* likely the GAMS model could not be compiled, which we could report as a readerror */
       ret = SCIP_READERROR;
       goto TERMINATE;
@@ -2041,8 +2042,9 @@ TERMINATE:
    if( gev != NULL )
       gevFree(&gev);
 
-   /* remove temporary directory content (should have only files) and directory itself) */
-   system("rm loadgms.tmp/* && rmdir loadgms.tmp");
+   /* remove temporary directory content (should have only files and directory itself) */
+   if( ret != SCIP_READERROR )
+      system("rm loadgms.tmp/* && rmdir loadgms.tmp");
 
    return ret;
 }
@@ -2063,8 +2065,10 @@ SCIP_DECL_READERWRITE(readerWriteGms)
 static
 SCIP_DECL_READERFREE(readerFreeGms)
 {
-   gmoLibraryUnload();
-   gevLibraryUnload();
+   if( gmoLibraryLoaded() )
+      gmoLibraryUnload();
+   if( gevLibraryLoaded() )
+      gevLibraryUnload();
 
    return SCIP_OKAY;
 }
