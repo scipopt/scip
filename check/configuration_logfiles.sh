@@ -108,28 +108,11 @@ if test "$CONTINUE" = "true" && test -e results/$FILENAME.out
 then
     echo skipping file $INSTANCE due to existing output file results/$FILENAME.out
     SKIPINSTANCE="true"
-
-# skip instance if outfile contains a corresponding entry
-elif test "$CONTINUE" = "true" && test -f $OUTFILE
-then
-    SOLVEDPROBS=`awk -f getsolvedprobs.awk $OUTFILE`
-    for PROB in ${SOLVEDPROBS[@]}
-    do
-        if test "$PROB" = "$INSTANCE"
-        then
-            echo skipping file $INSTANCE due to existing output in $OUTFILE
-            SKIPINSTANCE="true"
-            break
-        fi
-    done
 fi
 
-# configure gobal names TMPFILE (batch file) and SETFILE to save settings to
+# configure global names TMPFILE (batch file) and SETFILE to save settings to
 BASENAME=$SCIPPATH/results/$FILENAME
 TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 
-if test "$SKIPINSTANCE" = "false" || test -e results/$FILENAME.out
-then
-    echo $BASENAME >> $EVALFILE
-fi
+echo $BASENAME >> $EVALFILE
