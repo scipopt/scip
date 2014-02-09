@@ -5308,7 +5308,7 @@ SCIP_RETCODE checkSolution(
 
 /** try upgrading pseudoboolean linear constraint to an XOR constraint and/or remove possible and-constraints
  *
- *  @note An XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j \in {1,..,n}, which is not yet checked while
+ *  @note An XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j in {1,..,n}, which is not yet checked while
  *  trying to upgrade
  */
 static
