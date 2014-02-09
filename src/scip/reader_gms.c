@@ -2678,7 +2678,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
-         nbinvars + nintvars > 0 ? "MI" : "", nlcons ? (nqcons ? (nsmooth ? "DNLP" : "NLP") : "QCP") : (nbinvars + nintvars > 0 ? "P" : "LP"));
+         nbinvars + nintvars > 0 ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && nbinvars == 0 && nintvars == 0) ? "DNLP" : "NLP") : "QCP") : (nbinvars + nintvars > 0 ? "P" : "LP"));
 
    SCIPinfoMessage(scip, file, "$if not set %s $set %s %s\n", buffer, buffer, buffer);
    SCIPinfoMessage(scip, file, "Solve m using %%%s%% %simizing objvar;\n",
