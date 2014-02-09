@@ -654,7 +654,7 @@ SCIP_RETCODE execRelpscost(
           * Additionally, also if the value for the current best candidate is valid and exceeds the new cutoff bound,
           * we want to change the domain of this variable rather than branching on it.
           */
-         if( SCIPgetBestSol(scip) != bestsol )
+         if( SCIPgetBestSol(scip) != bestsol && bestcand != -1 )
          {
             bestsol = SCIPgetBestSol(scip);
 
