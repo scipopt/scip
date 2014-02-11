@@ -1060,7 +1060,8 @@ SCIP_RETCODE printSOSCons(
    appendLine(scip, file, linebuffer, &linecnt, buffer);
    endLine(scip, file, linebuffer, &linecnt);
 
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " SOS%d Variable %s_sosvar(%s_sosset);", sostype, consname, consname);
+   /* explicitly set lower bound of SOS variables to -inf, as GAMS default is 0.0 */
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " SOS%d Variable %s_sosvar(%s_sosset); %s_sosvar.lo(%s_sosset) = -inf;", sostype, consname, consname, consname, consname);
    appendLine(scip, file, linebuffer, &linecnt, buffer);
    endLine(scip, file, linebuffer, &linecnt);
 
@@ -1073,11 +1074,6 @@ SCIP_RETCODE printSOSCons(
    {
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "$sameas(%s_sosset,'%d')", consname, v+1);
       SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, v > 0 ? " + " : NULL, buffer, 1, &vars[v], &coef, transformed) );
-
-      if( SCIPisNegative(scip, SCIPvarGetLbGlobal(vars[v])) )
-      {
-         SCIPwarningMessage(scip, "Variable <%s> in SOS constraint <%s> hat negative lower bound, which is not supported by GAMS.\n", SCIPvarGetName(vars[v]), rowname);
-      }
    }
    appendLine(scip, file, linebuffer, &linecnt, ";");
    endLine(scip, file, linebuffer, &linecnt);
