@@ -6080,7 +6080,7 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbOriginal(var)));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsLE(set, newbound, SCIPvarGetUbOriginal(var)));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
@@ -6134,7 +6134,7 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbOriginal(var)));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsGE(set, newbound, SCIPvarGetLbOriginal(var)));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
@@ -6349,7 +6349,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
    /* check that the bound is feasible */
-   if( newbound > var->glbdom.ub )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && newbound > var->glbdom.ub )
    {
       /* due to numerics we only want to be feasible in feasibility tolerance */
       assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
@@ -6369,13 +6369,16 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* change the bound */
    oldbound = var->glbdom.lb;
-   assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
    var->glbdom.lb = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
 
-   /* merges overlapping holes into single holes, moves bounds respectively */
-   domMerge(&var->glbdom, blkmem, set, &newbound, NULL);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* merges overlapping holes into single holes, moves bounds respectively */
+      domMerge(&var->glbdom, blkmem, set, &newbound, NULL);
+   }
 
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
@@ -6520,7 +6523,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
    /* check that the bound is feasible */
-   if( newbound < var->glbdom.lb )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && newbound < var->glbdom.lb )
    {
       /* due to numerics we only want to be feasible in feasibility tolerance */
       assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
@@ -6540,13 +6543,16 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* change the bound */
    oldbound = var->glbdom.ub;
-   assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
    var->glbdom.ub = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
 
-   /* merges overlapping holes into single holes, moves bounds respectively */
-   domMerge(&var->glbdom, blkmem, set, NULL, &newbound);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* merges overlapping holes into single holes, moves bounds respectively */
+      domMerge(&var->glbdom, blkmem, set, NULL, &newbound);
+   }
 
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
@@ -6680,18 +6686,22 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
     * of the domain within feastol
     */
-   assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
    /* check that the adjusted bound is feasible
-    * @todo this does not have to be the case if the original problem was infeasible due to bounds and we are called here because we reset bounds to their original value!
+    * @todo this does not have to be the case if the original problem was infeasible due to bounds and we are called
+    *       here because we reset bounds to their original value!
     */
-   assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
 
-   /* we do not want to exceed the upperbound, which could have happened due to numerics */
-   newbound = MIN(newbound, var->glbdom.ub);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to exceed the upperbound, which could have happened due to numerics */
+      newbound = MIN(newbound, var->glbdom.ub);
+   }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
@@ -6818,18 +6828,22 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
     * of the domain within feastol
     */
-   assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
-   /* check that the adjusted bound is feasible 
-    * @todo this does not have to be the case if the original problem was infeasible due to bounds and we are called here because we reset bounds to their original value!
+   /* check that the adjusted bound is feasible
+    * @todo this does not have to be the case if the original problem was infeasible due to bounds and we are called
+    *       here because we reset bounds to their original value!
     */
-   assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
 
-   /* we do not want to undercut the lowerbound, which could have happened due to numerics */
-   newbound = MAX(newbound, var->glbdom.lb);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+      newbound = MAX(newbound, var->glbdom.lb);
+   }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
@@ -7125,12 +7139,15 @@ SCIP_RETCODE varProcessChgLbLocal(
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsLE(set, newbound, var->glbdom.ub));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
-   /* we do not want to exceed the upperbound, which could have happened due to numerics */
-   newbound = MIN(newbound, var->locdom.ub);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to exceed the upperbound, which could have happened due to numerics */
+      newbound = MIN(newbound, var->locdom.ub);
+   }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
@@ -7142,7 +7159,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    /* change the bound */
    oldbound = var->locdom.lb;
-   assert(SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -7151,8 +7168,11 @@ SCIP_RETCODE varProcessChgLbLocal(
    if( stat != NULL )
       stat->domchgcount++;
 
-   /* merges overlapping holes into single holes, moves bounds respectively */
-   domMerge(&var->locdom, blkmem, set, &newbound, NULL);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* merges overlapping holes into single holes, moves bounds respectively */
+      domMerge(&var->locdom, blkmem, set, &newbound, NULL);
+   }
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -7281,12 +7301,15 @@ SCIP_RETCODE varProcessChgUbLocal(
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsGE(set, newbound, var->glbdom.lb));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
-   /* we do not want to undercut the lowerbound, which could have happened due to numerics */
-   newbound = MAX(newbound, var->locdom.lb);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+      newbound = MAX(newbound, var->locdom.lb);
+   }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
@@ -7298,7 +7321,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* change the bound */
    oldbound = var->locdom.ub;
-   assert(SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -7307,8 +7330,11 @@ SCIP_RETCODE varProcessChgUbLocal(
    if( stat != NULL )
       stat->domchgcount++;
 
-   /* merges overlapping holes into single holes, moves bounds respectively */
-   domMerge(&var->locdom, blkmem, set, NULL, &newbound);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* merges overlapping holes into single holes, moves bounds respectively */
+      domMerge(&var->locdom, blkmem, set, NULL, &newbound);
+   }
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -7432,16 +7458,19 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
     * of the domain within feastol
     */
-   assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
    /* check that the adjusted bound is feasible */
-   assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
 
-   /* we do not want to exceed the upperbound, which could have happened due to numerics */
-   newbound = MIN(newbound, var->locdom.ub);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to exceed the upperbound, which could have happened due to numerics */
+      newbound = MIN(newbound, var->locdom.ub);
+   }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
@@ -7555,16 +7584,19 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
     * of the domain within feastol
     */
-   assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
    /* check that the adjusted bound is feasible */
-   assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
 
-   /* we do not want to undercut the lowerbound, which could have happened due to numerics */
-   newbound = MAX(newbound, var->locdom.lb);
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+      newbound = MAX(newbound, var->locdom.lb);
+   }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);

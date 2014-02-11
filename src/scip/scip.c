@@ -19077,7 +19077,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
-   assert(SCIPsetIsLE(scip->set, lb, ub));
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
    {
@@ -19187,7 +19187,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
-   assert(SCIPsetIsLE(scip->set, lb, ub));
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
    {
