@@ -6685,7 +6685,9 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
-   /* check that the adjusted bound is feasible */
+   /* check that the adjusted bound is feasible
+    * @todo this does not have to be the case if the original problem was infeasible due to bounds and we are called here because we reset bounds to their original value!
+    */
    assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
@@ -6821,7 +6823,9 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
-   /* check that the adjusted bound is feasible */
+   /* check that the adjusted bound is feasible 
+    * @todo this does not have to be the case if the original problem was infeasible due to bounds and we are called here because we reset bounds to their original value!
+    */
    assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
