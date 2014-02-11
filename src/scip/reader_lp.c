@@ -1913,6 +1913,8 @@ SCIP_RETCODE readGenerals(
    while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
@@ -1926,6 +1928,14 @@ SCIP_RETCODE readGenerals(
       {
          syntaxError(scip, lpinput, "unknown variable in generals section.");
          return SCIP_OKAY;
+      }
+
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      if( !SCIPisFeasIntegral(scip, lb) || !SCIPisFeasIntegral(scip, ub) )
+      {
+         SCIPwarningMessage(scip, "variable <%s> declared as integer has non-integral bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
 
       /* mark the variable to be integral */
@@ -1948,6 +1958,8 @@ SCIP_RETCODE readBinaries(
    while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
@@ -1961,6 +1973,14 @@ SCIP_RETCODE readBinaries(
       {
          syntaxError(scip, lpinput, "unknown variable in binaries section.");
          return SCIP_OKAY;
+      }
+
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      if( !SCIPisFeasZero(scip, lb) || !SCIPisFeasEQ(scip, ub, 1.0) )
+      {
+         SCIPwarningMessage(scip, "variable <%s> declared as binary has non-binary bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
 
       /* mark the variable to be binary and change its bounds appropriately */
