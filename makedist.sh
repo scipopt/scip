@@ -50,6 +50,9 @@ $NAME/check/check_count.sh $NAME/check/evalcheck_count.sh $NAME/check/check_coun
 $NAME/check/testset/short.test $NAME/check/testset/short.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
+$NAME/check/configuration_set.sh $NAME/check/configuration_logfiles.sh \
+$NAME/check/configuration_tmpfile_setup_scip.sh \
+$NAME/check/run.sh $NAME/check/evalcheck_cluster.sh \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp \
@@ -79,6 +82,11 @@ $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
+$NAME/examples/GMI/Makefile \
+$NAME/examples/GMI/doc/xternal.c $NAME/examples/GMI/doc/gmi.dxy $NAME/examples/GMI/doc/header.html \
+$NAME/examples/GMI/check/testset/short.test $NAME/examples/GMI/check/testset/short.solu \
+$NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
+$NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
 $NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.test $NAME/examples/LOP/check/testset/short.solu \
 $NAME/examples/LOP/src/depend.* \

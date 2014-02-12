@@ -37,7 +37,8 @@ fixed bugs:
 - fixed bug in cons_superindicator concerning names of upgraded constraints
 - fixed several bugs in lpi_grb
 - fixed bug in sepa_cgmip computeObjWeightSize() w.r.t. equal sized rows
-- fixed several minor bug with handling of memory when writing aggregated variables (reader_lp, reader_mps)
+- fixed several minor bugs with handling of memory when writing aggregated variables (reader_lp, reader_mps)
+- fixed minor bug in cons_linear w.r.t. disabled presolving
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -141,7 +142,7 @@ performance improvements:
 - added upgradability for implicit binary variable cases for linear constraints
 - improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
 - improved merging of constraints in cons_and.c
-- faster feasibility check of LP solutions (controlled by parameter lp/checkfeas)
+- faster feasibility check of LP solutions (controlled by parameters lp/checkprimfeas and lp/checkdualfeas)
 
 interface
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
@@ -184,6 +185,8 @@ interface
 - SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 - SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
 - added a copy of the GAMS/SCIP interface to interfaces/gams
+- added reading capability to GAMS reader (if compiling with GAMS=true, requires a GAMS system)
+- added capability of writing SOS1/2 constraints to GAMS reader (introduces extra variables and equations)
 - added SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to either add/decrease the counter on upgrade-locks on
   a constraint or get the current number of upgrade-locks
 - added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
@@ -277,6 +280,11 @@ parameters:
   when solving a component
 - new advanced parameters "misc/permuteconss" and "misc/permutevars" to control whether variables and/or constraints
   should be permuted, if permutationseed != -1
+- new parameter "separating/zerohalf/delayedcuts" to use the delayed cutpool for the zerohalf separator
+- new parameter "heuristics/shiftandpropagate/impliscontinuous" to decide whether implicit integer variables are treated
+  as continuous variables
+- parameter lp/checkfeas was replaced by two parameters lp/checkprimfeas and lp/checkdualfeas to decide primal and dual
+  feasibility check individually
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -286,7 +294,7 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 - changed all calls to SCIPaddCut() to take infeasibility parameter
-- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkfeas)
+- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkdualfeas)
 - return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
 
 Makefile:

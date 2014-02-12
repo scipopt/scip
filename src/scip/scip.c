@@ -1058,7 +1058,7 @@ SCIP_Bool SCIPisPresolveFinished(
 #endif
 
    /* abort if maximal number of presolving rounds is reached */
-   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
+   finished = finished || (scip->stat->npresolrounds + 1 >= maxnrounds);
 
    return finished;
 }
@@ -8698,9 +8698,48 @@ SCIP_RETCODE SCIPreadProb(
             scip->origprob->nimplvars, scip->origprob->ncontvars,
             scip->origprob->nconss);
 
+         /* in full verbose mode we will also print the number of constraints per constraint handler */
+         if( scip->set->disp_verblevel == SCIP_VERBLEVEL_FULL )
+         {
+            int* nconss;
+            int c;
+            int h;
+
+            SCIP_CALL( SCIPallocClearMemoryArray(scip, &nconss, scip->set->nconshdlrs) );
+
+            /* loop over all constraints and constraint-handlers to count for each type the amount of original
+             * constraints
+             */
+            for( c = scip->origprob->nconss - 1; c >= 0; --c )
+            {
+               for( h = scip->set->nconshdlrs - 1; h >= 0; --h )
+               {
+                  if( scip->origprob->conss[c]->conshdlr == scip->set->conshdlrs[h] )
+                  {
+                     ++(nconss[h]);
+                     break;
+                  }
+               }
+               /* constraint handler should be found */
+               assert(h >= 0);
+            }
+
+            /* loop over all constraints handlers for printing the number of original constraints */
+            for( h = 0; h < scip->set->nconshdlrs; ++h )
+            {
+               if( nconss[h] > 0 )
+               {
+                  SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                     "%7d constraints of type <%s>\n", nconss[h], SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+               }
+            }
+
+            SCIPfreeMemoryArray(scip, &nconss);
+         }
+
          /* get reading time */
          readingtime = SCIPgetReadingTime(scip);
-         
+
          /* display timing statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "Reading Time: %.2f\n", readingtime);
@@ -11585,7 +11624,7 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
    {
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
-      /* since no root node, for which we could update the lower bound, has been create yet, update the dual bound stored
+      /* since no root node, for which we could update the lower bound, has been created yet, update the dual bound stored
        * in the problem data
        */
       SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, newbound));
@@ -12705,9 +12744,6 @@ SCIP_RETCODE presolve(
       /* check whether problem is infeasible or unbounded */
       finished = finished || *unbounded || *infeasible;
 
-      /* check whether we will reach the limit on presolving rounds */
-      finished = finished || (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds+1 >= scip->set->presol_maxrounds);
-
       /* if the presolving will be terminated, call the delayed presolvers */
       while( delayed && finished && !(*unbounded) && !(*infeasible) )
       {
@@ -12721,9 +12757,6 @@ SCIP_RETCODE presolve(
 
          /* check whether problem is infeasible or unbounded */
          finished = finished || *unbounded || *infeasible;
-
-         /* check whether we will reach the limit on presolving rounds */
-         finished = finished || (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds+1 >= scip->set->presol_maxrounds);
       }
 
       /* increase round number */
@@ -12765,7 +12798,7 @@ SCIP_RETCODE presolve(
    }
 
    /* deinitialize presolving */
-   if( finished && !stopped )
+   if( finished && (!stopped || *unbounded || *infeasible) )
    {
       SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
@@ -13160,7 +13193,7 @@ SCIP_RETCODE freeTransform(
          if( !hasinfval )
          {
             /* add solution to original candidate solution storage */
-            SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+            SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, &stored) );
          }
          else
          {
@@ -13173,7 +13206,7 @@ SCIP_RETCODE freeTransform(
             if( newsol != NULL )
             {
                /* add solution to original candidate solution storage */
-               SCIP_CALL( SCIPaddSolFree(scip, &newsol, &stored) );
+               SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, &sol, &stored) );
             }
          }
          ++s;
@@ -19044,7 +19077,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
-   assert(SCIPsetIsLE(scip->set, lb, ub));
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
    {
@@ -19154,7 +19187,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
-   assert(SCIPsetIsLE(scip->set, lb, ub));
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
    {
@@ -20528,11 +20561,8 @@ SCIP_RETCODE SCIPchgVarType(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
 
-      /* first adjust the variable due new integrality information */
+      /* first adjust the variable due to new integrality information */
       SCIP_CALL( tightenBounds(scip, var, vartype, infeasible) );
-
-      if( *infeasible )
-         return SCIP_OKAY;
 
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
@@ -20558,11 +20588,8 @@ SCIP_RETCODE SCIPchgVarType(
          return SCIP_OKAY;
       }
 
-      /* first adjust the variable due new integrality information */
+      /* first adjust the variable due to new integrality information */
       SCIP_CALL( tightenBounds(scip, var, vartype, infeasible) );
-
-      if( *infeasible )
-         return SCIP_OKAY;
 
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
@@ -32604,7 +32631,7 @@ SCIP_RETCODE SCIPaddSol(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert( SCIPsolIsOriginal(sol) );
+      assert(SCIPsolIsOriginal(sol));
       SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -32678,7 +32705,7 @@ SCIP_RETCODE SCIPaddSolFree(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert( SCIPsolIsOriginal(*sol) );
+      assert(SCIPsolIsOriginal(*sol));
       SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 

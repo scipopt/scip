@@ -1280,7 +1280,7 @@ SCIP_RETCODE presolComponents(
                      nintvars++;
                }
                ncontvars = ncompvars - nintvars - nbinvars;
-               compsize[c] = (int)(1000 * (nbinvars + presoldata->intfactor * nintvars) + MIN(999, ncontvars));
+               compsize[c] = (int)((1000 * (nbinvars + presoldata->intfactor * nintvars) + (950.0 * ncontvars)/nvars));
             }
 
             /* get permutation of component numbers such that the size of the components is increasing */

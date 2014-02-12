@@ -3322,11 +3322,14 @@ SCIP_RETCODE propAndSolve(
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
-            /* update node estimate */
-            SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+            if( SCIPtreeHasFocusNodeLP(tree) )
+            {
+               /* update node estimate */
+               SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
 
-            if( actdepth == 0 && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-               SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
+               if( actdepth == 0 && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+                  SCIPprobUpdateBestRootSol(transprob, set, stat, lp);
+            }
          }
 
          solverelax = TRUE;

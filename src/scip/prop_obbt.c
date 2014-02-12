@@ -55,7 +55,7 @@
                                                     *   auxiliary LPs? */
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
-#define DEFAULT_CONDITIONLIMIT           1e12      /**< maximum condition limit used in LP solver (-1.0: no limit) */
+#define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration

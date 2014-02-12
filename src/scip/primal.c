@@ -800,7 +800,7 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
@@ -826,7 +826,7 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+15 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
+      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
 
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
@@ -988,6 +988,9 @@ SCIP_RETCODE SCIPprimalAddSol(
    if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
    {
       SCIP_SOL* solcopy;
+#ifdef SCIP_MORE_DEBUG
+      int i;
+#endif
 
       assert(insertpos >= 0 && insertpos < set->limit_maxsol);
 
@@ -997,7 +1000,12 @@ SCIP_RETCODE SCIPprimalAddSol(
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
-
+#ifdef SCIP_MORE_DEBUG
+      for( i = 0; i < primal->nsols - 1; ++i )
+      {
+         assert(SCIPsetIsLE(set, SCIPsolGetObj(primal->sols[i], set, transprob, origprob), SCIPsolGetObj(primal->sols[i+1], set, transprob, origprob)));
+      }
+#endif
       *stored = TRUE;
    }
    else

@@ -1686,7 +1686,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
    SCIPdebugMessage("processing %d constraints that have to be updated in constraint handler <%s>\n",
       conshdlr->nupdateconss, conshdlr->name);
 
-   for( i = 0; i < conshdlr->nupdateconss; ++i )
+   for( i = conshdlr->nupdateconss - 1; i >= 0; --i )
    {
       cons = conshdlr->updateconss[i];
       assert(cons != NULL);
@@ -6040,7 +6040,10 @@ SCIP_RETCODE SCIPconsSetInitial(
          }
          else
          {
-            conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+            if( cons->initconsspos >= 0 )
+            {
+               conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+            }
          }
       }
    }

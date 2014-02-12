@@ -249,6 +249,12 @@ READLINESRC	:=	$(shell cat $(READLINEDEP))
 ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 
+GAMSDEP		:=	$(SRCDIR)/depend.gams
+GAMSSRC		:=	$(shell cat $(GAMSDEP))
+
+PARASCIPDEP	:=	$(SRCDIR)/depend.parascip
+PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
+
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
@@ -265,6 +271,14 @@ endif
 ifeq ($(IPOPT),true)
 SOFTLINKS	+=	$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\", \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/libipopt*\", ... should exist.\n"
+endif
+
+ifeq ($(GAMS),true)
+GAMSDIR		=	$(LIBDIR)/gams.$(OSTYPE).$(ARCH).$(COMP)
+FLAGS		+=	-DWITH_GAMS=\"$(abspath $(GAMSDIR))\"
+FLAGS		+=	-I$(SCIPDIR)/interfaces/gams/src -I$(GAMSDIR)/apifiles/C/api
+SOFTLINKS	+=	$(GAMSDIR)
+LPIINSTMSG	+=	"\n  -> \"$(GAMSDIR)\" is the path to the GAMS system directory"
 endif
 
 #-----------------------------------------------------------------------------
@@ -467,6 +481,10 @@ SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
+ifeq ($(GAMS),true)
+SCIPLIBOBJFILES += $(addprefix $(LIBOBJDIR)/scip/,gmomcc.o gevmcc.o reader_gmo.o)
+endif
+
 ALLSRC		+=	$(SCIPLIBSRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
@@ -529,7 +547,7 @@ MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
 ALLSRC		+=	$(MAINSRC)
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(GAMS)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -542,12 +560,27 @@ ifeq ($(VERBOSE),false)
 		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(MAINLINK) $(MAINSHORTLINK) \
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
+MAKE		+= -s
 endif
 
-all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+.PHONY: all
+all:		libs
+		@-$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
-libs: 		$(LINKSMARKERFILE) makesciplibfile $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+libs:     	preprocess
+		@-$(MAKE) makesciplibfile $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+
+.PHONY: preprocess
+preprocess:     checkdefines
+		@$(SHELL) -ec 'if test ! -e $(LINKSMARKERFILE) ; \
+			then \
+				echo "-> generating necessary links" ; \
+				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
+			fi'
+		@-$(MAKE) touchexternal
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -651,15 +684,28 @@ githash::      # do not remove the double-colon
 -include make/make.install
 
 # the testgams target need to come after make/local/make.targets has been included (if any), because the latter may assign a value to CLIENTTMPDIR
+# if calling with GAMS=true, assume user wants the GAMS system that is linked in lib/gams.*
+# if calling with GAMS=false (default), assume user has a GAMS system in the path (keeping original default behavior)
+ifeq ($(GAMS),true)
+	TESTGAMS = $(abspath $(GAMSDIR))/gams
+else
+ifeq ($(GAMS),false)
+	TESTGAMS = gams
+else
+	TESTGAMS = $(GAMS)
+endif
+endif
 .PHONY: testgams
 testgams:
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true;
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true;
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
 
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(LPILIBSHORTLINK)
 $(LPILIBSHORTLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
@@ -668,6 +714,8 @@ $(NLPILIBLINK):	$(NLPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
 
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(NLPILIBSHORTLINK)
 $(NLPILIBSHORTLINK):	$(NLPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
@@ -676,6 +724,8 @@ $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $@)
 
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(SCIPLIBSHORTLINK)
 $(SCIPLIBSHORTLINK):	$(SCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $@)
@@ -684,10 +734,14 @@ $(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
 
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(OBJSCIPLIBSHORTLINK)
 $(OBJSCIPLIBSHORTLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
 
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(MAINSHORTLINK)
 $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
@@ -799,6 +853,8 @@ scipdepend:
 		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
+		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
+		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
 
 depend:		scipdepend lpidepend nlpidepend maindepend
 
@@ -824,9 +880,10 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: makesciplibfile
-makesciplibfile: checkdefines touchexternal | $(LIBDIR) $(LIBOBJSUBDIRS) $(SCIPLIBFILE)
+makesciplibfile: preprocess
+		@-$(MAKE) $(SCIPLIBFILE)
 
-$(SCIPLIBFILE):	$(SCIPLIBOBJFILES)
+$(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES)
@@ -866,23 +923,33 @@ $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR)
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR)
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
+
+ifeq ($(GAMS),true)
+$(LIBOBJDIR)/scip/%.o:	$(GAMSDIR)/apifiles/C/api/%.c | $(LIBOBJDIR)
+		@echo "-> compiling $@"
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
+$(LIBOBJDIR)/scip/%.o:	$(SRCDIR)/../interfaces/gams/src/%.c | $(LIBOBJDIR)
+		@echo "-> compiling $@"
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
+endif
 
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) | $(LIBOBJDIR)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(GAMSDEP) $(LPSCHECKDEP) $(PARASCIPDEP) | $(LIBOBJDIR)
 ifeq ($(TOUCHLINKS),true)
 		@-touch $(ZLIBSRC)
 		@-touch $(GMPSRC)
 		@-touch $(READLINESRC)
 		@-touch $(ZIMPLSRC)
+		@-touch $(GAMSSRC)
 		@-touch $(LPSCHECKSRC)
 		@-touch $(LPILIBSRC)
 		@-touch $(NLPILIBSRC)
@@ -893,7 +960,7 @@ endif
 		@$(SHELL) -ec 'if test ! -e $(SCIPGITHASHFILE) ; \
 			then \
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
-				@-$(MAKE) githash ; \
+				$(MAKE) githash ; \
 			fi'
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
@@ -907,10 +974,22 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
+ifneq ($(GAMS),$(LAST_GAMS))
+		@-touch $(GAMSSRC)
+endif
 ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
 		@-touch $(LPSCHECKSRC)
 endif
+ifneq ($(PARASCIP),$(LAST_PARASCIP))
+		@-touch $(PARASCIPSRC)
+endif
 ifneq ($(SHARED),$(LAST_SHARED))
+		@-touch $(ALLSRC)
+endif
+ifneq ($(USRFLAGS),$(LAST_USRFLAGS))
+		@-touch $(ALLSRC)
+endif
+ifneq ($(USROFLAGS),$(LAST_USROFLAGS))
 		@-touch $(ALLSRC)
 endif
 ifneq ($(USRCFLAGS),$(LAST_USRCFLAGS))
@@ -919,16 +998,29 @@ endif
 ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
 		@-touch $(ALLSRC)
 endif
+ifneq ($(USRLDFLAGS),$(LAST_USRLDFLAGS))
+		@-touch -c $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
+endif
+ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
+		@-touch -c $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+		@echo "LAST_GAMS=$(GAMS)" >> $(LASTSETTINGS)
+		@echo "LAST_PARASCIP=$(PARASCIP)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 		@echo "LAST_SHARED=$(SHARED)" >> $(LASTSETTINGS)
+		@echo "LAST_USRFLAGS=$(USRFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_USROFLAGS=$(USROFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRCFLAGS=$(USRCFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRCXXFLAGS=$(USRCXXFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_USRLDFLAGS=$(USRLDFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_USRARFLAGS=$(USRARFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_USRDFLAGS=$(USRDFLAGS)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -941,7 +1033,7 @@ links:		| $(LIBDIR) $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) EXPRINT=$(EXPRINT)"
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) EXPRINT=$(EXPRINT) GAMS=$(GAMS)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
@@ -1007,6 +1099,11 @@ ifneq ($(ZIMPL),false)
 		$(error invalid ZIMPL flag selected: ZIMPL=$(ZIMPL). Possible options are: true false auto)
 endif
 endif
+ifneq ($(GAMS),true)
+ifneq ($(GAMS),false)
+		$(error invalid GAMS flag selected: GAMS=$(GAMS). Possible options are: true false)
+endif
+endif
 ifneq ($(IPOPT),true)
 ifneq ($(IPOPT),false)
 		$(error invalid IPOPT flag selected: IPOPT=$(IPOPT). Possible options are: true false)
@@ -1020,6 +1117,11 @@ endif
 ifneq ($(ZLIB),true)
 ifneq ($(ZLIB),false)
 		$(error invalid ZLIB flag selected: ZLIB=$(ZLIB). Possible options are: true false)
+endif
+endif
+ifneq ($(PARASCIP),true)
+ifneq ($(PARASCIP),false)
+		$(error invalid PARASCIP flag selected: PARASCIP=$(PARASCIP). Possible options are: true false)
 endif
 endif
 

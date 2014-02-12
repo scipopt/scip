@@ -1913,6 +1913,8 @@ SCIP_RETCODE readGenerals(
    while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
@@ -1926,6 +1928,14 @@ SCIP_RETCODE readGenerals(
       {
          syntaxError(scip, lpinput, "unknown variable in generals section.");
          return SCIP_OKAY;
+      }
+
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      if( !SCIPisFeasIntegral(scip, lb) || !SCIPisFeasIntegral(scip, ub) )
+      {
+         SCIPwarningMessage(scip, "variable <%s> declared as integer has non-integral bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
 
       /* mark the variable to be integral */
@@ -1948,6 +1958,8 @@ SCIP_RETCODE readBinaries(
    while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
@@ -1961,6 +1973,14 @@ SCIP_RETCODE readBinaries(
       {
          syntaxError(scip, lpinput, "unknown variable in binaries section.");
          return SCIP_OKAY;
+      }
+
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      if( !SCIPisFeasZero(scip, lb) || !SCIPisFeasEQ(scip, ub, 1.0) )
+      {
+         SCIPwarningMessage(scip, "variable <%s> declared as binary has non-binary bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
 
       /* mark the variable to be binary and change its bounds appropriately */
@@ -3814,11 +3834,11 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* allocate array for storing aggregated and negated variables (dynamically adjusted) */
-   saggvars = nvars;
+   saggvars = MAX(10, nvars);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
 
    /* create hashtable for storing aggregated variables */
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 10 * nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 10 * saggvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
    for( c = 0; c < nConsSOS1; ++c )

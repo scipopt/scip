@@ -756,7 +756,7 @@ SCIP_RETCODE consDropAllEvents(
    assert(consdata->eventdatas != NULL);
 
    /* drop event of every single variable */
-   for( i = 0; i < consdata->nvars; ++i )
+   for( i = consdata->nvars - 1; i >= 0; --i )
    {
       SCIP_CALL( consDropEvent(scip, cons, eventhdlr, i) );
    }
@@ -5623,7 +5623,19 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMessage("adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      /* if presolving is turned off, the row might be trivial */
+      if ( ! SCIPisInfinity(scip, -consdata->lhs) || ! SCIPisInfinity(scip, consdata->rhs) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      }
+#ifndef NDEBUG
+      else
+      {
+         int r;
+         SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/maxprerounds", &r) );
+         assert( r == 0 );
+      }
+#endif
    }
 
    return SCIP_OKAY;
@@ -6325,9 +6337,10 @@ SCIP_RETCODE extractCliques(
 
             i = 0;
             j = i + 1;
+#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasLE(scip, binvarvals[i], threshold));
-
+#endif
             /* check if at least two variables are in a clique */
             if( SCIPisFeasGT(scip, binvarvals[i] + binvarvals[j], threshold) )
             {
@@ -6473,9 +6486,10 @@ SCIP_RETCODE extractCliques(
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
+#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasGE(scip, binvarvals[i], threshold));
-
+#endif
             /* check if two variables are in a clique */
             if( SCIPisFeasLT(scip, binvarvals[i] + binvarvals[j], threshold) )
             {
@@ -12247,7 +12261,7 @@ SCIP_DECL_CONSEXIT(consExitLinear)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* drop events for the constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_CONSDATA* consdata;
 

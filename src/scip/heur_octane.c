@@ -779,6 +779,10 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
+
+   /* clear raydirection array first for not accidentally using it uninitialized */
+   BMSclearMemoryArray(raydirection, nsubspacevars);
+
    for( i = f_max; i >= 0; --i )
    {
       /*lint --e{866}*/

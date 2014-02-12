@@ -2226,22 +2226,22 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
       /* skip white space and ',' */
       while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
          ++s;
-      
+
       /* begin new row if required */
       if ( *s == '.' )
       {
          ++nspcons;
          ++s;
 
-         if ( nspcons > maxnspcons )
+         if ( nspcons >= maxnspcons )
          {
             int newsize;
 
-            newsize = SCIPcalcMemGrowSize(scip, nspcons);
+            newsize = SCIPcalcMemGrowSize(scip, nspcons+1);
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
             maxnspcons = newsize;
          }
-         assert( nspcons <= maxnspcons );
+         assert(nspcons < maxnspcons);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );  /*lint !e866*/
          j = 0;

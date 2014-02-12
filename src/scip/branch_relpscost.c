@@ -563,9 +563,9 @@ SCIP_RETCODE execRelpscost(
          inititer = MAX(inititer, 10);
          inititer = MIN(inititer, 500);
       }
-      
-      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iterations:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%u)\n",
-         reliable, ninitcands, nbranchcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
+
+      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, maxbdchgs=%d, inititer=%d, iterations:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%u)\n",
+         reliable, ninitcands, nbranchcands, nuninitcands, maxninitcands, maxlookahead, maxbdchgs, inititer,
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
       bestsbcand = -1;
@@ -573,7 +573,7 @@ SCIP_RETCODE execRelpscost(
       bestsbfracscore = -SCIPinfinity(scip);
       bestsbdomainscore = -SCIPinfinity(scip);
       lookahead = 0.0;
-      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts >= maxbdchgs
+      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
               && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
       {
          SCIP_Real down;
@@ -670,32 +670,35 @@ SCIP_RETCODE execRelpscost(
                break; /* terminate initialization loop, because node is infeasible */
             }
             /* proved bound for down child of best candidate is larger than cutoff bound -> increase lower bound of best candidate */
-            else if( !bestsbdowncutoff && bestsbdownvalid && SCIPisGE(scip, bestsbdown, SCIPgetCutoffbound(scip)) )
+            else if( bestcand != -1 )
             {
-               bestsbdowncutoff = TRUE;
+               if( !bestsbdowncutoff && bestsbdownvalid && SCIPisGE(scip, bestsbdown, SCIPgetCutoffbound(scip)) )
+               {
+                  bestsbdowncutoff = TRUE;
 
-               SCIPdebugMessage(" -> valid dual bound for down child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbdown=%g, cutoff=%g)\n",
-                  SCIPvarGetName(branchcands[bestcand]), bestsbdownvalid, bestsbdown, SCIPgetCutoffbound(scip));
+                  SCIPdebugMessage(" -> valid dual bound for down child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbdown=%g, cutoff=%g)\n",
+                     SCIPvarGetName(branchcands[bestcand]), bestsbdownvalid, bestsbdown, SCIPgetCutoffbound(scip));
 
-               SCIPdebugMessage(" -> increase lower bound of best candidate <%s> to %g\n",
-                  SCIPvarGetName(branchcands[bestcand]), SCIPfeasCeil(scip, branchcandssol[bestcand]));
+                  SCIPdebugMessage(" -> increase lower bound of best candidate <%s> to %g\n",
+                     SCIPvarGetName(branchcands[bestcand]), SCIPfeasCeil(scip, branchcandssol[bestcand]));
 
-               SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestcand]),
-                     SCIP_BOUNDTYPE_LOWER, SCIPfeasCeil(scip, branchcandssol[bestcand])) );
-            }
-            /* proved bound for up child of best candidate is larger than cutoff bound -> decrease upper bound of best candidate */
-            else if( !bestsbupcutoff && bestsbupvalid && SCIPisGE(scip, bestsbup, SCIPgetCutoffbound(scip)) )
-            {
-               bestsbupcutoff = TRUE;
+                  SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestcand]),
+                        SCIP_BOUNDTYPE_LOWER, SCIPfeasCeil(scip, branchcandssol[bestcand])) );
+               }
+               /* proved bound for up child of best candidate is larger than cutoff bound -> decrease upper bound of best candidate */
+               else if( !bestsbupcutoff && bestsbupvalid && SCIPisGE(scip, bestsbup, SCIPgetCutoffbound(scip)) )
+               {
+                  bestsbupcutoff = TRUE;
 
-               SCIPdebugMessage(" -> valid dual bound for up child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbup=%g, cutoff=%g)\n",
-                  SCIPvarGetName(branchcands[bestcand]), bestsbupvalid, bestsbup, SCIPgetCutoffbound(scip));
+                  SCIPdebugMessage(" -> valid dual bound for up child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbup=%g, cutoff=%g)\n",
+                     SCIPvarGetName(branchcands[bestcand]), bestsbupvalid, bestsbup, SCIPgetCutoffbound(scip));
 
-               SCIPdebugMessage(" -> decrease upper bound of best candidate <%s> to %g\n",
-                  SCIPvarGetName(branchcands[bestcand]), SCIPfeasFloor(scip, branchcandssol[bestcand]));
+                  SCIPdebugMessage(" -> decrease upper bound of best candidate <%s> to %g\n",
+                     SCIPvarGetName(branchcands[bestcand]), SCIPfeasFloor(scip, branchcandssol[bestcand]));
 
-               SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestcand]),
-                     SCIP_BOUNDTYPE_UPPER, SCIPfeasFloor(scip, branchcandssol[bestcand])) );
+                  SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestcand]),
+                        SCIP_BOUNDTYPE_UPPER, SCIPfeasFloor(scip, branchcandssol[bestcand])) );
+               }
             }
          }
 
