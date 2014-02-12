@@ -889,6 +889,7 @@ SCIP_RETCODE conshdlrAddSepacons(
    assert(cons->sepaconsspos == -1);
    assert(set != NULL);
    assert(cons->scip == set->scip);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringsepa);
 
    SCIP_CALL( conshdlrEnsureSepaconssMem(conshdlr, set, conshdlr->nsepaconss+1) );
    insertpos = conshdlr->nsepaconss;
@@ -928,6 +929,7 @@ void conshdlrDelSepacons(
    assert(cons->separate);
    assert(cons->sepaenabled);
    assert(cons->sepaconsspos != -1);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringsepa);
 
    delpos = cons->sepaconsspos;
    if( !cons->obsolete )
@@ -1168,7 +1170,7 @@ SCIP_RETCODE conshdlrAddPropcons(
    assert(cons->propconsspos == -1);
    assert(set != NULL);
    assert(cons->scip == set->scip);
-   assert(!conshdlrAreUpdatesDelayed(conshdlr));
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringprop);
 
    /* add constraint to the propagation array */
    SCIP_CALL( conshdlrEnsurePropconssMem(conshdlr, set, conshdlr->npropconss+1) );
@@ -1219,6 +1221,7 @@ void conshdlrDelPropcons(
    assert(cons->propagate);
    assert(cons->propenabled);
    assert(cons->propconsspos != -1);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringprop);
 
    /* unmark constraint to be propagated; this will move the constraint to the obsolete or non-obsolete part of the
     * array, depending on its age
@@ -2179,6 +2182,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->sepasolwasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
    (*conshdlr)->presolwasdelayed = FALSE;
+   (*conshdlr)->duringsepa = FALSE;
+   (*conshdlr)->duringprop = FALSE;
    (*conshdlr)->initialized = FALSE;
 
    (*conshdlr)->pendingconss = NULL;
@@ -2850,6 +2855,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
              * external method; to avoid this, these changes will be buffered and processed after the method call
              */
             conshdlrDelayUpdates(conshdlr);
+            conshdlr->duringsepa = TRUE;
 
             /* start timing */
             SCIPclockStart(conshdlr->sepatime, set);
@@ -2862,6 +2868,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             SCIPclockStop(conshdlr->sepatime, set);
 
             /* perform the cached constraint updates */
+            conshdlr->duringsepa = FALSE;
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
             /* update statistics */
@@ -2979,6 +2986,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
              * external method; to avoid this, these changes will be buffered and processed after the method call
              */
             conshdlrDelayUpdates(conshdlr);
+            conshdlr->duringsepa = TRUE;
 
             /* start timing */
             SCIPclockStart(conshdlr->sepatime, set);
@@ -2991,6 +2999,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
             SCIPclockStop(conshdlr->sepatime, set);
 
             /* perform the cached constraint updates */
+            conshdlr->duringsepa = FALSE;
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
             /* update statistics */
@@ -3577,6 +3586,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
              * external method; to avoid this, these changes will be buffered and processed after the method call
              */
             conshdlrDelayUpdates(conshdlr);
+            conshdlr->duringprop = TRUE;
 
             /* start timing */
             if( instrongbranching )
@@ -3595,6 +3605,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                SCIPclockStop(conshdlr->proptime, set);
 
             /* perform the cached constraint updates */
+            conshdlr->duringprop = FALSE;
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
             /* update statistics */
