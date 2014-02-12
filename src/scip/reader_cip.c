@@ -1013,7 +1013,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
                naggrvars = SCIPvarGetMultaggrNVars(var);
                aggrvars = SCIPvarGetMultaggrVars(var);
-               assert( aggrvars != NULL );
+               assert(aggrvars != NULL || naggrvars == 0);
 
                for (j = 0; j < naggrvars; ++j)
                {
