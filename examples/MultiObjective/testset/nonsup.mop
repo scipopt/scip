@@ -1,0 +1,29 @@
+* SCIP STATISTICS
+*   Problem name     : nonsup.lp
+*   Variables        : 2 (0 binary, 2 integer, 0 implicit integer, 0 continuous)
+*   Constraints      : 3
+*   Obj. scale       : 1
+*   Obj. offset      : 0
+NAME          nonsup.lp
+ROWS
+ N  Obj1
+ N  Obj2
+ G  c0 
+ L  c1 
+ L  c2 
+COLUMNS
+    INTSTART  'MARKER'                            'INTORG'                           
+    x0        Obj1                             2  c2                              -1 
+    x0        c0                               1  c1                               1 
+    x0        Obj2                            -1
+    x1        c0                               1  c1                              -1 
+    x1        Obj1                            -1  c2                               1 
+    x1        Obj2                             3
+    INTEND    'MARKER'                            'INTEND'                           
+RHS
+    RHS       c0                               2  c1                               2 
+    RHS       c2                               2 
+BOUNDS
+ PL Bound     x0                                 
+ PL Bound     x1                                 
+ENDATA
