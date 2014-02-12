@@ -7459,6 +7459,10 @@ SCIP_RETCODE applyProbingVar(
 
    var = vars[probingpos];
    assert(var != NULL);
+   assert(SCIPisGE(scip, leftub, SCIPvarGetLbLocal(var)));
+   assert(SCIPisLE(scip, leftub, SCIPvarGetUbLocal(var)));
+   assert(SCIPisGE(scip, rightlb, SCIPvarGetLbLocal(var)));
+   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbLocal(var)));
 
    (*success) = FALSE;
 
@@ -7471,12 +7475,29 @@ SCIP_RETCODE applyProbingVar(
 
    if( (*cutoff) )
    {
+      /* note that cutoff may occur if presolving has not been executed fully */
       SCIP_CALL( SCIPtightenVarLb(scip, var, rightlb, TRUE, cutoff, &tightened) );
-      assert(!(*cutoff));
 
       if( tightened )
       {
          (*success) =TRUE;
+         (*nfixedvars)++;
+      }
+
+      return SCIP_OKAY;
+   }
+
+   /* note that probing can change the upper bound and thus the right branch may have been detected infeasible if
+    * presolving has not been executed fully
+    */
+   if( SCIPisGT(scip, rightlb, SCIPvarGetUbLocal(var)) )
+   {
+      /* note that cutoff may occur if presolving has not been executed fully */
+      SCIP_CALL( SCIPtightenVarUb(scip, var, leftub, TRUE, cutoff, &tightened) );
+
+      if( tightened )
+      {
+         (*success) = TRUE;
          (*nfixedvars)++;
       }
 
@@ -7489,8 +7510,8 @@ SCIP_RETCODE applyProbingVar(
 
    if( (*cutoff) )
    {
+      /* note that cutoff may occur if presolving has not been executed fully */
       SCIP_CALL( SCIPtightenVarUb(scip, var, leftub, TRUE, cutoff, &tightened) );
-      assert(!(*cutoff));
 
       if( tightened )
       {
