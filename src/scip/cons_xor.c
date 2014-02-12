@@ -3765,7 +3765,6 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
       {
          SCIP_VAR** xorvars;
          SCIP_VAR* parityvar = NULL;
-         int twocoef = -1;
          int cnt = 0;
          int j;
 
@@ -3775,10 +3774,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
          for (j = 0; j < nvars; ++j)
          {
             if ( SCIPisEQ(scip, REALABS(vals[j]), 2.0) )
-            {
-               twocoef = j;
                parityvar = vars[j];
-            }
             else if ( ! SCIPisEQ(scip, REALABS(vals[j]), 1.0) )
                break;
             else
