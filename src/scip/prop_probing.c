@@ -1195,6 +1195,17 @@ SCIP_RETCODE SCIPapplyProbingVar(
       SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
       SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
 
+   /* in debug mode we assert above that this trivial infeasibility does not occur (for performance reasons), but in
+    * optimized mode we return safely
+    */
+   if( SCIPisLT(scip, bound, SCIPvarGetLbLocal(vars[probingpos]))
+         || SCIPisGT(scip, bound, SCIPvarGetUbLocal(vars[probingpos])) )
+   {
+      SCIPdebugMessage(" -> trivial infeasibility detected\n");
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
 
