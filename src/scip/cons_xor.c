@@ -64,6 +64,9 @@
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
+#define LINCONSUPGD_PRIORITY    +600000 /**< priority of the constraint handler for upgrading of linear constraints */
+#define QUADCONSUPGD_PRIORITY   +600000 /**< priority of the constraint handler for upgrading of linear constraints */
+
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_ADDEXTENDEDFORM   FALSE /**< should the extended formulation be added in presolving? */
 #define DEFAULT_ADDFLOWEXTENDED   FALSE /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
@@ -2203,6 +2206,7 @@ SCIP_RETCODE checkSystemGF2(
          if ( b[p[i]] != 0 )
             break;
       }
+
       /* did not find nonzero entry in b -> equation system is feasible */
       if ( i >= nconssmat )
       {
@@ -3737,6 +3741,91 @@ SCIP_RETCODE createConsXorIntvar(
 }
 
 
+
+/*
+ * Linear constraint upgrading
+ */
+
+/** tries to upgrade a linear constraint into an xor constraint */
+static
+SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
+{  /*lint --e{715}*/
+   assert( upgdcons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
+   assert( ! SCIPconsIsModifiable(cons) );
+
+   /* check, if linear constraint can be upgraded to xor constraint */
+   if ( nposbin + nnegbin + nposimplbin + nnegimplbin >= nvars-1 && ncoeffspone + ncoeffsnone == nvars-1 && ncoeffspint + ncoeffsnint == 1 )
+   {
+      assert( integral );
+      assert( ncoeffspfrac + ncoeffsnfrac == 0 );
+      assert( nposcont + nnegcont == 0 );
+
+      if ( SCIPisEQ(scip, lhs, rhs) && SCIPisIntegral(scip, lhs) )
+      {
+         SCIP_VAR** xorvars;
+         SCIP_VAR* parityvar = NULL;
+         int twocoef = -1;
+         int cnt = 0;
+         int j;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &xorvars, nvars) );
+
+         /* check parity of constraints */
+         for (j = 0; j < nvars; ++j)
+         {
+            if ( SCIPisEQ(scip, REALABS(vals[j]), 2.0) )
+            {
+               twocoef = j;
+               parityvar = vars[j];
+            }
+            else if ( ! SCIPisEQ(scip, REALABS(vals[j]), 1.0) )
+               break;
+            else
+            {
+               assert( SCIPvarIsBinary(vars[j]) );
+               xorvars[cnt++] = vars[j];
+            }
+         }
+
+         if ( parityvar != NULL )
+         {
+            assert( twocoef >= 0 );
+
+            /* check whether parity variable is present only in this constraint and objective is 0 */
+            if ( SCIPvarGetNLocksDown(parityvar) <= 1 && SCIPvarGetNLocksUp(parityvar) <= 1 && SCIPisZero(scip, SCIPvarGetObj(parityvar)) )
+            {
+               assert( SCIPvarGetNLocksDown(parityvar) == 1 );
+               assert( SCIPvarGetNLocksUp(parityvar) == 1 );
+
+               /* check whether bounds of parity variable are large enough */
+               if ( SCIPisGE(scip, REALABS(SCIPvarGetLbGlobal(parityvar)), (SCIP_Real) (ncoeffsnone/2)) && SCIPisLE(scip, SCIPvarGetUbGlobal(parityvar), (SCIP_Real) (ncoeffspone/2)) )
+               {
+                  SCIP_Bool rhsparity = FALSE;
+
+                  SCIPdebugMessage("upgrading constraint <%s> to XOR constraint\n", SCIPconsGetName(cons));
+                  assert( cnt == nvars - 1 );
+
+                  if ( ((int) SCIPfloor(scip, rhs)) % 2 == 1 )
+                     rhsparity = TRUE;
+
+                  SCIP_CALL( SCIPcreateConsXor(scip, upgdcons, SCIPconsGetName(cons), rhsparity, nvars-1, xorvars,
+                        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                        SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                        SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+               }
+            }
+         }
+
+         SCIPfreeBufferArray(scip, &xorvars);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of constraint handler
  */
@@ -4613,6 +4702,12 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXor, consSepasolXor, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXor) );
+
+   if ( SCIPfindConshdlr(scip, "linear") != NULL )
+   {
+      /* include the linear constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXor, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
 
    /* add xor constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
