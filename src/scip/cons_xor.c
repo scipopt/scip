@@ -1830,7 +1830,7 @@ int computeRowEcholonGF2(
 
       /* init starting column */
       if ( i == 0 )
-         j = 1;
+         j = 0;
       else
          j = s[i-1] + 1;
 
@@ -2125,8 +2125,8 @@ SCIP_RETCODE checkSystemGF2(
       assert( consdata != NULL );
       assert( consdata->nvars > 0 );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) ); /*lint !e866*/
-      BMSclearMemoryArray(A[nconssmat], nvars); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvarsmat) ); /*lint !e866*/
+      BMSclearMemoryArray(A[nconssmat], nvarsmat); /*lint !e866*/
 
       /* correct rhs w.r.t. to fixed variables and count nonfixed variables in constraint */
       b[nconssmat] = (Type) consdata->rhs;
