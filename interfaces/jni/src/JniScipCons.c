@@ -71,7 +71,7 @@ jstring JNISCIPCONS(conshdlrGetDesc)(
    conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
    assert(conshdlr != NULL);
 
-   /* get constraint name */
+   /* get constraint description */
    desc = SCIPconshdlrGetDesc(conshdlr);
 
    /* convert char* into jstring */

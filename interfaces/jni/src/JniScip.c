@@ -1245,6 +1245,41 @@ jboolean JNISCIP(isParamFixed)(
    return (jboolean) paramfixed;
 }
 
+/** returns the pointer to the SCIP parameter with the given name
+ *
+ *  @return pointer to the parameter with the given name
+ */
+JNIEXPORT
+jlong JNISCIP(getParam)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jstring               jname               /**< name of the parameter */
+   )
+{
+	SCIP* scip;
+	const char* name;
+	jboolean iscopy;
+	SCIP_PARAM *param;
+
+	/* convert JNI pointer into C pointer */
+	scip = (SCIP*) (size_t) jscip;
+	assert(scip != NULL);
+
+	/* convert JNI string into const char* */
+	name = (*env)->GetStringUTFChars(env, jname, &iscopy);
+	if( name == NULL )
+	   SCIPABORT();
+	assert(iscopy);
+
+	param=SCIPgetParam(scip, name);
+
+	(*env)->ReleaseStringUTFChars(env, jname, name);
+
+	return (jlong) (size_t) param;
+}
+
+
 /** gets the value of an existing SCIP_Bool parameter */
 JNIEXPORT
 jboolean JNISCIP(getBoolParam)(
@@ -1990,7 +2025,8 @@ void JNISCIP(setEmphasis)(
       || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_EASYCIP)
       || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_FEASIBILITY)
       || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_HARDLP)
-      || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_OPTIMALITY));
+      || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_OPTIMALITY)
+      || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_DEFAULT));
 
    JNISCIP_CALL( SCIPsetEmphasis(scip, (int)jparamemphasis, (SCIP_Bool)jquiet) );
 }
@@ -25827,7 +25863,7 @@ void JNISCIP(processShellArguments)(
 
    /* get number of arguments */
    argc = (*env)->GetArrayLength(env, jargv);
-   assert(argc = jargc);
+   assert(argc == jargc);
 
    /* allocate memory for the arguments array */
    JNISCIP_CALL( SCIPallocMemoryArray(scip, &argv, argc) );

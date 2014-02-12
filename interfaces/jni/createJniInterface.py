@@ -160,6 +160,7 @@ def convertEnumsType(enumtype):
         'SCIP_NLPPARAM',
         'SCIP_NLPSOLSTAT',
         'SCIP_NLPTERMSTAT',
+        'SCIP_LINEARCONSTYPE',
         'SCIP_SETPPCTYPE',
         'SCIP_CLOCKTYPE',
         'SCIP_DISPSTATUS',
