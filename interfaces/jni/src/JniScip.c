@@ -2025,7 +2025,8 @@ void JNISCIP(setEmphasis)(
       || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_EASYCIP)
       || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_FEASIBILITY)
       || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_HARDLP)
-      || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_OPTIMALITY));
+      || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_OPTIMALITY)
+      || jparamemphasis == JNIPACKAGENAME(JniScipParamemphasis_SCIP_PARAMEMPHASIS_DEFAULT));
 
    JNISCIP_CALL( SCIPsetEmphasis(scip, (int)jparamemphasis, (SCIP_Bool)jquiet) );
 }
@@ -25862,7 +25863,7 @@ void JNISCIP(processShellArguments)(
 
    /* get number of arguments */
    argc = (*env)->GetArrayLength(env, jargv);
-   assert(argc = jargc);
+   assert(argc == jargc);
 
    /* allocate memory for the arguments array */
    JNISCIP_CALL( SCIPallocMemoryArray(scip, &argv, argc) );
