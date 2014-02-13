@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -28,32 +28,34 @@ installheaders:
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SCIPPLUGININCSRC)
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/pub_*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/struct_*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/type_*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scip.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/def.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/vbc.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scipshell.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scipdefplugins.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/presolve.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/intervalarith.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(OBJSCIPINCSRC)
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/lpi/  $(SRCDIR)/lpi/lpi.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/lpi/  $(SRCDIR)/lpi/type_lpi.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/pub_*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/struct_*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/type_*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/exprinterpret.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/intervalarithext.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/nlpi.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/nlpi_ipopt.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(SRCDIR)/nlpi/nlpioracle.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(SRCDIR)/blockmemshell/memory.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(SRCDIR)/dijkstra/dijkstra.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(SRCDIR)/tclique/*.h
-		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/xml/ $(SRCDIR)/xml/*.h
+		@-install -m 644 -p $(SCIPPLUGININCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/pub_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/struct_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/type_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/scip.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/def.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/vbc.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/scipshell.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/scipdefplugins.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/presolve.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/intervalarith.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(OBJSCIPINCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
+		@-install -m 644 -p $(SRCDIR)/lpi/lpi.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
+		@-install -m 644 -p $(SRCDIR)/lpi/type_lpi.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/pub_*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/struct_*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/type_*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/exprinterpret.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/intervalarithext.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/nlpi.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/nlpi_ipopt.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/nlpioracle.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/blockmemshell/memory.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
+		@-install -m 644 -p $(SRCDIR)/dijkstra/dijkstra.h $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
+		@-install -m 644 -p $(SRCDIR)/tclique/*.h $(INSTALLDIR)/$(INCLUDEDIR)/tclique/
+		@-install -m 644 -p $(SRCDIR)/xml/*.h $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+else
+		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
 endif
 
 
@@ -63,7 +65,9 @@ installlibs:	libs
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
-		@-install -m 644 -p -t $(INSTALLDIR)/$(LIBDIR)/ $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) 
+		@-install -m 644 -p $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+else
+		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
 endif
 
 
@@ -73,7 +77,9 @@ installbinary:	all
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP binary into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
-		@-install -m 755 -p -t $(INSTALLDIR)/$(BINDIR)/ $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+		@-install -m 755 -p $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) $(INSTALLDIR)/$(BINDIR)/
+else
+		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
 endif
 
 
@@ -90,5 +96,7 @@ ifneq ($(INSTALLDIR),)
 		@-(cd $(INSTALLDIR) && rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -f $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE)); 
+else
+		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
 endif
 

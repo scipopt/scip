@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,7 +49,6 @@
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPmessagePrintWarning((messagehdlr), "LP Error: CPLEX returned %d\n", _restat_); \
-         assert(0);\
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
@@ -965,8 +964,12 @@ SCIP_RETCODE restoreLPData(
     * after refactorization, it might be necessary to do a few extra pivot steps.
     */
    CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-   assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
-   assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+#ifndef NDEBUG
+   if ( CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) > CPX_REFACTORMAXITERS )
+      SCIPmessagePrintWarning(lpi->messagehdlr, "CPLEX needed %d phase 1 iterations to restore optimal basis.\n", CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp));
+   if ( CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) > CPX_REFACTORMAXITERS )
+      SCIPmessagePrintWarning(lpi->messagehdlr, "CPLEX needed %d iterations to restore optimal basis.\n", CPXgetitcnt(lpi->cpxenv, lpi->cpxlp));
+#endif
 
    return SCIP_OKAY;
 }
@@ -2728,6 +2731,11 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
       SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
       return SCIP_LPERROR;
    }
+   else if( retval == CPXERR_SINGULAR )
+   {
+      SCIPdebugMessage(" -> numerical troubles (basis singular)\n");
+      return SCIP_LPERROR;
+   }
    CHECK_ZERO( lpi->messagehdlr, retval );
    SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
 
@@ -3146,14 +3154,12 @@ SCIP_Bool SCIPlpiIsStable(
     */
    if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
    {
-      SCIP_RETCODE retcode;
       SCIP_Real kappa;
 
-      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
-      assert(kappa != SCIP_INVALID);
-      assert(retcode == SCIP_OKAY);
+      SCIP_CALL_ABORT( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa) );
 
-      if( kappa > lpi->conditionlimit )
+      /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
+      if( kappa != SCIP_INVALID || kappa > lpi->conditionlimit )
          return FALSE;
    }
 
@@ -3332,7 +3338,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 /** gets information about the quality of an LP solution
  *
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
- *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ *  The LPI should return SCIP_INVALID for @p quality, if the requested quantity is not available.
  */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3345,6 +3351,8 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    assert(lpi != NULL);
    assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
 
    SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
 
@@ -3365,11 +3373,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
-   if( solntype == CPX_NO_SOLN )
-   {
-      *quality = SCIP_INVALID;
-   }
-   else
+   if( solntype == CPX_BASIC_SOLN )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
    }

@@ -1,4 +1,4 @@
-/* $Id: ad.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
+/* $Id: ad.hpp 3064 2013-12-28 18:01:30Z bradbell $ */
 # ifndef CPPAD_AD_INCLUDED
 # define CPPAD_AD_INCLUDED
 
@@ -146,23 +146,30 @@ public:
 	// type of value
 	typedef Base value_type;
 
-	// default constructor
+	// implicit default constructor
 	inline AD(void);
 
-	// use default copy constructor and assignment operator
+	// use default implicit copy constructor and assignment operator
 	// inline AD(const AD &x);
 	// inline AD& operator=(const AD &x);
 
-	// construction and assingment from base type
+	// implicit construction and assingment from base type
 	inline AD(const Base &b);
 	inline AD& operator=(const Base &b); 
 
-	// contructor and assignment from VecAD<Base>::reference
+	// implicit contructor and assignment from VecAD<Base>::reference
 	inline AD(const VecAD_reference<Base> &x);
 	inline AD& operator=(const VecAD_reference<Base> &x);
 
-	// construction and assignment from some other type
+# if CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
+	// implicit construction from some other type (depricated)
 	template <class T> inline AD(const T &t);
+# else
+	// explicit construction from some other type (depricated)
+	template <class T> inline explicit AD(const T &t);
+# endif
+
+	// assignment from some other type
 	template <class T> inline AD& operator=(const T &right);
 
 	// base type corresponding to an AD object

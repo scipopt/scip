@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -125,7 +125,7 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 EXTERN
 SCIP_RETCODE SCIPtransformMinUC(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            success             /**< could all constraints be transformed? */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints could be transformed */
    );
 
 

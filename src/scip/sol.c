@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1572,8 +1572,15 @@ SCIP_RETCODE SCIPsolRound(
          break;
 
       /* if solution value is already integral, there is nothing to do */
-      if( SCIPsetIsFeasIntegral(set, solval) )
+      if( SCIPsetIsIntegral(set, solval) )
          continue;
+
+      /* if solution value is already integral with feastol, round to nearest integral value */
+      if( SCIPsetIsFeasIntegral(set, solval) )
+      {
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, SCIPsetRound(set, solval)) );
+         continue;
+      }
 
       /* get rounding possibilities */
       mayrounddown = SCIPvarMayRoundDown(var);

@@ -186,7 +186,7 @@ bool hasnan(const Vector &v)
 	i   = v.size();
 	found_nan = false;
 	while(i--)
-		found_nan |= isnan(v[i]);
+		found_nan |= CppAD::isnan(v[i]);
 	return found_nan;
 }
 

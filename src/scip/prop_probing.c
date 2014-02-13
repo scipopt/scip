@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1171,7 +1171,7 @@ SCIP_RETCODE SCIPapplyProbingVar(
    int                   nvars,              /**< number of problem variables */
    int                   probingpos,         /**< variable number to apply probing on */
    SCIP_BOUNDTYPE        boundtype,          /**< which bound should be changed */
-   SCIP_Real             bound,              /**< whioch bound should be set */
+   SCIP_Real             bound,              /**< which bound should be set */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    SCIP_Real*            impllbs,            /**< array to store lower bounds after applying implications and cliques */
    SCIP_Real*            implubs,            /**< array to store upper bounds after applying implications and cliques */
@@ -1194,6 +1194,17 @@ SCIP_RETCODE SCIPapplyProbingVar(
       SCIPvarGetNLocksDown(vars[probingpos]), SCIPvarGetNLocksUp(vars[probingpos]),
       SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
       SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
+
+   /* in debug mode we assert above that this trivial infeasibility does not occur (for performance reasons), but in
+    * optimized mode we return safely
+    */
+   if( SCIPisLT(scip, bound, SCIPvarGetLbLocal(vars[probingpos]))
+         || SCIPisGT(scip, bound, SCIPvarGetUbLocal(vars[probingpos])) )
+   {
+      SCIPdebugMessage(" -> trivial infeasibility detected\n");
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );

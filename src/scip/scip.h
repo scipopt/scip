@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13378,6 +13378,24 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
    int                   nvals               /**< number of values */
    );
 
+/** indicates whether a cut is applicable
+ *
+ *  If the cut has only one variable and this method returns FALSE, it may
+ *  still be possible that the cut can be added to the LP (as a row instead
+ *  of a boundchange), but it will be a very weak cut. The user is asked
+ *  to avoid such cuts.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return whether the cut is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon
+ */
+EXTERN
+SCIP_Bool SCIPisCutApplicable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             cut                 /**< separated cut */
+   );
+
 /** adds cut to separation storage
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -13729,6 +13747,20 @@ SCIP_RETCODE SCIPclearCuts(
  */
 EXTERN
 SCIP_RETCODE SCIPremoveInefficaciousCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns current factor on cut infeasibility to limit feasibility tolerance for relaxation solver
+ *
+ *  Gives value of separating/feastolfac parameter.
+ *
+ *  @return factor on cut infeasibility to limit feasibility tolerance for relaxation solver
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_Real SCIPgetRelaxFeastolFactor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

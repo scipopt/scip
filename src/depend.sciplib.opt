@@ -792,7 +792,7 @@ $(LIBOBJDIR)/scip/cons_linear.o: src/scip/cons_linear.c src/scip/cons_linear.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
  src/scip/event.h src/scip/struct_event.h src/scip/cons_knapsack.h \
- src/scip/cons_quadratic.h src/scip/cons_nonlinear.h
+ src/scip/cons_quadratic.h src/scip/cons_nonlinear.h src/scip/debug.h
 $(LIBOBJDIR)/scip/cons_linking.o: src/scip/cons_linking.c src/scip/cons_linear.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -3800,7 +3800,7 @@ $(LIBOBJDIR)/scip/prop_genvbounds.o: src/scip/prop_genvbounds.c src/scip/prop_ge
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h
+ src/scip/event.h src/scip/struct_event.h src/scip/debug.h
 $(LIBOBJDIR)/scip/prop_obbt.o: src/scip/prop_obbt.c src/scip/prop_obbt.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h \
@@ -3834,7 +3834,8 @@ $(LIBOBJDIR)/scip/prop_obbt.o: src/scip/prop_obbt.c src/scip/prop_obbt.h src/sci
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/scip/prop_genvbounds.h
+ src/scip/event.h src/scip/struct_event.h src/scip/prop_genvbounds.h \
+ src/scip/debug.h
 $(LIBOBJDIR)/scip/prop_probing.o: src/scip/prop_probing.c src/scip/prop_probing.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -5205,7 +5206,7 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
  src/scip/event.h src/scip/struct_event.h src/scip/cons_linear.h \
- src/scip/lp.h src/scip/scipdefplugins.h src/scip/branch_allfullstrong.h \
+ src/scip/scipdefplugins.h src/scip/branch_allfullstrong.h \
  src/scip/branch_cloud.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_leastinf.h \
  src/scip/branch_mostinf.h src/scip/branch_pscost.h \
@@ -5260,8 +5261,7 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
- src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/nlpi/nlpi_ipopt.h
+ src/scip/sepa_strongcg.h src/scip/scipshell.h src/nlpi/nlpi_ipopt.h
 $(LIBOBJDIR)/scip/branch.o: src/scip/branch.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/set.h src/scip/buffer.h \

@@ -1,9 +1,9 @@
-// $Id: base_require.hpp 2506 2012-10-24 19:36:49Z bradbell $
+// $Id: base_require.hpp 3062 2013-12-28 10:40:48Z bradbell $
 # ifndef CPPAD_BASE_REQUIRE_INCLUDED
 # define CPPAD_BASE_REQUIRE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
@@ -78,7 +78,7 @@ $code cppad/cppad.hpp$$.
 
 $head Include Order$$
 If you are linking a non-standard base type to CppAD,
-you must first include the file $code cppad/base_require.hpp/$$,
+you must first include the file $code cppad/base_require.hpp$$,
 then provide the specifications below, 
 and then include the file $code cppad/cppad.hpp$$.
 

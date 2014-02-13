@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1249,16 +1249,20 @@ SCIP_RETCODE readObjective(
 
    assert(pipinput != NULL);
 
-   /* determine settings */
-   initial = pipinput->initialconss;
+   /* determine settings; note that reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model
+    * constraints and variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary
+    * objective variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
+    * of loose variables with infinite best bound cannot be solved)
+    */
+   initial = TRUE;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = pipinput->dynamicconss;
-   removable = pipinput->dynamicrows;
+   dynamic = FALSE;
+   removable = FALSE;
 
    /* read the objective coefficients */
    SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
@@ -1331,7 +1335,7 @@ SCIP_RETCODE readObjective(
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
@@ -1375,7 +1379,7 @@ SCIP_RETCODE readObjective(
          SCIP_Real  rhs;
 
          SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
 
          minusone = -1.0;
@@ -2738,7 +2742,7 @@ SCIP_RETCODE printNonlinearCons(
 static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR**            vars,               /**< variable array */
    int*                  nAggregatedVars,    /**< number of aggregated variables on output */
    SCIP_VAR***           aggregatedVars,     /**< array storing the aggregated variables on output */
@@ -2781,7 +2785,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nAggregatedVars,    /**< number of aggregated variables */
    SCIP_VAR**            aggregatedVars      /**< array storing the aggregated variables */
    )
@@ -2919,7 +2923,7 @@ SCIP_RETCODE SCIPwritePip(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */

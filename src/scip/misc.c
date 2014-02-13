@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -710,7 +710,9 @@ int SCIPqueueNElems(
    assert(queue->firstfree >= 0 && queue->firstused < queue->size);
    assert(queue->firstused > -1 || queue->firstfree == 0);
 
-   if( queue->firstused < queue->firstfree )
+   if( queue->firstused == -1 )
+      return 0;
+   else if( queue->firstused < queue->firstfree )
       return queue->firstfree - queue->firstused;
    else if( queue->firstused == queue->firstfree )
       return queue->size;
@@ -1576,7 +1578,7 @@ void SCIPhashtableRemoveAll(
 }
 
 /** returns number of hash table elements */
-SCIP_Longint SCIPhashtableGetNElemenets(
+SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
 {
@@ -7204,7 +7206,16 @@ int SCIPgetRandomInt(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   return minrandval + (int) ((maxrandval - minrandval + 1)*(SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0));
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0);
+   assert(randnumber >= 0.0);
+   assert(randnumber < 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
+    * apart
+    */
+   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
 }
 
 /** returns a random real between minrandval and maxrandval */
@@ -7214,7 +7225,16 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+   assert(randnumber >= 0.0);
+   assert(randnumber <= 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
+    * SCIP_REAL_MAX apart
+    */
+   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
 }
 
 
@@ -7600,7 +7620,7 @@ SCIP_Bool SCIPstrToIntValue(
    /* init errno to detect possible errors */
    errno = 0;
 
-   *value = strtol(str, endptr, 10);
+   *value = (int) strtol(str, endptr, 10);
 
    if( *endptr != str && *endptr != NULL )
    {

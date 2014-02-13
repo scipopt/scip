@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,13 +15,14 @@
 
 /**@file   reader_gms.h
  * @ingroup FILEREADERS
- * @brief  GAMS file writer
+ * @brief  GAMS file reader and writer
  * @author Ambros Gleixner
  *
  * This reader writes a CIP in GAMS format.
  * It can write all kinds of linear and nonlinear constraints (as occurring in MINLPs) and indicator constraints.
  *
- * Reading of GAMS model files is not supported.
+ * If SCIP has been compiled with GAMS=true, it can also read GAMS model instances.
+ * This requires a working GAMS system.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,7 +55,7 @@ SCIP_RETCODE SCIPwriteGms(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */

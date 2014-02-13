@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -357,13 +357,14 @@ struct SCIP_ConflicthdlrData
 
 
 /* Macro for parameters */
-#define SCIP_CALL_PARAM(x) do                                                                   \
+#define SCIP_CALL_PARAM(x) /*lint -e527 */ do                                                   \
 {                                                                                               \
    SCIP_RETCODE _restat_;                                                                       \
    if ( (_restat_ = (x)) != SCIP_OKAY && (_restat_ != SCIP_PARAMETERUNKNOWN) )                  \
    {                                                                                            \
       SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
       SCIPABORT();                                                                              \
+      return _restat_;                                                                          \
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )
@@ -880,7 +881,6 @@ SCIP_RETCODE checkIIS(
          int v;
 
          sign = 1.0;
-         cnt = 0;
 
          lincons = consdata->lincons;
          assert( lincons != NULL );
@@ -986,7 +986,7 @@ SCIP_RETCODE checkIIS(
                obj[v] = 0.0;
                lb[v] = SCIPvarGetLbLocal(var);
                ub[v] = SCIPvarGetUbLocal(var);
-               SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) ); /*lint !e866*/
                (void) SCIPsnprintf(colnames[v], SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var));
             }
 
@@ -1056,6 +1056,7 @@ SCIP_RETCODE checkIIS(
       SCIP_CALL( SCIPlpiWriteLP(lp, "check.lp") );
       SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "altdebug.lp") );
       SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
    }
    SCIPdebugMessage("Check successful!\n");
 

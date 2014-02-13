@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -163,6 +163,12 @@ SCIP_Real SCIPparamGetRealDefault(
 /** returns value of char parameter */
 EXTERN
 char SCIPparamGetChar(
+   SCIP_PARAM*           param               /**< parameter */
+   );
+
+/** returns allowed values of char parameter, or NULL if everything is allowed */
+EXTERN
+char* SCIPparamGetCharAllowedValues(
    SCIP_PARAM*           param               /**< parameter */
    );
 

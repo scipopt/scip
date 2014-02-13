@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -279,6 +279,7 @@ public:
       m_cpxlp = CPXcreateprob(m_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
       (void) CPXsetintparam(m_cpxenv, CPX_PARAM_SCRIND, 0);
       m_checknum = 0;
+      m_doublecheck = false;
 #endif
    }
 
@@ -2803,8 +2804,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
 
-   /* Since SoPlex does not support barrier we switch to DUAL */
-   return SCIPlpiSolveDual(lpi);
+   /* SoPlex does not support barrier (yet) */
+   SCIPerrorMessage("SCIPlpiSolveBarrier() not supported by SoPlex\n");
+   return SCIP_INVALIDCALL;
 }
 
 /** start strong branching - call before any strongbranching */
@@ -3678,7 +3680,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 /** gets information about the quality of an LP solution
  *
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
- *  The LPI should return SCIP_INVALID for *quality, if the requested quality is not available.
+ *  The LPI should return SCIP_INVALID for @p quality, if the requested quality is not available.
  */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3693,7 +3695,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
 #if ((SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 172)
    int maxiter;
-   int tolerance;
+   Real tolerance;
 
    assert(lpi != NULL);
    assert(quality != NULL);

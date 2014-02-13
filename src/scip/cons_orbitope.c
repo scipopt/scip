@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -261,7 +261,7 @@ SCIP_RETCODE printSCI(
    SCIP_CALL( SCIPallocBufferArray(scip, &M, p) );
    for (k = 0; k < p; ++k)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &M[k], q) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &M[k], q) ); /*lint !e866*/
       for (l = 0; l < q; ++l)
          M[k][l] = 0;
    }
@@ -2226,22 +2226,22 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
       /* skip white space and ',' */
       while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
          ++s;
-      
+
       /* begin new row if required */
       if ( *s == '.' )
       {
          ++nspcons;
          ++s;
 
-         if ( nspcons > maxnspcons )
+         if ( nspcons >= maxnspcons )
          {
             int newsize;
 
-            newsize = SCIPcalcMemGrowSize(scip, nspcons);
+            newsize = SCIPcalcMemGrowSize(scip, nspcons+1);
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
             maxnspcons = newsize;
          }
-         assert( nspcons <= maxnspcons );
+         assert(nspcons < maxnspcons);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );  /*lint !e866*/
          j = 0;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2803,7 +2803,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
          SCIPstatistic(
             if( ncovers == 0 && success )
-               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100.0*coversize /(SCIP_Real)nvars);
             );
 
          assert(coversize >= 0);

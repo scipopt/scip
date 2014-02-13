@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,15 +33,13 @@
 #define READER_DESC             "file reader for CIP (Constraint Integer Program) format"
 #define READER_EXTENSION        "cip"
 
-#define DEFAULT_CIP_WRITEFIXEDVARS  TRUE     /**< should fixed and aggregated variables be written when writing in CIP
-                                              *   format
-                                              */
+#define DEFAULT_CIP_WRITEFIXEDVARS  TRUE     /**< Should fixed and aggregated variables be written when writing? */
 
 
 /** CIP reading data */
 struct SCIP_ReaderData
 {
-   SCIP_Bool             writefixedvars;
+   SCIP_Bool             writefixedvars;     /**< Should fixed and aggregated variables be written when writing? */
 };
 
 
@@ -822,6 +820,7 @@ SCIP_DECL_READERREAD(readerReadCip)
       default:
          SCIPerrorMessage("invalid CIP state\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       } /*lint !e788*/ 
    }
 
@@ -943,7 +942,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
       SCIPinfoMessage(scip, file, "FIXED\n");
 
-      /* loop through variables until each has been written after the variables that depend on have been written; this
+      /* loop through variables until each has been written after the variables that it depends on have been written; this
        * requires several runs over the variables, but the depth (= number of loops) is usually small. */
       while ( nwritten < nfixedvars )
       {

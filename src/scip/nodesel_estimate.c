@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,7 +41,8 @@
 #define DEFAULT_MAXPLUNGEQUOT      0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where plunging is performed */
 #define DEFAULT_BESTNODEFREQ         10 /**< frequency at which the best node instead of the best estimate is selected (0: never) */
-#define DEFAULT_BREADTHFIRSTDEPTH    -1 /**< depth until breadth-fisrt search is applied (-1: never) */
+#define DEFAULT_BREADTHFIRSTDEPTH    -1 /**< depth until breadth-first search is applied (-1: never) */
+#define DEFAULT_PLUNGEOFFSET          0 /**< number of nodes before doing plunging the first time */
 
 
 /** node selector data for best estimate search node selection */
@@ -56,6 +57,7 @@ struct SCIP_NodeselData
    int                   bestnodefreq;       /**< frequency at which the best node instead of the best estimate is selected
                                               *   (0: never) */
    int                   breadthfirstdepth;  /**< depth until breadth-fisrt search is applied */
+   int                   plungeoffset;       /**< number of nodes before doing plunging the first time */
 };
 
 
@@ -143,6 +145,21 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
       }
    }
 
+   bestnodefreq = (nodeseldata->bestnodefreq == 0 ? INT_MAX : nodeseldata->bestnodefreq);
+
+   /* cehck if we don't want to do plunging yet */
+   if( SCIPgetNNodes(scip) < nodeseldata->plungeoffset )
+   {
+      /* we don't want to plunge yet: select best node from the tree */
+      SCIPdebugMessage("nnodes=%lld < %d=plungeoffset -> don't start plunging\n", SCIPgetNNodes(scip), nodeseldata->plungeoffset);
+      if( SCIPgetNNodes(scip) % bestnodefreq == 0 )
+         *selnode = SCIPgetBestboundNode(scip);
+      else
+         *selnode = SCIPgetBestNode(scip);
+      SCIPdebugMessage("  -> best node   : lower=%g\n",
+         *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
+   }
+
    /* calculate minimal and maximal plunging depth */
    minplungedepth = nodeseldata->minplungedepth;
    maxplungedepth = nodeseldata->maxplungedepth;
@@ -158,7 +175,6 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
    if( maxplungedepth == -1 )
       maxplungedepth = SCIPgetMaxDepth(scip)/2;
    maxplungedepth = MAX(maxplungedepth, minplungedepth);
-   bestnodefreq = (nodeseldata->bestnodefreq == 0 ? INT_MAX : nodeseldata->bestnodefreq);
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
@@ -363,8 +379,12 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
          &nodeseldata->bestnodefreq, FALSE, DEFAULT_BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/breadthfirstdepth",
-         "depth until breadth-fisrt search is applied",
+         "depth until breadth-first search is applied",
          &nodeseldata->breadthfirstdepth, FALSE, DEFAULT_BREADTHFIRSTDEPTH, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "nodeselection/estimate/plungeoffset",
+         "number of nodes before doing plunging the first time",
+         &nodeseldata->plungeoffset, FALSE, DEFAULT_PLUNGEOFFSET, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

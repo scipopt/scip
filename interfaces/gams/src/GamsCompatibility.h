@@ -12,10 +12,9 @@
 #error "gmomcc.h need to be included before this file to have GMOAPIVERSION defined"
 #endif
 
-#if GMOAPIVERSION >= 10
-#define gmoMaxSingleFNL        gmoNLCodeSizeMaxRow
-#define gmoMaxQnz              gmoMaxQNZ
-#define gmoEvalErrorNoMsg(a,b) gmoEvalErrorMsg(a,!(b))
+#if GMOAPIVERSION < 13
+#define gmoModelStat_Feasible gmoModelStat_NonOptimalIntermed 
+#define gmoNameOutput         gmoNameInput
 #endif
 
 #endif /* GAMSCOMPATIBILITY_H_ */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2424,6 +2424,9 @@ void SCIPcliquelistCheck(
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
+   /* @todo might need to change ifndef NDEBUG to ifdef SCIP_MOREDEBUG because it can take at lot of time to check for
+    *       correctness
+    */
 #ifndef NDEBUG
    int value;
 

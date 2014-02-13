@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -673,6 +673,7 @@ SCIP_RETCODE evalLhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR*      var;
    SCIP_Real      val;
    int            i;
 
@@ -686,12 +687,26 @@ SCIP_RETCODE evalLhs(
 
    for( i = 0; i < consdata->nvars; ++i )
    {
-      val = SCIPgetSolVal(scip, sol, consdata->vars[i]);
+      var = consdata->vars[i];
+      val = SCIPgetSolVal(scip, sol, var);
 
       if( SCIPisInfinity(scip, val) || SCIPisInfinity(scip, -val) )
       {
          consdata->lhsval = SCIPinfinity(scip);
          return SCIP_OKAY;
+      }
+
+      if( sol == NULL )
+      {
+         SCIP_Real lb = SCIPvarGetLbLocal(var);
+         SCIP_Real ub = SCIPvarGetUbLocal(var);
+         SCIP_Real minval = MIN(ub, val);
+
+#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         assert(SCIPisFeasGE(scip, val, lb));
+         assert(SCIPisFeasLE(scip, val, ub));
+#endif
+         val = MAX(lb, minval);
       }
 
       val = consdata->coefs[i] * (val + consdata->offsets[i]);
@@ -784,8 +799,20 @@ SCIP_RETCODE computeViolation(
       consdata->violation = consdata->rhscoeff < 0.0 ? 0.0 : SCIPinfinity(scip);
       return SCIP_OKAY;
    }
+   if( sol == NULL )
+   {
+      SCIP_Real lb = SCIPvarGetLbLocal(consdata->rhsvar);
+      SCIP_Real ub = SCIPvarGetUbLocal(consdata->rhsvar);
+      SCIP_Real minval = MIN(ub, rhsval);
 
-   consdata->violation = consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
+#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+      assert(SCIPisFeasGE(scip, rhsval, lb));
+      assert(SCIPisFeasLE(scip, rhsval, ub));
+#endif
+      rhsval = MAX(lb, minval);
+   }
+
+   consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
    if( consdata->violation <= 0.0 )
    {
       /* constraint is not violated for sure */
@@ -829,6 +856,7 @@ SCIP_RETCODE computeViolation(
       {
          SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
 
@@ -1174,21 +1202,32 @@ SCIP_RETCODE generateSparseCut(
          efficacy = -SCIPgetRowSolFeasibility(scip, *row, sol) ;
          switch( conshdlrdata->scaling )
          {
-            case 'o' :
-               break;
-            case 'g' :
-            {
-               SCIP_Real norm;
+         case 'o' :
+            break;
 
-               norm = SCIPgetRowMaxCoef(scip, *row);
-               efficacy /= MAX(1.0, norm);
-               break;
-            }
-            case 's' :
-               efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(*row)), REALABS(SCIProwGetRhs(*row))));
-               break;
-            default:
-               SCIPABORT();
+         case 'g' :
+         {
+            SCIP_Real norm;
+
+            norm = SCIPgetRowMaxCoef(scip, *row);
+            efficacy /= MAX(1.0, norm);
+            break;
+         }
+
+         case 's' :
+         {
+            SCIP_Real abslhs = REALABS(SCIProwGetLhs(*row));
+            SCIP_Real absrhs = REALABS(SCIProwGetRhs(*row));
+            SCIP_Real minval = MIN(abslhs, absrhs);
+
+            efficacy /= MAX(1.0, minval);
+            break;
+         }
+
+         default:
+            SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
+            SCIPABORT();
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( SCIPisGT(scip, efficacy, goodefficacy) ||
@@ -1259,7 +1298,7 @@ SCIP_RETCODE separatePoint(
 
    *success = FALSE;
 
-   minefficacy = inenforcement ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
+   minefficacy = inenforcement ? (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip)) : conshdlrdata->minefficacy;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1294,28 +1333,39 @@ SCIP_RETCODE separatePoint(
             efficacy = -SCIPgetRowSolFeasibility(scip, row, sol);
             switch( conshdlrdata->scaling )
             {
-               case 'o' :
-                  break;
-               case 'g' :
-               {
-                  SCIP_Real norm;
+            case 'o' :
+               break;
 
-                  /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-                   * this avoid finding cuts efficient which are only very slightly violated
-                   * CPLEX does not seem to scale row coefficients up too
-                   * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-                   */
-                  norm = SCIPgetRowMaxCoef(scip, row);
-                  efficacy /= MAX(1.0, norm);
-                  break;
-               }
-               case 's' :
-                  efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
-                  break;
-               default: SCIPABORT();
+            case 'g' :
+            {
+               SCIP_Real norm;
+
+               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding
+                * cuts efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up
+                * too also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers
+                * (equilibrium scaling) */
+               norm = SCIPgetRowMaxCoef(scip, row);
+               efficacy /= MAX(1.0, norm);
+               break;
             }
 
-            if( SCIPisLE(scip, efficacy, minefficacy) )
+            case 's' :
+            {
+               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+               SCIP_Real minval = MIN(abslhs, absrhs);
+
+               efficacy /= MAX(1.0, minval);
+               break;
+            }
+
+            default:
+               SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
+               SCIPABORT();
+               return SCIP_INVALIDDATA;  /*lint !e527*/
+            }
+
+            if( SCIPisLE(scip, efficacy, minefficacy) || !SCIPisCutApplicable(scip, row) )
             {
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
                continue;
@@ -1421,21 +1471,32 @@ SCIP_RETCODE addLinearizationCuts(
          efficacy = -SCIPgetRowLPFeasibility(scip, row);
          switch( conshdlrdata->scaling )
          {
-            case 'o' :
-               break;
-            case 'g' :
-               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-                * this avoid finding cuts efficient which are only very slightly violated
-                * CPLEX does not seem to scale row coefficients up too
-                * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-                */
-               norm = SCIPgetRowMaxCoef(scip, row);
-               efficacy /= MAX(1.0, norm);
-               break;
-            case 's' :
-               efficacy /= MAX(1.0, MIN(REALABS(SCIProwGetLhs(row)), REALABS(SCIProwGetRhs(row))));
-               break;
-            default: SCIPABORT();
+         case 'o' :
+            break;
+
+         case 'g' :
+            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too
+             * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
+             * scaling) */
+            norm = SCIPgetRowMaxCoef(scip, row);
+            efficacy /= MAX(1.0, norm);
+            break;
+
+         case 's' :
+         {
+            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
+            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
+            SCIP_Real minval = MIN(abslhs, absrhs);
+
+            efficacy /= MAX(1.0, minval);
+            break;
+         }
+
+         default:
+            SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
+            SCIPABORT();
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
 
          if( efficacy >= minefficacy )

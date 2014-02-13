@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1365,6 +1365,7 @@ SCIP_RETCODE readBounds(
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
       {
+         SCIP_VARTYPE oldvartype;
          SCIP_Bool infeasible;
 
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
@@ -1389,40 +1390,87 @@ SCIP_RETCODE readBounds(
          else
             val = atof(mpsinputField4(mpsi));
 
+         /* remember variable type */
+         oldvartype = SCIPvarGetType(var);
+
          /* if a bound of a binary variable is given, the variable is converted into an integer variable
           * with default bounds 0 <= x <= infinity
           */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( oldvartype == SCIP_VARTYPE_BINARY )
          {
             if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
                || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
                   && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
             {
-               assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-               assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+               oldvartype =  SCIP_VARTYPE_INTEGER;
                SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
             }
          }
 
+         /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
+          * bounds on general variables, which even might lead to infeasibility
+          */
+         if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
+         {
+            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER
+               && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY);
+            /* relaxing variable type */
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+         }
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
          switch( mpsinputField1(mpsi)[0] )
          {
          case 'L':
+            if( !SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisLT(scip, val, SCIPvarGetLbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), val);
+            }
+
+            SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
                /* don't assert feasibility here because the presolver will and should detect a infeasibility */
             }
-            SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+            else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
+            {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
+            }
+
             break;
          case 'U':
+            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+            }
+
+            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
+
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
                /* don't assert feasibility here because the presolver will and should detect a infeasibility */
             }
-            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
+            {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
+            }
             break;
          case 'S':
             assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
@@ -1442,6 +1490,11 @@ SCIP_RETCODE readBounds(
             assert(semicont != NULL);
             semicont[nsemicont] = var;
             ++nsemicont;
+
+            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+            }
 
             SCIP_CALL( SCIPchgVarUb(scip, var, val) );
             break;
@@ -1472,6 +1525,12 @@ SCIP_RETCODE readBounds(
          default:
             mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
+         }
+
+         /* switch variable type back to old type if necessary */
+         if( oldvartype < SCIPvarGetType(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, oldvartype, &infeasible) );
          }
       }
       else
@@ -1701,6 +1760,7 @@ SCIP_RETCODE readSOS(
             default: 
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
+               return SCIP_INVALIDDATA;  /*lint !e527*/
             }
             SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }
@@ -1872,19 +1932,23 @@ SCIP_RETCODE readQMatrix(
       SCIP_Real  lhs, rhs;
       SCIP_Real  minusone = -1.0;
 
-      /* standard settings for quadratic constraints: */
-      initial    = mpsi->initialconss;
+      /* determine settings; note that reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model
+       * constraints and variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary
+       * objective variable is loose with infinite best bound, triggering the problem that an LP that is unbounded
+       * because of loose variables with infinite best bound cannot be solved)
+       */
+      initial    = TRUE;
       separate   = TRUE;
       enforce    = TRUE;
       check      = TRUE;
       propagate  = TRUE;
       local      = FALSE;
       modifiable = FALSE;
-      dynamic    = mpsi->dynamicconss;
-      removable  = mpsi->dynamicrows;
+      dynamic    = FALSE;
+      removable  = FALSE;
 
       SCIP_CALL( SCIPcreateVar(scip, &qmatrixvar, "qmatrixvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-            SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, qmatrixvar) );
 
       if( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )
@@ -2751,7 +2815,7 @@ static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR***           aggvars,            /**< pointer to array storing the aggregated variables on output */
    int*                  naggvars,           /**< pointer to number of aggregated variables on output */
    int*                  saggvars,           /**< pointer to number of slots in aggvars array */
@@ -2759,8 +2823,6 @@ SCIP_RETCODE collectAggregatedVars(
    )
 {
    int v;
-   SCIP_VAR* var;
-   SCIP_VARSTATUS status;
 
    assert( scip != NULL );
    assert( aggvars != NULL );
@@ -2770,24 +2832,34 @@ SCIP_RETCODE collectAggregatedVars(
    /* check variables */
    for( v = 0; v < nvars; ++v )
    {
+      SCIP_VARSTATUS status;
+      SCIP_VAR* var;
+
       var = vars[v];
       status = SCIPvarGetStatus(var);
 
       /* collect aggregated variables in a list */
       if( status >= SCIP_VARSTATUS_AGGREGATED )
       {
-         assert(status == SCIP_VARSTATUS_AGGREGATED ||
-            status == SCIP_VARSTATUS_MULTAGGR ||
-            status == SCIP_VARSTATUS_NEGATED);
-	 assert(varAggregated != NULL);
+         assert( status == SCIP_VARSTATUS_AGGREGATED || status == SCIP_VARSTATUS_MULTAGGR || status == SCIP_VARSTATUS_NEGATED );
+         assert( varAggregated != NULL );
 
-         if( !SCIPhashtableExists(varAggregated, (void*) var) )
+         if( ! SCIPhashtableExists(varAggregated, (void*) var) )
          {
-            assert((*saggvars) > (*naggvars));
+            /* possibly enlarge array */
+            if ( *saggvars <= *naggvars )
+            {
+               int newsize;
+               newsize = SCIPcalcMemGrowSize(scip, *naggvars + 1);
+               assert( newsize > *saggvars );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggvars, *saggvars, newsize) );
+               *saggvars = newsize;
+            }
 
             (*aggvars)[*naggvars] = var;
             (*naggvars)++;
             SCIP_CALL( SCIPhashtableInsert(varAggregated, (void*) var) );
+            assert( *naggvars <= *saggvars );
          }
       }
    }
@@ -3212,9 +3284,24 @@ void printBoundSection(
             sectionName = TRUE;
          }
 
-         printStart(scip, file, "BV", "Bound", (int) maxnamelen);
-         printRecord(scip, file, varname, "", maxnamelen);
+         if( !SCIPisFeasZero(scip, lb) || !SCIPisFeasEQ(scip, ub, 1.0) )
+         {
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
+            printStart(scip, file, "LO", "Bound", (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", ub);
+            printStart(scip, file, "UP", "Bound", (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+         }
+         else
+         {
+            printStart(scip, file, "BV", "Bound", (int) maxnamelen);
+            printRecord(scip, file, varname, "", maxnamelen);
+         }
          SCIPinfoMessage(scip, file, "\n");
+
          continue;
       }
 
@@ -3548,11 +3635,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
-   /* create hashtable for storing aggregated variables */
+   /* nfixedvars counts all variables with status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, but not SCIP_VARSTATUS_NEGATED */
    saggvars = nfixedvars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
 
-   /* number of fixed variables contains all variable with the status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, SCIP_VARSTATUS_NEGATED */
+   /* create hashtable for storing aggregated variables */
    if( nfixedvars > 0 )
    {
       SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), 5 * nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
@@ -3816,6 +3903,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          /* store aggregated variables */
          binvar = SCIPgetBinaryVarIndicator(cons);
+         if( SCIPvarIsNegated(binvar) )
+            binvar = SCIPvarGetNegatedVar(binvar);
+         assert( binvar != NULL );
          SCIP_CALL( collectAggregatedVars(scip, &binvar, 1, &aggvars, &naggvars, &saggvars, varFixedHash) );
 
          /* indicator constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
@@ -4528,7 +4618,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* free variable hashmap */
    SCIPhashmapFree(&varnameHashmap);
 
-   SCIPfreeBufferArray(scip, &aggvars);
+   SCIPfreeBlockMemoryArray(scip, &aggvars, saggvars);
    SCIPfreeBufferArray(scip, &rhss);
 
    /* free buffer arrays for SOS1, SOS2, and quadratic */
