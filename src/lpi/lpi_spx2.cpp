@@ -31,7 +31,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define AUTOPRICING_ITERSWITCH          10000/**< start with devex and switch to steepest edge after this many iterations */
 #define STRONGBRANCH_RESTOREBASIS            /**< if defined then in SCIPlpiStrongbranch() we restore the basis after the
                                               *   down branch and after the up branch; if false only after the end of a
                                               *   strong branching phase, which however seems to mostly increase strong
