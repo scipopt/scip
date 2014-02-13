@@ -1402,6 +1402,9 @@ SCIP_RETCODE readBounds(
                || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
                   && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
             {
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               assert(!infeasible);
+
                oldvartype =  SCIP_VARTYPE_INTEGER;
                SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
             }
@@ -1462,7 +1465,7 @@ SCIP_RETCODE readBounds(
                }
 
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+               /* don't assert feasibility here because the presolver will and should detect an infeasibility */
             }
             else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
             {
