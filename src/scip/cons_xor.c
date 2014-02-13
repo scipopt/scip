@@ -3859,11 +3859,9 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
     *       we could generate a new integer variable aggregated to the old one, possibly the constraint was then
     *       normalized and all binary variables have coefficients of 2.0, if the coefficient is 4 then we need holes ...
     */
-   if ( nposbin + nnegbin + nposimplbin + nnegimplbin >= nvars-1 && ncoeffspone + ncoeffsnone == nvars-1 && ncoeffspint + ncoeffsnint == 1 )
+   if( integral && nposcont + nnegcont == 0 && nposbin + nnegbin + nposimplbin + nnegimplbin >= nvars-1 && ncoeffspone + ncoeffsnone == nvars-1 && ncoeffspint + ncoeffsnint == 1 )
    {
-      assert( integral );
       assert( ncoeffspfrac + ncoeffsnfrac == 0 );
-      assert( nposcont + nnegcont == 0 );
 
       if ( SCIPisEQ(scip, lhs, rhs) && SCIPisIntegral(scip, lhs) )
       {
