@@ -4252,7 +4252,6 @@ SCIP_RETCODE SCIPsolveCIP(
          nextnode = NULL;
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-
          /* start node activation timer */
          SCIPclockStart(stat->nodeactivationtime, set);
 
