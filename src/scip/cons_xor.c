@@ -453,7 +453,15 @@ SCIP_RETCODE consdataPrint(
 
    /* close variable list and write right hand side */
    SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
-   
+
+   /* write integer variable if it exists */
+   if( consdata->intvar != NULL )
+   {
+      SCIPinfoMessage(scip, file, " (intvar = ");
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->intvar, TRUE) );
+      SCIPinfoMessage(scip, file, ")");
+   }
+
    if( endline )
       SCIPinfoMessage(scip, file, "\n");
 
@@ -779,8 +787,9 @@ SCIP_RETCODE applyFixings(
 
 	 /* remove all negations by replacing them with the active variable
 	  * it holds that xor(x1, ~x2) = 0 <=> xor(x1, x2) = 1
+          * @note this can only be done if the integer variable does not exist
 	  */
-	 if( negated )
+	 if( negated && consdata->intvar == NULL )
 	 {
 	    assert(SCIPvarIsNegated(repvar));
 
@@ -1512,8 +1521,9 @@ SCIP_RETCODE checkCons(
    if( checklprows || !allRowsInLP(consdata) )
    {
       SCIP_Real solval;
-      int i;
       SCIP_Bool odd;
+      int ones;
+      int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
        * enforcement
@@ -1525,11 +1535,15 @@ SCIP_RETCODE checkCons(
 
       /* check, if all variables and the rhs sum up to an even value */
       odd = consdata->rhs;
+      ones = 0;
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
          assert(SCIPisFeasIntegral(scip, solval));
          odd = (odd != (solval > 0.5));
+
+         if( solval > 0.5 )
+            ++ones;
       }
       if( odd )
       {
@@ -1537,9 +1551,21 @@ SCIP_RETCODE checkCons(
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
-         {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         }
+      }
+      else if( consdata->intvar != NULL )
+      {
+         solval = SCIPgetSolVal(scip, sol, consdata->intvar);
+         assert(SCIPisFeasIntegral(scip, solval));
+
+         if( !SCIPisFeasEQ(scip, ones - 2 * solval, (SCIP_Real) consdata->rhs) )
+            *violated = TRUE;
+      }
+
+      /* only reset constraint age if we are in enforcement */
+      if( *violated && sol == NULL )
+      {
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
    }
 
@@ -2981,7 +3007,19 @@ SCIP_RETCODE cliquePresolve(
    v = nvars - 2;
    while( v >= 0 )
    {
-      assert(SCIPvarIsActive(vars[v]));
+      SCIP_VAR* var;
+      SCIP_VAR* var1;
+      SCIP_Bool value;
+      SCIP_Bool value1;
+
+      assert(SCIPvarIsActive(vars[v]) || (SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))));
+
+      value = SCIPvarIsActive(vars[v]);
+
+      if( !value )
+         var = SCIPvarGetNegationVar(vars[v]);
+      else
+         var = vars[v];
 
       if( posnotinclq1 == v )
       {
@@ -2994,7 +3032,14 @@ SCIP_RETCODE cliquePresolve(
 	 if( posnotinclq1 == v1 )
 	    continue;
 
-	 if( !SCIPvarsHaveCommonClique(vars[v], TRUE, vars[v1], TRUE, TRUE) )
+         value1 = SCIPvarIsActive(vars[v1]);
+
+         if( !value1 )
+            var1 = SCIPvarGetNegationVar(vars[v1]);
+         else
+            var1 = vars[v1];
+
+	 if( !SCIPvarsHaveCommonClique(var, value, var1, value1, TRUE) )
 	 {
 	    /* if the position of the variable which is not in the clique with all other variables is not yet
 	     * initialized, than do now, one of both variables does not fit
@@ -3071,6 +3116,7 @@ SCIP_RETCODE cliquePresolve(
 
 	    for( v = nvars - 1; v >= 0; --v )
 	    {
+               SCIPdebugMessage("fixing variable <%s> to 0\n", SCIPvarGetName(vars[v]));
 	       SCIP_CALL( SCIPfixVar(scip, vars[v], 0.0, &infeasible, &fixed) );
 
 	       assert(infeasible || fixed);
@@ -3084,7 +3130,6 @@ SCIP_RETCODE cliquePresolve(
 	       else
 		  ++(*nfixedvars);
 	    }
-
 	 }
       }
       /* all but one variable are in one clique, case 2 */
@@ -3139,6 +3184,26 @@ SCIP_RETCODE cliquePresolve(
 	 ++(*naddconss);
 
 	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
+
+      /* fix integer variable if it exists */
+      if( consdata->intvar != NULL )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
+
+         SCIPdebugMessage("also fix the integer variable <%s> to 0\n", SCIPvarGetName(consdata->intvar));
+         SCIP_CALL( SCIPfixVar(scip, consdata->intvar, 0.0, &infeasible, &fixed) );
+
+         assert(infeasible || fixed);
+
+         if( infeasible )
+         {
+            *cutoff = infeasible;
+            return SCIP_OKAY;
+         }
+         else
+            ++(*nfixedvars);
       }
 
       /* delete old redundant xor-constraint */
@@ -3754,7 +3819,24 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
    assert( ! SCIPconsIsModifiable(cons) );
 
-   /* check, if linear constraint can be upgraded to xor constraint */
+   /* check, if linear constraint can be upgraded to xor constraint
+    *
+    * assuming the only coefficients with an absolute value unequal to one is two in absolute value we can transform:
+    *
+    * \f[
+    *    \begin{array}{ll}
+    *                     & -sum_{i \in I} x_i + sum_{j \in J} x_j + a \cdot z = rhs
+    *     \Leftrightarrow & sum_{i \in I} ~x_i + sum_j x_{j \in J} + a \cdot z = rhs + \lvert I \rvert
+    *     \Leftrightarrow & sum_{i \in I} ~x_i + sum_j x_{j \in J} - 2 \cdot y = (rhs + \lvert I \rvert) mod 2
+    *                     & z \in \[lb_z,ub_z\] \Rightarrow y \in \[\left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor + (a = -2 ? lb_z : -ub_z), \left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor + (a = -2 ? ub_z : -lb_z) \]
+    *                     & z = (a = -2 ? y - \left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor : -y + \left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor)
+    * \f]
+    */
+
+   /* @todo also applicable if the integer variable has a coefficient different from 2, e.g. a coefficient like 0.5 then
+    *       we could generate a new integer variable aggregated to the old one, possibly the constraint was then
+    *       normalized and all binary variables have coefficients of 2.0, if the coefficient is 4 then we need holes ...
+    */
    if ( nposbin + nnegbin + nposimplbin + nnegimplbin >= nvars-1 && ncoeffspone + ncoeffsnone == nvars-1 && ncoeffspint + ncoeffsnint == 1 )
    {
       assert( integral );
@@ -3765,51 +3847,141 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
       {
          SCIP_VAR** xorvars;
          SCIP_VAR* parityvar = NULL;
+         SCIP_Bool postwo;
          int cnt = 0;
          int j;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &xorvars, nvars) );
 
          /* check parity of constraints */
-         for (j = 0; j < nvars; ++j)
+         for( j = nvars - 1; j >= 0; --j )
          {
-            if ( SCIPisEQ(scip, REALABS(vals[j]), 2.0) )
+            if( SCIPisEQ(scip, REALABS(vals[j]), 2.0) )
+            {
                parityvar = vars[j];
-            else if ( ! SCIPisEQ(scip, REALABS(vals[j]), 1.0) )
+               postwo = (vals[j] > 0.0);
+            }
+            else if( !SCIPisEQ(scip, REALABS(vals[j]), 1.0) )
                break;
             else
             {
                assert( SCIPvarIsBinary(vars[j]) );
-               xorvars[cnt++] = vars[j];
+
+               /* need negated variables for correct propagation to the integer variable */
+               if( vals[j] < 0.0 )
+               {
+                  SCIP_CALL( SCIPgetNegatedVar(scip, vars[j], &(xorvars[cnt])) );
+                  assert(xorvars[cnt] != NULL);
+               }
+               else
+                  xorvars[cnt] = vars[j];
+               ++cnt;
             }
          }
 
-         if ( parityvar != NULL )
+         if( parityvar != NULL )
          {
-            assert( twocoef >= 0 );
+            assert(cnt == nvars - 1);
 
-            /* check whether parity variable is present only in this constraint and objective is 0 */
-            if ( SCIPvarGetNLocksDown(parityvar) <= 1 && SCIPvarGetNLocksUp(parityvar) <= 1 && SCIPisZero(scip, SCIPvarGetObj(parityvar)) )
+            /* check whether parity variable is present only in this constraint */
+            if ( SCIPvarGetNLocksDown(parityvar) <= 1 && SCIPvarGetNLocksUp(parityvar) <= 1 )
             {
-               assert( SCIPvarGetNLocksDown(parityvar) == 1 );
-               assert( SCIPvarGetNLocksUp(parityvar) == 1 );
+               SCIP_VAR* intvar;
+               SCIP_Bool rhsparity;
+               SCIP_Bool neednew;
+               int intrhs;
 
-               /* check whether bounds of parity variable are large enough */
-               if ( SCIPisGE(scip, REALABS(SCIPvarGetLbGlobal(parityvar)), (SCIP_Real) (ncoeffsnone/2)) && SCIPisLE(scip, SCIPvarGetUbGlobal(parityvar), (SCIP_Real) (ncoeffspone/2)) )
+               SCIPdebugMessage("upgrading constraint <%s> to an XOR constraint\n", SCIPconsGetName(cons));
+
+               /* adjust the side, since we negated all binary variables with -1.0 as a coefficient */
+               rhs += ncoeffsnone;
+
+               intrhs = (int) SCIPfloor(scip, rhs);
+               rhsparity = ((SCIP_Bool) (intrhs % 2));
+               neednew = (intrhs != 1 && intrhs != 0);
+
+               /* check if we can use the parity variable as integer variable of the XOR constraint or do we need to
+                * create a new variable
+                */
+               if( neednew )
                {
-                  SCIP_Bool rhsparity = FALSE;
+                  char varname[SCIP_MAXSTRLEN];
+                  SCIP_Real lb;
+                  SCIP_Real ub;
+                  SCIP_Bool isbinary;
+                  SCIP_Bool infeasible;
+                  SCIP_Bool redundant;
+                  SCIP_Bool aggregated;
+                  int intrhshalfed;
 
-                  SCIPdebugMessage("upgrading constraint <%s> to XOR constraint\n", SCIPconsGetName(cons));
-                  assert( cnt == nvars - 1 );
+                  intrhshalfed = intrhs / 2;
 
-                  if ( ((int) SCIPfloor(scip, rhs)) % 2 == 1 )
-                     rhsparity = TRUE;
+                  if( postwo )
+                  {
+                     lb = intrhshalfed - SCIPvarGetUbGlobal(parityvar);
+                     ub = intrhshalfed - SCIPvarGetLbGlobal(parityvar);
+                  }
+                  else
+                  {
+                     lb = intrhshalfed + SCIPvarGetLbGlobal(parityvar);
+                     ub = intrhshalfed + SCIPvarGetUbGlobal(parityvar);
+                  }
+                  assert(SCIPisFeasLE(scip, lb, ub));
+                  assert(SCIPisFeasIntegral(scip, lb));
+                  assert(SCIPisFeasIntegral(scip, ub));
 
-                  SCIP_CALL( SCIPcreateConsXor(scip, upgdcons, SCIPconsGetName(cons), rhsparity, nvars-1, xorvars,
+                  /* adjust bounds to be more integral */
+                  lb = SCIPfeasFloor(scip, lb);
+                  ub = SCIPfeasFloor(scip, ub);
+
+                  isbinary = (SCIPisZero(scip, lb) && SCIPisEQ(scip, ub, 1.0));
+
+                  (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_xor_upgr", SCIPvarGetName(parityvar));
+                  SCIP_CALL( SCIPcreateVar(scip, &intvar, varname, lb, ub, 0.0,
+                        isbinary ? SCIP_VARTYPE_BINARY : SCIP_VARTYPE_INTEGER,
+                        SCIPvarIsInitial(parityvar), SCIPvarIsRemovable(parityvar), NULL, NULL, NULL, NULL, NULL) );
+                  SCIP_CALL( SCIPaddVar(scip, intvar) );
+
+                  SCIPdebugMessage("created new variable for aggregation:");
+                  SCIPdebug( SCIPprintVar(scip, intvar, NULL) );
+
+                  SCIP_CALL( SCIPaggregateVars(scip, parityvar, intvar, 1.0, postwo ? 1.0 : -1.0,
+                        postwo ? intrhshalfed : -intrhshalfed, &infeasible, &redundant, &aggregated) );
+                  assert(!infeasible);
+
+                  /* maybe aggregation was forbidden, than we cannot upgrade this constraint */
+                  if( !aggregated )
+                  {
+                     SCIPfreeBufferArray(scip, &xorvars);
+                     return SCIP_OKAY;
+                  }
+
+                  assert(redundant);
+                  assert(SCIPvarIsActive(intvar));
+
+                  SCIPdebugMessage("aggregated: %s = %g * %s + %g\n", SCIPvarGetName(parityvar),
+                     SCIPvarGetAggrScalar(parityvar), SCIPvarGetName(SCIPvarGetAggrVar(parityvar)),
+                     SCIPvarGetAggrConstant(parityvar));
+               }
+               else
+                  intvar = parityvar;
+
+               assert(intvar != NULL);
+
+               SCIPdebugMessage("upgrading constraint <%s> to XOR constraint\n", SCIPconsGetName(cons));
+
+               SCIP_CALL( createConsXorIntvar(scip, upgdcons, SCIPconsGetName(cons), rhsparity, nvars - 1, xorvars, intvar,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
                         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               SCIPdebugPrintCons(scip, *upgdcons, NULL);
+
+               if( neednew )
+               {
+                  assert(intvar != parityvar);
+                  SCIP_CALL( SCIPreleaseVar(scip, &intvar) );
                }
             }
          }
@@ -4087,12 +4259,20 @@ SCIP_DECL_CONSCHECK(consCheckXor)
                if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
                   sum++;
             }
-            SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE\n", sum );
+
+            if( consdata->intvar != NULL )
+            {
+               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", SCIPgetSolVal(scip, sol, consdata->intvar));
+            }
+            else
+            {
+               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE\n", sum );
+            }
          }
 
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -4393,9 +4573,9 @@ SCIP_DECL_CONSPRINT(consPrintXor)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
- 
+
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, FALSE) );
-    
+
    return SCIP_OKAY;
 }
 
@@ -4550,11 +4730,63 @@ SCIP_DECL_CONSPARSE(consParseXor)
 
          if( SCIPstrToRealValue(str, &rhs, &endptr) )
          {
+            SCIP_VAR* intvar = NULL;
+
             assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
 
-            /* create or constraint */
-            SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            str = endptr;
+
+            /* skip white spaces */
+            while( *str == ' ' || *str == '\t' )
+               str++;
+
+            /* check for integer variable, should look like (intvar = var) */
+            if( *str == '(' )
+            {
+               str++;
+               while( *str != '=' && str != '\0' )
+                  str++;
+
+               if( *str != '=' )
+               {
+                  SCIPerrorMessage("Parsing integer variable of XOR constraint\n");
+                  *success = FALSE;
+                  goto TERMINATE;
+               }
+
+               str++;
+               /* skip white spaces */
+               while( *str == ' ' || *str == '\t' )
+                  str++;
+
+               /* parse variable name */
+               SCIP_CALL( SCIPparseVarName(scip, str, &intvar, &endptr) );
+
+               if( intvar == NULL )
+               {
+                  SCIPdebugMessage("variable with name <%s> does not exist\n", SCIPvarGetName(intvar));
+                  (*success) = FALSE;
+                  goto TERMINATE;
+               }
+               str = endptr;
+
+               /* skip last ')' */
+               while( *str != ')' && str != '\0' )
+                  str++;
+            }
+
+            if( intvar != NULL )
+            {
+               /* create or constraint */
+               SCIP_CALL( createConsXorIntvar(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars, intvar,
+                     initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            }
+            else
+            {
+               /* create or constraint */
+               SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
+                     initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            }
 
             SCIPdebugPrintCons(scip, *cons, NULL);
          }
@@ -4563,6 +4795,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
       }
    }
 
+ TERMINATE:
    /* free variable buffer */
    SCIPfreeBufferArray(scip, &vars);
 
