@@ -1403,6 +1403,7 @@ SCIP_RETCODE readBounds(
                   && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
             {
                oldvartype =  SCIP_VARTYPE_INTEGER;
+               SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
             }
          }
 
@@ -1421,6 +1422,11 @@ SCIP_RETCODE readBounds(
          switch( mpsinputField1(mpsi)[0] )
          {
          case 'L':
+            if( !SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisLT(scip, val, SCIPvarGetLbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), val);
+            }
+
             SCIP_CALL( SCIPchgVarLb(scip, var, val) );
 
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
@@ -1442,6 +1448,11 @@ SCIP_RETCODE readBounds(
 
             break;
          case 'U':
+            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+            }
+
             SCIP_CALL( SCIPchgVarUb(scip, var, val) );
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
@@ -1479,6 +1490,11 @@ SCIP_RETCODE readBounds(
             assert(semicont != NULL);
             semicont[nsemicont] = var;
             ++nsemicont;
+
+            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+            }
 
             SCIP_CALL( SCIPchgVarUb(scip, var, val) );
             break;
