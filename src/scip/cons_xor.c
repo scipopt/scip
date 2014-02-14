@@ -3834,7 +3834,19 @@ SCIP_RETCODE createConsXorIntvar(
  * Linear constraint upgrading
  */
 
-/** tries to upgrade a linear constraint into an xor constraint */
+/** tries to upgrade a linear constraint into an xor constraint
+ *
+ *  Assuming the only coefficients with an absolute value unequal to one is two in absolute value we can transform:
+ *  \f[
+ *    \begin{array}{ll}
+ *                     & -\sum_{i \in I} x_i + \sum_{j \in J} x_j + a \cdot z = rhs \\
+ *     \Leftrightarrow & \sum_{i \in I} ~x_i + \sum_j x_{j \in J} + a \cdot z = rhs + |I| \\
+ *     \Leftrightarrow & \sum_{i \in I} ~x_i + \sum_j x_{j \in J} - 2 \cdot y = (rhs + |I|) mod 2 \\
+ *                     & z \in [lb_z,ub_z] \Rightarrow y \in (\left\lfloor \frac{rhs + |I|}{2} \right\rfloor + (a = -2\; ?\; lb_z : -ub_z), \left\lfloor \frac{rhs + |I|}{2} \right\rfloor + (a = -2\; ?\; ub_z : -lb_z) ) \\
+ *                     & z = (a = -2\; ?\; y - \left\lfloor \frac{rhs + |I|}{2} \right\rfloor\; :\; -y + \left\lfloor \frac{rhs + |I|}{2} \right\rfloor)
+ *    \end{array}
+ *  \f]
+ */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
 {  /*lint --e{715}*/
@@ -3842,20 +3854,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
    assert( ! SCIPconsIsModifiable(cons) );
 
-   /* check, if linear constraint can be upgraded to xor constraint
-    *
-    * assuming the only coefficients with an absolute value unequal to one is two in absolute value we can transform:
-    *
-    * \f[
-    *    \begin{array}{ll}
-    *                     & -sum_{i \in I} x_i + sum_{j \in J} x_j + a \cdot z = rhs
-    *     \Leftrightarrow & sum_{i \in I} ~x_i + sum_j x_{j \in J} + a \cdot z = rhs + \lvert I \rvert
-    *     \Leftrightarrow & sum_{i \in I} ~x_i + sum_j x_{j \in J} - 2 \cdot y = (rhs + \lvert I \rvert) mod 2
-    *                     & z \in \[lb_z,ub_z\] \Rightarrow y \in \[\left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor + (a = -2 ? lb_z : -ub_z), \left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor + (a = -2 ? ub_z : -lb_z) \]
-    *                     & z = (a = -2 ? y - \left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor : -y + \left\lfloor \frac{rhs + \lvert I \rvert}{2} \right\rfloor)
-    * \f]
-    */
-
+   /* check, if linear constraint can be upgraded to xor constraint */
    /* @todo also applicable if the integer variable has a coefficient different from 2, e.g. a coefficient like 0.5 then
     *       we could generate a new integer variable aggregated to the old one, possibly the constraint was then
     *       normalized and all binary variables have coefficients of 2.0, if the coefficient is 4 then we need holes ...
