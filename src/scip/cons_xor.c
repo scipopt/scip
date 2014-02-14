@@ -2011,6 +2011,9 @@ SCIP_RETCODE checkSystemGF2(
    SCIP_Bool* xoractive;
    SCIP_Real* xorvals;
    SCIP_VAR** xorvars;
+#ifndef NDEBUG
+   SCIP_Bool noaggr = TRUE;
+#endif
    Type** A;
    Type* b;
    int* s;
@@ -2066,7 +2069,8 @@ SCIP_RETCODE checkSystemGF2(
          /* consider nonfixed variables */
          if ( SCIPcomputeVarLbLocal(scip, var) < 0.5 && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
          {
-            if ( ! SCIPhashmapExists(varhash, var) )
+            /* consider active variables and collect only new ones */
+            if ( SCIPvarIsActive(var) && ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
                SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvarsmat) );
@@ -2167,6 +2171,22 @@ SCIP_RETCODE checkSystemGF2(
          var = consdata->vars[j];
          assert( var != NULL );
 
+         /* replace negated variables */
+         if ( SCIPvarIsNegated(var) )
+         {
+            var = SCIPvarGetNegatedVar(var);
+            assert( var != NULL );
+            b[nconssmat] = ! b[nconssmat];
+         }
+
+         /* If the constraint contains (multi-)aggregated variables, the solution might not be valid, since the
+          * implications are not represented in the matrix. */
+#ifndef NDEBUG
+         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+            noaggr = FALSE;
+#endif
+         /** @todo possibly treat aggregated variables here */
+
          if ( SCIPcomputeVarLbLocal(scip, var) > 0.5 )
          {
             /* variable is fixed to 1, invert rhs */
@@ -2175,7 +2195,7 @@ SCIP_RETCODE checkSystemGF2(
          }
          else
          {
-            if ( SCIPcomputeVarUbLocal(scip, var) > 0.5 )
+            if ( SCIPvarIsActive(var) && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
             {
                assert( SCIPhashmapExists(varhash, var) );
                idx = (int) (size_t) SCIPhashmapGetImage(varhash, var);
@@ -2271,6 +2291,7 @@ SCIP_RETCODE checkSystemGF2(
                {
                   assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
                   assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+                  assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
                   SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                }
             }
@@ -2303,7 +2324,8 @@ SCIP_RETCODE checkSystemGF2(
                      if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
                         ++nones;
                   }
-                  assert( nones % 2 == (int) consdata->rhs );
+                  /* if there are aggregated variables, the solution might not be feasible */
+                  assert( ! noaggr || nones % 2 == (int) consdata->rhs );
                   if ( (unsigned int) nones != consdata->rhs )
                   {
                      val = (SCIP_Real) (nones - consdata->rhs)/2;
