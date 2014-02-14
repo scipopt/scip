@@ -4680,26 +4680,39 @@ static
 SCIP_DECL_CONSPARSE(consParseLogicor)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-
    char* strcopy;
-   char* token;
-   char* saveptr;
    char* endptr;
+   char* startptr;
    int requiredsize;
    int varssize;
    int nvars;
-   
+
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
-   /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+   /* cutoff "logicor" from the constraint string */
+   startptr = strchr(str, '(');
 
-   /* cutoff "logicor" form the constraint string */
-   (void) SCIPstrtok(strcopy, "(", &saveptr ); 
+   if( startptr == NULL )
+   {
+      SCIPerrorMessage("missing starting character '(' parsing logicor\n");
+      return SCIP_OKAY;
+   }
 
-   /* cutoff ")" form the constraint string */
-   token = SCIPstrtok(NULL, ")", &saveptr ); 
-   
+   /* skip '(' */
+   ++startptr;
+
+   /* find end character ')' */
+   endptr = strrchr(startptr, ')');
+
+   if( endptr == NULL )
+   {
+      SCIPerrorMessage("missing ending character ')' parsing logicor\n");
+      return SCIP_OKAY;
+   }
+
+   /* copy string for parsing */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
+
    varssize = 100;
    nvars = 0;
 
@@ -4707,8 +4720,8 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-   
+   SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+
    if( *success )
    {
       /* check if the size of the variable array was great enough */
@@ -4717,23 +4730,24 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
          /* reallocate memory */
          varssize = requiredsize;
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-         
+
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+         SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
-      
+
       assert(*success);
       assert(varssize >= requiredsize);
 
       /* create logicor constraint */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,  
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    /* free buffers */
    SCIPfreeBufferArray(scip, &vars);
+
    SCIPfreeBufferArray(scip, &strcopy);
-   
+
    return SCIP_OKAY;
 }
 
