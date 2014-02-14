@@ -168,7 +168,7 @@ SCIP_RETCODE getInputString(
 
 /** read the problem name out of the statistics */
 static
-SCIP_RETCODE getStart(
+void getStart(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
@@ -180,17 +180,14 @@ SCIP_RETCODE getStart(
    if( strncmp(buf, "STATISTICS", 9) == 0 )
    {
       cipinput->section = CIP_STATISTIC;
-      return SCIP_OKAY;
+      return;
    }
 
    if( strncmp(buf, "VARIABLES", 8) == 0 || strncmp(buf, "FIXED", 5) == 0 || strncmp(buf, "CONSTRAINTS", 11) == 0 || strncmp(buf, "OBJECTIVE", 9) == 0 )
    {
       SCIPerrorMessage("Syntax Error: File has to start with 'STATISTICS' section.\n");
       cipinput->haserror = TRUE;
-      return SCIP_OKAY;
    }
-
-   return SCIP_OKAY;
 }
 
 
@@ -756,9 +753,9 @@ SCIP_DECL_READERREAD(readerReadCip)
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
-
    SCIP_Bool initialvar;
    SCIP_Bool removablevar;
+   SCIP_RETCODE retcode;
 
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
@@ -796,11 +793,11 @@ SCIP_DECL_READERREAD(readerReadCip)
 
       if( cipinput.endfile )
          break;
-      
+
       switch( cipinput.section )
       {
       case CIP_START:
-         SCIP_CALL( getStart(scip, &cipinput) );
+         getStart(scip, &cipinput);
          break;
       case CIP_STATISTIC:
          SCIP_CALL( getStatistics(scip, &cipinput) );
@@ -809,13 +806,37 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getObjective(scip, &cipinput, &objscale, &objoffset) );
          break;
       case CIP_VARS:
-         SCIP_CALL( getVariable(scip, &cipinput, initialvar, removablevar, objscale) );
+         retcode = getVariable(scip, &cipinput, initialvar, removablevar, objscale);
+
+         if( retcode == SCIP_READERROR )
+         {
+            cipinput.haserror = TRUE;
+            goto TERMINATE;
+         }
+         SCIP_CALL(retcode);
+
          break;
       case CIP_FIXEDVARS:
-         SCIP_CALL( getFixedVariable(scip, &cipinput) );
+         retcode = getFixedVariable(scip, &cipinput);
+
+         if( retcode == SCIP_READERROR )
+         {
+            cipinput.haserror = TRUE;
+            goto TERMINATE;
+         }
+         SCIP_CALL(retcode);
+
          break;
       case CIP_CONSTRAINTS:
-         SCIP_CALL( getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows) );
+         retcode = getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows);
+
+         if( retcode == SCIP_READERROR )
+         {
+            cipinput.haserror = TRUE;
+            goto TERMINATE;
+         }
+         SCIP_CALL(retcode);
+
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
@@ -836,13 +857,14 @@ SCIP_DECL_READERREAD(readerReadCip)
       SCIPdebugMessage("added variables <objoffset> for objective offset of <%g>\n", objoffset);
    }
 
-   /* close file stream */
-   SCIPfclose(cipinput.file);
-   
    if( cipinput.section != CIP_END && !cipinput.haserror )
    {
       SCIPerrorMessage("unexpected EOF\n");
    }
+
+ TERMINATE:
+   /* close file stream */
+   SCIPfclose(cipinput.file);
 
    SCIPfreeBufferArray(scip, &cipinput.strbuf);
 
