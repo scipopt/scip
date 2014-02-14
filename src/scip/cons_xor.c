@@ -4766,7 +4766,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
             if( *str == '(' )
             {
                str++;
-               while( *str != '=' && str != '\0' )
+               while( *str != '=' && *str != '\0' )
                   str++;
 
                if( *str != '=' )
@@ -4793,7 +4793,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
                str = endptr;
 
                /* skip last ')' */
-               while( *str != ')' && str != '\0' )
+               while( *str != ')' && *str != '\0' )
                   str++;
             }
 
