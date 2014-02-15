@@ -81,7 +81,7 @@ fi
 
 # the srun queue requires a format duration HH:MM:SS (and optionally days),
 # whereas the qsub requires the memory limit in kB
-if test "QUEUETYPE" != "qsub"
+if test "$QUEUETYPE" != "qsub"
 then
     TIMEFORMAT="format"
     MEMFORMAT="MB"
