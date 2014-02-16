@@ -4972,7 +4972,7 @@ SCIP_Real SCIPselectSimpleValue(
  * In the MS compiler world, there is a function _finite.
  * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
  */
-#if _XOPEN_SOURCE >= 600 || _ISOC99_SOURCE || _POSIX_C_SOURCE >= 200112L || __APPLE__
+#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
 #define SCIPisFinite isfinite
 #elif defined(_BSD_SOURCE) || defined(__sun)
 #define SCIPisFinite finite
