@@ -65,7 +65,6 @@
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
 #define LINCONSUPGD_PRIORITY    +600000 /**< priority of the constraint handler for upgrading of linear constraints */
-#define QUADCONSUPGD_PRIORITY   +600000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_ADDEXTENDEDFORM   FALSE /**< should the extended formulation be added in presolving? */
@@ -610,30 +609,32 @@ void consdataSort(
 	 /* correct watched variables */
 	 if( var1 != NULL )
 	 {
-	    int pos;
-#ifndef NDEBUG
-	    SCIP_Bool found;
+            int v;
 
-	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, (void*)var1, consdata->nvars, &pos);
-	    assert(found);
-#else
-	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, (void*)var1, consdata->nvars, &pos);
-#endif
-	    assert(pos >= 0 && pos < consdata->nvars);
-	    consdata->watchedvar1 = pos;
-
-	    if( var2 != NULL )
-	    {
-#ifndef NDEBUG
-	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, (void*)var2, consdata->nvars, &pos);
-	       assert(found);
-#else
-	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, (void*)var2, consdata->nvars, &pos);
-#endif
-	       assert(pos >= 0 && pos < consdata->nvars);
-	       consdata->watchedvar2 = pos;
-	    }
-	 }
+            /* since negated variables exist, we need to loop over all variables to find the old variable and cannot use
+             * SCIPsortedvecFindPtr()
+             */
+            for( v = consdata->nvars - 1; v >= 0; --v )
+            {
+               if( consdata->vars[v] == var1 )
+               {
+                  consdata->watchedvar1 = v;
+                  if( var2 == NULL || consdata->watchedvar2 != -1 )
+                     break;
+               }
+               else if( consdata->vars[v] == var2 )
+               {
+                  assert(consdata->vars[v] != NULL);
+                  consdata->watchedvar2 = v;
+                  if( consdata->watchedvar1 != -1 )
+                     break;
+               }
+            }
+            assert(consdata->watchedvar1 != -1);
+            assert(consdata->watchedvar2 != -1 || var2 == NULL);
+            assert(consdata->watchedvar1 < consdata->nvars);
+            assert(consdata->watchedvar2 < consdata->nvars);
+         }
       }
    }
 
@@ -3867,7 +3868,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
       {
          SCIP_VAR** xorvars;
          SCIP_VAR* parityvar = NULL;
-         SCIP_Bool postwo;
+         SCIP_Bool postwo = FALSE;
          int cnt = 0;
          int j;
 
@@ -3922,7 +3923,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
                rhs += ncoeffsnone;
 
                intrhs = (int) SCIPfloor(scip, rhs);
-               rhsparity = ((SCIP_Bool) (intrhs % 2));
+               rhsparity = ((SCIP_Bool) (intrhs % 2)); /*lint !e571*/
                neednew = (intrhs != 1 && intrhs != 0);
 
                /* check if we can use the parity variable as integer variable of the XOR constraint or do we need to
@@ -3971,7 +3972,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
                   SCIPdebug( SCIPprintVar(scip, intvar, NULL) );
 
                   SCIP_CALL( SCIPaggregateVars(scip, parityvar, intvar, 1.0, postwo ? 1.0 : -1.0,
-                        postwo ? intrhshalfed : -intrhshalfed, &infeasible, &redundant, &aggregated) );
+                        (SCIP_Real) (postwo ? intrhshalfed : -intrhshalfed), &infeasible, &redundant, &aggregated) );
                   assert(!infeasible);
 
                   /* maybe aggregation was forbidden, than we cannot upgrade this constraint */
