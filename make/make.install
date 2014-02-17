@@ -91,7 +91,19 @@ ifneq ($(INSTALLDIR),)
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/scip/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/objscip
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/objscip/*.h
-		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/lpi/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/tclique/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/tclique/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/xml/*.h
+		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
