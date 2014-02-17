@@ -3885,7 +3885,12 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
                break;
             else
             {
-               assert( SCIPvarIsBinary(vars[j]) );
+               /* exit if variable is not binary or implicit binary */
+               if ( ! SCIPvarIsBinary(vars[j]) )
+               {
+                  parityvar = NULL;
+                  break;
+               }
 
                /* need negated variables for correct propagation to the integer variable */
                if( vals[j] < 0.0 )
