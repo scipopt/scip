@@ -238,7 +238,7 @@
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
-#define SCIP_DEFAULT_MISC_FINITESOLSTORE   TRUE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+#define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 
 
 /* Node Selection */

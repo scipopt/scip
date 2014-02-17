@@ -13201,12 +13201,18 @@ SCIP_RETCODE freeTransform(
             SCIP_Bool success;
 
             SCIP_CALL( SCIPcreateFiniteSolCopy(scip, &newsol, sol, &success) );
-            /* @todo shouldn't we check for success and not add the solution in case we were not successful??? */
 
+            /* infinite fixing could be removed */
             if( newsol != NULL )
             {
-               /* add solution to original candidate solution storage */
-               SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, &sol, &stored) );
+               /* add solution to original candidate solution storage; we must not use SCIPprimalAddOrigSolFree()
+                * because we want to create a copy of the solution in the origprimal solution store, but newsol was
+                * created in the (transformed) primal
+                */
+               SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, newsol, &stored) );
+
+               /* free solution in (transformed) primal where it was created */
+               SCIP_CALL( SCIPsolFree(&newsol, scip->mem->probmem, scip->primal) );
             }
          }
          ++s;
