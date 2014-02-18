@@ -16525,6 +16525,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       {
          *value = SCIPinfinity(scip);
 
+         if( valid != NULL )
+            *valid = TRUE;
+
          SCIPdebugMessage("%s branch of var <%s> detected infeasible during propagation\n",
             down ? "down" : "up", SCIPvarGetName(var));
       }
@@ -16640,7 +16643,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
                if( SCIPlpiIsDualFeasible(lpi) )
                {
-                  *valid = TRUE;
+                  if( valid != NULL )
+                     *valid = TRUE;
 
                   if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
                      *cutoff = TRUE;
@@ -16669,6 +16673,16 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 #endif
    }
 
+   /* If columns are missing in the LP, the cutoff flag may be wrong. Therefore, we need to set it and the valid pointer
+    * to false here.
+    */
+   if( (*cutoff) && !SCIPallColsInLP(scip) )
+   {
+      *cutoff = FALSE;
+
+      if( valid != NULL )
+         *valid = FALSE;
+   }
 
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
