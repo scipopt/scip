@@ -4607,7 +4607,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       char* startptr;
 
       /* cutoff "== and(" form the constraint string */
-      startptr = strchr(str, '(');
+      startptr = strchr(str, '('); /*lint !e158*/
 
       if( startptr == NULL )
       {

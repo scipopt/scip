@@ -1039,7 +1039,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
                for (j = 0; j < naggrvars; ++j)
                {
-                  if ( ! SCIPhashtableExists(varhash, (void*) aggrvars[j]) )
+                  if( !SCIPhashtableExists(varhash, (void*) aggrvars[j]) ) /*lint !e613*/
                      break;
                }
 
