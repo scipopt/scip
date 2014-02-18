@@ -908,7 +908,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          continue;
 
       /* assert necessary for flexelint */
-      assert(q > 0);
+      assert(q != 0.0);
       lambda[0] = p / q;
 
       nfacets = 1;

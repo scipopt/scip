@@ -6021,7 +6021,7 @@ SCIP_RETCODE SCIPconsTransform(
       (*transcons)->transorigcons = origcons;
 
       /* copy the number of upgradelocks */
-      (*transcons)->nupgradelocks = origcons->nupgradelocks;
+      (*transcons)->nupgradelocks = origcons->nupgradelocks; /*lint !e732*/
    }
    assert(*transcons != NULL);
 
@@ -7904,7 +7904,7 @@ void SCIPconsAddUpgradeLocks(
    assert(cons != NULL);
 
    assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
-   cons->nupgradelocks += nlocks;
+   cons->nupgradelocks += (unsigned int) nlocks;
 }
 
 /** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */

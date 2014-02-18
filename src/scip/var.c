@@ -1129,9 +1129,9 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             {
                /* shrink dynamic size arrays to their minimal sizes */
                SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
-                     (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+                     (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
-            
+
                /* convert into static domain change */
                SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGDYN), sizeof(SCIP_DOMCHGBOUND)) );
                (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOUND; /*lint !e641*/
@@ -1141,7 +1141,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          {
             /* shrink dynamic size arrays to their minimal sizes */
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
-                  (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+                  (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
                   (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
@@ -3317,16 +3317,16 @@ SCIP_RETCODE SCIPvarTransform(
             origvar->glbdom.lb, origvar->glbdom.ub, (SCIP_Real)objsense * origvar->obj,
             SCIPvarGetType(origvar), origvar->initial, origvar->removable,
             origvar->vardelorig, origvar->vartrans, origvar->vardeltrans, origvar->varcopy, NULL) );
-      
+
       /* copy the branch factor and priority */
       (*transvar)->branchfactor = origvar->branchfactor;
       (*transvar)->branchpriority = origvar->branchpriority;
-      (*transvar)->branchdirection = origvar->branchdirection;
+      (*transvar)->branchdirection = origvar->branchdirection; /*lint !e732*/
 
       /* duplicate hole lists */
       SCIP_CALL( holelistDuplicate(&(*transvar)->glbdom.holelist, blkmem, set, origvar->glbdom.holelist) );
       SCIP_CALL( holelistDuplicate(&(*transvar)->locdom.holelist, blkmem, set, origvar->locdom.holelist) );
-      
+
       /* link original and transformed variable */
       origvar->data.original.transvar = *transvar;
       SCIP_CALL( varAddParent(*transvar, blkmem, set, origvar) );

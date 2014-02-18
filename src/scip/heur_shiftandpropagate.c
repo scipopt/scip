@@ -544,12 +544,12 @@ SCIP_RETCODE initMatrix(
     */
    for( i = 0; i < nrows; ++i )
    {
-      SCIP_Real* rowvals;
       SCIP_COL** cols;
-      SCIP_Real maxval;
       SCIP_ROW* row;
-      SCIP_Real nrowlpnonz;
+      SCIP_Real* rowvals;
       SCIP_Real constant;
+      SCIP_Real maxval;
+      int nrowlpnonz;
 
       /* get LP row information */
       row = lprows[i];

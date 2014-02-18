@@ -6176,7 +6176,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
 
       storedcolsolvals[c].primsol = col->primsol;
       storedcolsolvals[c].redcost = col->redcost;
-      storedcolsolvals[c].basisstatus = col->basisstatus; /*lint !e641*/
+      storedcolsolvals[c].basisstatus = col->basisstatus; /*lint !e641 !e732*/
    }
    for (r = 0; r < lp->nrows; ++r)
    {
@@ -6194,7 +6194,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          storedrowsolvals[r].dualsol = row->dualsol;
       }
       storedrowsolvals[r].activity = row->activity;
-      storedrowsolvals[r].basisstatus = row->basisstatus; /*lint !e641*/
+      storedrowsolvals[r].basisstatus = row->basisstatus; /*lint !e641 !e732*/
    }
 
    /* check, if the LP was infeasible or bound exceeding */
@@ -6226,7 +6226,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          assert( col != NULL );
          col->primsol = storedcolsolvals[c].primsol;
          col->redcost = storedcolsolvals[c].redcost;
-         col->basisstatus = storedcolsolvals[c].basisstatus; /*lint !e641*/
+         col->basisstatus = storedcolsolvals[c].basisstatus; /*lint !e641 !e732*/
       }
       for (r = 0; r < lp->nrows; ++r)
       {
@@ -6243,7 +6243,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
             row->dualsol = storedrowsolvals[r].dualsol;
          }
          row->activity = storedrowsolvals[r].activity;
-         row->basisstatus = storedrowsolvals[r].basisstatus; /*lint !e641*/
+         row->basisstatus = storedrowsolvals[r].basisstatus; /*lint !e641 !e732*/
       }
    }
    SCIPsetFreeBufferArray(set, &storedrowsolvals);

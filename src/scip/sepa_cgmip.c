@@ -310,13 +310,14 @@ SCIP_RETCODE solCutIsViolated(
 
          /* get data */
          SCIP_CALL( SCIPgetVarsData(mipdata->scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+         assert(nvars >= 0);
          SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
 
          /* compute coefficients */
          SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, cutcoefs, &rhs, &localrowsused, &localboundsused, &cutrank, &success) );
 
 #if 0
-         for (j = 0; (int) j < nvars; ++j)
+         for (j = 0; j < (unsigned int) nvars; ++j)
          {
             if ( ! SCIPisZero(scip, cutcoefs[j]) )
                SCIPinfoMessage(scip, NULL, "+ %f x%d", cutcoefs[j], j);
@@ -330,7 +331,7 @@ SCIP_RETCODE solCutIsViolated(
 
          /* compute activity and Euclidean norm (todo: use arbitrary norm) */
          cutsqrnorm = 0.0;
-         for (j = 0; (int) j < nvars; ++j)
+         for (j = 0; j < (unsigned int) nvars; ++j)
          {
             if ( ! SCIPisZero(scip, cutcoefs[j]) )
             {

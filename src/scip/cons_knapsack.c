@@ -1189,9 +1189,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             assert(nonsolitems != NULL);
 
             /* the rest are not in the solution */
-            for( j = nmyitems - 1; (SCIP_Longint) j >= capacity; --j )
+            for( i = nmyitems - 1; i >= capacity; --i )
             {
-               nonsolitems[*nnonsolitems] = myitems[j];
+               nonsolitems[*nnonsolitems] = myitems[i];
                ++(*nnonsolitems);
             }
          }

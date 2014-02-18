@@ -771,7 +771,7 @@ SCIP_RETCODE nodeAssignParent(
       assert(parent->lowerbound <= parent->estimate);
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
-      node->depth = parent->depth+1;
+      node->depth = parent->depth+1; /*lint !e732*/
       if( parent->depth >= MAXDEPTH-1 )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
@@ -1161,7 +1161,7 @@ void SCIPnodeMarkPropagated(
    assert(tree != NULL);
 
    if( node->parent != NULL )
-      node->repropsubtreemark = node->parent->repropsubtreemark;
+      node->repropsubtreemark = node->parent->repropsubtreemark; /*lint !e732*/
    node->reprop = FALSE;
 
    /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */

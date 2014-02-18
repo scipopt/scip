@@ -437,7 +437,7 @@ SCIP_RETCODE colStoreSolVals(
    /* store values */
    storedsolvals->primsol = col->primsol;
    storedsolvals->redcost = col->redcost;
-   storedsolvals->basisstatus = col->basisstatus; /*lint !e641*/
+   storedsolvals->basisstatus = col->basisstatus; /*lint !e641 !e732*/
 
    return SCIP_OKAY;
 }
@@ -463,7 +463,7 @@ SCIP_RETCODE colRestoreSolVals(
       col->primsol = storedsolvals->primsol;
       col->redcost = storedsolvals->redcost;
       col->validredcostlp = validlp;
-      col->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
+      col->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
 
       /* we do not save the farkas coefficient, since it can be recomputed; thus, we invalidate it here */
       col->validfarkaslp = -1;
@@ -520,7 +520,7 @@ SCIP_RETCODE rowStoreSolVals(
    {
       storedsolvals->dualsol = row->dualsol;
       storedsolvals->activity = row->activity;
-      storedsolvals->basisstatus = row->basisstatus; /*lint !e641*/
+      storedsolvals->basisstatus = row->basisstatus; /*lint !e641 !e732*/
    }
 
    return SCIP_OKAY;
@@ -551,7 +551,7 @@ SCIP_RETCODE rowRestoreSolVals(
          row->dualsol = storedsolvals->dualsol;
       row->activity = storedsolvals->activity;
       row->validactivitylp = validlp;
-      row->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
+      row->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
    }
    /* if the row was created after performing the storage (possibly during probing), we treat it as basic;
     * we make sure to invalidate the reduced cost and farkas coefficient, which are not available
@@ -4998,7 +4998,7 @@ void SCIProwCapture(
 {
    assert(row != NULL);
    assert(row->nuses >= 0);
-   assert(row->nlocks <= (unsigned int)(row->nuses));
+   assert(row->nlocks <= (unsigned int)(row->nuses)); /*lint !e574*/
 
    SCIPdebugMessage("capture row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
    row->nuses++;
@@ -5016,7 +5016,7 @@ SCIP_RETCODE SCIProwRelease(
    assert(row != NULL);
    assert(*row != NULL);
    assert((*row)->nuses >= 1);
-   assert((*row)->nlocks < (unsigned int)((*row)->nuses));
+   assert((*row)->nlocks < (unsigned int)((*row)->nuses)); /*lint !e574*/
 
    SCIPdebugMessage("release row <%s> with nuses=%d and nlocks=%u\n", (*row)->name, (*row)->nuses, (*row)->nlocks);
    (*row)->nuses--;
