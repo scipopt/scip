@@ -1414,9 +1414,17 @@ void SCIPprimalSolFreed(
    assert(primal != NULL);
    assert(sol != NULL);
 
+#ifndef NDEBUG
+   for( idx = 0; idx < primal->nexistingsols; ++idx )
+   {
+      assert(idx == SCIPsolGetPrimalIndex(primal->existingsols[idx]));
+   }
+#endif
+
    /* remove solution */
    idx = SCIPsolGetPrimalIndex(sol);
    assert(0 <= idx && idx < primal->nexistingsols);
+   assert(sol == primal->existingsols[idx]);
    if( idx < primal->nexistingsols-1 )
    {
       primal->existingsols[idx] = primal->existingsols[primal->nexistingsols-1];
