@@ -14395,7 +14395,7 @@ SCIP_RETCODE SCIPparseVarsList(
    SCIP_VAR* var;
    int ntmpvars;
    int v;
-   
+
    SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* allocate buffer memory for temporary storing the parsed variables */
@@ -14403,11 +14403,11 @@ SCIP_RETCODE SCIPparseVarsList(
 
    ntmpvars = 0;
    (*success) = TRUE;
-   
+
    do
    {
       *endptr = (char*)str;
-      
+
       /* parse variable name */ 
       SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
 
@@ -14417,20 +14417,20 @@ SCIP_RETCODE SCIPparseVarsList(
          (*success) = FALSE;
          break;
       }
-      
+
       /* store the variable in the tmp array */
       if( ntmpvars < varssize )
          tmpvars[ntmpvars] = var;
-      
+
       ntmpvars++;
 
       str = *endptr;
-      
+
       while( isspace((unsigned char)*str) )
          str++;
    }
    while( *str == delimiter );
-   
+
    *endptr = (char*)str;
 
    /* if all variable name searches were successfully and the variable array has enough slots copy the collected
@@ -14440,14 +14440,14 @@ SCIP_RETCODE SCIPparseVarsList(
    {
       for( v = 0; v < ntmpvars; ++v )
          vars[v] = tmpvars[v];
-      
+
       (*nvars) = ntmpvars;
    }
    else
       (*nvars) = 0;
-   
+
    (*requiredsize) = ntmpvars;
-   
+
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &tmpvars);
 

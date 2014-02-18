@@ -4588,69 +4588,101 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    int requiredsize;
    int varssize;
    int nvars;
-   
+
    SCIPdebugMessage("parse <%s> as and constraint\n", str);
 
-   /* parse variable name */ 
+   *success = FALSE;
+
+   /* parse variable name of resultant */
    SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );
    str = endptr;
 
    if( resvar == NULL )
    {
       SCIPdebugMessage("resultant variable does not exist \n");
-      *success = FALSE;
    }
    else
    {
-      char* strcopy;
-      char* token;
-      char* saveptr;
-
-      /* copy string for truncating it */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+      char* strcopy = NULL;
+      char* startptr;
 
       /* cutoff "== and(" form the constraint string */
-      (void) SCIPstrtok(strcopy, "(", &saveptr );
+      startptr = strchr(str, '(');
 
-      /* cutoff ")" form the constraint string */
-      token = SCIPstrtok(NULL, ")", &saveptr );
-
-      varssize = 100;
-      nvars = 0;
-
-      /* allocate buffer array for variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-
-      /* parse string */
-      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-      token = endptr;
-
-      if( *success )
+      if( startptr == NULL )
       {
-         /* check if the size of the variable array was great enough */
-         if( varssize < requiredsize )
-         {
-            /* reallocate memory */
-            varssize = requiredsize;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-            
-            /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-         }
-         
-         assert(*success);
-         assert(varssize >= requiredsize);
-         
-         /* create and constraint */
-         SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars, 
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         SCIPerrorMessage("missing starting character '(' parsing and constraint\n");
+         return SCIP_OKAY;
       }
 
-      /* free variable buffer */
-      SCIPfreeBufferArray(scip, &vars);
-      SCIPfreeBufferArray(scip, &strcopy);
+      /* skip '(' */
+      ++startptr;
+
+      /* find end character ')' */
+      endptr = strrchr(startptr, ')');
+
+      if( endptr == NULL )
+      {
+         SCIPerrorMessage("missing ending character ')' parsing and constraint\n");
+         return SCIP_OKAY;
+      }
+      assert(endptr >= startptr);
+
+      if( endptr > startptr )
+      {
+         /* copy string for parsing */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
+
+         varssize = 100;
+         nvars = 0;
+
+         /* allocate buffer array for variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+         /* parse string */
+         SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+
+         if( *success )
+         {
+            /* check if the size of the variable array was great enough */
+            if( varssize < requiredsize )
+            {
+               /* reallocate memory */
+               varssize = requiredsize;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+
+               /* parse string again with the correct size of the variable array */
+               SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+            }
+
+            assert(*success);
+            assert(varssize >= requiredsize);
+
+            /* create and constraint */
+            SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         }
+
+         /* free variable buffer */
+         SCIPfreeBufferArray(scip, &vars);
+         SCIPfreeBufferArray(scip, &strcopy);
+      }
+      else
+      {
+         if( !modifiable )
+         {
+            SCIPerrorMessage("cannot create empty and constraint\n");
+            return SCIP_OKAY;
+         }
+
+         /* create empty and constraint */
+         SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, 0, NULL,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+         *success = TRUE;
+      }
    }
-   
+
    return SCIP_OKAY;
 }
 

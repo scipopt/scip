@@ -4689,6 +4689,8 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
 
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
+   *success = FALSE;
+
    /* cutoff "logicor" from the constraint string */
    startptr = strchr(str, '(');
 
@@ -4709,44 +4711,61 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
       SCIPerrorMessage("missing ending character ')' parsing logicor\n");
       return SCIP_OKAY;
    }
+   assert(endptr >= startptr);
 
-   /* copy string for parsing */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
-
-   varssize = 100;
-   nvars = 0;
-
-   /* allocate buffer array for variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-
-   /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-
-   if( *success )
+   if( endptr > startptr )
    {
-      /* check if the size of the variable array was great enough */
-      if( varssize < requiredsize )
-      {
-         /* reallocate memory */
-         varssize = requiredsize;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+      /* copy string for parsing */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
 
-         /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+      varssize = 100;
+      nvars = 0;
+
+      /* allocate buffer array for variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+      /* parse string */
+      SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+
+      if( *success )
+      {
+         /* check if the size of the variable array was great enough */
+         if( varssize < requiredsize )
+         {
+            /* reallocate memory */
+            varssize = requiredsize;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+
+            /* parse string again with the correct size of the variable array */
+            SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+         }
+
+         assert(*success);
+         assert(varssize >= requiredsize);
+
+         /* create logicor constraint */
+         SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
 
-      assert(*success);
-      assert(varssize >= requiredsize);
-
-      /* create logicor constraint */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      /* free buffers */
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &strcopy);
    }
+   else
+   {
+      if( !modifiable )
+      {
+         SCIPerrorMessage("cannot create empty logicor constraint\n");
+         return SCIP_OKAY;
+      }
 
-   /* free buffers */
-   SCIPfreeBufferArray(scip, &vars);
+      /* create empty logicor constraint */
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, 0, NULL,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-   SCIPfreeBufferArray(scip, &strcopy);
+      *success = TRUE;
+   }
 
    return SCIP_OKAY;
 }
