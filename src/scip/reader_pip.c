@@ -2286,7 +2286,7 @@ void printRowNl(
       {
       case SCIP_EXPR_CONST:
       {
-         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr), varname);
+         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr));
          appendLine(scip, file, linebuffer, &linecnt, buffer);
 
          break;
