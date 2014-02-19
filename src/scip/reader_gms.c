@@ -64,9 +64,6 @@
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
 #define GMS_DEFAULT_SIGNPOWER FALSE
-#ifdef WITH_GAMS
-#define GMS_LOGOPTION        3
-#endif
 
 /*
  * Local methods (for writing)
@@ -2066,7 +2063,7 @@ SCIP_DECL_READERREAD(readerReadGms)
 
    /* call GAMS with convertd solver to get compiled model instance in temporary directory */
    SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d",
-      filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? GMS_LOGOPTION : 0);
+      filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? 3 : 0);
    SCIPdebugMessage(gamscall);
    rc = system(gamscall);
    if( rc != 0 )
