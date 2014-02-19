@@ -1978,7 +1978,8 @@ SCIP_RETCODE readBinaries(
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
-      if( !SCIPisFeasZero(scip, lb) || (!SCIPisFeasEQ(scip, ub, 1.0) && !SCIPisInfinity(scip, ub)) )
+      if( (!SCIPisFeasZero(scip, lb) && !SCIPisFeasEQ(scip, lb, 1.0)) ||
+          (!SCIPisFeasZero(scip, ub) && !SCIPisFeasEQ(scip, ub, 1.0) && !SCIPisInfinity(scip, ub)) )
       {
          SCIPwarningMessage(scip, "variable <%s> declared as binary has non-binary bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
