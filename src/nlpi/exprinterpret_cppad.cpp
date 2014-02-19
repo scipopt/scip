@@ -125,7 +125,7 @@ size_t thread_num(void)
    {
       pthread_mutex_lock(&cppadmutex);
 
-      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", ncurthreads, (void*)pthread_self());
+      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", (long unsigned int)ncurthreads, (void*)pthread_self());
 
       pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
 
