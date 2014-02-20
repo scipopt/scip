@@ -32,7 +32,8 @@ MEMLIMIT=${10}      # - memory limit for the solver
 NODELIMIT=${11}  # - node limit for the solver
 LPS=${12}        # - LP solver to use
 DISPFREQ=${13}   # - display frequency for chronological output table
-SOLUFILE=${14}   # - solu file, only necessary if $SETCUTOFF is 1
+OPTCOMMAND=${14} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
+SOLUFILE=${15}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -99,7 +100,7 @@ then
     fi
 fi
 
-echo optimize                          >> $TMPFILE
+echo $OPTCOMMAND                       >> $TMPFILE
 echo display statistics                >> $TMPFILE
 echo checksol                          >> $TMPFILE
 echo quit                              >> $TMPFILE
