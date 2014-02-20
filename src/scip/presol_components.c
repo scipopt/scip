@@ -1042,36 +1042,47 @@ SCIP_RETCODE splitProblem(
          /* there is no constraint to connect variables, so there should be only one variable in the component */
          assert(ncompvars == 1);
 
-         /* fix variable to its best bound (or 0.0, if objective is 0) */
-         if( SCIPisPositive(scip, SCIPvarGetObj(compvars[0])) )
-            compfixvals[0] = SCIPvarGetLbGlobal(compvars[0]);
-         else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
-            compfixvals[0] = SCIPvarGetUbGlobal(compvars[0]);
-         else
+         /* is the variable still locked? */
+         if( SCIPvarGetNLocksUp(compvars[0]) == 0 && SCIPvarGetNLocksDown(compvars[0]) == 0 )
          {
-            compfixvals[0] = 0.0;
-            compfixvals[0] = MIN(compfixvals[0], SCIPvarGetUbGlobal(compvars[0])); /*lint !e666*/
-            compfixvals[0] = MAX(compfixvals[0], SCIPvarGetLbGlobal(compvars[0])); /*lint !e666*/
-         }
+            /* fix variable to its best bound (or 0.0, if objective is 0) */
+            if( SCIPisPositive(scip, SCIPvarGetObj(compvars[0])) )
+               compfixvals[0] = SCIPvarGetLbGlobal(compvars[0]);
+            else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
+               compfixvals[0] = SCIPvarGetUbGlobal(compvars[0]);
+            else
+            {
+               compfixvals[0] = 0.0;
+               compfixvals[0] = MIN(compfixvals[0], SCIPvarGetUbGlobal(compvars[0])); /*lint !e666*/
+               compfixvals[0] = MAX(compfixvals[0], SCIPvarGetLbGlobal(compvars[0])); /*lint !e666*/
+            }
 
 #ifdef SCIP_MORE_DEBUG
-	 SCIPinfoMessage(scip, NULL, "presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
-            SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
-            SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
+            SCIPinfoMessage(scip, NULL, "presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
+               SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
+               SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
 #else
-	 SCIPdebugMessage("presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
-            SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
-            SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
+            SCIPdebugMessage("presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
+               SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
+               SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
 #endif
 
-         SCIP_CALL( SCIPfixVar(scip, compvars[0], compfixvals[0], &infeasible, &fixed) );
-         assert(!infeasible);
-         assert(fixed);
-         ++(*ndeletedvars);
-         ++(*nsolvedprobs);
+            SCIP_CALL( SCIPfixVar(scip, compvars[0], compfixvals[0], &infeasible, &fixed) );
+            assert(!infeasible);
+            assert(fixed);
+            ++(*ndeletedvars);
+            ++(*nsolvedprobs);
 
-         /* update statistics */
-         SCIPstatistic( updateStatisticsSingleVar(presoldata) );
+            /* update statistics */
+            SCIPstatistic( updateStatisticsSingleVar(presoldata) );
+         }
+         else
+         {
+            /* variable is still locked */
+            SCIPdebugMessage("strange?! components with single variable variable <%s>[%g,%g] (locks [%d, %d]) that won't be fixed due to locks\n",
+               SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
+               SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]));
+         }
       }
       /* we do not want to solve the component, if it is the last unsolved one */
       else if( ncompvars < SCIPgetNVars(scip) )
