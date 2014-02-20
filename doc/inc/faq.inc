@@ -967,14 +967,18 @@
       its objective function value is not a valid dual bound. However, there is a way in SCIP to
       stop the pricing process earlier, called "early branching".
     </p>
-    <p class="a">  
+    <p class="a">
       The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
-      In the usual case that the pricer either adds a new variable or ensures that there are no further 
-      variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS. 
-      If the pricer aborts pricing without creating a new variable, but there might exist additional 
-      variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN. 
-      In this case, the lp solution will not be used as a lower bound. 
-      The pricer can, however, store a valid lower bound in the lowerbound pointer.
+      In the usual case that the pricer either adds a new variable or ensures that there are no further
+      variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
+      If the pricer aborts pricing without creating a new variable, but there might exist additional
+      variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+      In this case, the LP solution will not be used as a lower bound.
+      Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
+      The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
+      bound of the current node.
+      Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
+      in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
     </p>
 
     <p class="q">
