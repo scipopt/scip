@@ -1093,6 +1093,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -1113,6 +1114,12 @@ SCIP_RETCODE SCIPconstructCurrentLP(
 
       /* setup initial LP relaxation of node */
       SCIP_CALL( initLP(blkmem, set, stat, transprob, origprob, tree, lp, pricestore, sepastore, branchcand, eventqueue, eventfilter, initroot,
+            cutoff) );
+   }
+   else if( newinitconss )
+   {
+      SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob,
+            origprob, tree, lp, branchcand, eventqueue, eventfilter, FALSE, FALSE,
             cutoff) );
    }
 
@@ -1206,6 +1213,7 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
@@ -1227,8 +1235,9 @@ SCIP_RETCODE solveNodeInitialLP(
    *lperror = FALSE;
 
    /* load the LP into the solver */
-   SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, transprob, origprob, tree, lp, pricestore, sepastore, branchcand, eventqueue,
-         eventfilter, cutoff) );
+   SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, transprob, origprob, tree, lp, pricestore, sepastore,
+         branchcand, eventqueue, eventfilter, newinitconss, cutoff) );
+
    if( *cutoff )
       return SCIP_OKAY;
 
@@ -2617,10 +2626,12 @@ SCIP_RETCODE solveNodeLP(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             initiallpsolved,    /**< was the initial LP already solved? */
+   SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if an unbounded ray was found in the LP */
    SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occured */
-   SCIP_Bool*            pricingaborted      /**< pointer to store TRUE, if the pricing was aborted and the lower bound must not be used */ 
+   SCIP_Bool*            pricingaborted      /**< pointer to store TRUE, if the pricing was aborted and the lower bound
+                                              *   must not be used */
    )
 {
    SCIP_Longint nlpiterations;
@@ -2642,8 +2653,9 @@ SCIP_RETCODE solveNodeLP(
    if( !initiallpsolved )
    {
       /* load and solve the initial LP of the node */
-      SCIP_CALL( solveNodeInitialLP(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, pricestore, sepastore,
-            branchcand, eventfilter, eventqueue, cutoff, lperror) );
+      SCIP_CALL( solveNodeInitialLP(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, pricestore,
+            sepastore, branchcand, eventfilter, eventqueue, newinitconss, cutoff, lperror) );
+
       assert(*cutoff || *lperror || (lp->flushed && lp->solved));
       SCIPdebugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n",
          SCIPlpGetSolstat(lp),
@@ -3254,6 +3266,8 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool*            forcedenforcement   /**< pointer to store whether the enforcement of pseudo solution should be forced */
    )
 {
+   SCIP_Bool newinitconss;
+
    assert(set != NULL);
    assert(stat != NULL);
    assert(origprob != NULL);
@@ -3284,12 +3298,14 @@ SCIP_RETCODE propAndSolve(
    assert(pricingaborted != NULL);
    assert(forcedenforcement != NULL);
 
+   newinitconss = FALSE;
+
    /* domain propagation */
    if( propagate && !(*cutoff) )
    {
-      SCIP_Bool lpwasflushed;
-      SCIP_Longint oldnboundchgs;
       SCIP_Longint oldninitconssadded;
+      SCIP_Longint oldnboundchgs;
+      SCIP_Bool lpwasflushed;
 
       lpwasflushed = lp->flushed;
       oldnboundchgs = stat->nboundchgs;
@@ -3297,6 +3313,8 @@ SCIP_RETCODE propAndSolve(
 
       SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation, timingmask, cutoff) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+      newinitconss = (stat->ninitconssadded != oldninitconssadded);
 
       if( timingmask != SCIP_PROPTIMING_BEFORELP )
          *fullpropagation = FALSE;
@@ -3307,7 +3325,7 @@ SCIP_RETCODE propAndSolve(
       /* if the LP was flushed and is now no longer flushed, a bound change occurred, and the LP has to be resolved;
        * we also have to solve the LP if new intial constraints were added which need to be added to the LP
        */
-      solvelp = solvelp || (lpwasflushed && (!lp->flushed || stat->ninitconssadded != oldninitconssadded));
+      solvelp = solvelp || (lpwasflushed && (!lp->flushed || newinitconss));
 
       /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
       if( stat->nboundchgs > oldnboundchgs )
@@ -3349,7 +3367,7 @@ SCIP_RETCODE propAndSolve(
             FALSE, propagateagain) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
    }
-         
+
    /* solve external relaxations with non-negative priority */
    if( solverelax && !(*cutoff) )
    {
@@ -3378,9 +3396,10 @@ SCIP_RETCODE propAndSolve(
       *unbounded = FALSE;
 
       /* solve the node's LP */
-      SCIP_CALL( solveNodeLP(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, pricestore, sepastore,
-            cutpool, delayedcutpool, branchcand, conflict, eventfilter, eventqueue, *initiallpsolved, cutoff, unbounded, 
-            lperror, pricingaborted) );
+      SCIP_CALL( solveNodeLP(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, pricestore,
+            sepastore, cutpool, delayedcutpool, branchcand, conflict, eventfilter, eventqueue, *initiallpsolved,
+            newinitconss, cutoff, unbounded, lperror, pricingaborted) );
+
       *initiallpsolved = TRUE;
       SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %"SCIP_LONGINT_FORMAT", count: %"SCIP_LONGINT_FORMAT"\n",
          SCIPlpGetSolstat(lp),
