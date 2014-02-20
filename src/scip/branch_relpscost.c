@@ -40,7 +40,7 @@
 #define DEFAULT_CUTOFFWEIGHT     0.0001 /**< weight in score calculations for cutoff score */
 #define DEFAULT_PSCOSTWEIGHT     1.0    /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE      5.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iterations */
 #define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     9      /**< maximal number of further variables evaluated without better score */

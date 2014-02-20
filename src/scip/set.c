@@ -288,7 +288,7 @@
                                                  *   bound compared to best node's dual bound for applying separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */

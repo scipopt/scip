@@ -48,11 +48,11 @@
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
 #define DEFAULT_STOPAFTERFEASIBLE TRUE  /**< Should the heuristic stop calculating optimal shift values when no more rows are violated? */
-#define DEFAULT_PREFERBINARIES   FALSE  /**< Should binary variables be shifted first? */
+#define DEFAULT_PREFERBINARIES   TRUE   /**< Should binary variables be shifted first? */
 #define SORTKEYS                 "nrtuv"/**< options sorting key: (n)orms down, norms (u)p, (v)iolated rows decreasing,
                                          *   viola(t)ed rows increasing, or (r)andom */
 #define DEFAULT_NOZEROFIXING      FALSE /**< should variables with a zero shifting value be delayed instead of being fixed? */
-#define DEFAULT_FIXBINLOCKS       FALSE /**< should binary variables with no locks in one direction be fixed to that direction? */
+#define DEFAULT_FIXBINLOCKS       TRUE  /**< should binary variables with no locks in one direction be fixed to that direction? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
