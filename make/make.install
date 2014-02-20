@@ -55,7 +55,7 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 644 -p $(SRCDIR)/tclique/*.h $(INSTALLDIR)/$(INCLUDEDIR)/tclique/
 		@-install -m 644 -p $(SRCDIR)/xml/*.h $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 else
-		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
+		$(error "Installation directory required - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local")
 endif
 
 
@@ -66,8 +66,6 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
 		@-install -m 644 -p $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
-else
-		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
 endif
 
 
@@ -78,8 +76,6 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP binary into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
 		@-install -m 755 -p $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) $(INSTALLDIR)/$(BINDIR)/
-else
-		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
 endif
 
 
@@ -109,6 +105,6 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -f $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE)); 
 else
-		@echo "no installation directory specified - use make install INSTALLDIR=<dir>, e.g., make install INSTALLDIR=/usr/local"
+		$(error "no installation directory specified - use make uninstall INSTALLDIR=<dir>, e.g., make uninstall INSTALLDIR=/usr/local")
 endif
 
