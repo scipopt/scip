@@ -45,7 +45,7 @@ testgamscluster:
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 
-SCIPEXAMPLES	=	Binpacking Coloring Eventhdlr MIPSolver TSP
+SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver Scheduler TSP VRP
 
 .PHONY: testexamples
 testexamples:
