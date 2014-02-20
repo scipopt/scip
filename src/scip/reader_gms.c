@@ -1049,10 +1049,6 @@ SCIP_RETCODE printSOSCons(
    /* start each line with a space */
    appendLine(scip, file, linebuffer, &linecnt, " ");
 
-   /* write as
-    * sos1 Variable name_sos(sosset);
-    *  name_soseq(sosset).. name_sos(sosset) =e= s$(sameas(sosset,'slack') + z$(sameas(sosset,'bin'));
-    */
    SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, rowname) );
 
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "Set %s_sosset /1*%d/;", consname, nvars);
