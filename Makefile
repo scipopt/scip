@@ -43,7 +43,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.1.0a
+VERSION		=	3.1.0
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
