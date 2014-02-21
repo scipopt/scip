@@ -125,6 +125,14 @@ $NAME/interfaces/ampl/check/testset/short.test $NAME/interfaces/ampl/check/insta
 $NAME/interfaces/ampl/check/instances/MINLP/*.row $NAME/interfaces/ampl/check/instances/MINLP/*.nl \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/src/* \
+$NAME/interfaces/jni/createJniInterface.py $NAME/interfaces/jni/jniinterface.dxy \
+$NAME/interfaces/jni/Makefile $NAME/interfaces/jni/README \
+$NAME/interfaces/jni/src/*h $NAME/interfaces/jni/src/*c $NAME/interfaces/jni/src/depend* \
+$NAME/interfaces/jni/java/de/zib/jscip/nativ/NativeScipException.java \
+$NAME/interfaces/jni/examples/JniKnapsack/Makefile $NAME/interfaces/jni/examples/JniKnapsack/run.sh \
+$NAME/interfaces/jni/examples/JniKnapsack/java/JniKnapsack.java \
+$NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
+$NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
