@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.1.0a
+ * @version  3.1.0
  *
  * \image html scippy.png
  *
@@ -678,7 +678,7 @@
   -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
   -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
 
- * \endverbatim
+   \endverbatim
  *
  * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
  *
@@ -723,7 +723,7 @@
   -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
   -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
 
- * \endverbatim
+   \endverbatim
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
@@ -849,7 +849,7 @@
  *   directory). For instance, type
  *   \verbatim
  > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
- *   \endverbatim
+     \endverbatim
  *
  *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
@@ -1388,7 +1388,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \verbatim
+ *  \code
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1399,7 +1399,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endverbatim
+ *  \endcode
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -5611,26 +5611,25 @@
 /**@page DEBUG Debugging
  *
  *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
-
+ *
  *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
  *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
  *    following example, taken from the file src/scip/cons_linear.c:
- * \verbatim
-SCIP_RETCODE consdataCatchEvent(
-   SCIP*                 scip,               /**< SCIP data structure *\/
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
-   int                   pos                 /**< array position of variable to catch bound change events for *\/
-   )
-   {
-      assert(scip != NULL);
-      assert(consdata != NULL);
-      assert(eventhdlr != NULL);
-      assert(0 <= pos && pos < consdata->nvars);
-   ...
-   }
- * \endverbatim
- *    @n
+ *    \code
+ *    SCIP_RETCODE consdataCatchEvent(
+ *       SCIP*                 scip,               /**< SCIP data structure *\/
+ *       SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
+ *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
+ *       int                   pos                 /**< array position of variable to catch bound change events for *\/
+ *       )
+ *       {
+ *          assert(scip != NULL);
+ *          assert(consdata != NULL);
+ *          assert(eventhdlr != NULL);
+ *          assert(0 <= pos && pos < consdata->nvars);
+ *          ...
+ *       }
+ *    \endcode
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>

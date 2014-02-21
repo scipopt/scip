@@ -548,12 +548,15 @@ SCIP_RETCODE walkExpression(
          break;
       }
 
+      case MINLIST:
       case MAXLIST:
       {
          expr_va* amplexpr_va;
          const de* d;
          SCIP_EXPR* arg;
+         SCIP_EXPROP operand;
 
+         operand = opnum == MINLIST ? SCIP_EXPR_MIN : SCIP_EXPR_MAX;
          amplexpr_va = (expr_va*)amplexpr;
 
          arg = NULL;
@@ -577,7 +580,7 @@ SCIP_RETCODE walkExpression(
                   SCIPexprFreeDeep(SCIPblkmem(scip), &arg);
                   break;
                }
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg) );
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, operand, *scipexpr, arg) );
             }
          }
          assert(*scipexpr != NULL); /* empty list?? */

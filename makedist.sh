@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.1.0a"
+VERSION="3.1.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -123,8 +123,23 @@ $NAME/interfaces/ampl/Makefile $NAME/interfaces/ampl/INSTALL $NAME/interfaces/am
 $NAME/interfaces/ampl/src/* $NAME/interfaces/ampl/check/check.sh \
 $NAME/interfaces/ampl/check/testset/short.test $NAME/interfaces/ampl/check/instances/MINLP/*.col \
 $NAME/interfaces/ampl/check/instances/MINLP/*.row $NAME/interfaces/ampl/check/instances/MINLP/*.nl \
+$NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/instances/SOS/*.row \
+$NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/src/* \
+$NAME/interfaces/jni/createJniInterface.py $NAME/interfaces/jni/jniinterface.dxy \
+$NAME/interfaces/jni/Makefile $NAME/interfaces/jni/README \
+$NAME/interfaces/jni/src/*h $NAME/interfaces/jni/src/*c $NAME/interfaces/jni/src/depend* \
+$NAME/interfaces/jni/java/de/zib/jscip/nativ/NativeScipException.java \
+$NAME/interfaces/jni/examples/JniKnapsack/Makefile $NAME/interfaces/jni/examples/JniKnapsack/run.sh \
+$NAME/interfaces/jni/examples/JniKnapsack/java/JniKnapsack.java \
+$NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
+$NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
+$NAME/interfaces/python/include/ $NAME/interfaces/python/lib/ \
+$NAME/interfaces/python/pyscipopt/*.pyx $NAME/interfaces/python/pyscipopt/*.pxd \
+$NAME/interfaces/python/pyscipopt/*.py $NAME/interfaces/python/tests/*.py \
+$NAME/interfaces/python/INSTALL $NAME/interfaces/python/LICENSE \
+$NAME/interfaces/python/README $NAME/interfaces/python/*.py \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \

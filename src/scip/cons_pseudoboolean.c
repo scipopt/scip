@@ -113,6 +113,10 @@
  *         maybe add in SCIPaggregateVars a check for original variables, to prefer them if the variable type is the
  *         same; probably it would be better too if we would aggregate two resultants that the one with less variables
  *         inside the and-constraint will stay active
+ *
+ * @note since product resultants are artificial, we do not care for their solution value, but this can lead to fixation
+ *       of the resultant not representing the product, in 'optimization mode' we do not care, but this might make
+ *       solution debugging complicated
  */
 
 /** and-constraint data object */

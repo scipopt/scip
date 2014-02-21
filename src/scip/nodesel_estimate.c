@@ -158,6 +158,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
          *selnode = SCIPgetBestNode(scip);
       SCIPdebugMessage("  -> best node   : lower=%g\n",
          *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
+      return SCIP_OKAY;
    }
 
    /* calculate minimal and maximal plunging depth */

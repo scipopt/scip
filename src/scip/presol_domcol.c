@@ -3393,6 +3393,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                lb = SCIPvarGetLbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, lb));
 
+               SCIPdebugMessage("fixing dominated variable <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
+
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
@@ -3428,6 +3430,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                var = matrix->vars[v];
                ub = SCIPvarGetUbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, ub));
+
+               SCIPdebugMessage("fixing dominated variable <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
 
                /* fix at upper bound */
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );

@@ -41,6 +41,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_trysol.h"
+#include "scip/debug.h"
 
 
 /* constraint handler properties */
@@ -1380,6 +1381,26 @@ SCIP_RETCODE createRelaxation(
                consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
                SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+         if( SCIPdebugIsMainscip(scip) )
+         {
+            SCIP_Real solval;
+            int count = 0;
+            int v;
+
+            for( v = consdata->nvars - 1; v >= 0; --v )
+            {
+               SCIP_CALL( SCIPdebugGetSolVal(scip, consdata->vars[v], &solval) );
+               count += (solval > 0.5 ? 1 : 0);
+            }
+            assert((count - consdata->rhs) % 2 == 0);
+            solval = (SCIP_Real) ((count - consdata->rhs) / 2);
+
+            /* store debug sol value of artificial integer variable */
+            SCIP_CALL( SCIPdebugAddSolVal(scip, consdata->intvar, solval) );
+         }
+#endif
 
          /* install the rounding locks for the internal variable */
          SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );

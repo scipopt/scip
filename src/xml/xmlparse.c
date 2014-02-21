@@ -112,7 +112,7 @@ static void xmlErrmsg(
 
       if ( strchr(ppos->buf, '\n') == NULL )
       {
-         char retc;
+         int retc;
 
          retc = fputc('\n', stderr);
          assert(retc != EOF);
@@ -243,9 +243,9 @@ int mygetc(
       if ( NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp) )
          return EOF;
 #else
-      size_t len = FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
+      size_t len = (size_t) FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
 
-      if (len <= 0)
+      if( len == 0 || len > sizeof(ppos->buf) - 1 )
          return EOF;
 
       ppos->buf[len] = '\0';
@@ -586,11 +586,13 @@ char* doCdata(
    }
    assert(data != NULL);
 
+   /*lint --e{527}*/
    if ( c != EOF )
    {
       assert(len  >= 2);
+      assert(data != NULL);
 
-      data[len - 2] = '\0';
+      data[len - 2] = '\0'; /*lint !e413*/
    }
    else
    {
@@ -652,8 +654,7 @@ void handleDecl(
    {
       const char* name;
       XMLSECTION  what;
-   }
-   key[] =
+   } key[] =
    {
       { "--",       IS_COMMENT  },
       { "ATTLIST",  IS_ATTLIST  },

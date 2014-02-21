@@ -1129,9 +1129,9 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             {
                /* shrink dynamic size arrays to their minimal sizes */
                SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
-                     (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+                     (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
-            
+
                /* convert into static domain change */
                SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGDYN), sizeof(SCIP_DOMCHGBOUND)) );
                (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOUND; /*lint !e641*/
@@ -1141,7 +1141,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          {
             /* shrink dynamic size arrays to their minimal sizes */
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
-                  (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+                  (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
                   (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
@@ -3317,16 +3317,16 @@ SCIP_RETCODE SCIPvarTransform(
             origvar->glbdom.lb, origvar->glbdom.ub, (SCIP_Real)objsense * origvar->obj,
             SCIPvarGetType(origvar), origvar->initial, origvar->removable,
             origvar->vardelorig, origvar->vartrans, origvar->vardeltrans, origvar->varcopy, NULL) );
-      
+
       /* copy the branch factor and priority */
       (*transvar)->branchfactor = origvar->branchfactor;
       (*transvar)->branchpriority = origvar->branchpriority;
-      (*transvar)->branchdirection = origvar->branchdirection;
+      (*transvar)->branchdirection = origvar->branchdirection; /*lint !e732*/
 
       /* duplicate hole lists */
       SCIP_CALL( holelistDuplicate(&(*transvar)->glbdom.holelist, blkmem, set, origvar->glbdom.holelist) );
       SCIP_CALL( holelistDuplicate(&(*transvar)->locdom.holelist, blkmem, set, origvar->locdom.holelist) );
-      
+
       /* link original and transformed variable */
       origvar->data.original.transvar = *transvar;
       SCIP_CALL( varAddParent(*transvar, blkmem, set, origvar) );
@@ -3876,7 +3876,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       assert(var != NULL);
 
-      if( scalar == 0 )
+      if( scalar == 0.0 )
          continue;
 
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
@@ -4050,8 +4050,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
       default:
-         /* x = c */
+         /* case x = c, but actually we should not be here, since SCIPvarGetProbvarSum() returns a scalar of 0.0 for
+          * fixed variables and is handled already
+          */
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
+         assert(SCIPsetIsZero(set, var->glbdom.lb) && SCIPsetIsEQ(set, var->glbdom.lb, var->glbdom.ub));
       }
    }
 
@@ -11566,6 +11569,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( (*var)->data.multaggr.vars != NULL );
             assert( (*var)->data.multaggr.scalars != NULL );
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
+            assert(!EPSZ((*var)->data.multaggr.scalars[0], 1e-06));
 
             /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
              * another variable which needs to be fixed
@@ -11581,13 +11585,17 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             }
             else
             {
+               /* @note due to fixations, a multi-aggregation can have a constant of zero and a negative scalar or even
+                *       a scalar in absolute value unequal to one, in this case this aggregation variable needs to be
+                *       fixed to zero, but should be done by another enforcement; so not depending on the scalar, we
+                *       will return the aggregation variable
+                */
+               if( !EPSEQ(REALABS((*var)->data.multaggr.scalars[0]), 1.0, 1e-06) )
+                  return SCIP_OKAY;
+
                assert( EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) );
                assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
 
-               /* @note due to fixations, a multi-aggregation can have a constant of zero and a negative scalar, in this
-                *       case this aggregation variable needs to be fixed to zero, but should be done by another
-                *       enforcement; so not depending on the scalar, we will return the aggregation variable
-                */
                if( EPSZ((*var)->data.multaggr.constant, 1e-06) )
                {
                   /* if the scalar is negative, either the aggregation variable is already fixed to zero or has at

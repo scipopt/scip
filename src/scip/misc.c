@@ -331,7 +331,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
 {
    assert(sparsesol != NULL);
    assert(vars != NULL);
-   assert(nvars > 0);
+   assert(nvars >= 0);
 
    SCIP_ALLOC( BMSallocMemory(sparsesol) );
 

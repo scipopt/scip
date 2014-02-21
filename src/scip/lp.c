@@ -437,7 +437,7 @@ SCIP_RETCODE colStoreSolVals(
    /* store values */
    storedsolvals->primsol = col->primsol;
    storedsolvals->redcost = col->redcost;
-   storedsolvals->basisstatus = col->basisstatus; /*lint !e641*/
+   storedsolvals->basisstatus = col->basisstatus; /*lint !e641 !e732*/
 
    return SCIP_OKAY;
 }
@@ -463,7 +463,7 @@ SCIP_RETCODE colRestoreSolVals(
       col->primsol = storedsolvals->primsol;
       col->redcost = storedsolvals->redcost;
       col->validredcostlp = validlp;
-      col->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
+      col->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
 
       /* we do not save the farkas coefficient, since it can be recomputed; thus, we invalidate it here */
       col->validfarkaslp = -1;
@@ -520,7 +520,7 @@ SCIP_RETCODE rowStoreSolVals(
    {
       storedsolvals->dualsol = row->dualsol;
       storedsolvals->activity = row->activity;
-      storedsolvals->basisstatus = row->basisstatus; /*lint !e641*/
+      storedsolvals->basisstatus = row->basisstatus; /*lint !e641 !e732*/
    }
 
    return SCIP_OKAY;
@@ -551,7 +551,7 @@ SCIP_RETCODE rowRestoreSolVals(
          row->dualsol = storedsolvals->dualsol;
       row->activity = storedsolvals->activity;
       row->validactivitylp = validlp;
-      row->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
+      row->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
    }
    /* if the row was created after performing the storage (possibly during probing), we treat it as basic;
     * we make sure to invalidate the reduced cost and farkas coefficient, which are not available
@@ -3917,7 +3917,7 @@ void SCIPcolSetStrongbranchData(
    SCIP_Real             sbup,               /**< dual bound after branching column up */
    SCIP_Bool             sbdownvalid,        /**< is the returned down value a valid dual bound? */
    SCIP_Bool             sbupvalid,          /**< is the returned up value a valid dual bound? */
-   int                   iter,               /**< total number of strong branching iterations */
+   SCIP_Longint          iter,               /**< total number of strong branching iterations */
    int                   itlim               /**< iteration limit applied to the strong branching call */
    )
 {
@@ -4998,7 +4998,7 @@ void SCIProwCapture(
 {
    assert(row != NULL);
    assert(row->nuses >= 0);
-   assert(row->nlocks <= (unsigned int)(row->nuses));
+   assert(row->nlocks <= (unsigned int)(row->nuses)); /*lint !e574*/
 
    SCIPdebugMessage("capture row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
    row->nuses++;
@@ -5016,7 +5016,7 @@ SCIP_RETCODE SCIProwRelease(
    assert(row != NULL);
    assert(*row != NULL);
    assert((*row)->nuses >= 1);
-   assert((*row)->nlocks < (unsigned int)((*row)->nuses));
+   assert((*row)->nlocks < (unsigned int)((*row)->nuses)); /*lint !e574*/
 
    SCIPdebugMessage("release row <%s> with nuses=%d and nlocks=%u\n", (*row)->name, (*row)->nuses, (*row)->nlocks);
    (*row)->nuses--;
@@ -17500,14 +17500,15 @@ SCIP_RETCODE SCIPlpEndDive(
    lp->diving = FALSE;
    lp->divingobjchg = FALSE;
 
-   /* if the LP was solved before starting the dive, but not to optimality or unboundedness, then we need to solve the
+   /* if the LP was solved before starting the dive, but not to optimality (or unboundedness), then we need to solve the
     * LP again to reset the solution (e.g. we do not save the Farkas proof for infeasible LPs, because we assume that we
     * are not called in this case, anyway); restoring by solving the LP again in either case can be forced by setting
     * the parameter resolverestore to TRUE
+    * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
     */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || (lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL && lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY)) )
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL) )
    {
       SCIP_Bool lperror;
 

@@ -24,7 +24,6 @@
 #include <stdarg.h>
 
 #include "scip/pub_fileio.h"
-#include "scip/pub_misc.h"
 
 
 #define BUFFER_LEN 8192
@@ -46,12 +45,19 @@ SCIP_FILE* SCIPfdopen(int fildes, const char *mode)
 
 size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
 {
-   return gzread((gzFile)stream, ptr, size * nmemb);
+#ifndef NDEBUG
+   int nbytesread = gzread((gzFile)stream, ptr, size * nmemb);
+   assert(nbytesread >= 0);
+
+   return (size_t) nbytesread;
+#else
+   return (size_t) gzread((gzFile)stream, ptr, size * nmemb);
+#endif
 }
 
 size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
 {
-   return gzwrite((gzFile)stream, ptr, size * nmemb);
+   return (size_t) gzwrite((gzFile)stream, ptr, size * nmemb);
 }
 
 int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
@@ -107,7 +113,7 @@ int SCIPfseek(SCIP_FILE *stream, long offset, int whence)
 
 void SCIPrewind(SCIP_FILE *stream)
 {
-   gzrewind((gzFile)stream);
+   (void) gzrewind((gzFile)stream);
 }
 
 long SCIPftell(SCIP_FILE *stream)

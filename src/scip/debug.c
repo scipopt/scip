@@ -47,6 +47,7 @@ static int nsolvals = 0;
 static int solsize = 0;
 static SCIP_SET* mainscipset = NULL;
 static SCIP_SOL* debugsol = NULL;
+static SCIP_STAGE debugsolstage = SCIP_STAGE_INIT;
 static SCIP_HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static SCIP_Bool falseptr = FALSE;
 static SCIP_Bool trueptr = TRUE;
@@ -210,6 +211,7 @@ SCIP_RETCODE readSolfile(
 
    /* create SCIP solution */
    SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
+   debugsolstage = SCIPgetStage(set->scip);
 
    /* set SCIP solution values */
    SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
@@ -532,7 +534,7 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    if( solinnode != NULL)
       SCIPhashmapFree(&solinnode);
 
-   if( debugsol != NULL )
+   if( debugsol != NULL && SCIPgetStage(set->scip) == debugsolstage )
    {
       SCIP_CALL( SCIPfreeSol(set->scip, &debugsol) );
    }

@@ -855,6 +855,8 @@ SCIP_RETCODE readPolynomial(
    int nvars;
    SCIP_HASHMAP* varhash;
 
+   SCIP_Real constant;
+
    SCIP_EXPRDATA_MONOMIAL** monomials;
    int monomialssize;
    int nmonomials;
@@ -937,6 +939,7 @@ SCIP_RETCODE readPolynomial(
    nvars = 0;
    nfactors = 0;
    monomialdegree = 0;
+   constant = 0.0;
    while( getNextToken(scip, pipinput) )
    {
       SCIP_VAR* var;
@@ -950,13 +953,20 @@ SCIP_RETCODE readPolynomial(
       issense = FALSE;  /* fix lint warning */
       if( (isnewsection = isNewSection(scip, pipinput)) ||  /*lint !e820*/ 
          (issense = isSense(pipinput, NULL))      ||  /*lint !e820*/
-         (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
+         ((nfactors > 0 || havevalue) && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
       {
          /* finish the current monomial */
-         SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialssize, nmonomials + 1) );
-         SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip),
-               &monomials[nmonomials], coefsign * coef, nfactors, varidxs, exponents) );
-         ++nmonomials;
+         if( nfactors > 0 )
+         {
+            SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialssize, nmonomials + 1) );
+            SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip),
+                  &monomials[nmonomials], coefsign * coef, nfactors, varidxs, exponents) );
+            ++nmonomials;
+         }
+         else if( havevalue) 
+         {
+            constant += coefsign * coef;
+         }
 
          if( monomialdegree > *degree )
             *degree = monomialdegree;
@@ -1100,7 +1110,7 @@ SCIP_RETCODE readPolynomial(
 
    /* create polynomial expression, let polynomial take over ownership of monomials */
    SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &expression, nvars, varexprs,
-         nmonomials, monomials, 0.0, FALSE) );
+         nmonomials, monomials, constant, FALSE) );
 
    SCIPfreeBufferArray(scip, &varexprs);
 
@@ -1152,7 +1162,7 @@ void getLinearAndQuadraticCoefs(
    nmonomials = SCIPexprGetNMonomials(expr);
    monomials  = SCIPexprGetMonomials(expr);
 
-   *constant = 0.0;
+   *constant = SCIPexprGetPolynomialConstant(expr);
    *nlinvars = 0;
    *nquadterms = 0;
    for( i = 0; i < nmonomials; ++i )
@@ -1275,6 +1285,14 @@ SCIP_RETCODE readObjective(
       assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
 
       nmonomials = SCIPexprGetNMonomials(expr);
+      
+      if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
+      {
+         SCIP_VAR* objconst;
+         SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, SCIPexprGetPolynomialConstant(expr), SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, objconst) );
+         SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
+      }
 
       assert(degree >= 0);
       if( degree == 1 )
@@ -1285,7 +1303,6 @@ SCIP_RETCODE readObjective(
 
          assert(SCIPexprtreeGetVars(exprtree) != NULL);
          assert(SCIPexprGetNChildren(expr) == SCIPexprtreeGetNVars(exprtree));
-         assert(SCIPexprGetPolynomialConstant(expr) == 0.0);
 
          monomials  = SCIPexprGetMonomials(expr);
 
@@ -2286,7 +2303,7 @@ void printRowNl(
       {
       case SCIP_EXPR_CONST:
       {
-         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr), varname);
+         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr));
          appendLine(scip, file, linebuffer, &linecnt, buffer);
 
          break;

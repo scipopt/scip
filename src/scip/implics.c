@@ -1401,7 +1401,7 @@ int cliquesSearchClique(
    assert(cliques != NULL || ncliques == 0);
    assert(clique != NULL);
 
-   cliqueid = clique->id;
+   cliqueid = clique->id; /*lint !e732*/
    left = -1;
    right = ncliques;
    while( left < right-1 )
@@ -1411,7 +1411,7 @@ int cliquesSearchClique(
 
       assert(cliques != NULL);
       middle = (left+right)/2;
-      id = cliques[middle]->id;
+      id = cliques[middle]->id; /*lint !e732*/
       if( cliqueid < id )
          right = middle;
       else if( cliqueid > id )
@@ -1542,10 +1542,10 @@ SCIP_RETCODE SCIPcliquelistAdd(
 
    SCIPdebugMessage("adding clique %u to cliquelist %p value %u (length: %d)\n", 
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
-   
+
    /* insert clique into list, sorted by clique id */
-   id = clique->id;
-   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i )
+   id = clique->id; /*lint !e732*/
+   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i ) /*lint !e574*/
       (*cliquelist)->cliques[value][i] = (*cliquelist)->cliques[value][i-1];
    (*cliquelist)->cliques[value][i] = clique;
    (*cliquelist)->ncliques[value]++;

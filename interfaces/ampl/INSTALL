@@ -23,7 +23,7 @@ Please let us know if you find any bugs, unexpected behavior, or compatibility p
 
 To use SCIP from AMPL, you have to do the following:
  - execute the ./get.ASL script to download the AMPL solver library sources;
-   the script downloads the compressed tarball from the netlib server and expands it in a directory solvers 
+   the script downloads the compressed tarball and expands it in a directory solvers
  - build the AMPL solver library,
    on Linux, this may be possible by doing "cd solvers; make -f makefile.u",
    on MinGW with MS or Intel compiler, this may be possible by doing "cd solvers; cp details.c0 details.c; nmake -f makefile.vc"

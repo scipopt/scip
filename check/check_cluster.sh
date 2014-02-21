@@ -49,9 +49,10 @@ CLIENTTMPDIR=${16}
 NOWAITCLUSTER=${17}
 EXCLUSIVE=${18}
 PERMUTE=${19}
+OPTCOMMAND=${20}
 
 # check if all variables defined (by checking the last one)
-if test -z $PERMUTE
+if test -z $OPTCOMMAND
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -73,6 +74,7 @@ then
     echo "NOWAITCLUSTER = $NOWAITCLUSTER"
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
+    echo "OPTCOMMAND    = $OPTCOMMAND"
     exit 1;
 fi
 
@@ -146,7 +148,7 @@ do
             fi
 
             # call tmp file configuration for SCIP
-            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $SOLUFILE
+            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
 
             # check queue type
             if test  "$QUEUETYPE" = "srun"

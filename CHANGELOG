@@ -209,6 +209,7 @@ interface
   stopped early although variables were generated, and early branching should be performed
 - new method SCIPcopyImplicationsCliques() that copies implications and cliques
 - add support for SOS1 and SOS2 constraints to AMPL interface (see interfaces/check/testset/SOS/sos?a.mod for example)
+- beta version of a python interface for the scipoptsuite is now available under interfaces/python
 
 parameters:
 - parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function

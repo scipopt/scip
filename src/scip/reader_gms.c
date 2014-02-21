@@ -64,7 +64,6 @@
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
 #define GMS_DEFAULT_SIGNPOWER FALSE
-#define GMS_LOGOPTION        3
 
 /*
  * Local methods (for writing)
@@ -1050,10 +1049,6 @@ SCIP_RETCODE printSOSCons(
    /* start each line with a space */
    appendLine(scip, file, linebuffer, &linecnt, " ");
 
-   /* write as
-    * sos1 Variable name_sos(sosset);
-    *  name_soseq(sosset).. name_sos(sosset) =e= s$(sameas(sosset,'slack') + z$(sameas(sosset,'bin'));
-    */
    SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, rowname) );
 
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "Set %s_sosset /1*%d/;", consname, nvars);
@@ -1073,7 +1068,7 @@ SCIP_RETCODE printSOSCons(
    for( v = 0; v < nvars; ++v )
    {
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "$sameas(%s_sosset,'%d')", consname, v+1);
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, v > 0 ? " + " : NULL, buffer, 1, &vars[v], &coef, transformed) );
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, v > 0 ? " + " : NULL, buffer, 1, &vars[v], &coef, transformed) ); /*lint !e613*/
    }
    appendLine(scip, file, linebuffer, &linecnt, ";");
    endLine(scip, file, linebuffer, &linecnt);
