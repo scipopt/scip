@@ -251,6 +251,13 @@ double negate(
 
 #else /* unknown compiler or MSVS 64bit */
 
+/* MSVC compiler 64bit does not have nextafter
+ * @todo does it have _nextafter ???
+ */
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(NO_NEXTAFTER)
+#define NO_NEXTAFTER
+#endif
+
 /** gets the negation of a double
  *
  * Fallback implementation that calls the negation method from misc.o.
