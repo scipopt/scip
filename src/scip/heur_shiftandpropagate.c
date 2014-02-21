@@ -55,10 +55,7 @@
 #define DEFAULT_FIXBINLOCKS       FALSE /**< should binary variables with no locks in one direction be fixed to that direction? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
-<<<<<<< HEAD
-=======
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -92,10 +89,7 @@ struct SCIP_HeurData
    SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
    SCIP_Bool             normalize;          /**< should coefficients and left/right hand sides be normalized by max row coeff? */
    SCIP_Bool             updateweights;      /**< should row weight be increased every time the row is violated? */
-<<<<<<< HEAD
-=======
    SCIP_Bool             impliscontinuous;   /**< should implicit integer variables be treated as continuous variables? */
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
    SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
@@ -566,11 +560,7 @@ SCIP_RETCODE initMatrix(
       constant = SCIProwGetConstant(row);
 
       SCIPdebugMessage(" %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
-<<<<<<< HEAD
-      SCIPdebug( SCIPprintRow(scip, row, NULL) );
-=======
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
       assert(!SCIPisInfinity(scip, constant));
 
       matrix->rowmatbegin[i] = currentpointer;
@@ -702,11 +692,7 @@ SCIP_RETCODE initMatrix(
       {
          SCIP_VAR* var;
          var = SCIPcolGetVar(col);
-<<<<<<< HEAD
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-=======
          assert(!varIsDiscrete(var, impliscontinuous));
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
          relaxVar(scip, var, matrix, normalize);
       }
    }
@@ -1302,15 +1288,10 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    SCIPstatistic(
       SCIP_HEURDATA* heurdata;
 
-<<<<<<< HEAD
-   /* if statistic mode is enabled, statistics are printed to console */
-   SCIPstatistic(
-=======
       heurdata = SCIPheurGetData(heur);
 
       assert(heurdata != NULL);
 
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
       SCIPstatisticMessage(
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
@@ -1489,11 +1470,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->lpcols, nlpcols) );
    heurdata->nlpcols = nlpcols;
 
-<<<<<<< HEAD
-=======
    impliscontinuous = heurdata->impliscontinuous;
 
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
 #ifndef NDEBUG
    BMSclearMemoryArray(heurdata->lpcols, nlpcols);
 #endif
@@ -2247,13 +2225,6 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/nozerofixing", "should variables with a zero shifting value be delayed instead of being fixed?",
          &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/fixbinlocks", "should binary variables with no locks in one direction be fixed to that direction?",
-<<<<<<< HEAD
-            &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
-               &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights", "should row weight be increased every time the row is violated?",
-                  &heurdata->updateweights, TRUE, DEFAULT_UPDATEWEIGHTS, NULL, NULL) );
-=======
          &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
          &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
@@ -2261,6 +2232,5 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->updateweights, TRUE, DEFAULT_UPDATEWEIGHTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/impliscontinuous", "should implicit integer variables be treated as continuous variables?",
          &heurdata->impliscontinuous, TRUE, DEFAULT_IMPLISCONTINUOUS, NULL, NULL) );
->>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
    return SCIP_OKAY;
 }
