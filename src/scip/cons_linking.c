@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -556,6 +556,9 @@ SCIP_RETCODE consdataCreate(
 
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->intvar, &(*consdata)->intvar) );
    }
+
+   /* mark integer variable to be not multi-aggregated */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->intvar) );
 
    /* capture variables */
    for( v = 0; v < nbinvars; ++v )
@@ -2895,11 +2898,11 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    int nbinvars;
    int v;
 
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a linking constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    (*valid) = TRUE;
@@ -3371,6 +3374,7 @@ SCIP_VAR* SCIPgetIntvarLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3394,6 +3398,7 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3435,6 +3440,7 @@ int SCIPgetNBinvarsLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3455,6 +3461,7 @@ int* SCIPgetValsLinking(
    {
       SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

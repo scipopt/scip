@@ -22,6 +22,8 @@
 extern "C" {
 #endif
 
+typedef struct gmoRec gmoRec_t;
+
 /** includes the gmo file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderGmo(
@@ -34,7 +36,7 @@ SCIP_RETCODE SCIPincludeReaderGmo(
 extern
 void SCIPsetGMOReaderGmo(
    SCIP*                 scip,               /**< SCIP data structure */
-   void*                 gmo                 /**< GMO object, or NULL to reset to default behaviour */
+   gmoRec_t*             gmo                 /**< GMO object, or NULL to reset to default behaviour */
    );
 
 /** passes GAMS options to SCIP and initiates reading of user options file, if given in GMO */
@@ -42,6 +44,15 @@ extern
 SCIP_RETCODE SCIPreadParamsReaderGmo(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** creates a SCIP problem from a GMO */
+extern
+SCIP_RETCODE SCIPcreateProblemReaderGmo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   gmoRec_t*             gmo,                /**< GAMS Model Object */
+   const char*           indicatorfile,      /**< name of file with indicator specification, or NULL */
+   SCIP_Bool             loadinitialsol      /**< whether to pass initial solution from GMO to SCIP */
+);
 
 #ifdef __cplusplus
 }

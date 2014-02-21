@@ -11,6 +11,7 @@
 
 #include <cstdio>
 #include <cassert>
+#include <cstdlib>
 
 #include "gmomcc.h"
 #include "gevmcc.h"
@@ -25,33 +26,41 @@
 extern "C" void goto_set_num_threads(int);
 #endif
 
-#ifdef HAVE_MKL_SETNUMTHREADS
-extern "C" void MKL_Set_Num_Threads(int);
+#ifdef HAVE_OMP_SETNUMTHREADS
+extern "C" void omp_set_num_threads(int);
 #endif
 
-void GamsSolver::setNumThreadsLinearAlgebra(
+void GamsSolver::setNumThreads(
    struct gevRec*      gev,                /**< GAMS environment */
-   int                 nthreads            /**< number of threads for BLAS routines */
+      int              nthreads            /**< number of threads for OpenMP/GotoBlas */
 )
 {
 #ifdef HAVE_GOTO_SETNUMTHREADS
    if( gev != NULL && nthreads > 1 )
    {
       char msg[100];
-      sprintf(msg, "Limit number of threads in GotoBLAS to %d.\n", nthreads);
+      sprintf(msg, "Number of GotoBlas threads: %d.\n", nthreads);
       gevLogPChar(gev, msg);
    }
    goto_set_num_threads(nthreads);
 #endif
 
-#ifdef HAVE_MKL_SETNUMTHREADS
+#ifdef HAVE_OMP_SETNUMTHREADS
    if( gev != NULL && nthreads > 1 )
    {
       char msg[100];
-      sprintf(msg, "Limit number of threads in MKL BLAS to %d.\n", nthreads);
+      sprintf(msg, "Number of OpenMP threads: %d.\n", nthreads);
       gevLogPChar(gev, msg);
    }
-   MKL_Set_Num_Threads(nthreads);
+   omp_set_num_threads(nthreads);
+#endif
+
+#ifdef __APPLE__
+   {
+      char buf[10];
+      snprintf(buf, 10, "%d", nthreads);
+      setenv("VECLIB_MAXIMUM_THREADS", buf, 1);
+   }
 #endif
 }
 

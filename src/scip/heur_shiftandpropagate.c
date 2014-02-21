@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,6 +55,10 @@
 #define DEFAULT_FIXBINLOCKS       FALSE /**< should binary variables with no locks in one direction be fixed to that direction? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
+<<<<<<< HEAD
+=======
+#define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -88,6 +92,10 @@ struct SCIP_HeurData
    SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
    SCIP_Bool             normalize;          /**< should coefficients and left/right hand sides be normalized by max row coeff? */
    SCIP_Bool             updateweights;      /**< should row weight be increased every time the row is violated? */
+<<<<<<< HEAD
+=======
+   SCIP_Bool             impliscontinuous;   /**< should implicit integer variables be treated as continuous variables? */
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
    SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
@@ -149,6 +157,25 @@ struct SCIP_EventData
  * Local methods
  */
 
+/** returns whether a given variable is counted as discrete, depending on the parameter impliscontinuous */
+static
+SCIP_Bool varIsDiscrete(
+   SCIP_VAR*             var,                /**< variable to check for discreteness */
+   SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
+   )
+{
+   return SCIPvarIsIntegral(var) && (SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT || !impliscontinuous);
+}
+
+/** returns whether a given column is counted as discrete, depending on the parameter impliscontinuous */
+static
+SCIP_Bool colIsDiscrete(
+   SCIP_COL*             col,                /**< column to check for discreteness */
+   SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
+   )
+{
+   return SCIPcolIsIntegral(col) && (!impliscontinuous || SCIPvarGetType(SCIPcolGetVar(col)) != SCIP_VARTYPE_IMPLINT);
+}
 
 /** returns nonzero values and corresponding columns of given row */
 static
@@ -238,7 +265,6 @@ void relaxVar(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    varcol = SCIPvarGetCol(var);
    assert(varcol != NULL);
@@ -446,6 +472,7 @@ SCIP_RETCODE initMatrix(
 {
    SCIP_ROW** lprows;
    SCIP_COL** lpcols;
+   SCIP_Bool impliscontinuous;
    int i;
    int j;
    int currentpointer;
@@ -471,6 +498,7 @@ SCIP_RETCODE initMatrix(
    matrix->normalized = FALSE;
    matrix->ndiscvars = 0;
    *nmaxrows = 0;
+   impliscontinuous = heurdata->impliscontinuous;
 
    /* count the number of nonzeros of the LP constraint matrix */
    for( j = 0; j < ncols; ++j )
@@ -478,7 +506,7 @@ SCIP_RETCODE initMatrix(
       assert(lpcols[j] != NULL);
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
 
-      if( SCIPcolIsIntegral(lpcols[j]) )
+      if( colIsDiscrete(lpcols[j], impliscontinuous) )
       {
          matrix->nnonzs += SCIPcolGetNLPNonz(lpcols[j]);
          ++matrix->ndiscvars;
@@ -522,12 +550,12 @@ SCIP_RETCODE initMatrix(
     */
    for( i = 0; i < nrows; ++i )
    {
-      SCIP_Real* rowvals;
       SCIP_COL** cols;
-      SCIP_Real maxval;
       SCIP_ROW* row;
-      SCIP_Real nrowlpnonz;
+      SCIP_Real* rowvals;
       SCIP_Real constant;
+      SCIP_Real maxval;
+      int nrowlpnonz;
 
       /* get LP row information */
       row = lprows[i];
@@ -538,7 +566,11 @@ SCIP_RETCODE initMatrix(
       constant = SCIProwGetConstant(row);
 
       SCIPdebugMessage(" %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
+<<<<<<< HEAD
       SCIPdebug( SCIPprintRow(scip, row, NULL) );
+=======
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
       assert(!SCIPisInfinity(scip, constant));
 
       matrix->rowmatbegin[i] = currentpointer;
@@ -579,7 +611,7 @@ SCIP_RETCODE initMatrix(
       /* row coefficients are normalized and copied to heuristic matrix */
       for( j = 0; j < nrowlpnonz; ++j )
       {
-         if( !SCIPcolIsIntegral(cols[j]) )
+         if( !colIsDiscrete(cols[j], impliscontinuous) )
             continue;
          assert(SCIPcolGetLPPos(cols[j]) >= 0);
          assert(currentpointer < matrix->nnonzs);
@@ -615,7 +647,7 @@ SCIP_RETCODE initMatrix(
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
 
       currentcol = lpcols[j];
-      assert(SCIPcolIsIntegral(currentcol));
+      assert(colIsDiscrete(currentcol, impliscontinuous));
 
       colvals = SCIPcolGetVals(currentcol);
       rows = SCIPcolGetRows(currentcol);
@@ -661,7 +693,7 @@ SCIP_RETCODE initMatrix(
       SCIP_COL* col;
 
       col = lpcols[j];
-      if( SCIPcolIsIntegral(col) )
+      if( colIsDiscrete(col, impliscontinuous) )
       {
          matrix->transformshiftvals[j] = 0.0;
          transformVariable(scip, matrix, heurdata, j);
@@ -670,7 +702,11 @@ SCIP_RETCODE initMatrix(
       {
          SCIP_VAR* var;
          var = SCIPcolGetVar(col);
+<<<<<<< HEAD
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+=======
+         assert(!varIsDiscrete(var, impliscontinuous));
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
          relaxVar(scip, var, matrix, normalize);
       }
    }
@@ -819,7 +855,6 @@ SCIP_Real retransformVariable(
 
    status = matrix->transformstatus[varindex];
    assert(status != TRANSFORMSTATUS_NONE);
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
    /* check if original variable has different bounds and transform solution value correspondingly */
    if( status == TRANSFORMSTATUS_LB )
@@ -1263,14 +1298,19 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
 static
 SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-
-   assert(heurdata != NULL);
-
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
+      SCIP_HEURDATA* heurdata;
+
+<<<<<<< HEAD
+   /* if statistic mode is enabled, statistics are printed to console */
+   SCIPstatistic(
+=======
+      heurdata = SCIPheurGetData(heur);
+
+      assert(heurdata != NULL);
+
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
       SCIPstatisticMessage(
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
@@ -1394,6 +1434,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_Bool cutoff;              /* has current probing node been cutoff? */
    SCIP_Bool probing;             /* should probing be applied or not? */
    SCIP_Bool infeasible;          /* FALSE as long as currently infeasible rows have variables left */
+   SCIP_Bool impliscontinuous;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1448,6 +1489,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->lpcols, nlpcols) );
    heurdata->nlpcols = nlpcols;
 
+<<<<<<< HEAD
+=======
+   impliscontinuous = heurdata->impliscontinuous;
+
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
 #ifndef NDEBUG
    BMSclearMemoryArray(heurdata->lpcols, nlpcols);
 #endif
@@ -1469,10 +1515,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       col = heurdata->lpcols[c];
       assert(col != NULL);
-      colvar =SCIPcolGetVar(col);
+      colvar = SCIPcolGetVar(col);
       assert(colvar != NULL);
 
-      if( SCIPvarGetType(colvar) != SCIP_VARTYPE_CONTINUOUS )
+      if( varIsDiscrete(colvar, impliscontinuous) )
          ++ndiscvars;
       if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
          ++nbinvars;
@@ -1801,6 +1847,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             marksuspicious = TRUE;
 
          /* retransform the solution value from the heuristic transformation space */
+         assert(varIsDiscrete(var, impliscontinuous));
          origsolval = retransformVariable(scip, matrix, var, permutedvarindex, optimalshiftvalue);
       }
       assert(SCIPisFeasGE(scip, origsolval, lb) && SCIPisFeasLE(scip, origsolval, ub));
@@ -1930,7 +1977,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* get the column position of the variable */
          permutedvarindex = permutation[v];
          var = SCIPcolGetVar(heurdata->lpcols[permutedvarindex]);
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+         assert(varIsDiscrete(var, impliscontinuous));
 
          /* update the transformation of the variable, since the bound might have changed after the last update. */
          if( heurdata->probing )
@@ -1938,6 +1985,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), violatedrows, violatedrowpos, &nviolatedrows);
 
          /* retransform the solution value from the heuristic transformed space, set the solution value accordingly */
+         assert(varIsDiscrete(var, impliscontinuous));
          origsolval = retransformVariable(scip, matrix, var, permutedvarindex, 0.0);
          assert(SCIPisFeasGE(scip, origsolval, SCIPvarGetLbLocal(var))
             && SCIPisFeasLE(scip, origsolval, SCIPvarGetUbLocal(var)));
@@ -2197,12 +2245,22 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/preferbinaries", "Should binary variables be shifted first?",
          &heurdata->preferbinaries, TRUE, DEFAULT_PREFERBINARIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/nozerofixing", "should variables with a zero shifting value be delayed instead of being fixed?",
-            &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
+         &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/fixbinlocks", "should binary variables with no locks in one direction be fixed to that direction?",
+<<<<<<< HEAD
             &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
                &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights", "should row weight be increased every time the row is violated?",
                   &heurdata->updateweights, TRUE, DEFAULT_UPDATEWEIGHTS, NULL, NULL) );
+=======
+         &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
+         &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights", "should row weight be increased every time the row is violated?",
+         &heurdata->updateweights, TRUE, DEFAULT_UPDATEWEIGHTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/impliscontinuous", "should implicit integer variables be treated as continuous variables?",
+         &heurdata->impliscontinuous, TRUE, DEFAULT_IMPLISCONTINUOUS, NULL, NULL) );
+>>>>>>> 12e5c10268bd815b45970243b3ebd82fed8b66b3
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -263,6 +263,8 @@ struct SCIP_Conshdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
+   SCIP_Bool             duringsepa;         /**< is the constraint handler currently performing separation? */
+   SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */
    SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
 
    SCIP_QUEUE*           pendingconss;       /**< queue of pending constraints */

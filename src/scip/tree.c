@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -230,7 +230,7 @@ SCIP_RETCODE subrootReleaseLPIState(
 }
 
 /** increases the reference counter of the LP state in the fork or subroot node */
-void SCIPnodeCaptureLPIState(
+SCIP_RETCODE SCIPnodeCaptureLPIState(
    SCIP_NODE*            node,               /**< fork/subroot node */
    int                   nuses               /**< number to add to the usage counter */
    )
@@ -252,7 +252,9 @@ void SCIPnodeCaptureLPIState(
    default:
       SCIPerrorMessage("node for capturing the LPI state is neither fork nor subroot\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }  /*lint !e788*/
+   return SCIP_OKAY;
 }
 
 /** decreases the reference counter of the LP state in the fork or subroot node */
@@ -325,6 +327,8 @@ SCIP_RETCODE probingnodeUpdate(
    if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &probingnode->lpistate) );
+      probingnode->lpwasprimfeas = lp->primalfeasible;
+      probingnode->lpwasdualfeas = lp->dualfeasible;
    }
    else
       probingnode->lpistate = NULL;
@@ -376,7 +380,9 @@ SCIP_RETCODE junctionInit(
 
    /* increase the LPI state usage counter of the current LP fork */
    if( tree->focuslpstatefork != NULL )
-      SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren);
+   {
+      SCIP_CALL( SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren) );
+   }
 
    return SCIP_OKAY;
 }
@@ -429,7 +435,9 @@ SCIP_RETCODE pseudoforkCreate(
 
    /* increase the LPI state usage counter of the current LP fork */
    if( tree->focuslpstatefork != NULL )
-      SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren);
+   {
+      SCIP_CALL( SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren) );
+   }
 
    return SCIP_OKAY;
 }
@@ -547,7 +555,7 @@ SCIP_RETCODE forkFree(
    assert(lp != NULL);
 
    /* release the added rows */
-   for( i = 0; i < (*fork)->naddedrows; ++i )
+   for( i = (*fork)->naddedrows - 1; i >= 0; --i )
    {
       SCIP_CALL( SCIProwRelease(&(*fork)->addedrows[i], blkmem, set, lp) );
    }
@@ -589,7 +597,7 @@ SCIP_RETCODE subrootCreate(
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = SCIPlpGetNCols(lp);
    (*subroot)->nrows = SCIPlpGetNRows(lp);
-   (*subroot)->nchildren = tree->nchildren;
+   (*subroot)->nchildren = (unsigned int) tree->nchildren;
    SCIP_CALL( SCIPlpGetState(lp, blkmem, &((*subroot)->lpistate)) );
    (*subroot)->lpwasprimfeas = lp->primalfeasible;
    (*subroot)->lpwasdualfeas = lp->dualfeasible;
@@ -763,7 +771,7 @@ SCIP_RETCODE nodeAssignParent(
       assert(parent->lowerbound <= parent->estimate);
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
-      node->depth = parent->depth+1;
+      node->depth = parent->depth+1; /*lint !e732*/
       if( parent->depth >= MAXDEPTH-1 )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
@@ -1153,7 +1161,7 @@ void SCIPnodeMarkPropagated(
    assert(tree != NULL);
 
    if( node->parent != NULL )
-      node->repropsubtreemark = node->parent->repropsubtreemark;
+      node->repropsubtreemark = node->parent->repropsubtreemark; /*lint !e732*/
    node->reprop = FALSE;
 
    /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */
@@ -1612,14 +1620,14 @@ SCIP_RETCODE treeAddPendingBdchg(
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
 	 /* check bound on debugging solution */
-	 SCIP_CALL( SCIPdebugCheckLbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+	 SCIP_CALL( SCIPdebugCheckLbGlobal(set->scip, var, newbound) ); /*lint !e506 !e774*/
       }
       else
       {
 	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
 	 /* check bound on debugging solution */
-	 SCIP_CALL( SCIPdebugCheckUbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+	 SCIP_CALL( SCIPdebugCheckUbGlobal(set->scip, var, newbound) ); /*lint !e506 !e774*/
       }
    }
 
@@ -2210,6 +2218,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_Real lpobjval;
 
    assert(set != NULL);
+   assert(lp->flushed);
 
    /* in case of iteration or time limit, the LP value may not be a valid dual bound */
    /* @todo check for dual feasibility of LP solution and use sub-optimal solution if they are dual feasible */
@@ -2434,7 +2443,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 
 /** updates the LP sizes of the active path starting at the given depth */
 static
-void treeUpdatePathLPSize(
+SCIP_RETCODE treeUpdatePathLPSize(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   startdepth          /**< depth to start counting */
    )
@@ -2493,15 +2502,19 @@ void treeUpdatePathLPSize(
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_CHILD:
          SCIPerrorMessage("child cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_LEAF:
          SCIPerrorMessage("leaf cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_DEADEND:
          SCIPerrorMessage("dead-end cannot be in the active path\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_PSEUDOFORK:
@@ -2522,13 +2535,16 @@ void treeUpdatePathLPSize(
       case SCIP_NODETYPE_REFOCUSNODE:
          SCIPerrorMessage("node cannot be of type REFOCUSNODE at this point\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       default:
          SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
          SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
       tree->pathnlpcols[i] = ncols;
       tree->pathnlprows[i] = nrows;
    }
+   return SCIP_OKAY;
 }
 
 /** finds the common fork node, the new LP state defining fork, and the new focus subroot, if the path is switched to
@@ -2930,7 +2946,7 @@ SCIP_RETCODE treeSwitchPath(
    }
 
    /* count the new LP sizes of the path */
-   treeUpdatePathLPSize(tree, forkdepth+1);
+   SCIP_CALL( treeUpdatePathLPSize(tree, forkdepth+1) );
 
    /* process the delayed events */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
@@ -3289,6 +3305,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 {
    SCIP_NODE* lpstatefork;
    SCIP_Bool updatefeas;
+   SCIP_Bool checkbdchgs;
    int lpstateforkdepth;
    int d;
 
@@ -3343,9 +3360,15 @@ SCIP_RETCODE SCIPtreeLoadLPState(
                lpstatefork->data.subroot->lpwasprimfeas, lpstatefork->data.subroot->lpwasdualfeas) );
       }
       updatefeas = !lp->solved || !lp->solisbasic;
+      checkbdchgs = TRUE;
    }
    else
+   {
       updatefeas = TRUE;
+
+      /* we do not need to check the bounds, since primalfeasible is updated anyway when flushing the LP */
+      checkbdchgs = FALSE;
+   }
 
    if( updatefeas )
    {
@@ -3356,10 +3379,13 @@ SCIP_RETCODE SCIPtreeLoadLPState(
          && (tree->pathnlpcols[tree->correctlpdepth] == tree->pathnlpcols[lpstateforkdepth]);
 
       /* check the path from LP fork to focus node for domain changes (destroying primal feasibility of LP basis) */
-      for( d = lpstateforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
+      if( checkbdchgs )
       {
-         assert(d < tree->pathlen);
-         lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
+         for( d = lpstateforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
+         {
+            assert(d < tree->pathlen);
+            lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
+         }
       }
    }
 
@@ -3895,7 +3921,7 @@ SCIP_RETCODE focusnodeToSubroot(
    tree->focusnode->data.subroot = subroot;
 
    /* update the LP column and row counter for the converted node */
-   treeUpdatePathLPSize(tree, tree->focusnode->depth);
+   SCIP_CALL( treeUpdatePathLPSize(tree, tree->focusnode->depth) );
 
    /* release LPI state */
    if( tree->focuslpstatefork != NULL )
@@ -5846,7 +5872,7 @@ SCIP_RETCODE treeCreateProbingNode(
    tree->pathlen++;
 
    /* update the path LP size for the previous node and set the (initial) path LP size for the newly created node */
-   treeUpdatePathLPSize(tree, tree->pathlen-2);
+   SCIP_CALL( treeUpdatePathLPSize(tree, tree->pathlen-2) );
 
    /* mark the LP's size */
    SCIPlpMarkSize(lp);
@@ -5872,8 +5898,6 @@ SCIP_RETCODE SCIPtreeStartProbing(
    assert(tree != NULL);
    assert(tree->probinglpistate == NULL);
    assert(tree->probinglpinorms == NULL);
-   assert(tree->probinglpwasprimfeas);
-   assert(tree->probinglpwasdualfeas);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
 
@@ -5948,8 +5972,8 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       SCIP_NODE* node;
       SCIP_LPISTATE* lpistate;
       SCIP_LPINORMS* lpinorms;
-      SCIP_Bool lpwasprimfeas;
-      SCIP_Bool lpwasdualfeas;
+      SCIP_Bool lpwasprimfeas = FALSE;
+      SCIP_Bool lpwasdualfeas = FALSE;
 
       /* get the current probing node */
       node = SCIPtreeGetCurrentNode(tree);
@@ -5987,7 +6011,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       if( lpistate != NULL )
       {
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate,
-               lpwasprimfeas, lpwasdualfeas) ); /*lint !e644*/
+               lpwasprimfeas, lpwasdualfeas) );
       }
 
       /* set the LP pricing norms */
@@ -6224,8 +6248,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate,
                   tree->probinglpwasprimfeas, tree->probinglpwasdualfeas) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
-            tree->probinglpwasprimfeas = TRUE;
-            tree->probinglpwasdualfeas = TRUE;
 
             if( tree->probinglpinorms != NULL )
             {
@@ -6266,8 +6288,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
       lp->flushed = FALSE;
 
    assert(tree->probinglpistate == NULL);
-   assert(tree->probinglpwasprimfeas);
-   assert(tree->probinglpwasdualfeas);
 
    /* if no LP was solved during probing and the LP before probing was not solved, then it should not be solved now */
    assert(tree->probingsolvedlp || tree->probinglpwassolved || !lp->solved);

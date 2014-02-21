@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.0.1.5"
+VERSION="3.1.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -50,6 +50,9 @@ $NAME/check/check_count.sh $NAME/check/evalcheck_count.sh $NAME/check/check_coun
 $NAME/check/testset/short.test $NAME/check/testset/short.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
+$NAME/check/configuration_set.sh $NAME/check/configuration_logfiles.sh \
+$NAME/check/configuration_tmpfile_setup_scip.sh \
+$NAME/check/run.sh $NAME/check/evalcheck_cluster.sh \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp \
@@ -79,6 +82,11 @@ $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
+$NAME/examples/GMI/Makefile \
+$NAME/examples/GMI/doc/xternal.c $NAME/examples/GMI/doc/gmi.dxy $NAME/examples/GMI/doc/header.html \
+$NAME/examples/GMI/check/testset/short.test $NAME/examples/GMI/check/testset/short.solu \
+$NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
+$NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
 $NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.test $NAME/examples/LOP/check/testset/short.solu \
 $NAME/examples/LOP/src/depend.* \
@@ -115,8 +123,23 @@ $NAME/interfaces/ampl/Makefile $NAME/interfaces/ampl/INSTALL $NAME/interfaces/am
 $NAME/interfaces/ampl/src/* $NAME/interfaces/ampl/check/check.sh \
 $NAME/interfaces/ampl/check/testset/short.test $NAME/interfaces/ampl/check/instances/MINLP/*.col \
 $NAME/interfaces/ampl/check/instances/MINLP/*.row $NAME/interfaces/ampl/check/instances/MINLP/*.nl \
+$NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/instances/SOS/*.row \
+$NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/src/* \
+$NAME/interfaces/jni/createJniInterface.py $NAME/interfaces/jni/jniinterface.dxy \
+$NAME/interfaces/jni/Makefile $NAME/interfaces/jni/README \
+$NAME/interfaces/jni/src/*h $NAME/interfaces/jni/src/*c $NAME/interfaces/jni/src/depend* \
+$NAME/interfaces/jni/java/de/zib/jscip/nativ/NativeScipException.java \
+$NAME/interfaces/jni/examples/JniKnapsack/Makefile $NAME/interfaces/jni/examples/JniKnapsack/run.sh \
+$NAME/interfaces/jni/examples/JniKnapsack/java/JniKnapsack.java \
+$NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
+$NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
+$NAME/interfaces/python/include/ $NAME/interfaces/python/lib/ \
+$NAME/interfaces/python/pyscipopt/*.pyx $NAME/interfaces/python/pyscipopt/*.pxd \
+$NAME/interfaces/python/pyscipopt/*.py $NAME/interfaces/python/tests/*.py \
+$NAME/interfaces/python/INSTALL $NAME/interfaces/python/LICENSE \
+$NAME/interfaces/python/README $NAME/interfaces/python/*.py \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
@@ -137,8 +160,9 @@ $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile, Makefile.nmake, and makedist.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
 grep "^VERSION" Makefile
+grep "^VERSION" Makefile.nmake
 tail src/scip/githash.c

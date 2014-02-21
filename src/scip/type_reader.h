@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,7 +86,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
                         extobj = objsense * objscale * (intobj + objoffset)
  *  - objoffset       : objective offset from bound shifting and fixing 
  *  - vars            : array with active variables ordered binary, integer, implicit, continuous 
- *  - nvars           : number of mutable variables in the problem
+ *  - nvars           : number of active variables in the problem
  *  - nbinvars        : number of binary variables
  *  - nintvars        : number of general integer variables
  *  - nimplvars       : number of implicit integer variables 

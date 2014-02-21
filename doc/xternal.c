@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2013 Konrad-Zuse-Zentrum                            */
+/*                  2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.0.2.1
+ * @version  3.1.0
  *
  * \image html scippy.png
  *
@@ -678,7 +678,7 @@
   -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
   -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
 
- * \endverbatim
+   \endverbatim
  *
  * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
  *
@@ -723,7 +723,7 @@
   -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
   -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
 
- * \endverbatim
+   \endverbatim
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
@@ -849,7 +849,7 @@
  *   directory). For instance, type
  *   \verbatim
  > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
- *   \endverbatim
+     \endverbatim
  *
  *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
@@ -899,7 +899,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -1388,7 +1388,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \verbatim
+ *  \code
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1399,7 +1399,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endverbatim
+ *  \endcode
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -5611,26 +5611,25 @@
 /**@page DEBUG Debugging
  *
  *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
-
+ *
  *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
  *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
  *    following example, taken from the file src/scip/cons_linear.c:
- * \verbatim
-SCIP_RETCODE consdataCatchEvent(
-   SCIP*                 scip,               /**< SCIP data structure *\/
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
-   int                   pos                 /**< array position of variable to catch bound change events for *\/
-   )
-   {
-      assert(scip != NULL);
-      assert(consdata != NULL);
-      assert(eventhdlr != NULL);
-      assert(0 <= pos && pos < consdata->nvars);
-   ...
-   }
- * \endverbatim
- *    @n
+ *    \code
+ *    SCIP_RETCODE consdataCatchEvent(
+ *       SCIP*                 scip,               /**< SCIP data structure *\/
+ *       SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
+ *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
+ *       int                   pos                 /**< array position of variable to catch bound change events for *\/
+ *       )
+ *       {
+ *          assert(scip != NULL);
+ *          assert(consdata != NULL);
+ *          assert(eventhdlr != NULL);
+ *          assert(0 <= pos && pos < consdata->nvars);
+ *          ...
+ *       }
+ *    \endcode
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
@@ -5673,7 +5672,7 @@ SCIP_RETCODE consdataCatchEvent(
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -6838,8 +6837,8 @@ SCIP_RETCODE consdataCatchEvent(
  * <table>
  * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
- * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc.</td></tr>
- * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [write only]</td></tr>
+ * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
+ * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>

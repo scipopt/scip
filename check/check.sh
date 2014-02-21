@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -29,9 +29,10 @@ VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
 CLIENTTMPDIR=${16}
+OPTCOMMAND=${17}
 
 # check if all variables defined (by checking the last one)
-if test -z $VALGRIND
+if test -z $OPTCOMMAND
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -49,6 +50,8 @@ then
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
     echo "VALGRIND      = $VALGRIND"
+    echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "OPTCOMMAND    = $OPTCOMMAND"
     exit 1;
 fi
 
@@ -93,7 +96,7 @@ do
         fi
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $SOLUFILE
+        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH

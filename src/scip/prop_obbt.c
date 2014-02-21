@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,7 @@
 
 #include "scip/prop_obbt.h"
 #include "scip/prop_genvbounds.h"
+#include "scip/debug.h"
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -54,7 +55,7 @@
                                                     *   auxiliary LPs? */
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
-#define DEFAULT_CONDITIONLIMIT           1e12      /**< maximum condition limit used in LP solver (-1.0: no limit) */
+#define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
@@ -968,6 +969,17 @@ SCIP_RETCODE findNewBounds(
                bound->found = TRUE;
 
                SCIPdebugMessage("      var <%s>, LP value: %f\n", SCIPvarGetName(var), bound->newval);
+
+#ifdef SCIP_DEBUG_SOLUTION
+               if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( SCIPdebugCheckLbGlobal(scip, var, bound->newval) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPdebugCheckUbGlobal(scip, var, bound->newval) );
+               }
+#endif
 
                /* in root node we may want to create a genvbound (independent of tightening success) */
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )

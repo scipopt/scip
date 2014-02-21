@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1189,9 +1189,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             assert(nonsolitems != NULL);
 
             /* the rest are not in the solution */
-            for( j = nmyitems - 1; (SCIP_Longint) j >= capacity; --j )
+            for( i = nmyitems - 1; i >= capacity; --i )
             {
-               nonsolitems[*nnonsolitems] = myitems[j];
+               nonsolitems[*nnonsolitems] = myitems[i];
                ++(*nnonsolitems);
             }
          }
@@ -8750,6 +8750,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                newweight = dualcapacity - minweight;
                startv = v;
+               assert(v < nvars);
 
                /* @todo check for further reductions, when two times the minweight exceeds the dualcapacity */
                /* shrink big coefficients */
@@ -8764,11 +8765,17 @@ SCIP_RETCODE dualWeightsTightening(
 
                /* skip unchangable weights */
                while( weights[v] + minweight == dualcapacity )
+               {
+                  assert(v < nvars);
                   ++v;
+               }
 
                --end;
+               /* skip same end weights */
+               while( end >= 0 && weights[end] == weights[end + 1] )
+                  --end;
 
-               if( end <= 0 )
+               if( v >= end )
                   goto TERMINATE;
 
                minweight = weights[end];
@@ -8783,6 +8790,7 @@ SCIP_RETCODE dualWeightsTightening(
                minweight = sumcoef;
                newweight = dualcapacity - minweight;
                startv = v;
+               assert(v < nvars);
 
                /* shrink big coefficients */
                while( weights[v] + minweight > dualcapacity && 2 * minweight <= dualcapacity )
@@ -8796,7 +8804,10 @@ SCIP_RETCODE dualWeightsTightening(
 
                /* skip unchangable weights */
                while( weights[v] + minweight == dualcapacity )
+               {
+                  assert(v < nvars);
                   ++v;
+               }
             }
 
             if( v >= end )
@@ -10454,22 +10465,33 @@ SCIP_RETCODE tightenWeights(
 
       /* calculate clique partition */
       SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[pos]), len, clqpart, &nclq) );
+      assert(nclq <= len);
+
+#ifndef NDEBUG
+      /* clique numbers must be at least as high as the index */
+      for( w = 0; w < nclq; ++w )
+         assert(clqpart[w] <= w);
+#endif
 
       SCIPdebugMessage("Disaggregating knapsack constraint <%s> due to clique information.\n", SCIPconsGetName(cons));
 
       /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &clqvars, len - nclq + 2) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &clqvars, pos + len - nclq + 1) );
 
+      /* copy corresponding variables with big coefficients */
       for( w = pos - 1; w >= 0; --w )
          clqvars[w] = consdata->vars[w];
 
+      /* create for each clique a set-packing constraint */
       for( c = 0; c < nclq; ++c )
       {
          nclqvars = pos;
-         for( w = 0; w < len; ++w )
+
+         for( w = c; w < len; ++w )
          {
             if( clqpart[w] == c )
             {
+               assert(nclqvars < pos + len - nclq + 1);
                clqvars[nclqvars] = consdata->vars[w + pos];
                ++nclqvars;
             }
@@ -13095,6 +13117,7 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return 0;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13147,6 +13170,7 @@ int SCIPgetNVarsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13167,6 +13191,7 @@ SCIP_VAR** SCIPgetVarsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13187,6 +13212,7 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13207,6 +13233,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
    }
    
    consdata = SCIPconsGetData(cons);
@@ -13230,8 +13257,9 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -13255,6 +13283,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

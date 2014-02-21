@@ -160,6 +160,7 @@ def convertEnumsType(enumtype):
         'SCIP_NLPPARAM',
         'SCIP_NLPSOLSTAT',
         'SCIP_NLPTERMSTAT',
+        'SCIP_LINEARCONSTYPE',
         'SCIP_SETPPCTYPE',
         'SCIP_CLOCKTYPE',
         'SCIP_DISPSTATUS',
@@ -192,7 +193,8 @@ def convertEnumsType(enumtype):
         'SCIP_DOMCHGTYPE',
         'SCIP_BOUNDCHGTYPE',
         'SCIP_VBCCOLOR',
-        'TCLIQUE_STATUS'
+        'TCLIQUE_STATUS',
+        'SCIP_LINEARCONSTYPE'
         ]
 
     for enum in reversed(enumtypes):

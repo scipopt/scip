@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1085,13 +1085,12 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
 {
    assert(branchcand != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsFeasLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
    
    if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)
       && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
       && SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
-      /* variable is neither continuous nor fixed: make sure it is member of the pseudo branching candidate list */
+      /* variable is neither continuous nor fixed and has non-empty domain: make sure it is member of the pseudo branching candidate list */
       if( var->pseudocandindex == -1 )
       {
          SCIP_CALL( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
@@ -1108,9 +1107,9 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
          || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-         || SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         || SCIPsetIsGE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
+      /* variable is continuous or fixed or has empty domain: make sure it is not member of the pseudo branching candidate list */
       SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
    }
 

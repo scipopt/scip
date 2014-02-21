@@ -20,6 +20,8 @@
  * The code (including some comments) for this reader is based on OSnl2osil.cpp,
  * the nl-reader of the Optimization Services Project (https://projects.coin-or.org/OS).
  *
+ * The code for SOS reading is based on the AMPL/Bonmin interface (https://projects.coin-or.org/Bonmin).
+ *
  * For an incomplete documentation on how to hook up a solver to AMPL, see http://www.ampl.com/REFS/HOOKING/index.html.
  */
 
@@ -33,6 +35,8 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 
 /* we need the ABS define from ASL later */
 #undef ABS
@@ -544,12 +548,15 @@ SCIP_RETCODE walkExpression(
          break;
       }
 
+      case MINLIST:
       case MAXLIST:
       {
          expr_va* amplexpr_va;
          const de* d;
          SCIP_EXPR* arg;
+         SCIP_EXPROP operand;
 
+         operand = opnum == MINLIST ? SCIP_EXPR_MIN : SCIP_EXPR_MAX;
          amplexpr_va = (expr_va*)amplexpr;
 
          arg = NULL;
@@ -573,7 +580,7 @@ SCIP_RETCODE walkExpression(
                   SCIPexprFreeDeep(SCIPblkmem(scip), &arg);
                   break;
                }
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg) );
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, operand, *scipexpr, arg) );
             }
          }
          assert(*scipexpr != NULL); /* empty list?? */
@@ -963,6 +970,91 @@ SCIP_RETCODE setupConstraints(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE setupSOS(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Bool*            success
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   int varssize;
+   char name[20];
+   ASL* asl;
+   int copri[2] = {0,0};
+   int* starts = NULL;
+   int* indices = NULL;
+   char* types = NULL;
+   SCIP_Real* weights = NULL;
+   int* priorities = NULL;
+   int num;
+   int numNz;
+   int i;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(probdata != NULL);
+   assert(probdata->asl != NULL);
+   assert(probdata->vars != NULL || probdata->nvars == 0);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   asl = probdata->asl;
+
+   num = suf_sos(0 /*flags*/, &numNz, &types, &priorities, copri, &starts, &indices, &weights);
+
+   if( num == 0 )
+      return SCIP_OKAY;
+   assert(num > 0);
+
+   varssize = 10;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+   for( i = 0; i < num; ++i )
+   {
+      if( starts[i+1] - starts[i] > varssize )
+      {
+         varssize = SCIPcalcMemGrowSize(scip, starts[i+1] - starts[i]);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+      }
+
+      for( j = starts[i], k = 0; j < starts[i+1]; ++j, ++k )
+         vars[k] = probdata->vars[indices[j]];
+
+      sprintf(name, "sos%d", i);
+      switch( types[i] )
+      {
+         case '1' :
+         {
+            SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, k, vars, &weights[starts[i]], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+            break;
+         }
+
+         case '2' :
+         {
+            SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, k, vars, &weights[starts[i]], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+            break;
+         }
+
+         default :
+         {
+            SCIPerrorMessage("SOS type %c not supported by SCIP.\n", types[i]);
+            *success = FALSE;
+            break;
+         }
+      }
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of probdata
@@ -1032,6 +1124,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    const char* filebasename;
    FILE* nl;
    ASL* asl;
+   SufDecl suftable[5];
 
    assert(scip != NULL);
    assert(reader != NULL);
@@ -1042,6 +1135,29 @@ SCIP_DECL_READERREAD(readerReadNl)
 
    /* initialize ASL */
    asl = ASL_alloc(ASL_read_fg);
+
+   /* make ASL aware of SOS suffixes */
+   suftable[0].name = (char*)"ref";
+   suftable[0].kind = ASL_Sufkind_var | ASL_Sufkind_real;
+   suftable[0].nextra = 0;
+
+   suftable[1].name = (char*)"sos";
+   suftable[1].kind = ASL_Sufkind_var;
+   suftable[1].nextra = 0;
+
+   suftable[2].name = (char*)"sos";
+   suftable[2].kind = ASL_Sufkind_con;
+   suftable[2].nextra = 0;
+
+   suftable[3].name = (char*)"sosno";
+   suftable[3].kind = ASL_Sufkind_var | ASL_Sufkind_real;
+   suftable[3].nextra = 0;
+
+   suftable[4].name = (char*)"priority";
+   suftable[4].kind = ASL_Sufkind_var;
+   suftable[4].nextra = 0;
+
+   suf_declare(suftable, 5);
 
    /* let ASL read .nl file
     * jac0dim will do exit(1) if the file is not found
@@ -1088,6 +1204,10 @@ SCIP_DECL_READERREAD(readerReadNl)
       return SCIP_READERROR;
 
    SCIP_CALL( setupConstraints(scip, probdata, &success) );
+   if( !success )
+      return SCIP_READERROR;
+
+   SCIP_CALL( setupSOS(scip, probdata, &success) );
    if( !success )
       return SCIP_READERROR;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_trysol.h"
+#include "scip/debug.h"
 
 
 /* constraint handler properties */
@@ -1368,6 +1369,26 @@ SCIP_RETCODE createRelaxation(
                SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+         if( SCIPdebugIsMainscip(scip) )
+         {
+            SCIP_Real solval;
+            int count = 0;
+            int v;
+
+            for( v = consdata->nvars - 1; v >= 0; --v )
+            {
+               SCIP_CALL( SCIPdebugGetSolVal(scip, consdata->vars[v], &solval) );
+               count += (solval > 0.5 ? 1 : 0);
+            }
+            assert((count - consdata->rhs) % 2 == 0);
+            solval = (SCIP_Real) ((count - consdata->rhs) / 2);
+
+            /* store debug sol value of artificial integer variable */
+            SCIP_CALL( SCIPdebugAddSolVal(scip, consdata->intvar, solval) );
+         }
+#endif
+
          /* install the rounding locks for the internal variable */
          SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );
       }
@@ -1830,7 +1851,7 @@ int computeRowEcholonGF2(
 
       /* init starting column */
       if ( i == 0 )
-         j = 1;
+         j = 0;
       else
          j = s[i-1] + 1;
 
@@ -1982,6 +2003,9 @@ SCIP_RETCODE checkSystemGF2(
    SCIP_Bool* xoractive;
    SCIP_Real* xorvals;
    SCIP_VAR** xorvars;
+#ifndef NDEBUG
+   SCIP_Bool noaggr = TRUE;
+#endif
    Type** A;
    Type* b;
    int* s;
@@ -2037,7 +2061,8 @@ SCIP_RETCODE checkSystemGF2(
          /* consider nonfixed variables */
          if ( SCIPcomputeVarLbLocal(scip, var) < 0.5 && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
          {
-            if ( ! SCIPhashmapExists(varhash, var) )
+            /* consider active variables and collect only new ones */
+            if ( SCIPvarIsActive(var) && ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
                SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvarsmat) );
@@ -2125,8 +2150,8 @@ SCIP_RETCODE checkSystemGF2(
       assert( consdata != NULL );
       assert( consdata->nvars > 0 );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) ); /*lint !e866*/
-      BMSclearMemoryArray(A[nconssmat], nvars); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvarsmat) ); /*lint !e866*/
+      BMSclearMemoryArray(A[nconssmat], nvarsmat); /*lint !e866*/
 
       /* correct rhs w.r.t. to fixed variables and count nonfixed variables in constraint */
       b[nconssmat] = (Type) consdata->rhs;
@@ -2138,6 +2163,22 @@ SCIP_RETCODE checkSystemGF2(
          var = consdata->vars[j];
          assert( var != NULL );
 
+         /* replace negated variables */
+         if ( SCIPvarIsNegated(var) )
+         {
+            var = SCIPvarGetNegatedVar(var);
+            assert( var != NULL );
+            b[nconssmat] = ! b[nconssmat];
+         }
+
+         /* If the constraint contains (multi-)aggregated variables, the solution might not be valid, since the
+          * implications are not represented in the matrix. */
+#ifndef NDEBUG
+         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+            noaggr = FALSE;
+#endif
+         /** @todo possibly treat aggregated variables here */
+
          if ( SCIPcomputeVarLbLocal(scip, var) > 0.5 )
          {
             /* variable is fixed to 1, invert rhs */
@@ -2146,7 +2187,7 @@ SCIP_RETCODE checkSystemGF2(
          }
          else
          {
-            if ( SCIPcomputeVarUbLocal(scip, var) > 0.5 )
+            if ( SCIPvarIsActive(var) && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
             {
                assert( SCIPhashmapExists(varhash, var) );
                idx = (int) (size_t) SCIPhashmapGetImage(varhash, var);
@@ -2241,6 +2282,7 @@ SCIP_RETCODE checkSystemGF2(
                {
                   assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
                   assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+                  assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
                   SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                }
             }
@@ -2273,7 +2315,8 @@ SCIP_RETCODE checkSystemGF2(
                      if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
                         ++nones;
                   }
-                  assert( nones % 2 == (int) consdata->rhs );
+                  /* if there are aggregated variables, the solution might not be feasible */
+                  assert( ! noaggr || nones % 2 == (int) consdata->rhs );
                   if ( (unsigned int) nones != consdata->rhs )
                   {
                      val = (SCIP_Real) (nones - consdata->rhs)/2;
@@ -3521,6 +3564,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          default:
             SCIPerrorMessage("invalid comparison result\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
       }
 
@@ -4737,6 +4781,7 @@ int SCIPgetNVarsXor(
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
    
    consdata = SCIPconsGetData(cons);
@@ -4757,6 +4802,7 @@ SCIP_VAR** SCIPgetVarsXor(
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
    
    consdata = SCIPconsGetData(cons);

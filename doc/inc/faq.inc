@@ -786,7 +786,23 @@
 
 <h4><a name="Section5">5. Specific questions about Column Generation and Branch-And-Price with SCIP</a></h4>
     <p class="q">
-      <a name="Q5.1">Why are not all variables in the LP?</a>
+      <a name="Q5.1">What can I expect when using SCIP as a Branch-Cut-and-Price framework?</a>
+    </p>
+    <p class="a">
+      If you want to use SCIP as a branch-and-price framework, you normally need to implement a reader to read in your
+      problem data and build the problem, a pricer to generate new columns, and a branching rule to do the branching
+      (see also Question Q5.4 to see how to store branching decisions, if needed). SCIP takes care about everything else,
+      for example the branch-and-bound tree management and LP solving including storage of warmstart bases. Moreover,
+      many of SCIP's primal heuristics will be used and can help improve your primal bound.
+      However, this also comes with a few restrictions: You are not allowed to change the objective function coefficients
+      of variables during the solving process, because that means that previously computed dual bounds might have to be updated.
+      This prevents the use of dual variable stabilization techniques based on a (more or less strict) bounding box in the dual.
+      We are working on making this possible and recommend to use a weighted sum stabilization approach until then.
+      Another point that SCIP does for you is the dynamic removal of columns from the LP due to aging (see also the next two questions).
+      However, due to the way simplex bases are stored in SCIP, columns can only be removed at the same node where they were created.
+    </p>
+    <p class="q">
+      <a name="Q5.2">Why are not all variables in the LP?</a>
     </p>
     <p class="a">
       With <code>SCIPgetLPColsData()</code> you can obtain the columns of the current LP relaxation. It is correct that
@@ -797,7 +813,7 @@
       deletion can be avoided by setting the "removable" flag to FALSE in the <code>SCIPcreateVar()</code> call.
     </p>
     <p class="q">
-      <a name="Q5.2">I only implemented one pricer, why is there a second one, called variable pricer?</a>
+      <a name="Q5.3">I only implemented one pricer, why is there a second one, called variable pricer?</a>
     </p>
     <p class="a">
       As described in the <a href="#Q5.1">previous question</a>, it may happen, that some variables are not in the
@@ -806,7 +822,7 @@
       pricers.
     </p>
     <p class="q">
-      <a name="Q5.3">How can I store branching decisions?</a>
+      <a name="Q5.4">How can I store branching decisions?</a>
     </p>
     <p class="a">
       This is a very common problem in Branch-And-Price, which you can deal nicely with using SCIP.
@@ -825,7 +841,7 @@
       The third way is to use an event handler, which is described <a href="#Q5.5">here</a>.
     </p>
     <p class="q">
-      <a name="Q5.4">I want to store some information at the nodes and update my pricer's data structures
+      <a name="Q5.5">I want to store some information at the nodes and update my pricer's data structures
                     when entering a new node. How can I do that?</a>
     </p>
     <p class="a">
@@ -859,7 +875,7 @@
       an example of a constraint handler that does all these things.
     </p>
     <p class="q">
-      <a name="Q5.5">How can an event handler help me with my branching?</a>
+      <a name="Q5.6">How can an event handler help me with my branching?</a>
     </p>
     <p class="a">
       An event handler can watch for events like local bound changes on variables. So, if your 
@@ -869,7 +885,7 @@
     </p>
 
     <p class="q">
-      <a name="Q5.6">How can I add locally valid variables to the problem in my branch-and-price code?</a>
+      <a name="Q5.7">How can I add locally valid variables to the problem in my branch-and-price code?</a>
     </p>
     <p class="a">
       Variables in SCIP are always added globally. If you want to add them locally, because they are forbidden
@@ -878,7 +894,7 @@
     </p>
 
     <p class="q">
-      <a name="Q5.7">My pricer generates the same column twice. How can I solve this problem?</a>
+      <a name="Q5.8">My pricer generates the same column twice. How can I solve this problem?</a>
     </p>
     <p class="a">
       First check whether your pricing is correct. Are there upper bounds on variables that you have forgotten to take
@@ -901,7 +917,7 @@
     </p>
 
     <p class="q">
-      <a name="Q5.8">Which default plugins should be deactivated in order to get a working branch-and-price code?</a>
+      <a name="Q5.9">Which default plugins should be deactivated in order to get a working branch-and-price code?</a>
     </p>
     <p class="a">
       In most cases, you should deactivate separators, since cutting planes that are added to your master problem may
@@ -913,7 +929,7 @@
     </p>
 
     <p class="q">
-      <a name="Q5.9">What are the lazy bounds for variables in SCIP and what do I need them for?</a>
+      <a name="Q5.10">What are the lazy bounds for variables in SCIP and what do I need them for?</a>
     </p>
     <p class="a">
       In many Branch-and-Price applications, you have binary variables, but you do not want to impose
@@ -944,25 +960,29 @@
     </p>
 
     <p class="q">
-      <a name="Q5.10">Can I stop the pricing process before the master problem is solved to optimality?</a>
+      <a name="Q5.11">Can I stop the pricing process before the master problem is solved to optimality?</a>
     </p>
     <p class="a">
       In a column generation approach, you usually have to solve the master problem to optimality; otherwise,
       its objective function value is not a valid dual bound. However, there is a way in SCIP to
       stop the pricing process earlier, called "early branching".
     </p>
-    <p class="a">  
+    <p class="a">
       The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
-      In the usual case that the pricer either adds a new variable or ensures that there are no further 
-      variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS. 
-      If the pricer aborts pricing without creating a new variable, but there might exist additional 
-      variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN. 
-      In this case, the lp solution will not be used as a lower bound. 
-      The pricer can, however, store a valid lower bound in the lowerbound pointer.
+      In the usual case that the pricer either adds a new variable or ensures that there are no further
+      variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
+      If the pricer aborts pricing without creating a new variable, but there might exist additional
+      variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+      In this case, the LP solution will not be used as a lower bound.
+      Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
+      The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
+      bound of the current node.
+      Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
+      in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
     </p>
 
     <p class="q">
-      <a name="Q5.11">How can I delete variables?</a>
+      <a name="Q5.12">How can I delete variables?</a>
     </p>
     <p class="a">
       SCIP features the functionality to delete variables from the problem when performing branch-and-price.

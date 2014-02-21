@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -230,7 +230,7 @@ void SCIPcolSetStrongbranchData(
    SCIP_Real             sbup,               /**< dual bound after branching column up */
    SCIP_Bool             sbdownvalid,        /**< is the returned down value a valid dual bound? */
    SCIP_Bool             sbupvalid,          /**< is the returned up value a valid dual bound? */
-   int                   iter,               /**< total number of strong branching iterations */
+   SCIP_Longint          iter,               /**< total number of strong branching iterations */
    int                   itlim               /**< iteration limit applied to the strong branching call */
    );
 

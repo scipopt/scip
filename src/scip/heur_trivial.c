@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -109,6 +109,10 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
       lb = SCIPvarGetLbLocal(vars[i]);
       ub = SCIPvarGetUbLocal(vars[i]);
+      
+      /* if problem is obviously infeasible due to empty domain, stop */
+      if( SCIPisGT(scip, lb, ub) )
+         goto TERMINATE;
 
       /* set bounds to sufficient large value */
       if( SCIPisInfinity(scip, -lb) )
@@ -210,6 +214,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       *result = SCIP_FOUNDSOL;
    }
 
+TERMINATE:
    /* free solutions */
    SCIP_CALL( SCIPfreeSol(scip, &lbsol) );
    SCIP_CALL( SCIPfreeSol(scip, &ubsol) );

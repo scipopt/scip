@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -125,7 +125,7 @@ size_t thread_num(void)
    {
       pthread_mutex_lock(&cppadmutex);
 
-      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", ncurthreads, (void*)pthread_self());
+      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", (long unsigned int)ncurthreads, (void*)pthread_self());
 
       pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
 

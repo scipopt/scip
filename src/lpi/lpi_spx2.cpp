@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define AUTOPRICING_ITERSWITCH          10000/**< start with devex and switch to steepest edge after this many iterations */
 #define STRONGBRANCH_RESTOREBASIS            /**< if defined then in SCIPlpiStrongbranch() we restore the basis after the
                                               *   down branch and after the up branch; if false only after the end of a
                                               *   strong branching phase, which however seems to mostly increase strong
@@ -73,22 +72,20 @@
 #endif
 
 /* include SoPlex solver */
-#include "soplex2.h"
+#include "soplex.h"
 
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
 
+/**@todo update this check to version 2.0 */
 /* check version */
-#if (SOPLEX_VERSION < 133)
-#error "This interface is not compatible with SoPlex versions prior to 1.4"
+#if (SOPLEX_VERSION < 172 || (SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION < 8))
+#error "This interface is not compatible with SoPlex versions prior to 1.7.2.8"
 #endif
 
-/* get githash of SoPlex */
-#if (SOPLEX_VERSION >= 160)
 #include "spxgithash.h"
-#endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
@@ -172,7 +169,7 @@ using namespace soplex;
 
 
 /** SCIP's SoPlex class */
-class SPxSCIP : public SoPlex2
+class SPxSCIP : public SoPlex
 {
    bool                  _lpinfo;
    bool                  _fromscratch;
@@ -192,7 +189,9 @@ public:
       SCIP_MESSAGEHDLR*  messagehdlr = NULL, /**< message handler */
       const char*        probname = NULL     /**< name of problem */
       )
-      : _probname(NULL),
+      : _lpinfo(false),
+        _fromscratch(false),
+        _probname(NULL),
         _colStat(NULL),
         _rowStat(NULL),
         _messagehdlr(messagehdlr)
@@ -202,11 +201,12 @@ public:
 
 #ifdef WITH_LPSCHECK
       int cpxstat;
+      _checknum = 0;
+      _doublecheck = false;
       _cpxenv = CPXopenCPLEX(&cpxstat);
       assert(_cpxenv != NULL);
       _cpxlp = CPXcreateprob(_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
       (void) CPXsetintparam(_cpxenv, CPX_PARAM_SCRIND, 0);
-      _checknum = 0;
 #endif
    }
 
@@ -227,7 +227,7 @@ public:
    /** return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol()
    {
-      return (Real) rationalParam(FEASTOL);
+      return realParam(FEASTOL);
    }
 
    /** set feastol and store value in case SoPlex only accepts a larger tolerance */
@@ -235,13 +235,13 @@ public:
       const Real d
       )
    {
-      setRationalParam(FEASTOL, (Rational) d);
+      setRealParam(FEASTOL, d);
    }
 
    /** return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real opttol()
    {
-      return (Real) rationalParam(OPTTOL);
+      return realParam(OPTTOL);
    }
 
    /** set opttol and store value in case SoPlex only accepts a larger tolerance */
@@ -249,15 +249,15 @@ public:
       const Real d
       )
    {
-      setRationalParam(OPTTOL, (Rational) d);
+      setRealParam(OPTTOL, d);
    }
 
    /** get objective limit according to objective sense */
    Real getObjLimit() const
    {
-      return (intParam(SoPlex2::OBJSENSE) == SoPlex2::OBJSENSE_MINIMIZE)
-         ? realParam(SoPlex2::OBJLIMIT_UPPER)
-         : realParam(SoPlex2::OBJLIMIT_LOWER);
+      return (intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE)
+         ? realParam(SoPlex::OBJLIMIT_UPPER)
+         : realParam(SoPlex::OBJLIMIT_LOWER);
    }
 
    // @todo realize this with a member variable as before
@@ -695,6 +695,8 @@ struct SCIP_LPi
    SCIP_PRICING          pricing;            /**< current pricing strategy */
    SCIP_Bool             solved;             /**< was the current LP solved? */
    SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -906,9 +908,7 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
    sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#if (SOPLEX_VERSION >= 160)
    sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
-#endif
 #ifdef WITH_LPSCHECK
    sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
 #endif
@@ -956,6 +956,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
@@ -965,6 +967,13 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
+
+   {
+      int verbosity = Param::verbose();
+      Param::setVerbose((*lpi)->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+      (*lpi)->spx->printVersion();
+      Param::setVerbose(verbosity);
+   }
 
    return SCIP_OKAY;
 }
@@ -1041,7 +1050,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       spx->clearLPReal();
 
       /* set objective sense */
-      spx->setIntParam(SoPlex2::OBJSENSE, (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex2::OBJSENSE_MINIMIZE : SoPlex2::OBJSENSE_MAXIMIZE));
+      spx->setIntParam(SoPlex::OBJSENSE, (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE));
 
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
@@ -1440,7 +1449,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setIntParam(SoPlex2::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex2::OBJSENSE_MINIMIZE : SoPlex2::OBJSENSE_MAXIMIZE ) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setIntParam(SoPlex::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE ) );
 
    return SCIP_OKAY;
 }
@@ -1517,14 +1526,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
       rowvec *= scaleval;
 
       /* adjust the sides */
-      if( lhs > -lpi->spx->realParam(SoPlex2::INFTY) )
+      if( lhs > -lpi->spx->realParam(SoPlex::INFTY) )
          lhs *= scaleval;
       else if( scaleval < 0.0 )
-         lhs = lpi->spx->realParam(SoPlex2::INFTY);
-      if( rhs < lpi->spx->realParam(SoPlex2::INFTY) )
+         lhs = lpi->spx->realParam(SoPlex::INFTY);
+      if( rhs < lpi->spx->realParam(SoPlex::INFTY) )
          rhs *= scaleval;
       else if( scaleval < 0.0 )
-         rhs = -lpi->spx->realParam(SoPlex2::INFTY);
+         rhs = -lpi->spx->realParam(SoPlex::INFTY);
       if( scaleval < 0.0 )
       {
          SCIP_Real oldlhs = lhs;
@@ -1589,14 +1598,14 @@ SCIP_RETCODE SCIPlpiScaleCol(
       obj *= scaleval;
 
       /* adjust the bounds */
-      if( lb > -lpi->spx->realParam(SoPlex2::INFTY) )
+      if( lb > -lpi->spx->realParam(SoPlex::INFTY) )
          lb /= scaleval;
       else if( scaleval < 0.0 )
-         lb = lpi->spx->realParam(SoPlex2::INFTY);
-      if( ub < lpi->spx->realParam(SoPlex2::INFTY) )
+         lb = lpi->spx->realParam(SoPlex::INFTY);
+      if( ub < lpi->spx->realParam(SoPlex::INFTY) )
          ub /= scaleval;
       else if( scaleval < 0.0 )
-         ub = -lpi->spx->realParam(SoPlex2::INFTY);
+         ub = -lpi->spx->realParam(SoPlex::INFTY);
       if( scaleval < 0.0 )
       {
          SCIP_Real oldlb = lb;
@@ -1894,7 +1903,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    assert(lpi->spx != NULL);
    assert(objsen != NULL);
 
-   *objsen = (lpi->spx->intParam(SoPlex2::OBJSENSE) == SoPlex2::OBJSENSE_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
+   *objsen = (lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
 
    return SCIP_OKAY;
 }
@@ -2037,13 +2046,13 @@ SCIP_RETCODE spxSolve(
 
    /* set basis representation and algorithm type */
    if( rep == SPxSolver::COLUMN )
-      lpi->spx->setIntParam(SoPlex2::REPRESENTATION, SoPlex2::REPRESENTATION_COLUMN);
+      lpi->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_COLUMN);
    else
-      lpi->spx->setIntParam(SoPlex2::REPRESENTATION, SoPlex2::REPRESENTATION_ROW);
+      lpi->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_ROW);
    if( type == SPxSolver::LEAVE )
-      lpi->spx->setIntParam(SoPlex2::ALGORITHM, SoPlex2::ALGORITHM_LEAVE);
+      lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_LEAVE);
    else
-      lpi->spx->setIntParam(SoPlex2::ALGORITHM, SoPlex2::ALGORITHM_ENTER);
+      lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_ENTER);
 
 #ifdef WITH_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
@@ -2090,7 +2099,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       factor 1.1 for switching back to column representation */
    if( lpi->rowrepswitch >= 0 )
    {
-      rowrep = lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW;
+      rowrep = lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW;
 
       if( !rowrep )
          rowrep = lpi->spx->numRowsReal() > lpi->spx->numColsReal() * (lpi->rowrepswitch);
@@ -2111,8 +2120,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
     * - LEAVE = PRIMAL
     */
    retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::LEAVE) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::ENTER);
-   assert(!rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW);
-   assert(rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_COLUMN);
+   assert(!rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW);
+   assert(rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN);
 
    return retcode;
 }
@@ -2134,7 +2143,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       factor 1.1 for switching back to column representation */
    if( lpi->rowrepswitch >= 0 )
    {
-      rowrep = lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW;
+      rowrep = lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW;
 
       if( !rowrep )
          rowrep = lpi->spx->numRowsReal() > lpi->spx->numColsReal() * (lpi->rowrepswitch);
@@ -2155,8 +2164,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
     * - LEAVE = PRIMAL
     */
    retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::ENTER) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::LEAVE);
-   assert(!rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW);
-   assert(rowrep || lpi->spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_COLUMN);
+   assert(!rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW);
+   assert(rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN);
 
    return retcode;
 }
@@ -2240,7 +2249,7 @@ SCIP_RETCODE lpiStrongbranch(
    status = SPxSolver::UNKNOWN;
    fromparentbasis = false;
    error = false;
-   oldItlim = spx->intParam(SoPlex2::ITERLIMIT);
+   oldItlim = spx->intParam(SoPlex::ITERLIMIT);
 
    /* get current bounds of column */
    oldlb = spx->lowerReal(col);
@@ -2253,8 +2262,8 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-   spx->setIntParam(SoPlex2::ALGORITHM, spx->intParam(SoPlex2::REPRESENTATION) == SoPlex2::REPRESENTATION_ROW
-      ? SoPlex2::ALGORITHM_ENTER : SoPlex2::ALGORITHM_LEAVE);
+   spx->setIntParam(SoPlex::ALGORITHM, spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW
+      ? SoPlex::ALGORITHM_ENTER : SoPlex::ALGORITHM_LEAVE);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -2265,7 +2274,7 @@ SCIP_RETCODE lpiStrongbranch(
       spx->changeUpperReal(col, newub);
       assert(spx->lowerReal(col) <= spx->upperReal(col));
 
-      spx->setIntParam(SoPlex2::ITERLIMIT, itlim);
+      spx->setIntParam(SoPlex::ITERLIMIT, itlim);
       do
       {
 #ifdef WITH_LPSCHECK
@@ -2309,7 +2318,7 @@ SCIP_RETCODE lpiStrongbranch(
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n",
                              itlim - spx->numIterations());
-            spx->setIntParam(SoPlex2::ITERLIMIT, itlim - spx->numIterations());
+            spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
             assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
@@ -2344,7 +2353,7 @@ SCIP_RETCODE lpiStrongbranch(
          spx->changeLowerReal(col, newlb);
          assert(spx->lowerReal(col) <= spx->upperReal(col));
 
-         spx->setIntParam(SoPlex2::ITERLIMIT, itlim);
+         spx->setIntParam(SoPlex::ITERLIMIT, itlim);
          do
          {
 #ifdef WITH_LPSCHECK
@@ -2389,7 +2398,7 @@ SCIP_RETCODE lpiStrongbranch(
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->numIterations());
                assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
-               spx->setIntParam(SoPlex2::ITERLIMIT, itlim - spx->numIterations());
+               spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
                error = false;
                fromparentbasis = true;
             }
@@ -2413,7 +2422,7 @@ SCIP_RETCODE lpiStrongbranch(
    }
 
    /* reset old iteration limit */
-   spx->setIntParam(SoPlex2::ITERLIMIT, oldItlim);
+   spx->setIntParam(SoPlex::ITERLIMIT, oldItlim);
 
    /* restore verbosity */
    Param::setVerbose(verbosity);
@@ -2645,11 +2654,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    return (lpi->spx->status() == SPxSolver::UNBOUNDED);
-#else
-   return FALSE;
-#endif
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -2806,7 +2811,29 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->status() != SPxSolver::ERROR && lpi->spx->status() != SPxSolver::SINGULAR);
+   if( lpi->spx->status() == SPxSolver::ERROR || lpi->spx->status() == SPxSolver::SINGULAR )
+      return FALSE;
+
+   /* only if we have a regular basis and the condition limit is set, we compute the condition number of the basis;
+    * everything above the specified threshold is then counted as instable
+    */
+   if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_RETCODE retcode;
+      SCIP_Real kappa;
+
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+      }
+      assert(kappa != SCIP_INVALID);
+
+      if( kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -2959,7 +2986,6 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    try
    {
       Vector tmp(lpi->spx->numColsReal(), ray);
@@ -2975,10 +3001,6 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    }
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by SoPlex versions <= 1.5.0\n");
-   return SCIP_LPERROR;
-#endif
 }
 
 /** gets dual farkas proof for infeasibility */
@@ -3028,7 +3050,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 /** gets information about the quality of an LP solution
  *
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
- *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ *  The LPI should return SCIP_INVALID for @p quality, if the requested quantity is not available.
  */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
@@ -3042,7 +3064,33 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   *quality = SCIP_INVALID;
+   bool success;
+
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   SCIPdebugMessage("requesting solution quality from SoPlex: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         success = lpi->spx->getEstimatedCondition(*quality);
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         success = lpi->spx->getExactCondition(*quality);
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+   }
+
+   if( !success )
+   {
+      SCIPdebugMessage("problem computing condition number\n");
+      *quality = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }
@@ -3662,16 +3710,16 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->spx->getLpInfo();
       break;
    case SCIP_LPPAR_LPITLIM:
-      *ival = lpi->spx->intParam(SoPlex2::ITERLIMIT);
+      *ival = lpi->spx->intParam(SoPlex::ITERLIMIT);
       break;
    case SCIP_LPPAR_PRESOLVING:
-      *ival = lpi->spx->intParam(SoPlex2::SIMPLIFIER) == SoPlex2::SIMPLIFIER_AUTO;
+      *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == SoPlex::SIMPLIFIER_AUTO;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int) lpi->pricing;
       break;
    case SCIP_LPPAR_SCALING:
-      *ival = (int) (lpi->spx->intParam(SoPlex2::SCALER) != SoPlex2::SCALER_OFF);
+      *ival = (int) (lpi->spx->intParam(SoPlex::SCALER) != SoPlex::SCALER_OFF);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3704,11 +3752,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       assert(ival >= -1);
-      lpi->spx->setIntParam(SoPlex2::ITERLIMIT, ival);
+      lpi->spx->setIntParam(SoPlex::ITERLIMIT, ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setIntParam(SoPlex2::SIMPLIFIER, (ival ? SoPlex2::SIMPLIFIER_AUTO : SoPlex2::SIMPLIFIER_OFF));
+      lpi->spx->setIntParam(SoPlex::SIMPLIFIER, (ival ? SoPlex::SIMPLIFIER_AUTO : SoPlex::SIMPLIFIER_OFF));
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = (SCIP_PRICING)ival;
@@ -3716,22 +3764,22 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       {
       case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_AUTO:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_AUTO);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_AUTO);
          break;
       case SCIP_PRICING_FULL:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_STEEP);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_STEEP);
          break;
       case SCIP_PRICING_PARTIAL:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_PARMULT);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_PARMULT);
          break;
       case SCIP_PRICING_STEEP:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_STEEP);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_STEEP);
          break;
       case SCIP_PRICING_STEEPQSTART:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_QUICKSTEEP);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_QUICKSTEEP);
          break;
       case SCIP_PRICING_DEVEX:
-         lpi->spx->setIntParam(SoPlex2::PRICER, SoPlex2::PRICER_DEVEX);
+         lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_DEVEX);
          break;
       default:
          return SCIP_LPERROR;
@@ -3739,7 +3787,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setIntParam(SoPlex2::SCALER, ( ival ? SoPlex2::SCALER_BIEQUI : SoPlex2::SCALER_OFF));
+      lpi->spx->setIntParam(SoPlex::SCALER, ( ival ? SoPlex::SCALER_BIEQUI : SoPlex::SCALER_OFF));
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3766,23 +3814,23 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->spx->feastol();
       break;
-#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->opttol();
       break;
-#endif
    case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex2::OBJLIMIT_LOWER);
+      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_LOWER);
       break;
    case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex2::OBJLIMIT_UPPER);
+      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_UPPER);
       break;
    case SCIP_LPPAR_LPTILIM:
-      *dval = lpi->spx->realParam(SoPlex2::TIMELIMIT);
+      *dval = lpi->spx->realParam(SoPlex::TIMELIMIT);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3807,23 +3855,25 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       lpi->spx->setFeastol(dval);
       break;
-#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->spx->setOpttol(dval);
       break;
-#endif
    case SCIP_LPPAR_LOBJLIM:
-      lpi->spx->setRealParam(SoPlex2::OBJLIMIT_LOWER, dval);
+      lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_UOBJLIM:
-      lpi->spx->setRealParam(SoPlex2::OBJLIMIT_UPPER, dval);
+      lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      lpi->spx->setRealParam(SoPlex2::TIMELIMIT, dval);
+      lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
       lpi->rowrepswitch = dval;
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3851,7 +3901,7 @@ SCIP_Real SCIPlpiInfinity(
 {
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
-   return lpi->spx->realParam(SoPlex2::INFTY);
+   return lpi->spx->realParam(SoPlex::INFTY);
 }
 
 /** checks if given value is treated as infinity in the LP solver */
@@ -3862,7 +3912,7 @@ SCIP_Bool SCIPlpiIsInfinity(
 {
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
-   return (val >= lpi->spx->realParam(SoPlex2::INFTY));
+   return (val >= lpi->spx->realParam(SoPlex::INFTY));
 }
 
 /**@} */
@@ -3912,8 +3962,9 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    try
    {
-      if( !lpi->spx->readFileReal(fname) )
-      return SCIP_READERROR;
+      assert(lpi->spx->intParam(SoPlex::READMODE) == SoPlex::READMODE_REAL);
+      if( !lpi->spx->readFile(fname) )
+         return SCIP_READERROR;
    }
    catch(SPxException x)
    {

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -53,6 +53,8 @@ SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
 VALGRIND	=	false
+CLIENTTMPDIR    =       /tmp
+OPTCOMMAND	=	optimize
 
 #compiling and linking parameters
 VERBOSE		=	false
@@ -71,14 +73,15 @@ PARASCIP	=	false
 #third party compiling parameters
 READLINE	=	true
 ZLIB		=	true
-GMP             =       auto
-ZIMPL		=	true
+GMP		=	true
+ZIMPL		=	auto
 IPOPT		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
+GAMS		=	false
 
 #compiler and linker parameters
 CC		=	gcc
@@ -123,7 +126,6 @@ GUROBI          =       gurobi_cl
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
-GAMS            =       gams
 
 #system parameters
 SHELL		= 	bash
@@ -150,14 +152,21 @@ GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
 
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique lpi nlpi xml dijkstra
+LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
+			$(LIBOBJDIR)/objscip \
+			$(LIBOBJDIR)/blockmemshell \
+			$(LIBOBJDIR)/tclique \
+			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/nlpi \
+			$(LIBOBJDIR)/xml \
+			$(LIBOBJDIR)/dijkstra
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -293,8 +302,8 @@ FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
 LDFLAGS		+=	$(ZLIB_LDFLAGS)
 endif
 
-ifeq ($(GMP),auto)
-GMP		=	$(ZIMPL)
+ifeq ($(ZIMPL),auto)
+ZIMPL		=	$(GMP)
 endif
 
 ifeq ($(GMP_LDFLAGS),)
@@ -302,11 +311,8 @@ GMP		=	false
 endif
 
 ifeq ($(ZIMPL),true)
-ifeq ($(ZLIB),false)
-$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
-endif
 ifeq ($(GMP),false)
-$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
+$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
 endif
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
 endif
@@ -343,6 +349,9 @@ LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
 endif
 
+ifeq ($(GAMS),true)
+LDFLAGS		+=	-ldl -lpthread
+endif
 
 #-----------------------------------------------------------------------------
 # SHARED Libaries

@@ -1,4 +1,4 @@
-/* $Id: undef.hpp 2939 2013-10-14 11:06:18Z bradbell $ */
+/* $Id: undef.hpp 3067 2013-12-29 17:35:34Z bradbell $ */
 # ifndef CPPAD_UNDEF_INCLUDED
 # define CPPAD_UNDEF_INCLUDED
 
@@ -50,6 +50,9 @@ Preprecessor definitions that presist after cppad/cppad.hpp is included:
 # undef CppADTrackExtend      deprecated version of CPPAD_TRACK_EXTEND
 # undef CppADTrackNewVec      deprecated version of CPPAD_TRACK_NEW_VEC
 # undef CppADvector           deprecated version of CPPAD_TEST_VECTOR
+
+// for conditional testing when implicit conversion is not present
+# undef CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
 -----------------------------------------------------------------------------
 */
 // Preprecessor definitions that do not presist 

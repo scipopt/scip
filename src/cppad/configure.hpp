@@ -1,4 +1,4 @@
-/* $Id: configure.hpp.in 2939 2013-10-14 11:06:18Z bradbell $ */
+/* $Id: configure.hpp.in 3064 2013-12-28 18:01:30Z bradbell $ */
 # ifndef CPPAD_CONFIGURE_INCLUDED
 # define CPPAD_CONFIGURE_INCLUDED
 
@@ -44,7 +44,7 @@ Replacement for config.h so that all preprocessor symbols begin with CPPAD_
 \def CPPAD_PACKAGE_STRING
 cppad-yyyymmdd as a C string where yyyy is year, mm is month, and dd is day.
 */
-# define CPPAD_PACKAGE_STRING "cppad-20130918"
+# define CPPAD_PACKAGE_STRING "cppad-20140000.1"
 
 /*!
 def CPPAD_HAS_NULLPTR
@@ -59,6 +59,14 @@ is the internal representation used for sparse vectors of std::set<size_t>
 either sparse_set or sparse_list).
 */
 # define CPPAD_INTERNAL_SPARSE_SET sparse_list
+
+/*!
+\def CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
+If this symbol is one, an implicit constor of AD<Base> is defined
+where the argument has any type.
+Otherwise this constructor is explicit.
+*/
+# define CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE 0
 
 /*!
 \def CPPAD_BOOSTVECTOR
