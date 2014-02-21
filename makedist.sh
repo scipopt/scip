@@ -135,6 +135,11 @@ $NAME/interfaces/jni/examples/JniKnapsack/Makefile $NAME/interfaces/jni/examples
 $NAME/interfaces/jni/examples/JniKnapsack/java/JniKnapsack.java \
 $NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
 $NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
+$NAME/interfaces/python/include/ $NAME/interfaces/python/lib/ \
+$NAME/interfaces/python/pyscipopt/*.pyx $NAME/interfaces/python/pyscipopt/*.pxd \
+$NAME/interfaces/python/pyscipopt/*.py $NAME/interfaces/python/tests/*.py \
+$NAME/interfaces/python/INSTALL $NAME/interfaces/python/LICENSE \
+$NAME/interfaces/python/README $NAME/interfaces/python/*.py \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
