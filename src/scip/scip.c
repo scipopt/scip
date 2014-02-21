@@ -29406,6 +29406,8 @@ SCIP_RETCODE SCIPnewProbingNode(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
+
    SCIP_CALL( checkStage(scip, "SCIPnewProbingNode", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
@@ -29414,7 +29416,13 @@ SCIP_RETCODE SCIPnewProbingNode(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPtreeCreateProbingNode(scip->tree, scip->mem->probmem, scip->set, scip->lp) );
+   retcode = SCIPtreeCreateProbingNode(scip->tree, scip->mem->probmem, scip->set, scip->lp);
+
+   if( retcode == SCIP_MAXDEPTHLEVEL )
+   {
+      SCIPwarningMessage(scip, "probing reached maximal depth; it should be stopped\n");
+   }
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }

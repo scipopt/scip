@@ -5821,6 +5821,7 @@ SCIP_RETCODE treeCreateProbingNode(
 {
    SCIP_NODE* currentnode;
    SCIP_NODE* node;
+   SCIP_RETCODE retcode;
 
    assert(tree != NULL);
    assert(SCIPtreeIsPathComplete(tree));
@@ -5844,9 +5845,17 @@ SCIP_RETCODE treeCreateProbingNode(
 
    /* create the probingnode data */
    SCIP_CALL( probingnodeCreate(&node->data.probingnode, blkmem, lp) );
-   
+
    /* make the current node the parent of the new probing node */
-   SCIP_CALL( nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0) );
+   retcode = nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0);
+
+   /* if we reached the maximal depth level we clean up the allocated memory and stop */
+   if( retcode == SCIP_MAXDEPTHLEVEL )
+   {
+      SCIP_CALL( probingnodeFree(&(node->data.probingnode), blkmem, lp) );
+      BMSfreeBlockMemory(blkmem, &node);
+   }
+   SCIP_CALL( retcode );
    assert(SCIPnodeGetDepth(node) == tree->pathlen);
 
    /* check, if the node is the probing root node */
