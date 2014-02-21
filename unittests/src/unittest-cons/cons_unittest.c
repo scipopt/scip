@@ -65,9 +65,11 @@
 /* TODO: fill in the necessary constraint data */
 
 /** constraint data for unittest constraints */
-/*struct SCIP_ConsData
+#if 0
+struct SCIP_ConsData
 {
-};*/
+};
+#endif
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
