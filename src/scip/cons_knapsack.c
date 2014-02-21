@@ -177,6 +177,7 @@ struct SCIP_ConsData
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the knapsack already added to clique table? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
+   unsigned int          existmultaggr:1;    /**< does this constraint contain multi-aggregations */
 };
 
 
@@ -636,20 +637,19 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->merged = FALSE;
    (*consdata)->cliquesadded = FALSE;
    (*consdata)->varsdeleted = FALSE;
+   (*consdata)->existmultaggr = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
-#ifndef NDEBUG
       for( v = 0; v < (*consdata)->nvars; v++ )
       {
          SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
          assert(var != NULL);
-         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+         (*consdata)->existmultaggr = (*consdata)->existmultaggr || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
       }
-#endif
 
       /* allocate memory for additional data structures */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->nvars) );
@@ -6233,6 +6233,9 @@ SCIP_RETCODE addCoef(
                | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
                conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1],
                &consdata->eventdatas[consdata->nvars-1]->filterpos) );
+
+         if( !consdata->existmultaggr && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+            consdata->existmultaggr = TRUE;
       }
 
       /* update weight sums */
@@ -9338,6 +9341,9 @@ SCIP_RETCODE applyFixings(
       return SCIP_OKAY;
    }
 
+   /* all multi-aggregations should be resolved */
+   consdata->existmultaggr = FALSE;
+
    v = 0;
    while( v < consdata->nvars )
    {
@@ -12265,6 +12271,7 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    SCIP_Bool redundant;
+   SCIP_Bool inpresolve;
    int nfixedvars;
    int i;
 
@@ -12274,11 +12281,23 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+
    /* process useful constraints */
    for( i = 0; i < nusefulconss && !cutoff; i++ )
    {
+      /* do not propagate constraints with multi-aggregated variables, which should only happen in probing mode,
+       * otherwise the multi-aggregation should be resolved
+       */
+      if( inpresolve && SCIPconsGetData(conss[i])->existmultaggr )
+         continue;
+#ifndef NDEBUG
+      else if( !inpresolve )
+         assert(!(SCIPconsGetData(conss[i])->existmultaggr));
+#endif
+
       SCIP_CALL( propagateCons(scip, conss[i], &cutoff, &redundant, &nfixedvars, conshdlrdata->negatedclique) );
-   } 
+   }
 
    /* adjust result code */
    if( cutoff )
@@ -12838,24 +12857,33 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
-      
+
       conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
       assert(conshdlr != NULL);
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
-   
+
       if( conshdlrdata->negatedclique )
       {
          /* if a variable fixed to 1 is unfixed, it is possible, that it can be fixed to 1 again */
          eventdata->consdata->propagated = FALSE;
       }
-  
+
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if a variable fixed to 0 is unfixed, it is possible, that it can be fixed to 0 again */
       eventdata->consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_VARFIXED:  /* the variable should be removed from the constraint in presolving */
+      if( !eventdata->consdata->existmultaggr )
+      {
+	 SCIP_VAR* var = SCIPeventGetVar(event);
+	 assert(var != NULL);
+
+         if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+            eventdata->consdata->existmultaggr = TRUE;
+      }
+      /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */
       eventdata->consdata->presolved = FALSE;
       break;
