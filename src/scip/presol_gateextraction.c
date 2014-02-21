@@ -1270,6 +1270,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    HASHDATA* hashdata;
    SCIP_CONSHDLR* conshdlrsetppc;
    SCIP_CONSHDLR* conshdlrlogicor;
+   SCIP_CONSHDLR* conshdlrand;
    SCIP_CONS** setppcconss;
    SCIP_CONS** logicorconss;
    int nsetppcconss;
@@ -1347,8 +1348,33 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    if( nsetppcconss == 0 || nlogicorconss == 0 )
       return SCIP_OKAY;
 
+   /* get presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   conshdlrand = SCIPfindConshdlr(scip, "and");
+
+   /* need and-constraint handler to extract and-gates */
+   if( conshdlrand == NULL )
+   {
+      /* nothing to do when we cannot extract anything */
+      if( !presoldata->searchequations )
+         return SCIP_OKAY;
+      else
+      {
+         /* make sure that we correct the parameter for only extrating set-partitioning constraints */
+         if( SCIPisParamFixed(scip, "presolving/"PRESOL_NAME"/onlysetpart") )
+         {
+            SCIPwarningMessage(scip, "unfixing parameter <presolving/"PRESOL_NAME"/onlysetpart> in gate extration presolver\n");
+            SCIP_CALL( SCIPunfixParam(scip, "presolving/"PRESOL_NAME"/onlysetpart") );
+         }
+         SCIP_CALL( SCIPsetBoolParam(scip, "presolving/"PRESOL_NAME"/onlysetpart", TRUE) );
+         assert(presoldata->onlysetpart);
+      }
+   }
+
    paramvalue = FALSE;
-   if( SCIPgetBoolParam(scip, "constraints/and/linearize", &paramvalue) == SCIP_OKAY )
+   if( conshdlrand != NULL && SCIPgetBoolParam(scip, "constraints/and/linearize", &paramvalue) == SCIP_OKAY )
    {
       if( paramvalue )
       {
@@ -1363,10 +1389,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    assert(setppcconss != NULL);
    logicorconss = SCIPconshdlrGetConss(conshdlrlogicor);
    assert(logicorconss != NULL);
-
-   /* get presolver data */
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
 
    /* first we need to initialized the hashtables if not yet done */
    if( presoldata->hashdatatable == NULL )
