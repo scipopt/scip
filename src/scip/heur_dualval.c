@@ -2667,9 +2667,9 @@ SCIP_RETCODE SCIPincludeHeurDualval(
          &heurdata->relaxindicators, FALSE, DEFAULT_RELAXINDICATORS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxcontvars",
-         "relax the continous variables ",
+         "relax the continous variables",
          &heurdata->relaxcontvars, FALSE, DEFAULT_RELAXCONTVARS, NULL, NULL) );
-   
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/heurverblevel",
          "verblevel of the heuristic, default is 0 to display nothing",
          &heurdata->heurverblevel, FALSE, DEFAULT_HEURVERBLEVEL, 0, 4, NULL, NULL) );
