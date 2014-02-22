@@ -670,20 +670,20 @@ SCIP_RETCODE execRelpscost(
                break; /* terminate initialization loop, because node is infeasible */
             }
             /* proved bound for down child of best candidate is larger than cutoff bound -> increase lower bound of best candidate */
-            else if( bestcand != -1 )
+            else if( bestsbcand != -1 )
             {
                if( !bestsbdowncutoff && bestsbdownvalid && SCIPisGE(scip, bestsbdown, SCIPgetCutoffbound(scip)) )
                {
                   bestsbdowncutoff = TRUE;
 
                   SCIPdebugMessage(" -> valid dual bound for down child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbdown=%g, cutoff=%g)\n",
-                     SCIPvarGetName(branchcands[bestcand]), bestsbdownvalid, bestsbdown, SCIPgetCutoffbound(scip));
+                     SCIPvarGetName(branchcands[bestsbcand]), bestsbdownvalid, bestsbdown, SCIPgetCutoffbound(scip));
 
                   SCIPdebugMessage(" -> increase lower bound of best candidate <%s> to %g\n",
-                     SCIPvarGetName(branchcands[bestcand]), SCIPfeasCeil(scip, branchcandssol[bestcand]));
+                     SCIPvarGetName(branchcands[bestsbcand]), SCIPfeasCeil(scip, branchcandssol[bestsbcand]));
 
-                  SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestcand]),
-                        SCIP_BOUNDTYPE_LOWER, SCIPfeasCeil(scip, branchcandssol[bestcand])) );
+                  SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestsbcand]),
+                        SCIP_BOUNDTYPE_LOWER, SCIPfeasCeil(scip, branchcandssol[bestsbcand])) );
                }
                /* proved bound for up child of best candidate is larger than cutoff bound -> decrease upper bound of best candidate */
                else if( !bestsbupcutoff && bestsbupvalid && SCIPisGE(scip, bestsbup, SCIPgetCutoffbound(scip)) )
@@ -691,13 +691,13 @@ SCIP_RETCODE execRelpscost(
                   bestsbupcutoff = TRUE;
 
                   SCIPdebugMessage(" -> valid dual bound for up child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbup=%g, cutoff=%g)\n",
-                     SCIPvarGetName(branchcands[bestcand]), bestsbupvalid, bestsbup, SCIPgetCutoffbound(scip));
+                     SCIPvarGetName(branchcands[bestsbcand]), bestsbupvalid, bestsbup, SCIPgetCutoffbound(scip));
 
                   SCIPdebugMessage(" -> decrease upper bound of best candidate <%s> to %g\n",
-                     SCIPvarGetName(branchcands[bestcand]), SCIPfeasFloor(scip, branchcandssol[bestcand]));
+                     SCIPvarGetName(branchcands[bestsbcand]), SCIPfeasFloor(scip, branchcandssol[bestsbcand]));
 
-                  SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestcand]),
-                        SCIP_BOUNDTYPE_UPPER, SCIPfeasFloor(scip, branchcandssol[bestcand])) );
+                  SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestsbcand]),
+                        SCIP_BOUNDTYPE_UPPER, SCIPfeasFloor(scip, branchcandssol[bestsbcand])) );
                }
             }
          }
