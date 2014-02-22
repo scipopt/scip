@@ -19,7 +19,7 @@ Features
 
 - the original problem can now be copied
 
-- upgrading can now be disabled for single constraints
+- upgrading can now be disabled for single linear constraints
 
 - the rank of cuts is now stored and taken into account to improve numerical stability
 
@@ -37,6 +37,9 @@ Interfaces
 - beta version of a python interface
 
 - beta version of a Java native interface
+
+- added copy of GAMS interface from COIN-OR/GAMSlinks project;
+  GAMS-reader in SCIP can now read model instances from .gms files
 
 
 Performance Improvements and Bug Fixes
@@ -59,6 +62,8 @@ Performance Improvements and Bug Fixes
 - improved handling of initial constraints created during solving
 
 - improved numerical stability checks for LP solution
+
+- disabled scaling in feasibility check of nonlinear constraint handlers
 
 - and many bug fixes, see CHANGELOG
 

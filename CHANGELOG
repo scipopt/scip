@@ -26,7 +26,7 @@ fixed bugs:
   treated node are kept and added to the LP at every node where they are active
 - fixed bug where a limit on presolving rounds was exceeded by 1
 - fixed bug that lead to resolving the LP after diving instead of restoring the buffered solution
-- fixed rare bug with conflict analysis and LP/LPI having different stati after diving
+- fixed rare bug with conflict analysis and LP/LPI having different states after diving
 - fixed bug in genvbounds propagator occurring when objective offset or scale changes after a restart
 - fixed bug in flowcover separator to exclude unconstrained rows in aggregation
 - fixed bug in prop_dualfix w.r.t. to fixing of variables to infinity after presolving
@@ -39,7 +39,7 @@ fixed bugs:
 - fixed bug in sepa_cgmip computeObjWeightSize() w.r.t. equal sized rows
 - fixed several minor bugs with handling of memory when writing aggregated variables (reader_lp, reader_mps)
 - fixed minor bug in cons_linear w.r.t. disabled presolving
-- fixed bug in handling max-functions in ampl interface
+- fixed bug in handling max-function in ampl interface; added support for min-function
 - fixed bug in cons_indicator with trying to create solution in problem stage
 - fixed bug in cons_orbitope with fixing upper right triangle in non-root nodes
 - fixed bug in reader_lp when writing bilinear terms (product sign was missing)
@@ -54,8 +54,8 @@ features:
   objective function which in turn is treated as additional constraint
 - added average gap based on primal-dual integral to solution statistics, can be disabled via parameter
   "misc/calcintegral"
-- new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value.
-  The heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables.
+- new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value;
+  the heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables
 - added breadth first search node selection
 - new node selection rule UCT which balances exploration and exploitation by considering node visits
 - added new dual presolving for setppc-constraints
@@ -77,7 +77,7 @@ features:
   methods for sorting, insertion and deletion
 - added a data pointer to each node of the SCIP_DIGRAPH
 - the statistics now include the value of the first LP solved at the root node (without cuts)
-- all readers now take the global parameters "reading/dynamic{conss|cols|rows}" and "reading/initialconss" into account.
+- all readers now take the global parameters "reading/dynamic{conss|cols|rows}" and "reading/initialconss" into account
 - the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
 - added the possibility to copy the original problem via SCIPcopyOrig()
 - SCIPgetVarCopy() will now copy the original bounds when called for an original variable
@@ -87,8 +87,8 @@ features:
 - new branching rule "cloud branching" that considers several alternative LP optima
 - additional vbc output added: branching information is printed earlier and also for nodes which were cut off
 - added new statistic which distinguish between internal nodes and leaves which got processed
-- added reader_pbm, which writes the matrix structure in pbm format (possibly scaled to given size)
-- added possibility to separate a cutpool w.r.t. given solution (instead of LP-solution)
+- added reader_pbm, which writes constraints-variables incidence matrix in pbm format (possibly scaled to given size)
+- added possibility to separate a cutpool w.r.t. a given solution (instead of LP-solution)
 - added multi-aggregation for binary variables with at most two uplocks and two downlocks, which emerge from set-
   partitioning or set-packing constraints
 - added full-dual presolving step in setppc constraint handler
@@ -99,12 +99,11 @@ features:
 - can now read and write CIP-files with (multi-)aggregated variables
 - new method SCIPapplyProbingVar() in prop_probing.h
 - added first implication detection in cons_linear
-- several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
+- several new presolving steps for linear and knapsack constraints, using gcd information and many more
 - cons_indicator can now try to construct feasible solutions from a cover
 - reader_osil can now read SOS1 and SOS2 constraints
-- reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
-- reader_mps is now abled to write and constraints in form of their (weak/strict) relaxation
-- added possibility to forbid constraint upgrading
+- reader_lp and reader_mps are now able to write and-constraints in form of their (weak/strict) relaxation
+- added possibility to forbid upgrading of linear constraints
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
 - added clique presolving for xor constraints
@@ -121,7 +120,7 @@ features:
 - probing supports implicit binary variables
 - added scaling to computation of relative interior point in SCIPcomputeLPRelIntPoint()
 - added more presolving to cons_indicator, checking whether indicator/slack variables are aggregated
-- before copying solutions to the original solution candidate store, infinite solution values are now removed using
+- before copying solutions to the original solution candidate storage, infinite solution values are now removed using
   SCIPcreateFiniteSolCopy()
 - new initial constraints are now added to the LP before solving a probing LP
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface
@@ -148,10 +147,10 @@ performance improvements:
 - minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
 - added upgradability for implicit binary variable cases for linear constraints
 - improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
-- improved merging of constraints in cons_and.c
+- improved merging of and-constraints
 - faster feasibility check of LP solutions (controlled by parameters lp/checkprimfeas and lp/checkdualfeas)
 
-interface
+interface:
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
   value via an additional pointer; the corresponding implicit integer variables can be accessed together with their
   fractionalities and solution values in the same way as binary and integer variables before; the arrays are sorted such
@@ -216,15 +215,14 @@ interface
 - beta version of a python interface for the scipoptsuite is now available under interfaces/python
 - beta version of a Java native interface is now available under interfaces/jni
 
-
 parameters:
-- parameter branching/scorefunction has new value 'q' for for 'q'uotient branching score function
+- parameter "branching/scorefunction" has new value 'q' for for 'q'uotient branching score function
 - new parameters "branching/firstsbchild" and "branching/forceall" to specify the first child node to be
   investigated during strong branching ('u'p,'d'down,'a'uto) and whether always both children should be solved (only for
   strong branching with domain propagation, per default, the second child is not looked at when the first is infeasible)
 - new parameters "branching/checksol" and "branching/heursbsol" to specify whether the strong branching LP solution
   should be checked for feasibility and whether a simple rounding heuristic should be run on this solution
-- added "conflict/maxvarsdetectimpliedbounds> parameter to decide whether the a valid conflict of what maximal length
+- added "conflict/maxvarsdetectimpliedbounds" parameter to decide whether the a valid conflict of what maximal length
   will be used to derive global bound changes
 - added "conflict/fullshortenconflict" parameter to decide whether we want to stop shortening a conflict set, when no
   global bound changes can be found anymore
@@ -252,10 +250,10 @@ parameters:
   to the corresponding bound
 - new parameter "heuristics/shiftandpropagate/impliscontinuous" to decide whether implicit integer variables are treated
   as continuous variables
-- new parameter <lp/disablecutoff> to switch usage of LP cutoff bound (0: enabled, 1: disabled, 2: auto = disabled if
+- new parameter "lp/disablecutoff" to toggle usage of LP cutoff bound (0: enabled, 1: disabled, 2: auto = disabled if
   pricers are used)
-- parameter lp/checkfeas was replaced by two parameters lp/checkprimfeas and lp/checkdualfeas to decide primal and dual
-  feasibility check individually
+- replaced parameter "lp/checkfeas" by two parameters "lp/checkprimfeas" and "lp/checkdualfeas" to decide on primal and dual
+  feasibility checks individually
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral
 - new parameter "misc/finitesolutionstore" to switch whether infinite fixings should be removed from solutions before
   copying them to the original solution store
@@ -268,25 +266,20 @@ parameters:
   when solving a component
 - new parameter "reading/(READER)/initialconss" that determines whether model constraints are initial
 - new parameter "reading/cipreader/writefixedvars" for disabling printing of fixed variables in CIP format
-- new parameter "reading/lpreader/linearize-and-constraints" to allow and constraints to be linearized when printing in
-  LP format
-- new parameter "reading/lpreader/aggrlinearization-ands" to enable/disable the printing of the weak or strict
-  relaxation of and constraints in LP format
-- new parameter "reading/mpsreader/linearize-and-constraints" to allow and constraints to be linearized when printing in
-  MPS format
-- new parameter "reading/mpsreader/aggrlinearization-ands" to enable/disable the printing of the weak or strict
-  relaxation of and constraints in MPS format
+- new parameters "reading/lpreader/linearize-and-constraints" and "reading/mpsreader/linearize-and-constraints" to
+  allow and-constraints to be linearized when printing in LP and MPS format, respectively
+- new parameter "reading/lpreader/aggrlinearization-ands" and "reading/mpsreader/aggrlinearization-ands" to enable/disable
+  the printing of the weak or strict relaxation of and-constraints in LP and MPS format, respectively
 - new parameter "separating/gomory/sidetypebasis" to decide whether the sides of ranged rows should be determined from
   the basis status
 - new parameter "separating/oddcycle/cutthreshold" to run odd cycle separation if not enough cuts have been found
 - remove parameter "separating/closecuts/relintnormtype"
 - new parameter "separating/feastolfac" to allow dynamic decrease of relaxation feasibility tolerance depending on
   feasibility to applied cuts, i.e., allow relaxation solutions to have a primal infeasibility of at most this factor
-  times the infeasibility applied cuts
+  times the infeasibility of applied cuts
 - new parameter "separating/zerohalf/delayedcuts" to use the delayed cutpool for the zerohalf separator
 - new parameter "write/allconss" to enable that all constraints are written
-- new parameter "write/genericnamesoffset" when writing a generic problem now it is possible to define an offset on the
-  variable name, that normally starts with "0"
+- new parameter "write/genericnamesoffset" when writing a generic problem to define an offset on the variable numbering
 - changed default value of parameter numerics/dualfeastol to 1e-7 for safer dual bounds from LP solver
 - changed default max coefficient for big-M constraint to be initial from 1e6 to 1e9
 - changed default value of gomory cut separation parameter "separating/gomory/maxrank" from 0 to 3, to take also gomory
@@ -299,8 +292,7 @@ core:
 - the main output routine of message.c (bufferMessage - now handleMessage) has been rewritten: it now does not need
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
-- changed all calls to SCIPaddCut() to take infeasibility parameter
-- extended and corrected dual feasibility checks for LP solution (controlled by parameter lp/checkdualfeas)
+- extended and corrected dual feasibility checks for LP solution (controlled by parameter "lp/checkdualfeas")
 - return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
 
 Makefile:
@@ -308,8 +300,8 @@ Makefile:
 - fixed make install for older Mac systems where install command does not have option -t
 - dropped support for Ipopt < 3.10
 
-Misc:
-- added SCIPdebugCheckConss() to the debugging mechanism and therefor created a SCIP_SOL in (original space) in debug.c
+misc:
+- added SCIPdebugCheckConss() to the debugging mechanism and therefor created a SCIP_SOL (in original space) in debug.c
 
 
 SCIP version 3.0.2
