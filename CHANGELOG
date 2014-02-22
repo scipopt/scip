@@ -97,8 +97,7 @@ features:
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
 - cons_indicator can now try to construct feasible solutions from a cover
 - reader_osil can now read SOS1 and SOS2 constraints
-- reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
-- reader_mps is now abled to write and constraints in form of their (weak/strict) relaxation
+- reader_lp and reader_mps are now able to write and-constraints in form of their (weak/strict) relaxation
 - added possibility to forbid constraint upgrading
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
