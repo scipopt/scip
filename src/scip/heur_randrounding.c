@@ -140,7 +140,8 @@ SCIP_RETCODE performRandRounding(
       {
          cutoff = TRUE;
          break;
-      } else if( SCIPisFeasEQ(scip, lb, ceilval) )
+      }
+      else if( SCIPisFeasEQ(scip, lb, ceilval) )
       {
          /* only rounding up possible */
          assert(SCIPisFeasGE(scip, ub, ceilval));
@@ -227,7 +228,7 @@ SCIP_RETCODE performRandRounding(
    }
 
    /* if no cutoff was detected, the solution is a candidate to be checked for feasibility */
-   if( !cutoff )
+   if( !cutoff && ! SCIPisStopped(scip) )
    {
       if( SCIPallColsInLP(scip) )
       {
