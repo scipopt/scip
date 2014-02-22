@@ -294,6 +294,7 @@ core:
   function pointer to the output function and uses it to directly output the (buffered) messages
 - extended and corrected dual feasibility checks for LP solution (controlled by parameter "lp/checkdualfeas")
 - return error if variable should be fixed to infinity after presolving (LP-solvers do not handle this consistently)
+- LPI file (lpi*.[h|c]) all moved from src/scip to src/lpi
 
 Makefile:
 - default flag for ZIMPL is now "auto", which means that it is built if and only if GMP is available (GMP=true)
