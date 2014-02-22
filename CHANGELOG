@@ -2,7 +2,7 @@ SCIP version 3.1.0
 ==================
 
 fixed bugs:
-- fixed bug when adding (global) clique, implications or variable bound information in solving stage, that lead to
+- fixed bug when adding (global) clique, implications or variable bound information in solving stage that lead to
   global bound changes which contradict local bounds and therefore need to be stored as pending bound changes
 - unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
   transformed problem to be infeasible in the original problem
@@ -14,11 +14,11 @@ fixed bugs:
 - do not multi-aggregate variables if the constant would be a huge value in order to avoid numerical troubles
 - fixed bug with infinite multi-aggregation constants
 - fixed wrong bound calculation in sepa_rapidlearning
-- fixed bug when bound change contradicts local bound and is stored as pending, but the contradicting local
+- fixed bug when a bound change contradicts a local bound and is stored as pending, but the contradicting local
   bound becomes global afterwards (--> node where pending bound change is valid can be cut off)
 - fixed bug w.r.t. changing the variable branching priority beyond the problem stage
 - fixed statistics bug: externally given solutions and new solutions found while transforming existing ones
-  are now listed in line "other solutions" of Primal Heuristics statistics
+  are now listed in line "other solutions" of primal heuristics statistics
 - fixed memory bug in reader_mps
 - fixed output of aggregated variables in indicator constraints in lp and mps-format
 - fixed bug in reading indicator constraints in mps-format
@@ -50,12 +50,12 @@ data structures:
 - hash tables will now increase dynamically
 
 features:
-- new LNS heuristic called proximity which solves a problem in which a local branching constraint replaces the
+- new LNS heuristic called "proximity", which solves a problem in which a local branching constraint replaces the
   objective function which in turn is treated as additional constraint
-- added average gap based on primal-dual integral to solution statistics, can be disabled via parameter
+- added average gap based on primal-dual integral to solution statistics; can be disabled via parameter
   "misc/calcintegral"
 - new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value;
-  the heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables
+  the heuristic uses the probing mode of SCIP to generate conflict clauses on the fractional variables
 - added breadth first search node selection
 - new node selection rule UCT which balances exploration and exploitation by considering node visits
 - added new dual presolving for setppc-constraints
@@ -78,7 +78,7 @@ features:
 - added a data pointer to each node of the SCIP_DIGRAPH
 - the statistics now include the value of the first LP solved at the root node (without cuts)
 - all readers now take the global parameters "reading/dynamic{conss|cols|rows}" and "reading/initialconss" into account
-- the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
+- XOR constraint handler can add two extended formulations (flow/asymmetric, parameter "addflowextended/addextendedform")
 - added the possibility to copy the original problem via SCIPcopyOrig()
 - SCIPgetVarCopy() will now copy the original bounds when called for an original variable
 - added method SCIPcreateFiniteSolCopy() which creates a copy of a solution, thereby trying to reduce
@@ -86,15 +86,15 @@ features:
 - added propagation method to cons_xor relying on Gaussian elimination, which can also produce feasible solutions
 - new branching rule "cloud branching" that considers several alternative LP optima
 - additional vbc output added: branching information is printed earlier and also for nodes which were cut off
-- added new statistic which distinguish between internal nodes and leaves which got processed
-- added reader_pbm, which writes constraints-variables incidence matrix in pbm format (possibly scaled to given size)
+- added new statistic which distinguishes between internal nodes and leaves which got processed
+- added reader_pbm, which writes the constraint-variable incidence matrix in pbm format (possibly scaled to given size)
 - added possibility to separate a cutpool w.r.t. a given solution (instead of LP-solution)
 - added multi-aggregation for binary variables with at most two uplocks and two downlocks, which emerge from set-
   partitioning or set-packing constraints
 - added full-dual presolving step in setppc constraint handler
 - added upgrade from quadratic constraints to set-packing constraints
 - generalized the linking constraint handler
-- in verblevel SCIP_VERBLEVEL_FULL the number of non-zeros will be computed for the original and presolved model
+- in verblevel SCIP_VERBLEVEL_FULL, the number of non-zeros will be output for the original and presolved model
 - new presolving step for tightening logicor constraints using implication and clique information
 - can now read and write CIP-files with (multi-)aggregated variables
 - new method SCIPapplyProbingVar() in prop_probing.h
@@ -107,8 +107,8 @@ features:
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
 - added clique presolving for xor constraints
-- added upgrade of continuous variables to implicit variables for linear equations even if the coefficient is unequal to
-  one
+- added upgrade of continuous variables to implicit variables for linear equations even if the coefficient is
+  not equal to 1
 - added presolving using pairs of variable bound constraints that use the same variables
 - added strong branching with domain propagation support: in SCIPstartStrongbranch(), support for propagation can
   be enabled (uses the probing mode, some overhead compared to standard strong branching), after that
@@ -127,7 +127,7 @@ features:
 - added McNemar tests and Wilcoxon signed rank tests to cmpres.awk evaluation scripts
 - a pricer can now return that no further pricing should be done but rather early branching, even if it added variables
 - dual solution can now be displayed for pure LPs when no presolving was performed
-- first implementation of parsing for nonlinear constraints in cip format
+- first implementation of parsing for nonlinear constraints in CIP format
 - added reading capability to GAMS reader (if compiling with GAMS=true, requires a GAMS system)
 - added capability of writing SOS1/2 constraints to GAMS reader (introduces extra variables and equations)
 
@@ -161,7 +161,7 @@ interface:
 - added number of constraints which are marked for propagation to callback method consprop
 - SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use
   (relevant for ranged rows)
-- SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
+- SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible for local bounds
 - SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
 - SCIPstartStrongbranch() has a new parameter "propagate" to enable or disable propagation support for strong branching
 - removed parameter "normtype" from function SCIPcomputeLPRelIntPoint()
@@ -170,9 +170,9 @@ interface:
 - SCIPgetLPObjval() now returns the LP value of the current (suboptimal) basis if the iteration limit is hit during LP
   solving (instead of -infinity); this value is not necessarily a valid dual bound and must not be used as such, but can
   be used as an objective estimate, e.g., if strong branching is simulated using the probing mode
-- the HEUREXEC callback has a new parameter nodeinfeasible which denotes whether the current node was already detected
+- the HEUREXEC callback has a new parameter "nodeinfeasible" which denotes whether the current node was already detected
   to be infeasible
-- the PRICERREDCOST callback has a new parameter stopearly, which is a bool pointer to store whether pricing should be
+- the PRICERREDCOST callback has a new parameter "stopearly", which is a bool pointer to store whether pricing should be
   stopped early although variables were generated, and early branching should be performed
 - new method SCIPadjustImplicitSolVals() which sets implicit integer variables to an integer value in a given solution
   without deteriorating its objective value
@@ -180,7 +180,7 @@ interface:
   SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
 - new methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the
   number of found cuts
-- added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
+- added function SCIPgetFirstLPTime() to return the time needed to solve the first LP of the root node
 - added SCIPshrinkDisjunctiveVarSet(), which takes an set of variables with corresponding bounds and boundtypes, and
   tries to derive global boundchanges and also to shorten this set of variables by using cliqe, implication and variable
   bound information
@@ -196,7 +196,7 @@ interface:
 - added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
 - added method SCIPdoNotMultaggr() returning whether multi-aggregation is completely disabled
 - added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
-- added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
+- added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space and updates
   all orignal solutions correspondingly
 - added method SCIPgmlWriteNodeWeight() to write node weights
 - new function SCIPwriteCliqueGraph() which allows to write a graph with node weights for fractional variables
@@ -218,7 +218,7 @@ interface:
 parameters:
 - parameter "branching/scorefunction" has new value 'q' for for 'q'uotient branching score function
 - new parameters "branching/firstsbchild" and "branching/forceall" to specify the first child node to be
-  investigated during strong branching ('u'p,'d'down,'a'uto) and whether always both children should be solved (only for
+  investigated during strong branching ('u'p, 'd'down, 'a'uto) and whether always both children should be solved (only for
   strong branching with domain propagation, per default, the second child is not looked at when the first is infeasible)
 - new parameters "branching/checksol" and "branching/heursbsol" to specify whether the strong branching LP solution
   should be checked for feasibility and whether a simple rounding heuristic should be run on this solution
@@ -283,7 +283,7 @@ parameters:
 - changed default value of parameter numerics/dualfeastol to 1e-7 for safer dual bounds from LP solver
 - changed default max coefficient for big-M constraint to be initial from 1e6 to 1e9
 - changed default value of gomory cut separation parameter "separating/gomory/maxrank" from 0 to 3, to take also gomory
-  cuts, that could not be scaled to integral coefficients, with maximal rank 3 into account
+  cuts that could not be scaled to integral coefficients, with maximal rank 3 into account
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
