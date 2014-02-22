@@ -1,5 +1,3 @@
-<!-- HTML footer for doxygen 1.8.3-->
-<!-- start footer part -->
 <hr class="footer">
 <table width="100%">
   <tr>
