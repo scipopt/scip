@@ -6102,6 +6102,11 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
       /* change the bound */
       var->data.original.origdom.lb = newbound;
    }
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert( var->negatedvar != NULL );
+      SCIP_CALL( SCIPvarChgUbOriginal(var->negatedvar, set, var->data.negate.constant - newbound) );
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -6155,6 +6160,11 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
 
       /* change the bound */
       var->data.original.origdom.ub = newbound;
+   }
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert( var->negatedvar != NULL );
+      SCIP_CALL( SCIPvarChgLbOriginal(var->negatedvar, set, var->data.negate.constant - newbound) );
    }
 
    /* process parent variables */

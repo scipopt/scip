@@ -44,6 +44,7 @@ fixed bugs:
 - fixed bug in cons_orbitope with fixing upper right triangle in non-root nodes
 - fixed bug in reader_lp when writing bilinear terms (product sign was missing)
 - allow again branching on continuous variables with huge bounds
+- make sure that bound changes of negated original variables are correct
 
 data structures:
 - new data structure for (circular) queues (SCIP_QUEUE)
