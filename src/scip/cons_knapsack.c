@@ -2230,7 +2230,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
 static
 SCIP_RETCODE GUBsetGetCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_GUBSET*          gubset,      	     /**< GUB set data structure */
+   SCIP_GUBSET*          gubset,             /**< GUB set data structure */
    SCIP_VAR**            vars,               /**< variables in the knapsack constraint */
    SCIP_Real*            solvals             /**< solution values of all knapsack variables */
    )
