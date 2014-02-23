@@ -5916,7 +5916,7 @@ SCIP_RETCODE generateClusterCuts(
       maxsepacuts = sepadata->maxsepacutsroot;
    else
       maxsepacuts = sepadata->maxsepacuts;
-   if( maxsepacuts <= 0 )
+   if( maxsepacuts < 0 )
       maxsepacuts = INT_MAX;
    else if( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE )
       maxsepacuts *= 2;
