@@ -1120,7 +1120,8 @@ void updateTransformation(
    {
       if( SCIPisInfinity(scip, -lb) )
          transformVariable(scip, matrix, heurdata, varindex);
-      else {
+      else
+      {
          deltashift = lb - (*transformshiftval);
          *transformshiftval = lb;
          if( !SCIPisInfinity(scip, ub) )
@@ -1235,7 +1236,8 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    vartype1 = SCIPvarGetType(var1);
    vartype2 = SCIPvarGetType(var2);
 
-   switch (vartype1) {
+   switch (vartype1)
+   {
       case SCIP_VARTYPE_BINARY:
          key1 = 1;
          break;
@@ -1254,7 +1256,8 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
          SCIPABORT();
          break;
    }
-   switch (vartype2) {
+   switch (vartype2)
+   {
       case SCIP_VARTYPE_BINARY:
          key2 = 1;
          break;
