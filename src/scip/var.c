@@ -9721,12 +9721,13 @@ SCIP_RETCODE SCIPvarAddVlb(
          minvlb = adjustedLb(set, SCIPvarGetType(var), minvlb);
          maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
-         /* improve global lower bound of variable */
-         if( SCIPsetIsFeasGT(set, minvlb, xub) )
+         /* check bounds for feasibility */
+         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && !SCIPsetIsZero(set, vlbconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+         /* improve global lower bound of variable */
          if( SCIPsetIsFeasGT(set, minvlb, xlb) )
          {
             /* bound might be adjusted due to integrality condition */
@@ -10072,12 +10073,13 @@ SCIP_RETCODE SCIPvarAddVub(
          minvub = adjustedUb(set, SCIPvarGetType(var), minvub);
          maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
 
-         /* improve global upper bound of variable */
-         if( SCIPsetIsFeasLT(set, maxvub, xlb) )
+         /* check bounds for feasibility */
+         if( SCIPsetIsFeasLT(set, maxvub, xlb) || (var == vubvar && SCIPsetIsEQ(set, vubcoef, 1.0) && !SCIPsetIsZero(set, vubconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+         /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
             /* bound might be adjusted due to integrality condition */
