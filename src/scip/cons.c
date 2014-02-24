@@ -2671,7 +2671,9 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    )
 {
    assert(conshdlr != NULL);
+#ifdef MORE_DEBUG
    assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0 || SCIPtreeProbing(tree));
+#endif
 
    if( conshdlr->consinitlp != NULL )
    {
