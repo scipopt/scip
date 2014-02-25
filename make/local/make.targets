@@ -51,6 +51,9 @@ SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver S
 testexamples:
 		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
 
+.PHONY: docexamples
+docexamples:
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ doc || exit 1;)
 
 .PHONY: coverage
 coverage:
