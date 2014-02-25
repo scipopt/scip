@@ -67,6 +67,8 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
+ * - \ref TEST     "How to run automated tests with SCIP"
+ * - \ref COUNTER  "How to use SCIP to count feasible solutions"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -95,9 +97,6 @@
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref CONF    "Conflict analysis"
  *   - \ref PARAM   "additional user parameters"
- *
- * - \ref TEST     "How to run automated tests with SCIP"
- * - \ref COUNTER  "How to use SCIP to count feasible solutions"
  *
  *
  * @section FURTHERINFO Further information
@@ -6839,7 +6838,7 @@
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
- * \htmlinclude faq_new.inc
+ * \htmlinclude faq.inc
  */
 
 
