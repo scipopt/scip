@@ -1935,7 +1935,7 @@ SCIP_RETCODE readGenerals(
 
       if( !SCIPisFeasIntegral(scip, lb) || !SCIPisFeasIntegral(scip, ub) )
       {
-         SCIPwarningMessage(scip, "variable <%s> declared as integer has non-integral bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
+         SCIPwarningMessage(scip, "variable <%s> declared as integer has non-integral bounds[%.14g, %.14g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
 
       /* mark the variable to be integral */
@@ -1981,7 +1981,7 @@ SCIP_RETCODE readBinaries(
       if( (!SCIPisFeasZero(scip, lb) && !SCIPisFeasEQ(scip, lb, 1.0)) ||
           (!SCIPisFeasZero(scip, ub) && !SCIPisFeasEQ(scip, ub, 1.0) && !SCIPisInfinity(scip, ub)) )
       {
-         SCIPwarningMessage(scip, "variable <%s> declared as binary has non-binary bounds[%g, %g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
+         SCIPwarningMessage(scip, "variable <%s> declared as binary has non-binary bounds[%.14g, %.14g] -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), lb, ub);
       }
 
       /* mark the variable to be binary and change its bounds appropriately */
