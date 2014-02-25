@@ -2339,8 +2339,8 @@ SCIP_RETCODE dualPresolve(
              *   obj(x3) = -1
              *   r = x1 * x2 * x3
              *   r = 0
-             *   x1 = 0
-             *   x2 = 0
+             *   x1 = 1
+             *   x2 = 1
              */
             if( !*cutoff && goodvarsfound && linearize )
             {
