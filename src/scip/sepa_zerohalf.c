@@ -6587,13 +6587,10 @@ SCIP_RETCODE process(
    assert(mod2data->rowsind != NULL);
    assert(mod2data->colsind != NULL);
 
-   if( sepadata->nsepamethods == -1 )
-   {
-      sepadata->nsepamethods = (int) strlen(sepadata->sepamethods);
-      if( sepadata->nsepamethods > 0 && sepadata->sepamethods[0] == '-' )
-         sepadata->nsepamethods = 0;    
-   }
-  
+   sepadata->nsepamethods = (int) strlen(sepadata->sepamethods);
+   if( sepadata->nsepamethods > 0 && sepadata->sepamethods[0] == '-' )
+      sepadata->nsepamethods = 0;
+
    if( sepadata->nsepamethods == 0 )
       return SCIP_OKAY;
 
