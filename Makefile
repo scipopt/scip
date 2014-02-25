@@ -105,6 +105,10 @@ LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
+ifeq ($(SPX_LEGACY),true)
+CFLAGS		+= -DSOPLEX_LEGACY
+CXXFLAGS		+= -DSOPLEX_LEGACY
+endif
 LPILIBOBJ	=	lpi/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
