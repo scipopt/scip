@@ -569,11 +569,11 @@ endif
 
 .PHONY: all
 all:		libs
-		@-$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
 libs:     	makesciplibfile
-		@-$(MAKE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+		@$(MAKE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
 		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 
@@ -584,7 +584,7 @@ preprocess:     checkdefines
 				echo "-> generating necessary links" ; \
 				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
 			fi'
-		@-$(MAKE) touchexternal
+		@$(MAKE) touchexternal
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -885,7 +885,7 @@ endif
 
 .PHONY: makesciplibfile
 makesciplibfile: preprocess
-		@-$(MAKE) $(SCIPLIBFILE)
+		@$(MAKE) $(SCIPLIBFILE)
 
 $(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
@@ -959,7 +959,7 @@ ifeq ($(TOUCHLINKS),true)
 		@-touch $(NLPILIBSRC)
 endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
-		@-$(MAKE) githash
+		@$(MAKE) githash
 endif
 		@$(SHELL) -ec 'if test ! -e $(SCIPGITHASHFILE) ; \
 			then \
