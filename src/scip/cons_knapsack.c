@@ -91,6 +91,12 @@
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                          *   comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
+#define DEFAULT_DETECTCUTOFFBOUND  TRUE /**< should presolving try to detect constraints parallel to the objective
+                                         *   function defining an upper bound and prevent these constraints from
+                                         *   entering the LP */
+#define DEFAULT_DETECTLOWERBOUND TRUE   /**< should presolving try to detect constraints parallel to the objective
+                                         *   function defining a lower bound and prevent these constraints from
+                                         *   entering the LP */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
@@ -150,6 +156,12 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    SCIP_Bool             usegubs;            /**< should GUB information be used for separation? */
+   SCIP_Bool             detectcutoffbound;  /**< should presolving try to detect constraints parallel to the objective
+                                              *   function defining an upper bound and prevent these constraints from
+                                              *   entering the LP */
+   SCIP_Bool             detectlowerbound;   /**< should presolving try to detect constraints parallel to the objective
+                                              *   function defining a lower bound and prevent these constraints from
+                                              *   entering the LP */
 };
 
 
@@ -6805,7 +6817,8 @@ SCIP_RETCODE dualPresolving(
 static
 SCIP_RETCODE checkParallelObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< knapsack constraint */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< knapsack constraint handler data */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -6819,6 +6832,10 @@ SCIP_RETCODE checkParallelObjective(
    int nobjvars;
    int nvars;
    int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6887,13 +6904,13 @@ SCIP_RETCODE checkParallelObjective(
 
    if( applicable )
    {
-      /* avoid that the knapsack constraint enters the LP since it is parallel to the objective function */
-      SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
-      SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
-
-      if( SCIPisPositive(scip, scale) )
+      if( SCIPisPositive(scip, scale) && conshdlrdata->detectcutoffbound )
       {
          SCIP_Real cutoffbound;
+
+         /* avoid that the knapsack constraint enters the LP since it is parallel to the objective function */
+         SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+         SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
 
          cutoffbound = (consdata->capacity - offset) / scale;
 
@@ -6920,11 +6937,13 @@ SCIP_RETCODE checkParallelObjective(
             SCIP_CALL( SCIPsetConsPropagated(scip, cons, FALSE) );
          }
       }
-      else
+      else if( SCIPisNegative(scip, scale) && conshdlrdata->detectlowerbound )
       {
          SCIP_Real lowerbound;
 
-         assert(SCIPisNegative(scip, scale) );
+         /* avoid that the knapsack constraint enters the LP since it is parallel to the objective function */
+         SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+         SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
 
          lowerbound = (consdata->capacity - offset) / scale;
 
@@ -12453,7 +12472,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             }
 
             /* check if knapsack constraint is parallel to objective function */
-            SCIP_CALL( checkParallelObjective(scip, cons) );
+            SCIP_CALL( checkParallelObjective(scip, cons, conshdlrdata) );
          }
       }
       /* remember the first changed constraint to begin the next aggregation round with */
@@ -12967,57 +12986,65 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
 
    /* add knapsack constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/knapsack/sepacardfreq",
+         "constraints/"CONSHDLR_NAME"/sepacardfreq",
          "multiplier on separation frequency, how often knapsack cuts are separated (-1: never, 0: only at root)",
          &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/knapsack/maxcardbounddist",
+         "constraints/"CONSHDLR_NAME"/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cuts",
          &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/knapsack/maxrounds",
+         "constraints/"CONSHDLR_NAME"/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
          &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/knapsack/maxroundsroot",
+         "constraints/"CONSHDLR_NAME"/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
          &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/knapsack/maxsepacuts",
+         "constraints/"CONSHDLR_NAME"/maxsepacuts",
          "maximal number of cuts separated per separation round",
          &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/knapsack/maxsepacutsroot",
+         "constraints/"CONSHDLR_NAME"/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/disaggregation",
+         "constraints/"CONSHDLR_NAME"/disaggregation",
          "should disaggregation of knapsack constraints be allowed in preprocessing?",
          &conshdlrdata->disaggregation, TRUE, DEFAULT_DISAGGREGATION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/simplifyinequalities",
+         "constraints/"CONSHDLR_NAME"/simplifyinequalities",
          "should presolving try to simplify knapsacks",
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/negatedclique",
+         "constraints/"CONSHDLR_NAME"/negatedclique",
          "should negated clique information be used in solving process",
          &conshdlrdata->negatedclique, TRUE, DEFAULT_NEGATEDCLIQUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/presolpairwise",
+         "constraints/"CONSHDLR_NAME"/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/presolusehashing",
+         "constraints/"CONSHDLR_NAME"/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance", 
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/dualpresolving",
+         "constraints/"CONSHDLR_NAME"/dualpresolving",
          "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/knapsack/usegubs",
+         "constraints/"CONSHDLR_NAME"/usegubs",
          "should GUB information be used for separation?",
          &conshdlrdata->usegubs, TRUE, DEFAULT_USEGUBS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/detectcutoffbound",
+         "should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?",
+         &conshdlrdata->detectcutoffbound, TRUE, DEFAULT_DETECTCUTOFFBOUND, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/detectlowerbound",
+         "should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?",
+         &conshdlrdata->detectlowerbound, TRUE, DEFAULT_DETECTLOWERBOUND, NULL, NULL) );
 
    return SCIP_OKAY;
 }

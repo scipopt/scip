@@ -285,6 +285,11 @@ parameters:
 - changed default max coefficient for big-M constraint to be initial from 1e6 to 1e9
 - changed default value of gomory cut separation parameter "separating/gomory/maxrank" from 0 to 3, to take also gomory
   cuts that could not be scaled to integral coefficients, with maximal rank 3 into account
+- new parameters "constraints/{linear,knapsack}/detectcutoffbound" and "constraints/{linear,knapsack}/detectlowerbound"
+  to enable/disable detection of constraint parallel to the objective function that will add an cutoffbound or an
+  lowerbound respectively, and these constraints will be prevented from entering the LP
+- new parameters "constraints/linear/detectpartialobjective" to enable/disable the detection of sub-equations of the
+  objective function
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
