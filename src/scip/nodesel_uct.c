@@ -191,18 +191,18 @@ SCIP_Real nodeGetUctScore(
    int parentvisits;
 
    rootlowerbound = SCIPgetLowerboundRoot(scip);
-   assert(!SCIPisInfinity(scip, -rootlowerbound));
 
    /* the objective part of the UCT score uses the (negative) gap between node estimate and root lower bound */
    score = nodeseldata->useestimate ? SCIPnodeGetEstimate(node) : SCIPnodeGetLowerbound(node);
-   assert(SCIPisGE(scip, score, rootlowerbound));
 
-   if( !SCIPisEQ(scip, score, rootlowerbound) )
+   /* if the root lower bound is infinite due to LP errors, we ignore the gap part of the UCT score */
+   if( !SCIPisInfinity(scip, -rootlowerbound) && !SCIPisEQ(scip, score, rootlowerbound) )
    {
       SCIP_Real absscore;
       SCIP_Real absrootlowerbound;
       SCIP_Real minabs;
 
+      assert(SCIPisGE(scip, score, rootlowerbound));
       absscore = REALABS(score);
       absrootlowerbound = REALABS(rootlowerbound);
       minabs = MIN(absscore, absrootlowerbound);
