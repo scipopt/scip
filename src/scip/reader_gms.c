@@ -280,7 +280,6 @@ SCIP_RETCODE printActiveVariables(
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
-   assert( vals != NULL || nvars == 0 );
 
 
    if( *linecnt == 0 )
@@ -306,7 +305,7 @@ SCIP_RETCODE printActiveVariables(
       else
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
-         
+
          for( v = 0; v < nactivevars; ++v )
             activevals[v] = 1.0;
       }
