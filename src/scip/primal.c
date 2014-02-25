@@ -190,20 +190,38 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   SCIP_Real             cutoffbound,        /**< new cutoff bound */
+   SCIP_Bool             useforobjlimit      /**< should the cutoff bound be used to update the objective limit, if
+                                              *   better? */
    )
 {
    assert(primal != NULL);
    assert(cutoffbound <= SCIPsetInfinity(set));
    assert(cutoffbound <= primal->upperbound);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
 
    if( cutoffbound < primal->cutoffbound )
    {
+      if( useforobjlimit )
+      {
+         SCIP_Real objval;
+
+         objval = SCIPprobExternObjval(transprob, origprob, set, cutoffbound);
+
+         if( objval < SCIPprobGetObjlim(origprob, set) )
+         {
+            SCIPdebugMessage("changing cutoff bound from %g to %g changes objective limit from %g to %g\n", primal->cutoffbound, cutoffbound, SCIPprobGetObjlim(origprob, set), objval);
+            SCIPprobSetObjlim(origprob, objval);
+         }
+      }
+
       /* update cutoff bound */
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventqueue, tree, lp, cutoffbound) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, lp, cutoffbound) );
    }
    else if( cutoffbound > primal->cutoffbound )
    {
@@ -388,7 +406,11 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    /* invalidate old upper bound */
    SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, lp, SCIPsetInfinity(set)) );
 
-   /* reset the cutoff bound */
+   /* reset the cutoff bound
+    *
+    * @note we might need to relax the bound since in presolving the objective correction of an
+    *       aggregation is still in progress
+    */
    SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, lp, upperbound) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */

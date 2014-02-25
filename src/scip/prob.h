@@ -600,6 +600,12 @@ SCIP_Real SCIPprobGetObjoffset(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets the objective scalar */
+extern
+SCIP_Real SCIPprobGetObjscale(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -621,6 +627,7 @@ SCIP_Real SCIPprobGetObjoffset(
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
+#define SCIPprobGetObjscale(prob)       ((prob)->objscale)
 #endif
 
 

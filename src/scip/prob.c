@@ -2204,4 +2204,13 @@ SCIP_Real SCIPprobGetObjoffset(
    return prob->objoffset;
 }
 
+/** gets the objective scalar */
+SCIP_Real SCIPprobGetObjscale(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->objscale;
+}
+
 #endif
