@@ -1,7 +1,7 @@
 <h3>Main developers</h3>
 <table class="desc">
    <tr>
-      <td><a href="http://www.zib.de/gamrath/">Gerald Gamrath</a></td>
+      <td class="w-200"><a href="http://www.zib.de/gamrath/">Gerald Gamrath</a></td>
       <td>Column generation</td>
    </tr>
    <tr>
@@ -36,7 +36,7 @@
       <td>Former main developer</td>
    </tr>
    <tr>
-      <td class="w-200"><a href="http://www.zib.de/berthold/">Timo Berthold</a></td>
+      <td><a href="http://www.zib.de/berthold/">Timo Berthold</a></td>
       <td>Former main developer, primal heuristics, branching rules</td>
    </tr>
    <tr>
@@ -101,7 +101,7 @@
          <td>Dual value heuristic</td>
       </tr>
       <tr>
-         <td class="w-200"><a href="http://www.dii.uchile.cl/~daespino/">Daniel Espinoza</a></td>
+         <td><a href="http://www.dii.uchile.cl/~daespino/">Daniel Espinoza</a></td>
          <td>Interface to <a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></td>
       </tr>
       <tr>

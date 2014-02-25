@@ -22,7 +22,12 @@ div.inner {
   border:     1px solid #BDBDBD;
   min-height: 450px;
   min-width: 1150px;
-  background-color: #ffffe6;
+  background-color: #f5f5ff;
+}
+
+.w-200 {
+   width:200px;
+   vertical-align:top;
 }
 
 /* @group Heading Levels */
