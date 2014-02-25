@@ -5154,11 +5154,29 @@ SCIP_RETCODE SCIPtreeBranchVar(
       {
          /* if the only way to branch is such that in both sides the relative domain width becomes smaller epsilon,
           * then fix the variable in both branches right away
+          *
+          * however, if one of the bounds is at infinity (and thus the other bound is at most 2eps away from the same infinity (in relative sense),
+          * then fix the variable to the non-infinite value, as we cannot fix a variable to infinity
           */
          SCIPdebugMessage("continuous branch on variable <%s> with bounds [%.15g, %.15g], priority %d (current lower bound: %g), node %p\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode), (void*)tree->focusnode);
-         downub = SCIPvarGetLbLocal(var);
-         uplb = SCIPvarGetUbLocal(var);
+         if( SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
+         {
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetUbLocal(var)));
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob,
+                  tree, lp, branchcand, eventqueue, var, SCIPvarGetUbLocal(var), SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else if( SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) )
+         {
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetLbLocal(var)));
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob,
+                  tree, lp, branchcand, eventqueue, var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+         {
+            downub = SCIPvarGetLbLocal(var);
+            uplb = SCIPvarGetUbLocal(var);
+         }
       }
       else
       {
