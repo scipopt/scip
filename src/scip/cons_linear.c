@@ -2822,11 +2822,11 @@ void permSortConsdata(
 }
 
 /** sorts linear constraint's variables depending on the stage of the solving process:
- *  - during PRESOLVING
+ * - during PRESOLVING
  *       sorts variables by binaries, integers, implicit integers, and continuous variables,
  *       and the variables of the same type by non-decreasing variable index
  *
- * -  during SOLVING
+ * - during SOLVING
  *       sorts binary variables of the remaining problem w.r.t the absolute of their coefficient.
  *       This fastens the propagation time of the constraint handler.
  */

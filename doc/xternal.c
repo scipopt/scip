@@ -105,6 +105,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
  * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
  * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
@@ -843,8 +844,8 @@
  *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>-example
- *         is a <b>branch-and-cut</b>-code in <b>C</b>.
-
+ *       is a <b>branch-and-cut</b>-code in <b>C</b>.
+ *
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
  *   \verbatim
@@ -6575,6 +6576,150 @@
   *   - The methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where
   *     the new element was inserted.
   *   - New macro SCIPdebugPrintCons() to print constraint only if SCIP_DEBUG flag is set.
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG7 Interface changes between SCIP 3.0 and SCIP 3.1
+  *
+  *
+  * @section CHGCALLBACKS7 New and changed callbacks
+  *
+  * - <b>Branching Rules</b>:
+  *     <br>
+  *     <br>
+  *   - new possible return value "SCIP_DIDNOTFIND" for SCIP_DECL_BRANCHEXECLP(), SCIP_DECL_BRANCHEXECPS(), and
+  *     SCIP_DECL_BRANCHEXECEXT() callbacks to state that the branching rule searched, but did not find a branching.
+  *
+  * - <b>Domain Propagation</b>:
+  *     <br>
+  *     <br>
+  *   - added parameter "nmarkedconss" to SCIP_DECL_CONSPROP() callback which gives the number of constraints marked
+  *     for propagation (these constraints are listed first in the conss array given as parameter).
+  *
+  * - <b>Message Handler</b>:
+  *      <br>
+  *      <br>
+  *   - New generic messagehandler output callback method SCIP_DECL_MESSAGEOUTPUTFUNC().
+  *   - Removed parameter "msglength" from callback method SCIP_DECL_ERRORPRINTING().
+  *
+  * - <b>Variable Pricers</b>:
+  *      <br>
+  *      <br>
+  *   - Added parameter "stopearly" to callback method SCIP_DECL_PRICERREDCOST(). This boolean pointer should be used
+  *     by the pricer to state whether early branching should be performed, even if new variables were added in the
+  *     current pricing round.
+  *
+  * - <b>Primal Heuristics</b>:
+  *     <br>
+  *     <br>
+  *   - Added parameter "nodeinfeasible" to SCIP_DECL_HEUREXEC() callback which states whether the current subproblem
+  *     was already detected to be infeasible. In this case, the current LP solution might not respect local bounds,
+  *     and the heuristic must not assume that it does.
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC7 Changed interface methods
+  *
+  * - <b>Branching Rules</b>:
+  *      <br>
+  *      <br>
+  *   - Added parameter "nfracimplvars" to SCIPgetLPBranchCands()
+  *
+  * - <b>Constraint Handlers</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPconshdlrGetStrongBranchPropTime() which returns the time used for domain propagation methods
+  *     of the constraint handler during strong branching.
+  *   - New method SCIPconsIsMarkedPropagate() which returns whether a constraint is marked for propagation.
+  *   - New methods SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to increase or get the number of upgrade
+  *     locks of a constraint.
+  *
+  * - <b>Domain Propagation</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPpropGetStrongBranchPropTime() which returns the time spent by a domain propagator during strong
+  *     branching.
+  *   - New methods SCIPmarkConsPropagate() and SCIPunmarkConsPropagate to (un)mark a constraint for propagation.
+  *
+  * - <b>LP and Cutting Planes</b>:
+  *      <br>
+  *      <br>
+  *   - New methods SCIProwChgRank() and SCIProwGetRank() to change and get the rank of a cutting plane, respectively.
+  *   - Added parameter "sidetypes" to SCIPcalcMIR() to specify the specify row side type to be used.
+  *   - Added parameter "cutrank" to SCIPcalcMIR() and SCIPcalcStrongCG() which stores the rank of the returned cut.
+  *   - New method SCIPisCutApplicable() which returns whether a cut is good enough to be applied.
+  *   - Added parameter "infeasible" to SCIPaddCut() which is a pointer to store whether the cut is infeasible for the
+  *     local bounds.
+  *   - delayed cutpool
+  *   - New methods SCIPchgRowLhsDive() and SCIPchgRowRhsDive() to change left and right hand side of a row during diving.
+  *   - Added parameter "cutoff" to SCIPsolveDiveLP(), SCIPsolveProbingLP(), and SCIPsolveProbingLPWithPricing()
+  *     which is a pointer to store whether the diving/probing LP was infeasible or the objective limit was reached.
+  *
+  * - <b>Message Handler</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPmessageVPrintError() to print an error message.
+  *   - Removed method SCIPmessagePrintWarningHeader().
+  *
+  * - <b>Parameters</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPparamGetCharAllowedValues() to get the allowed values for a char parameter.
+  *
+  * - <b>Variables</b>:
+  *      <br>
+  *      <br>
+  *   - New structure to store value-based branching and inference history (see pub_history.h).
+  *   - New method SCIPvarGetValuehistory() to get the value-based history of a variable.
+  *
+  * - <b>Data structures</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPgmlWriteNodeWeight() to write a node section including weight to a .gml graph file.
+  *   - New methods SCIPsparseSolGetFirstSol() and SCIPsparseSolGetNextSol() to get the first sparse solution
+  *     or iterate over the sparse solutions, respectively.
+  *   - New methods in pub_misc.h to handle a (circular) queue, e.g., SCIPqueueCreate(), SCIPqueueFree(),
+  *     SCIPqueueInsert(), ...
+  *   - New methods for hash tables: SCIPhashtableRemoveAll(), SCIPhashtableGetNElements(), SCIPhashtableGetLoad()
+  *   - New methods in pub_misc.h to handle a resource activity, e.g., SCIPactivityCreate(), SCIPactivityFree(),
+  *     SCIPactivityGetVar(), SCIPactivityGetDemand() ...
+  *   - New methods for digraphs: SCIPdigraphResize() to resize the graph and SCIPdigraphSetNodeDatas() and
+  *     SCIPdigraphGetNodeDatas() to set and get the data attached to the nodes.
+  *
+  * - <b>Misc</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPcopyOrig() to copy the original problem. Analoguosly, use SCIPcopyOrigProb(), SCIPcopyOrigVars(),
+  *     and SCIPcopyOrigConss() to copy original problem data, variables, or constraints, respectively.
+  *   - New method SCIPcopyImplicationsCliques() to copy implications and cliques to a copied SCIP instance.
+  *   - New method SCIPgetParam() to get the parameter with a given name.
+  *   - New method SCIPaddOrigObjoffset() to add an offset to the objective function.
+  *   - New method SCIPgetNCheckConss() which returns the number of checked constraints.
+  *   - Added parameter "endptr" to SCIPparseVar() which stores the final string position after parsing.
+  *   - Added parameter "enablepropagation" to SCIPstartStrongbranch(), which can be used to enable strong branching
+  *     with domain propagation.
+  *   - New method SCIPgetVarStrongbranchWithPropagation() which performs strong branching with propagation on a variable.
+  *   - New method SCIPwriteCliqueGraph() to write the clique graph.
+  *   - New method SCIPdoNotMultaggr() which returns whether multi-aggregation was disabled.
+  *   - Added parameter "lazyconss" to SCIPwriteMIP() to swith writing removable rows as lazy constraints.
+  *   - New method SCIPcreateFiniteSolCopy() to create a copy of a solution with infinite fixings removed.
+  *   - New method SCIPadjustImplicitSolVals() which sets implicit integer variables to an integer value in the given
+  *     solution without deteriorating its objective value.
+  *   - New method SCIPprintDualSol() which prints the dual solution for a pure LP (works only with preprocessing disabled).
+  *   - New method SCIPgetOpenNodesData() which returns all unprocessed nodes.
+  *   - New method SCIPgetFirstLPTime() and SCIPgetNRootFirstLPIterations() to return time and iterations for the first
+  *     LP solve and SCIPgetFirstLPDualboundRoot() and SCIPgetFirstLPLowerboundRoot() to return the first root LP dual and
+  *     lower bound.
+  *   - New method SCIPgetNLimSolsFound() returning the number of feasible primal solution respecting the objective limit.
+  *   - Added parameter "endline" to SCIPprintDisplayLine() to switch printing a newline symbol at the end of the line.
+  *
+  * <br>
+  * @section MISCELLANEOUS7 Miscellaneous
+  *
+  *   - Moved LP solver interfaces to subdirectory src/lpi.
   *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".

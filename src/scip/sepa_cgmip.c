@@ -995,8 +995,8 @@ SCIP_Real computeObjWeightSize(
  *    this we require that the cut is tight at the currently best solution. To get reliable solutions
  *    we relax equality by EPSILONVALUE.
  *
- * - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
- *   respect to the current lower and upper bounds.
+ *  - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
+ *    respect to the current lower and upper bounds.
  */
 static
 SCIP_RETCODE createSubscip(
