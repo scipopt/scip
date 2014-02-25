@@ -24,7 +24,7 @@ echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* scripts/* interfaces/ampl/get.ASL
+chmod 750 bin/* scripts/* interfaces/ampl/get.ASL interfaces/jni/createJniInterface.py check/cmpres.awk check/find_missing_instances.py
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
