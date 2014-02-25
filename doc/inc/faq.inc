@@ -62,18 +62,19 @@
       </ul>
      <li><a href="#Section5"><b>Specific questions about Column Generation and Branch-And-Price with SCIP</b></a></li>
       <ul>
-	<li><a href="#Q5.1">Why are not all variables in the LP?</a></li>
-	<li><a href="#Q5.2">I only implemented one pricer, why is there a second one, called variable pricer?</a></li>
-	<li><a href="#Q5.3">How can I store branching decisions?</a></li>
-	<li><a href="#Q5.4">I want to store some information at the nodes and update my pricer's data structures
+	<li><a href="#Q5.1">What can I expect when using SCIP as a Branch-Cut-and-Price framework?</a></li>
+	<li><a href="#Q5.2">Why are not all variables in the LP?</a></li>
+	<li><a href="#Q5.3">I only implemented one pricer, why is there a second one, called variable pricer?</a></li>
+	<li><a href="#Q5.4">How can I store branching decisions?</a></li>
+	<li><a href="#Q5.5">I want to store some information at the nodes and update my pricer's data structures
         when entering a new node. How can I do that?</a></li>
-	<li><a href="#Q5.5">How can an event handler help me with my branching?</a></li>
-	<li><a href="#Q5.6">How can I add locally valid variables to the problem in my branch-and-price code?</a></li>
-	<li><a href="#Q5.7">My pricer generates the same column twice. How can I solve this problem?</a></li>
-	<li><a href="#Q5.8">Which default plugins should be deactivated in order to get a working branch-and-price code?</a></li>
-	<li><a href="#Q5.9">What are the lazy bounds for variables in SCIP and what do I need them for?</a></li>
-	<li><a href="#Q5.10">Can I stop the pricing process before the master problem is solved to optimality?</a></li>
-	<li><a href="#Q5.11">How can I delete variables?</a></li>
+	<li><a href="#Q5.6">How can an event handler help me with my branching?</a></li>
+	<li><a href="#Q5.7">How can I add locally valid variables to the problem in my branch-and-price code?</a></li>
+	<li><a href="#Q5.8">My pricer generates the same column twice. How can I solve this problem?</a></li>
+	<li><a href="#Q5.9">Which default plugins should be deactivated in order to get a working branch-and-price code?</a></li>
+	<li><a href="#Q5.10">What are the lazy bounds for variables in SCIP and what do I need them for?</a></li>
+	<li><a href="#Q5.11">Can I stop the pricing process before the master problem is solved to optimality?</a></li>
+	<li><a href="#Q5.12">How can I delete variables?</a></li>
       </ul>
      <li><a href="#Section6"><b>Specific questions about the copy functionality in SCIP</b></a></li>
       <ul>
@@ -816,7 +817,7 @@
       <a name="Q5.3">I only implemented one pricer, why is there a second one, called variable pricer?</a>
     </p>
     <p class="a">
-      As described in the <a href="#Q5.1">previous question</a>, it may happen, that some variables are not in the
+      As described in the <a href="#Q5.2">previous question</a>, it may happen, that some variables are not in the
       current LP relaxation. Nevertheless, these variables still exist, and SCIP can calculate their reduced costs and
       add them to the LP again, if necessary. This is the job of the variable pricer. It is called before all other
       pricers.
@@ -835,10 +836,10 @@
     <p class="a">
       If you have complex pricer data like a graph and need to update it after each branching decision,
       you should introduce "marker constraints" that are added to the branching nodes and store
-      all the information needed (see the <a href="#Q5.4">next question</a>).
+      all the information needed (see the <a href="#Q5.5">next question</a>).
     </p>
     <p class="a">
-      The third way is to use an event handler, which is described <a href="#Q5.5">here</a>.
+      The third way is to use an event handler, which is described <a href="#Q5.6">here</a>.
     </p>
     <p class="q">
       <a name="Q5.5">I want to store some information at the nodes and update my pricer's data structures
@@ -890,7 +891,7 @@
     <p class="a">
       Variables in SCIP are always added globally. If you want to add them locally, because they are forbidden
       in another part of the branch-and-bound-tree, you should ensure that they are locally fixed to 0
-      in all subtrees where they are not valid. A description of how this can be done is given <a href="#Q5.4">here</a>.
+      in all subtrees where they are not valid. A description of how this can be done is given <a href="#Q5.5">here</a>.
     </p>
 
     <p class="q">
@@ -907,7 +908,7 @@
       behavior is probably caused by the PRICER_DELAY property of your pricer.
     </p>
     <p class="a">
-      If it is set to FALSE, the following may have happened: The variable pricer (see <a href="#Q5.2">this question</a>)
+      If it is set to FALSE, the following may have happened: The variable pricer (see <a href="#Q5.3">this question</a>)
       found a variable with negative dual feasibility that was not part of the current LP relaxation and added it to the
       LP. In the same pricing round, your own pricer found the same column and created a new variable for it. This might
       happen, since your pricer uses the same dual values as the variable pricer. To avoid this behavior, set
