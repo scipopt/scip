@@ -16698,6 +16698,17 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          }  /*lint !e788*/
       }
 
+      /* If columns are missing in the LP, the cutoff flag may be wrong. Therefore, we need to set it and the valid pointer
+       * to false here.
+       */
+      if( (*cutoff) && !SCIPallColsInLP(scip) )
+      {
+         *cutoff = FALSE;
+
+         if( valid != NULL )
+            *valid = FALSE;
+      }
+
 #ifndef NDEBUG
       if( *lperror )
       {
@@ -16706,16 +16717,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 #endif
    }
 
-   /* If columns are missing in the LP, the cutoff flag may be wrong. Therefore, we need to set it and the valid pointer
-    * to false here.
-    */
-   if( (*cutoff) && !SCIPallColsInLP(scip) )
-   {
-      *cutoff = FALSE;
-
-      if( valid != NULL )
-         *valid = FALSE;
-   }
 
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
