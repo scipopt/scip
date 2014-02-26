@@ -43,12 +43,12 @@ SECTION: General Questions about SCIP
     </p>
 
     QUESTION: I heard something about licenses. Do I have to pay for using SCIP?
-    LABEL:licence
+    LABEL:license
     ANSWER:
     <p>
       As long as you use it for academic, non-commercial purposes: No.
       This will not change. For the other cases, check the explanation of the
-      <a href="http://scip.zib.de/#licence">ZIB academic license</a> and always feel free to ask us.
+      <a href="http://scip.zib.de/#license">ZIB academic license</a> and always feel free to ask us.
       If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
     </p>
 
@@ -92,7 +92,7 @@ SECTION: General Questions about SCIP
     </ul>
     <p>
       We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
-      you might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps
+      you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files can also directly be read by SCIP.
       You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/#download">here</a>.
     </p>
