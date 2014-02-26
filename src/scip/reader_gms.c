@@ -2269,9 +2269,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
-   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n\n", objoffset);
+   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n\n", nconss);
 
    /* print flags */
    SCIPinfoMessage(scip, file, "$MAXCOL %d\n", GMS_MAX_LINELEN - 1);
@@ -2516,7 +2514,7 @@ SCIP_RETCODE SCIPwriteGms(
    /* print objective function equation */
    clearLine(linebuffer, &linecnt);
    if( objoffset != 0.0 )
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", objoffset);
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", objscale * objoffset);
    else
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2531,7 +2529,7 @@ SCIP_RETCODE SCIPwriteGms(
       /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
       assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 
-      objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : SCIPvarGetObj(var);
+      objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : objscale * SCIPvarGetObj(var);
    }
 
    SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", nvars, vars, objcoeffs, transformed) );
