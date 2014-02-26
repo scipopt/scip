@@ -2265,13 +2265,15 @@ SCIP_RETCODE SCIPwriteGms(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
 
-   /* check if the objective is a single continuous variable, so we would not have to introduce an auxiliary variable for GAMS */
+   /* check if the objective is a single continuous variable, so we would not have to introduce an auxiliary variable
+    * for GAMS
+    */
    objvar = NULL;
    if( objscale == 1.0 && objoffset == 0.0 )
    {
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarGetObj(vars[v]) == 0.0 )
+         if( SCIPvarGetObj(vars[v]) == 0.0 ) /*lint !e613*/
             continue;
 
          if( objvar == NULL )
@@ -2279,10 +2281,11 @@ SCIP_RETCODE SCIPwriteGms(
             /* first variable with nonzero obj coefficient
              * if not active or having coefficient != 1.0, or being binary/integer, then give up
              */
-            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 || SCIPvarGetType(vars[v]) < SCIP_VARTYPE_IMPLINT )
+            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 ||
+               SCIPvarGetType(vars[v]) < SCIP_VARTYPE_IMPLINT ) /*lint !e613*/
                break;
 
-            objvar = vars[v];
+            objvar = vars[v]; /*lint !e613*/
          }
          else
          {
