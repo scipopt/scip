@@ -2380,7 +2380,6 @@ SCIP_RETCODE priceAndCutLoop(
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
                         eventqueue, eventfilter, FALSE, FALSE, cutoff) );
-                  oldninitconssadded = stat->ninitconssadded;
                }
 
                if( !(*cutoff) )
