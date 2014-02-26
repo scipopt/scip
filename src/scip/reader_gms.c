@@ -2515,8 +2515,8 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print objective function equation */
    clearLine(linebuffer, &linecnt);
-   if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", SCIPgetTransObjoffset(scip));
+   if( objoffset != 0.0 )
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", objoffset);
    else
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
