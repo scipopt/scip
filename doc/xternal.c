@@ -113,9 +113,7 @@
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
  * @subsection AUTHORS SCIP Authors
- * - <a class="el" href="AUTHORS.shtml#main">Current main developers</a>
- * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
- * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
+ * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
  * @version  3.1.0
  *
@@ -893,12 +891,12 @@
  * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/download.shtml">SCIP download section</a>, download the latest release (version 3.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 3.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
@@ -1134,7 +1132,7 @@
  * \endcode
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings (also see <a href="FAQ.shtml#Section2">the FAQ</a>), to apply primal heuristics
+ * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
  * more aggressively. SCIP shows us, which single parameters it changed therefor. Now, the optimal solution is already
  * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
  * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
@@ -1158,7 +1156,7 @@
  * \endcode
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.shtml#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using SCIP as a standalone MIP/MINLP-Solver</a>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
