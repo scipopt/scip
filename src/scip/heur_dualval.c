@@ -2697,14 +2697,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolDualval)
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolDualval)
 {
-   SCIP_HEURDATA* heurdata;
-
    assert(scip != NULL);
    assert(heur != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
