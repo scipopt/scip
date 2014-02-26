@@ -121,7 +121,7 @@ features:
 - probing supports implicit binary variables
 - added scaling to computation of relative interior point in SCIPcomputeLPRelIntPoint()
 - added more presolving to cons_indicator, checking whether indicator/slack variables are aggregated
-- before copying solutions to the original solution candidate storage, infinite solution values are now removed using
+- before copying solutions to the original solution candidate storage, infinite solution values can now be removed using
   SCIPcreateFiniteSolCopy()
 - new initial constraints are now added to the LP before solving a probing LP
 - SoPlex (>= 1.7.0.5) can compute condition number of current basis matrix via LP interface

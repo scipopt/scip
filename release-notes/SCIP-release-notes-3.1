@@ -41,6 +41,8 @@ Interfaces
 - added copy of GAMS interface from COIN-OR/GAMSlinks project;
   GAMS-reader in SCIP can now read model instances from .gms files
 
+- moved LP interfaces to separate directory src/lpi
+
 
 Performance Improvements and Bug Fixes
 ======================================
@@ -60,6 +62,8 @@ Performance Improvements and Bug Fixes
 - strong branching LP solutions are checked for integrality
 
 - improved handling of initial constraints created during solving
+
+- improved LP reoptimization for branch-and-price applications
 
 - improved numerical stability checks for LP solution
 
