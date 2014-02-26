@@ -6152,7 +6152,7 @@
  * - A significant change for <b>C++ users</b> is that all include files of SCIP
  *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
  *
- * For further release notes we refer the \ref RELEASENOTES "Release notes".
+ * For further release notes we refer to the \ref RELEASENOTES "Release notes".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6290,7 +6290,7 @@
  *
  *
  * <br>
- * For further release notes we refer the \ref RELEASENOTES "Release notes".
+ * For further release notes we refer to the \ref RELEASENOTES "Release notes".
  */
 
 /* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
@@ -6426,7 +6426,7 @@
   *    which can be set using SCIPsetEmphasis().
   *
   * <br>
-  * For further release notes we refer the \ref RELEASENOTES "Release notes".
+  * For further release notes we refer to the \ref RELEASENOTES "Release notes".
   */
 
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6851,6 +6851,8 @@
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.1
  *
  * \verbinclude SCIP-release-notes-3.0.2
  *
