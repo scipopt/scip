@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 ## import all required classes from the /src/ folder 
 ## - Note: Classes which are created in the /src/ folder have to be declared public in the file src/__init__.py
