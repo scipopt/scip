@@ -133,7 +133,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
@@ -142,7 +142,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
  *  </td>
  *  <td>
  *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
@@ -150,7 +150,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
  *  </td>
  *  <td>
  *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
@@ -164,7 +164,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>
  *  </td>
  *  <td>
  *  An example for implementing a constraint handler.
@@ -172,7 +172,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>
  *  </td>
  *  <td>
  *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
@@ -186,7 +186,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/CallableLibrary/index.shtml"><b>CallableLibrary</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/CallableLibrary"><b>CallableLibrary</b></a>
  *  </td>
  *  <td>
  *  An example showing how to setup constraints (esp. nonlinear ones) when using SCIP as callable library.
@@ -194,7 +194,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/MIPSolver/index.shtml"><b>MIPSolver</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/MIPSolver"><b>MIPSolver</b></a>
  *  </td>
  *  <td>
  *  A minimal implementation for using SCIP included into another source code
@@ -202,7 +202,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <b>Queen</b>
+ *  <a href="http://scip.zib.de/doc/examples/Queen"><b>Queen</b>
  *  </td>
  *  <td>
  *  An example showing the use of SCIP as callable library.
@@ -216,7 +216,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.shtml"><b>Eventhdlr</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Eventhdlr"><b>Eventhdlr</b></a>
  *  </td>
  *  <td>
  *  A small example illustrating the use of an event handler.
@@ -224,10 +224,18 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Scheduler"><b>Scheduler</b></a>
  *  </td>
  *  <td>
  *  An example containing three readers and one primal heuristic for scheduling problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/GMI"><b>GMI</b></a>
+ *  </td>
+ *  <td>
+ *  An example about Gomory mixed-integer cuts.
  *  </td>
  *  </tr>
  *  </table>
@@ -835,14 +843,14 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *
  *    We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
- *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
+ *        and the <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
  *
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
@@ -1188,7 +1196,7 @@
  *
  * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
- * <a href="http://scip.zib.de/doc/examples/TSP/index.shtml">TSP </a> example project.
+ * <a href="http://scip.zib.de/doc/examples/TSP">TSP </a> example project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
@@ -5521,7 +5529,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>linear ordering example</b></a>
+ * <a href="http://scip.zib.de/doc/examples/LOP"><b>linear ordering example</b></a>
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
@@ -6884,8 +6892,8 @@
 /**@defgroup PUBLICMETHODS Public Methods
  *
  * This page lists headers containing methods provided by the core of SCIP that can be used via the
- * callable library. If you are in the <a href="../html/index.shtml">User's Manual</a> you only find methods that are
- * public and, therefore, allowed to be used. The <a href="../html_devel/index.shtml">Developer's Manual</a> includes
+ * callable library. If you are in the <a href="../html">User's Manual</a> you only find methods that are
+ * public and, therefore, allowed to be used. The <a href="../html_devel">Developer's Manual</a> includes
  * all methods.
  *
  * All of the headers listed below include functions that are allowed to be called by external users. Besides those
