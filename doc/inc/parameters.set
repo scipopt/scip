@@ -1016,6 +1016,18 @@ constraints/linear/sortvars = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linear/checkrelmaxabs = FALSE
 
+# should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/detectcutoffbound = TRUE
+
+# should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/detectlowerbound = TRUE
+
+# should presolving try to detect subsets of constraints parallel to the objective function?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/detectpartialobjective = TRUE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/abspower/sepafreq = 1
@@ -1791,6 +1803,14 @@ constraints/knapsack/dualpresolving = TRUE
 # should GUB information be used for separation?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/knapsack/usegubs = FALSE
+
+# should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/detectcutoffbound = TRUE
+
+# should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/detectlowerbound = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
