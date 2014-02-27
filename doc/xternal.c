@@ -200,7 +200,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Queen"><b>Queen</b>
+ *  <a href="http://scip.zib.de/doc/examples/Queen"><b>Queen</b></a>
  *  </td>
  *  <td>
  *  An example showing the use of SCIP as callable library.
