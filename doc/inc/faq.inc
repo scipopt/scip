@@ -1,6 +1,22 @@
 <!-- this file is used to generate the local doxygen documentation -->
 <!-- using make doc from within scip or soplex -->
 
+<style>
+.reveal:hover {
+    text-shadow: 1px 1px 1px #777;
+}
+.reveal {
+    color:#06c;
+    padding-top: 1em;
+    cursor: pointer;
+    margin: 5px 0;
+}
+.answer {
+    background-color: #fff;
+    padding-left:   1em;
+}
+</style>
+
 <h4>General Questions about SCIP</h4><ol>  <li>
     <div id="whatisscip" class="reveal">
       What is SCIP?    </div>
@@ -26,7 +42,7 @@ to solve MIPs, MINLPs, or PBO problems. They can read
 <li>SOL - file format (solution reader, xml-solutions are also supported)</li>
 <li><a href="http://zimpl.zib.de/download/zimpl.pdf">ZPL - file format</a></li>
 </ol>
-See also the page on <a href="group__FILEREADERS.shtml">file readers</a>.
+See also the page on <a href="./group__FILEREADERS.shtml">file readers</a>.
 </li>
 <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
 <li>You can use SCIP as a framework in which you implement your own plugins.</li>
@@ -49,13 +65,13 @@ branch-cut-and-price-framework in which you can directly implement your own meth
     </div>
   </li>
     <li>
-    <div id="licence" class="reveal">
+    <div id="license" class="reveal">
       I heard something about licenses. Do I have to pay for using SCIP?    </div>
-    <div id="licence_ans" class="answer">
+    <div id="license_ans" class="answer">
        <p>
 As long as you use it for academic, non-commercial purposes: No.
 This will not change. For the other cases, check the explanation of the
-<a href="http://scip.zib.de/#licence">ZIB academic license</a> and always feel free to ask us.
+<a href="http://scip.zib.de/#license">ZIB academic license</a> and always feel free to ask us.
 If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
 </p>
     </div>
@@ -65,10 +81,10 @@ If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
       How do I get started?    </div>
     <div id="howtogetstarted_ans" class="answer">
        <p>
-An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.shtml">here</a> for a tutorial.
+An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="./SHELL.shtml">here</a> for a tutorial.
 For that, you just have to download one of the precompiled binaries from the
 <a href="http://scip.zib.de/#download">download section</a>, or the zipped source code and compile it
-with your favorite settings. This is described in detail in the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP main directory.
+with your favorite settings. This is described in detail in the <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP main directory.
 </p>
 <p>
 Another way is to use SCIP as a solver integrated into your own program source code.
@@ -78,8 +94,8 @@ for simple examples and <a href="#howtocreateproblem">this point</a>.
 <p>
 A third way is to implement your own plugins into SCIP.
 This is explained in the HowTos for all plugin types, which you can find in the
-<a href="index.shtml">doxygen documentation</a>.
-See also <a href="START.shtml">How to start a new project</a>.
+<a href="./index.shtml">doxygen documentation</a>.
+See also <a href="./START.shtml">How to start a new project</a>.
 </p>
     </div>
   </li>
@@ -89,7 +105,7 @@ See also <a href="START.shtml">How to start a new project</a>.
     <div id="extrasoftware_ans" class="answer">
        <p>Unless you want to use SCIP as a pure CP-Solver (see <a href="#scipascpsolver">here</a>),
 you need an underlying LP-Solver installed and linked to the libraries
-(see the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory).
+(see the <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory).
 LP-solvers currently supported by SCIP are:
 </p>
 <ul>
@@ -103,7 +119,7 @@ LP-solvers currently supported by SCIP are:
 </ul>
 <p>
 We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
-you might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps
+you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
 or *.lp files. ZIMPL files can also directly be read by SCIP.
 You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/#download">here</a>.
 </p>
@@ -118,7 +134,7 @@ If you want to use SCIP for mixed integer nonlinear programming, you might want 
       I have installation problems. What can I do?    </div>
     <div id="installationproblems_ans" class="answer">
        <p>
-Read the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+Read the <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
 the binaries available on the <a href="http://scip.zib.de">SCIP page</a>. <br>
 If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver, you can try the
 following:
@@ -141,7 +157,7 @@ Suite directory.
 <p>
 As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
 If you have any problems while using an LP-solver different from SoPlex,
-please read the SCIP <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file first.
+please read the SCIP <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file first.
 </p>
     </div>
   </li>
@@ -154,12 +170,12 @@ Do you have a general hint on that?    </div>
 Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
 </p>
 <ul>
-<li> <a href="CHG1.shtml">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
-<li> <a href="CHG2.shtml">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
-<li> <a href="CHG3.shtml">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
-<li> <a href="CHG4.shtml">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
-<li> <a href="CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
-<li> <a href="CHG6.shtml">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
+<li> <a href="./CHG1.shtml">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+<li> <a href="./CHG2.shtml">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+<li> <a href="./CHG3.shtml">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+<li> <a href="./CHG4.shtml">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
+<li> <a href="./CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
+<li> <a href="./CHG6.shtml">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
 </ul>
     </div>
   </li>
@@ -171,7 +187,7 @@ Maybe the parameters of a function in SCIP changed. Relevant changes between ver
 Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a>
 and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first
 line of the corresponding *.c file, recompile and let it run again. This will print debug messages from that piece of code.
-Find a short debugging tutorial <a href="DEBUG.shtml">here</a>.
+Find a short debugging tutorial <a href="./DEBUG.shtml">here</a>.
 </p>
     </div>
   </li>
@@ -194,10 +210,10 @@ How does the naming of the methods work? Where do I find the most common methods
     <div id="searchdocumentation_ans" class="answer">
        <p>
 For an explanation of the naming see the
-<a href="CODE.shtml">coding style guidelines</a>. <br>
+<a href="./CODE.shtml">coding style guidelines</a>. <br>
 The methods you might want to use should normally be found in scip.h or in pub_*.h,
-see also <a href="DOC.shtml">here</a>.
-In the doxygen documentation of <a href="scip_8h.shtml">scip.h</a>,
+see also <a href="./DOC.shtml">here</a>.
+In the doxygen documentation of <a href="./scip_8h.shtml">scip.h</a>,
 the methods are ordered by topics.
 </p>
     </div>
@@ -262,7 +278,7 @@ which can be avoided by careful modeling.
       How can I use the SCIP makefiles?    </div>
     <div id="howtousemakefiles_ans" class="answer">
        <p>
-See <a href="MAKE.shtml">Makefiles</a>.
+See <a href="./MAKE.shtml">Makefiles</a>.
 </p>
     </div>
   </li>
@@ -298,7 +314,7 @@ locate the libraries. If you want to move the libraries, you might to set the
 <!--
 If you have a different system or compiler (which supports shared libraries) you might try to
 copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-needs (see also <a href="MAKE.shtml">Makefiles</a>).
+needs (see also <a href="./MAKE.shtml">Makefiles</a>).
 -->
 If you are using your own building system: The "magic" changes are the <code>-FPIC</code>
 compiler/linker option and the <code>-Wl,-rpath</code> option.
@@ -480,7 +496,7 @@ Search <code>SCIPdialogExecOptimize</code> in src/scip/dialog_default.c to see h
 the functionality of the "optimize" command is invoked.
 Also, in src/scip/cons_countsols.c, you can see an example of a dialog handler
 being added to SCIP.
-If this is the way you go, please check the <a href="DIALOG.shtml">How to add dialogs section</a>
+If this is the way you go, please check the <a href="./DIALOG.shtml">How to add dialogs section</a>
 of the doxygen documentation.
 </p>
     </div>
@@ -516,7 +532,7 @@ the solution process via <code>SCIPsolve()</code>.
 <p>
 Make sure to also call <code>SCIPreleaseVar()</code> if you do not need the variable pointer anymore.  For an
 explanation of creating and releasing objects, please see the <a
-href="OBJ.shtml">doxygen documentation.</a>.
+href="./OBJ.shtml">doxygen documentation.</a>.
 </p>
     </div>
   </li>
@@ -615,7 +631,7 @@ constraints <code>knap_clq_1:&nbsp;x_1&nbsp;+&nbsp;x_3&nbsp;&le;&nbsp;1</code> a
 Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods
 which return a SCIP_RETCODE and should therefore parenthesize each such method.
 SCIP_OKAY is the code which is returned if everything worked well;
-there are 17 different error codes, see <a href="type__retcode_8h.shtml">type_retcode.h</a>.
+there are 17 different error codes, see <a href="./type__retcode_8h.shtml">type_retcode.h</a>.
 Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
 If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
 If you do not want to use this either, you have to do the exception handling
@@ -644,7 +660,7 @@ For more examples, please have a look into heur_rens.c.
       How do I start a project?    </div>
     <div id="howtostartbcpproject_ans" class="answer">
        <p>
-See <a href="START.shtml">How to start a new project</a>.
+See <a href="./START.shtml">How to start a new project</a>.
 </p>
     </div>
   </li>
@@ -653,8 +669,8 @@ See <a href="START.shtml">How to start a new project</a>.
       What types of plugins can I add and how do I do this?    </div>
     <div id="howtoaddplugins_ans" class="answer">
        <p>
-See the <a href="modules.shtml">doxygen documentation</a> for a list of
-plugin types. There is a <a href="index.shtml#HOWTOADD">HowTo</a> for each of them.
+See the <a href="./modules.shtml">doxygen documentation</a> for a list of
+plugin types. There is a <a href="./index.shtml#HOWTOADD">HowTo</a> for each of them.
 </p>
     </div>
   </li>
@@ -741,7 +757,7 @@ Can I change the statistics displayed at the end of solving?    </div>
 Setting the status of a display column to 0 turns it off. E.g., type <code>set display memused status 0</code> in the
 interactive shell to disable the memory information column, or include the line <code>SCIPsetIntParam(scip,
 &quot;display/memused/status&quot;, 0)</code> into your source code.  Adding your own display column can be done
-by calling the <code>SCIPincludeDisp()</code> method, see the <a href="DISP.shtml">doxygen
+by calling the <code>SCIPincludeDisp()</code> method, see the <a href="./DISP.shtml">doxygen
 documentation</a>.<br> The statistic display, which is shown by <code>display statistics</code> and
 <code>SCIPprintStatistics()</code>, respectively, cannot be changed.
 </p>
@@ -1032,7 +1048,7 @@ LP. In the same pricing round, your own pricer found the same column and created
 happen, since your pricer uses the same dual values as the variable pricer. To avoid this behavior, set
 PRICER_DELAY to TRUE, so that the LP is reoptimized after the variable pricer added variables to the LP. You can
 find some more information about the PRICER_DELAY property at <a
-href="PRICER.shtml#PRICER_PROPERTIES">How to add variable pricers </a>.
+href="./PRICER.shtml#PRICER_PROPERTIES">How to add variable pricers </a>.
 </p>
     </div>
   </li>
@@ -1146,7 +1162,7 @@ Constraint-based branching is rather straightforward to implement in
 SCIP.  You have to add a new branching rule that uses the methods
 SCIPcreateChild() and SCIPaddConsNode() in its branching callbacks.
 A very good example for this is the Ryan/Foster branching rule that has
-been implemented in the binpacking example from the <a href="EXAMPLES.shtml">examples section</a>.
+been implemented in the binpacking example from the <a href="./EXAMPLES.shtml">examples section</a>.
 </p>
 <p>
 Sometimes it might be more appropriate to implement a constraint
