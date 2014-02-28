@@ -32,7 +32,6 @@ to solve MIPs, MINLPs, or PBO problems. They can read
 <ol>
 <li>CIP - file format (own constraint based file format)</li>
 <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html">CNF - file format</a></li>
-<li><a href="http://www.gams.com/docs/document.htm">GMS format [write only]</a></li>
 <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
 <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
 <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
@@ -176,6 +175,7 @@ Maybe the parameters of a function in SCIP changed. Relevant changes between ver
 <li> <a href="./CHG4.shtml">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
 <li> <a href="./CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
 <li> <a href="./CHG6.shtml">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
+<li> <a href="./CHG7.shtml">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
 </ul>
     </div>
   </li>
