@@ -574,9 +574,11 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable/disable(default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
  *
- * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter or no expressions interpreter (default)
+ * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
+ *
+ * - <code>GAMS=\<true|false\></code>   to enable or disable (default) reading functionality in GAMS reader (needs GAMS)
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
