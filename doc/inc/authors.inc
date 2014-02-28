@@ -129,6 +129,10 @@
          <td>Constraint Handler for bivariate nonlinear constraints</td>
       </tr>
       <tr>
+         <td><a href="http://people.sutd.edu.sg/~nannicini/">Giacomo Nannicini</a></td>
+         <td>GMI example</td>
+      </tr>
+      <tr>
          <td>Michael Perregaard</td>
          <td>Interface to <a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO/Xpress</a></td>
       </tr>
