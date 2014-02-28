@@ -2,7 +2,7 @@
 <table class="desc">
    <tr>
       <td class="w-200"><a href="http://www.zib.de/gamrath/">Gerald Gamrath</a></td>
-      <td>Column generation</td>
+      <td>Column generation, branching rules</td>
    </tr>
    <tr>
       <td><a href="http://www.zib.de/gleixner/">Ambros Gleixner</a></td>
@@ -10,7 +10,7 @@
    </tr>
    <tr>
       <td><a href="http://www.zib.de/en/people/staff/member.html?mail=hendel">Gregor Hendel</a></td>
-      <td>Student assistant</td>
+      <td>Student assistant, primal heuristics</td>
    </tr>
    <tr>
       <td><a href="http://www.zib.de/miltenberger/">Matthias Miltenberger</a></td>
@@ -26,7 +26,7 @@
    </tr>
    <tr>
       <td><a href="http://www.zib.de/en/people/staff/member.html?mail=michael.winkler">Michael Winkler</a></td>
-      <td>Student assistant</td>
+      <td>Student assistant, presolving</td>
    </tr>
 </table>
 <h3>Further and former developers</h3>
@@ -49,7 +49,7 @@
    </tr>
    <tr>
       <td>Alexandra Kraft</td>
-      <td>Former student assistant</td>
+      <td>Former student assistant, pbm reader, Java native interface</td>
    </tr>
    <tr>
       <td><a href="http://www.am.uni-erlangen.de/?id=199">Alexander Martin</a></td>
@@ -57,7 +57,7 @@
    </tr>
    <tr>
       <td><a href="http://www.zib.de/en/people/staff/member.html?mail=benjamin.mueller&amp;L=1">Benjamin M&uuml;ller</a></td>
-      <td>Student assistant</td>
+      <td>Student assistant, obbt propagator</td>
    </tr>
    <tr>
       <td><a href="http://www.zib.de/en/people/staff/member.html?mail=serrano">Felipe Serrano</a></td>
@@ -65,7 +65,7 @@
    </tr>
    <tr>
       <td><a href="http://www.zib.de/en/people/staff/member.html?mail=waniek&amp;L=1">Robert Waniek</a></td>
-      <td>Former student assistant</td>
+      <td>Former student assistant, odd-cycle separator, dins primal heuristic</td>
    </tr>
    <tr>
       <td><a href="http://www.mso.math.fau.de/de/wirtschaftsmathematik/team/weninger-dieter">Dieter Weninger</a></td>
@@ -162,7 +162,7 @@
       </tr>
       <tr>
          <td><a href="http://www.zib.de/en/people/staff/member.html?mail=simon&amp;L=1">Felix Simon</a></td>
-         <td>JNI interface</td>
+         <td>Java native interface</td>
       </tr>
       <tr>
          <td><a href="http://www.zib.de/en/people/staff/member.html?mail=shinano">Yuji Shinano</a></td>
