@@ -65,9 +65,9 @@ branch-cut-and-price-framework in which you can directly implement your own meth
     </div>
   </li>
     <li>
-    <div id="license" class="reveal">
+    <div id="licensefaq" class="reveal">
       I heard something about licenses. Do I have to pay for using SCIP?    </div>
-    <div id="license_ans" class="answer">
+    <div id="licensefaq_ans" class="answer">
        <p>
 As long as you use it for academic, non-commercial purposes: No.
 This will not change. For the other cases, check the explanation of the
