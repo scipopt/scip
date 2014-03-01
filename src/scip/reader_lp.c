@@ -3229,7 +3229,7 @@ void checkConsnames(
    const char* conshdlrname;
 
    assert( scip != NULL );
-   assert( conss != NULL );
+   assert( conss != NULL || nconss == 0 );
 
    for( c = 0; c < nconss; ++c )
    {
