@@ -280,7 +280,6 @@ SCIP_RETCODE printActiveVariables(
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
-   assert( vals != NULL || nvars == 0 );
 
 
    if( *linecnt == 0 )
@@ -306,7 +305,7 @@ SCIP_RETCODE printActiveVariables(
       else
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
-         
+
          for( v = 0; v < nactivevars; ++v )
             activevals[v] = 1.0;
       }
@@ -2242,6 +2241,7 @@ SCIP_RETCODE SCIPwriteGms(
    int nconsvars;
 
    SCIP_VAR* var;
+   SCIP_VAR* objvar;
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Bool freeints;
@@ -2253,6 +2253,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool rangedrow;
    SCIP_Bool indicatorsosdef;
    SCIP_Bool signpowerallowed;
+   SCIP_Bool needcomma;
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
@@ -2264,15 +2265,44 @@ SCIP_RETCODE SCIPwriteGms(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
 
+   /* check if the objective is a single continuous variable, so we would not have to introduce an auxiliary variable
+    * for GAMS
+    */
+   objvar = NULL;
+   if( objscale == 1.0 && objoffset == 0.0 )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         if( SCIPvarGetObj(vars[v]) == 0.0 ) /*lint !e613*/
+            continue;
+
+         if( objvar == NULL )
+         {
+            /* first variable with nonzero obj coefficient
+             * if not active or having coefficient != 1.0, or being binary/integer, then give up
+             */
+            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 ||
+               SCIPvarGetType(vars[v]) < SCIP_VARTYPE_IMPLINT ) /*lint !e613*/
+               break;
+
+            objvar = vars[v]; /*lint !e613*/
+         }
+         else
+         {
+            /* second variable with nonzero obj coefficient -> give up */
+            objvar = NULL;
+            break;
+         }
+      }
+   }
+
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "$OFFLISTING\n");
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
-   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n\n", objoffset);
+   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n\n", nconss);
 
    /* print flags */
    SCIPinfoMessage(scip, file, "$MAXCOL %d\n", GMS_MAX_LINELEN - 1);
@@ -2282,8 +2312,11 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "Variables\n");
    clearLine(linebuffer, &linecnt);
 
-   /* auxiliary objective variable */
-   SCIPinfoMessage(scip, file, " objvar%c\n", nvars > 0 ? ',' : ';');
+   if( objvar == NULL )
+   {
+      /* auxiliary objective variable */
+      SCIPinfoMessage(scip, file, " objvar%c", nvars > 0 ? ',' : ';');
+   }
 
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
@@ -2292,7 +2325,7 @@ SCIP_RETCODE SCIPwriteGms(
       assert( var != NULL );
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nvars - 1) ? "," : ";");
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%c", varname, (v < nvars - 1) ? ',' : ';');
       appendLine(scip, file, linebuffer, &linecnt, buffer);
 
       if( (linecnt > 0 && (v == nbinvars - 1 || v == nbinvars + nintvars - 1 ||
@@ -2444,10 +2477,18 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "\n");
 
    /* print equations section */
-   SCIPinfoMessage(scip, file, "Equations\n");
-   clearLine(linebuffer, &linecnt);
+   if( nconss > 0 || objvar == NULL )
+   {
+      SCIPinfoMessage(scip, file, "Equations\n");
+      clearLine(linebuffer, &linecnt);
+   }
+   needcomma = FALSE;
 
-   SCIPinfoMessage(scip, file, " objequ");
+   if( objvar == NULL )
+   {
+      SCIPinfoMessage(scip, file, " objequ");
+      needcomma = TRUE;
+   }
 
    /* declare equations */
    for( c = 0; c < nconss; ++c )
@@ -2492,8 +2533,8 @@ SCIP_RETCODE SCIPwriteGms(
          continue;
       }
 
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ",");
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      if( needcomma )
+         appendLine(scip, file, linebuffer, &linecnt, ",");
 
       SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, SCIPconsGetName(cons)) );
       if( rangedrow )
@@ -2506,40 +2547,47 @@ SCIP_RETCODE SCIPwriteGms(
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s", consname);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
+      needcomma = TRUE;
    }
 
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ";");
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   endLine(scip, file, linebuffer, &linecnt);
-   SCIPinfoMessage(scip, file, "\n");
-
-   /* print objective function equation */
-   clearLine(linebuffer, &linecnt);
-   if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", SCIPgetTransObjoffset(scip));
-   else
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
-
-   for( v = 0; v < nvars; ++v )
+   if( nconss > 0 || objvar == NULL )
    {
-      var = vars[v]; /*lint !e613*/
-      assert( var != NULL );
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ";");
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
 
-      /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
-      assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
-
-      objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : SCIPvarGetObj(var);
+      endLine(scip, file, linebuffer, &linecnt);
+      SCIPinfoMessage(scip, file, "\n");
    }
 
-   SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", nvars, vars, objcoeffs, transformed) );
+   if( objvar == NULL )
+   {
+      /* print objective function equation */
+      clearLine(linebuffer, &linecnt);
+      if( objoffset != 0.0 )
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", objscale * objoffset);
+      else
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
 
-   SCIPfreeBufferArray(scip, &objcoeffs);
-   endLine(scip, file, linebuffer, &linecnt);
-   SCIPinfoMessage(scip, file, "\n");
+      SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
+
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v]; /*lint !e613*/
+         assert( var != NULL );
+
+         /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
+         assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
+
+         objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : objscale * SCIPvarGetObj(var);
+      }
+
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", nvars, vars, objcoeffs, transformed) );
+
+      SCIPfreeBufferArray(scip, &objcoeffs);
+      endLine(scip, file, linebuffer, &linecnt);
+      SCIPinfoMessage(scip, file, "\n");
+   }
 
    /* print constraints */
    nlcons = FALSE;
@@ -2757,9 +2805,14 @@ SCIP_RETCODE SCIPwriteGms(
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
          discrete ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && !discrete) ? "DNLP" : "NLP") : "QCP") : (discrete > 0 ? "P" : "LP"));
 
+   if( objvar != NULL )
+   {
+      SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(objvar)) );
+   }
+
    SCIPinfoMessage(scip, file, "$if not set %s $set %s %s\n", buffer, buffer, buffer);
-   SCIPinfoMessage(scip, file, "Solve m using %%%s%% %simizing objvar;\n",
-         buffer, objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max");
+   SCIPinfoMessage(scip, file, "Solve m using %%%s%% %simizing %s;\n",
+         buffer, objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max", objvar != NULL ? varname : "objvar");
 
    *result = SCIP_SUCCESS;
 

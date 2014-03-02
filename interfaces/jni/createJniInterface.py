@@ -577,6 +577,12 @@ for arg in sys.argv[1:]:
 
     # unknown file skip that file completely
     if component == "-1":
+        print "WARNING: unknown file"
+        continue
+
+    # if there is no .c implementation, we should skip the complete file
+    if not os.path.isfile("src/JniScip" + component + ".c"):
+        print "File src/JniScip" + component + ".c, does not exist. Skip it"
         continue
 
     # check if the java files already exist
@@ -597,6 +603,7 @@ for arg in sys.argv[1:]:
 
     nativejnifile = open("java/de/zib/jscip/nativ/NativeScip" + component + ".java", 'w')
     jnifile = open("java/de/zib/jscip/nativ/jni/JniScip" + component + ".java", 'w')
+    cfile = open("src/JniScip" + component + ".c", 'r')
 
     # create preamble for Native interface
     if nativelines == []:
@@ -638,8 +645,19 @@ for arg in sys.argv[1:]:
 #            attributes = method.attributes()
 #            print attributes
 
-
         methodname = getTextFromTag(method, 'name')
+
+        # if a function is called  fun_name, javah changes the name to fun_1name
+        javamethodname = "(" + methodname.replace('SCIP', '').replace('_','_1') + ")"
+        cfile.seek(0)
+        skipmethod = 1
+        for line in cfile:
+            if javamethodname in line:
+                skipmethod = 0
+                break
+        if skipmethod:
+            print "Skip method " + methodname + " not implemented on " + cfile.name + " " + javamethodname + " not found"
+            continue;
 
         # check if the method which potentially frees an object
         if "free" in methodname or "release" in methodname:

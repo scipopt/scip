@@ -2265,6 +2265,7 @@ SCIP_RETCODE priceAndCutLoop(
       if( !(*cutoff) && !(*lperror) && mustsepa )
       {
          SCIP_Longint olddomchgcount;
+         SCIP_Longint oldninitconssadded;
          SCIP_Bool enoughcuts;
 
          assert(lp->flushed);
@@ -2272,6 +2273,7 @@ SCIP_RETCODE priceAndCutLoop(
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
          olddomchgcount = stat->domchgcount;
+         oldninitconssadded = stat->ninitconssadded;
 
          mustsepa = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
@@ -2358,23 +2360,11 @@ SCIP_RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
-                  SCIP_Longint oldninitconssadded;
-
-                  oldninitconssadded = stat->ninitconssadded;
-
                   SCIPdebugMessage(" -> separation changed bound: call propagators that are applicable before LP is solved\n");
 
                   /* propagate domains */
                   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
                   assert(SCIPbufferGetNUsed(set->buffer) == 0);
-
-                  if( stat->ninitconssadded != oldninitconssadded )
-                  {
-                     SCIPdebugMessage("new initial constraints added during propagation: old=%lld, new=%lld\n", oldninitconssadded, stat->ninitconssadded);
-
-                     SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
-                           eventqueue, eventfilter, FALSE, FALSE, cutoff) );
-                  }
 
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
@@ -2382,6 +2372,14 @@ SCIP_RETCODE priceAndCutLoop(
                      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
                      SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                   }
+               }
+
+               if( stat->ninitconssadded != oldninitconssadded )
+               {
+                  SCIPdebugMessage("new initial constraints added during propagation: old=%lld, new=%lld\n", oldninitconssadded, stat->ninitconssadded);
+
+                  SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
+                        eventqueue, eventfilter, FALSE, FALSE, cutoff) );
                }
 
                if( !(*cutoff) )

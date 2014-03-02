@@ -3425,7 +3425,11 @@ SCIP_RETCODE checkAndConss(
       /* check for violation and update aging */
       if( !SCIPisFeasEQ(scip, andvalue, SCIPgetSolVal(scip, sol, res)) )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, andcons) );
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, andcons) );
+         }
 
          *violated = TRUE;
          break;

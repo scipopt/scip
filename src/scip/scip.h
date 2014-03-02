@@ -13990,7 +13990,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+   SCIP_Bool*            cutoff              /**< pointer to store whether the diving LP was infeasible or the objective
                                               *   limit was reached (or NULL, if not needed) */
    );
 
@@ -14305,7 +14305,7 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
  *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
  *  account for fractional implicit integer variables which should not be used for branching decisions.
  *
- *  Fractional implicit integer variables are stored at the positions *nlpcands - *nlpcands + *nfracimplvars - 1
+ *  Fractional implicit integer variables are stored at the positions *nlpcands to *nlpcands + *nfracimplvars - 1
  *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
@@ -14326,7 +14326,7 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
-   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of fractional implicit integer variables, or NULL */
    );
 
 /** gets number of branching candidates for LP solution branching (number of fractional variables)

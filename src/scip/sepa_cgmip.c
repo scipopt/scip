@@ -101,7 +101,7 @@
 #define DEFAULT_SKIPMULTBOUNDS     TRUE /**< Skip the upper bounds on the multipliers in the sub-MIP? */
 #define DEFAULT_OBJLONE           FALSE /**< Should the objective of the sub-MIP only minimize the l1-norm of the multipliers? */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
-#define DEFAULT_OBJWEIGHSIZE       TRUE /**< Weigh each row by its size? */
+#define DEFAULT_OBJWEIGHTSIZE      TRUE /**< Weight each row by its size? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< Should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_USECMIR            TRUE /**< Use CMIR-generator (otherwise add cut directly)? */
 #define DEFAULT_USESTRONGCG       FALSE /**< Use strong CG-function to strengthen cut? */
@@ -169,7 +169,7 @@ struct SCIP_SepaData
    SCIP_Bool             skipmultbounds;     /**< Skip the upper bounds on the multipliers in the sub-MIP? */
    SCIP_Bool             objlone;            /**< Should the objective of the sub-MIP only minimize the l1-norm of the multipliers? */
    SCIP_Real             objweight;          /**< objective weight for artificial variables */
-   SCIP_Bool             objweighsize;       /**< Weigh each row by its size? */
+   SCIP_Bool             objweightsize;      /**< Weight each row by its size? */
    SCIP_Bool             dynamiccuts;        /**< Should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             usecmir;            /**< Use CMIR-generator (otherwise add cut directly)? */
    SCIP_Bool             usestrongcg;        /**< Use strong CG-function to strengthen cut? */
@@ -995,8 +995,8 @@ SCIP_Real computeObjWeightSize(
  *    this we require that the cut is tight at the currently best solution. To get reliable solutions
  *    we relax equality by EPSILONVALUE.
  *
- * - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
- *   respect to the current lower and upper bounds.
+ *  - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
+ *    respect to the current lower and upper bounds.
  */
 static
 SCIP_RETCODE createSubscip(
@@ -1402,7 +1402,7 @@ SCIP_RETCODE createSubscip(
          assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) ); /* equations should always be active */
          assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) );
 
-         if ( sepadata->objweighsize )
+         if ( sepadata->objweightsize )
             weight = - sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
 
          /* create two variables for each equation */
@@ -1438,7 +1438,7 @@ SCIP_RETCODE createSubscip(
             if ( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
             {
                isactive = TRUE;
-               if ( sepadata->objweighsize )
+               if ( sepadata->objweightsize )
                   weight = -sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
                else
                   weight = -sepadata->objweight;
@@ -1469,7 +1469,7 @@ SCIP_RETCODE createSubscip(
             if ( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) )
             {
                isactive = TRUE;
-               if ( sepadata->objweighsize )
+               if ( sepadata->objweightsize )
                   weight = -sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
                else
                   weight = -sepadata->objweight;
@@ -1503,7 +1503,7 @@ SCIP_RETCODE createSubscip(
       mipdata->yrhs[mipdata->nrows] = NULL;
       cnt = 0;
 
-      if ( sepadata->objweighsize )
+      if ( sepadata->objweightsize )
          weight = -sepadata->objweight * computeObjWeightSize(SCIPgetNObjVars(scip), minrowsize, maxrowsize);
       else
          weight = -sepadata->objweight;
@@ -4182,9 +4182,9 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->objweight, TRUE, DEFAULT_OBJWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/objweighsize",
-         "Weigh each row by its size?",
-         &sepadata->objweighsize, FALSE, DEFAULT_OBJWEIGHSIZE, NULL, NULL) );
+         "separating/"SEPA_NAME"/objweightsize",
+         "Weight each row by its size?",
+         &sepadata->objweightsize, FALSE, DEFAULT_OBJWEIGHTSIZE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/"SEPA_NAME"/dynamiccuts",

@@ -864,6 +864,10 @@ SCIP_RETCODE SCIPprintStage(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is solved [");
       SCIP_CALL( SCIPprintStatus(scip, file) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
+
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " (objective limit reached)");
+
       break;
    case SCIP_STAGE_EXITSOLVE:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving process deinitialization");
@@ -13049,7 +13053,7 @@ SCIP_RETCODE initSolve(
       {
          /* adjust cutoff bound */
          SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-               scip->transprob, scip->tree, scip->lp, objbound) );
+               scip->transprob, scip->origprob, scip->tree, scip->lp, objbound, FALSE) );
       }
    }
 
@@ -13285,6 +13289,11 @@ SCIP_RETCODE displayRelevantStats(
    /* display most relevant statistics */
    if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
    {
+      SCIP_Bool objlimitreached = FALSE;
+
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+         objlimitreached = TRUE;
+
       SCIPmessagePrintInfo(scip->messagehdlr, "\n");
       SCIPmessagePrintInfo(scip->messagehdlr, "SCIP Status        : ");
       SCIP_CALL( SCIPprintStage(scip, NULL) );
@@ -13297,18 +13306,33 @@ SCIP_RETCODE displayRelevantStats(
          SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
       {
-         char limsolstring[SCIP_MAXSTRLEN];
-         if( scip->primal->nsolsfound !=  scip->primal->nlimsolsfound )
-            (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN, ", %"SCIP_LONGINT_FORMAT" respecting the objective limit", scip->primal->nlimsolsfound);
+         if( objlimitreached )
+         {
+            SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
+               SCIPinfinity(scip), scip->primal->nsolsfound);
+         }
          else
-            (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN,"");
+         {
+            char limsolstring[SCIP_MAXSTRLEN];
+            if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
+               (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN, ", %"SCIP_LONGINT_FORMAT" respecting the objective limit", scip->primal->nlimsolsfound);
+            else
+               (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN,"");
 
-         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions%s)\n",
-            getPrimalbound(scip), scip->primal->nsolsfound, limsolstring);
+            SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions%s)\n",
+               getPrimalbound(scip), scip->primal->nsolsfound, limsolstring);
+         }
       }
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
-         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
+         if( objlimitreached )
+         {
+            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPinfinity(scip));
+         }
+         else
+         {
+            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
+         }
          SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
             SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
@@ -16674,6 +16698,17 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          }  /*lint !e788*/
       }
 
+      /* If columns are missing in the LP, the cutoff flag may be wrong. Therefore, we need to set it and the valid pointer
+       * to false here.
+       */
+      if( (*cutoff) && !SCIPallColsInLP(scip) )
+      {
+         *cutoff = FALSE;
+
+         if( valid != NULL )
+            *valid = FALSE;
+      }
+
 #ifndef NDEBUG
       if( *lperror )
       {
@@ -16682,16 +16717,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 #endif
    }
 
-   /* If columns are missing in the LP, the cutoff flag may be wrong. Therefore, we need to set it and the valid pointer
-    * to false here.
-    */
-   if( (*cutoff) && !SCIPallColsInLP(scip) )
-   {
-      *cutoff = FALSE;
-
-      if( valid != NULL )
-         *valid = FALSE;
-   }
 
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
@@ -29406,6 +29431,8 @@ SCIP_RETCODE SCIPnewProbingNode(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
+
    SCIP_CALL( checkStage(scip, "SCIPnewProbingNode", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
@@ -29414,7 +29441,13 @@ SCIP_RETCODE SCIPnewProbingNode(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPtreeCreateProbingNode(scip->tree, scip->mem->probmem, scip->set, scip->lp) );
+   retcode = SCIPtreeCreateProbingNode(scip->tree, scip->mem->probmem, scip->set, scip->lp);
+
+   if( retcode == SCIP_MAXDEPTHLEVEL )
+   {
+      SCIPwarningMessage(scip, "probing reached maximal depth; it should be stopped\n");
+   }
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -29870,7 +29903,7 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
  *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
  *  account for fractional implicit integer variables which should not be used for branching decisions.
  *
- *  Fractional implicit integer variables are stored at the positions *nlpcands - *nlpcands + *nfracimplvars - 1
+ *  Fractional implicit integer variables are stored at the positions *nlpcands to *nlpcands + *nfracimplvars - 1
  *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
@@ -29890,7 +29923,7 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
-   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of fractional implicit integer variables, or NULL */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -32206,7 +32239,7 @@ SCIP_RETCODE SCIPprintDualSol(
 
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintTransSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
    {
@@ -35125,6 +35158,7 @@ SCIP_Real SCIPgetCutoffbound(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note the given cutoff bound has to better or equal to known one (SCIPgetCutoffbound())
+ *  @note a given cutoff bound is also used for updating the objective limit, if possible
  */
 SCIP_RETCODE SCIPupdateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -35136,7 +35170,7 @@ SCIP_RETCODE SCIPupdateCutoffbound(
    assert(cutoffbound <= SCIPgetCutoffbound(scip));
 
    SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->tree, scip->lp, cutoffbound) );
+         scip->transprob, scip->origprob, scip->tree, scip->lp, cutoffbound, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -36555,6 +36589,7 @@ void printSolutionStatistics(
    SCIP_Real bestsol;
    SCIP_Real gap;
    SCIP_Real firstprimalbound;
+   SCIP_Bool objlimitreached;
    char limsolstring[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -36565,31 +36600,42 @@ void printSolutionStatistics(
    dualbound = getDualbound(scip);
    gap = SCIPgetGap(scip);
 
-   if( scip->primal->nsolsfound !=  scip->primal->nlimsolsfound )
+   objlimitreached = FALSE;
+   if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+      objlimitreached = TRUE;
+
+   if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
       (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN, ", %"SCIP_LONGINT_FORMAT" respecting the objective limit", scip->primal->nlimsolsfound);
    else
       limsolstring[0] = '\0';
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Solution           :\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10"SCIP_LONGINT_FORMAT" (%d improvements%s)\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT" improvements%s)\n",
       scip->primal->nsolsfound, scip->primal->nbestsolsfound, limsolstring);
 
-   if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
+   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
          if( scip->primal->nsols == 0 )
          {
             if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+            {
+               assert(!objlimitreached);
                SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : infeasible or unbounded\n");
+            }
             else
             {
                assert(SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE);
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : infeasible\n");
+               if( objlimitreached )
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : infeasible (objective limit reached)\n");
+               else
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : infeasible\n");
             }
          }
          else
          {
+            assert(!objlimitreached);
             assert(SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED);
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     :  unbounded\n");
          }
@@ -36649,7 +36695,7 @@ void printSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
-   if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
+   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       :          -\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       : %+21.14e\n", dualbound);

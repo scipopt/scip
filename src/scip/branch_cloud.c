@@ -670,11 +670,11 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/usecloud",
-         "should a cloud of points be used? ",
+         "should a cloud of points be used?",
          &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/onlyF2",
-         "should only F2 be used? ",
+         "should only F2 be used?",
          &branchruledata->onlyF2, FALSE, DEFAULT_ONLYF2, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/useunion",

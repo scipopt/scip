@@ -3241,13 +3241,25 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
+   int retcode;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval) );
+   retcode = CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval);
+
+   /* if CPLEX has no solution, e.g., because of a reached time limit, we return -infinity */
+   if( retcode == CPXERR_NO_SOLN )
+   {
+      *objval = -SCIPlpiInfinity(lpi);
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, retcode );
+   }
 
    return SCIP_OKAY;
 }

@@ -1436,7 +1436,7 @@ SCIP_RETCODE readBounds(
             {
                if( !SCIPisFeasIntegral(scip, val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
                }
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
                /* don't assert feasibility here because the presolver will and should detect a infeasibility */
@@ -1445,7 +1445,7 @@ SCIP_RETCODE readBounds(
             {
                if( !SCIPisFeasIntegral(scip, val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
                }
             }
 
@@ -1461,7 +1461,7 @@ SCIP_RETCODE readBounds(
             {
                if( !SCIPisFeasIntegral(scip, val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
                }
 
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
@@ -1471,7 +1471,7 @@ SCIP_RETCODE readBounds(
             {
                if( !SCIPisFeasIntegral(scip, val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bounds (%g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
                }
             }
             break;

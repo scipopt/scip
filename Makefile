@@ -43,7 +43,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.1.0
+VERSION		=	3.1.0.1
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
@@ -105,6 +105,10 @@ LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
+ifeq ($(SPX_LEGACY),true)
+CFLAGS		+= -DSOPLEX_LEGACY
+CXXFLAGS		+= -DSOPLEX_LEGACY
+endif
 LPILIBOBJ	=	lpi/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
@@ -565,11 +569,11 @@ endif
 
 .PHONY: all
 all:		libs
-		@-$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
 libs:     	makesciplibfile
-		@-$(MAKE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+		@$(MAKE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
 		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 
@@ -580,7 +584,7 @@ preprocess:     checkdefines
 				echo "-> generating necessary links" ; \
 				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
 			fi'
-		@-$(MAKE) touchexternal
+		@$(MAKE) touchexternal
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -881,7 +885,7 @@ endif
 
 .PHONY: makesciplibfile
 makesciplibfile: preprocess
-		@-$(MAKE) $(SCIPLIBFILE)
+		@$(MAKE) $(SCIPLIBFILE)
 
 $(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
@@ -955,7 +959,7 @@ ifeq ($(TOUCHLINKS),true)
 		@-touch $(NLPILIBSRC)
 endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
-		@-$(MAKE) githash
+		@$(MAKE) githash
 endif
 		@$(SHELL) -ec 'if test ! -e $(SCIPGITHASHFILE) ; \
 			then \

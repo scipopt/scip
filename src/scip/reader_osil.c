@@ -53,10 +53,12 @@
  * Data structures
  */
 
-typedef enum {
-   LINEAR,
-   QUADRATIC,
-   NONLINEAR
+/** type of constraint */
+typedef enum
+{
+   LINEAR,               /**< linear constraint */
+   QUADRATIC,            /**< quadratic constraint */
+   NONLINEAR             /**< general nonlinear constraint */
 } CONSTYPE;
 
 

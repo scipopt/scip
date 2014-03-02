@@ -13515,7 +13515,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          &conshdlrdata->efcheck, FALSE, DEFAULT_EFCHECK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/efinfer",
-         "should edge-finding be used to infer bounds? ",
+         "should edge-finding be used to infer bounds?",
          &conshdlrdata->efinfer, FALSE, DEFAULT_EFINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",

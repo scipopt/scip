@@ -6102,6 +6102,11 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
       /* change the bound */
       var->data.original.origdom.lb = newbound;
    }
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert( var->negatedvar != NULL );
+      SCIP_CALL( SCIPvarChgUbOriginal(var->negatedvar, set, var->data.negate.constant - newbound) );
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -6155,6 +6160,11 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
 
       /* change the bound */
       var->data.original.origdom.ub = newbound;
+   }
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert( var->negatedvar != NULL );
+      SCIP_CALL( SCIPvarChgLbOriginal(var->negatedvar, set, var->data.negate.constant - newbound) );
    }
 
    /* process parent variables */
@@ -9711,12 +9721,13 @@ SCIP_RETCODE SCIPvarAddVlb(
          minvlb = adjustedLb(set, SCIPvarGetType(var), minvlb);
          maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
-         /* improve global lower bound of variable */
-         if( SCIPsetIsFeasGT(set, minvlb, xub) )
+         /* check bounds for feasibility */
+         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && !SCIPsetIsZero(set, vlbconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+         /* improve global lower bound of variable */
          if( SCIPsetIsFeasGT(set, minvlb, xlb) )
          {
             /* bound might be adjusted due to integrality condition */
@@ -10062,12 +10073,13 @@ SCIP_RETCODE SCIPvarAddVub(
          minvub = adjustedUb(set, SCIPvarGetType(var), minvub);
          maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
 
-         /* improve global upper bound of variable */
-         if( SCIPsetIsFeasLT(set, maxvub, xlb) )
+         /* check bounds for feasibility */
+         if( SCIPsetIsFeasLT(set, maxvub, xlb) || (var == vubvar && SCIPsetIsEQ(set, vubcoef, 1.0) && !SCIPsetIsZero(set, vubconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+         /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
             /* bound might be adjusted due to integrality condition */

@@ -2671,7 +2671,9 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    )
 {
    assert(conshdlr != NULL);
-   assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0);
+#ifdef MORE_DEBUG
+   assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0 || SCIPtreeProbing(tree));
+#endif
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -2749,9 +2751,8 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 #endif
       conshdlr->ninitconss = conshdlr->ninitconsskept;
 
-      if( stat->nnodes <= 1 )
+      if( conshdlr->ninitconss == 0 )
       {
-         assert(conshdlr->ninitconss == 0);
          BMSfreeMemoryArrayNull(&conshdlr->initconss);
          conshdlr->initconsssize = 0;
       }

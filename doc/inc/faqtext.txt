@@ -7,13 +7,12 @@ SECTION: General Questions about SCIP
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MINLP, and PBO.
     </p>
     <ul>
-      <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
+      <li>You can use the <a href="http://scip.zib.de/#download">precompiled binaries</a>
           to solve MIPs, MINLPs, or PBO problems. They can read
 
         <ol>
             <li>CIP - file format (own constraint based file format)</li>
             <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html">CNF - file format</a></li>
-            <li><a href="http://www.gams.com/docs/document.htm">GMS format [write only]</a></li>
             <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
             <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
             <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
@@ -23,7 +22,7 @@ SECTION: General Questions about SCIP
             <li>SOL - file format (solution reader, xml-solutions are also supported)</li>
             <li><a href="http://zimpl.zib.de/download/zimpl.pdf">ZPL - file format</a></li>
         </ol>
-        See also the page on <a href="group__FILEREADERS.shtml">file readers</a>.
+        See also the page on <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file readers</a>.
       </li>
       <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li>
@@ -43,12 +42,12 @@ SECTION: General Questions about SCIP
     </p>
 
     QUESTION: I heard something about licenses. Do I have to pay for using SCIP?
-    LABEL:licence
+    LABEL:licensefaq
     ANSWER:
     <p>
       As long as you use it for academic, non-commercial purposes: No.
       This will not change. For the other cases, check the explanation of the
-      <a href="http://scip.zib.de/licence.shtml">ZIB academic license</a> and always feel free to ask us.
+      <a href="http://scip.zib.de/#license">ZIB academic license</a> and always feel free to ask us.
       If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
     </p>
 
@@ -56,10 +55,10 @@ SECTION: General Questions about SCIP
     LABEL:howtogetstarted
     ANSWER:
     <p>
-      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.shtml">here</a> for a tutorial.
+      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
       For that, you just have to download one of the precompiled binaries from the
-      <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it
-      with your favorite settings. This is described in detail in the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP main directory.
+      <a href="http://scip.zib.de/#download">download section</a>, or the zipped source code and compile it
+      with your favorite settings. This is described in detail in the <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file in the SCIP main directory.
     </p>
     <p>
       Another way is to use SCIP as a solver integrated into your own program source code.
@@ -69,8 +68,8 @@ SECTION: General Questions about SCIP
     <p>
       A third way is to implement your own plugins into SCIP.
       This is explained in the HowTos for all plugin types, which you can find in the
-      <a href="index.shtml">doxygen documentation</a>.
-      See also <a href="START.shtml">How to start a new project</a>.
+      <a href="PATHTODOC/index.LINKEXT">doxygen documentation</a>.
+      See also <a href="PATHTODOC/START.LINKEXT">How to start a new project</a>.
     </p>
 
     QUESTION: Do I need any extra software?
@@ -78,7 +77,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>Unless you want to use SCIP as a pure CP-Solver (see <a href="#scipascpsolver">here</a>),
       you need an underlying LP-Solver installed and linked to the libraries
-      (see the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory).
+      (see the <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file in the SCIP root directory).
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
@@ -91,10 +90,10 @@ SECTION: General Questions about SCIP
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
     </ul>
     <p>
-      We also provide some <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>. Besides that,
-      you might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps
+      We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
+      you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files can also directly be read by SCIP.
-      You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/download.shtml">here</a>.
+      You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/#download">here</a>.
     </p>
     <p>
       If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g.,
@@ -105,7 +104,7 @@ SECTION: General Questions about SCIP
     LABEL:installationproblems
     ANSWER:
     <p>
-      Read the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+      Read the <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
       the binaries available on the <a href="http://scip.zib.de">SCIP page</a>. <br>
       If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver, you can try the
       following:
@@ -128,7 +127,7 @@ SECTION: General Questions about SCIP
     <p>
       As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
       If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file first.
+      please read the SCIP <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file first.
     </p>
 
     QUESTION: I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
@@ -139,12 +138,13 @@ SECTION: General Questions about SCIP
         Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
     </p>
     <ul>
-        <li> <a href="CHG1.shtml">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
-        <li> <a href="CHG2.shtml">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
-        <li> <a href="CHG3.shtml">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
-        <li> <a href="CHG4.shtml">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
-        <li> <a href="CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
-        <li> <a href="CHG6.shtml">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
+        <li> <a href="PATHTODOC/CHG1.LINKEXT">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+        <li> <a href="PATHTODOC/CHG2.LINKEXT">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+        <li> <a href="PATHTODOC/CHG3.LINKEXT">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+        <li> <a href="PATHTODOC/CHG4.LINKEXT">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
+        <li> <a href="PATHTODOC/CHG5.LINKEXT">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
+        <li> <a href="PATHTODOC/CHG6.LINKEXT">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
+        <li> <a href="PATHTODOC/CHG7.LINKEXT">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
     </ul>
 
     QUESTION: How can I debug in SCIP?
@@ -154,7 +154,7 @@ SECTION: General Questions about SCIP
       Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a>
       and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first
       line of the corresponding *.c file, recompile and let it run again. This will print debug messages from that piece of code.
-      Find a short debugging tutorial <a href="DEBUG.shtml">here</a>.
+      Find a short debugging tutorial <a href="PATHTODOC/DEBUG.LINKEXT">here</a>.
     </p>
 
     QUESTION: SCIP prints error messages, aborts, produces segmentation faults, or just behaves strangely. What should I do?
@@ -173,10 +173,10 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       For an explanation of the naming see the
-      <a href="CODE.shtml">coding style guidelines</a>. <br>
+      <a href="PATHTODOC/CODE.LINKEXT">coding style guidelines</a>. <br>
       The methods you might want to use should normally be found in scip.h or in pub_*.h,
-      see also <a href="DOC.shtml">here</a>.
-      In the doxygen documentation of <a href="scip_8h.shtml">scip.h</a>,
+      see also <a href="PATHTODOC/DOC.LINKEXT">here</a>.
+      In the doxygen documentation of <a href="PATHTODOC/scip_8h.LINKEXT">scip.h</a>,
       the methods are ordered by topics.
     </p>
 
@@ -233,7 +233,7 @@ SECTION: General Questions about SCIP
     LABEL:howtousemakefiles
     ANSWER:
     <p>
-        See <a href="MAKE.shtml">Makefiles</a>.
+        See <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>.
     </p>
 
     QUESTION: What is this business with .a and .so libraries in the directory <tt>lib/</tt>?
@@ -265,7 +265,7 @@ SECTION: General Questions about SCIP
         <!--
             If you have a different system or compiler (which supports shared libraries) you might try to
             copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-            needs (see also <a href="MAKE.shtml">Makefiles</a>).
+            needs (see also <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>).
         -->
        If you are using your own building system: The "magic" changes are the <code>-FPIC</code>
        compiler/linker option and the <code>-Wl,-rpath</code> option.
@@ -432,7 +432,7 @@ SECTION: Using SCIP as a standalone solver
         the functionality of the "optimize" command is invoked.
         Also, in src/scip/cons_countsols.c, you can see an example of a dialog handler
         being added to SCIP.
-        If this is the way you go, please check the <a href="DIALOG.shtml">How to add dialogs section</a>
+        If this is the way you go, please check the <a href="PATHTODOC/DIALOG.LINKEXT">How to add dialogs section</a>
         of the doxygen documentation.
     </p>
 
@@ -465,7 +465,7 @@ SECTION: Using SCIP included in another source code
     <p>
         Make sure to also call <code>SCIPreleaseVar()</code> if you do not need the variable pointer anymore.  For an
         explanation of creating and releasing objects, please see the <a
-        href="OBJ.shtml">doxygen documentation.</a>.
+        href="PATHTODOC/OBJ.LINKEXT">doxygen documentation.</a>.
     </p>
 
     QUESTION: I already know a solution in advance, which I want to pass to SCIP.
@@ -554,7 +554,7 @@ SECTION: Using SCIP included in another source code
         Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods
         which return a SCIP_RETCODE and should therefore parenthesize each such method.
         SCIP_OKAY is the code which is returned if everything worked well;
-        there are 17 different error codes, see <a href="type__retcode_8h.shtml">type_retcode.h</a>.
+        there are 17 different error codes, see <a href="PATHTODOC/type__retcode_8h.LINKEXT">type_retcode.h</a>.
         Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
         If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
         If you do not want to use this either, you have to do the exception handling
@@ -580,15 +580,15 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
     LABEL:howtostartbcpproject
     ANSWER:
     <p>
-        See <a href="START.shtml">How to start a new project</a>.
+        See <a href="PATHTODOC/START.LINKEXT">How to start a new project</a>.
     </p>
 
     QUESTION: What types of plugins can I add and how do I do this?
     LABEL:howtoaddplugins
     ANSWER:
     <p>
-        See the <a href="modules.shtml">doxygen documentation</a> for a list of
-        plugin types. There is a <a href="index.shtml#HOWTOADD">HowTo</a> for each of them.
+        See the <a href="PATHTODOC/modules.LINKEXT">doxygen documentation</a> for a list of
+        plugin types. There is a <a href="PATHTODOC/index.LINKEXT#HOWTOADD">HowTo</a> for each of them.
     </p>
 
     QUESTION: When should I implement a constraint handler, when should I implement a separator?
@@ -671,7 +671,7 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         Setting the status of a display column to 0 turns it off. E.g., type <code>set display memused status 0</code> in the
         interactive shell to disable the memory information column, or include the line <code>SCIPsetIntParam(scip,
         &quot;display/memused/status&quot;, 0)</code> into your source code.  Adding your own display column can be done
-        by calling the <code>SCIPincludeDisp()</code> method, see the <a href="DISP.shtml">doxygen
+        by calling the <code>SCIPincludeDisp()</code> method, see the <a href="PATHTODOC/DISP.LINKEXT">doxygen
         documentation</a>.<br> The statistic display, which is shown by <code>display statistics</code> and
         <code>SCIPprintStatistics()</code>, respectively, cannot be changed.
     </p>
@@ -804,6 +804,24 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
 
 SECTION: Specific questions about Column Generation and Branch-And-Price with SCIP
 
+    QUESTION: What can I expect when using SCIP as a Branch-Cut-and-Price framework?
+    LABEL:whattoexpect
+    ANSWER:
+    <p>
+        If you want to use SCIP as a branch-and-price framework, you normally need to implement a reader to read in your
+	problem data and build the problem, a pricer to generate new columns, and a branching rule to do the branching
+	(see also  <a href="#howtostorebranchingdecisions">this question</a> to see how to store branching decisions, if needed).
+	SCIP takes care about everything else,
+	for example the branch-and-bound tree management and LP solving including storage of warmstart bases. Moreover,
+	many of SCIP's primal heuristics will be used and can help improve your primal bound.
+	However, this also comes with a few restrictions: You are not allowed to change the objective function coefficients
+	of variables during the solving process, because that means that previously computed dual bounds might have to be updated.
+	This prevents the use of dual variable stabilization techniques based on a (more or less strict) bounding box in the dual.
+	We are working on making this possible and recommend to use a weighted sum stabilization approach until then.
+	Another point that SCIP does for you is the dynamic removal of columns from the LP due to aging (see also the next two questions).
+	However, due to the way simplex bases are stored in SCIP, columns can only be removed at the same node where they were created.
+    </p>
+
     QUESTION: Why are not all variables in the LP?
     LABEL:wherearethevariables
     ANSWER:
@@ -917,7 +935,7 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
         happen, since your pricer uses the same dual values as the variable pricer. To avoid this behavior, set
         PRICER_DELAY to TRUE, so that the LP is reoptimized after the variable pricer added variables to the LP. You can
         find some more information about the PRICER_DELAY property at <a
-        href="PRICER.shtml#PRICER_PROPERTIES">How to add variable pricers </a>.
+        href="PATHTODOC/PRICER.LINKEXT#PRICER_PROPERTIES">How to add variable pricers </a>.
     </p>
 
     QUESTION: Which default plugins should be deactivated in order to get a working branch-and-price code?
@@ -973,12 +991,16 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     </p>
     <p>
         The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
-        In the usual case that the pricer either adds a new variable or ensures that there are no further
-        variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
-        If the pricer aborts pricing without creating a new variable, but there might exist additional
-        variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
-        In this case, the lp solution will not be used as a lower bound.
-        The pricer can, however, store a valid lower bound in the lowerbound pointer.
+	In the usual case that the pricer either adds a new variable or ensures that there are no further
+	variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
+	If the pricer aborts pricing without creating a new variable, but there might exist additional
+	variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+	In this case, the LP solution will not be used as a lower bound.
+	Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
+	The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
+	bound of the current node.
+	Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
+	in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
     </p>
 
     QUESTION: How can I delete variables?
@@ -1017,7 +1039,7 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
         SCIP.  You have to add a new branching rule that uses the methods
         SCIPcreateChild() and SCIPaddConsNode() in its branching callbacks.
         A very good example for this is the Ryan/Foster branching rule that has
-        been implemented in the binpacking example from the <a href="EXAMPLES.shtml">examples section</a>.
+        been implemented in the binpacking example from the <a href="PATHTODOC/EXAMPLES.LINKEXT">examples section</a>.
     </p>
     <p>
         Sometimes it might be more appropriate to implement a constraint

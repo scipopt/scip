@@ -10061,14 +10061,13 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          unbounded = FALSE; /* whether there are unbounded variables */
          possquare = FALSE; /* whether there is a positive square term */
          negsquare = FALSE; /* whether there is a negative square term */
-         lambda = 0.6; /* weight of preferred bound */
          for( k = 0; k < 2; ++k )
          {
             /* set reference point to 0 projected on bounds for unbounded variables or in between lower and upper bound for bounded variables
-             * in the first round, we set it closer to the best bound, in the second closer to the worst bound
-             * the reason is, that for a bilinear term with bounded variables, there are always two linear underestimators
-             * if the reference point is set to the middle, then rounding and luck decides which underestimator is chosen
-             * we thus choose the reference point not to be the middle, so both McCormick terms are definitely chosen one time
+             * in the first round, we set it closer to the best bound for one part of the variables, in the second closer to the best bound for the other part of the variables
+             * additionally, we use slightly different weights for each variable
+             * the reason for the latter is, that for a bilinear term with bounded variables, there are always two linear underestimators
+             * if the same weight is used for both variables of a product, then rounding and luck decides which underestimator is chosen
              * of course, the possible number of cuts is something in the order of 2^nquadvars, and we choose two of them here
              */
             for( i = 0; i < consdata->nquadvars; ++i )
@@ -10093,7 +10092,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                      unbounded = TRUE;
                   }
                   else
+                  {
+                     lambda = 0.4 + 0.2 * ((i+k)%2) + 0.01 * i / (double)consdata->nquadvars;
                      x[i] = lambda * SCIPvarGetBestBoundLocal(var) + (1.0-lambda) * SCIPvarGetWorstBoundLocal(var);
+                  }
                }
 
                possquare |= consdata->quadvarterms[i].sqrcoef > 0.0;  /*lint !e514 */

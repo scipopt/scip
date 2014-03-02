@@ -320,9 +320,13 @@ lp/checkstability = TRUE
 # [type: real, range: [-1,1.79769313486232e+308], default: -1]
 lp/conditionlimit = -1
 
-# should LP solutions be checked, resolving LP when numerical troubles occur?
+# should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/checkfeas = TRUE
+lp/checkprimfeas = TRUE
+
+# should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/checkdualfeas = TRUE
 
 # which FASTMIP setting of LP solver should be used? 0: off, 1: low
 # [type: int, range: [0,1], default: 1]
@@ -465,8 +469,8 @@ misc/transorigsols = TRUE
 misc/calcintegral = TRUE
 
 # should SCIP try to remove infinite fixings from solutions copied to the solution store?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-misc/finitesolutionstore = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+misc/finitesolutionstore = FALSE
 
 # child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'ybrid inference/root LP value difference)
 # [type: char, range: {dupilrh}, default: h]
@@ -597,8 +601,8 @@ separating/maxbounddist = 1
 separating/minefficacy = 0.05
 
 # minimal efficacy for a cut to enter the LP in the root node
-# [type: real, range: [0,1e+98], default: 0.01]
-separating/minefficacyroot = 0.01
+# [type: real, range: [0,1e+98], default: 0.001]
+separating/minefficacyroot = 0.001
 
 # minimal orthogonality for a cut to enter the LP
 # [type: real, range: [0,1], default: 0.5]
@@ -1012,6 +1016,18 @@ constraints/linear/sortvars = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linear/checkrelmaxabs = FALSE
 
+# should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/detectcutoffbound = TRUE
+
+# should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/detectlowerbound = TRUE
+
+# should presolving try to detect subsets of constraints parallel to the objective function?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/detectpartialobjective = TRUE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/abspower/sepafreq = 1
@@ -1416,7 +1432,7 @@ constraints/cumulative/ttinfer = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/cumulative/efcheck = FALSE
 
-# should edge-finding be used to infer bounds? 
+# should edge-finding be used to infer bounds?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/cumulative/efinfer = FALSE
 
@@ -1787,6 +1803,14 @@ constraints/knapsack/dualpresolving = TRUE
 # should GUB information be used for separation?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/knapsack/usegubs = FALSE
+
+# should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/detectcutoffbound = TRUE
+
+# should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/detectlowerbound = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -2564,11 +2588,11 @@ presolving/domcol/maxrounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 presolving/domcol/delay = TRUE
 
-# minimal number of pair comparisons 
+# minimal number of pair comparisons
 # [type: int, range: [100,1048576], default: 1024]
 presolving/domcol/numminpairs = 1024
 
-# maximal number of pair comparisons 
+# maximal number of pair comparisons
 # [type: int, range: [1024,1000000000], default: 1048576]
 presolving/domcol/nummaxpairs = 1048576
 
@@ -2808,11 +2832,11 @@ branching/cloud/maxdepth = -1
 # [type: real, range: [0,1], default: 1]
 branching/cloud/maxbounddist = 1
 
-# should a cloud of points be used? 
+# should a cloud of points be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 branching/cloud/usecloud = TRUE
 
-# should only F2 be used? 
+# should only F2 be used?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/cloud/onlyF2 = FALSE
 
@@ -3017,8 +3041,8 @@ branching/relpscost/pscostweight = 1
 branching/relpscost/minreliable = 1
 
 # maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-branching/relpscost/maxreliable = 8
+# [type: real, range: [0,1.79769313486232e+308], default: 5]
+branching/relpscost/maxreliable = 5
 
 # maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -3380,7 +3404,7 @@ heuristics/dualval/onlyleaves = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/dualval/relaxindicators = FALSE
 
-# relax the continous variables 
+# relax the continous variables
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/dualval/relaxcontvars = FALSE
 
@@ -4349,12 +4373,12 @@ heuristics/rens/fullscale = FALSE
 heuristics/rins/priority = -1101000
 
 # frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
-# [type: int, range: [-1,2147483647], default: -1]
-heuristics/rins/freq = -1
+# [type: int, range: [-1,2147483647], default: 25]
+heuristics/rins/freq = 25
 
 # frequency offset for calling primal heuristic <rins>
-# [type: int, range: [0,2147483647], default: 5]
-heuristics/rins/freqofs = 5
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/rins/freqofs = 0
 
 # maximal depth level to call primal heuristic <rins> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -4525,16 +4549,16 @@ heuristics/shiftandpropagate/collectstats = TRUE
 heuristics/shiftandpropagate/stopafterfeasible = TRUE
 
 # Should binary variables be shifted first?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-heuristics/shiftandpropagate/preferbinaries = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/preferbinaries = TRUE
 
 # should variables with a zero shifting value be delayed instead of being fixed?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/shiftandpropagate/nozerofixing = FALSE
 
 # should binary variables with no locks in one direction be fixed to that direction?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-heuristics/shiftandpropagate/fixbinlocks = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/fixbinlocks = TRUE
 
 # should coefficients and left/right hand sides be normalized by max row coeff?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -4543,6 +4567,10 @@ heuristics/shiftandpropagate/normalize = TRUE
 # should row weight be increased every time the row is violated?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/shiftandpropagate/updateweights = FALSE
+
+# should implicit integer variables be treated as continuous variables?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/impliscontinuous = TRUE
 
 # priority of heuristic <shifting>
 # [type: int, range: [-536870912,536870911], default: -5000]
@@ -5097,8 +5125,8 @@ propagating/obbt/itlimitfactor = 5
 propagating/obbt/dualfeastol = 1e-09
 
 # maximum condition limit used in LP solver (-1.0: no limit)
-# [type: real, range: [-1,1.79769313486232e+308], default: 1000000000000]
-propagating/obbt/conditionlimit = 1000000000000
+# [type: real, range: [-1,1.79769313486232e+308], default: -1]
+propagating/obbt/conditionlimit = -1
 
 # priority of propagator <probing>
 # [type: int, range: [-536870912,536870911], default: -100000]
@@ -5233,8 +5261,8 @@ propagating/redcost/freq = 1
 propagating/redcost/delay = FALSE
 
 # timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
-# [type: int, range: [1,15], default: 2]
-propagating/redcost/timingmask = 2
+# [type: int, range: [1,15], default: 6]
+propagating/redcost/timingmask = 6
 
 # presolving priority of propagator <redcost>
 # [type: int, range: [-536870912,536870911], default: 0]
@@ -5444,9 +5472,9 @@ separating/cgmip/objlone = FALSE
 # [type: real, range: [0,1.79769313486232e+308], default: 0.001]
 separating/cgmip/objweight = 0.001
 
-# Weigh each row by its size?
+# Weight each row by its size?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/objweighsize = TRUE
+separating/cgmip/objweightsize = TRUE
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -6269,6 +6297,10 @@ separating/zerohalf/onlyorigrows = FALSE
 # should zerohalf cuts be filtered using a cutpool?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/zerohalf/usezhcutpool = TRUE
+
+# should cuts be added to the delayed cut pool?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/delayedcuts = TRUE
 
 # maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1)
 # [type: int, range: [-1,2147483647], default: 10]

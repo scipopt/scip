@@ -103,8 +103,16 @@
 #define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
-#define DEFAULT_SIMPLIFYINEQUALITIES TRUE/**< should presolving try to simplify inequalities */
+#define DEFAULT_SIMPLIFYINEQUALITIES TRUE /**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
+#define DEFAULT_DETECTCUTOFFBOUND    TRUE /**< should presolving try to detect constraints parallel to the objective
+                                           *   function defining an upper bound and prevent these constraints from
+                                           *   entering the LP */
+#define DEFAULT_DETECTLOWERBOUND     TRUE /**< should presolving try to detect constraints parallel to the objective
+                                           *   function defining a lower bound and prevent these constraints from
+                                           *   entering the LP */
+#define DEFAULT_DETECTPARTIALOBJECTIVE TRUE/**< should presolving try to detect subsets of constraints parallel to the
+                                           *   objective function */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
@@ -255,6 +263,14 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
    SCIP_Bool             checkrelmaxabs;     /**< should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
+   SCIP_Bool             detectcutoffbound;  /**< should presolving try to detect constraints parallel to the objective
+                                              *   function defining an upper bound and prevent these constraints from
+                                              *   entering the LP */
+   SCIP_Bool             detectlowerbound;   /**< should presolving try to detect constraints parallel to the objective
+                                              *   function defining a lower bound and prevent these constraints from
+                                              *   entering the LP */
+   SCIP_Bool             detectpartialobjective;/**< should presolving try to detect subsets of constraints parallel to
+                                                 *   the objective function */
 
 };
 
@@ -2822,11 +2838,11 @@ void permSortConsdata(
 }
 
 /** sorts linear constraint's variables depending on the stage of the solving process:
- *  - during PRESOLVING
+ * - during PRESOLVING
  *       sorts variables by binaries, integers, implicit integers, and continuous variables,
  *       and the variables of the same type by non-decreasing variable index
  *
- * -  during SOLVING
+ * - during SOLVING
  *       sorts binary variables of the remaining problem w.r.t the absolute of their coefficient.
  *       This fastens the propagation time of the constraint handler.
  */
@@ -8233,7 +8249,8 @@ SCIP_Bool checkEqualObjective(
 static
 SCIP_RETCODE checkPartialObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< linear equation constraint */
+   SCIP_CONS*            cons,               /**< linear equation constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< linear constraint handler data */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8244,6 +8261,10 @@ SCIP_RETCODE checkPartialObjective(
    int nvars;
    int v;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(conshdlrdata != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
@@ -8253,6 +8274,11 @@ SCIP_RETCODE checkPartialObjective(
 
    /* check if the linear equality constraints does not have more variables than the objective function */
    if( nvars > nobjvars || nvars == 0 )
+      return SCIP_OKAY;
+
+   /* check for allowance of algorithm */
+   if( (nvars < nobjvars && !conshdlrdata->detectpartialobjective) ||
+      (nvars == nobjvars && (!conshdlrdata->detectcutoffbound || !conshdlrdata->detectlowerbound)) )
       return SCIP_OKAY;
 
    offset = consdata->rhs;
@@ -8336,7 +8362,8 @@ SCIP_RETCODE updateCutoffbound(
 static
 SCIP_RETCODE checkParallelObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< linear constraint */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< linear constraint handler data */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8345,6 +8372,10 @@ SCIP_RETCODE checkParallelObjective(
    SCIP_Bool applicable;
    int nobjvars;
    int nvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8370,13 +8401,12 @@ SCIP_RETCODE checkParallelObjective(
 
    if( applicable )
    {
-      /* avoid that the linear constraint enters the LP since it is parallel to the objective function */
-      SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
-      SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
+      SCIP_Bool rhsfinite = !SCIPisInfinity(scip, consdata->rhs);
+      SCIP_Bool lhsfinite = !SCIPisInfinity(scip, -consdata->lhs);
 
       if( SCIPisPositive(scip, scale) )
       {
-         if( !SCIPisInfinity(scip, consdata->rhs) )
+         if( conshdlrdata->detectcutoffbound && rhsfinite )
          {
             SCIP_Real primalbound;
 
@@ -8388,7 +8418,7 @@ SCIP_RETCODE checkParallelObjective(
             SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
          }
 
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( conshdlrdata->detectlowerbound && lhsfinite )
          {
             SCIP_Real lowerbound;
 
@@ -8399,10 +8429,18 @@ SCIP_RETCODE checkParallelObjective(
 
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
          }
+
+         if( (conshdlrdata->detectcutoffbound && (conshdlrdata->detectlowerbound || !lhsfinite)) ||
+            (conshdlrdata->detectlowerbound && !rhsfinite) )
+         {
+            /* avoid that the linear constraint enters the LP since it is parallel to the objective function */
+            SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+            SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
+         }
       }
       else
       {
-         if( !SCIPisInfinity(scip, consdata->rhs) )
+         if( conshdlrdata->detectlowerbound && rhsfinite )
          {
             SCIP_Real lowerbound;
 
@@ -8414,7 +8452,7 @@ SCIP_RETCODE checkParallelObjective(
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
          }
 
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( conshdlrdata->detectcutoffbound && lhsfinite )
          {
             SCIP_Real primalbound;
 
@@ -8424,6 +8462,14 @@ SCIP_RETCODE checkParallelObjective(
                SCIPconsGetName(cons), primalbound);
 
             SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
+         }
+
+         if( (conshdlrdata->detectcutoffbound && (conshdlrdata->detectlowerbound || !rhsfinite)) ||
+            (conshdlrdata->detectlowerbound && !lhsfinite) )
+         {
+            /* avoid that the linear constraint enters the LP since it is parallel to the objective function */
+            SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+            SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
          }
       }
    }
@@ -8436,6 +8482,7 @@ static
 SCIP_RETCODE convertEquality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
@@ -8446,6 +8493,7 @@ SCIP_RETCODE convertEquality(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(conshdlrdata != NULL);
    assert(cutoff != NULL);
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
@@ -8473,7 +8521,7 @@ SCIP_RETCODE convertEquality(
    else
    {
       /* check if the equality is part of the objective function */
-      SCIP_CALL( checkPartialObjective(scip, cons) );
+      SCIP_CALL( checkPartialObjective(scip, cons, conshdlrdata) );
 
       /* try to multi-aggregate one of the variables */
       SCIP_CALL( convertLongEquality(scip, cons, cutoff, naggrvars, ndelconss) );
@@ -8494,7 +8542,7 @@ SCIP_Bool consdataIsResidualIntegral(
    )
 {
    int v;
-   
+
    assert(scip != NULL);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
@@ -13450,7 +13498,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 	 /* convert special equalities */
 	 if( !cutoff && SCIPconsIsActive(cons) )
 	 {
-	    SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	    SCIP_CALL( convertEquality(scip, cons, conshdlrdata, &cutoff, nfixedvars, naggrvars, ndelconss) );
 	 }
 
 	 /* apply dual presolving for variables that appear in only one constraint */
@@ -13462,7 +13510,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 	 /* check if an inequality is parallel to the objective function */
 	 if( !cutoff && SCIPconsIsActive(cons) )
 	 {
-	    SCIP_CALL( checkParallelObjective(scip, cons) );
+	    SCIP_CALL( checkParallelObjective(scip, cons, conshdlrdata) );
 	 }
 
 	 /* remember the first changed constraint to begin the next aggregation round with */
@@ -14348,71 +14396,84 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* add linear constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/tightenboundsfreq",
+         "constraints/"CONSHDLR_NAME"/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
          &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/maxrounds",
+         "constraints/"CONSHDLR_NAME"/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
          &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/maxroundsroot",
+         "constraints/"CONSHDLR_NAME"/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
          &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/maxsepacuts",
+         "constraints/"CONSHDLR_NAME"/maxsepacuts",
          "maximal number of cuts separated per separation round",
          &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/maxsepacutsroot",
+         "constraints/"CONSHDLR_NAME"/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/presolpairwise",
+         "constraints/"CONSHDLR_NAME"/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/presolusehashing",
+         "constraints/"CONSHDLR_NAME"/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance", 
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/nmincomparisons",
+         "constraints/"CONSHDLR_NAME"/nmincomparisons",
          "number for minimal pairwise presolve comparisons",
          &conshdlrdata->nmincomparisons, TRUE, DEFAULT_NMINCOMPARISONS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/linear/mingainpernmincomparisons",
+         "constraints/"CONSHDLR_NAME"/mingainpernmincomparisons",
          "minimal gain per minimal pairwise presolve comparisons to repeat pairwise comparison round",
          &conshdlrdata->mingainpernmincomp, TRUE, DEFAULT_MINGAINPERNMINCOMP, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/linear/maxaggrnormscale",
+         "constraints/"CONSHDLR_NAME"/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
          &conshdlrdata->maxaggrnormscale, TRUE, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/linear/maxcardbounddist",
+         "constraints/"CONSHDLR_NAME"/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
          &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/separateall",
+         "constraints/"CONSHDLR_NAME"/separateall",
          "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
          &conshdlrdata->separateall, FALSE, DEFAULT_SEPARATEALL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/aggregatevariables",
+         "constraints/"CONSHDLR_NAME"/aggregatevariables",
          "should presolving search for aggregations in equations",
          &conshdlrdata->aggregatevariables, TRUE, DEFAULT_AGGREGATEVARIABLES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/simplifyinequalities",
+         "constraints/"CONSHDLR_NAME"/simplifyinequalities",
          "should presolving try to simplify inequalities",
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/dualpresolving",
+         "constraints/"CONSHDLR_NAME"/dualpresolving",
          "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/linear/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/linear/checkrelmaxabs",
+         "constraints/"CONSHDLR_NAME"/checkrelmaxabs",
          "should the violation for a constraint with side 0.0 be checked relative to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)?",
          &conshdlrdata->checkrelmaxabs, TRUE, DEFAULT_CHECKRELMAXABS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/detectcutoffbound",
+         "should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?",
+         &conshdlrdata->detectcutoffbound, TRUE, DEFAULT_DETECTCUTOFFBOUND, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/detectlowerbound",
+         "should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?",
+         &conshdlrdata->detectlowerbound, TRUE, DEFAULT_DETECTLOWERBOUND, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/detectpartialobjective",
+         "should presolving try to detect subsets of constraints parallel to the objective function?",
+         &conshdlrdata->detectpartialobjective, TRUE, DEFAULT_DETECTPARTIALOBJECTIVE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

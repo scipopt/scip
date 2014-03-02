@@ -3522,12 +3522,12 @@ SCIP_RETCODE SCIPincludePresolDomcol(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/domcol/numminpairs",
-         "minimal number of pair comparisons ",
+         "minimal number of pair comparisons",
          &presoldata->numminpairs, FALSE, DEFAULT_NUMMINPAIRS, 100, DEFAULT_NUMMAXPAIRS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/domcol/nummaxpairs",
-         "maximal number of pair comparisons ",
+         "maximal number of pair comparisons",
          &presoldata->nummaxpairs, FALSE, DEFAULT_NUMMAXPAIRS, DEFAULT_NUMMINPAIRS, 1000000000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

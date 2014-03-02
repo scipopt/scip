@@ -5154,11 +5154,29 @@ SCIP_RETCODE SCIPtreeBranchVar(
       {
          /* if the only way to branch is such that in both sides the relative domain width becomes smaller epsilon,
           * then fix the variable in both branches right away
+          *
+          * however, if one of the bounds is at infinity (and thus the other bound is at most 2eps away from the same infinity (in relative sense),
+          * then fix the variable to the non-infinite value, as we cannot fix a variable to infinity
           */
          SCIPdebugMessage("continuous branch on variable <%s> with bounds [%.15g, %.15g], priority %d (current lower bound: %g), node %p\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode), (void*)tree->focusnode);
-         downub = SCIPvarGetLbLocal(var);
-         uplb = SCIPvarGetUbLocal(var);
+         if( SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
+         {
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetUbLocal(var)));
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob,
+                  tree, lp, branchcand, eventqueue, var, SCIPvarGetUbLocal(var), SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else if( SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) )
+         {
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetLbLocal(var)));
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob,
+                  tree, lp, branchcand, eventqueue, var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+         {
+            downub = SCIPvarGetLbLocal(var);
+            uplb = SCIPvarGetUbLocal(var);
+         }
       }
       else
       {
@@ -5821,6 +5839,7 @@ SCIP_RETCODE treeCreateProbingNode(
 {
    SCIP_NODE* currentnode;
    SCIP_NODE* node;
+   SCIP_RETCODE retcode;
 
    assert(tree != NULL);
    assert(SCIPtreeIsPathComplete(tree));
@@ -5844,9 +5863,17 @@ SCIP_RETCODE treeCreateProbingNode(
 
    /* create the probingnode data */
    SCIP_CALL( probingnodeCreate(&node->data.probingnode, blkmem, lp) );
-   
+
    /* make the current node the parent of the new probing node */
-   SCIP_CALL( nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0) );
+   retcode = nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0);
+
+   /* if we reached the maximal depth level we clean up the allocated memory and stop */
+   if( retcode == SCIP_MAXDEPTHLEVEL )
+   {
+      SCIP_CALL( probingnodeFree(&(node->data.probingnode), blkmem, lp) );
+      BMSfreeBlockMemory(blkmem, &node);
+   }
+   SCIP_CALL( retcode );
    assert(SCIPnodeGetDepth(node) == tree->pathlen);
 
    /* check, if the node is the probing root node */

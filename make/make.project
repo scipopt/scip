@@ -82,6 +82,7 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
 GAMS		=	false
+SPX_LEGACY  = false
 
 #compiler and linker parameters
 CC		=	gcc

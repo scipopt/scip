@@ -168,7 +168,7 @@
  *   Generates a html documentation. For this call the external tool
  *   <a href="http://doxygen.org">doyxgen</a> is needed.
  *   After generating the documentation, you can use your favorite browser to open the main page
- *   <code>doc/html/index.html</code>.
+ *   <code>doc/html/index.shtml</code>.
  *   <br>
  *
  * - <b>clean</b>
@@ -179,7 +179,7 @@
  * - <b>test</b> 
  *   <br> 
  *   Starts an automated test run based on the SCIP test runs (see <a
- *   href="http://scip.zib.de/doc/html/TEST.html">How to run automated tests with SCIP</a>).  
+ *   href="http://scip.zib.de/doc/html/TEST.php">How to run automated tests with SCIP</a>).
  *   <br>
  *
  * - <b>tags</b>

@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.1.0"
+VERSION="3.1.0.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -24,7 +24,7 @@ echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* scripts/* interfaces/ampl/get.ASL
+chmod 750 bin/* scripts/* interfaces/ampl/get.ASL interfaces/jni/createJniInterface.py check/cmpres.awk check/find_missing_instances.py
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
@@ -33,6 +33,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
+$NAME/doc/howtoadd.dxy $NAME/doc/interfaces.dxy \
 $NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
