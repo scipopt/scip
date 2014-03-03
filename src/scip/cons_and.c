@@ -2026,6 +2026,7 @@ SCIP_RETCODE dualPresolve(
 	 SCIP_Real maxobj = -SCIPinfinity(scip);
 	 int maxpos = -1;
 	 int oldnfixedvars = *nfixedvars;
+	 int oldnaggrvars = *naggrvars;
 
 	 nimpoperands = 0;
 
@@ -2100,6 +2101,9 @@ SCIP_RETCODE dualPresolve(
 	    }
 	    else
 	    {
+               SCIP_Bool aggregationperformed = FALSE;
+               SCIP_Bool zerofix = FALSE;
+
 	       assert(nimpoperands > 0);
 
 	       SCIPdebugMessage("dual-fixing all variables in constraint <%s> with positive contribution (when together exceeding the negative contribution of the resultant) to 0 and with negative contribution to 1\n", SCIPconsGetName(cons));
@@ -2120,28 +2124,68 @@ SCIP_RETCODE dualPresolve(
 		  else if( !poscontissmall )
 		  {
 		     SCIP_CALL( SCIPfixVar(scip, impoperands[v], 0.0, &infeasible, &fixed) );
+		     assert(!infeasible);
+		     assert(fixed);
 
-		     *cutoff = *cutoff || infeasible;
-		     if( fixed )
-			++(*nfixedvars);
+                     ++(*nfixedvars);
+                     zerofix = TRUE;
 		  }
+                  else
+                  {
+                     SCIP_Bool redundant;
+                     SCIP_Bool aggregated;
+
+                     /* aggregate resultant to operand */
+                     SCIP_CALL( SCIPaggregateVars(scip, resvar, impoperands[v], 1.0, -1.0, 0.0,
+                           &infeasible, &redundant, &aggregated) );
+                     assert(!infeasible);
+
+                     if( aggregated )
+                     {
+                        /* note that we cannot remove the aggregated operand because we do not know the position */
+                        ++(*naggrvars);
+
+                        aggregationperformed = TRUE;
+
+                        SCIPdebugMessage("dual aggregating operand <%s> with 1 up- and downlock to the resultant <%s> in constraint <%s>\n", SCIPvarGetName(impoperands[v]), SCIPvarGetName(resvar), SCIPconsGetName(cons));
+                     }
+                  }
 	       }
-	       assert(*nfixedvars - oldnfixedvars <= nimpoperands);
+	       assert(*nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars <= nimpoperands);
 
-	       if( *nfixedvars - oldnfixedvars == nvars )
+               /* did we aggregate the resultant, then we can decide the value to fix it on the (aggregated) objective
+                * value since it was a independant variable
+                */
+	       if( aggregationperformed || zerofix )
 	       {
-		  SCIPdebugMessage("all operands in constraint <%s> are fixed (and some of them to 0), fix resultant <%s> to 0\n", SCIPconsGetName(cons), SCIPvarGetName(resvar));
+                  SCIP_Real fixval;
 
-		  SCIP_CALL( SCIPfixVar(scip, resvar, 0.0, &infeasible, &fixed) );
+                  if( zerofix )
+                     fixval = 0.0;
+                  else
+                  {
+                     /* get aggregated objective value of active variable, that might be changed */
+                     SCIP_CALL( SCIPvarGetAggregatedObj(resvar, &obj) );
+                     assert(!SCIPisPositive(scip, obj));
 
-		  *cutoff = *cutoff || infeasible;
-		  if( fixed )
-		     ++(*nfixedvars);
+                     fixval = (SCIPisNegative(scip, obj) ? 1.0 : 0.0);
+                  }
 
-		  SCIPdebugMessage("deleting constraint <%s> because all variables are fixed to one\n", SCIPconsGetName(cons));
+                  if( fixval < 0.5 || *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars == nvars )
+                  {
+                     SCIPdebugMessage("constraint <%s> we can fix the resultant <%s> to %g, because the and constraint will alwys be fulfilled\n", SCIPconsGetName(cons), SCIPvarGetName(resvar), fixval);
 
-		  SCIP_CALL( SCIPdelCons(scip, cons) );
-		  ++(*ndelconss);
+                     SCIP_CALL( SCIPfixVar(scip, resvar, fixval, &infeasible, &fixed) );
+                     assert(!infeasible);
+                     assert(fixed);
+
+                     ++(*nfixedvars);
+
+                     SCIPdebugMessage("deleting constraint <%s> because \n", SCIPconsGetName(cons));
+
+                     SCIP_CALL( SCIPdelCons(scip, cons) );
+                     ++(*ndelconss);
+                  }
 	       }
 	    }
 	 }
@@ -2233,8 +2277,8 @@ SCIP_RETCODE dualPresolve(
 	 SCIP_Bool linearize = FALSE;
 	 SCIP_Bool zerofix = FALSE;
 #ifndef NDEBUG
-	 SCIP_Real tmpobj;
 	 int oldnchgcoefs = *nchgcoefs;
+	 int oldnfixedvars = *nfixedvars;
 #endif
 
 	 /* get aggregated objective value of active variable */
@@ -2245,6 +2289,8 @@ SCIP_RETCODE dualPresolve(
 	 /* we can only aggregate when the objective contribution of the resultant is less or equal to 0 */
 	 if( !resobjispos )
 	 {
+            SCIP_Bool goodvarsfound = FALSE;
+
 	    for( v = nvars - 1; v >= 0; --v )
 	    {
 	       var = vars[v];
@@ -2255,46 +2301,74 @@ SCIP_RETCODE dualPresolve(
 	       SCIP_CALL( SCIPvarGetAggregatedObj(var, &obj) );
 
 	       /* all operands which are only locked by this constraint, the objective contribution is greater or equal
-		* to 0, and the absolute value of the contribution of the resultant exceeds can be eliminated and
-		* aggregated to the resultant
+		* to 0 can be aggregated to the resultant
 		*/
-	       if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, obj, 0.0) && SCIPisGE(scip, REALABS(resobj), obj) )
-	       {
-		  linearize = TRUE;
+	       if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 )
+               {
+                  if( !SCIPisNegative(scip, obj) )
+                  {
+                     /* aggregate resultant to operand */
+                     SCIP_CALL( SCIPaggregateVars(scip, resvar, var, 1.0, -1.0, 0.0,
+                           &infeasible, &redundant, &aggregated) );
 
-		  /* delete redundant entry from constraint */
-		  SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-		  ++(*nchgcoefs);
+                     if( aggregated )
+                     {
+                        ++(*naggrvars);
 
-		  SCIPdebugMessage("aggregating operand <%s> with 1 up- and downlock to the resultant <%s> in constraint <%s>\n", SCIPvarGetName(var), SCIPvarGetName(resvar), SCIPconsGetName(cons));
+                        linearize = TRUE;
 
-		  /* aggregate resultant to operand */
-		  SCIP_CALL( SCIPaggregateVars(scip, resvar, var, 1.0, -1.0, 0.0,
-			&infeasible, &redundant, &aggregated) );
+                        /* delete redundant entry from constraint */
+                        SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+                        ++(*nchgcoefs);
 
-		  if( aggregated )
-		     ++(*naggrvars);
+                        SCIPdebugMessage("dual aggregating operand <%s> with 1 up- and downlock to the resultant <%s> in constraint <%s>\n", SCIPvarGetName(var), SCIPvarGetName(resvar), SCIPconsGetName(cons));
+                     }
 
-		  *cutoff = *cutoff || infeasible;
-
-#ifndef NDEBUG
-		  /* caused by aggregation the objective value of the resultant may change, but is cannot change from
-		   * negative to positive
-		   */
-		  SCIP_CALL( SCIPvarGetAggregatedObj(resvar, &tmpobj) );
-		  assert(resobjispos == SCIPisGT(scip, tmpobj, 0.0));
-#endif
-	       }
+                     *cutoff = *cutoff || infeasible;
+                  }
+                  else
+                     goodvarsfound = TRUE;
+               }
 	    }
 	    assert(*nchgcoefs - oldnchgcoefs <= nvars);
 
+            /* if we aggregated an operands with the resultant we can also fix "good" independant operands to 1, since
+             * the correctness of "resultant = 0 => at least one operand = 0" in enforced by that aggregation
+             * without an aggregation we cannot fix these variables since it might lead to infeasibility, e.g.
+             *
+             *   obj(x3) = -1
+             *   r = x1 * x2 * x3
+             *   r = 0
+             *   x1 = 1
+             *   x2 = 1
+             */
+            if( !*cutoff && goodvarsfound && linearize )
+            {
+               /* fix good variables to 1 */
+               for( v = consdata->nvars - 1; v >= 0; --v )
+               {
+                  var = vars[v];
+                  assert(var != NULL);
+
+                  if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 )
+                  {
 #ifndef NDEBUG
-	    /* caused by aggregation the objective value of the resultant may change, but is cannot change from negative
-	     * to positive
-	     */
-	    SCIP_CALL( SCIPvarGetAggregatedObj(resvar, &tmpobj) );
-	    assert(resobjispos == SCIPisGT(scip, tmpobj, 0.0));
+                     /* aggregated objective value of active variable need to be negative */
+                     SCIP_CALL( SCIPvarGetAggregatedObj(var, &obj) );
+                     assert(SCIPisNegative(scip, obj));
 #endif
+                     SCIPdebugMessage("dual-fixing variable <%s> in constraint <%s> to 1, because the contribution is negative\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+                     SCIP_CALL( SCIPfixVar(scip, var, 1.0, &infeasible, &fixed) );
+
+                     assert(!infeasible);
+                     if( fixed )
+                        ++(*nfixedvars);
+                  }
+               }
+               assert(*nfixedvars - oldnfixedvars <= consdata->nvars);
+            }
+	    assert(*nchgcoefs - oldnchgcoefs + *nfixedvars - oldnfixedvars <= nvars);
 	 }
 	 /* if the downlocks of the resultant are only from this constraint and the objective contribution is positive,
 	  * we can try to fix operands
@@ -2380,6 +2454,10 @@ SCIP_RETCODE dualPresolve(
 	    }
 	 }
 
+         /* we have to linearize the constraint, otherwise we might get wrong propagations, since due to aggregations a
+          * resultant fixed to zero is already fulfilling the constraint, and we must not ensure that some remaining
+          * operand needs to be 0
+          */
 	 if( linearize )
 	 {
 	    SCIP_CONS* newcons;
@@ -4588,69 +4666,101 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    int requiredsize;
    int varssize;
    int nvars;
-   
+
    SCIPdebugMessage("parse <%s> as and constraint\n", str);
 
-   /* parse variable name */ 
+   *success = FALSE;
+
+   /* parse variable name of resultant */
    SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );
    str = endptr;
 
    if( resvar == NULL )
    {
       SCIPdebugMessage("resultant variable does not exist \n");
-      *success = FALSE;
    }
    else
    {
-      char* strcopy;
-      char* token;
-      char* saveptr;
-
-      /* copy string for truncating it */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+      char* strcopy = NULL;
+      char* startptr;
 
       /* cutoff "== and(" form the constraint string */
-      (void) SCIPstrtok(strcopy, "(", &saveptr );
+      startptr = strchr(str, '('); /*lint !e158*/
 
-      /* cutoff ")" form the constraint string */
-      token = SCIPstrtok(NULL, ")", &saveptr );
-
-      varssize = 100;
-      nvars = 0;
-
-      /* allocate buffer array for variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-
-      /* parse string */
-      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-      token = endptr;
-
-      if( *success )
+      if( startptr == NULL )
       {
-         /* check if the size of the variable array was great enough */
-         if( varssize < requiredsize )
-         {
-            /* reallocate memory */
-            varssize = requiredsize;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-            
-            /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-         }
-         
-         assert(*success);
-         assert(varssize >= requiredsize);
-         
-         /* create and constraint */
-         SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars, 
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         SCIPerrorMessage("missing starting character '(' parsing and constraint\n");
+         return SCIP_OKAY;
       }
 
-      /* free variable buffer */
-      SCIPfreeBufferArray(scip, &vars);
-      SCIPfreeBufferArray(scip, &strcopy);
+      /* skip '(' */
+      ++startptr;
+
+      /* find end character ')' */
+      endptr = strrchr(startptr, ')');
+
+      if( endptr == NULL )
+      {
+         SCIPerrorMessage("missing ending character ')' parsing and constraint\n");
+         return SCIP_OKAY;
+      }
+      assert(endptr >= startptr);
+
+      if( endptr > startptr )
+      {
+         /* copy string for parsing */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
+
+         varssize = 100;
+         nvars = 0;
+
+         /* allocate buffer array for variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+         /* parse string */
+         SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+
+         if( *success )
+         {
+            /* check if the size of the variable array was great enough */
+            if( varssize < requiredsize )
+            {
+               /* reallocate memory */
+               varssize = requiredsize;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+
+               /* parse string again with the correct size of the variable array */
+               SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+            }
+
+            assert(*success);
+            assert(varssize >= requiredsize);
+
+            /* create and constraint */
+            SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         }
+
+         /* free variable buffer */
+         SCIPfreeBufferArray(scip, &vars);
+         SCIPfreeBufferArray(scip, &strcopy);
+      }
+      else
+      {
+         if( !modifiable )
+         {
+            SCIPerrorMessage("cannot create empty and constraint\n");
+            return SCIP_OKAY;
+         }
+
+         /* create empty and constraint */
+         SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, 0, NULL,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+         *success = TRUE;
+      }
    }
-   
+
    return SCIP_OKAY;
 }
 

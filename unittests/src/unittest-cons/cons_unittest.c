@@ -65,9 +65,9 @@
 /* TODO: fill in the necessary constraint data */
 
 /** constraint data for unittest constraints */
-struct SCIP_ConsData
+/*struct SCIP_ConsData
 {
-};
+};*/
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
@@ -397,8 +397,6 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
    assert(conshdlrdata != NULL);
 
    conshdlrdata->ncheck++;
-   printf("HIER IN CHECK!\n");
-
 
    val = SCIPgetSolVal(scip, sol, vars[0]) + SCIPgetSolVal(scip, sol, vars[1]);
 

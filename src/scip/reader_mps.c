@@ -1365,6 +1365,7 @@ SCIP_RETCODE readBounds(
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
       {
+         SCIP_VARTYPE oldvartype;
          SCIP_Bool infeasible;
 
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
@@ -1389,40 +1390,90 @@ SCIP_RETCODE readBounds(
          else
             val = atof(mpsinputField4(mpsi));
 
+         /* remember variable type */
+         oldvartype = SCIPvarGetType(var);
+
          /* if a bound of a binary variable is given, the variable is converted into an integer variable
           * with default bounds 0 <= x <= infinity
           */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( oldvartype == SCIP_VARTYPE_BINARY )
          {
             if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
                || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
                   && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
             {
-               assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-               assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+               assert(!infeasible);
+
+               oldvartype =  SCIP_VARTYPE_INTEGER;
                SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
             }
          }
 
+         /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
+          * bounds on general variables, which even might lead to infeasibility
+          */
+         if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
+         {
+            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER
+               && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY);
+            /* relaxing variable type */
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+         }
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
          switch( mpsinputField1(mpsi)[0] )
          {
          case 'L':
+            if( !SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisLT(scip, val, SCIPvarGetLbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), val);
+            }
+
+            SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
                /* don't assert feasibility here because the presolver will and should detect a infeasibility */
             }
-            SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+            else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
+            {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
+            }
+
             break;
          case 'U':
+            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+            }
+
+            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
+
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+               /* don't assert feasibility here because the presolver will and should detect an infeasibility */
             }
-            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
+            {
+               if( !SCIPisFeasIntegral(scip, val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), val);
+               }
+            }
             break;
          case 'S':
             assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
@@ -1442,6 +1493,11 @@ SCIP_RETCODE readBounds(
             assert(semicont != NULL);
             semicont[nsemicont] = var;
             ++nsemicont;
+
+            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+            }
 
             SCIP_CALL( SCIPchgVarUb(scip, var, val) );
             break;
@@ -1472,6 +1528,12 @@ SCIP_RETCODE readBounds(
          default:
             mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
+         }
+
+         /* switch variable type back to old type if necessary */
+         if( oldvartype < SCIPvarGetType(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, oldvartype, &infeasible) );
          }
       }
       else
@@ -3225,9 +3287,24 @@ void printBoundSection(
             sectionName = TRUE;
          }
 
-         printStart(scip, file, "BV", "Bound", (int) maxnamelen);
-         printRecord(scip, file, varname, "", maxnamelen);
+         if( !SCIPisFeasZero(scip, lb) || !SCIPisFeasEQ(scip, ub, 1.0) )
+         {
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
+            printStart(scip, file, "LO", "Bound", (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", ub);
+            printStart(scip, file, "UP", "Bound", (int) maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
+         }
+         else
+         {
+            printStart(scip, file, "BV", "Bound", (int) maxnamelen);
+            printRecord(scip, file, varname, "", maxnamelen);
+         }
          SCIPinfoMessage(scip, file, "\n");
+
          continue;
       }
 

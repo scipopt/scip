@@ -54,6 +54,7 @@ CONTINUE	=	false
 LOCK		=	false
 VALGRIND	=	false
 CLIENTTMPDIR    =       /tmp
+OPTCOMMAND	=	optimize
 
 #compiling and linking parameters
 VERBOSE		=	false
@@ -81,6 +82,7 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
 GAMS		=	false
+SPX_LEGACY  = false
 
 #compiler and linker parameters
 CC		=	gcc

@@ -60,23 +60,27 @@ extern "C" {
  *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
  *        solver was interrupted.
  *
- *  @param[in] njobs               number of jobs (activities)
- *  @param[in] durations           array of durations
- *  @param[in,out] ests            array of earliest start times for each job
- *  @param[in,out] lsts            array of latest start times for each job
- *  @param[in] objvals             array of objective coefficients for each job (linear objective function), or NULL if none
- *  @param[in] demands             array of demands
- *  @param[in] capacity            cumulative capacity
- *  @param[in] hmin                left bound of time axis to be considered (including hmin)
- *  @param[in] hmax                right bound of time axis to be considered (not including hmax)
- *  @param[in] timelimit           time limit for solving in seconds
- *  @param[in] memorylimit         memory limit for solving in mega bytes (MB)
- *  @param[in] maxnodes            maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
+ *  input:
+ *  - njobs           : number of jobs (activities)
+ *  - objvals         : array of objective coefficients for each job (linear objective function), or NULL if none
+ *  - durations       : array of durations
+ *  - demands         : array of demands
+ *  - capacity        : cumulative capacity
+ *  - hmin            : left bound of time axis to be considered (including hmin)
+ *  - hmax            : right bound of time axis to be considered (not including hmax)
+ *  - timelimit       : time limit for solving in seconds
+ *  - memorylimit     : memory limit for solving in mega bytes (MB)
+ *  - maxnodes        : maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
  *
- *  @param[out] solved             pointer to store if the problem is solved (to optimality)
- *  @param[out] infeasible         pointer to store if the problem is infeasible
- *  @param[out] unbounded          pointer to store if the problem is unbounded
- *  @param[out] error              pointer to store if an error occurred
+ *  input/output:
+ *  - ests            : array of earliest start times for each job
+ *  - lsts            : array of latest start times for each job
+ *
+ *  output:
+ *  - solved          : pointer to store if the problem is solved (to optimality)
+ *  - infeasible      : pointer to store if the problem is infeasible
+ *  - unbounded       : pointer to store if the problem is unbounded
+ *  - error           : pointer to store if an error occurred
  *
  */
 #define SCIP_DECL_SOLVECUMULATIVE(x) SCIP_RETCODE x (int njobs, SCIP_Real* ests, SCIP_Real* lsts, SCIP_Real* objvals, \

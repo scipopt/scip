@@ -159,7 +159,7 @@ jlong JNISCIPCONSLINEAR(createConsBasicLinear)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jname,              /**< name of constraint */
-   int                   jnvars,             /**< number of nonzeros in the constraint */
+   jint                  jnvars,             /**< number of nonzeros in the constraint */
    jlongArray            jvars,              /**< array with variables of constraint entries */
    jdoubleArray          jvals,              /**< array with coefficients of constraint entries */
    jdouble               jlhs,               /**< left hand side of constraint */

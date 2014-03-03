@@ -251,6 +251,11 @@ double negate(
 
 #else /* unknown compiler or MSVS 64bit */
 
+/* for the MS compiler, the function nextafter is named _nextafter */
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(NO_NEXTAFTER)
+#define nextafter(x,y) _nextafter(x,y)
+#endif
+
 /** gets the negation of a double
  *
  * Fallback implementation that calls the negation method from misc.o.

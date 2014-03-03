@@ -2466,15 +2466,15 @@ SCIP_RETCODE SCIPparamsetWrite(
       /* display the SCIP version as comment in the first line */
 #if( SCIP_SUBVERSION == 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "# SCIP version %d.%d.%d\n", 
-            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10);
+            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10); /*lint !e778*/
 #else
          SCIPmessageFPrintInfo(messagehdlr, file, "# SCIP version %d.%d.%d.%d\n", 
-            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10, SCIP_SUBVERSION);
+            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10, SCIP_SUBVERSION); /*lint !e778*/
 #endif
-      
+
       SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
-   
+
    /* write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )
    {

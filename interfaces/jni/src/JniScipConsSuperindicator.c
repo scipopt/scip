@@ -82,32 +82,22 @@ jlong JNISCIPCONSSUPERINDICATOR(getSlackConsSuperindicator)(
    return (jlong) (size_t) SCIPgetSlackConsSuperindicator(cons);
 }
 
-/** todo: length of array? */
 /** transforms the current problem into a MinUC problem (minimizing the number of unsatisfied constraints),
  *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
  */
-#if 0
 JNIEXPORT
-void JNISCIPCONSSUPERINDICATOR(transformMinUC)(
+jboolean JNISCIPCONSSUPERINDICATOR(transformMinUC)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jbooleanArray         jsuccess            /**< could all constraints be transformed? */
+   jlong                 jscip               /**< SCIP data structure */
    )
 {
    SCIP* scip;
-   SCIP_Bool* success;
-
+   SCIP_Bool success ;
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
+   JNISCIP_CALL( SCIPtransformMinUC(scip, &success) );
 
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &success, ?length?) );
-
-   (*env)->GetBooleanArrayRegion(env, jsuccess, 0, ?length?, (jdouble*)success);
-
-   JNISCIP_CALL( SCIPtransformMinUC(scip, success) );
-
-   SCIPfreeBufferArray(scip, &success);
+   return (jboolean) success;
 }
-#endif

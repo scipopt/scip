@@ -3241,13 +3241,25 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
+   int retcode;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval) );
+   retcode = CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval);
+
+   /* if CPLEX has no solution, e.g., because of a reached time limit, we return -infinity */
+   if( retcode == CPXERR_NO_SOLN )
+   {
+      *objval = -SCIPlpiInfinity(lpi);
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, retcode );
+   }
 
    return SCIP_OKAY;
 }
@@ -3338,7 +3350,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 /** gets information about the quality of an LP solution
  *
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
- *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ *  The LPI should return SCIP_INVALID for @p quality, if the requested quantity is not available.
  */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3373,7 +3385,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
-   if( solntype != CPX_NO_SOLN && solntype != CPX_NONBASIC_SOLN )
+   if( solntype == CPX_BASIC_SOLN )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
    }

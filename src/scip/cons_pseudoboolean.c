@@ -113,6 +113,10 @@
  *         maybe add in SCIPaggregateVars a check for original variables, to prefer them if the variable type is the
  *         same; probably it would be better too if we would aggregate two resultants that the one with less variables
  *         inside the and-constraint will stay active
+ *
+ * @note since product resultants are artificial, we do not care for their solution value, but this can lead to fixation
+ *       of the resultant not representing the product, in 'optimization mode' we do not care, but this might make
+ *       solution debugging complicated
  */
 
 /** and-constraint data object */
@@ -3421,7 +3425,11 @@ SCIP_RETCODE checkAndConss(
       /* check for violation and update aging */
       if( !SCIPisFeasEQ(scip, andvalue, SCIPgetSolVal(scip, sol, res)) )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, andcons) );
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, andcons) );
+         }
 
          *violated = TRUE;
          break;
@@ -5308,7 +5316,7 @@ SCIP_RETCODE checkSolution(
 
 /** try upgrading pseudoboolean linear constraint to an XOR constraint and/or remove possible and-constraints
  *
- *  @note An XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j \in {1,..,n}, which is not yet checked while
+ *  @note An XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j in {1,..,n}, which is not yet checked while
  *  trying to upgrade
  */
 static

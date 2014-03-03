@@ -72,28 +72,29 @@
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
-#define ROOTS_KNOWN 10                  /**< up to which (integer) exponents precomputed roots have been stored */
 
 /*
  * Data structures
  */
 
-/** The positive root of the polynom (n-1) y^n + n y^(n-1) - 1 is needed in separation.
- * Here we store these roots for small integer values of n.
+#define ROOTS_KNOWN 10                  /**< up to which (integer) exponents precomputed roots have been stored */
+
+/** The positive root of the polynomial (n-1) y^n + n y^(n-1) - 1 is needed in separation.
+ *  Here we store these roots for small integer values of n.
  */
 static
 SCIP_Real roots[ROOTS_KNOWN+1] = {
-   -1.0,                     /**< no root for n=0 */
-   -1.0,                     /**< no root for n=1 */
-   0.41421356237309504880,   /**< root for n=2 (-1+sqrt(2)) */
-   0.5,                      /**< root for n=3 */
-   0.56042566045031785945,   /**< root for n=4 */
-   0.60582958618826802099,   /**< root for n=5 */
-   0.64146546982884663257,   /**< root for n=6 */
-   0.67033204760309682774,   /**< root for n=7 */
-   0.69428385661425826738,   /**< root for n=8 */
-   0.71453772716733489700,   /**< root for n=9 */
-   0.73192937842370733350    /**< root for n=10 */
+   -1.0,                     /* no root for n=0 */
+   -1.0,                     /* no root for n=1 */
+   0.41421356237309504880,   /* root for n=2 (-1+sqrt(2)) */
+   0.5,                      /* root for n=3 */
+   0.56042566045031785945,   /* root for n=4 */
+   0.60582958618826802099,   /* root for n=5 */
+   0.64146546982884663257,   /* root for n=6 */
+   0.67033204760309682774,   /* root for n=7 */
+   0.69428385661425826738,   /* root for n=8 */
+   0.71453772716733489700,   /* root for n=9 */
+   0.73192937842370733350    /* root for n=10 */
 };
 
 /** constraint data for absolute power constraints */
@@ -107,7 +108,7 @@ struct SCIP_ConsData
    SCIP_Real             lhs;                /**< left  hand side of constraint */
    SCIP_Real             rhs;                /**< right hand side of constraint */
 
-   SCIP_Real             root;               /**< root of polynom */
+   SCIP_Real             root;               /**< root of polynomial */
    DECL_MYPOW            ((*power));         /**< function for computing power*/
 
    SCIP_Real             lhsviol;            /**< current (scaled) violation of left  hand side */

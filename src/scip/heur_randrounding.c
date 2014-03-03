@@ -140,7 +140,8 @@ SCIP_RETCODE performRandRounding(
       {
          cutoff = TRUE;
          break;
-      } else if( SCIPisFeasEQ(scip, lb, ceilval) )
+      }
+      else if( SCIPisFeasEQ(scip, lb, ceilval) )
       {
          /* only rounding up possible */
          assert(SCIPisFeasGE(scip, ub, ceilval));
@@ -197,7 +198,16 @@ SCIP_RETCODE performRandRounding(
          /* enter a new probing node if the variable was not already fixed before */
          if( lbadjust || ubadjust )
          {
-            SCIP_CALL( SCIPnewProbingNode(scip) );
+            SCIP_RETCODE retcode;
+
+            if( SCIPisStopped(scip) )
+               break;
+
+            retcode = SCIPnewProbingNode(scip);
+            if( retcode == SCIP_MAXDEPTHLEVEL )
+               break;
+
+            SCIP_CALL( retcode );
 
             /* tighten the bounds to fix the variable for the probing node */
             if( lbadjust )
@@ -218,7 +228,7 @@ SCIP_RETCODE performRandRounding(
    }
 
    /* if no cutoff was detected, the solution is a candidate to be checked for feasibility */
-   if( !cutoff )
+   if( !cutoff && ! SCIPisStopped(scip) )
    {
       if( SCIPallColsInLP(scip) )
       {
@@ -442,7 +452,7 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
    if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
 
-   propagate = !heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0;
+   propagate = (!heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0);
 
    /* try to round LP solution */
    SCIP_CALL( performLPRandRounding(scip, heurdata, heurtiming, propagate, result) );

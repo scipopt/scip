@@ -889,6 +889,7 @@ SCIP_RETCODE conshdlrAddSepacons(
    assert(cons->sepaconsspos == -1);
    assert(set != NULL);
    assert(cons->scip == set->scip);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringsepa);
 
    SCIP_CALL( conshdlrEnsureSepaconssMem(conshdlr, set, conshdlr->nsepaconss+1) );
    insertpos = conshdlr->nsepaconss;
@@ -928,6 +929,7 @@ void conshdlrDelSepacons(
    assert(cons->separate);
    assert(cons->sepaenabled);
    assert(cons->sepaconsspos != -1);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringsepa);
 
    delpos = cons->sepaconsspos;
    if( !cons->obsolete )
@@ -1168,7 +1170,7 @@ SCIP_RETCODE conshdlrAddPropcons(
    assert(cons->propconsspos == -1);
    assert(set != NULL);
    assert(cons->scip == set->scip);
-   assert(!conshdlrAreUpdatesDelayed(conshdlr));
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringprop);
 
    /* add constraint to the propagation array */
    SCIP_CALL( conshdlrEnsurePropconssMem(conshdlr, set, conshdlr->npropconss+1) );
@@ -1219,6 +1221,7 @@ void conshdlrDelPropcons(
    assert(cons->propagate);
    assert(cons->propenabled);
    assert(cons->propconsspos != -1);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr) || !conshdlr->duringprop);
 
    /* unmark constraint to be propagated; this will move the constraint to the obsolete or non-obsolete part of the
     * array, depending on its age
@@ -2179,6 +2182,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->sepasolwasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
    (*conshdlr)->presolwasdelayed = FALSE;
+   (*conshdlr)->duringsepa = FALSE;
+   (*conshdlr)->duringprop = FALSE;
    (*conshdlr)->initialized = FALSE;
 
    (*conshdlr)->pendingconss = NULL;
@@ -2666,7 +2671,9 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    )
 {
    assert(conshdlr != NULL);
-   assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0);
+#ifdef MORE_DEBUG
+   assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0 || SCIPtreeProbing(tree));
+#endif
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -2744,9 +2751,8 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 #endif
       conshdlr->ninitconss = conshdlr->ninitconsskept;
 
-      if( stat->nnodes <= 1 )
+      if( conshdlr->ninitconss == 0 )
       {
-         assert(conshdlr->ninitconss == 0);
          BMSfreeMemoryArrayNull(&conshdlr->initconss);
          conshdlr->initconsssize = 0;
       }
@@ -2850,6 +2856,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
              * external method; to avoid this, these changes will be buffered and processed after the method call
              */
             conshdlrDelayUpdates(conshdlr);
+            conshdlr->duringsepa = TRUE;
 
             /* start timing */
             SCIPclockStart(conshdlr->sepatime, set);
@@ -2862,6 +2869,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             SCIPclockStop(conshdlr->sepatime, set);
 
             /* perform the cached constraint updates */
+            conshdlr->duringsepa = FALSE;
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
             /* update statistics */
@@ -2979,6 +2987,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
              * external method; to avoid this, these changes will be buffered and processed after the method call
              */
             conshdlrDelayUpdates(conshdlr);
+            conshdlr->duringsepa = TRUE;
 
             /* start timing */
             SCIPclockStart(conshdlr->sepatime, set);
@@ -2991,6 +3000,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
             SCIPclockStop(conshdlr->sepatime, set);
 
             /* perform the cached constraint updates */
+            conshdlr->duringsepa = FALSE;
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
             /* update statistics */
@@ -3577,6 +3587,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
              * external method; to avoid this, these changes will be buffered and processed after the method call
              */
             conshdlrDelayUpdates(conshdlr);
+            conshdlr->duringprop = TRUE;
 
             /* start timing */
             if( instrongbranching )
@@ -3595,6 +3606,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                SCIPclockStop(conshdlr->proptime, set);
 
             /* perform the cached constraint updates */
+            conshdlr->duringprop = FALSE;
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
             /* update statistics */
@@ -6010,7 +6022,7 @@ SCIP_RETCODE SCIPconsTransform(
       (*transcons)->transorigcons = origcons;
 
       /* copy the number of upgradelocks */
-      (*transcons)->nupgradelocks = origcons->nupgradelocks;
+      (*transcons)->nupgradelocks = origcons->nupgradelocks; /*lint !e732*/
    }
    assert(*transcons != NULL);
 
@@ -7893,7 +7905,7 @@ void SCIPconsAddUpgradeLocks(
    assert(cons != NULL);
 
    assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
-   cons->nupgradelocks += nlocks;
+   cons->nupgradelocks += (unsigned int) nlocks;
 }
 
 /** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */

@@ -42,6 +42,8 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_soc.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_indicator.h"
@@ -62,7 +64,6 @@
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
 #define GMS_DEFAULT_SIGNPOWER FALSE
-#define GMS_LOGOPTION        3
 
 /*
  * Local methods (for writing)
@@ -279,7 +280,6 @@ SCIP_RETCODE printActiveVariables(
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
-   assert( vals != NULL || nvars == 0 );
 
 
    if( *linecnt == 0 )
@@ -305,7 +305,7 @@ SCIP_RETCODE printActiveVariables(
       else
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
-         
+
          for( v = 0; v < nactivevars; ++v )
             activevals[v] = 1.0;
       }
@@ -914,6 +914,7 @@ SCIP_RETCODE printIndicatorCons(
    const char*           rowname,            /**< row name */
    SCIP_VAR*             z,                  /**< indicating variable (binary) */
    SCIP_VAR*             s,                  /**< slack variable */
+   SCIP_Bool*            sossetdeclr,        /**< buffer to store whether we declared the SOS set for indicator reform */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
@@ -930,6 +931,7 @@ SCIP_RETCODE printIndicatorCons(
    assert( z != NULL );
    assert( s != NULL );
    assert( SCIPvarIsBinary(z) );
+   assert( sossetdeclr != NULL );
 
    clearLine(linebuffer, &linecnt);
 
@@ -978,6 +980,13 @@ SCIP_RETCODE printIndicatorCons(
          coef = 1.0;
          SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, rowname) );
 
+         /* declare set for SOS1 declarations from reformulation of indicator, if needed */
+         if( !*sossetdeclr )
+         {
+            SCIPinfoMessage(scip, file, " Set sosset / slack, bin /;\n");
+            *sossetdeclr = TRUE;
+         }
+
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "sos1 Variable %s_sos(sosset);", consname);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
          endLine(scip, file, linebuffer, &linecnt);
@@ -996,6 +1005,71 @@ SCIP_RETCODE printIndicatorCons(
          return SCIP_ERROR;
    }
 
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
+/* print SOS constraint in some GAMS format to file stream (performing retransformation to active variables)
+ *
+ * write as
+ * Set name_sosset /1*nvars/;
+ * SOS1/2 Variable name_sosvar(name_sosset);
+ * Equation name_sosequ(e1_sosset);
+ * name_sosequ(name_sosset).. name_sosvar(e1_sosset) =e=
+ * vars[0]$sameas(name_sosset, '1') + vars[1]$sameas(name_sosset, '2') + ... + vars[nvars-1]$sameas(name_sosset, nvars);
+ */
+static
+SCIP_RETCODE printSOSCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   int                   nvars,              /**< number of variables in SOS */
+   SCIP_VAR**            vars,               /**< variables in SOS */
+   int                   sostype,            /**< type of SOS: 1 or 2 */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   int linecnt;
+   SCIP_Real coef;
+   int v;
+
+   char consname[GMS_MAX_NAMELEN + 30];
+   char buffer[GMS_MAX_PRINTLEN];
+
+   assert( scip != NULL );
+   assert( strlen(rowname) > 0 );
+   assert( vars != NULL || nvars == 0 );
+   assert( sostype == 1 || sostype == 2 );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, rowname) );
+
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "Set %s_sosset /1*%d/;", consname, nvars);
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+   endLine(scip, file, linebuffer, &linecnt);
+
+   /* explicitly set lower bound of SOS variables to -inf, as GAMS default is 0.0 */
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " SOS%d Variable %s_sosvar(%s_sosset); %s_sosvar.lo(%s_sosset) = -inf;", sostype, consname, consname, consname, consname);
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+   endLine(scip, file, linebuffer, &linecnt);
+
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(%s_sosset).. %s_sosvar(%s_sosset) =e= ", consname, consname, consname, consname);
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+   endLine(scip, file, linebuffer, &linecnt);
+
+   coef = 1.0;
+   for( v = 0; v < nvars; ++v )
+   {
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "$sameas(%s_sosset,'%d')", consname, v+1);
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, v > 0 ? " + " : NULL, buffer, 1, &vars[v], &coef, transformed) ); /*lint !e613*/
+   }
+   appendLine(scip, file, linebuffer, &linecnt, ";");
    endLine(scip, file, linebuffer, &linecnt);
 
    return SCIP_OKAY;
@@ -2146,8 +2220,8 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
-   int c,v;
-
+   int c;
+   int v;
    int linecnt;
    char linebuffer[GMS_MAX_PRINTLEN];
 
@@ -2167,6 +2241,7 @@ SCIP_RETCODE SCIPwriteGms(
    int nconsvars;
 
    SCIP_VAR* var;
+   SCIP_VAR* objvar;
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Bool freeints;
@@ -2174,9 +2249,11 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool nlcons;
    SCIP_Bool nqcons;
    SCIP_Bool nsmooth;
+   SCIP_Bool discrete;
    SCIP_Bool rangedrow;
-   char indicatorform;
+   SCIP_Bool indicatorsosdef;
    SCIP_Bool signpowerallowed;
+   SCIP_Bool needcomma;
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
@@ -2188,15 +2265,44 @@ SCIP_RETCODE SCIPwriteGms(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
 
+   /* check if the objective is a single continuous variable, so we would not have to introduce an auxiliary variable
+    * for GAMS
+    */
+   objvar = NULL;
+   if( objscale == 1.0 && objoffset == 0.0 )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         if( SCIPvarGetObj(vars[v]) == 0.0 ) /*lint !e613*/
+            continue;
+
+         if( objvar == NULL )
+         {
+            /* first variable with nonzero obj coefficient
+             * if not active or having coefficient != 1.0, or being binary/integer, then give up
+             */
+            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 ||
+               SCIPvarGetType(vars[v]) < SCIP_VARTYPE_IMPLINT ) /*lint !e613*/
+               break;
+
+            objvar = vars[v]; /*lint !e613*/
+         }
+         else
+         {
+            /* second variable with nonzero obj coefficient -> give up */
+            objvar = NULL;
+            break;
+         }
+      }
+   }
+
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "$OFFLISTING\n");
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
-   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n\n", objoffset);
+   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n\n", nconss);
 
    /* print flags */
    SCIPinfoMessage(scip, file, "$MAXCOL %d\n", GMS_MAX_LINELEN - 1);
@@ -2206,8 +2312,11 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "Variables\n");
    clearLine(linebuffer, &linecnt);
 
-   /* auxiliary objective variable */
-   SCIPinfoMessage(scip, file, " objvar%c\n", nvars > 0 ? ',' : ';');
+   if( objvar == NULL )
+   {
+      /* auxiliary objective variable */
+      SCIPinfoMessage(scip, file, " objvar%c", nvars > 0 ? ',' : ';');
+   }
 
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
@@ -2216,7 +2325,7 @@ SCIP_RETCODE SCIPwriteGms(
       assert( var != NULL );
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nvars - 1) ? "," : ";");
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%c", varname, (v < nvars - 1) ? ',' : ';');
       appendLine(scip, file, linebuffer, &linecnt, buffer);
 
       if( (linecnt > 0 && (v == nbinvars - 1 || v == nbinvars + nintvars - 1 ||
@@ -2264,7 +2373,6 @@ SCIP_RETCODE SCIPwriteGms(
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
-
       endLine(scip, file, linebuffer, &linecnt);
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2368,26 +2476,19 @@ SCIP_RETCODE SCIPwriteGms(
       SCIPinfoMessage(scip, file, "* (All other bounds at default value: binary [0,1], integer [%s], continuous [-inf,+inf].)\n", freeints ? "0,+inf" : "0,100");
    SCIPinfoMessage(scip, file, "\n");
 
-   /* declare set for SOS1 declarations from reformulation of indicator, if needed */
-   conshdlr = SCIPfindConshdlr(scip, "indicator");
-   SCIP_CALL( SCIPgetCharParam(scip, "reading/gmsreader/indicatorreform", &indicatorform) );
-   if( conshdlr != NULL && indicatorform == 's' )
-   {
-      for( c = 0; c < nconss; ++c )
-      {
-         if( SCIPconsGetHdlr(conss[c]) == conshdlr )
-         {
-            SCIPinfoMessage(scip, file, "Set sosset / slack, bin /;\n\n");
-            break;
-         }
-      }
-   }
-
    /* print equations section */
-   SCIPinfoMessage(scip, file, "Equations\n");
-   clearLine(linebuffer, &linecnt);
+   if( nconss > 0 || objvar == NULL )
+   {
+      SCIPinfoMessage(scip, file, "Equations\n");
+      clearLine(linebuffer, &linecnt);
+   }
+   needcomma = FALSE;
 
-   SCIPinfoMessage(scip, file, " objequ%c\n", (nconss > 0) ? ',' : ';');
+   if( objvar == NULL )
+   {
+      SCIPinfoMessage(scip, file, " objequ");
+      needcomma = TRUE;
+   }
 
    /* declare equations */
    for( c = 0; c < nconss; ++c )
@@ -2422,72 +2523,78 @@ SCIP_RETCODE SCIPwriteGms(
          && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)));
 
       /* we declare only those constraints which we can print in GAMS format */
+      if( strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "setppc") != 0
+          && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "quadratic") != 0 && strcmp(conshdlrname, "varbound") != 0
+          && strcmp(conshdlrname, "soc") != 0 && strcmp(conshdlrname, "abspower") != 0 && strcmp(conshdlrname, "bivariate") != 0
+          && strcmp(conshdlrname, "nonlinear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
+          && strcmp(conshdlrname, "indicator") != 0 )
+      {
+         SCIPwarningMessage(scip, "Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, SCIPconsGetName(cons));
+         continue;
+      }
+
+      if( needcomma )
+         appendLine(scip, file, linebuffer, &linecnt, ",");
+
       SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, SCIPconsGetName(cons)) );
       if( rangedrow )
       {
-         assert( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "varbound") == 0 );
-
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s%s%s%s", consname, "_lhs, ", consname, "_rhs", (c < nconss - 1) ? "," : ";");
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-      }
-      else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0
-            || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0
-            || strcmp(conshdlrname, "soc") == 0 || strcmp(conshdlrname, "abspower") == 0 || strcmp(conshdlrname, "bivariate") == 0
-            || strcmp(conshdlrname, "nonlinear") == 0 )
-      {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-      }
-      else if( strcmp(conshdlrname, "indicator") == 0 )
-      {
-         if( indicatorform == 'b' )
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
-         else
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(sosset)%s", consname, (c < nconss - 1) ? "," : ";");
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s%s%s", consname, "_lhs, ", consname, "_rhs");
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
       else
       {
-         SCIPwarningMessage(scip, "Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, consname);
-         if( c == nconss - 1 )
-            appendLine(scip, file, linebuffer, &linecnt, ";");
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s", consname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
+      needcomma = TRUE;
    }
 
-   endLine(scip, file, linebuffer, &linecnt);
-   SCIPinfoMessage(scip, file, "\n");
-
-   /* print objective function equation */
-   clearLine(linebuffer, &linecnt);
-   if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", SCIPgetTransObjoffset(scip));
-   else
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
-
-   for( v = 0; v < nvars; ++v )
+   if( nconss > 0 || objvar == NULL )
    {
-      var = vars[v]; /*lint !e613*/
-      assert( var != NULL );
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ";");
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
 
-      /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
-      assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
-
-      objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : SCIPvarGetObj(var);
+      endLine(scip, file, linebuffer, &linecnt);
+      SCIPinfoMessage(scip, file, "\n");
    }
 
-   SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", nvars, vars, objcoeffs, transformed) );
+   if( objvar == NULL )
+   {
+      /* print objective function equation */
+      clearLine(linebuffer, &linecnt);
+      if( objoffset != 0.0 )
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", objscale * objoffset);
+      else
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
 
-   SCIPfreeBufferArray(scip, &objcoeffs);
-   endLine(scip, file, linebuffer, &linecnt);
-   SCIPinfoMessage(scip, file, "\n");
+      SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
+
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v]; /*lint !e613*/
+         assert( var != NULL );
+
+         /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
+         assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
+
+         objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : objscale * SCIPvarGetObj(var);
+      }
+
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", nvars, vars, objcoeffs, transformed) );
+
+      SCIPfreeBufferArray(scip, &objcoeffs);
+      endLine(scip, file, linebuffer, &linecnt);
+      SCIPinfoMessage(scip, file, "\n");
+   }
 
    /* print constraints */
    nlcons = FALSE;
    nqcons = FALSE;
    nsmooth = FALSE;
+   discrete = nbinvars > 0 || nintvars > 0;
+   indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
@@ -2647,7 +2754,7 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_CALL( printIndicatorCons(scip, file, consname,
-            SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons),
+            SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons), &indicatorsosdef,
             transformed) );
       }
       else if( strcmp(conshdlrname, "abspower") == 0 )
@@ -2659,6 +2766,20 @@ SCIP_RETCODE SCIPwriteGms(
 
          nlcons = TRUE;
          nqcons = TRUE;
+      }
+      else if( strcmp(conshdlrname, "SOS1") == 0 )
+      {
+         SCIP_CALL( printSOSCons(scip, file, consname,
+            SCIPgetNVarsSOS1(scip, cons), SCIPgetVarsSOS1(scip, cons), 1,
+            transformed) );
+         discrete = TRUE;
+      }
+      else if( strcmp(conshdlrname, "SOS2") == 0 )
+      {
+         SCIP_CALL( printSOSCons(scip, file, consname,
+            SCIPgetNVarsSOS2(scip, cons), SCIPgetVarsSOS2(scip, cons), 2,
+            transformed) );
+         discrete = TRUE;
       }
       else
       {
@@ -2682,11 +2803,16 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
-         nbinvars + nintvars > 0 ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && nbinvars == 0 && nintvars == 0) ? "DNLP" : "NLP") : "QCP") : (nbinvars + nintvars > 0 ? "P" : "LP"));
+         discrete ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && !discrete) ? "DNLP" : "NLP") : "QCP") : (discrete > 0 ? "P" : "LP"));
+
+   if( objvar != NULL )
+   {
+      SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(objvar)) );
+   }
 
    SCIPinfoMessage(scip, file, "$if not set %s $set %s %s\n", buffer, buffer, buffer);
-   SCIPinfoMessage(scip, file, "Solve m using %%%s%% %simizing objvar;\n",
-         buffer, objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max");
+   SCIPinfoMessage(scip, file, "Solve m using %%%s%% %simizing %s;\n",
+         buffer, objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max", objvar != NULL ? varname : "objvar");
 
    *result = SCIP_SUCCESS;
 

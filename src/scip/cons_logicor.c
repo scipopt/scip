@@ -4680,60 +4680,93 @@ static
 SCIP_DECL_CONSPARSE(consParseLogicor)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-
    char* strcopy;
-   char* token;
-   char* saveptr;
    char* endptr;
+   char* startptr;
    int requiredsize;
    int varssize;
    int nvars;
-   
+
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
-   /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+   *success = FALSE;
 
-   /* cutoff "logicor" form the constraint string */
-   (void) SCIPstrtok(strcopy, "(", &saveptr ); 
+   /* cutoff "logicor" from the constraint string */
+   startptr = strchr(str, '('); /*lint !e158*/
 
-   /* cutoff ")" form the constraint string */
-   token = SCIPstrtok(NULL, ")", &saveptr ); 
-   
-   varssize = 100;
-   nvars = 0;
-
-   /* allocate buffer array for variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-
-   /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-   
-   if( *success )
+   if( startptr == NULL )
    {
-      /* check if the size of the variable array was great enough */
-      if( varssize < requiredsize )
-      {
-         /* reallocate memory */
-         varssize = requiredsize;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-         
-         /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-      }
-      
-      assert(*success);
-      assert(varssize >= requiredsize);
-
-      /* create logicor constraint */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,  
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      SCIPerrorMessage("missing starting character '(' parsing logicor\n");
+      return SCIP_OKAY;
    }
 
-   /* free buffers */
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &strcopy);
-   
+   /* skip '(' */
+   ++startptr;
+
+   /* find end character ')' */
+   endptr = strrchr(startptr, ')');
+
+   if( endptr == NULL )
+   {
+      SCIPerrorMessage("missing ending character ')' parsing logicor\n");
+      return SCIP_OKAY;
+   }
+   assert(endptr >= startptr);
+
+   if( endptr > startptr )
+   {
+      /* copy string for parsing */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
+
+      varssize = 100;
+      nvars = 0;
+
+      /* allocate buffer array for variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+      /* parse string */
+      SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+
+      if( *success )
+      {
+         /* check if the size of the variable array was great enough */
+         if( varssize < requiredsize )
+         {
+            /* reallocate memory */
+            varssize = requiredsize;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+
+            /* parse string again with the correct size of the variable array */
+            SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+         }
+
+         assert(*success);
+         assert(varssize >= requiredsize);
+
+         /* create logicor constraint */
+         SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
+      /* free buffers */
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &strcopy);
+   }
+   else
+   {
+      if( !modifiable )
+      {
+         SCIPerrorMessage("cannot create empty logicor constraint\n");
+         return SCIP_OKAY;
+      }
+
+      /* create empty logicor constraint */
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, 0, NULL,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+      *success = TRUE;
+   }
+
    return SCIP_OKAY;
 }
 
