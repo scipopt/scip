@@ -13234,12 +13234,12 @@ SCIP_RETCODE freeTransform(
       if( scip->origprimal->nsols > 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-            "stored the %d best primal solutions in the original solution cadidate list\n", scip->origprimal->nsols);
+            "stored the %d best primal solutions in the original solution candidate list\n", scip->origprimal->nsols);
       }
       else if( scip->origprimal->nsols == 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-            "stored the best primal solution in the original solution cadidate list\n");
+            "stored the best primal solution in the original solution candidate list\n");
       }
    }
 
