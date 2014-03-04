@@ -327,6 +327,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
+			scip/event_softtimelimit.o \
 			scip/disp_default.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_clique.o \

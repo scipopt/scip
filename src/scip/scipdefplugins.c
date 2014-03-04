@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
-   SCIP_CALL( SCIPincludePropRedcost(scip) );   
+   SCIP_CALL( SCIPincludePropRedcost(scip) );
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
@@ -163,6 +163,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
