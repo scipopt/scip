@@ -1006,6 +1006,9 @@ SCIP_DECL_BRANCHCOPY(branchCopyDistribution)
 static
 SCIP_DECL_BRANCHEXITSOL(branchExitsolDistribution)
 {
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
    SCIP_BRANCHRULEDATA* branchruledata;
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -1015,6 +1018,16 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolDistribution)
 
    /* free row arrays when branch-and-bound data is freed */
    branchruledataFreeArrays(scip, branchruledata);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* drop variable events at the end of branch and bound process (cannot be used after restarts, anyway) */
+   assert(nvars > 0);
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_CALL( SCIPdropVarEvent(scip, vars[v], EVENT_DISTRIBUTION, branchruledata->eventhdlr, NULL, -1) );
+   }
 
    return SCIP_OKAY;
 }
