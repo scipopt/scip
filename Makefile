@@ -619,6 +619,15 @@ endif
 doc: 		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
 
+.PHONY: docpreview
+docpreview:
+# generates preview for a list of files
+ifneq ($(FILES),)
+		echo "generating doxygen preview for $(FILES)"
+		cd doc; ( cat $(MAINSHORTNAME).dxy && echo 'FILE_PATTERNS = $(FILES)' ) | $(DOXY) -
+else
+		echo "please specify file(s) for which preview should be created"
+endif
 .PHONY: check
 check:		test
 
