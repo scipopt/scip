@@ -83,7 +83,7 @@ If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
 An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="./SHELL.shtml">here</a> for a tutorial.
 For that, you just have to download one of the precompiled binaries from the
 <a href="http://scip.zib.de/#download">download section</a>, or the zipped source code and compile it
-with your favorite settings. This is described in detail in the <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP main directory.
+with your favorite settings. This is described in detail in the <code><a href="./INSTALL.shtml">INSTALL</a></code> file in the SCIP main directory.
 </p>
 <p>
 Another way is to use SCIP as a solver integrated into your own program source code.
@@ -104,7 +104,7 @@ See also <a href="./START.shtml">How to start a new project</a>.
     <div id="extrasoftware_ans" class="answer">
        <p>Unless you want to use SCIP as a pure CP-Solver (see <a href="#scipascpsolver">here</a>),
 you need an underlying LP-Solver installed and linked to the libraries
-(see the <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory).
+(see the <code><a href="./INSTALL.shtml">INSTALL</a></code> file in the SCIP root directory).
 LP-solvers currently supported by SCIP are:
 </p>
 <ul>
@@ -133,7 +133,7 @@ If you want to use SCIP for mixed integer nonlinear programming, you might want 
       I have installation problems. What can I do?    </div>
     <div id="installationproblems_ans" class="answer">
        <p>
-Read the <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+Read the <code><a href="./INSTALL.shtml">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
 the binaries available on the <a href="http://scip.zib.de">SCIP page</a>. <br>
 If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver, you can try the
 following:
@@ -150,13 +150,17 @@ binary linked to ZIMPL and Soplex. The necessary system libraries are:
 <li>Readline (libreadline.a)</li>
 </ol>
 <p>
-If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the SCIP Optimization
-Suite directory.
+If you do not have all of these libraries, read the <code><a href="./INSTALL.shtml">INSTALL</a></code> file
+in the SCIP Optimization Suite directory.
 </p>
 <p>
 As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
 If you have any problems while using an LP-solver different from SoPlex,
-please read the SCIP <a href="./INSTALL.shtml"><tt>INSTALL</tt></a> file first.
+please read the SCIP <code><a href="./INSTALL.shtml">INSTALL</a></code> file first.
+</p>
+<p>
+If you encounter compilation problems dealing with the <code>explicit</code> keyword you can either try a newer
+compiler or set the flags <code>LEGACY=true</code> for SoPlex and <code>SPX_LEGACY=true</code> for SCIP.
 </p>
     </div>
   </li>
@@ -284,7 +288,7 @@ See <a href="./MAKE.shtml">Makefiles</a>.
   </li>
     <li>
     <div id="staticvsshared" class="reveal">
-      What is this business with .a and .so libraries in the directory <tt>lib/</tt>?    </div>
+      What is this business with .a and .so libraries in the directory <code>lib/</code>?    </div>
     <div id="staticvsshared_ans" class="answer">
        <p>
 When SCIP builds the binary it needs to link with the corresponding libraries of the LP-solver. There are usually
@@ -293,8 +297,8 @@ that all of its information is packed into the binary. In the second way (.so) t
 library. In this case, the code of the library is not inserted into the binary itself, but is loaded at
 runtime. This has the advantage that the binaries are smaller, but it comes at the cost that you have to make
 sure that the library is found at runtime (for most systems it suffices to put the path of the library into the
-<tt>LD_LIBRARY_PATH</tt> variable).<br/><br/> <em>Note:</em> Depending on the system shared or static libraries
-are standard. If both links are present in the <tt>lib</tt> directory, the linker chooses which version to take
+<code>LD_LIBRARY_PATH</code> variable).<br/><br/> <em>Note:</em> Depending on the system shared or static libraries
+are standard. If both links are present in the <code>lib</code> directory, the linker chooses which version to take
 (on newer Linux systems this is usually the shared version). If you do not want this to happen you have to delete
 the link that is not intended.
 </p>
@@ -314,7 +318,7 @@ locate the libraries. If you want to move the libraries, you might to set the
 <!--
 If you have a different system or compiler (which supports shared libraries) you might try to
 copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-needs (see also <a href="./MAKE.shtml">Makefiles</a>).
+needs (see also <code><a href="./MAKE.shtml">Makefiles</a></code>).
 -->
 If you are using your own building system: The "magic" changes are the <code>-FPIC</code>
 compiler/linker option and the <code>-Wl,-rpath</code> option.
