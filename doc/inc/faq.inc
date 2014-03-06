@@ -87,7 +87,7 @@ with your favorite settings. This is described in detail in the <code><a href=".
 </p>
 <p>
 Another way is to use SCIP as a solver integrated into your own program source code.
-See the directories &quot;examples/MIPsolver/&quot and &quot;examples/Queens/&quot;
+See the directories &quot;examples/MIPsolver/&quot; and &quot;examples/Queens/&quot;
 for simple examples and <a href="#howtocreateproblem">this point</a>.
 </p>
 <p>
