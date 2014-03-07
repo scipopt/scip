@@ -1170,29 +1170,25 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    {
       SCIP_Real upscore;
       SCIP_Real downscore;
-      SCIP_Real locallb;
-      SCIP_Real localub;
       SCIP_VAR* lpcand;
       int varindex;
 
       lpcand = lpcands[c];
       assert(lpcand != NULL);
 
-      locallb = SCIPvarGetLbLocal(lpcand);
-      localub = SCIPvarGetUbLocal(lpcand);
       varindex = SCIPvarGetProbindex(lpcand);
 
       /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
        * by the branching rule event system
        */
-      assert(SCIPisFeasLE(scip, locallb, localub));
+      assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcand), SCIPvarGetUbLocal(lpcand)));
       assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
 
       assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
       assert((branchruledata->currentlbs[varindex] == SCIP_INVALID)
-            || SCIPisFeasEQ(scip, locallb, branchruledata->currentlbs[varindex]));
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(lpcand), branchruledata->currentlbs[varindex]));
       assert((branchruledata->currentubs[varindex] == SCIP_INVALID)
-                  || SCIPisFeasEQ(scip, localub, branchruledata->currentubs[varindex]));
+                  || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(lpcand), branchruledata->currentubs[varindex]));
 
       /* if the branching rule has not captured the variable bounds yet, this can be done now */
       if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
