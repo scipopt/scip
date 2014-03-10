@@ -5840,7 +5840,7 @@ SCIP_RETCODE SCIPconsPrint(
       SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file) );
    }
    else
-      SCIPmessageFPrintInfo(messagehdlr, file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
+      SCIPmessageFPrintInfo(messagehdlr, file, "constraint handler <%s> doesn't support printing constraint", conshdlr->name);
 
    return SCIP_OKAY;
 }
