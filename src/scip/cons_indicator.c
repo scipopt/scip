@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -63,7 +63,7 @@
  *      & D x + C z \leq f, \\
  *      & l \leq x \leq u, \\
  *      & u \leq z \leq v, \\
- *      & 0 \geq s.
+ *      & 0 \leq s.
  * \end{array}
  * \f]
  * As above \f$Ax - s \leq b\f$ contains all inequalities corresponding to indicator constraints,
@@ -83,7 +83,7 @@
  * Here, \f$r\f$ and \f$t\f$ correspond to the lower and upper bounds on \f$x\f$, respectively.
  *
  * It turns out that the vertices of \f$P\f$ correspond to minimal infeasible subsystems of \f$A x
- * \leq b\f$. If \f$I\f$ is the index set of such a system, it follows that not all \f$s_i\f$ for
+ * \leq b\f$, \f$l \leq x \leq u\f$. If \f$I\f$ is the index set of such a system, it follows that not all \f$s_i\f$ for
  * \f$i \in I\f$ can be 0, i.e., \f$y_i\f$ can be 1. In other words, the following cut is valid:
  * \f[
  *      \sum_{i \in I} y_i \leq |I| - 1.
@@ -183,6 +183,13 @@
  * but directly enforce the propagations etc.
  *
  * @todo Turn off separation if the alternative polyhedron is infeasible and updateBounds is false.
+ *
+ * @todo Improve parsing of indicator constraint in CIP-format. Currently, we have to rely on a particular name, i.e.,
+ * the slack variable has to start with "indslack" and end with the name of the corresponding linear constraint.
+ *
+ * @todo Check whether one can further use the fact that the slack variable is aggregated.
+ *
+ * @todo Check whether using an objective cutoff can be integrated into the alternative polyhedron.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -350,13 +357,14 @@ struct SCIP_ConflicthdlrData
 
 
 /* Macro for parameters */
-#define SCIP_CALL_PARAM(x) do                                                                   \
+#define SCIP_CALL_PARAM(x) /*lint -e527 */ do                                                   \
 {                                                                                               \
    SCIP_RETCODE _restat_;                                                                       \
    if ( (_restat_ = (x)) != SCIP_OKAY && (_restat_ != SCIP_PARAMETERUNKNOWN) )                  \
    {                                                                                            \
       SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
       SCIPABORT();                                                                              \
+      return _restat_;                                                                          \
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )
@@ -873,7 +881,6 @@ SCIP_RETCODE checkIIS(
          int v;
 
          sign = 1.0;
-         cnt = 0;
 
          lincons = consdata->lincons;
          assert( lincons != NULL );
@@ -979,7 +986,7 @@ SCIP_RETCODE checkIIS(
                obj[v] = 0.0;
                lb[v] = SCIPvarGetLbLocal(var);
                ub[v] = SCIPvarGetUbLocal(var);
-               SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) ); /*lint !e866*/
                (void) SCIPsnprintf(colnames[v], SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var));
             }
 
@@ -1049,6 +1056,7 @@ SCIP_RETCODE checkIIS(
       SCIP_CALL( SCIPlpiWriteLP(lp, "check.lp") );
       SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "altdebug.lp") );
       SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
    }
    SCIPdebugMessage("Check successful!\n");
 
@@ -2709,9 +2717,9 @@ SCIP_RETCODE extendToCover(
                   binvar = consdata->binvar;
                   assert( binvar != NULL );
 
-                  /* Fix binary variables in cover to 1 and corresponding slack variables to 0. The other binary variables
+                  /* Fix binary variables not in cover to 1 and corresponding slack variables to 0. The other binary variables
                    * are fixed to 0 */
-                  if ( S[j] )
+                  if ( ! S[j] )
                   {
                      SCIP_VAR* slackvar;
 
@@ -3148,6 +3156,7 @@ SCIP_RETCODE createVarUbs(
 static
 SCIP_RETCODE presolRoundIndicator(
    SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool             dualreductions,     /**< should dual reductions be performed? */
@@ -3330,6 +3339,111 @@ SCIP_RETCODE presolRoundIndicator(
       ++(*ndelconss);
       *success = TRUE;
       return SCIP_OKAY;
+   }
+
+   /* check whether indicator variable is aggregated  */
+   if ( SCIPvarGetStatus(consdata->binvar) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      SCIP_Bool negated = FALSE;
+      SCIP_VAR* var;
+
+      /* possibly get representation of indicator variable by active variable */
+      var = consdata->binvar;
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      assert( var == consdata->binvar || SCIPvarIsActive(var) || SCIPvarIsNegated(var) );
+
+      /* we can replace the binary variable by the active variable if it is not negated */
+      if ( var != consdata->binvar && ! negated )
+      {
+         SCIPdebugMessage("Indicator variable <%s> is aggregated and replaced by active/negated variable <%s>.\n", SCIPvarGetName(consdata->binvar), SCIPvarGetName(var) );
+
+         /* we need to update the events and locks */
+         assert( conshdlrdata->eventhdlrbound != NULL );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
+
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+
+         /* change binvary variable */
+         consdata->binvar = var;
+      }
+   }
+
+   /* check whether slack variable is aggregated  */
+   if ( SCIPvarGetStatus(consdata->slackvar) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      SCIP_BOUNDTYPE boundtype = SCIP_BOUNDTYPE_LOWER;
+      SCIP_Real bound;
+      SCIP_VAR* var;
+
+      /* possibly get representation of slack variable by active variable */
+      var = consdata->slackvar;
+      bound = SCIPvarGetLbGlobal(var);
+
+      SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
+
+      /* we can replace the binary variable by the active variable if it is also a >= variable */
+      if ( var != consdata->slackvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
+      {
+         assert( SCIPvarIsActive(var) );
+         SCIPdebugMessage("Slack variable <%s> is aggregated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
+
+         /* we need to update the events, locks, and captures */
+         assert( conshdlrdata->eventhdlrbound != NULL );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
+
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+
+         SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+
+         /* change slack variable */
+         consdata->slackvar = var;
+      }
+      else if ( var == consdata->binvar )
+      {
+         /* check special case that aggregating variable is equal to the indicator variable */
+         assert( SCIPisEQ(scip, bound, 0.0) || SCIPisEQ(scip, bound, 1.0) );
+
+         /* if the lower bound is transformed to an upper bound, we have "y = 1 -> 1 - y = 0", i.e., the constraint is redundant */
+         if ( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            SCIPdebugMessage("Slack variable <%s> is aggregated to negated indicator variable <%s> -> constraint redundant.\n",
+               SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
+            assert( SCIPisEQ(scip, bound, 1.0) );
+
+            /* delete constraint */
+            assert( ! SCIPconsIsModifiable(cons) );
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+            *success = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            /* if the lower bound is transformed to a lower bound, we have "y = 1 -> y = 0", i.e., we can fix the binary variable to 0 */
+            SCIPdebugMessage("Slack variable <%s> is aggregated to the indicator variable <%s> -> fix indicator variable to 0.\n",
+               SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
+            assert( boundtype == SCIP_BOUNDTYPE_LOWER );
+            assert( SCIPisEQ(scip, bound, 0.0) );
+
+            SCIP_CALL( SCIPfixVar(scip, consdata->binvar, 0.0, &infeasible, &fixed) );
+            assert( ! infeasible );
+
+            if ( fixed )
+               ++(*nfixedvars);
+
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+
+            ++(*ndelconss);
+            *success = TRUE;
+
+            return SCIP_OKAY;
+         }
+      }
    }
 
    /* Note that because of possible multi-aggregation we cannot simply remove the indicator
@@ -4983,7 +5097,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          }
 
          /* perform one presolving round */
-         SCIP_CALL( presolRoundIndicator(scip, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, ndelconss, nfixedvars) );
+         SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -5816,7 +5930,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    posstr = strstr(slackvarname, "indslack");
    if ( posstr == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", binvarname);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
       *success = FALSE;
       return SCIP_OKAY;
    }

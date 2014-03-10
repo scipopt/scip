@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
 
 /**@file   heur_randrounding.c
  * @brief  randomized LP rounding heuristic which also generates conflicts via an auxiliary probing tree
@@ -41,7 +40,7 @@
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_DURINGPRICINGLOOP
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
@@ -141,7 +140,8 @@ SCIP_RETCODE performRandRounding(
       {
          cutoff = TRUE;
          break;
-      } else if( SCIPisFeasEQ(scip, lb, ceilval) )
+      }
+      else if( SCIPisFeasEQ(scip, lb, ceilval) )
       {
          /* only rounding up possible */
          assert(SCIPisFeasGE(scip, ub, ceilval));
@@ -198,7 +198,16 @@ SCIP_RETCODE performRandRounding(
          /* enter a new probing node if the variable was not already fixed before */
          if( lbadjust || ubadjust )
          {
-            SCIP_CALL( SCIPnewProbingNode(scip) );
+            SCIP_RETCODE retcode;
+
+            if( SCIPisStopped(scip) )
+               break;
+
+            retcode = SCIPnewProbingNode(scip);
+            if( retcode == SCIP_MAXDEPTHLEVEL )
+               break;
+
+            SCIP_CALL( retcode );
 
             /* tighten the bounds to fix the variable for the probing node */
             if( lbadjust )
@@ -219,7 +228,7 @@ SCIP_RETCODE performRandRounding(
    }
 
    /* if no cutoff was detected, the solution is a candidate to be checked for feasibility */
-   if( !cutoff )
+   if( !cutoff && ! SCIPisStopped(scip) )
    {
       if( SCIPallColsInLP(scip) )
       {
@@ -443,7 +452,7 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
    if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
 
-   propagate = !heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0;
+   propagate = (!heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0);
 
    /* try to round LP solution */
    SCIP_CALL( performLPRandRounding(scip, heurdata, heurtiming, propagate, result) );

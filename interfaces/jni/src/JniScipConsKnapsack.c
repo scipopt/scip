@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -465,43 +465,4 @@ jlong JNISCIPCONSKNAPSACK(getRowKnapsack)(
    row = SCIPgetRowKnapsack(scip, cons);
 
    return (jlong)(size_t)row;
-}
-
-/** separates lifted cover inequalities for given knapsack problem */
-JNIEXPORT
-jint JNISCIPCONSKNAPSACK(separateKnapsackCover)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jlong                 cons,               /**< originating constraint of the knapsack problem, or NULL */
-   jlong                 sepa,               /**< originating separator of the knapsack problem, or NULL */
-   jlongArray            jvars,              /**< variables in knapsack constraint */
-   jint                  nvars,              /**< number of variables in knapsack constraint */
-   jlongArray            jweights,           /**< weights of variables in knapsack constraint */
-   jlong                 capacity,           /**< capacity of knapsack */
-   jlong                 sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
-   jint                  maxnumcardlift      /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
-   )
-{
-   SCIP* scip;
-   SCIP_VAR** vars;
-   SCIP_Longint* weights;
-   int ncuts;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &weights, (int)nvars) );
-
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
-   (*env)->GetLongArrayRegion(env, jweights, 0, (int)nvars, (jlong*)weights);
-
-   JNISCIP_CALL( SCIPseparateKnapsackCover(scip, (SCIP_CONS*)(size_t)cons, (SCIP_SEPA*)(size_t)sepa, vars, (int)nvars, weights, (SCIP_Longint)capacity, (SCIP_SOL*)(size_t)sol, (int)maxnumcardlift, &ncuts) );
-
-   SCIPfreeBufferArray(scip, &weights);
-   SCIPfreeBufferArray(scip, &vars);
-
-   return (jint) ncuts;
 }

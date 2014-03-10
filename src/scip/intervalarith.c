@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -250,6 +250,11 @@ double negate(
 #endif
 
 #else /* unknown compiler or MSVS 64bit */
+
+/* for the MS compiler, the function nextafter is named _nextafter */
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(NO_NEXTAFTER)
+#define nextafter(x,y) _nextafter(x,y)
+#endif
 
 /** gets the negation of a double
  *

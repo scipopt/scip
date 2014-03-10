@@ -3,7 +3,7 @@
 # This scripts generates the dependences for SCIP 
 #
 
-LPSS=(cpx spx spx132 xprs msk clp grb qso none)
+LPSS=(cpx spx spx2 xprs msk clp grb qso none)
 OPTS=(opt dbg prf opt-gccold)
 EXPRINTS=(none cppad)
 
@@ -22,7 +22,7 @@ do
         # check if the header for the LP solver are available,
         # or we are in the special case "none"
         # in the case "qso", the include directory is called qsinc
-        if [ -e lib/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "$LPS" == "qso" -a -e lib/qsinc ] || [ "$LPS" == "clp" -a -e lib/clp.*.opt ]
+        if [ -e lib/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "$LPS" == "spx2" -a -e lib/spxinc ] || [ "$LPS" == "qso" -a -e lib/qsinc ] || [ "$LPS" == "clp" -a -e lib/clp.*.opt ]
         then
              make LPS=$LPS OPT=$OPT lpidepend
         fi

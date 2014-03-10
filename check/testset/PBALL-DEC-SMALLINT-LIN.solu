@@ -363,7 +363,7 @@
 =unkn=	normalized-army12.21bt
 =opt=	normalized-army12.21ls
 =opt=	normalized-army13.24bt
-=unkn=	normalized-army13.24ls
+=opt=	normalized-army13.24ls
 =opt=	normalized-army8.9bt
 =opt=	normalized-army8.9ls
 =opt=	normalized-army9.12bt
@@ -450,3 +450,14 @@
 =opt=	normalized-ppp:1,3-13,19
 =opt=	normalized-ppp:1-9,16-19
 =opt=	normalized-ppp:3-13,25,26
+=opt=   normalized-neos-808444
+=opt=   normalized-neos-849702
+=opt=   normalized-05
+=opt=   normalized-27
+=opt=   normalized-37
+=opt=   normalized-41
+=opt=   normalized-107
+=opt=   normalized-162
+=opt=   normalized-164
+=opt=   normalized-187
+=inf=   normalized-188

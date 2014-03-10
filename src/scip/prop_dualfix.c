@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,6 +16,7 @@
 /**@file   prop_dualfix.c
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -43,7 +44,7 @@
  * @{
  */
 
-/** performe dual presolving */
+/** perform dual presolving */
 static
 SCIP_RETCODE performDualfix(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -114,40 +115,55 @@ SCIP_RETCODE performDualfix(
             if( roundbound < SCIPvarGetUbGlobal(var) )
                bound = roundbound;
          }
-         SCIPdebugMessage("variable <%s> with objective 0 fixed to %g\n",
-            SCIPvarGetName(var), bound);
+         SCIPdebugMessage("fixing variable <%s> with objective 0 to %g\n", SCIPvarGetName(var), bound);
       }
       else
       {
-         /* if it is always possible to round variable in direction of objective value,
-          * fix it to its proper bound
-          */
+         /* if it is always possible to round variable in direction of objective value, fix it to its proper bound */
          if( SCIPvarMayRoundDown(var) && !SCIPisNegative(scip, obj) )
          {
             bound = SCIPvarGetLbGlobal(var);
-            if( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(var) == 1 && SCIPisInfinity(scip, -bound) )
+            if ( SCIPisZero(scip, obj) && SCIPisInfinity(scip, -bound) )
             {
-               /* variable can be set to -infinity, and it is only contained in one constraint:
-                * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
-                * to something more useful than -infinity and do nothing here
-                */
-               continue;
+               /* variable can be fixed to -infinity */
+               if ( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
+               {
+                  /* Fixing variables to infinity is not allowed after presolving, since LP-solvers cannot handle this
+                   * consistently. We thus have to ignore this (should better be handled in presolving). */
+                  continue;
+               }
+               if ( SCIPvarGetNLocksUp(var) == 1 )
+               {
+                  /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
+                   * clever enough to set/aggregate the variable to something more useful than -infinity and do nothing
+                   * here. */
+                  continue;
+               }
             }
-            SCIPdebugMessage("variable <%s> with objective %g and %d uplocks fixed to lower bound %g\n",
+            SCIPdebugMessage("fixing variable <%s> with objective %g and %d uplocks to lower bound %g\n",
                SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksUp(var), bound);
          }
          else if( SCIPvarMayRoundUp(var) && !SCIPisPositive(scip, obj) )
          {
             bound = SCIPvarGetUbGlobal(var);
-            if( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(var) == 1 && SCIPisInfinity(scip, bound) )
+            if ( SCIPisZero(scip, obj) && SCIPisInfinity(scip, bound) )
             {
-               /* variable can be set to +infinity, and it is only contained in one constraint:
-                * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
-                * to something more useful than +infinity and do nothing here
-                */
-               continue;
+               /* variable can be fixed to infinity */
+               if ( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
+               {
+                  /* Fixing variables to infinity is not allowed after presolving, since LP-solvers cannot handle this
+                   * consistently. We thus have to ignore this (should better be handled in presolving). */
+                  continue;
+               }
+               if ( SCIPvarGetNLocksDown(var) == 1 )
+               {
+                  /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
+                   * clever enough to set/aggregate the variable to something more useful than +infinity and do nothing
+                   * here */
+                  continue;
+               }
             }
-            SCIPdebugMessage("variable <%s> with objective %g and %d downlocks fixed to upper bound %g\n",
+            SCIPdebugMessage("fixing variable <%s> with objective %g and %d downlocks to upper bound %g\n",
                SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksDown(var), bound);
          }
          else
@@ -165,6 +181,7 @@ SCIP_RETCODE performDualfix(
       }
 
       /* apply the fixing */
+      SCIPdebugMessage("apply fixing of variable %s to %g\n", SCIPvarGetName(var), bound);
       SCIP_CALL( SCIPfixVar(scip, var, bound, &infeasible, &fixed) );
 
       if( infeasible )
@@ -173,7 +190,9 @@ SCIP_RETCODE performDualfix(
          *cutoff = TRUE;
          return SCIP_OKAY;
       }
-      assert(fixed);
+
+      assert(fixed || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
+            && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
       (*nfixedvars)++;
    }
 
@@ -272,7 +291,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
 
 /**@} */
 
-/*@name Interface methods
+/**@name Interface methods
  *
  * @{
  */

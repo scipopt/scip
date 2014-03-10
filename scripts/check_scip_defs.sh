@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -20,83 +20,94 @@ OUTFILE=`pwd`/check_scip_defs.out
 cd $SCIPDIR
 rm -f $OUTFILE
 
-DEFS=`grep -h 'ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
-# echo "DEFS = \"$DEFS\""
-# echo
+DEFS=`grep -h '#ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
 
 # IMPLINTSARECONT, BETTERWEIGHTFORDEMANDNODES, MAKECUTINTEGRAL, and SEPARATEROWS are defined by default
-# ALLDIFFERENT is excluded because it needs cons_alldifferent
-EXCLUDES=" __cplusplus CPX_VERSION_VERSION ___DEBUG _MSC_VER NDEBUG ___NDEBUG NO_NEXTAFTER NO_RAND_R NO_SIGACTION NO_STRERROR_R NO_STRTOK_R ROUNDING_FE ROUNDING_FP ROUNDING_MS SCIP_DEBUG_SOLUTION SORTTPL_BACKWARDS SORTTPL_EXPANDNAME SORTTPL_FIELD1TYPE SORTTPL_FIELD2TYPE SORTTPL_FIELD3TYPE SORTTPL_FIELD4TYPE SORTTPL_FIELD5TYPE SORTTPL_FIELD6TYPE SORTTPL_INDCOMP SORTTPL_NAME SORTTPL_PTRCOMP __sun _WIN32 WITH_GMP WITH_READLINE WITH_ZIMPL WITH_ZLIB QUADCONSUPGD_PRIORITY LINCONSUPGD_PRIORITY ALLDIFFERENT IMPLINTSARECONT BETTERWEIGHTFORDEMANDNODES MAKECUTINTEGRAL SEPARATEROWS SCIP_MORE_DEBUG "
-# echo "EXCLUDES = \"$EXCLUDES\""
-# echo
+# ALLDIFFERENT and WITHEQKNAPSACK are excluded because they need non-default plugins
+EXCLUDES=" __GNUC__ __cplusplus CPX_VERSION_VERSION ___DEBUG _MSC_VER NDEBUG ___NDEBUG NO_NEXTAFTER NO_RAND_R NO_SIGACTION NO_STRERROR_R NO_STRTOK_R ROUNDING_FE ROUNDING_FP ROUNDING_MS SCIP_DEBUG_SOLUTION SORTTPL_BACKWARDS SORTTPL_EXPANDNAME SORTTPL_FIELD1TYPE SORTTPL_FIELD2TYPE SORTTPL_FIELD3TYPE SORTTPL_FIELD4TYPE SORTTPL_FIELD5TYPE SORTTPL_FIELD6TYPE SORTTPL_INDCOMP SORTTPL_NAME SORTTPL_PTRCOMP __sun _WIN32 WITH_GMP WITH_READLINE WITH_ZIMPL WITH_ZLIB QUADCONSUPGD_PRIORITY LINCONSUPGD_PRIORITY ALLDIFFERENT WITHEQKNAPSACK IMPLINTSARECONT BETTERWEIGHTFORDEMANDNODES MAKECUTINTEGRAL SEPARATEROWS SCIP_MORE_DEBUG "
 
-echo
-echo "gathering defines . . ."
-echo
+echo "gathering defines . . ." |& tee -a $OUTFILE
+
 for i in $DEFS
 do
     if [[ ! $EXCLUDES =~ " $i " ]]; then
-	INCLUDES="$INCLUDES$i "
+        INCLUDES="$INCLUDES$i "
     else
-	echo "- excluding $i"
+        echo "- excluding $i" |& tee -a $OUTFILE
     fi
 done
-echo
 
 for i in $INCLUDES
 do
     USRDEFS="$USRDEFS-D$i "
-    echo "- including $i"
+    echo "- including $i" |& tee -a $OUTFILE
 done
-echo
+echo |& tee -a $OUTFILE
 
-LPSS=(grb cpx spx none) # spx132 xprs msk clp qso)
-OPTS=(dbg opt prf opt-gccold)
-
-# first ensure that links are available so we don't fail because of that when making with -j later
-for i in ${LPSS[@]}
-do
-    for k in ${OPTS[@]}
-    do
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" links"
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" links
-	echo
-    done
-done
+LPSS=(none spx cpx grb) # xprs msk clp qso)
+OPTS=(dbg opt)
 
 for i in ${LPSS[@]}
 do
     for k in ${OPTS[@]}
     do
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" clean"
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" clean
-	echo
+        echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" clean"
+        echo
+        make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" clean
+        echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\"" -j
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" -j || exit 1
-	echo
+        echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\""
+        echo
+        make LPS=$i OPT=$k USRCFLAGS="$USRDEFS"  || exit 1
+        echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false clean
-	echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false -j
-	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false -j || exit 1
-	echo
+        if [[ ! $i == "grb" ]]
+        then
+            echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
+            echo
+            make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false clean
+            echo
 
-#	if test "$?" = 0
-#	then
-#	    echo
+            echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false
+            echo
+            make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false || exit 1
+            echo
+        fi
+
+
+        echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\" clean"
+        echo
+        make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS" clean
+        echo
+
+        echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\""
+        echo
+        make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS"  || exit 1
+        echo
+
+
+        if [[ ! $i == "grb" ]]
+        then
+            echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\" CC=\"clang++ -x c++\" CFLAGS=\"\" ZIMPL=false clean"
+            echo
+            make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS" CC="clang++ -x c++" CFLAGS="" ZIMPL=false clean
+            echo
+
+            echo "make LPS=$i OPT=$k COMP=clang USRCFLAGS=\"$USRDEFS\" CC=\"clang++ -x c++\" CFLAGS=\"\"" ZIMPL=false
+            echo
+            make LPS=$i OPT=$k COMP=clang USRCFLAGS="$USRDEFS" CC="clang++ -x c++" CFLAGS="" ZIMPL=false || exit 1
+            echo
+        fi
+
+#if test "$?" = 0
+#then
+#    echo
 #
-#	    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" test"
-#	    echo
-#	    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
-#	    echo
-#	fi
+#    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" test"
+#    echo
+#    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
+#    echo
+#fi
     done
 done |& tee -a $OUTFILE

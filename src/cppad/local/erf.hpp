@@ -1,13 +1,13 @@
-/* $Id: erf.hpp 2082 2011-08-31 17:50:58Z bradbell $ */
+/* $Id: erf.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ERF_INCLUDED
 # define CPPAD_ERF_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -55,14 +55,14 @@ $codei%
 $head Operation Sequence$$
 The AD of $icode Base$$
 operation sequence used to calculate $icode y$$ is
-$xref/glossary/Operation/Independent/independent/1/$$
+$cref/independent/glossary/Operation/Independent/$$
 of $icode x$$.
 
 $head Method$$
 This is a fast approximation (few numerical operations) 
 with relative error bound $latex 4 \times 10^{-4}$$; see
 Vedder, J.D.,
-$italic Simple approximations for the error function and its inverse$$,
+$icode Simple approximations for the error function and its inverse$$,
 American Journal of Physics, 
 v 55, 
 n 8, 
@@ -74,7 +74,7 @@ $children%
 	example/erf.cpp
 %$$
 The file
-$xref/Erf.cpp/$$
+$cref erf.cpp$$
 contains an example and test of this function.   
 It returns true if it succeeds and false otherwise.
 
@@ -91,10 +91,9 @@ namespace CppAD {
 
 template <class Type>
 Type erf_template(const Type &x)
-{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-	using CppAD::exp;
-	static const Type a = static_cast<Type>(993./880.);
-	static const Type b = static_cast<Type>(89./880.); 
+{	using CppAD::exp;
+	const Type a = static_cast<Type>(993./880.);
+	const Type b = static_cast<Type>(89./880.); 
 
 	return tanh( (a + b * x * x) * x );
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPsolTransform(
 /** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
  *  deteriorated by this method.
  */
-EXTERN
+extern
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -373,7 +373,8 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
    );
 
 /** recomputes the objective value of an original solution, e.g., when transferring solutions

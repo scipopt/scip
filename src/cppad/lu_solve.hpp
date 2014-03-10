@@ -1,13 +1,13 @@
-/* $Id: lu_solve.hpp 2057 2011-08-11 14:07:11Z bradbell $ */
+/* $Id: lu_solve.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_LU_SOLVE_INCLUDED
 # define CPPAD_LU_SOLVE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -47,21 +47,21 @@ $$
 $head Syntax$$ $code# include <cppad/lu_solve.hpp>$$
 $pre
 $$
-$syntax%%signdet% = LuSolve(%n%, %m%, %A%, %B%, %X%, %logdet%)%$$
+$icode%signdet% = LuSolve(%n%, %m%, %A%, %B%, %X%, %logdet%)%$$
 
 
 $head Description$$
-Use an LU factorization of the matrix $italic A$$ to
+Use an LU factorization of the matrix $icode A$$ to
 compute its determinant 
-and solve for $italic X$$ in the linear of equation
+and solve for $icode X$$ in the linear of equation
 $latex \[
 	A * X = B
 \] $$
-where $italic A$$ is an 
-$italic n$$ by $italic n$$ matrix,
-$italic X$$ is an 
-$italic n$$ by $italic m$$ matrix, and
-$italic B$$ is an $latex n x m$$ matrix.
+where $icode A$$ is an 
+$icode n$$ by $icode n$$ matrix,
+$icode X$$ is an 
+$icode n$$ by $icode m$$ matrix, and
+$icode B$$ is an $latex n x m$$ matrix.
 
 $head Include$$
 The file $code cppad/lu_solve.hpp$$ is included by $code cppad/cppad.hpp$$
@@ -70,12 +70,12 @@ the $code CppAD$$ routines.
 
 $head Factor and Invert$$
 This routine is an easy to user interface to
-$xref/LuFactor/$$ and $xref/LuInvert/$$ for computing determinants and
+$cref LuFactor$$ and $cref LuInvert$$ for computing determinants and
 solutions of linear equations.
 These separate routines should be used if
-one right hand side $italic B$$
+one right hand side $icode B$$
 depends on the solution corresponding to another
-right hand side (with the same value of $italic A$$).
+right hand side (with the same value of $icode A$$).
 In this case only one call to $code LuFactor$$ is required
 but there will be multiple calls to $code LuInvert$$.
 
@@ -92,114 +92,114 @@ $latex \[
 \] $$
 
 $head signdet$$
-The return value $italic signdet$$ is a $code int$$ value
-that specifies the sign factor for the determinant of $italic A$$.
-This determinant of $italic A$$ is zero if and only if $italic signdet$$
+The return value $icode signdet$$ is a $code int$$ value
+that specifies the sign factor for the determinant of $icode A$$.
+This determinant of $icode A$$ is zero if and only if $icode signdet$$
 is zero. 
 
 $head n$$
-The argument $italic n$$ has type $code size_t$$ 
+The argument $icode n$$ has type $code size_t$$ 
 and specifies the number of rows in the matrices
-$italic A$$,
-$italic X$$,
-and $italic B$$.
-The number of columns in $italic A$$ is also equal to $italic n$$.
+$icode A$$,
+$icode X$$,
+and $icode B$$.
+The number of columns in $icode A$$ is also equal to $icode n$$.
 
 $head m$$
-The argument $italic m$$ has type $code size_t$$ 
+The argument $icode m$$ has type $code size_t$$ 
 and specifies the number of columns in the matrices
-$italic X$$
-and $italic B$$.
-If $italic m$$ is zero,
-only the determinant of $italic A$$ is computed and
-the matrices $italic X$$ and $italic B$$ are not used.
+$icode X$$
+and $icode B$$.
+If $icode m$$ is zero,
+only the determinant of $icode A$$ is computed and
+the matrices $icode X$$ and $icode B$$ are not used.
 
 $head A$$
-The argument $italic A$$ has the prototype
-$syntax%
+The argument $icode A$$ has the prototype
+$codei%
 	const %FloatVector% &%A%
 %$$
-and the size of $italic A$$ must equal $latex n * n$$
-(see description of $xref/LuSolve/FloatVector/FloatVector/$$ below).
-This is the $latex n$$ by $italic n$$ matrix that 
+and the size of $icode A$$ must equal $latex n * n$$
+(see description of $cref/FloatVector/LuSolve/FloatVector/$$ below).
+This is the $latex n$$ by $icode n$$ matrix that 
 we are computing the determinant of 
 and that defines the linear equation.
 
 $head B$$
-The argument $italic B$$ has the prototype
-$syntax%
+The argument $icode B$$ has the prototype
+$codei%
 	const %FloatVector% &%B%
 %$$
-and the size of $italic B$$ must equal $latex n * m$$
-(see description of $xref/LuSolve/FloatVector/FloatVector/$$ below).
-This is the $latex n$$ by $italic m$$ matrix that 
+and the size of $icode B$$ must equal $latex n * m$$
+(see description of $cref/FloatVector/LuSolve/FloatVector/$$ below).
+This is the $latex n$$ by $icode m$$ matrix that 
 defines the right hand side of the linear equations.
-If $italic m$$ is zero, $italic B$$ is not used.
+If $icode m$$ is zero, $icode B$$ is not used.
 
 $head X$$
-The argument $italic X$$ has the prototype
-$syntax%
+The argument $icode X$$ has the prototype
+$codei%
 	%FloatVector% &%X%
 %$$
-and the size of $italic X$$ must equal $latex n * m$$
-(see description of $xref/LuSolve/FloatVector/FloatVector/$$ below).
-The input value of $italic X$$ does not matter.
-On output, the elements of $italic X$$ contain the solution
+and the size of $icode X$$ must equal $latex n * m$$
+(see description of $cref/FloatVector/LuSolve/FloatVector/$$ below).
+The input value of $icode X$$ does not matter.
+On output, the elements of $icode X$$ contain the solution
 of the equation we wish to solve
-(unless $italic signdet$$ is equal to zero).
-If $italic m$$ is zero, $italic X$$ is not used.
+(unless $icode signdet$$ is equal to zero).
+If $icode m$$ is zero, $icode X$$ is not used.
 
 $head logdet$$
-The argument $italic logdet$$ has prototype
-$syntax%
+The argument $icode logdet$$ has prototype
+$codei%
 	%Float% &%logdet%
 %$$
-On input, the value of $italic logdet$$ does not matter.
+On input, the value of $icode logdet$$ does not matter.
 On output, it has been set to the 
-log of the determinant of $italic A$$ 
+log of the determinant of $icode A$$ 
 (but not quite).
 To be more specific,
-the determinant of $italic A$$ is given by the formula
-$syntax%
+the determinant of $icode A$$ is given by the formula
+$codei%
 	%det% = %signdet% * exp( %logdet% )
 %$$
 This enables $code LuSolve$$ to use logs of absolute values
-in the case where $italic Float$$ corresponds to a real number.
+in the case where $icode Float$$ corresponds to a real number.
 
 $head Float$$
-The type $italic Float$$ must satisfy the conditions
-for a $xref/NumericType/$$ type.
-The routine $xref/CheckNumericType/$$ will generate an error message
+The type $icode Float$$ must satisfy the conditions
+for a $cref NumericType$$ type.
+The routine $cref CheckNumericType$$ will generate an error message
 if this is not the case.
 In addition, the following operations must be defined for any pair
-of $italic Float$$ objects $italic x$$ and $italic y$$:
+of $icode Float$$ objects $icode x$$ and $icode y$$:
 
 $table
 $bold Operation$$ $cnext $bold Description$$  $rnext
-$syntax%log(%x%)%$$ $cnext
-	returns the logarithm of $italic x$$ as a $italic Float$$ object
+$codei%log(%x%)%$$ $cnext
+	returns the logarithm of $icode x$$ as a $icode Float$$ object
 $tend
 
 $head FloatVector$$
-The type $italic FloatVector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type Float/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode FloatVector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type Float/SimpleVector/Elements of Specified Type/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head LeqZero$$
 Including the file $code lu_solve.hpp$$ defines the template function 
-$syntax%
+$codei%
 	template <typename %Float%>
 	bool LeqZero<%Float%>(const %Float% &%x%)
 %$$
 in the $code CppAD$$ namespace.
-This function returns true if $italic x$$ is less than or equal to zero
+This function returns true if $icode x$$ is less than or equal to zero
 and false otherwise.
 It is used by $code LuSolve$$ to avoid taking the log of
-zero (or a negative number if $italic Float$$ corresponds to real numbers).
+zero (or a negative number if $icode Float$$ corresponds to real numbers).
 This template function definition assumes that the operator 
-$code <=$$ is defined for $italic Float$$ objects. 
-If this operator is not defined for your use of $italic Float$$,
+$code <=$$ is defined for $icode Float$$ objects. 
+If this operator is not defined for your use of $icode Float$$,
 you will need to specialize this template so that it works for your
 use of $code LuSolve$$.
 $pre
@@ -209,22 +209,22 @@ Complex numbers do not have the operation or $code <=$$ defined.
 In addition, in the complex case, 
 one can take the log of a negative number.
 The specializations
-$syntax%
+$codei%
 	bool LeqZero< std::complex<float> > (const std::complex<float> &%x%)
 	bool LeqZero< std::complex<double> >(const std::complex<double> &%x%)
 %$$ 
 are defined by including $code lu_solve.hpp$$.
-These return true if $italic x$$ is zero and false otherwise.
+These return true if $icode x$$ is zero and false otherwise.
 
 $head AbsGeq$$
 Including the file $code lu_solve.hpp$$ defines the template function 
-$syntax%
+$codei%
 	template <typename %Float%>
 	bool AbsGeq<%Float%>(const %Float% &%x%, const %Float% &%y%)
 %$$
-If the type $italic Float$$ does not support the $code <=$$ operation
+If the type $icode Float$$ does not support the $code <=$$ operation
 and it is not $code std::complex<float>$$ or $code std::complex<double>$$,
-see the documentation for $code AbsGeq$$ in $xref/LuFactor/AbsGeq/LuFactor/$$. 
+see the documentation for $code AbsGeq$$ in $cref/LuFactor/LuFactor/AbsGeq/$$. 
 
 $children%
 	example/lu_solve.cpp%
@@ -232,18 +232,18 @@ $children%
 %$$
 $head Example$$
 The file 
-$xref/LuSolve.cpp/$$
+$cref lu_solve.cpp$$
 contains an example and test of using this routine.
 It returns true if it succeeds and false otherwise.
 
 $head Source$$
-The file $cref/lu_solve.hpp/$$ contains the
+The file $cref lu_solve.hpp$$ contains the
 current source code that implements these specifications.
 
 $end
 --------------------------------------------------------------------------
 */
-// BEGIN PROGRAM
+// BEGIN C++
 # include <complex>
 # include <vector>
 
@@ -296,15 +296,15 @@ int LuSolve(
 
 	// -------------------------------------------------------
 	CPPAD_ASSERT_KNOWN(
-		A.size() == n * n,
+		size_t(A.size()) == n * n,
 		"Error in LuSolve: A must have size equal to n * n"
 	);
 	CPPAD_ASSERT_KNOWN(
-		B.size() == n * m,
+		size_t(B.size()) == n * m,
 		"Error in LuSolve: B must have size equal to n * m"
 	);
 	CPPAD_ASSERT_KNOWN(
-		X.size() == n * m,
+		size_t(X.size()) == n * m,
 		"Error in LuSolve: X must have size equal to n * m"
 	);
 	// -------------------------------------------------------
@@ -347,5 +347,5 @@ int LuSolve(
 	return signdet;
 }
 } // END CppAD namespace 
-// END PROGRAM
+// END C++
 # endif

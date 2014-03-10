@@ -1,13 +1,13 @@
-/* $Id: hessian.hpp 1598 2009-12-03 02:59:52Z bradbell $ */
+/* $Id: hessian.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
 # ifndef CPPAD_HESSIAN_INCLUDED
 # define CPPAD_HESSIAN_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-09 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -30,53 +30,53 @@ $index driver, Hessian$$
 $section Hessian: Easy Driver$$
 
 $head Syntax$$
-$syntax%%hes% = %f%.Hessian(%x%, %w%)
+$icode%hes% = %f%.Hessian(%x%, %w%)
 %$$
-$syntax%%hes% = %f%.Hessian(%x%, %l%)
+$icode%hes% = %f%.Hessian(%x%, %l%)
 %$$
 
 
 $head Purpose$$
 We use $latex F : B^n \rightarrow B^m$$ to denote the
-$xref/glossary/AD Function/AD function/$$ corresponding to $italic f$$.
-The syntax above sets $italic hes$$ to the Hessian 
-The syntax above sets $italic h$$ to the Hessian 
+$cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
+The syntax above sets $icode hes$$ to the Hessian 
+The syntax above sets $icode h$$ to the Hessian 
 $latex \[
 	hes = \dpow{2}{x} \sum_{i=1}^m w_i F_i (x) 
 \] $$
-The routine $cref/sparse_hessian/$$ may be faster in the case
+The routine $cref sparse_hessian$$ may be faster in the case
 where the Hessian is sparse.
 
 $head f$$
-The object $italic f$$ has prototype
-$syntax%
+The object $icode f$$ has prototype
+$codei%
 	ADFun<%Base%> %f%
 %$$
-Note that the $xref/ADFun/$$ object $italic f$$ is not $code const$$
-(see $xref/Hessian/Hessian Uses Forward/Hessian Uses Forward/$$ below).
+Note that the $cref ADFun$$ object $icode f$$ is not $code const$$
+(see $cref/Hessian Uses Forward/Hessian/Hessian Uses Forward/$$ below).
 
 $head x$$
-The argument $italic x$$ has prototype
-$syntax%
+The argument $icode x$$ has prototype
+$codei%
 	const %Vector% &%x%
 %$$
-(see $xref/Hessian/Vector/Vector/$$ below)
+(see $cref/Vector/Hessian/Vector/$$ below)
 and its size 
-must be equal to $italic n$$, the dimension of the
-$xref/seq_property/Domain/domain/$$ space for $italic f$$.
+must be equal to $icode n$$, the dimension of the
+$cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
 that point at which to evaluate the Hessian.
 
 $head l$$
-If the argument $italic l$$ is present, it has prototype
-$syntax%
+If the argument $icode l$$ is present, it has prototype
+$codei%
 	size_t %l%
 %$$
-and is less than $italic m$$, the dimension of the
-$xref/seq_property/Range/range/$$ space for $italic f$$.
-It specifies the component of $italic F$$
+and is less than $icode m$$, the dimension of the
+$cref/range/seq_property/Range/$$ space for $icode f$$.
+It specifies the component of $icode F$$
 for which we are evaluating the Hessian.
-To be specific, in the case where the argument $italic l$$ is present,
+To be specific, in the case where the argument $icode l$$ is present,
 $latex \[
 	w_i = \left\{ \begin{array}{ll}
 		1 & i = l \\
@@ -85,20 +85,20 @@ $latex \[
 \] $$
 
 $head w$$
-If the argument $italic w$$ is present, it has prototype
-$syntax%
+If the argument $icode w$$ is present, it has prototype
+$codei%
 	const %Vector% &%w%
 %$$
 and size $latex m$$.
 It specifies the value of $latex w_i$$ in the expression 
-for $italic h$$.
+for $icode h$$.
 
 $head hes$$
-The result $italic hes$$ has prototype
-$syntax%
+The result $icode hes$$ has prototype
+$codei%
 	%Vector% %hes%
 %$$
-(see $xref/Hessian/Vector/Vector/$$ below)
+(see $cref/Vector/Hessian/Vector/$$ below)
 and its size is $latex n * n$$.
 For $latex j = 0 , \ldots , n - 1 $$ 
 and $latex \ell = 0 , \ldots , n - 1$$
@@ -107,18 +107,20 @@ $latex \[
 \] $$
 
 $head Vector$$
-The type $italic Vector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
-$italic Base$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
+$icode Base$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Hessian Uses Forward$$
-After each call to $xref/Forward/$$,
-the object $italic f$$ contains the corresponding 
-$xref/glossary/Taylor Coefficient/Taylor coefficients/$$.
-After $code Hessian$$,
-the previous calls to $xref/Forward/$$ are undefined.
+After each call to $cref Forward$$,
+the object $icode f$$ contains the corresponding 
+$cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
+After a call to $code Hessian$$,
+the zero order Taylor coefficients correspond to
+$icode%f%.Forward(0, %x%)%$$
+and the other coefficients are unspecified.
 
 $head Example$$
 $children%
@@ -126,8 +128,8 @@ $children%
 	example/hes_lagrangian.cpp
 %$$
 The routines 
-$cref/Hessian.cpp/$$ and
-$cref/HesLagrangian.cpp/$$
+$cref hessian.cpp$$ and
+$cref hes_lagrangian.cpp$$
 are examples and tests of $code Hessian$$.
 They return $code true$$, if they succeed and $code false$$ otherwise.
 
@@ -169,11 +171,11 @@ Vector ADFun<Base>::Hessian(const Vector &x, const Vector &w)
 	CheckSimpleVector<Base, Vector>();
 
 	CPPAD_ASSERT_KNOWN(
-		x.size() == n,
+		size_t(x.size()) == n,
 		"Hessian: length of x not equal domain dimension for f"
 	); 
 	CPPAD_ASSERT_KNOWN(
-		w.size() == Range(),
+		size_t(w.size()) == Range(),
 		"Hessian: length of w not equal range dimension for f"
 	);
 

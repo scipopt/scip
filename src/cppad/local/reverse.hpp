@@ -1,13 +1,13 @@
-/* $Id: reverse.hpp 1948 2011-05-24 03:33:43Z bradbell $ */
+/* $Id: reverse.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_REVERSE_INCLUDED
 # define CPPAD_REVERSE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -40,8 +40,10 @@ $end
 # include <algorithm>
 # include <cppad/local/pod_vector.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup reverse_hpp reverse.hpp
+\{
 \file reverse.hpp
 Compute derivatives using reverse mode.
 */
@@ -138,7 +140,7 @@ VectorBase ADFun<Base>::Reverse(size_t p, const VectorBase &w)
 	CheckSimpleVector<Base, VectorBase>();
 
 	CPPAD_ASSERT_KNOWN(
-		w.size() == m || w.size() == (m * p),
+		size_t(w.size()) == m || size_t(w.size()) == (m * p),
 		"Argument w to Reverse does not have length equal to\n"
 		"the dimension of the range for the corresponding ADFun."
 	);
@@ -161,7 +163,7 @@ VectorBase ADFun<Base>::Reverse(size_t p, const VectorBase &w)
 	// (use += because two dependent variables can point to same location)
 	for(i = 0; i < m; i++)
 	{	CPPAD_ASSERT_UNKNOWN( dep_taddr_[i] < total_num_var_ );
-		if( w.size() == m )
+		if( size_t(w.size()) == m )
 			Partial[dep_taddr_[i] * p + p - 1] += w[i];
 		else
 		{	for(k = 0; k < p; k++)
@@ -179,7 +181,8 @@ VectorBase ADFun<Base>::Reverse(size_t p, const VectorBase &w)
 		taylor_col_dim_,
 		taylor_.data(),
 		p,
-		Partial.data()
+		Partial.data(),
+		cskip_op_
 	);
 
 	// return the derivative values
@@ -193,7 +196,7 @@ VectorBase ADFun<Base>::Reverse(size_t p, const VectorBase &w)
 		// by the Reverse Identity Theorem 
 		// partial of y^{(k)} w.r.t. u^{(0)} is equal to
 		// partial of y^{(p-1)} w.r.t. u^{(p - 1 - k)}
-		if( w.size() == m )
+		if( size_t(w.size()) == m )
 		{	for(k = 0; k < p; k++)
 				value[j * p + k ] = 
 					Partial[ind_taddr_[j] * p + p - 1 - k];
@@ -204,12 +207,15 @@ VectorBase ADFun<Base>::Reverse(size_t p, const VectorBase &w)
 					Partial[ind_taddr_[j] * p + k];
 		}
 	}
+	CPPAD_ASSERT_KNOWN( ! ( hasnan(value) && check_for_nan_ ) ,
+		"dw = f.Reverse(p, w): has a nan,\n"
+		"but none of its Taylor coefficents are nan."
+	);
 
 	return value;
 }
 	
 
-} // END CppAD namespace
-	
-
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

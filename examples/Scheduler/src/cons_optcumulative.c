@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2328,7 +2328,7 @@ SCIP_RETCODE presolveCumulativeCondition(
    /* use presolving of cumulative constraint handler to process cumulative condition */
    SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
          consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
-         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
+         irrelevants, nfixedvars, nchgsides, cutoff) );
 
    /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
     * consdataDeletePos()

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -25,6 +25,7 @@ OUTFILE=$CLIENTTMPDIR/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/$BASENAME.err
 LSTFILE=$CLIENTTMPDIR/$BASENAME.lst
 TRCFILE=$CLIENTTMPDIR/$BASENAME.trc
+EXMFILE=$CLIENTTMPDIR/$BASENAME.exm
 WORKDIR=$CLIENTTMPDIR/$BASENAME.scr
 OPTDIR=$CLIENTTMPDIR/$BASENAME.opt
 
@@ -34,11 +35,12 @@ GAMSOPTS="$GAMSOPTS curdir=$WORKDIR"
 
 # ensure scratch directory is deleted and results are copied when exiting (normally or due to abort/interrupt)
 trap "
-  rm -r $WORKDIR;
+  rm -rf $WORKDIR $OPTDIR;
   test -e $OUTFILE && mv $OUTFILE results/$BASENAME.out
   test -e $LSTFILE && mv $LSTFILE results/$BASENAME.lst
   test -e $ERRFILE && mv $ERRFILE results/$BASENAME.err
   test -e $TRCFILE && mv $TRCFILE results/$BASENAME.trc
+  test -e $EXMFILE && mv $EXMFILE results/$BASENAME.exm
 " EXIT
 
 
@@ -61,6 +63,31 @@ echo "* Trace Record Definition" > $TRCFILE
 echo "* GamsSolve" >> $TRCFILE
 echo "* InputFileName,ModelType,SolverName,OptionFile,Direction,NumberOfEquations,NumberOfVariables,NumberOfDiscreteVariables,NumberOfNonZeros,NumberOfNonlinearNonZeros," >> $TRCFILE
 echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime,ETSolver,NumberOfIterations,NumberOfNodes" >> $TRCFILE
+
+# setup examiner option file
+if test $EXAMINER = 1
+then
+  mkdir -p $OPTDIR
+  echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
+  if test "$SETNAME" != "default"
+  then
+    echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
+  else
+    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+  fi
+  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
+  echo   "scaled yes" >> $OPTDIR/examiner2.opt
+  echo "unscaled yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolvpoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinegamspoint no"  >> $OPTDIR/examiner2.opt
+  echo "examineinitpoint no"  >> $OPTDIR/examiner2.opt
+  echo "trace ${EXMFILE}" >> $OPTDIR/examiner2.opt
+  echo "tracestyle 1" >> $OPTDIR/examiner2.opt
+
+  #Examiner currently ignores Trace Record Definition, so no sense in initializing it
+  #cp -f $TRCFILE $EXMFILE
+fi
 
 # setup gams file that sets cutoff
 # this only works for models that include %gams.u1% and where the model name is m (e.g., MINLPLib instances)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -736,12 +736,12 @@ SCIP_RETCODE presolRoundSOS2(
    /* if there are exactly two fixed nonzero variables */
    else if ( nfixednonzeros == 2 )
    {
-      assert(0 <= lastFixedNonzero && lastFixedNonzero < consdata->nvars);
+      assert(0 < lastFixedNonzero && lastFixedNonzero < consdata->nvars);
       assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero])) ||
          SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero])));
-      /* the next variable need also to be nonzero */
-      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero + 1])) ||
-         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero + 1])));
+      /* the previous variable need also to be nonzero, otherwise the infeasibility should have been detected earlier */
+      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero - 1])) ||
+         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero - 1])));
 
       /* fix all variables before lastFixedNonzero to zero */
       for( j = 0; j < lastFixedNonzero - 1; ++j )
@@ -2429,6 +2429,7 @@ int SCIPgetNVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2453,6 +2454,7 @@ SCIP_VAR** SCIPgetVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2477,6 +2479,7 @@ SCIP_Real* SCIPgetWeightsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

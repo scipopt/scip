@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
  */
 #include "scip/branch_allfullstrong.h"
 #include "scip/branch_cloud.h"
+#include "scip/branch_distribution.h"
 #include "scip/branch_fullstrong.h"
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"

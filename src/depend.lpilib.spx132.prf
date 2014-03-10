@@ -18,7 +18,7 @@ $(LIBOBJDIR)/lpi/lpi_spx132.o: src/lpi/lpi_spx132.cpp lib/spx132inc/spxsolver.h 
  lib/spx132inc/spxfastrt.h lib/spx132inc/spxratiotester.h \
  src/scip/message.h src/lpi/lpi.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
- src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
+ src/blockmemshell/memory.h src/lpi/type_lpi.h src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/bitencode.h

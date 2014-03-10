@@ -1,4 +1,4 @@
-/* $Id: track_new_del.hpp 2211 2011-11-24 23:44:39Z bradbell $ */
+/* $Id: track_new_del.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_TRACK_NEW_DEL_INCLUDED
 # define CPPAD_TRACK_NEW_DEL_INCLUDED
 
@@ -7,7 +7,7 @@ CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -34,7 +34,7 @@ $index memory, track$$
 $head Deprecated$$
 $index deprecated, track memory$$
 All these routines have been deprecated.
-You should use the $cref/thread_alloc/$$ memory allocator instead
+You should use the $cref thread_alloc$$ memory allocator instead
 (which works better in both a single thread and 
 properly in multi-threading environment).
 
@@ -128,7 +128,7 @@ The value of $icode oldptr$$ does not matter
 If $code NDEBUG$$ is not defined, $code TrackNewVec$$ also
 tracks the this memory allocation.
 In this case, if memory cannot be allocated
-$cref/ErrorHandler/$$ is used to generate a message
+$cref ErrorHandler$$ is used to generate a message
 stating that there was not sufficient memory.
 
 $subhead Macro$$
@@ -159,7 +159,7 @@ If $code NDEBUG$$ is not defined, $code TrackDelete$$ also checks that
 $icode oldptr$$ was allocated by $code TrackNew$$ or $code TrackExtend$$
 and has not yet been freed.
 If this is not the case,
-$cref/ErrorHandler/$$ is used to generate an error message.
+$cref ErrorHandler$$ is used to generate an error message.
 
 $subhead Macro$$
 $index CPPAD_TRACK_DEL_VEC$$
@@ -182,7 +182,7 @@ $index TrackExtend$$
 This routine is used to 
 allocate a new vector (using $code TrackNewVec$$),
 copy $icode ncopy$$ elements from the old vector to the new vector.
-If $icode ncopy$$ is greater than zero, $italic oldptr$$ 
+If $icode ncopy$$ is greater than zero, $icode oldptr$$ 
 must have been allocated using $code TrackNewVec$$ or $code TrackExtend$$.
 In this case, the vector pointed to by $icode oldptr$$ 
 must be have at least $icode ncopy$$ elements
@@ -243,13 +243,13 @@ $index TrackCount, multi-threading$$
 $index thread, multi TrackCount$$
 These routines cannot be used $cref/in_parallel/ta_in_parallel/$$
 execution mode.
-Use the $cref/thread_alloc/$$ routines instead.
+Use the $cref thread_alloc$$ routines instead.
 
 $head Example$$
 $children%
 	test_more/track_new_del.cpp
 %$$
-The file $cref/TrackNewDel.cpp/$$
+The file $cref TrackNewDel.cpp$$
 contains an example and test of these functions.
 It returns true, if it succeeds, and false otherwise.
 

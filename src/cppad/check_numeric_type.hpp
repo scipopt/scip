@@ -1,13 +1,13 @@
-/* $Id: check_numeric_type.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: check_numeric_type.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_CHECK_NUMERIC_TYPE_INCLUDED
 # define CPPAD_CHECK_NUMERIC_TYPE_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -30,17 +30,17 @@ $head Syntax$$
 $code # include <cppad/check_numeric_type.hpp>$$
 $pre
 $$
-$syntax%CheckNumericType<%NumericType%>()%$$
+$codei%CheckNumericType<%NumericType%>()%$$
 
 
 $head Purpose$$
 The syntax 
-$syntax%
+$codei%
 	CheckNumericType<%NumericType%>()
 %$$
 preforms compile and run time checks that the type specified
-by $italic NumericType$$ satisfies all the requirements for 
-a $xref/NumericType/$$ class. 
+by $icode NumericType$$ satisfies all the requirements for 
+a $cref NumericType$$ class. 
 If a requirement is not satisfied,
 a an error message makes it clear what condition is not satisfied.
 
@@ -60,7 +60,7 @@ $head Example$$
 $children%
 	example/check_numeric_type.cpp
 %$$
-The file $xref/CheckNumericType.cpp/$$
+The file $cref check_numeric_type.cpp$$
 contains an example and test of this function. 
 It returns true, if it succeeds an false otherwise.
 The comments in this example suggest a way to change the example

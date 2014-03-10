@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -407,7 +407,6 @@ SCIP_Bool getNextLine(
    )
 {
    int i;
-   char* last;
 
    assert(fzninput != NULL);
 
@@ -447,8 +446,7 @@ SCIP_Bool getNextLine(
 
    if( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' )
    {
-      /* overwrite the character to search the last blank from this position backwards */
-      fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
+      char* last;
 
       /* buffer is full; erase last token since it might be incomplete */
       fzninput->endline = FALSE;
@@ -463,8 +461,8 @@ SCIP_Bool getNextLine(
       }
       else
       {
-         SCIPfseek(fzninput->file, -(long) strlen(last) - 1, SEEK_CUR);
-         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         SCIPfseek(fzninput->file, -(long) strlen(last), SEEK_CUR);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last));
          *last = '\0';
       }
    }
@@ -4218,7 +4216,7 @@ SCIP_RETCODE writeFzn(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */

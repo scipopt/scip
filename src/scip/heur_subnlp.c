@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1012,7 +1012,7 @@ SCIP_RETCODE solveSubNLP(
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
        */
-      if( !SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
+      if( retcode == SCIP_OKAY && SCIPgetStage(heurdata->subscip) != SCIP_STAGE_SOLVED && !SCIPisNLPConstructed(heurdata->subscip) )
       {
          SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
          retcode = SCIPsolve(heurdata->subscip);
@@ -1986,12 +1986,12 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    assert(scip != NULL);
    assert(heur != NULL);
 
+   /* obviously, we did not do anything yet */
+   *result = SCIP_DIDNOTRUN;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-
-   /* obviously, we did not do anything yet */
-   *result = SCIP_DIDNOTRUN;
 
    /* if keepcopy and subscip == NULL, then InitsolNlp decided that we do not need an NLP solver,
     *   probably because we do not have nonlinear continuous or implicit integer variables
@@ -2010,6 +2010,10 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    if( heurdata->startcand == NULL )
    {
       /* if no start candidate is given, we consider the LP solution of the current node */
+
+      /* however, if the node was already detected to be infeasible, then there is no point to look at its LP solution */
+      if( nodeinfeasible )
+         return SCIP_OKAY;
 
       /* at least if we are not called the first time, we call the heuristic only if an optimal LP solution is available 
        * if we are called the first time and the LP is unbounded, then we are quite desperate and still give the NLP a try

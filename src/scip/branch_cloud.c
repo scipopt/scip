@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -465,8 +465,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->usecloud = FALSE;
    }
 
-
-
    if( branchruledata->onlyF2 )
       counter = MAX(counter,1);
 
@@ -672,11 +670,11 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/usecloud",
-         "should a cloud of points be used? ",
+         "should a cloud of points be used?",
          &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/onlyF2",
-         "should only F2 be used? ",
+         "should only F2 be used?",
          &branchruledata->onlyF2, FALSE, DEFAULT_ONLYF2, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/useunion",

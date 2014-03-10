@@ -1,13 +1,13 @@
-/* $Id: print_for.hpp 2057 2011-08-11 14:07:11Z bradbell $ */
+/* $Id: print_for.hpp 2859 2013-05-28 06:03:21Z bradbell $ */
 # ifndef CPPAD_PRINT_FOR_INCLUDED
 # define CPPAD_PRINT_FOR_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -43,22 +43,22 @@ $codei%PrintFor(%pos%, %before%, %var%, %after%)
 
 $head Purpose$$
 The $cref/zero order forward/ForwardZero/$$ mode command
-$icode%
-	f%.Forward(0, %x%)
+$codei%
+	%f%.Forward(0, %x%)
 %$$
 assigns the 
 $cref/independent variable/glossary/Tape/Independent Variable/$$ vector
 equal to $icode x$$.
 It then computes a value for all of the dependent variables in the 
-$xref/glossary/Operation/Sequence/operation sequence/1/$$ corresponding
+$cref/operation sequence/glossary/Operation/Sequence/$$ corresponding
 to $icode f$$.
 Putting a $code PrintFor$$ in the operation sequence will
 cause the value of $icode var$$, corresponding to $icode x$$,
 to be printed during zero order forward operations.
 
 $head f.Forward(0, x)$$
-The objects $icode f$$, $italic x$$, and the purpose
-for this operation, are documented in $cref/Forward/$$.
+The objects $icode f$$, $icode x$$, and the purpose
+for this operation, are documented in $cref Forward$$.
 
 $head pos$$
 If present, the argument $icode pos$$ has one of the following prototypes
@@ -83,7 +83,7 @@ $codei%
 	const AD<%Base%>&               %var%
 	const VecAD<%Base%>::reference& %var%
 %$$
-The value of $icode var$$, that corresponds to $italic x$$,
+The value of $icode var$$, that corresponds to $icode x$$,
 is written to $code std::cout$$ during the execution of 
 $codei%
 	%f%.Forward(0, %x%)
@@ -109,7 +109,7 @@ $codei%log(%var%)%$$ and $icode%var% <= 0%$$,
 the corresponding result will be $cref nan$$.
 
 $head Alternative$$
-The $cref/Output/$$ section describes the normal 
+The $cref ad_output$$ section describes the normal 
 printing of values; i.e., printing when the corresponding
 code is executed.
 
@@ -119,12 +119,12 @@ $children%
 	example/print_for.cpp
 %$$
 The program
-$cref/print_for_cout.cpp/$$
+$cref print_for_cout.cpp$$
 is an example and test that prints to standard output.
 The output of this program
 states the conditions for passing and failing the test.
 The function
-$cref/print_for_string.cpp/$$
+$cref print_for_string.cpp$$
 is an example and test that prints to an standard string stream.
 This function automatically check for correct output.
 
@@ -140,9 +140,8 @@ namespace CppAD {
 		const char *before, const AD<Base>& var, const char* after)
 	{	CPPAD_ASSERT_NARG_NRES(PriOp, 5, 0);
 
-		ADTape<Base> *tape = AD<Base>::tape_ptr();
-
 		// check for case where we are not recording operations
+		ADTape<Base>* tape = AD<Base>::tape_ptr();
 		if( tape == CPPAD_NULL )
 			return;
 

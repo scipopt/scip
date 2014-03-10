@@ -1,13 +1,13 @@
-/* $Id: rosen_34.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: rosen_34.hpp 2575 2012-11-17 12:25:04Z bradbell $ */
 # ifndef CPPAD_ROSEN_34_INCLUDED
 # define CPPAD_ROSEN_34_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -63,11 +63,11 @@ $pre
 
 $$
 We use $latex n$$ for the size of the vector $icode xi$$.
-Let $latex \R$$ denote the real numbers
-and let $latex F : \R \times \R^n \rightarrow \R^n$$ be a smooth function.
+Let $latex \B{R}$$ denote the real numbers
+and let $latex F : \B{R} \times \B{R}^n \rightarrow \B{R}^n$$ be a smooth function.
 The return value $icode xf$$ contains a 5th order
 approximation for the value $latex X(tf)$$ where 
-$latex X : [ti , tf] \rightarrow \R^n$$ is defined by 
+$latex X : [ti , tf] \rightarrow \B{R}^n$$ is defined by 
 the following initial value problem:
 $latex \[
 \begin{array}{rcl}
@@ -76,7 +76,7 @@ $latex \[
 \end{array}
 \] $$
 If your set of  ordinary differential equations are not stiff
-an explicit method may be better (perhaps $cref/Runge45/$$.)
+an explicit method may be better (perhaps $cref Runge45$$.)
 
 $head Include$$
 The file $code cppad/rosen_34.hpp$$ is included by $code cppad/cppad.hpp$$
@@ -88,13 +88,13 @@ The return value $icode xf$$ has the prototype
 $codei%
 	%Vector% %xf%
 %$$
-and the size of $icode xf$$ is equal to $italic n$$ 
+and the size of $icode xf$$ is equal to $icode n$$ 
 (see description of $cref/Vector/Rosen34/Vector/$$ below).
 $latex \[
 	X(tf) = xf + O( h^5 )
 \] $$
 where $latex h = (tf - ti) / M$$ is the step size.
-If $icode xf$$ contains not a number $cref/nan/$$,
+If $icode xf$$ contains not a number $cref nan$$,
 see the discussion of $cref/f/Rosen34/Fun/Nan/$$.
 
 $head Fun$$
@@ -132,7 +132,7 @@ The argument $icode f$$ to $icode%F%.Ode%$$ has prototype
 $codei%
 	%Vector% &%f%
 %$$
-On input and output, $icode f$$ is a vector of size $italic n$$
+On input and output, $icode f$$ is a vector of size $icode n$$
 and the input values of the elements of $icode f$$ do not matter.
 On output,
 $icode f$$ is set equal to $latex F(t, x)$$
@@ -143,7 +143,7 @@ The argument $icode f_t$$ to $icode%F%.Ode_ind%$$ has prototype
 $codei%
 	%Vector% &%f_t%
 %$$
-On input and output, $icode f_t$$ is a vector of size $italic n$$
+On input and output, $icode f_t$$ is a vector of size $icode n$$
 and the input values of the elements of $icode f_t$$ do not matter.
 On output, the $th i$$ element of
 $icode f_t$$ is set equal to $latex \partial_t F_i (t, x)$$ 
@@ -161,16 +161,16 @@ $icode f_x$$ is set equal to $latex \partial_{x(j)} F_i (t, x)$$
 (see $icode F(t, x)$$ in $cref/Description/Rosen34/Description/$$). 
 
 $subhead Nan$$
-If any of the elements of $icode f$$, $italic f_t$$, or $italic f_x$$
+If any of the elements of $icode f$$, $icode f_t$$, or $icode f_x$$
 have the value not a number $code nan$$,
 the routine $code Rosen34$$ returns with all the
-elements of $icode xf$$ and $italic e$$ equal to $code nan$$.
+elements of $icode xf$$ and $icode e$$ equal to $code nan$$.
 
 $subhead Warning$$
-The arguments $icode f$$, $italic f_t$$, and $italic f_x$$
+The arguments $icode f$$, $icode f_t$$, and $icode f_x$$
 must have a call by reference in their prototypes; i.e.,
 do not forget the $code &$$ in the prototype for 
-$icode f$$, $italic f_t$$ and $italic f_x$$.
+$icode f$$, $icode f_t$$ and $icode f_x$$.
 
 $subhead Optimization$$
 Every call of the form 
@@ -181,7 +181,7 @@ is directly followed by a call of the form
 $codei%
 	%F%.Ode_dep(%t%, %x%, %f_x%)
 %$$
-where the arguments $icode t$$ and $italic x$$ have not changed between calls.
+where the arguments $icode t$$ and $icode x$$ have not changed between calls.
 In many cases it is faster to compute the values of $icode f_t$$
 and $icode f_x$$ together and then pass them back one at a time.
 
@@ -222,7 +222,7 @@ The argument $icode xi$$ has the prototype
 $codei%
 	const %Vector% &%xi%
 %$$
-and the size of $icode xi$$ is equal to $italic n$$.
+and the size of $icode xi$$ is equal to $icode n$$.
 It specifies the value of $latex X(ti)$$
 
 $head e$$
@@ -231,7 +231,7 @@ $codei%
 	%Vector% &%e%
 %$$
 If $icode e$$ is present,
-the size of $icode e$$ must be equal to $italic n$$.
+the size of $icode e$$ must be equal to $icode n$$.
 The input value of the elements of $icode e$$ does not matter.
 On output
 it contains an element by element
@@ -243,11 +243,11 @@ where $latex h = (tf - ti) / M$$ is the step size.
 
 $head Scalar$$
 The type $icode Scalar$$ must satisfy the conditions
-for a $cref/NumericType/$$ type.
-The routine $cref/CheckNumericType/$$ will generate an error message
+for a $cref NumericType$$ type.
+The routine $cref CheckNumericType$$ will generate an error message
 if this is not the case.
 In addition, the following operations must be defined for 
-$icode Scalar$$ objects $italic a$$ and $italic b$$:
+$icode Scalar$$ objects $icode a$$ and $icode b$$:
 
 $table
 $bold Operation$$ $cnext $bold Description$$  $rnext
@@ -256,9 +256,9 @@ $icode%a% < %b%$$ $cnext
 $tend
 
 $head Vector$$
-The type $icode Vector$$ must be a $cref/SimpleVector/$$ class with
+The type $icode Vector$$ must be a $cref SimpleVector$$ class with
 $cref/elements of type Scalar/SimpleVector/Elements of Specified Type/$$.
-The routine $cref/CheckSimpleVector/$$ will generate an error message
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Parallel Mode$$
@@ -276,7 +276,7 @@ $children%
 	example/rosen_34.cpp
 %$$
 The file
-$cref/Rosen34.cpp/$$
+$cref rosen_34.cpp$$
 contains an example and test a test of using this routine.
 It returns true if it succeeds and false otherwise.
 
@@ -426,7 +426,11 @@ Vector Rosen34(
 		}
 
 		// LU factor the matrix E
+# ifndef NDEBUG
 		int sign = LuFactor(ip, jp, E);
+# else
+		LuFactor(ip, jp, E);
+# endif
 		CPPAD_ASSERT_KNOWN(
 			sign != 0,
 			"Error in Rosen34: I - f_x * h / 2 not invertible"

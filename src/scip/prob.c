@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -402,12 +402,13 @@ SCIP_RETCODE SCIPprobFree(
    assert(prob != NULL);
    assert(*prob != NULL);
    assert(set != NULL);
-   
+
    /* remove all constraints from the problem */
    while( (*prob)->nconss > 0 )
    {
+      /*@todo for debug mode it even might sense, to sort them downwards after their arraypos */
       assert((*prob)->conss != NULL);
-      SCIP_CALL( SCIPprobDelCons(*prob, blkmem, set, stat, (*prob)->conss[0]) );
+      SCIP_CALL( SCIPprobDelCons(*prob, blkmem, set, stat, (*prob)->conss[(*prob)->nconss - 1]) );
    }
 
    if( (*prob)->transformed )
@@ -426,7 +427,7 @@ SCIP_RETCODE SCIPprobFree(
 
    /* free constraint array */
    BMSfreeMemoryArrayNull(&(*prob)->conss);
-   
+
    /* free user problem data */
    if( (*prob)->transformed )
    {
@@ -444,7 +445,7 @@ SCIP_RETCODE SCIPprobFree(
    }
 
    /* release problem variables */
-   for( v = 0; v < (*prob)->nvars; ++v )
+   for( v = (*prob)->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, set, TRUE) );
@@ -453,7 +454,7 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->vars);
 
    /* release fixed problem variables */
-   for( v = 0; v < (*prob)->nfixedvars; ++v )
+   for( v = (*prob)->nfixedvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
@@ -474,7 +475,7 @@ SCIP_RETCODE SCIPprobFree(
    }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
-   
+
    return SCIP_OKAY;
 }
 
@@ -797,6 +798,7 @@ SCIP_RETCODE probRemoveVar(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
@@ -1674,7 +1676,9 @@ void SCIPprobUpdateBestRootSol(
    int v;
 
    assert(prob != NULL);
+   assert(lp != NULL);
    assert(prob->transformed);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* in case we have a zero objective fucntion, we skip the root reduced cost update */
    if( SCIPprobGetNObjVars(prob, set) == 0 )
@@ -1690,8 +1694,8 @@ void SCIPprobUpdateBestRootSol(
    {
       SCIP_VAR* var;
       SCIP_COL* col;
-      SCIP_Real rootsol;
-      SCIP_Real rootredcost;
+      SCIP_Real rootsol = 0.0;
+      SCIP_Real rootredcost = 0.0;
 
       var = prob->vars[v];
       assert(var != NULL);
@@ -1712,10 +1716,17 @@ void SCIPprobUpdateBestRootSol(
       }
       else
       {
-         switch( SCIPcolGetBasisStatus(col) )
-         {
-         case SCIP_BASESTAT_LOWER:
-         case SCIP_BASESTAT_UPPER:
+         SCIP_Real primsol;
+         SCIP_BASESTAT basestat;
+         SCIP_Bool lpissolbasic;
+
+         basestat = SCIPcolGetBasisStatus(col);
+         lpissolbasic = SCIPlpIsSolBasic(lp);
+         primsol = SCIPcolGetPrimsol(col);
+
+         if( (lpissolbasic && (basestat == SCIP_BASESTAT_LOWER || basestat == SCIP_BASESTAT_UPPER)) ||
+            (!lpissolbasic && (SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol) ||
+               SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol))) )
          {
             SCIP_Real lbrootredcost;
             SCIP_Real ubrootredcost;
@@ -1740,16 +1751,6 @@ void SCIPprobUpdateBestRootSol(
                rootredcost = ubrootredcost;
                rootsol = 0.0;
             }
-            break;
-         }
-         case SCIP_BASESTAT_BASIC:
-         case SCIP_BASESTAT_ZERO:
-            continue;
-
-         default:
-            SCIPerrorMessage("invalid basis state\n");
-            SCIPABORT();
-            return; /*lint !e527*/
          }
       }
 
@@ -2201,6 +2202,15 @@ SCIP_Real SCIPprobGetObjoffset(
 {
    assert(prob != NULL);
    return prob->objoffset;
+}
+
+/** gets the objective scalar */
+SCIP_Real SCIPprobGetObjscale(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->objscale;
 }
 
 #endif

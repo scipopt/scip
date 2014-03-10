@@ -1,21 +1,23 @@
-/* $Id: discrete_op.hpp 1986 2011-06-18 20:33:17Z bradbell $ */
+/* $Id: discrete_op.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_DISCRETE_OP_INCLUDED
 # define CPPAD_DISCRETE_OP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup discrete_op_hpp discrete_op.hpp
+\{
 \file discrete_op.hpp
 Zero order forward mode for z = f(x) where f is piecewise constant.
 */
@@ -88,5 +90,6 @@ inline void forward_dis_op_0(
 }
 
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

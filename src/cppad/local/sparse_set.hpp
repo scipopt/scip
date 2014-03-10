@@ -1,13 +1,13 @@
-// $Id: sparse_set.hpp 2178 2011-10-30 06:52:58Z bradbell $
+// $Id: sparse_set.hpp 2910 2013-10-07 13:27:58Z bradbell $
 # ifndef CPPAD_SPARSE_SET_INCLUDED
 # define CPPAD_SPARSE_SET_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -18,14 +18,16 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 # include <cppad/local/cppad_assert.hpp>
 
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup sparse_set_hpp sparse_set.hpp
+\{
 \file sparse_set.hpp
-Vector of sets of positive integers.
+Vector of sets of positive integers stored as std::set<size_t>.
 */
 
 /*!
-Vector of sets of postivie integers, each set stored as a standard set.
+Vector of sets of positive integers, each set stored as a standard set.
 */
 
 class sparse_set {
@@ -64,7 +66,7 @@ public:
 	sparse_set(const sparse_set& v)
 	{	// Error: 
 		// Probably a sparse_set argument has been passed by value
-		CPPAD_ASSERT_UNKNOWN(0); 
+		CPPAD_ASSERT_UNKNOWN(false); 
 	}
 	// -----------------------------------------------------------------
 	/*! Destructor 
@@ -74,9 +76,9 @@ public:
 	// -----------------------------------------------------------------
 	/*! Change number of sets, set end, and initialize all sets as empty
 
-	Any memory currently allocated for this object is freed. If 
-	\a n_set_in is zero, no new memory is allocated for the set.
-	Otherwise, new memory may be allocated for the sets.
+
+	If \c n_set_in is zero, any memory currently allocated for this object 
+	is freed. Otherwise, new memory may be allocated for the sets (if needed).
 
 	\param n_set_in
 	is the number of sets in this vector of sets.
@@ -87,8 +89,11 @@ public:
 	void resize(size_t n_set_in, size_t end_in) 
 	{	n_set_          = n_set_in;
 		end_            = end_in;
-		// free all memory connected with data_
-		data_.resize(0);
+		if( n_set_ == 0 )
+		{	// free all memory connected with data_
+			data_.clear();
+			return;
+		}
 		// now start a new vector with empty sets
 		data_.resize(n_set_);
 
@@ -116,6 +121,29 @@ public:
 		CPPAD_ASSERT_UNKNOWN( index   < n_set_ );
 		CPPAD_ASSERT_UNKNOWN( element < end_ );
 		data_[ index ].insert( element );
+	}
+	// -----------------------------------------------------------------
+	/*! Is an element of a set.
+
+	\param index
+	is the index for this set in the vector of sets.
+
+	\param element
+	is the element we are adding to the set.
+
+	\par Checked Assertions
+	\li index    < n_set_
+	\li element  < end_
+	*/
+	bool is_element(size_t index, size_t element)
+	{	// This routine should use the std::insert operator
+		// that cashes the iterator of previous insertion for when
+		// insertions occur in order. We should speed test that this
+		// actually makes things faster.
+		CPPAD_ASSERT_UNKNOWN( index   < n_set_ );
+		CPPAD_ASSERT_UNKNOWN( element < end_ );
+		std::set<size_t>::iterator itr = data_[ index ].find( element );
+		return itr != data_[index].end();
 	}
 	// -----------------------------------------------------------------
 	/*! Begin retrieving elements from one of the sets.
@@ -271,5 +299,78 @@ public:
 	{	return end_; }
 };
 
-CPPAD_END_NAMESPACE
+/*! 
+Copy a user vector of sets sparsity pattern to an internal sparse_set object.
+
+\tparam VectorSet
+is a simple vector with elements of type \c std::set<size_t>.
+
+\param internal
+The input value of sparisty does not matter.
+Upon return it contains the same sparsity pattern as \c user
+(or the transposed sparsity pattern).
+
+\param user
+sparsity pattern that we are placing \c internal.
+
+\param n_row
+number of rows in the sparsity pattern in \c user
+(range dimension).
+
+\param n_col
+number of columns in the sparsity pattern in \c user
+(domain dimension).
+
+\param transpose
+if true, the sparsity pattern in \c internal is the transpose
+of the one in \c user. 
+Otherwise it is the same sparsity pattern.
+*/
+template<class VectorSet>
+void sparsity_user2internal(
+	sparse_set&             internal  , 
+	const VectorSet&        user      ,
+	size_t                  n_row     ,
+	size_t                  n_col     ,
+	bool                    transpose )
+{	CPPAD_ASSERT_UNKNOWN( n_row == size_t(user.size()) );
+
+	CPPAD_ASSERT_KNOWN(
+		size_t( user.size() ) == n_row,
+		"Size of this vector of sets sparsity pattern is not equal "
+		"the range dimension for the corresponding function."
+	);
+
+	size_t i, j;
+	std::set<size_t>::const_iterator itr;
+
+	// transposed pattern case
+	if( transpose )
+	{	internal.resize(n_col, n_row);
+		for(i = 0; i < n_row; i++)
+		{	itr = user[i].begin();
+			while(itr != user[i].end())
+			{	j = *itr++;
+				CPPAD_ASSERT_UNKNOWN( j < n_col );
+				internal.add_element(j, i);
+			}
+		}
+		return;
+	}
+
+	// same pattern case
+	internal.resize(n_row, n_col);
+	for(i = 0; i < n_row; i++)
+	{	itr = user[i].begin();
+		while(itr != user[i].end())
+		{	j = *itr++;
+			CPPAD_ASSERT_UNKNOWN( j < n_col );
+			internal.add_element(i, j);
+		}
+	}
+	return;
+}
+
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

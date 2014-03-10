@@ -177,7 +177,7 @@ for (my $i = 0; $i < $narg; ++$i)
 	    {
 	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ )
 	       {
-		  printf("%d: possible doxygen documentation within function:\n%s\n\n", $line, $_);
+		  printf("%d: possible doxygen documentation within function (depth: %d, enumstruct: %d):\n%s\n\n", $line, $depth, $inenumstruct, $_);
 	       }
 	    }
 
@@ -227,9 +227,9 @@ for (my $i = 0; $i < $narg; ++$i)
       # calculate depth
 
       # determine whether we are in an enum or struct (assume it is at the beginning of the line)
-      if ( $str =~ /^enum/ || $str =~ /^struct/ )
+      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /\s*union/ )
       {
-	 $inenumstruct = 1;
+	 ++($inenumstruct);
       }
 
       # check for opening blocks
@@ -263,7 +263,12 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for closing blocks
       if ( $str =~ /\}/ && $str !~ /'\}'/ && $incomment == 0 )
       {
-	 $inenumstruct = 0;
+	 --($inenumstruct);
+	 if ( $inenumstruct < 0 )
+	 {
+	    $inenumstruct = 0;
+	 }
+
 	 if ( $str =~ /\@\}/ )
 	 {
 	    printf("%d: '\@}' within non-comment line:\n%s\n\n", $line, $_);

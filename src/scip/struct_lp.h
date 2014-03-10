@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,10 +66,10 @@
 
 
 #include "scip/def.h"
-#include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_event.h"
+#include "lpi/type_lpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -270,6 +270,7 @@ struct SCIP_Lp
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
+   SCIP_Real             lpiconditionlimit;  /**< current condition number limit in LPI */
    SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    SCIP_LPI*             lpi;                /**< LP solver interface */
@@ -359,6 +360,8 @@ struct SCIP_Lp
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
+   SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
+   SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
 };
 
 #ifdef __cplusplus

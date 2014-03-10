@@ -1,13 +1,13 @@
-/* $Id: speed_test.hpp 2192 2011-11-18 00:15:16Z bradbell $ */
+/* $Id: speed_test.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_SPEED_TEST_INCLUDED
 # define CPPAD_SPEED_TEST_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -341,7 +341,7 @@ of $code SpeedTest$$.
 $end
 -----------------------------------------------------------------------
 */
-// BEGIN PROGRAM
+// BEGIN C++
 
 
 # include <string>
@@ -470,5 +470,5 @@ inline void SpeedTest(
 
 } // END CppAD namespace
 
-// END PROGRAM
+// END C++
 # endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -460,6 +460,11 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPCOND) == 0);
    assert(scip != NULL);
 
+   /* note that after diving mode, the LPI may only have the basis information, but SCIPlpiWasSolved() can be false; in
+    * this case, we will (depending on the LP solver) probably not obtain the quality measure; one solution would be to
+    * store the results of SCIPlpiGetRealSolQuality() within the SCIP_LP after each LP solve; this would have the added
+    * advantage, that we reduce direct access to the LPI, but it sounds potentially expensive
+    */
    SCIP_CALL( SCIPgetLPI(scip, &lpi) );
    if( lpi == NULL )
    {

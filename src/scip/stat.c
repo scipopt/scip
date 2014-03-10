@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -252,6 +252,7 @@ void SCIPstatReset(
    stat->solindex = 0;
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
+   stat->ninitconssadded = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -309,10 +310,10 @@ void SCIPstatResetPresolving(
 
 /** reset primal-dual integral */
 void SCIPstatResetPrimalDualIntegral(
-   SCIP_STAT*           stat,                /**< problem statistics data */
-   SCIP_SET*            set,                 /**< global SCIP settings */
-   SCIP_Bool            partialreset         /**< should time and integral value be kept? (in combination with no statistical
-                                                  *  reset, integrals are added for each problem to be solved) */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             partialreset        /**< should time and integral value be kept? (in combination with no statistical
+                                              *   reset, integrals are added for each problem to be solved) */
    )
 {
    assert(stat != NULL);
@@ -335,12 +336,12 @@ void SCIPstatResetPrimalDualIntegral(
  *  upper and lower bound, respectively
  */
 void SCIPstatUpdatePrimalDualIntegral(
-   SCIP_STAT*           stat,                /**< problem statistics data */
-   SCIP_SET*            set,                 /**< global SCIP settings */
-   SCIP_PROB*           transprob,           /**< transformed problem */
-   SCIP_PROB*           origprob,            /**< original problem */
-   SCIP_Real            upperbound,          /**< current upper bound in transformed problem, or infinity */
-   SCIP_Real            lowerbound           /**< current lower bound in transformed space, or -infinity */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Real             upperbound,         /**< current upper bound in transformed problem, or infinity */
+   SCIP_Real             lowerbound          /**< current lower bound in transformed space, or -infinity */
    )
 {
    SCIP_Real currentgap;
@@ -400,7 +401,7 @@ void SCIPstatUpdatePrimalDualIntegral(
       SCIP_Real absprim = REALABS(primalbound);
       SCIP_Real absdual = REALABS(dualbound);
 
-      /** The gap in the definition of the primal-dual integral differs from the default SCIP gap function.
+      /* The gap in the definition of the primal-dual integral differs from the default SCIP gap function.
        * Here, the MAX(primalbound, dualbound) is taken for gap quotient in order to ensure a gap <= 100.
        */
       currentgap = 100.0 * REALABS(primalbound - dualbound) / MAX(absprim, absdual);

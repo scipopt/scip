@@ -1,13 +1,13 @@
-// $Id: sparse_pack.hpp 2178 2011-10-30 06:52:58Z bradbell $
+// $Id: sparse_pack.hpp 2910 2013-10-07 13:27:58Z bradbell $
 # ifndef CPPAD_SPARSE_PACK_INCLUDED
 # define CPPAD_SPARSE_PACK_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -15,16 +15,17 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 # include <cppad/local/cppad_assert.hpp>
 # include <cppad/local/pod_vector.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup sparse_pack_hpp sparse_pack.hpp
+\{
 \file sparse_pack.hpp
-Vector of sets of positive integers.
+Vector of sets of positive integers stored as a packed array of bools.
 */
 
 /*!
 Vector of sets of postivie integers, each set stored as a packed boolean array.
 */
-
 
 class sparse_pack {
 private:
@@ -80,9 +81,8 @@ public:
 	// -----------------------------------------------------------------
 	/*! Change number of sets, set end, and initialize all sets as empty
 
-	Any memory currently allocated for this object is freed. If both
-	\a n_set_in and \a end_in are non-zero new memory is allocated, otherwise
-	no new memory is allocated for the object.
+	If \c n_set_in is zero, any memory currently allocated for this object 
+	is freed. Otherwise, new memory may be allocated for the sets (if needed).
 
 	\param n_set_in
 	is the number of sets in this vector of sets.
@@ -91,11 +91,17 @@ public:
 	is the maximum element plus one (the minimum element is 0).
 	*/
 	void resize(size_t n_set_in, size_t end_in) 
-	{	Pack zero(0);
-		data_.erase();
-
+	{
 		n_set_          = n_set_in;
 		end_            = end_in;
+		if( n_set_ == 0 )
+		{	data_.free();
+			return;
+		}
+		// now start a new vector with empty sets
+		Pack zero(0);
+		data_.erase();
+
 		n_pack_         = ( 1 + (end_ - 1) / n_bit_ );
 		size_t i        = n_set_ * n_pack_;
 
@@ -130,6 +136,29 @@ public:
 		size_t k  = element - j * n_bit_;
 		Pack mask = one << k;
 		data_[ index * n_pack_ + j] |= mask;
+	}
+	// -----------------------------------------------------------------
+	/*! Is an element of a set.
+
+	\param index
+	is the index for this set in the vector of sets.
+
+	\param element
+	is the element we are checking to see if it is in the set.
+
+	\par Checked Assertions
+	\li index    < n_set_
+	\li element  < end_
+	*/
+	bool is_element(size_t index, size_t element)
+	{	static Pack one(1);
+		static Pack zero(0);
+		CPPAD_ASSERT_UNKNOWN( index   < n_set_ );
+		CPPAD_ASSERT_UNKNOWN( element < end_ );
+		size_t j  = element / n_bit_;
+		size_t k  = element - j * n_bit_;
+		Pack mask = one << k;
+		return (data_[ index * n_pack_ + j] & mask) != zero;
 	}
 	// -----------------------------------------------------------------
 	/*! Begin retrieving elements from one of the sets.
@@ -319,5 +348,72 @@ public:
 	{	return end_; }
 };
 
-CPPAD_END_NAMESPACE
+/*! 
+Copy a user vector of bools sparsity pattern to an internal sparse_pack object.
+
+\tparam VectorBool
+is a simple vector with elements of type bool.
+
+\param internal
+The input value of sparisty does not matter.
+Upon return it contains the same sparsity pattern as \c user
+(or the transposed sparsity pattern).
+
+\param user
+sparsity pattern that we are placing \c internal.
+
+\param n_row
+number of rows in the sparsity pattern in \c user
+(rand dimension).
+
+\param n_col
+number of columns in the sparsity pattern in \c user
+(domain dimension).
+
+\param transpose
+if true, the sparsity pattern in \c internal is the transpose
+of the one in \c user. 
+Otherwise it is the same sparsity pattern.
+*/
+template<class VectorBool>
+void sparsity_user2internal(
+	sparse_pack&       internal  , 
+	const VectorBool&  user      ,
+	size_t             n_row     ,
+	size_t             n_col     ,
+	bool               transpose )
+{	CPPAD_ASSERT_UNKNOWN( n_row * n_col == size_t(user.size()) );
+	size_t i, j;
+
+	CPPAD_ASSERT_KNOWN(
+		size_t( user.size() ) == n_row * n_col,
+		"Size of this vector of bools sparsity pattern is not equal product "
+		"of the domain and range dimensions for corresponding function."
+	);
+
+	// transposed pattern case
+	if( transpose )
+	{	internal.resize(n_col, n_row);
+		for(j = 0; j < n_col; j++)
+		{	for(i = 0; i < n_row; i++)
+			{	if( user[ i * n_col + j ] )
+					internal.add_element(j, i);
+			}
+		}
+		return;
+	}
+
+	// same pattern case
+	internal.resize(n_row, n_col);
+	for(i = 0; i < n_row; i++)
+	{	for(j = 0; j < n_col; j++)
+		{	if( user[ i * n_col + j ] )
+				internal.add_element(i, j);
+		}
+	}
+	return;
+}
+
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

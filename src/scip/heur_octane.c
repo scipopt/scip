@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -671,6 +671,10 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    *result = SCIP_DELAYED;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
@@ -775,6 +779,10 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
+
+   /* clear raydirection array first for not accidentally using it uninitialized */
+   BMSclearMemoryArray(raydirection, nsubspacevars);
+
    for( i = f_max; i >= 0; --i )
    {
       /*lint --e{866}*/
@@ -900,7 +908,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          continue;
 
       /* assert necessary for flexelint */
-      assert(q > 0);
+      assert(q != 0.0);
       lambda[0] = p / q;
 
       nfacets = 1;

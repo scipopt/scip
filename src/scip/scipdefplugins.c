@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,6 +93,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNodeselUct(scip) );
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
+   SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );

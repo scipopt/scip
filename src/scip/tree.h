@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPnodeFree(
 
 /** increases the reference counter of the LP state in the fork or subroot node */
 extern
-void SCIPnodeCaptureLPIState(
+SCIP_RETCODE SCIPnodeCaptureLPIState(
    SCIP_NODE*            node,               /**< fork/subroot node */
    int                   nuses               /**< number to add to the usage counter */
    );

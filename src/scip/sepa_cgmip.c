@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -101,7 +101,7 @@
 #define DEFAULT_SKIPMULTBOUNDS     TRUE /**< Skip the upper bounds on the multipliers in the sub-MIP? */
 #define DEFAULT_OBJLONE           FALSE /**< Should the objective of the sub-MIP only minimize the l1-norm of the multipliers? */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
-#define DEFAULT_OBJWEIGHSIZE       TRUE /**< Weigh each row by its size? */
+#define DEFAULT_OBJWEIGHTSIZE      TRUE /**< Weight each row by its size? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< Should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_USECMIR            TRUE /**< Use CMIR-generator (otherwise add cut directly)? */
 #define DEFAULT_USESTRONGCG       FALSE /**< Use strong CG-function to strengthen cut? */
@@ -112,8 +112,8 @@
 #define DEFAULT_ADDVIOLATIONCONS  FALSE /**< Add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?*/
 #define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< Add constraint handler to filter out violated cuts? */
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< Should the violation constraint handler use the norm of a cut to check for feasibility? */
-#define DEFAULT_USEOBJUB           TRUE /**< Use upper bound on objective function (via primal solution)? */
-#define DEFAULT_USEOBJLB           TRUE /**< Use lower bound on objective function (via lower bound)? */
+#define DEFAULT_USEOBJUB          FALSE /**< Use upper bound on objective function (via primal solution)? */
+#define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
 #define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
 #define DEFAULT_OUTPUT            FALSE /**< Should information about the sub-MIP and cuts be displayed? */
 
@@ -169,7 +169,7 @@ struct SCIP_SepaData
    SCIP_Bool             skipmultbounds;     /**< Skip the upper bounds on the multipliers in the sub-MIP? */
    SCIP_Bool             objlone;            /**< Should the objective of the sub-MIP only minimize the l1-norm of the multipliers? */
    SCIP_Real             objweight;          /**< objective weight for artificial variables */
-   SCIP_Bool             objweighsize;       /**< Weigh each row by its size? */
+   SCIP_Bool             objweightsize;      /**< Weight each row by its size? */
    SCIP_Bool             dynamiccuts;        /**< Should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             usecmir;            /**< Use CMIR-generator (otherwise add cut directly)? */
    SCIP_Bool             usestrongcg;        /**< Use strong CG-function to strengthen cut? */
@@ -310,13 +310,14 @@ SCIP_RETCODE solCutIsViolated(
 
          /* get data */
          SCIP_CALL( SCIPgetVarsData(mipdata->scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+         assert(nvars >= 0);
          SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
 
          /* compute coefficients */
          SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, cutcoefs, &rhs, &localrowsused, &localboundsused, &cutrank, &success) );
 
 #if 0
-         for (j = 0; (int) j < nvars; ++j)
+         for (j = 0; j < (unsigned int) nvars; ++j)
          {
             if ( ! SCIPisZero(scip, cutcoefs[j]) )
                SCIPinfoMessage(scip, NULL, "+ %f x%d", cutcoefs[j], j);
@@ -330,7 +331,7 @@ SCIP_RETCODE solCutIsViolated(
 
          /* compute activity and Euclidean norm (todo: use arbitrary norm) */
          cutsqrnorm = 0.0;
-         for (j = 0; (int) j < nvars; ++j)
+         for (j = 0; j < (unsigned int) nvars; ++j)
          {
             if ( ! SCIPisZero(scip, cutcoefs[j]) )
             {
@@ -828,26 +829,37 @@ SCIP_RETCODE transformColumn(
 }
 
 
-/** compute objective coefficient for rows that are weighted by size */
+/** compute objective coefficient for rows that are weighted by size
+ *
+ *  The objective is computed by multiplying a default value by
+ *  \f[
+ *  1 - (r_{\mbox{max}} - r) \frac{1 - a}{r_{\mbox{max}} - r_{\mbox{min}}},
+ *  \f]
+ *  where \f$r\f$ is the size of the current row, \f$a \in [0,1]\f$ is a parameter, and \f$r_{\mbox{max}}\f$ and
+ *  \f$r_{\mbox{min}}\f$ are the maximal and minimal size of a row, respectively.
+ *
+ *  Thus, if \f$r = r_{\mbox{max}}\f$, we get 1 and if \f$r = r_{\mbox{min}}\f$, we get \f$a\f$.
+ */
 static
 SCIP_Real computeObjWeightSize(
-   int                   rowsize,            /**< size of rows */
+   int                   rowsize,            /**< size of current row */
    int                   minrowsize,         /**< maximal size of rows */
    int                   maxrowsize          /**< minimal size of rows */
    )
 {
    SCIP_Real a;
-   SCIP_Real b;
 
    assert( maxrowsize > 0 );
    assert( minrowsize < INT_MAX );
    assert( minrowsize <= maxrowsize );
    assert( minrowsize <= rowsize && rowsize <= maxrowsize );
 
-   a = (1.0 - OBJWEIGHTRANGE)/((SCIP_Real) (maxrowsize - minrowsize));
-   b = 1.0 - a * ((SCIP_Real) maxrowsize);
+   if ( minrowsize == maxrowsize )
+      return 1.0;
 
-   return a * ((SCIP_Real) rowsize) + b;
+   a = (1.0 - OBJWEIGHTRANGE)/((SCIP_Real) (maxrowsize - minrowsize));
+
+   return 1.0 - a * ((SCIP_Real) (maxrowsize - rowsize));
 }
 
 
@@ -983,8 +995,8 @@ SCIP_Real computeObjWeightSize(
  *    this we require that the cut is tight at the currently best solution. To get reliable solutions
  *    we relax equality by EPSILONVALUE.
  *
- * - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
- *   respect to the current lower and upper bounds.
+ *  - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
+ *    respect to the current lower and upper bounds.
  */
 static
 SCIP_RETCODE createSubscip(
@@ -1390,7 +1402,7 @@ SCIP_RETCODE createSubscip(
          assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) ); /* equations should always be active */
          assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) );
 
-         if ( sepadata->objweighsize )
+         if ( sepadata->objweightsize )
             weight = - sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
 
          /* create two variables for each equation */
@@ -1426,7 +1438,7 @@ SCIP_RETCODE createSubscip(
             if ( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
             {
                isactive = TRUE;
-               if ( sepadata->objweighsize )
+               if ( sepadata->objweightsize )
                   weight = -sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
                else
                   weight = -sepadata->objweight;
@@ -1457,7 +1469,7 @@ SCIP_RETCODE createSubscip(
             if ( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) )
             {
                isactive = TRUE;
-               if ( sepadata->objweighsize )
+               if ( sepadata->objweightsize )
                   weight = -sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
                else
                   weight = -sepadata->objweight;
@@ -1491,7 +1503,7 @@ SCIP_RETCODE createSubscip(
       mipdata->yrhs[mipdata->nrows] = NULL;
       cnt = 0;
 
-      if ( sepadata->objweighsize )
+      if ( sepadata->objweightsize )
          weight = -sepadata->objweight * computeObjWeightSize(SCIPgetNObjVars(scip), minrowsize, maxrowsize);
       else
          weight = -sepadata->objweight;
@@ -3911,7 +3923,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    /* check for parameters */
    if ( ( sepadata->useobjub || sepadata->useobjlb ) && ( sepadata->usecmir || sepadata->usestrongcg ) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Using objective function bounds and CMIR or Strong-CG functions is useless. Turning off usage of objective function bounds.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+         "WARNING - sepa_cgmip: Using objective function bounds and CMIR or Strong-CG functions is useless. Turning off usage of objective function bounds.\n");
       SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjub", FALSE) );
       SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjlb", FALSE) );
    }
@@ -4169,9 +4182,9 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->objweight, TRUE, DEFAULT_OBJWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/objweighsize",
-         "Weigh each row by its size?",
-         &sepadata->objweighsize, FALSE, DEFAULT_OBJWEIGHSIZE, NULL, NULL) );
+         "separating/"SEPA_NAME"/objweightsize",
+         "Weight each row by its size?",
+         &sepadata->objweightsize, FALSE, DEFAULT_OBJWEIGHTSIZE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/"SEPA_NAME"/dynamiccuts",

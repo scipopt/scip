@@ -1,13 +1,13 @@
-/* $Id: div_eq.hpp 1986 2011-06-18 20:33:17Z bradbell $ */
+/* $Id: div_eq.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_DIV_EQ_INCLUDED
 # define CPPAD_DIV_EQ_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -18,26 +18,22 @@ namespace CppAD {
 
 template <class Base>
 AD<Base>& AD<Base>::operator /= (const AD<Base> &right)
-{	ADTape<Base> *tape = AD<Base>::tape_ptr();
-	size_t tape_id = 0;
-	if( tape != CPPAD_NULL )
-		tape_id = tape->id_;
-
-	// id_ setting for parameters cannot match 0
-	bool var_left  = id_       == tape_id;
-	bool var_right = right.id_ == tape_id;
-	CPPAD_ASSERT_KNOWN(
-		Parameter(*this) || var_left ,
-		"/=: left operand is a variable for a different thread"
-	);
-	CPPAD_ASSERT_KNOWN(
-		Parameter(right) || var_right ,
-		"/=: right operand is a variable for a different thread"
-	);
-
+{
+	// compute the Base part
 	Base left;
 	left    = value_;
 	value_ /= right.value_;
+
+	// check if there is a recording in progress
+	ADTape<Base>* tape = AD<Base>::tape_ptr();
+	if( tape == CPPAD_NULL )
+		return *this;
+	tape_id_t tape_id = tape->id_;
+
+	// tape_id cannot match the default value for tape_id_; i.e., 0
+	CPPAD_ASSERT_UNKNOWN( tape_id > 0 );
+	bool var_left  = tape_id_       == tape_id;
+	bool var_right = right.tape_id_ == tape_id;
 
 	if( var_left )
 	{	if( var_right )
@@ -50,7 +46,7 @@ AD<Base>& AD<Base>::operator /= (const AD<Base> &right)
 			// put operator in the tape
 			taddr_ = tape->Rec_.PutOp(DivvvOp);
 			// make this a variable
-			CPPAD_ASSERT_UNKNOWN( id_ == tape_id );
+			CPPAD_ASSERT_UNKNOWN( tape_id_ == tape_id );
 		}
 		else if( IdenticalOne( right.value_ ) )
 		{	// this = variable * 1
@@ -66,7 +62,7 @@ AD<Base>& AD<Base>::operator /= (const AD<Base> &right)
 			// put operator in the tape
 			taddr_ = tape->Rec_.PutOp(DivvpOp);
 			// make this a variable
-			CPPAD_ASSERT_UNKNOWN( id_ == tape_id );
+			CPPAD_ASSERT_UNKNOWN( tape_id_ == tape_id );
 		}
 	}
 	else if( var_right  )
@@ -84,7 +80,7 @@ AD<Base>& AD<Base>::operator /= (const AD<Base> &right)
 			// put operator in the tape
 			taddr_ = tape->Rec_.PutOp(DivpvOp);
 			// make this a variable
-			id_ = tape_id;
+			tape_id_ = tape_id;
 		}
 	}
 	return *this;

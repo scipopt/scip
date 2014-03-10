@@ -1,0 +1,40 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                           *
+*                  This file is part of the program and library             *
+*         SCIP --- Solving Constraint Integer Programs                      *
+*                                                                           *
+*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+*                            fuer Informationstechnik Berlin                *
+*                                                                           *
+*  SCIP is distributed under the terms of the ZIB Academic License.         *
+*                                                                           *
+*  You should have received a copy of the ZIB Academic License              *
+*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*                                                                           *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Installation
+============
+
+To build the random setting generator, simply type "make [OPTIONS]" using
+the same options as for your SCIP build.  Make sure that SCIP is built with
+these options beforehand.  To run the program, it suffices to build with
+"make LPS=none ZIMPL=false READLINE=false GMP=false ZLIB=false" such that no
+external libraries are needed.
+
+
+Usage
+=====
+
+The binary takes a non-negative random seed as an optional parameter (using
+zero if none is given) and writes a random setting file named
+
+   <githash>-<seed>.set
+
+to the same directory.  You can use the command
+
+   make RUNS=<number of setting files to be created> test
+
+to automatically create a series of setting files with current timestamp as
+seed value.

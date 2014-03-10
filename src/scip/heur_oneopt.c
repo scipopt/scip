@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -449,7 +449,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -478,11 +477,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       }
       SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
 
+      /* avoid recursive call, which would lead to an endless loop */
       if( SCIPisParamFixed(subscip, "heuristics/oneopt/beforepresol") )
       {
          SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/beforepresol in subscip of oneopt heuristic\n");
          SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/beforepresol") );
       }
+      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
 
       if( valid )
       {

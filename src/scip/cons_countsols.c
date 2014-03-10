@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,10 +21,10 @@
  * If this constraint handler is activated than it counts or collects all feasible solutions. We refer to \ref COUNTER for
  * more details about using SCIP for counting feasible solutions.
  *
- * @todo In the last round of presolving we should check if variables exit which have up and down lock one. In that case
- *       we know that these locks are coming from this constraint handler. Therefore, they are totally free and can be
- *       ignored in the branch and bound process. To get this result we have to store these variables in the constraint
- *       handler data structure (to remember this free dimensions) and fix them to any feasible value.
+ * @todo In the last round of presolving we should check if variables exist, which have up and down lock one. In that
+ *       case we know that these locks are coming from this constraint handler. Therefore, they are totally free and can
+ *       be ignored in the branch and bound process. To get this result we have to store these variables in the
+ *       constraint handler data structure (to remember this free dimensions) and fix them to any feasible value.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -51,20 +51,11 @@ typedef SCIP_Longint         Int;
 /* constraint handler properties */
 #define CONSHDLR_NAME          "countsols"
 #define CONSHDLR_DESC          "constraint to count feasible solutions"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -9999999 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -9999999 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
-
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 /* default parameter settings */
 #define DEFAULT_SPARSETEST         TRUE /**< sparse test on or off */
@@ -156,8 +147,10 @@ void setInt(
    SCIP_Longint          newvalue            /**< new value */
    )
 {
+   assert(newvalue < LONG_MAX);
+
 #ifdef WITH_GMP
-   mpz_set_si(*value, newvalue);
+   mpz_set_si(*value, (long) newvalue);
 #else
    (*value) = newvalue;
 #endif
@@ -171,8 +164,10 @@ void setPowerOfTwo(
    SCIP_Longint          exponent            /**< exponent for the base 2 */
    )
 {
+   assert(0 <= exponent && exponent < LONG_MAX);
+
 #ifdef WITH_GMP
-   mpz_ui_pow_ui(*value, 2, exponent);
+   mpz_ui_pow_ui(*value, 2, (unsigned long) exponent);
 #else
    assert(exponent < 64);
    (*value) = 1 << exponent;
@@ -228,8 +223,10 @@ void multInt(
    SCIP_Longint          factor              /**< factor to multiply with */
    )
 {
+   assert(0 <= factor && factor < LONG_MAX);
+
 #ifdef WITH_GMP
-   mpz_mul_ui(*value, *value, factor);
+   mpz_mul_ui(*value, *value, (unsigned long) factor);
 #else
    (*value) *= factor;
 #endif
@@ -243,9 +240,9 @@ void toString(
    char**                buffer,             /**< pointer to buffer for storing the string */
    int                   buffersize          /**< length of the buffer */
    )
-{
+{  /*lint --e{715}*/
 #ifdef WITH_GMP
-   mpz_get_str(*buffer, 10, value);
+   (void) mpz_get_str(*buffer, 10, value);
 #else
    (void) SCIPsnprintf (*buffer, buffersize, "%"SCIP_LONGINT_FORMAT"", value);
 #endif
@@ -261,7 +258,7 @@ SCIP_Longint getNCountedSols(
 {
 #ifdef WITH_GMP
    *valid = FALSE;
-   if( 0 != mpz_fits_slong_p(value) )
+   if( 0 != mpz_fits_sint_p(value) )
       (*valid) = TRUE;
 
    return mpz_get_si(value);
@@ -307,7 +304,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nsolutions = 0;
    (*conshdlrdata)->ssolutions = 0;
 
-   allocInt(&(*conshdlrdata)->nsols);
+   allocInt(&(*conshdlrdata)->nsols); /*lint !e545*/
 
    (*conshdlrdata)->cutoffSolution = NULL;
    (*conshdlrdata)->warning = FALSE;
@@ -397,10 +394,16 @@ SCIP_RETCODE checkParameters(
    SCIP_CALL( SCIPgetIntParam(scip,  "presolving/maxrestarts", &intvalue) );
    if( intvalue != 0 )
    {
-      valid = FALSE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-         "The parameter <presolving/maxrestarts> is not 0 (currently %d)! This might cause a wrong counting process.\n",
-         intvalue);
+      /* need to disabled restarts, since collecting solutions won't work but also the captures for variables are not
+       * correctly handled
+       */
+      SCIPwarningMessage(scip, "counting forces parameter <presolving/maxrestarts> to 0\n");
+      if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
+      }
+
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    }
 
    return SCIP_OKAY;
@@ -716,10 +719,10 @@ SCIP_RETCODE countSparseSol(
        */
       assert( SCIPgetNPseudoBranchCands(scip) != 0 );
 
-      allocInt(&newsols);
+      allocInt(&newsols); /*lint !e545*/
 
       /* set newsols to one */
-      setInt(&newsols, 1LL);
+      setInt(&newsols, 1LL); /*lint !e545*/
 
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
@@ -728,30 +731,41 @@ SCIP_RETCODE countSparseSol(
          npseudocands = SCIPgetNPseudoBranchCands(scip);
 
          /* sets a power of 2 to the number of solutions */
-         setPowerOfTwo(&newsols, npseudocands);
+         setPowerOfTwo(&newsols, (SCIP_Longint) npseudocands); /*lint !e545*/
       }
       else
       {
+         SCIP_VAR* origvar;
+         SCIP_Real scalar = 1.0;
+         SCIP_Real constant = 0.0;
+
          SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
 
          for( v = 0; v < nvars; ++v )
          {
             var = vars[v];
-            lb = SCIPvarGetLbLocal(var);
-            ub = SCIPvarGetUbLocal(var);
+            origvar = var;
+            /* get original variable to decide if we will count the domain; continuous variables aren't counted */
+            SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
-            SCIPdebugMessage("variable <%s> Local Bounds are [%g,%g]\n", SCIPvarGetName(var), lb, ub);
+            if( origvar != NULL && SCIPvarGetType(origvar) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               lb = SCIPvarGetLbLocal(var);
+               ub = SCIPvarGetUbLocal(var);
 
-            assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
-            assert( SCIPisFeasIntegral(scip, lb) );
-            assert( SCIPisFeasIntegral(scip, ub) );
-            assert( SCIPisFeasIntegral(scip, ub - lb) );
-            assert( SCIPisFeasLT(scip, lb, ub) );
+               SCIPdebugMessage("variable <%s> Local Bounds are [%g,%g]\n", SCIPvarGetName(var), lb, ub);
 
-            /* the number of integers laying in the interval [lb,ub] is (ub - lb + 1); to make everything integral we
-             * add another 0.5 and cut the fractional part off
-             */
-            multInt(&newsols, (SCIP_Longint)(ub - lb + 1.5) );
+               assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+               assert( SCIPisFeasIntegral(scip, lb) );
+               assert( SCIPisFeasIntegral(scip, ub) );
+               assert( SCIPisFeasIntegral(scip, ub - lb) );
+               assert( SCIPisFeasLT(scip, lb, ub) );
+
+               /* the number of integers laying in the interval [lb,ub] is (ub - lb + 1); to make everything integral we
+                * add another 0.5 and cut the fractional part off
+                */
+               multInt(&newsols, (SCIP_Longint)(ub - lb + 1.5) );  /*lint !e545*/
+            }
          }
       }
 
@@ -763,13 +777,13 @@ SCIP_RETCODE countSparseSol(
          SCIP_CALL( collectSolution(scip, conshdlrdata, NULL) );
       }
 
-      addInt(&conshdlrdata->nsols, &newsols);
-      freeInt(&newsols);
+      addInt(&conshdlrdata->nsols, &newsols); /*lint !e545*/
+      freeInt(&newsols); /*lint !e545*/
    }
    else if(!conshdlrdata->discardsols)
    {
       SCIP_CALL( conshdlrdata->cutoffSolution(scip, sol, conshdlrdata) );
-      addOne(&conshdlrdata->nsols);
+      addOne(&conshdlrdata->nsols); /*lint !e545*/
       conshdlrdata->nNonSparseSols++;
       if( conshdlrdata->collect )
       {
@@ -1002,7 +1016,6 @@ SCIP_RETCODE checkBounddisjunction(
       for( v = nvars-1; v >= 0 && !satisfiedbound; --v )
       {
          SCIPdebug( SCIPprintVar(scip, vars[v], NULL) );
-         assert( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS );
 
          /* variable should be in right bounds to delete constraint */
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
@@ -1157,7 +1170,6 @@ SCIP_RETCODE checkFeasSubtree(
 
          if( strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0 )
          {
-
             SCIP_CALL( checkLogicor(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
             {
@@ -1271,7 +1283,7 @@ SCIP_RETCODE checkSolution(
       /* check solution original space */
       checkSolutionOrig(scip, sol, conshdlrdata);
 
-      addOne(&conshdlrdata->nsols);
+      addOne(&conshdlrdata->nsols); /*lint !e545*/
       conshdlrdata->nNonSparseSols++;
 
       SCIPdebugMessage("-> add one to number of solutions\n");
@@ -1292,7 +1304,7 @@ SCIP_RETCODE checkSolution(
       /* since all integer are fixed we cut off the subtree */
       *result = SCIP_CUTOFF;
    }
-   else if( conshdlrdata->sparsetest && !conshdlrdata->continuous )
+   else if( conshdlrdata->sparsetest )
    {
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparseSol(scip, sol, feasible, conshdlrdata, result) );
@@ -1367,7 +1379,7 @@ SCIP_DECL_CONSFREE(consFreeCountsols)
    assert(conshdlrdata != NULL);
 
    /* free conshdlrdata */
-   freeInt(&conshdlrdata->nsols);
+   freeInt(&conshdlrdata->nsols); /*lint !e545*/
 
    assert( conshdlrdata->solutions == NULL );
    assert( conshdlrdata->nsolutions == 0 );
@@ -1395,7 +1407,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
    conshdlrdata->feasST = 0;             /* number of non trivial unrestricted subtrees */
    conshdlrdata->nDiscardSols = 0;       /* number of discard solutions */
    conshdlrdata->nNonSparseSols = 0;     /* number of non sparse solutions */
-   setInt(&conshdlrdata->nsols, 0LL);    /* number of solutions */
+   setInt(&conshdlrdata->nsols, 0LL);    /* number of solutions */  /*lint !e545*/
 
    conshdlrdata->solutions = NULL;
    conshdlrdata->nsolutions = 0;
@@ -1431,8 +1443,11 @@ SCIP_DECL_CONSINIT(consInitCountsols)
             /* capture variable to ensure that the variable will not be deleted */
             SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->allvars[nallvars]) );
 
-            /* lock variable to avoid dual reductions */
-            SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->allvars[nallvars], 1, 1) );
+            if( strncmp(SCIPvarGetName(conshdlrdata->allvars[nallvars]), "t_andresultant_", strlen("t_andresultant_")) != 0 )
+            {
+               /* lock variable to avoid dual reductions */
+               SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->allvars[nallvars], 1, 1) );
+            }
 
             nallvars++;
          }
@@ -1481,8 +1496,11 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
       /* release and unlock all variables */
       for( v = 0; v < conshdlrdata->nallvars; ++v )
       {
-         /* remove the previously added variable locks */
-         SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->allvars[v], -1, -1) );
+         if( strncmp(SCIPvarGetName(conshdlrdata->allvars[v]), "t_andresultant_", strlen("t_andresultant_")) != 0 )
+         {
+            /* remove the previously added variable locks */
+            SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->allvars[v], -1, -1) );
+         }
 
          SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->allvars[v]) );
       }
@@ -1532,20 +1550,58 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 
    if( conshdlrdata->active )
    {
+      SCIP_VAR** vars;
       int v;
 
       assert(conshdlrdata->nsolutions == 0);
       assert(conshdlrdata->solutions == NULL);
 
       conshdlrdata->nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+      vars = SCIPgetVars(scip);
+
+      /* exclude upgrade continuous original variables */
+      for( v = conshdlrdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_VAR* origvar;
+         SCIP_Real scalar = 1.0;
+         SCIP_Real constant = 0.0;
+
+         origvar = vars[v];
+
+         /* get original variable to decide if we will count the domain; continuous variables aren't counted */
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
+         if( origvar != NULL && SCIPvarGetType(origvar) != SCIP_VARTYPE_CONTINUOUS )
+            break;
+      }
+      conshdlrdata->nvars = v + 1;
+
+      /* @todo we need to forbid variable downgrading, from integer type to implicit integer type, e.g. done in
+       *       cons_linear
+       */
+#ifndef NDEBUG
+      for( v = conshdlrdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_VAR* origvar;
+         SCIP_Real scalar = 1.0;
+         SCIP_Real constant = 0.0;
+
+         origvar = vars[v];
+
+         /* get original variable to decide if we will count the domain; continuous variables aren't counted */
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
+         assert(origvar != NULL && SCIPvarGetType(origvar) != SCIP_VARTYPE_CONTINUOUS);
+      }
+#endif
 
       /* copy array of active variables */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(conshdlrdata->vars), SCIPgetVars(scip), conshdlrdata->nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(conshdlrdata->vars), vars, conshdlrdata->nvars) );
 
       /* store mapping from all active variables to their position afetr presolving because during solving new variables
        * might be added and therefore could destroy writing collected solutions
        */
-      SCIP_CALL( SCIPhashmapCreate(&(conshdlrdata->hashmap), SCIPblkmem(scip), 5 * conshdlrdata->nvars) );
+      SCIP_CALL( SCIPhashmapCreate(&(conshdlrdata->hashmap), SCIPblkmem(scip), 5 * conshdlrdata->nvars + 1) );
 
       /* add variables to hashmap */
       for( v = conshdlrdata->nvars - 1; v >= 0; --v )
@@ -1566,22 +1622,28 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 }
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#ifndef NDEBUG
 static
 SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 {  /*lint --e{715}*/
-   SCIP_Bool collect;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/collect", &collect) );
-   if( collect )
-      assert(!restart);
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(nconss == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL );
+
+   if( conshdlrdata->active && restart )
+   {
+      SCIPerrorMessage("When collecting and counting solutions restarts need to be disabled (presolving/maxrestarts = 0).\n");
+      SCIPABORT();
+      return SCIP_INVALIDCALL; /*lint !e527*/
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolCountsols NULL
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -1746,9 +1808,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
@@ -1772,10 +1837,25 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displaygap;
    int displaysols;
    int displayfeasST;
+   int nrestarts;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &nrestarts) );
+
+   if( nrestarts != 0 )
+   {
+      /* need to disabled restarts, since collecting solutions won't work but also the captures for variables are not
+       * correctly handled
+       */
+      SCIPwarningMessage(scip, "counting forces parameter <presolving/maxrestarts> to 0\n");
+      if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
+      }
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+   }
 
    switch( SCIPgetStage(scip) )
    {
@@ -1904,9 +1984,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
@@ -1983,7 +2066,7 @@ SCIP_RETCODE writeExpandedSolutions(
    /* loop over all sparse solutions */
    for( s = 0; s < nsols; ++s )
    {
-      sparsesol = sols[s];
+      sparsesol = sols[s]; /*lint !e613*/
       assert(sparsesol != NULL);
       assert(SCIPsparseSolGetNVars(sparsesol) == nactivevars);
 
@@ -2011,13 +2094,14 @@ SCIP_RETCODE writeExpandedSolutions(
             int idx;
             int i;
 
-            vars[0] = allvars[v];
+            vars[0] = allvars[v]; /*lint !e613*/
             scalars[0] = 1.0;
             nvars = 1;
             constant = 0.0;
 
             SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, nallvars, &constant, &requiredsize, TRUE) );
             assert(requiredsize <= nallvars);
+            assert(nvars <= nactivevars);
 
             realvalue = constant;
 
@@ -2026,7 +2110,7 @@ SCIP_RETCODE writeExpandedSolutions(
                assert(SCIPhashmapExists(hashmap, vars[i]));
                idx = ((int) (size_t)SCIPhashmapGetImage(hashmap, vars[i])) - 1;
                assert(0 <= idx && idx < nactivevars);
-               assert(activevars[idx] == vars[i]);
+               assert(activevars[idx] == vars[i]); /*lint !e613*/
 
                objval += SCIPvarGetObj(vars[i]) * sol[idx];
                realvalue += scalars[i] * sol[idx];
@@ -2197,7 +2281,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                retcode = SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars);
                if( retcode != SCIP_OKAY )
                {
-                  fclose(file);
+                  fclose(file); /*lint !e449*/
                   SCIP_CALL( retcode );
                }
 
@@ -2415,9 +2499,7 @@ SCIP_RETCODE includeConshdlrCountsols(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCountsols, consCopyCountsols) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitCountsols) );
-#ifndef NDEBUG
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCountsols) );
-#endif
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCountsols) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitCountsols) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolCountsols) );
@@ -2459,9 +2541,15 @@ SCIP_RETCODE includeConshdlrCountsols(
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
 
 #ifdef WITH_GMP
-   /* add info that about using GMP to external codes information */
-   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %d.%d.%d", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL);
+#ifdef mpir_version
+   /* add info about using MPIR to external codes information */
+   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "MPIR %s", mpir_version);
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "Multiple Precision Integers and Rationals Library developed by W. Hart (mpir.org)") );
+#else
+   /* add info about using GMP to external codes information */
+   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %s", gmp_version);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
+#endif
 #endif
 
    return SCIP_OKAY;
@@ -2550,7 +2638,11 @@ void SCIPgetNCountedSolsstr(
    assert( conshdlrdata != NULL );
 
 #ifdef WITH_GMP
-   *requiredsize = mpz_sizeinbase( conshdlrdata->nsols, 10 );
+   /* size must be by two larger than the length of the string, since there need to be storage for a sign and a
+    * null-termination
+    */
+   assert(0 <= (int) (mpz_sizeinbase( conshdlrdata->nsols, 10 ) + 2));
+   *requiredsize = (int) (mpz_sizeinbase( conshdlrdata->nsols, 10 ) + 2);
    if( *requiredsize <= buffersize)
       toString(conshdlrdata->nsols, buffer, buffersize);
 #else

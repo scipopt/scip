@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,14 +47,9 @@
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
 #include "IpJournalist.hpp"
-/* only for Ipopt >= 3.10 we can be sure that the required header files are available */
-#ifdef IPOPT_VERSION_MAJOR
-#if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
-#endif
-#endif
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
@@ -1989,11 +1984,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
 {
-#ifdef IPOPT_VERSION
-   return "Ipopt "IPOPT_VERSION;
-#else
-   return "Ipopt < 3.9.0";
-#endif
+   return "Ipopt " IPOPT_VERSION;
 }
 
 /** gets string that describes Ipopt (version number) */
@@ -2494,8 +2485,6 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    )
 {
-#ifdef IPOPT_VERSION_MAJOR
-#if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
    if( nlpiproblem->storeintermediate && mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
    {
       Ipopt::TNLPAdapter* tnlp_adapter;
@@ -2546,8 +2535,6 @@ bool ScipNLP::intermediate_callback(
 
       }
    }
-#endif
-#endif
 
    /* do convergence test if fastfail is enabled */
    if( nlpiproblem->fastfail )
@@ -2707,8 +2694,14 @@ void ScipNLP::finalize_solution(
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
    case INTERNAL_ERROR:
+   case INVALID_OPTION:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+      break;
+
+   case OUT_OF_MEMORY:
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
       break;
 
    default:

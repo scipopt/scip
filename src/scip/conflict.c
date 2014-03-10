@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -183,7 +183,7 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
-#if 1
+#ifndef SCIP_CONFGRAPH_EDGE
    SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
 #else
    SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
@@ -192,7 +192,7 @@ void confgraphWriteEdge(
 
 /** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
 static
-void confgraphCreate(
+SCIP_RETCODE confgraphCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -210,7 +210,8 @@ void confgraphCreate(
    if( confgraphfile == NULL )
    {
       SCIPerrorMessage("cannot open graph file <%s>\n", fname);
-      SCIPABORT();
+      SCIPABORT(); /*lint !e527*/
+      return SCIP_WRITEERROR;
    }
 
    SCIPgmlWriteOpening(confgraphfile, TRUE);
@@ -218,6 +219,8 @@ void confgraphCreate(
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
+
+   return SCIP_OKAY;
 }
 
 /** closes conflict graph file */
@@ -1790,6 +1793,10 @@ SCIP_RETCODE detectImpliedBounds(
    SCIP_Bool* boundtypes;
    SCIP_Real* bounds;
    SCIP_Longint* nbinimpls;
+   int* sortvals;
+   SCIP_Real bound;
+   SCIP_Bool isupper;
+   int ntrivialredvars;
    int nbdchginfos;
    int nzeroimpls;
    int v;
@@ -1812,26 +1819,66 @@ SCIP_RETCODE detectImpliedBounds(
    if( *redundant )
       return SCIP_OKAY;
 
-   /* do not check to big conflicts */
-   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds )
-      return SCIP_OKAY;
-
    bdchginfos = conflictset->bdchginfos;
    relaxedbds = conflictset->relaxedbds;
    nbdchginfos = conflictset->nbdchginfos;
+   sortvals = conflictset->sortvals;
 
    assert(bdchginfos != NULL);
    assert(relaxedbds != NULL);
+   assert(sortvals != NULL);
+
+   /* check if the boolean representation of boundtypes matches the 'standard' definition */
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641*/
+
+   ntrivialredvars = 0;
+
+   /* due to multiple conflict sets for one conflict, it can happen, that we already have redundant information in the
+    * conflict set
+    */
+   for( v = nbdchginfos - 1; v >= 0; --v )
+   {
+      var = SCIPbdchginfoGetVar(bdchginfos[v]);
+      bound = relaxedbds[v];
+      isupper = (SCIP_Bool) SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[v]));
+
+      /* for integral variable we can increase/decrease the conflicting bound */
+      if( SCIPvarIsIntegral(var) )
+         bound += (isupper ? -1.0 : +1.0);
+
+      /* if conflict variable cannot fulfill the conflict we can remove it */
+      if( (isupper && SCIPsetIsFeasLT(set, bound, SCIPvarGetLbGlobal(var))) ||
+         (!isupper && SCIPsetIsFeasGT(set, bound, SCIPvarGetUbGlobal(var))) )
+      {
+         SCIPdebugMessage("remove redundant variable <%s> from conflict set\n", SCIPvarGetName(var));
+
+         bdchginfos[v] = bdchginfos[nbdchginfos - 1];
+         relaxedbds[v] = relaxedbds[nbdchginfos - 1];
+         sortvals[v] = sortvals[nbdchginfos - 1];
+
+         --nbdchginfos;
+         ++ntrivialredvars;
+      }
+   }
+   assert(ntrivialredvars + nbdchginfos == conflictset->nbdchginfos);
+
+   SCIPdebugMessage("trivially removed %d redundant of %d variables from conflictset (%p)\n", ntrivialredvars, conflictset->nbdchginfos, (void*)conflictset);
+   conflictset->nbdchginfos = nbdchginfos;
+   assert(conflictset->nbdchginfos > 0);
+
+   /* do not check to big or trivial conflicts */
+   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos == 1 )
+   {
+      *nredvars = ntrivialredvars;
+      return SCIP_OKAY;
+   }
 
    /* create array of boundtypes, and bound values in conflict set */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypes, nbdchginfos) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bounds, nbdchginfos) );
    /* memory for the estimates for binary implications used for sorting */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &nbinimpls, nbdchginfos) );
-
-   /* check if the boolean representation of boundtypes matches the 'standard' definition */
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641*/
 
    nzeroimpls = 0;
 
@@ -1930,13 +1977,13 @@ SCIP_RETCODE detectImpliedBounds(
       }
       else if( *nredvars > 0 )
       {
-         int* sortvals = conflictset->sortvals;
 #ifdef SCIP_DEBUG
          int nvars;
 #endif
 
-         assert(sortvals != NULL);
+         assert(bdchginfos == conflictset->bdchginfos);
          assert(relaxedbds == conflictset->relaxedbds);
+         assert(sortvals == conflictset->sortvals);
 
          for( v = nbdchginfos - 1; v >= 0; --v )
          {
@@ -1995,6 +2042,8 @@ SCIP_RETCODE detectImpliedBounds(
    SCIPsetFreeBufferArray(set, &nbinimpls);
    SCIPsetFreeBufferArray(set, &bounds);
    SCIPsetFreeBufferArray(set, &boundtypes);
+
+   *nredvars += ntrivialredvars;
 
    return SCIP_OKAY;
 }
@@ -2071,13 +2120,14 @@ SCIP_RETCODE conflictAddConflictCons(
    }
 
    /* in case the conflict set contains only one bound change which is globally valid we apply that bound change
-    * directly (except if we are in strong branching - in this case a bound change would yield an unflushed LP)
+    * directly (except if we are in strong branching or diving - in this case a bound change would yield an unflushed LP
+    * and is not handled when restoring the information)
     *
     * @note A bound change can only be applied if it is are related to the active node or if is a global bound
     *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
     *       data structure
     */
-   if( conflictset->nbdchginfos == 1 && insertdepth == 0 && ! lp->strongbranching )
+   if( conflictset->nbdchginfos == 1 && insertdepth == 0 && !lp->strongbranching && !lp->diving )
    {
       SCIP_VAR* var;
       SCIP_Real bound;
@@ -2630,7 +2680,7 @@ SCIP_RETCODE SCIPconflictInit(
 
 #ifdef SCIP_CONFGRAPH
    confgraphFree();
-   confgraphCreate(set, conflict);
+   SCIP_CALL( confgraphCreate(set, conflict) );
 #endif
 
    return SCIP_OKAY;
@@ -5959,8 +6009,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(lp != NULL);
    assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
-   if( success != NULL )
-      *success = FALSE;
+   assert(success == NULL || *success == FALSE);
 
    /* check, if infeasible LP conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useinflp )
@@ -6028,8 +6077,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    assert(!SCIPlpDivingObjChanged(lp));
    assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
-   if( success != NULL )
-      *success = FALSE;
+   assert(success == NULL || *success == FALSE);
 
    /* check, if bound exceeding LP conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useboundlp )
@@ -6091,10 +6139,22 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    int c;
    int r;
 
+   if( success != NULL )
+      *success = FALSE;
+
+   /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
+    * happens when a new incumbent which cuts off the current node is found during the LP solving loop; in this case the
+    * LP has status objlimit, but if diving has been used, the LPI only has the basis information, but is not solved
+    *
+    * @todo: alternatively, solve the LPI
+    */
+   if( !SCIPlpiWasSolved(SCIPlpGetLPI(lp)) )
+      return SCIP_OKAY;
+
    /* LP conflict analysis is only valid, if all variables are known */
    assert( SCIPprobAllColsInLP(transprob, set, lp) );
    assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
-      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff) );
+      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
 
    /* save status */
    storedsolvals.lpsolstat = lp->lpsolstat;
@@ -6116,7 +6176,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
 
       storedcolsolvals[c].primsol = col->primsol;
       storedcolsolvals[c].redcost = col->redcost;
-      storedcolsolvals[c].basisstatus = col->basisstatus; /*lint !e641*/
+      storedcolsolvals[c].basisstatus = col->basisstatus; /*lint !e641 !e732*/
    }
    for (r = 0; r < lp->nrows; ++r)
    {
@@ -6129,12 +6189,12 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          storedrowsolvals[r].dualsol = row->dualfarkas;
       else
       {
-         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
-            || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff) );
+         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+            (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
          storedrowsolvals[r].dualsol = row->dualsol;
       }
       storedrowsolvals[r].activity = row->activity;
-      storedrowsolvals[r].basisstatus = row->basisstatus; /*lint !e641*/
+      storedrowsolvals[r].basisstatus = row->basisstatus; /*lint !e641 !e732*/
    }
 
    /* check, if the LP was infeasible or bound exceeding */
@@ -6166,7 +6226,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          assert( col != NULL );
          col->primsol = storedcolsolvals[c].primsol;
          col->redcost = storedcolsolvals[c].redcost;
-         col->basisstatus = storedcolsolvals[c].basisstatus; /*lint !e641*/
+         col->basisstatus = storedcolsolvals[c].basisstatus; /*lint !e641 !e732*/
       }
       for (r = 0; r < lp->nrows; ++r)
       {
@@ -6183,7 +6243,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
             row->dualsol = storedrowsolvals[r].dualsol;
          }
          row->activity = storedrowsolvals[r].activity;
-         row->basisstatus = storedrowsolvals[r].basisstatus; /*lint !e641*/
+         row->basisstatus = storedrowsolvals[r].basisstatus; /*lint !e641 !e732*/
       }
    }
    SCIPsetFreeBufferArray(set, &storedrowsolvals);
