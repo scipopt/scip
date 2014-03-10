@@ -1300,25 +1300,31 @@ SCIP_RETCODE copyCuts(
    for( c = 0; c < ncuts; ++c )
    {
       SCIP_ROW* row;
-      SCIP_Longint nlpsaftercreation;
-      SCIP_Longint activeinlpcounter;
       SCIP_Bool takecut;
+      SCIP_CUT* cut;
 
-      row = SCIPcutGetRow(cuts[c]); /*lint !e613*/
+      cut = cuts[c];
+      assert(cut != NULL);
+
+      row = SCIPcutGetRow(cut); /*lint !e613*/
       assert(!SCIProwIsLocal(row));
       assert(!SCIProwIsModifiable(row));
 
-      nlpsaftercreation = SCIPcutGetNLPsAfterCreation(cuts[c]);
-      activeinlpcounter = SCIPcutGetActiveLPCount(cuts[c]);
 
-      /* in case of a restart, convert the cuts with a good LP activity quotient; in other cases, e.g., when heuristics
-       * copy cuts into subscips, take only currently active ones
+      /* trigger cut conversion into linear constraints of target scip based on separating/activityconversion. if
+       * parameter is set to TRUE, in case of a restart, convert the cuts with a good LP activity quotient;
+       * if the parameter is set to FALSE or in other as the above case, e.g., when heuristics copy cuts into subscips,
+       * take only currently active ones
        */
-      if( sourcescip == targetscip )
+      if( targetscip->set->sepa_activityconversion && sourcescip == targetscip )
       {
          SCIP_Real quotient;
+         SCIP_Longint nlpsaftercreation;
+         SCIP_Longint activeinlpcounter;
 
          assert( SCIPisInRestart(sourcescip) );
+         nlpsaftercreation = SCIPcutGetNLPsAfterCreation(cut);
+         activeinlpcounter = SCIPcutGetActiveLPCount(cut);
          quotient = nlpsaftercreation > 0 ? activeinlpcounter / (SCIP_Real)nlpsaftercreation : 0;
          takecut = quotient >= targetscip->set->sepa_minactivityquot;
 
@@ -1329,7 +1335,6 @@ SCIP_RETCODE copyCuts(
 
       /* create a linear constraint out of the cut */
       if( takecut )
-//      if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) ) /*lint !e613*/
       {
          char name[SCIP_MAXSTRLEN];
          SCIP_CONS* cons;

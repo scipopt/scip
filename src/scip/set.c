@@ -312,6 +312,8 @@
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
+#define SCIP_DEFAULT_SEPA_ACTIVITYCONVERSION FALSE /**< use cut activity in LP to trigger conversion based on minactivityquot
+                                                 *   parameter */
 
 /* Timing */
 
@@ -1690,6 +1692,9 @@ SCIP_RETCODE SCIPsetCreate(
          "factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off)",
          &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
          NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/activityconversion",
+         "use cut activity in LP to trigger conversion based on minactivityquot parameter",
+         &(*set)->sepa_activityconversion, FALSE, SCIP_DEFAULT_SEPA_ACTIVITYCONVERSION, NULL, NULL) );
 
    /* timing parameters */
    assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE));

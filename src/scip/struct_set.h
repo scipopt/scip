@@ -394,6 +394,8 @@ struct SCIP_Set
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
+   SCIP_Bool             sepa_activityconversion; /**< use cut activity in LP to trigger conversion based on minactivityquot
+                                              *   parameter */
 
    /* timing settings */
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
