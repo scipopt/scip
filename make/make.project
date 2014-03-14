@@ -305,6 +305,9 @@ endif
 
 ifeq ($(ZIMPL),auto)
 ZIMPL		=	$(GMP)
+ifeq ($(ZIMPL),false)
+$(warning ZIMPL was deactived because of missing GMP support.)
+endif
 endif
 
 ifeq ($(GMP_LDFLAGS),)
