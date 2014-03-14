@@ -203,6 +203,7 @@ BEGIN {
    if ( $15 in statuses ) # SCIP with median or stddtime (both will not be used)
    {
       # collect data (line with problem type, original and presolved problem size and simplex iterations)
+      name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
       vars[nsolver,nprobs[nsolver]] = $6;
@@ -221,6 +222,7 @@ BEGIN {
    if ( $16 in statuses ) # SCIP with median and stddtime
    {
       # collect data (line with problem type, original and presolved problem size and simplex iterations)
+      name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
       vars[nsolver,nprobs[nsolver]] = $6;
