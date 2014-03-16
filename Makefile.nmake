@@ -149,14 +149,9 @@ NLPILIBSCIPOBJ	=	$(LIBOBJDIR)\blockmemshell\memory.obj \
 
 !if "$(IPOPT)" == "true"
 CPPFLAGS			=	$(CPPFLAGS) /Ilib\ipopt.$(ARCH)\include\coin
+!if "$(ARCH)" == "x86"
 LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
 					lib\ipopt.$(ARCH)\lib\libcoinmumps.lib \
-					lib\mkl.$(ARCH)\mkl_intel_c.lib \
-					lib\mkl.$(ARCH)\mkl_sequential.lib \
-					lib\mkl.$(ARCH)\mkl_core.lib \
-					lib\mkl.$(ARCH)\mkl_intel_c.lib \
-					lib\mkl.$(ARCH)\mkl_sequential.lib \
-					lib\mkl.$(ARCH)\mkl_core.lib \
 					lib\mkl.$(ARCH)\mkl_intel_c.lib \
 					lib\mkl.$(ARCH)\mkl_sequential.lib \
 					lib\mkl.$(ARCH)\mkl_core.lib \
@@ -167,6 +162,21 @@ LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
 					lib\if.$(ARCH)\libirc.lib \
 					lib\if.$(ARCH)\svml_dispmt.lib \
 					$(LDFLAGS)
+!else
+LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
+					lib\ipopt.$(ARCH)\lib\libcoinmumps.lib \
+					lib\mkl.$(ARCH)\mkl_intel_lp64.lib \
+					lib\mkl.$(ARCH)\mkl_sequential.lib \
+					lib\mkl.$(ARCH)\mkl_core.lib \
+					lib\if.$(ARCH)\ifconsol.lib \
+					lib\if.$(ARCH)\libifcoremt.lib \
+					lib\if.$(ARCH)\libifport.lib \
+					lib\if.$(ARCH)\libmmt.lib \
+					lib\if.$(ARCH)\libirc.lib \
+					lib\if.$(ARCH)\svml_dispmt.lib \
+					lib\if.$(ARCH)\libdecimal.lib \
+					$(LDFLAGS)
+!endif
 NLPILIBSHORTNAMEIPOPT	=	.ipopt
 NLPILIBCXXOBJ		=	$(NLPILIBCXXOBJ) $(LIBOBJDIR)\nlpi\nlpi_ipopt.obj
 !else
