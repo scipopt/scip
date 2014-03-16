@@ -82,7 +82,7 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
 GAMS		=	false
-SPX_LEGACY  = false
+SPX_LEGACY  	= 	false
 
 #compiler and linker parameters
 CC		=	gcc
@@ -306,7 +306,9 @@ endif
 ifeq ($(ZIMPL),auto)
 ZIMPL		=	$(GMP)
 ifeq ($(ZIMPL),false)
+ifeq ($(MAKELEVEL),0)
 $(warning ZIMPL was deactived because of missing GMP support.)
+endif
 endif
 endif
 
