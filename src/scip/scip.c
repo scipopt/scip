@@ -1691,6 +1691,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    assert(targetscip != NULL);
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
+   assert(sourcevar->scip == sourcescip);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -15033,6 +15034,7 @@ SCIP_RETCODE SCIPcaptureVar(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcaptureVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   assert(var->scip == scip);
 
    SCIPvarCapture(var);
 
@@ -15067,6 +15069,7 @@ SCIP_RETCODE SCIPreleaseVar(
 {
    assert(var != NULL);
    assert(*var != NULL);
+   assert((*var)->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPreleaseVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
@@ -15117,6 +15120,7 @@ SCIP_RETCODE SCIPchgVarName(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarName", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert( var->scip == scip );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -15343,6 +15347,7 @@ SCIP_RETCODE SCIPgetNegatedVar(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNegatedVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   assert( var->scip == scip );
 
    SCIP_CALL( SCIPvarNegate(var, scip->mem->probmem, scip->set, scip->stat, negvar) );
 
@@ -15416,6 +15421,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    assert(var != NULL);
    assert(repvar != NULL);
    assert(negated != NULL);
+   assert(var->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPgetBinvarRepresentative", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -15673,15 +15679,16 @@ SCIP_Real SCIPgetVarRedcost(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    )
 {
-   assert(scip != NULL);
-   assert(var != NULL);
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( var->scip == scip );
 
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPgetVarRedcost(scip,var->data.original.transvar);
+      return SCIPgetVarRedcost(scip, var->data.original.transvar);
 
    case SCIP_VARSTATUS_COLUMN:
       return SCIPgetColRedcost(scip, SCIPvarGetCol(var));
@@ -15716,6 +15723,10 @@ SCIP_Real SCIPgetVarImplRedcost(
    SCIP_Bool             varfixing           /**< FALSE if for x == 0, TRUE for x == 1 */
    )
 {
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( var->scip == scip );
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -15758,6 +15769,7 @@ SCIP_Real SCIPgetVarFarkasCoef(
 {
    assert(scip != NULL);
    assert(var != NULL);
+   assert(var->scip == scip);
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -15799,6 +15811,7 @@ SCIP_Real SCIPgetVarSol(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   assert( var->scip == scip );
 
    return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
 }
@@ -16075,6 +16088,7 @@ SCIP_Real SCIPgetRelaxSolVal(
 {
    assert(scip != NULL);
    assert(var != NULL);
+   assert(var->scip == scip);
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRelaxSolVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -16380,6 +16394,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    assert(var != NULL);
    assert(lperror != NULL);
    assert(!SCIPtreeProbing(scip->tree)); /* we should not be in strong branching with propagation mode */
+   assert(var->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -16826,6 +16841,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    assert(lperror != NULL);
    assert((newlbs != NULL) == (newubs != NULL));
    assert(SCIPinProbing(scip));
+   assert(var->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -17092,9 +17108,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
 {
    SCIP_COL* col;
 
-   assert(lperror != NULL);
-
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(lperror != NULL);
+   assert(var->scip == scip);
 
    if( downvalid != NULL )
       *downvalid = FALSE;
@@ -17180,10 +17197,9 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    SCIP_COL** cols;
    int j;
 
-   assert(lperror != NULL);
-
    SCIP_CALL( checkStage(scip, "SCIPgetVarsStrongbranchesFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( lperror != NULL );
    assert( vars != NULL );
 
    /* set up data */
@@ -17434,6 +17450,8 @@ SCIP_Longint SCIPgetVarStrongbranchNode(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarStrongbranchNode", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return -1;
 
@@ -17466,6 +17484,8 @@ SCIP_Longint SCIPgetVarStrongbranchLPAge(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarStrongbranchLPAge", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return SCIP_LONGINT_MAX;
 
@@ -17495,6 +17515,8 @@ int SCIPgetVarNStrongbranchs(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarNStrongbranchs", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return 0;
@@ -17528,6 +17550,8 @@ SCIP_RETCODE SCIPaddVarLocks(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+
+   assert( var->scip == scip );
 
    switch( scip->set->stage )
    {
@@ -17584,6 +17608,8 @@ SCIP_RETCODE SCIPlockVarCons(
    int nlocksup;
 
    SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+
+   assert( var->scip == scip );
 
    nlocksdown = 0;
    nlocksup = 0;
@@ -17656,6 +17682,8 @@ SCIP_RETCODE SCIPunlockVarCons(
 
    SCIP_CALL( checkStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
+   assert( var->scip == scip );
+
    nlocksdown = 0;
    nlocksup = 0;
    if( SCIPconsIsLockedPos(cons) )
@@ -17713,6 +17741,8 @@ SCIP_RETCODE SCIPchgVarObj(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -17748,6 +17778,8 @@ SCIP_RETCODE SCIPaddVarObj(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    switch( scip->set->stage )
    {
@@ -20440,6 +20472,8 @@ SCIP_RETCODE SCIPchgVarBranchPriority(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( SCIPisTransformed(scip)  )
    {
       assert(scip->branchcand != NULL);
@@ -20479,6 +20513,8 @@ SCIP_RETCODE SCIPupdateVarBranchPriority(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( branchpriority > SCIPvarGetBranchPriority(var) )
    {
       SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
@@ -20510,6 +20546,8 @@ SCIP_RETCODE SCIPaddVarBranchPriority(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPvarChgBranchPriority(var, addpriority + SCIPvarGetBranchPriority(var)) );
 
    return SCIP_OKAY;
@@ -20539,6 +20577,8 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBranchDirection", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPvarChgBranchDirection(var, branchdirection) );
 
    return SCIP_OKAY;
@@ -20557,6 +20597,7 @@ SCIP_RETCODE tightenBounds(
    assert(scip != NULL);
    assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPvarIsTransformed(var));
+   assert(var->scip == scip);
 
    *infeasible = FALSE;
 
@@ -20625,9 +20666,10 @@ SCIP_RETCODE SCIPchgVarType(
                                               *   integrality condition of the new variable type) */
    )
 {
-   assert(var != NULL);
-
    SCIP_CALL( checkStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(var != NULL);
+   assert(var->scip == scip);
 
    /* change variable type */
    switch( scip->set->stage )
@@ -20951,6 +20993,8 @@ SCIP_RETCODE SCIPmultiaggregateVar(
 {
    SCIP_CALL( checkStage(scip, "SCIPmultiaggregateVar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert(var->scip == scip);
+
    if( SCIPtreeProbing(scip->tree) )
    {
       SCIPerrorMessage("cannot multi-aggregate variables during probing\n");
@@ -20993,6 +21037,7 @@ SCIP_Bool SCIPdoNotMultaggrVar(
 {
    assert(scip != NULL);
    assert(var != NULL);
+   assert(var->scip == scip);
 
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
@@ -21021,6 +21066,7 @@ SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
 {
    assert(scip != NULL);
    assert(var != NULL);
+   assert(var->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPmarkDoNotMultaggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
@@ -21115,6 +21161,8 @@ SCIP_Real SCIPgetVarPseudocostVal(
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
+   assert( var->scip == scip );
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostVal", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
@@ -21141,8 +21189,10 @@ SCIP_Real SCIPgetVarPseudocostValCurrentRun(
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
+   assert( var->scip == scip );
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostValCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
- 
+
    return SCIPvarGetPseudocostCurrentRun(var, scip->stat, solvaldelta);
 }
 
@@ -21167,6 +21217,7 @@ SCIP_Real SCIPgetVarPseudocost(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocost", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert(var->scip == scip);
 
    return SCIPvarGetPseudocost(var, scip->stat, dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
 }
@@ -21194,7 +21245,8 @@ SCIP_Real SCIPgetVarPseudocostCurrentRun(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
-   
+   assert(var->scip == scip);
+
    return SCIPvarGetPseudocostCurrentRun(var, scip->stat, dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
 }
 
@@ -21219,6 +21271,7 @@ SCIP_Real SCIPgetVarPseudocostCount(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert(var->scip == scip);
 
    return SCIPvarGetPseudocostCount(var, dir);
 }
@@ -21246,6 +21299,7 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert(var->scip == scip);
 
    return SCIPvarGetPseudocostCountCurrentRun(var, dir);
 }
@@ -21275,6 +21329,8 @@ SCIP_Real SCIPgetVarPseudocostScore(
    SCIP_Real pscostup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    downsol = SCIPsetFeasCeil(scip->set, solval-1.0);
    upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
@@ -21312,6 +21368,8 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    downsol = SCIPsetFeasCeil(scip->set, solval-1.0);
    upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
    pscostdown = SCIPvarGetPseudocostCurrentRun(var, scip->stat, downsol-solval);
@@ -21340,7 +21398,9 @@ SCIP_Real SCIPgetVarVSIDS(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarVSIDS", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
+   assert( var->scip == scip );
+
    return SCIPvarGetVSIDS(var, scip->stat, dir);
 }
 
@@ -21364,6 +21424,8 @@ SCIP_Real SCIPgetVarVSIDSCurrentRun(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarVSIDSCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    return SCIPvarGetVSIDSCurrentRun(var, scip->stat, dir);
 }
@@ -21390,6 +21452,8 @@ SCIP_Real SCIPgetVarConflictScore(
    SCIP_Real upscore;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    downscore = SCIPvarGetVSIDS(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    upscore = SCIPvarGetVSIDS(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
@@ -21420,6 +21484,8 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    downscore = SCIPvarGetVSIDSCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    upscore = SCIPvarGetVSIDSCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
@@ -21448,6 +21514,8 @@ SCIP_Real SCIPgetVarConflictlengthScore(
    SCIP_Real upscore;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictlengthScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    downscore = SCIPvarGetAvgConflictlength(var, SCIP_BRANCHDIR_DOWNWARDS);
    upscore = SCIPvarGetAvgConflictlength(var, SCIP_BRANCHDIR_UPWARDS);
@@ -21478,6 +21546,8 @@ SCIP_Real SCIPgetVarConflictlengthScoreCurrentRun(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictlengthScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    downscore = SCIPvarGetAvgConflictlengthCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
    upscore = SCIPvarGetAvgConflictlengthCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
 
@@ -21505,6 +21575,8 @@ SCIP_Real SCIPgetVarAvgConflictlength(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgConflictlength", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPvarGetAvgConflictlength(var, dir);
 }
 
@@ -21528,6 +21600,8 @@ SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgConflictlengthCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    return SCIPvarGetAvgConflictlengthCurrentRun(var, dir);
 }
@@ -21555,6 +21629,8 @@ SCIP_Real SCIPgetVarAvgInferences(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgInferences", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPvarGetAvgInferences(var, scip->stat, dir);
 }
 
@@ -21581,6 +21657,8 @@ SCIP_Real SCIPgetVarAvgInferencesCurrentRun(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgInferencesCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, dir);
 }
 
@@ -21606,6 +21684,8 @@ SCIP_Real SCIPgetVarAvgInferenceScore(
    SCIP_Real inferup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    inferdown = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    inferup = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
@@ -21635,6 +21715,8 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    SCIP_Real inferup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    inferdown = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    inferup = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
@@ -21736,6 +21818,8 @@ SCIP_Real SCIPgetVarAvgCutoffs(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPvarGetAvgCutoffs(var, scip->stat, dir);
 }
 
@@ -21762,6 +21846,8 @@ SCIP_Real SCIPgetVarAvgCutoffsCurrentRun(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffsCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, dir);
 }
 
@@ -21787,6 +21873,8 @@ SCIP_Real SCIPgetVarAvgCutoffScore(
    SCIP_Real cutoffup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    cutoffdown = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    cutoffup = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
@@ -21816,6 +21904,8 @@ SCIP_Real SCIPgetVarAvgCutoffScoreCurrentRun(
    SCIP_Real cutoffup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    cutoffdown = SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    cutoffup = SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
@@ -21852,6 +21942,8 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScore(
    SCIP_Real cutoffup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceCutoffScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    avginferdown = SCIPhistoryGetAvgInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS);
    avginferup = SCIPhistoryGetAvgInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS);
@@ -21894,6 +21986,8 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
    SCIP_Real cutoffup;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceCutoffScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    avginferdown = SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS);
    avginferup = SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
@@ -22017,6 +22111,8 @@ SCIP_RETCODE SCIPaddConflictLb(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
 
    return SCIP_OKAY;
@@ -22050,6 +22146,8 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx, relaxedlb) );
 
    return SCIP_OKAY;
@@ -22079,6 +22177,8 @@ SCIP_RETCODE SCIPaddConflictUb(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
 
@@ -22114,6 +22214,8 @@ SCIP_RETCODE SCIPaddConflictRelaxedUb(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx, relaxedub) );
 
    return SCIP_OKAY;
@@ -22144,6 +22246,8 @@ SCIP_RETCODE SCIPaddConflictBd(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx) );
 
@@ -22179,6 +22283,8 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedBd", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx, relaxedbd) );
 
    return SCIP_OKAY;
@@ -22207,7 +22313,9 @@ SCIP_RETCODE SCIPaddConflictBinvar(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert(var->scip == scip);
    assert(SCIPvarIsBinary(var));
+
    if( SCIPvarGetLbLocal(var) > 0.5 )
    {
       SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL) );
@@ -22243,6 +22351,8 @@ SCIP_RETCODE SCIPisConflictVarUsed(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisConflictVarUsed", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPconflictIsVarUsed(scip->conflict, var, scip->set, boundtype, bdchgidx, used);
 }
 
@@ -22265,6 +22375,8 @@ SCIP_Real SCIPgetConflictVarLb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarLb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPconflictGetVarLb(scip->conflict, var);
 }
 
@@ -22286,6 +22398,8 @@ SCIP_Real SCIPgetConflictVarUb(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    return SCIPconflictGetVarUb(scip->conflict, var);
 }
@@ -22540,6 +22654,8 @@ SCIP_RETCODE SCIPcaptureCons(
 {
    SCIP_CALL( checkStage(scip, "SCIPcaptureCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert( cons->scip == scip );
+
    SCIPconsCapture(cons);
 
    return SCIP_OKAY;
@@ -22624,6 +22740,8 @@ SCIP_RETCODE SCIPchgConsName(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgConsName", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE , FALSE, FALSE, FALSE) );
+
+   assert( cons->scip == scip );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -22982,6 +23100,7 @@ SCIP_RETCODE SCIPtransformCons(
    )
 {
    assert(transcons != NULL);
+   assert(cons->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPtransformCons", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -23071,6 +23190,7 @@ SCIP_RETCODE SCIPgetTransformedCons(
    )
 {
    assert(transcons != NULL);
+   assert(cons->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPgetTransformedCons", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
@@ -26838,6 +26958,8 @@ SCIP_RETCODE SCIPchgVarObjDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarObjDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
@@ -26866,6 +26988,8 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBoundsDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    if( scip->nlp == NULL )
    {
@@ -30195,6 +30319,7 @@ SCIP_RETCODE SCIPaddExternBranchCand(
    )
 {
    assert(scip != NULL);
+   assert(var->scip == scip);
 
    SCIP_CALL( checkStage(scip, "SCIPaddExternBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -30236,6 +30361,7 @@ SCIP_Bool SCIPcontainsExternBranchCand(
    )
 {
    assert(scip != NULL);
+   assert(var->scip == scip);
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPcontainsExternBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -30378,6 +30504,8 @@ SCIP_Real SCIPgetBranchScore(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBranchScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPbranchGetScore(scip->set, var, downgain, upgain);
 }
 
@@ -30399,6 +30527,8 @@ SCIP_Real SCIPgetBranchScoreMultiple(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBranchScoreMultiple", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPbranchGetScoreMultiple(scip->set, var, nchildren, gains);
 }
 
@@ -30419,6 +30549,8 @@ SCIP_Real SCIPgetBranchingPoint(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBranchingPoint", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    return SCIPbranchGetBranchingPoint(scip->set, scip->tree, var, suggestion);
 }
@@ -30444,6 +30576,8 @@ SCIP_Real SCIPcalcNodeselPriority(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPcalcNodeselPriority", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    return SCIPtreeCalcNodeselPriority(scip->tree, scip->set, scip->stat, var, branchdir, targetvalue);
 }
 
@@ -30465,6 +30599,8 @@ SCIP_Real SCIPcalcChildEstimate(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPcalcChildEstimate", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    return SCIPtreeCalcChildEstimate(scip->tree, scip->set, scip->stat, var, targetvalue);
 }
@@ -30521,7 +30657,9 @@ SCIP_RETCODE SCIPbranchVar(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
+
+   assert( var->scip == scip );
+
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       SCIPerrorMessage("cannot branch on continuous variable <%s>\n", SCIPvarGetName(var));
@@ -30562,6 +30700,8 @@ SCIP_RETCODE SCIPbranchVarHole(
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarHole", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( var->scip == scip );
+
    SCIP_CALL( SCIPtreeBranchVarHole(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
          scip->lp, scip->branchcand, scip->eventqueue, var, left, right, downchild, upchild) );
 
@@ -30594,6 +30734,8 @@ SCIP_RETCODE SCIPbranchVarVal(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    /* A continuous variable will be fixed if SCIPisRelEQ(lb,ub) is true. Otherwise, the given branching value should be
     * such that its value is not equal to one of the bounds. We assert this by requiring that it is at least eps/2 away
@@ -30654,6 +30796,8 @@ SCIP_RETCODE SCIPbranchVarValNary(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarValNary", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
 
    /* see comment in SCIPbranchVarVal */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
@@ -31555,6 +31699,8 @@ SCIP_RETCODE SCIPsetSolVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
@@ -31650,6 +31796,8 @@ SCIP_RETCODE SCIPincSolVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPincSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIPerrorMessage("cannot increase value of transformed variable <%s> in original space solution\n",
@@ -31690,10 +31838,13 @@ SCIP_Real SCIPgetSolVal(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert( var->scip == scip );
+
    if( sol != NULL )
       return SCIPsolGetVal(sol, scip->set, scip->stat, var);
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
 }
 
@@ -33189,6 +33340,7 @@ SCIP_Real SCIPgetPrimalRayVal(
 
    assert(var != NULL);
    assert(scip->primal->primalray != NULL);
+   assert(var->scip == scip);
 
    return SCIPsolGetRayVal(scip->primal->primalray, scip->set, scip->stat, var);
 }
