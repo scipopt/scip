@@ -19362,10 +19362,11 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 #undef SCIPcomputeVarUbLocal
 
 /** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
- * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
  *
- * @return the global lower bound computed by adding the global bounds from all aggregation variables
+ *  This global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal.
+ *
+ *  @return the global lower bound computed by adding the global bounds from all aggregation variables
  */
 SCIP_Real SCIPcomputeVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19382,10 +19383,11 @@ SCIP_Real SCIPcomputeVarLbGlobal(
 }
 
 /** for a multi-aggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
- * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal
  *
- * @return the global upper bound computed by adding the global bounds from all aggregation variables
+ *  This global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal
+ *
+ *  @return the global upper bound computed by adding the global bounds from all aggregation variables
  */
 SCIP_Real SCIPcomputeVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19402,10 +19404,11 @@ SCIP_Real SCIPcomputeVarUbGlobal(
 }
 
 /** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
- * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal
  *
- * @return the local lower bound computed by adding the global bounds from all aggregation variables
+ *  This local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal.
+ *
+ *  @return the local lower bound computed by adding the global bounds from all aggregation variables
  */
 SCIP_Real SCIPcomputeVarLbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19422,10 +19425,11 @@ SCIP_Real SCIPcomputeVarLbLocal(
 }
 
 /** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
- * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal
  *
- * @return the local upper bound computed by adding the global bounds from all aggregation variables
+ *  This local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal.
+ *
+ *  @return the local upper bound computed by adding the global bounds from all aggregation variables
  */
 SCIP_Real SCIPcomputeVarUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -26066,8 +26070,8 @@ SCIP_RETCODE SCIPprintRow(
 
 /** returns whether the NLP relaxation has been enabled
  *
- * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
- * To check whether an NLP is existing, use SCIPisNLPConstructed().
+ *  If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ *  To check whether an NLP is existing, use SCIPisNLPConstructed().
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -26077,7 +26081,7 @@ SCIP_RETCODE SCIPprintRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- * @see SCIPenableNLP
+ *  @see SCIPenableNLP
  */
 SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
@@ -26090,9 +26094,9 @@ SCIP_Bool SCIPisNLPEnabled(
 
 /** marks that there are constraints that are representable by nonlinear rows
  *
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
+ *  This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
  *
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ *  The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -26887,8 +26891,7 @@ SCIP_RETCODE SCIPgetNLPI(
 /**@name NLP Diving Methods */
 /**@{ */
 
-/** initiates NLP diving
- * making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
+/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -26915,7 +26918,8 @@ SCIP_RETCODE SCIPstartDiveNLP(
 }
 
 /** ends NLP diving
- * resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP()
+ *
+ *  Resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -27322,8 +27326,9 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
 }
 
 /** changes linear coefficient of a variables in a row
- * setting the coefficient to 0.0 means that it is removed from the row
- * the variable does not need to exists before
+ *
+ *  Setting the coefficient to 0.0 means that it is removed from the row
+ *  the variable does not need to exists before.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -27350,7 +27355,8 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
 }
 
 /** adds quadratic variable to the nonlinear row
- * after adding a quadratic variable, it can be used to add quadratic elements
+ *
+ *  After adding a quadratic variable, it can be used to add quadratic elements.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -27374,7 +27380,8 @@ SCIP_RETCODE SCIPaddQuadVarToNlRow(
 }
 
 /** adds quadratic variables to the nonlinear row
- * after adding quadratic variables, they can be used to add quadratic elements
+ *
+ *  After adding quadratic variables, they can be used to add quadratic elements.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -27407,7 +27414,8 @@ SCIP_RETCODE SCIPaddQuadVarsToNlRow(
 }
 
 /** add a quadratic element to the nonlinear row
- * variable indices of the quadratic element need to be relative to quadratic variables array of row
+ *
+ *  Variable indices of the quadratic element need to be relative to quadratic variables array of row.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -27431,7 +27439,8 @@ SCIP_RETCODE SCIPaddQuadElementToNlRow(
 }
 
 /** adds quadratic elements to the nonlinear row
- * variable indices of the quadratic elements need to be relative to quadratic variables array of row
+ *
+ *  Variable indices of the quadratic elements need to be relative to quadratic variables array of row.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -27464,8 +27473,9 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
 }
 
 /** changes coefficient in quadratic part of a row
- * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
- * the element does not need to exists before
+ *
+ *  Setting the coefficient in the quadelement to 0.0 means that it is removed from the row
+ *  the element does not need to exists before.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -30533,7 +30543,8 @@ SCIP_Real SCIPgetBranchScoreMultiple(
 }
 
 /** computes a branching point for a continuous or discrete variable
- * @see SCIPbranchGetBranchingPoint
+ *
+ *  @see SCIPbranchGetBranchingPoint
  *
  *  @return the branching point for a continuous or discrete variable.
  *
@@ -30762,20 +30773,22 @@ SCIP_RETCODE SCIPbranchVarVal(
 }
 
 /** n-ary branching on a variable x using a given value
- * Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
- * The branching value is selected as in SCIPbranchVarVal().
- * The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
- * If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
- * Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
- * Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance from the first nodes.
- * The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
- * If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
  *
- * Giving a large value for widthfactor results in creating children with small domain when close to the branching value
- * and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
- * results in a ternary branching where the branching variable is mostly fixed in the middle child.
- * Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
- * (except for one child if the branching value is not in the middle).
+ *  Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
+ *  The branching value is selected as in SCIPbranchVarVal().
+ *  The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
+ *  If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
+ *  Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
+ *  Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance
+ *  from the first nodes.
+ *  The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
+ *  If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
+ *
+ *  Giving a large value for widthfactor results in creating children with small domain when close to the branching value
+ *  and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
+ *  results in a ternary branching where the branching variable is mostly fixed in the middle child.
+ *  Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
+ *  (except for one child if the branching value is not in the middle).
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
