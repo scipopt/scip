@@ -1364,6 +1364,7 @@ SCIP_RETCODE getMultiaggDelcons(
                SCIP_VAR* var;
                var = matrix->vars[*rowpnt];
 
+               /* @todo: add methods for discrete variables too */
                if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
                   continue;
 
