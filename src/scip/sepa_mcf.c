@@ -5790,7 +5790,7 @@ SCIP_RETCODE addCut(
 
    ncutvars = 0;
    *cutoff = FALSE;
-   
+
    if( sepadata->separateknapsack )
    {
       /* allocate temporary memory */

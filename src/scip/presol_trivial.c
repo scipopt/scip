@@ -51,7 +51,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -91,7 +91,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
       {
          SCIP_Real newlb;
          SCIP_Real newub;
-         
+
          /* round fractional bounds on integer variables */
          newlb = SCIPfeasCeil(scip, lb);
          newub = SCIPfeasFloor(scip, ub);

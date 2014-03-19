@@ -415,7 +415,7 @@ SCIP_DECL_HEURCOPY(heurCopyRounding)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
- 
+
    return SCIP_OKAY;
 }
 

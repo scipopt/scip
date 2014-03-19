@@ -198,7 +198,7 @@ SCIP_DECL_SEPACOPY(sepaCopyStrongcg)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -426,7 +426,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
-               
+
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
          {

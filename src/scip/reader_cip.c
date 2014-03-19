@@ -393,17 +393,17 @@ SCIP_RETCODE getVariable(
    char* endptr;
 
    buf = cipinput->strbuf;
-   
+
    if( strncmp(buf, "FIXED", 5) == 0 )
       cipinput->section = CIP_FIXEDVARS;
    else if( strncmp(buf, "CONSTRAINTS", 4) == 0 )
       cipinput->section = CIP_CONSTRAINTS;
    else if( strncmp(buf, "END", 3) == 0 )
       cipinput->section = CIP_END;
-   
+
    if( cipinput->section != CIP_VARS )
       return SCIP_OKAY;
-   
+
    SCIPdebugMessage("parse variable\n");
 
    /* parse the variable */
@@ -415,7 +415,7 @@ SCIP_RETCODE getVariable(
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
-   
+
    if( objscale != 1.0 )
    {
       SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) * objscale) );
@@ -426,7 +426,7 @@ SCIP_RETCODE getVariable(
    SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
 
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
-   
+
    return SCIP_OKAY;
 }
 

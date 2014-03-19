@@ -254,7 +254,7 @@ SCIP_DECL_SEPACOPY(sepaCopyIntobj)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
- 
+
    return SCIP_OKAY;
 }
 

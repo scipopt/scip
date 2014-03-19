@@ -613,7 +613,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
-  
+
 
    /* copy all node selector plugins */
    if( copynodeselectors && sourceset->nodesels != NULL )
@@ -3386,7 +3386,7 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
 
    for( i = set->nnodesels; i > 0 && nodeselstdprio > SCIPnodeselGetStdPriority(set->nodesels[i-1]); --i )
       set->nodesels[i] = set->nodesels[i-1];
-   
+
    set->nodesels[i] = nodesel;
    set->nnodesels++;
 
@@ -3533,7 +3533,7 @@ SCIP_RETCODE SCIPsetIncludeDisp(
 {
    int i;
    int disppos;
-   
+
    assert(set != NULL);
    assert(disp != NULL);
    assert(!SCIPdispIsInitialized(disp));
@@ -3546,7 +3546,7 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    assert(set->ndisps < set->dispssize);
 
    disppos = SCIPdispGetPosition(disp);
-   
+
    for( i = set->ndisps; i > 0 && disppos < SCIPdispGetPosition(set->disps[i-1]); --i )
    {
       set->disps[i] = set->disps[i-1];
@@ -3732,7 +3732,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
    )
 {
    int i;
-   
+
    assert(set != NULL);
 
    /* active variable pricers */

@@ -647,7 +647,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          if( bestcandroundup == !backtracked )
          {
 	    SCIP_Real value = SCIPfeasCeil(scip, bestcandsol);
-            
+
 	    if ( SCIPisFeasIntegral(scip, bestcandsol) )
 	    {
                /* only indicator variables can have integral solution value */

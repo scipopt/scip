@@ -303,7 +303,7 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
       for( value = 0; value < 2; ++value )
       {
          assert(cliquegraphidx[value][i] == -1);
-         
+
          if( SCIPvarGetNCliques(var, (SCIP_Bool)value) >= 1 )
          {
             /* all cliques stored in the clique table are at least 3-cliques */
@@ -489,16 +489,16 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                   SCIP_VAR* z;
                   int zi;
                   int zvalue;
-                  
+
                   /* we found z with xindex < yindex < zindex and x + y + z <= 1 */
                   z = ximplvars[xk];
                   zi = SCIPvarGetProbindex(z);
                   assert(zi < nvars);
-                  
+
                   /* consider only implications with active implvar z */
                   if( zi < 0 )
                      continue;
-                  
+
                   assert(SCIPvarGetIndex(z) == zindex);
                   assert(xindex < yindex && yindex < zindex);
 
@@ -601,7 +601,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
                continue;
 
             assert(SCIPvarGetType(y) == SCIP_VARTYPE_BINARY);
-            
+
             /* check, whether the implicant is y == 0 or y == 1 (y conflicts with x == xvalue) */
             yvalue = (ximpltypes[yk] == SCIP_BOUNDTYPE_UPPER);
             if( SCIPvarGetNCliques(y, yvalue) == 0 )
@@ -623,7 +623,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
                   continue;
 
                assert(SCIPvarGetType(z) == SCIP_VARTYPE_BINARY);
-               
+
                /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
                zvalue = (ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
 
@@ -709,7 +709,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
          probidx = SCIPvarGetProbindex(implvars[j]);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
          assert(probidx < SCIPgetNVars(scip));
-                  
+
          /* consider only implications with active implvar */
          if( probidx < 0 )
             continue;
@@ -773,7 +773,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    /* calculate size of dense clique table */
    nbits = 8*sizeof(unsigned int);
    tcliquegraph->tablewidth = (tcliquegraph->nnodes + nbits-1) / nbits; /* number of ints needed */
-   
+
    /* check if dense clique table is too large (calculate as Reals to avoid overflow) */
    if( (SCIP_Real)tcliquegraph->nnodes * (SCIP_Real)tcliquegraph->tablewidth/1024.0 > cliquetablemem )
       return SCIP_OKAY;
@@ -1013,7 +1013,7 @@ SCIP_Bool nodesHaveCommonClique(
       int i2;
       int endi1;
       int endi2;
-      
+
       cliqueids = tcliquegraph->cliqueids;
       i1 = tcliquegraph->cliqueidsidxs[node1];
       endi1 = tcliquegraph->cliqueidsidxs[node1+1];
@@ -1025,7 +1025,7 @@ SCIP_Bool nodesHaveCommonClique(
             i1++;
          if( i1 == endi1 )
             break;
-         
+
          while( i2 < endi2 && cliqueids[i2] < cliqueids[i1] )
             i2++;
          if( i2 == endi2 )
@@ -1034,7 +1034,7 @@ SCIP_Bool nodesHaveCommonClique(
          if( cliqueids[i1] == cliqueids[i2] )
             return TRUE;
       }
-      
+
       return FALSE;
    }
 }
@@ -1391,7 +1391,7 @@ SCIP_DECL_SEPACOPY(sepaCopyClique)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaClique(scip) );
- 
+
    return SCIP_OKAY;
 }
 

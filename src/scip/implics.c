@@ -89,7 +89,7 @@ SCIP_RETCODE vboundsEnsureSize(
    )
 {
    assert(vbounds != NULL);
-   
+
    /* create variable bounds data structure, if not yet existing */
    if( *vbounds == NULL )
    {
@@ -547,7 +547,7 @@ SCIP_RETCODE implicsEnsureSize(
    )
 {
    assert(implics != NULL);
-   
+
    /* create implications data structure, if not yet existing */
    if( *implics == NULL )
    {
@@ -929,7 +929,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          stat->nimplications++;
       }
    }
-    
+
    checkImplics(*implics, set);
 
    return SCIP_OKAY;
@@ -2399,7 +2399,7 @@ int SCIPcliqueGetId(
 
    return (int) clique->id;
 }
-   
+
 /** returns the number of cliques stored in the clique list */
 int SCIPcliquelistGetNCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */

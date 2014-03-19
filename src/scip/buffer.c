@@ -84,7 +84,7 @@ SCIP_RETCODE SCIPbufferAllocMem(
    assert(buffer->firstfree <= buffer->ndata);
    assert(ptr != NULL);
    assert(size >= 0);
-   
+
    /* allocate minimal 1 byte */
    if( size == 0 )
       size = 1;
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPbufferDuplicateMem(
 
    /* copy the source memory into the buffer */
    BMScopyMemorySize(*ptr, source, size);
-   
+
    return SCIP_OKAY;
 }
 

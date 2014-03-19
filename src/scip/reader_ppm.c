@@ -102,7 +102,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -171,10 +171,10 @@ void appendLine(
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
    assert( extension != NULL );
-   
+
    if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
-   
+
    /* append extension to linebuffer */
    strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
@@ -327,7 +327,7 @@ void printRow(
       }
       else
          (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
-      
+
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;
    }

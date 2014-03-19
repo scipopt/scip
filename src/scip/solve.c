@@ -218,7 +218,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       assert(tree != NULL); /* for lint */
       depth = SCIPtreeGetFocusDepth(tree);
       lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
-      
+
       SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
    }
 
@@ -321,7 +321,7 @@ SCIP_RETCODE propagationRound(
     * anyway
     */
    abortoncutoff = set->prop_abortoncutoff || (set->stage != SCIP_STAGE_SOLVING);
- 
+
    /* call additional propagators with nonnegative priority */
    for( i = 0; i < set->nprops && (!(*cutoff) || !abortoncutoff); ++i )
    {
@@ -993,7 +993,7 @@ SCIP_RETCODE SCIPinitConssLP(
    assert(set != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
-   
+
    /* inform separation storage, that LP is now filled with initial data */
    SCIPsepastoreStartInitialLP(sepastore);
 

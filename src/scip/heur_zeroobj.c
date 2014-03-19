@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real inf;
-      
+
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
 

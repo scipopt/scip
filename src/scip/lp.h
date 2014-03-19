@@ -1657,7 +1657,7 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
- 
+
 #endif
 
 #ifdef __cplusplus

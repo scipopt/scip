@@ -76,7 +76,7 @@ SCIP_RETCODE readSol(
 
    /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   
+
    /* read the file */
    error = FALSE;
    unknownvariablemessage = FALSE;
@@ -236,12 +236,12 @@ SCIP_RETCODE readXMLSol(
       SCIPerrorMessage("Some error occured during parsing the XML solution file.\n");
       return SCIP_READERROR;
    }
-   
+
    /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   
+
    error = FALSE;
-   
+
    /* find variable sections */
    tag = "variables";
    varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
@@ -272,7 +272,7 @@ SCIP_RETCODE readXMLSol(
          error = TRUE;
          break;
       }
-      
+
       /* find the variable */
       var = SCIPfindVar(scip, varname);
       if( var == NULL )
@@ -372,7 +372,7 @@ SCIP_DECL_READERCOPY(readerCopySol)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderSol(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -430,7 +430,7 @@ SCIP_DECL_READERREAD(readerReadSol)
 
    /* decide whether it is xml */
    s = buffer;
-   
+
    /* skip spaces */
    while( isspace((unsigned char)*s) )
       ++s;

@@ -518,7 +518,7 @@ SCIP_Bool mpsinputReadLine(
              * should be ?
              */
             SCIP_Bool number;
-            
+
             number = isdigit((unsigned char)mpsi->buf[24]) || isdigit((unsigned char)mpsi->buf[25])
                || isdigit((unsigned char)mpsi->buf[26]) || isdigit((unsigned char)mpsi->buf[27])
                || isdigit((unsigned char)mpsi->buf[28]) || isdigit((unsigned char)mpsi->buf[29])
@@ -763,7 +763,7 @@ SCIP_RETCODE readObjname(
    assert(mpsi != NULL);
 
    SCIPdebugMessage("read objective name\n");
-   
+
    /* This has to be the Line with the name. */
    if( !mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL )
    {
@@ -2014,9 +2014,9 @@ SCIP_RETCODE readQCMatrix(
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   
+
    SCIPdebugMessage("read QCMATRIX section for row <%s>\n", mpsinputField1(mpsi));
-   
+
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
    {
@@ -2037,7 +2037,7 @@ SCIP_RETCODE readQCMatrix(
       SCIP_VAR* var1;
       SCIP_VAR* var2;
       SCIP_Real coef;
-      
+
       /* check if next section is found */
       if( mpsinputField0(mpsi) != NULL )
       {
@@ -2179,7 +2179,7 @@ SCIP_RETCODE readIndicators(
    char name[MPS_MAX_NAMELEN] = { '\0' };
 
    SCIPdebugMessage("read INDICATORS constraints\n");
-   
+
    /* standard settings for indicator constraints: */
    initial = mpsi->initialconss;
    separate = TRUE;
@@ -2715,7 +2715,7 @@ void freeMatrix(
    SCIPfreeBufferArray(scip, &matrix->rows);
    SCIPfreeBufferArray(scip, &matrix->columns);
    SCIPfreeBufferArray(scip, &matrix->values);
-   
+
    SCIPfreeBuffer(scip, &matrix);
 }
 
@@ -2745,7 +2745,7 @@ SCIP_RETCODE getLinearCoeffs(
    assert( nvars == 0 || vars != NULL );
    assert( !SCIPisInfinity(scip, *rhs) );
    assert( matrix != NULL );
-   
+
    /* if the variables array contains no variables, then return without
     * doing any thing; The MPS format and LP format do not forbid this
     * situation */
@@ -2755,7 +2755,7 @@ SCIP_RETCODE getLinearCoeffs(
    /* duplicate variable and value array */
    nactivevars = nvars;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   
+
    if( vals != NULL )
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
@@ -2772,12 +2772,12 @@ SCIP_RETCODE getLinearCoeffs(
    if( transformed )
    {
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize, TRUE) );
-         
+
       if( requiredsize > nactivevars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevals, requiredsize) );
-            
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize, TRUE) );
          assert( requiredsize <= nactivevars );
       }
@@ -2793,7 +2793,7 @@ SCIP_RETCODE getLinearCoeffs(
    /* copy the (matrix) row into the sparse matrix */
    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, nactivevars) );
    assert( matrix->nentries + nactivevars < matrix->sentries );
-   
+
    for( v = 0; v < nactivevars; ++v )
    {
       matrix->values[matrix->nentries] = activevals[v];
@@ -2801,7 +2801,7 @@ SCIP_RETCODE getLinearCoeffs(
       matrix->rows[matrix->nentries] = consname;
       matrix->nentries++;
    }
-   
+
    /* adjust right hand side */
    (*rhs) -= activeconstant;
 
@@ -3525,7 +3525,7 @@ SCIP_DECL_READERREAD(readerReadMps)
       return retcode;
 
    SCIP_CALL( retcode );
-      
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;

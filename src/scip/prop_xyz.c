@@ -73,7 +73,7 @@ SCIP_DECL_PROPCOPY(propCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else
