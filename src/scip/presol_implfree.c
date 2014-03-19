@@ -13,9 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_implfree.h
+/**@file   presol_implfree.c
  * @brief  exploit implied free variables for multi-aggregation
  * @author Dieter Weninger
+ *
+ * This presolver tries to find implied free variables within equalities and
+ * exploits this variables for multi-aggregation.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,7 +38,7 @@
 #include "presol_implfree.h"
 
 #define PRESOL_NAME            "implfree"
-#define PRESOL_DESC            "exploit implied free variables"
+#define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
 #define PRESOL_PRIORITY         12000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
@@ -985,7 +989,7 @@ SCIP_Real getMinActSingleRowWithoutCol(
 
 /** get minimum/maximum residual activity without the specified variable */
 static
-void getActivityResiduals(
+SCIP_RETCODE getActivityResiduals(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
@@ -1114,6 +1118,8 @@ void getActivityResiduals(
             *minresactivity = matrix->minactivity[row] - val * ub;
       }
    }
+
+   return SCIP_OKAY;
 }
 
 /** calculate the bounds of this variable from one row */
@@ -1145,8 +1151,8 @@ SCIP_RETCODE getVarBoundsOfRow(
    *lbfound = FALSE;
    *ubfound = FALSE;
 
-   getActivityResiduals(scip, matrix, col, row, val, &minresactivity, &maxresactivity,
-      &isminsettoinfinity, &ismaxsettoinfinity);
+   SCIP_CALL( getActivityResiduals(scip, matrix, col, row, val, &minresactivity, &maxresactivity,
+         &isminsettoinfinity, &ismaxsettoinfinity) );
 
    if( val > 0.0 )
    {
@@ -1182,19 +1188,18 @@ SCIP_RETCODE getVarBoundsOfRow(
 
 /** return true if the bounds of the variable are implied by another constraint */
 static
-SCIP_Bool isVarImpliedFree(
+SCIP_RETCODE isVarImpliedFree(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index for implied free test */
-   int                   row                 /**< constraint planned for multi-aggregation */
+   int                   row,                /**< constraint planned for multi-aggregation */
+   SCIP_Bool*            impliedfree         /**< flag indicating if this variable is an implied free variable */
    )
 {
-   SCIP_Bool impliedfree;
    SCIP_Real varub;
    SCIP_Real varlb;
    SCIP_Real impliedub;
    SCIP_Real impliedlb;
-   int numrows;
    int* colpnt;
    int* colend;
    SCIP_Real* valpnt;
@@ -1203,15 +1208,14 @@ SCIP_Bool isVarImpliedFree(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
    assert(0 <= row && row < matrix->nrows);
+   assert(impliedfree != NULL);
 
-   impliedfree = FALSE;
+   *impliedfree = FALSE;
 
    varub = SCIPvarGetUbGlobal(matrix->vars[col]);
    varlb = SCIPvarGetLbGlobal(matrix->vars[col]);
    impliedub = SCIPinfinity(scip);
    impliedlb = -SCIPinfinity(scip);
-
-   numrows = matrix->colmatcnt[col];
 
    colpnt = matrix->colmatind + matrix->colmatbeg[col];
    colend = colpnt + matrix->colmatcnt[col];
@@ -1228,7 +1232,7 @@ SCIP_Bool isVarImpliedFree(
          continue;
 #endif
 
-      getVarBoundsOfRow(scip,matrix,col,*colpnt,*valpnt,&rowlb,&lbfound,&rowub,&ubfound);
+      SCIP_CALL( getVarBoundsOfRow(scip,matrix,col,*colpnt,*valpnt,&rowlb,&lbfound,&rowub,&ubfound) );
 
       if( lbfound && rowlb > impliedlb )
          impliedlb = rowlb;
@@ -1238,9 +1242,9 @@ SCIP_Bool isVarImpliedFree(
    }
 
    if( SCIPisFeasLE(scip,impliedub,varub) && SCIPisFeasLE(scip,varlb,impliedlb) )
-      impliedfree = TRUE;
+      *impliedfree = TRUE;
 
-   return impliedfree;
+   return SCIP_OKAY;
 }
 
 /** calculate the amount of fill-in getting from multi-aggregation */
@@ -1269,29 +1273,31 @@ SCIP_Real getFillIn(
 
 /** use a simple heuristic if the presence of the variable is advantageous for multi-aggregation */
 static
-SCIP_Bool advConsPresence(
+SCIP_RETCODE advConsPresence(
    SCIP*                 scip,               /**< SCIP data structure */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
-   int                   row                 /**< row index */
+   int                   row,                /**< row index */
+   SCIP_Bool*            beneficial          /**< flag indicating if constraint presence is advantageous */
    )
 {
    int* colpnt;
    int* colend;
-   SCIP_Bool beneficial;
    int equalitycnt;
+
+   assert(0 < col && col < matrix->ncols);
+   assert(0 < row && row < matrix->nrows);
+   assert(beneficial != NULL);
 
    colpnt = matrix->colmatind + matrix->colmatbeg[col];
    colend = colpnt + matrix->colmatcnt[col];
-   beneficial = TRUE;
+   *beneficial = TRUE;
    equalitycnt = 0;
 
-   /* we allow the presence of one equality and no ranged rows */
+   /* currently we allow the presence of one equality and no ranged rows */
+   /* @todo: verify cases with ranged rows and more than one equality */
    for( ; (colpnt < colend); colpnt++ )
    {
-      int r;
-      r = *colpnt;
-
       if( !SCIPisInfinity(scip,-matrix->lhs[*colpnt]) )
       {
          if( !SCIPisInfinity(scip,matrix->rhs[*colpnt]) )
@@ -1302,21 +1308,21 @@ SCIP_Bool advConsPresence(
                equalitycnt++;
                if( equalitycnt > 1 )
                {
-                  beneficial = FALSE;
+                  *beneficial = FALSE;
                   break;
                }
             }
             else
             {
                /* ranged */
-               beneficial = FALSE;
+               *beneficial = FALSE;
                break;
             }
          }
       }
    }
 
-   return beneficial;
+   return SCIP_OKAY;
 }
 
 /** identify the candidates for multi-aggregation */
@@ -1339,12 +1345,9 @@ SCIP_RETCODE getMultiaggDelcons(
    assert(nummultiaggvars != NULL);
    assert(multiaggequalities != NULL);
 
-   /* @todo: different multi-aggregation may influence each other !!! */
-
-
    for( r = 0; r < matrix->nrows; r++ )
    {
-      /* do we have a long equality ? */
+      /* we consider only long equalities */
       if( matrix->rowmatcnt[r] > 2 )
       {
          if( SCIPisEQ(scip, matrix->lhs[r], matrix->rhs[r]) )
@@ -1362,6 +1365,8 @@ SCIP_RETCODE getMultiaggDelcons(
             for( ; rowpnt < rowend; rowpnt++, valpnt++ )
             {
                SCIP_VAR* var;
+               SCIP_Bool goodconspresence;
+
                var = matrix->vars[*rowpnt];
 
                /* @todo: add methods for discrete variables too */
@@ -1373,9 +1378,15 @@ SCIP_RETCODE getMultiaggDelcons(
                 */
                /* @todo: should we consider numerical stability too ? */
 
-               if( advConsPresence(scip,matrix,*rowpnt,r) )
+               SCIP_CALL( advConsPresence(scip,matrix,*rowpnt,r,&goodconspresence) );
+
+               if( goodconspresence )
                {
-                  if( isVarImpliedFree(scip,matrix,*rowpnt,r) )
+                  SCIP_Bool impliedfree;
+
+                  SCIP_CALL( isVarImpliedFree(scip,matrix,*rowpnt,r,&impliedfree) );
+
+                  if( impliedfree )
                   {
                      SCIP_Real fillin;
                      fillin = getFillIn(matrix,*rowpnt,r);
@@ -1455,10 +1466,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
-
-   /* @todo: maybe we should loop over the modified matrices to get all possible multi-aggregations */
-   /* while ( multi-aggregations done ) */
-   /* { ... */
 
    /* initialize constraint matrix */
    matrix = NULL;

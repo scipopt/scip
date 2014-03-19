@@ -16,6 +16,10 @@
 /**@file   presol_implfree.h
  * @brief  exploit implied free variables for multi-aggregation
  * @author Dieter Weninger
+ *
+ * This presolver tries to find implied free variables within equalities and
+ * exploits this variables for multi-aggregation.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
