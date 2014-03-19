@@ -1736,7 +1736,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       int nviolations;
       int permutedvarindex;
       SCIP_Bool marksuspicious;
-      
+
       permutedvarindex = permutation[c];
       optimalshiftvalue = 0.0;
       nviolations = 0;
@@ -1774,7 +1774,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          continue;
       }
-      
+
       marksuspicious = FALSE;
 
       /* check whether the variable is binary and has no locks in one direction, so that we want to fix it to the
@@ -1910,7 +1910,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                break;
          }
       }
-      
+
       if( marksuspicious )
       {
          /* mark the variable as suspicious */

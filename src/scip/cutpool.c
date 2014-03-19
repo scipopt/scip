@@ -237,7 +237,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    int maxabsval;
    SCIP_Real maxval;  
    SCIP_SET* set;
-   
+
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
@@ -245,7 +245,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    maxval = SCIProwGetMaxval(row, set);
    assert(row->nummaxval > 0);
    assert(row->validminmaxidx);
-   
+
    if( maxval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
@@ -333,7 +333,7 @@ SCIP_RETCODE cutFree(
    assert(*cut != NULL);
    assert((*cut)->row != NULL);
    assert(blkmem != NULL);
-   
+
    /* release row */
    SCIP_CALL( SCIProwRelease(&(*cut)->row, blkmem, set, lp) );
 
@@ -437,7 +437,7 @@ SCIP_RETCODE SCIPcutpoolFree(
 
    /* free hash table */
    SCIPhashtableFree(&(*cutpool)->hashtable);
-   
+
    BMSfreeMemoryArrayNull(&(*cutpool)->cuts);
    BMSfreeMemory(cutpool);
 
@@ -590,7 +590,7 @@ SCIP_RETCODE cutpoolDelCut(
 
    /* free the cut */
    SCIP_CALL( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
-   
+
    /* move the last cut of the pool to the free position */
    if( pos < cutpool->ncuts-1 )
    {

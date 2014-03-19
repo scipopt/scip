@@ -1285,7 +1285,7 @@ SCIP_RETCODE readObjective(
       assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
 
       nmonomials = SCIPexprGetNMonomials(expr);
-      
+
       if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
       {
          SCIP_VAR* objconst;

@@ -51,7 +51,7 @@ SCIP_RETCODE ensureSolsSize(
    )
 {
    assert(primal->nsols <= primal->solssize);
-   
+
    if( num > primal->solssize )
    {
       int newsize;
@@ -74,7 +74,7 @@ SCIP_RETCODE ensureExistingsolsSize(
    )
 {
    assert(primal->nexistingsols <= primal->existingsolssize);
-   
+
    if( num > primal->existingsolssize )
    {
       int newsize;
@@ -766,7 +766,7 @@ int primalSearchOrigSolPos(
    assert(primal != NULL);
 
    obj = SCIPsolGetOrigObj(sol);
-   
+
    left = -1;
    right = primal->nsols;
    while( left < right-1 )
@@ -826,7 +826,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
-   
+
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
          if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
@@ -969,13 +969,13 @@ SCIP_Bool origsolOfInterest(
    )
 {
    assert(SCIPsolIsOriginal(sol));
-   
+
    /* find insert position for the solution */
    (*insertpos) = primalSearchOrigSolPos(primal, sol);
-      
+
    if( (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
       return TRUE;
-   
+
    return FALSE;
 }
 

@@ -44,7 +44,7 @@ extern "C" {
 
 /**@name Expressions and Expression tree methods */
 /**@{ */
-   
+
 /** returns variables of expression tree */
 EXTERN
 SCIP_VAR** SCIPexprtreeGetVars(

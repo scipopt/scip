@@ -44,7 +44,7 @@ SCIP_DECL_READERCOPY(readerCopyRlp)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderRlp(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -72,7 +72,7 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
    else
    {
       SCIPwarningMessage(scip, "RLP format is LP format with generic variable and constraint names\n");
-      
+
       if( transformed )
       {
          SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");

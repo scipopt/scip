@@ -78,7 +78,7 @@ SCIP_RETCODE nodepqResize(
    )
 {
    assert(nodepq != NULL);
-   
+
    if( minsize <= nodepq->size )
       return SCIP_OKAY;
 
@@ -141,7 +141,7 @@ SCIP_RETCODE SCIPnodepqFree(
 
    /* free the nodes of the queue */
    SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventqueue, tree, lp) );
-   
+
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
 
@@ -218,19 +218,19 @@ SCIP_RETCODE SCIPnodepqSetNodesel(
 
       /* create new node priority queue */
       SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
-      
+
       /* resize the new node priority queue to be able to store all nodes */
       SCIP_CALL( nodepqResize(newnodepq, set, (*nodepq)->len) );
-      
+
       /* insert all nodes in the new node priority queue */
       for( i = 0; i < (*nodepq)->len; ++i )
       {
          SCIP_CALL( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
       }
-      
+
       /* destroy the old node priority queue without freeing the nodes */
       SCIPnodepqDestroy(nodepq);
-      
+
       /* use the new node priority queue */
       *nodepq = newnodepq;
    }
@@ -295,7 +295,7 @@ SCIP_RETCODE SCIPnodepqInsert(
       pos = PQ_PARENT(pos);
    }
    slots[pos] = node;
-   
+
    /* insert the final position into the bfs index queue */
    lowerbound = SCIPnodeGetLowerbound(node);
    bfspos = nodepq->len-1;
@@ -494,7 +494,7 @@ int nodepqFindNode(
 
    if( pos == nodepq->len )
       pos = -1;
-   
+
    return pos;
 }
 
@@ -1041,7 +1041,7 @@ void SCIPnodeselSetMemsavePriority(
 {
    assert(nodesel != NULL);
    assert(set != NULL);
-   
+
    nodesel->memsavepriority = priority;
    set->nodesel = NULL;
 }

@@ -638,7 +638,7 @@ SCIP_RETCODE SCIPeventCreateGholeAdded(
    (*event)->data.eventhole.var = var;
    (*event)->data.eventhole.left = left;
    (*event)->data.eventhole.right = right;
-   
+
    return SCIP_OKAY;
 }
 
@@ -660,7 +660,7 @@ SCIP_RETCODE SCIPeventCreateGholeRemoved(
    (*event)->data.eventhole.var = var;
    (*event)->data.eventhole.left = left;
    (*event)->data.eventhole.right = right;
-   
+
    return SCIP_OKAY;
 }
 
@@ -682,7 +682,7 @@ SCIP_RETCODE SCIPeventCreateLholeAdded(
    (*event)->data.eventhole.var = var;
    (*event)->data.eventhole.left = left;
    (*event)->data.eventhole.right = right;
-   
+
    return SCIP_OKAY;
 }
 
@@ -704,7 +704,7 @@ SCIP_RETCODE SCIPeventCreateLholeRemoved(
    (*event)->data.eventhole.var = var;
    (*event)->data.eventhole.left = left;
    (*event)->data.eventhole.right = right;
-   
+
    return SCIP_OKAY;
 }
 
@@ -737,12 +737,12 @@ SCIP_RETCODE SCIPeventCreateRowAddedSepa(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWADDEDSEPA;
    (*event)->data.eventrowaddedsepa.row = row;
-   
+
    return SCIP_OKAY;
 }
 
@@ -756,12 +756,12 @@ SCIP_RETCODE SCIPeventCreateRowDeletedSepa(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWDELETEDSEPA;
    (*event)->data.eventrowdeletedsepa.row = row;
-   
+
    return SCIP_OKAY;
 }
 
@@ -775,12 +775,12 @@ SCIP_RETCODE SCIPeventCreateRowAddedLP(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWADDEDLP;
    (*event)->data.eventrowaddedlp.row = row;
-   
+
    return SCIP_OKAY;
 }
 
@@ -794,12 +794,12 @@ SCIP_RETCODE SCIPeventCreateRowDeletedLP(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWDELETEDLP;
    (*event)->data.eventrowdeletedlp.row = row;
-   
+
    return SCIP_OKAY;
 }
 
@@ -816,7 +816,7 @@ SCIP_RETCODE SCIPeventCreateRowCoefChanged(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWCOEFCHANGED;
@@ -824,7 +824,7 @@ SCIP_RETCODE SCIPeventCreateRowCoefChanged(
    (*event)->data.eventrowcoefchanged.col = col;
    (*event)->data.eventrowcoefchanged.oldval = oldval;
    (*event)->data.eventrowcoefchanged.newval = newval;
-   
+
    return SCIP_OKAY;
 }
 
@@ -840,14 +840,14 @@ SCIP_RETCODE SCIPeventCreateRowConstChanged(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWCONSTCHANGED;
    (*event)->data.eventrowconstchanged.row = row;
    (*event)->data.eventrowconstchanged.oldval = oldval;
    (*event)->data.eventrowconstchanged.newval = newval;
-   
+
    return SCIP_OKAY;
 }
 
@@ -864,7 +864,7 @@ SCIP_RETCODE SCIPeventCreateRowSideChanged(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(row != NULL);
-   
+
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_ROWSIDECHANGED;
@@ -872,7 +872,7 @@ SCIP_RETCODE SCIPeventCreateRowSideChanged(
    (*event)->data.eventrowsidechanged.side = side;
    (*event)->data.eventrowsidechanged.oldval = oldval;
    (*event)->data.eventrowsidechanged.newval = newval;
-   
+
    return SCIP_OKAY;
 }
 
@@ -968,7 +968,7 @@ SCIP_VAR* SCIPeventGetVar(
    case SCIP_EVENTTYPE_LHOLEREMOVED:
       assert(event->data.eventhole.var != NULL);
       return event->data.eventhole.var;
-      
+
    case SCIP_EVENTTYPE_IMPLADDED:
       assert(event->data.eventimpladd.var != NULL);
       return event->data.eventimpladd.var;
@@ -1134,7 +1134,7 @@ SCIP_NODE* SCIPeventGetNode(
    )
 {
    assert(event != NULL);
-   
+
    if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
@@ -1178,7 +1178,7 @@ SCIP_SOL* SCIPeventGetSol(
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
-   
+
    return event->data.sol;
 }
 
@@ -1208,7 +1208,7 @@ SCIP_Real SCIPeventGetHoleLeft(
    )
 {
    assert(event != NULL);
-   
+
    if( (event->eventtype & SCIP_EVENTTYPE_HOLECHANGED) == 0 )
    {
       SCIPerrorMessage("event is not a hole added or removed event\n");
@@ -1225,7 +1225,7 @@ SCIP_Real SCIPeventGetHoleRight(
    )
 {
    assert(event != NULL);
-   
+
    if( (event->eventtype & SCIP_EVENTTYPE_HOLECHANGED) == 0 )
    {
       SCIPerrorMessage("event is not a hole added or removed event\n");
@@ -1242,7 +1242,7 @@ SCIP_ROW* SCIPeventGetRow(
    )
 {
    assert(event != NULL);
-   
+
    switch( event->eventtype )
    {
       case SCIP_EVENTTYPE_ROWADDEDSEPA:
@@ -1420,7 +1420,7 @@ SCIP_RETCODE SCIPeventProcess(
    assert((event->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
 
    SCIPdebugMessage("processing event of type 0x%x\n", event->eventtype);
-   
+
    switch( event->eventtype )
    {
    case SCIP_EVENTTYPE_DISABLED:
@@ -1577,7 +1577,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_LHOLEREMOVED:
       var = event->data.eventhole.var;
       assert(var != NULL);
-      
+
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
@@ -1630,7 +1630,7 @@ SCIP_RETCODE eventfilterEnsureMem(
       eventfilter->size = newsize;
    }
    assert(num <= eventfilter->size);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1981,7 +1981,7 @@ SCIP_RETCODE eventqueueEnsureEventsMem(
       eventqueue->eventssize = newsize;
    }
    assert(num <= eventqueue->eventssize);
-   
+
    return SCIP_OKAY;
 }
 
@@ -2012,7 +2012,7 @@ SCIP_RETCODE SCIPeventqueueFree(
 
    BMSfreeMemoryArrayNull(&(*eventqueue)->events);
    BMSfreeMemory(eventqueue);
-   
+
    return SCIP_OKAY;
 }
 
@@ -2063,7 +2063,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    assert(((*event)->eventtype & SCIP_EVENTTYPE_OBJCHANGED) == 0 || primal != NULL);
    assert(((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
    assert(((*event)->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
-   
+
    if( !eventqueue->delayevents )
    {
       /* immediately process event */
@@ -2270,7 +2270,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
          return SCIP_INVALIDDATA;
       }
    }
-   
+
    assert(*event == NULL);
 
    return SCIP_OKAY;

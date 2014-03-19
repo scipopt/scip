@@ -94,7 +94,7 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
    SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
    );
-   
+
 /** gets sub-SCIP used by NLP heuristic, or NULL if none */
 EXTERN
 SCIP* SCIPgetSubScipHeurSubNlp(

@@ -666,7 +666,7 @@ SCIP_RETCODE consdataPrint(
 
    /* write linear sum */
    SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, TRUE) );
-   
+
    /* print right hand side */
    switch( consdata->setppctype )
    {
@@ -1499,10 +1499,10 @@ SCIP_RETCODE mergeMultiples(
       SCIP_VAR* var2;
       SCIP_Bool negated1;
       SCIP_Bool negated2;
-      
+
       negated1 = FALSE;
       negated2 = FALSE;
-      
+
       var1 = consdata->vars[v];
       assert(SCIPvarIsBinary(var1));
       assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_FIXED);
@@ -1512,7 +1512,7 @@ SCIP_RETCODE mergeMultiples(
          negated1 = TRUE;
       }
       assert(var1 != NULL);
-      
+
       var2 = consdata->vars[v-1];
       assert(SCIPvarIsBinary(var2));
       assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_FIXED);
@@ -1522,7 +1522,7 @@ SCIP_RETCODE mergeMultiples(
          negated2 = TRUE;
       }
       assert(var2 != NULL);
-      
+
       if( var1 == var2 )
       {
          SCIP_Bool infeasible;
@@ -7048,7 +7048,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySetppc)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;

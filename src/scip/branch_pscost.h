@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP_VAR**            var,                /**< pointer to store the variable to branch on, or NULL if none */
    SCIP_Real*            brpoint             /**< pointer to store the branching point for the branching variable, will be fractional for a discrete variable */
    );
-   
+
 #ifdef __cplusplus
 }
 #endif

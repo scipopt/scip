@@ -173,7 +173,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -337,7 +337,7 @@ SCIP_DECL_READERCOPY(readerCopyCcg)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPwriteCcg(
          consvars = SCIPgetVarsLinear(scip, cons);
          nconsvars = SCIPgetNVarsLinear(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
-         
+
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
@@ -452,7 +452,7 @@ SCIP_RETCODE SCIPwriteCcg(
          consvars = SCIPgetVarsLogicor(scip, cons);
          nconsvars = SCIPgetNVarsLogicor(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
-         
+
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), transformed, &G) );

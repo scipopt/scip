@@ -316,7 +316,7 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
          {
             int depth1;
             int depth2;
-         
+
             depth1 = SCIPnodeGetDepth(node1);
             depth2 = SCIPnodeGetDepth(node2);
             if( depth1 < depth2 )

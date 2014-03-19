@@ -226,7 +226,7 @@ SCIP_RETCODE consdataSwitchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -280,7 +280,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
 {
    assert(consdata != NULL);
    assert(consdata->nvars <= consdata->varssize);
-   
+
    if( num > consdata->varssize )
    {
       int newsize;
@@ -430,7 +430,7 @@ SCIP_RETCODE consdataFree(
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
- 
+
    return SCIP_OKAY;
 }
 
@@ -4055,7 +4055,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyXor)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -4712,7 +4712,7 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &targetvars);
-   
+
    return SCIP_OKAY;
 }
 
@@ -5110,7 +5110,7 @@ int SCIPgetNVarsXor(
       SCIPABORT();
       return -1;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5131,7 +5131,7 @@ SCIP_VAR** SCIPgetVarsXor(
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5151,7 +5151,7 @@ SCIP_Bool SCIPgetRhsXor(
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

@@ -291,7 +291,7 @@ struct SCIP_Set
    int                   mem_arraygrowinit;  /**< initial size of dynamically allocated arrays */
    int                   mem_treegrowinit;   /**< initial size of tree array */
    int                   mem_pathgrowinit;   /**< initial size of path array */
-   
+
    /* miscellaneous settings */
    SCIP_Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
    SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */

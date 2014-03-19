@@ -177,7 +177,7 @@ void SCIPclockFree(
    )
 {
    assert(clck != NULL);
-   
+
    BMSfreeMemory(clck);
 }
 
@@ -188,7 +188,7 @@ void SCIPclockInit(
    )
 {
    assert(clck != NULL);
-   
+
    SCIPdebugMessage("initializing clock %p of type %d\n", (void*)clck, clocktype);
    clck->enabled = TRUE;
    clck->lasttime = 0.0;
@@ -286,7 +286,7 @@ void SCIPclockStart(
          struct timeval tp; /*lint !e86*/
          struct tms now;
 #endif
-         
+
          SCIPdebugMessage("starting clock %p (type %d, usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
@@ -356,7 +356,7 @@ void SCIPclockStop(
          struct timeval tp; /*lint !e86*/
          struct tms now;
 #endif
-         
+
          SCIPdebugMessage("stopping clock %p (type %d, usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
@@ -417,7 +417,7 @@ SCIP_Real SCIPclockGetTime(
    SCIP_Real result;
    assert(clck != NULL);
    result = 0.0;
-   
+
    SCIPdebugMessage("getting time of clock %p (type %d, usedefault=%u, nruns=%d)\n",
       (void*)clck, clck->clocktype, clck->usedefault, clck->nruns);
 
@@ -451,7 +451,7 @@ SCIP_Real SCIPclockGetTime(
       struct timeval tp; /*lint !e86*/
       struct tms now;
 #endif
-         
+
       /* the clock is currently running: we have to add the current time to the clocks timer */
       switch( clck->clocktype )
       {
@@ -484,7 +484,7 @@ SCIP_Real SCIPclockGetTime(
          result = 0.0; /*lint !e527*/
       }
    }
-   
+
    clck->lasttime = result;
    return result;
 }
@@ -495,7 +495,7 @@ SCIP_Real SCIPclockGetLastTime(
    )
 {
    assert(clck != NULL);
-   
+
    return clck->lasttime;
 }
 
@@ -519,17 +519,17 @@ void SCIPclockSetTime(
    case SCIP_CLOCKTYPE_CPU:
       sec2cputime(sec, &clck->data.cpuclock.user);
       break;
-      
+
    case SCIP_CLOCKTYPE_WALL:            
       sec2walltime(sec, &clck->data.wallclock.sec, &clck->data.wallclock.usec);
       break;
-      
+
    case SCIP_CLOCKTYPE_DEFAULT:
    default:
       SCIPerrorMessage("invalid clock type\n");
       SCIPABORT();
    }
-   
+
    if( clck->nruns >= 1 )
    {
 #if defined(_WIN32) || defined(_WIN64)
@@ -541,7 +541,7 @@ void SCIPclockSetTime(
       struct timeval tp; /*lint !e86*/
       struct tms now;
 #endif
-         
+
       /* the clock is currently running: we have to subtract the current time from the new timer value */
       switch( clck->clocktype )
       {
@@ -592,7 +592,7 @@ SCIP_Real SCIPclockGetTimeOfDay(
    return (SCIP_Real)(now % (24*3600));
 #else
    struct timeval tp; /*lint !e86*/
-   
+
    gettimeofday(&tp, NULL);
 
    return (SCIP_Real)(tp.tv_sec % (24*3600)) + (SCIP_Real)tp.tv_usec / 1e+6; /*lint !e40 !e115*/

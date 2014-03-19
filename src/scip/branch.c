@@ -58,7 +58,7 @@ SCIP_RETCODE ensureLpcandsSize(
    )
 {
    assert(branchcand->nlpcands <= branchcand->lpcandssize);
-   
+
    if( num > branchcand->lpcandssize )
    {
       int newsize;
@@ -83,7 +83,7 @@ SCIP_RETCODE ensurePseudocandsSize(
    )
 {
    assert(branchcand->npseudocands <= branchcand->pseudocandssize);
-   
+
    if( num > branchcand->pseudocandssize )
    {
       int newsize;
@@ -106,7 +106,7 @@ SCIP_RETCODE ensureExterncandsSize(
    )
 {
    assert(branchcand->nexterncands <= branchcand->externcandssize);
-   
+
    if( num > branchcand->externcandssize )
    {
       int newsize;
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->npriopseudoints = 0;
    (*branchcand)->pseudomaxpriority = INT_MIN;
    (*branchcand)->validlpcandslp = -1;
-   
+
    return SCIP_OKAY;
 }
 
@@ -261,7 +261,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(var != NULL);
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetCol(var) == col);
-         
+
          /* LP branching candidates are fractional binary and integer variables; implicit variables are kept at the end
           * of the candidates array for some rounding heuristics
           */
@@ -612,7 +612,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
             }
             branchcand->nprioexternints++;
             branchcand->nprioexternimpls--;
-         
+
 
             if( vartype == SCIP_VARTYPE_BINARY )
             {
@@ -688,7 +688,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    if( branchpriority == branchcand->externmaxpriority )
    {
       SCIP_VARTYPE vartype;
-      
+
       vartype = SCIPvarGetType(var);
 
       /* variable has equal priority as the current maximum:
@@ -754,9 +754,9 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
       SCIP_VAR* var;
       int npcs;
       int v;
-      
+
       assert(prob != NULL);
-      
+
       /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
       npcs = 0;
       for( v = 0; v < prob->nbinvars + prob->nintvars + prob->nimplvars; ++v )
@@ -957,7 +957,7 @@ void branchcandSortPseudoCands(
    SCIPdebugMessage("resorting pseudo candidates\n");
 
    branchcand->pseudomaxpriority = INT_MIN;
-   
+
    for( i = 0; i < branchcand->npseudocands; ++i )
    {
       var = branchcand->pseudocands[i];
@@ -1085,7 +1085,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
 {
    assert(branchcand != NULL);
    assert(var != NULL);
-   
+
    if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)
       && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
       && SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
@@ -1204,7 +1204,7 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
       SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), (void*)set->scip);
       SCIP_CALL( branchrule->branchcopy(set->scip, branchrule) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1480,13 +1480,13 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
-   
+
          /* call external method */
          SCIP_CALL( branchrule->branchexeclp(set->scip, branchrule, allowaddcons, result) );
 
          /* stop timing */
          SCIPclockStop(branchrule->branchclock, set);
-      
+
          /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
@@ -1576,13 +1576,13 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
-   
+
          /* call external method */
          SCIP_CALL( branchrule->branchexecext(set->scip, branchrule, allowaddcons, result) );
 
          /* stop timing */
          SCIPclockStop(branchrule->branchclock, set);
-      
+
          /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
@@ -1667,13 +1667,13 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
-   
+
          /* call external method */
          SCIP_CALL( branchrule->branchexecps(set->scip, branchrule, allowaddcons, result) );
 
          /* stop timing */
          SCIPclockStop(branchrule->branchclock, set);
-      
+
          /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
@@ -1878,7 +1878,7 @@ void SCIPbranchruleSetPriority(
 {
    assert(branchrule != NULL);
    assert(set != NULL);
-   
+
    branchrule->priority = priority;
    set->branchrulessorted = FALSE;
 }
@@ -2161,7 +2161,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
       /* first, project it onto the current domain */
       branchpoint = MAX(lb, MIN(suggestion, ub));
-      
+
       if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       {
          /* if it is a discrete variable, then round it down and up and accept this choice */
@@ -2212,7 +2212,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    { 
       /* if value is at -infty, then the lower bound should be at -infinity */
       assert(SCIPsetIsInfinity(set, -lb));
-      
+
       /* choose 0.0 or something below upper bound if upper bound < 0 */
       if( SCIPsetIsNegative(set, ub) )
          branchpoint = ub - 1000.0;
@@ -2264,7 +2264,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
             /* project branchpoint into [minbrpoint, maxbrpoint] */
             branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
-            
+
             /* if selected branching point is close to 0.0 and bounds are away from 0.0, it often makes sense to branch exactly on 0.0 */
             if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
                branchpoint = 0.0;

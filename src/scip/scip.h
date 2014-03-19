@@ -4105,7 +4105,7 @@ EXTERN
 SCIP_RETCODE SCIPstartInteraction(
    SCIP*                 scip                /**< SCIP data structure */
    );
-   
+
 /**@} */
 
 
@@ -18925,7 +18925,7 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPceil(scip, val)                       SCIPsetCeil((scip)->set, val)
 #define SCIPround(scip, val)                      SCIPsetRound((scip)->set, val)
 #define SCIPfrac(scip, val)                       SCIPsetFrac((scip)->set, val)
-                                                                                
+
 #define SCIPisSumEQ(scip, val1, val2)             SCIPsetIsSumEQ((scip)->set, val1, val2)    
 #define SCIPisSumLT(scip, val1, val2)             SCIPsetIsSumLT((scip)->set, val1, val2)    
 #define SCIPisSumLE(scip, val1, val2)             SCIPsetIsSumLE((scip)->set, val1, val2)    
@@ -18934,7 +18934,7 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPisSumZero(scip, val)                  SCIPsetIsSumZero((scip)->set, val)         
 #define SCIPisSumPositive(scip, val)              SCIPsetIsSumPositive((scip)->set, val)     
 #define SCIPisSumNegative(scip, val)              SCIPsetIsSumNegative((scip)->set, val)     
-                                                                                
+
 #define SCIPisFeasEQ(scip, val1, val2)            SCIPsetIsFeasEQ((scip)->set, val1, val2)   
 #define SCIPisFeasLT(scip, val1, val2)            SCIPsetIsFeasLT((scip)->set, val1, val2)   
 #define SCIPisFeasLE(scip, val1, val2)            SCIPsetIsFeasLE((scip)->set, val1, val2)   
@@ -18950,16 +18950,16 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPfeasRound(scip, val)                  SCIPsetFeasRound((scip)->set, val)
 #define SCIPfeasFrac(scip, val)                   SCIPsetFeasFrac((scip)->set, val)
 
-                                                                                
+
 #define SCIPisLbBetter(scip, newlb, oldlb, oldub) SCIPsetIsLbBetter(scip->set, newlb, oldlb, oldub)
 #define SCIPisUbBetter(scip, newub, oldlb, oldub) SCIPsetIsUbBetter(scip->set, newub, oldlb, oldub)
-                                                                                
+
 #define SCIPisRelEQ(scip, val1, val2)             SCIPsetIsRelEQ((scip)->set, val1, val2)    
 #define SCIPisRelLT(scip, val1, val2)             SCIPsetIsRelLT((scip)->set, val1, val2)    
 #define SCIPisRelLE(scip, val1, val2)             SCIPsetIsRelLE((scip)->set, val1, val2)    
 #define SCIPisRelGT(scip, val1, val2)             SCIPsetIsRelGT((scip)->set, val1, val2)    
 #define SCIPisRelGE(scip, val1, val2)             SCIPsetIsRelGE((scip)->set, val1, val2)    
-                                                                                
+
 #define SCIPisSumRelEQ(scip, val1, val2)          SCIPsetIsSumRelEQ((scip)->set, val1, val2) 
 #define SCIPisSumRelLT(scip, val1, val2)          SCIPsetIsSumRelLT((scip)->set, val1, val2) 
 #define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 

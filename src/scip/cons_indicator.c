@@ -7235,7 +7235,7 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-      
+
       /* if the linear constraint is not present, we stop */
       if ( ! consdata->linconsactive )
          break;

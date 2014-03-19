@@ -1062,7 +1062,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    nchgbds = 0;
    startidx = 0;
    oldnimplications = propdata->nimplications;
-   
+
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
    SCIPdebugMessage("probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);

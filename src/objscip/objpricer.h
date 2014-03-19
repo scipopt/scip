@@ -192,7 +192,7 @@ scip::ObjPricer* SCIPfindObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable pricer */
    );
-   
+
 /** returns the variable pricer object for the given pricer */
 EXTERN
 scip::ObjPricer* SCIPgetObjPricer(

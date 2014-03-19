@@ -738,7 +738,7 @@ SCIP_RETCODE pqueueResize(
    )
 {
    assert(pqueue != NULL);
-   
+
    if( minsize <= pqueue->size )
       return SCIP_OKAY;
 
@@ -834,7 +834,7 @@ void* SCIPpqueueRemove(
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
-   
+
    if( pqueue->len == 0 )
       return NULL;
 
@@ -1737,7 +1737,7 @@ void hashmaplistFree(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   
+
    list = *hashmaplist;
    while( list != NULL )
    {
@@ -1915,7 +1915,7 @@ SCIP_RETCODE SCIPhashmapInsert(
 
    /* append origin->image pair to the list at the hash position */
    SCIP_CALL( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1958,7 +1958,7 @@ SCIP_RETCODE SCIPhashmapSetImage(
 
    /* set image for origin in hash list */
    SCIP_CALL( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1997,7 +1997,7 @@ SCIP_RETCODE SCIPhashmapRemove(
 
    /* remove element from the list at the hash position */
    SCIP_CALL( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2051,11 +2051,11 @@ SCIP_Bool SCIPhashmapIsEmpty(
 {
    int i;
    assert(hashmap != NULL);
-   
+
    for( i = 0; i < hashmap->nlists; ++i )
       if( hashmap->lists[i] )
          return FALSE;
-   
+
    return TRUE;
 }
 
@@ -2067,7 +2067,7 @@ int SCIPhashmapGetNEntries(
    int count = 0;
    int i;
    assert(hashmap != NULL);
-   
+
    for( i = 0; i < hashmap->nlists; ++i )
       count += SCIPhashmapListGetNEntries(hashmap->lists[i]);
 
@@ -2080,7 +2080,7 @@ int SCIPhashmapGetNLists(
 )
 {
    assert(hashmap != NULL);
-   
+
    return hashmap->nlists;
 }
 
@@ -2093,7 +2093,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
    assert(hashmap != NULL);
    assert(listindex >= 0);
    assert(listindex < hashmap->nlists);
-   
+
    return hashmap->lists[listindex];
 }
 
@@ -2103,10 +2103,10 @@ int SCIPhashmapListGetNEntries(
 )
 {
    int count = 0;
-   
+
    for( ; hashmaplist; hashmaplist = hashmaplist->next )
       ++count;
-   
+
    return count;
 }
 
@@ -2116,7 +2116,7 @@ void* SCIPhashmapListGetOrigin(
 )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->origin;
 }
 
@@ -2126,7 +2126,7 @@ void* SCIPhashmapListGetImage(
 )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->image;
 }
 
@@ -2136,7 +2136,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
 )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->next;
 }
 
@@ -2315,7 +2315,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -2612,7 +2612,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(intarray->maxusedidx == INT_MIN || intarray->maxusedidx < intarray->firstidx + intarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, intarray->minusedidx);
    maxidx = MAX(maxidx, intarray->maxusedidx);
    assert(0 <= minidx);
@@ -2686,7 +2686,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
-      
+
       if( intarray->minusedidx <= intarray->maxusedidx )
       {
          int shift;
@@ -2717,7 +2717,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
-      
+
       if( intarray->minusedidx <= intarray->maxusedidx )
       {
          int shift;
@@ -2785,7 +2785,7 @@ int SCIPintarrayGetVal(
 {
    assert(intarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < intarray->minusedidx || idx > intarray->maxusedidx )
       return 0;
    else
@@ -2819,7 +2819,7 @@ SCIP_RETCODE SCIPintarraySetVal(
       SCIP_CALL( SCIPintarrayExtend(intarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= intarray->firstidx);
       assert(idx < intarray->firstidx + intarray->valssize);
-      
+
       /* set the array value of the index */
       intarray->vals[idx - intarray->firstidx] = val;
 
@@ -2831,7 +2831,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    {
       /* set the array value of the index to zero */
       intarray->vals[idx - intarray->firstidx] = 0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == intarray->minusedidx )
       {
@@ -2978,7 +2978,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(boolarray->maxusedidx == INT_MIN || boolarray->maxusedidx < boolarray->firstidx + boolarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, boolarray->minusedidx);
    maxidx = MAX(maxidx, boolarray->maxusedidx);
    assert(0 <= minidx);
@@ -3052,7 +3052,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
-      
+
       if( boolarray->minusedidx <= boolarray->maxusedidx )
       {
          int shift;
@@ -3083,7 +3083,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
-      
+
       if( boolarray->minusedidx <= boolarray->maxusedidx )
       {
          int shift;
@@ -3153,7 +3153,7 @@ SCIP_Bool SCIPboolarrayGetVal(
 {
    assert(boolarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < boolarray->minusedidx || idx > boolarray->maxusedidx )
       return FALSE;
    else
@@ -3187,7 +3187,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
       SCIP_CALL( SCIPboolarrayExtend(boolarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= boolarray->firstidx);
       assert(idx < boolarray->firstidx + boolarray->valssize);
-      
+
       /* set the array value of the index */
       boolarray->vals[idx - boolarray->firstidx] = val;
 
@@ -3199,7 +3199,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    {
       /* set the array value of the index to zero */
       boolarray->vals[idx - boolarray->firstidx] = FALSE;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == boolarray->minusedidx )
       {
@@ -3333,7 +3333,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(ptrarray->maxusedidx == INT_MIN || ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, ptrarray->minusedidx);
    maxidx = MAX(maxidx, ptrarray->maxusedidx);
    assert(0 <= minidx);
@@ -3378,7 +3378,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
          for( i = 0; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
-      
+
       /* free old memory storage, and set the new array parameters */
       BMSfreeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
@@ -3407,7 +3407,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + ptrarray->valssize);
-      
+
       if( ptrarray->minusedidx <= ptrarray->maxusedidx )
       {
          int shift;
@@ -3438,7 +3438,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + ptrarray->valssize);
-      
+
       if( ptrarray->minusedidx <= ptrarray->maxusedidx )
       {
          int shift;
@@ -3506,7 +3506,7 @@ void* SCIPptrarrayGetVal(
 {
    assert(ptrarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < ptrarray->minusedidx || idx > ptrarray->maxusedidx )
       return NULL;
    else
@@ -3540,7 +3540,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
       SCIP_CALL( SCIPptrarrayExtend(ptrarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= ptrarray->firstidx);
       assert(idx < ptrarray->firstidx + ptrarray->valssize);
-      
+
       /* set the array value of the index */
       ptrarray->vals[idx - ptrarray->firstidx] = val;
 
@@ -3552,7 +3552,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    {
       /* set the array value of the index to zero */
       ptrarray->vals[idx - ptrarray->firstidx] = NULL;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == ptrarray->minusedidx )
       {
@@ -4107,7 +4107,7 @@ void SCIPsortDown(
    /* create identity permutation */
    for( pos = 0; pos < len; ++pos )
       perm[pos] = pos;
-   
+
    SCIPsortDownInd(perm, indcomp, dataptr, len);
 }
 
@@ -6789,7 +6789,7 @@ SCIP_Bool SCIPrealToRational(
    h1 = 0.0;
    delta0 = val - g0/h0;
    delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
-  
+
    while( (delta0 < mindelta || delta0 > maxdelta) && (delta1 < mindelta || delta1 > maxdelta) )
    {
       assert(EPSGT(b, a, epsilon));
@@ -6808,10 +6808,10 @@ SCIP_Bool SCIPrealToRational(
 
       g1 = gx;
       h1 = hx;
-      
+
       if( h0 > maxdnom )
          return FALSE;
-      
+
       delta0 = val - g0/h0;
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
@@ -7134,7 +7134,7 @@ SCIP_Real SCIPselectSimpleValue(
       SCIP_Longint nominator;
       SCIP_Longint denominator;
       SCIP_Bool success;
-      
+
       /* try to find a "simple" rational number inside the interval */
       SCIPdebugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
       success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
@@ -7154,7 +7154,7 @@ SCIP_Real SCIPselectSimpleValue(
          SCIPdebugPrintf(" failed\n");
       }
    }
-   
+
    return val;
 }
 
@@ -7860,6 +7860,6 @@ SCIP_Real SCIPrelDiff(
    absval1 = REALABS(val1);
    absval2 = REALABS(val2);
    quot = MAX3(1.0, absval1, absval2);
-   
+
    return (val1-val2)/quot;
 }

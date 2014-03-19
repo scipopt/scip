@@ -193,7 +193,7 @@ SCIP_RETCODE SCIPrelaxInit(
       relax->ncalls = 0;
       relax->lastsolvednode = -1;
    }
-   
+
    if( relax->relaxinit != NULL )
    {
       /* start timing */
@@ -476,7 +476,7 @@ void SCIPrelaxSetPriority(
 {
    assert(relax != NULL);
    assert(set != NULL);
-   
+
    relax->priority = priority;
    set->relaxssorted = FALSE;
 }

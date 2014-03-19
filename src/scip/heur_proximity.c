@@ -111,7 +111,7 @@ SCIP_RETCODE solveLp(
 {
    SCIP_VAR** vars;
    SCIP_RETCODE retstat;
-   
+
    int v;
    int nvars;
    int ncontvars;
@@ -121,7 +121,7 @@ SCIP_RETCODE solveLp(
    SCIP_Bool requiresnlp;
 
    assert(success != NULL);
- 
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
 
    nintvars = nvars - ncontvars;
@@ -532,7 +532,7 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    heurdata->lastsolidx = -1;
    heurdata->nusedlpiters = 0LL;
    heurdata->subprobidx = 0;
-   
+
    heurdata->subscip = NULL;
    heurdata->varmapfw = NULL;
    heurdata->subvars = NULL;

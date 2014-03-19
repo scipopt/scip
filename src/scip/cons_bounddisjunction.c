@@ -394,7 +394,7 @@ SCIP_RETCODE switchWatchedvars(
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(watchedvar1 == -1 || watchedvar1 != watchedvar2);
@@ -406,7 +406,7 @@ SCIP_RETCODE switchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -442,7 +442,7 @@ SCIP_RETCODE switchWatchedvars(
    /* set the new watched variables */
    consdata->watchedvar1 = watchedvar1;
    consdata->watchedvar2 = watchedvar2;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1029,7 +1029,7 @@ SCIP_RETCODE processWatchedVars(
       for( v = 0; v < nvars; ++v )
       {
          SCIP_Longint nbranchings;
-         
+
          /* don't process the watched variables again */
          if( v == consdata->watchedvar1 || v == consdata->watchedvar2 )
             continue;
@@ -1043,7 +1043,7 @@ SCIP_RETCODE processWatchedVars(
          {
             assert(v != consdata->watchedvar1);
             assert(v != consdata->watchedvar2);
-            
+
             /* the literal is satisfied, making the constraint redundant;
              * make sure, the feasible variable is watched and disable the constraint
              */
@@ -1060,7 +1060,7 @@ SCIP_RETCODE processWatchedVars(
             SCIP_CALL( disableCons(scip, cons) );
             return SCIP_OKAY;
          }
-      
+
          /* the literal is still undecided and can be used as watched variable */
          nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], 
             boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_UPWARDS);
@@ -1246,12 +1246,12 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_Real varub;
    int nvars;
    int v;
-   
+
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(neednarybranch != NULL);
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    nvars = consdata->nvars;
@@ -1261,9 +1261,9 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || boundtypes != NULL);
    assert(nvars == 0 || bounds != NULL);
-   
+
    *neednarybranch = TRUE;
-   
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -1354,10 +1354,10 @@ SCIP_RETCODE enforceCurrentSol(
          /* constraint was infeasible -> reset age */
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *infeasible = TRUE;
-         
+
          /* register branching candidates */
          SCIP_CALL( registerBranchingCandidates(scip, cons, &neednarybranch) );
-         
+
          if( !neednarybranch )
             *registeredbrcand = TRUE;
       }
@@ -1382,15 +1382,15 @@ SCIP_RETCODE createNAryBranch(
    SCIP_Real varub;
    int nvars;
    int v;
-   
+
    SCIP_Real  priority;
    SCIP_Real  estimate;
    SCIP_NODE* node;
-   
+
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    nvars = consdata->nvars;
@@ -1400,7 +1400,7 @@ SCIP_RETCODE createNAryBranch(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || boundtypes != NULL);
    assert(nvars == 0 || bounds != NULL);
-   
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -1436,7 +1436,7 @@ SCIP_RETCODE createNAryBranch(
 
       SCIPdebugMessage(" -> creating child to enforce: <%s> %c= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(vars[v]), boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<', bounds[v], priority, estimate);
-      
+
       SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
 
       /* enforce current literal */
@@ -1446,7 +1446,7 @@ SCIP_RETCODE createNAryBranch(
          SCIP_Real  one;
 
          one = 1.0;
-         
+
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
             SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &var, &one, bounds[v], SCIPinfinity(scip),
@@ -1908,7 +1908,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBounddisjunction)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -2096,7 +2096,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBounddisjunction)
          *result = SCIP_BRANCHED;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2159,7 +2159,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
          *result = SCIP_BRANCHED;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2589,7 +2589,7 @@ SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
    assert( cons != NULL );
 
    consdataPrint(scip, SCIPconsGetData(cons), file, FALSE);
-  
+
    return SCIP_OKAY;
 }
 
@@ -2603,9 +2603,9 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    SCIP_Real* bounds;
    int nvars;
    int v;
-   
+
    assert(valid != NULL);
-   
+
    *valid = TRUE;
 
    /* get source data */
@@ -2615,7 +2615,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    bounds = SCIPgetBoundsBounddisjunction(sourcescip, sourcecons);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
-   
+
    /* map source variables to active variables of the target SCIP */
    for( v = 0; v < nvars && *valid; ++v )
    {
@@ -2739,7 +2739,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       /* set variable */
       vars[nvars++] = var;
-      
+
       /* check if the size of the variable array was big enough */
       if( nvars > varssize )
       {
@@ -2915,7 +2915,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       else
          ncontinuous++;
    }
-      
+
    /* create a constraint out of the conflict set */
    if( i == nbdchginfos && ncontinuous < conflicthdlrdata->continuousfrac * nbdchginfos + 0.5 )
    {

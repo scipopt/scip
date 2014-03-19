@@ -1913,7 +1913,7 @@ SCIP_RETCODE createSubscip(
             {
                SCIP_Real val;
                assert( mipdata->coltype[j] == colPresent );
-               
+
                val = SCIPgetSolVal(scip, bestsol, SCIPcolGetVar(cols[j]));
                consvars[nconsvars] = mipdata->alpha[j];
                consvals[nconsvars] = val;
