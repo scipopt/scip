@@ -196,7 +196,7 @@ ALLSRC		+=	$(LPILIBSRC)
 
 
 #-----------------------------------------------------------------------------
-# NLP Solver Interfaces and expression interpreter 
+# NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
 NLPILIBCOBJ	= nlpi/nlpi.o \
@@ -611,13 +611,13 @@ endif
 splint:		$(SCIPLIBSRC) $(LPILIBSRC)
 		-rm -f splint.out
 ifeq ($(FILES),)
-		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) &>> splint.out;'
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
 else
-		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$(FILES)) &>> splint.out;'
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$(FILES)) >> splint.out;'
 endif
 
 .PHONY: doc
-doc: 		
+doc:
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
 
 .PHONY: docpreview
@@ -638,61 +638,61 @@ test:
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 
 .PHONY: testcount
-testcount:		
+testcount:
 		cd check; \
 		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: testcplex
-testcplex:		
+testcplex:
 		cd check; \
 		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testmosek
-testmosek:		
+testmosek:
 		cd check; \
 		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcbc
-testcbc:		
+testcbc:
 		cd check; \
 		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
 
 .PHONY: testcbcparallel
-testcbcparallel:                
+testcbcparallel:
 		cd check; \
                 $(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
 
 .PHONY: testgurobi
-testgurobi:		
+testgurobi:
 		cd check; \
 		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testglpk
-testglpk:		
+testglpk:
 		cd check; \
 		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testsymphony
-testsymphony:		
+testsymphony:
 		cd check; \
 		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testblis
-testblis:		
+testblis:
 		cd check; \
 		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/;
 
-# include target to detect the current git hash 
+# include target to detect the current git hash
 -include make/local/make.detectgithash
 
 # this empty target is needed for the SCIP release versions
 githash::      # do not remove the double-colon
 
-# include local targets 
+# include local targets
 -include make/local/make.targets
 
 # include install/uninstall targets
@@ -761,7 +761,7 @@ $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
-$(OBJDIR):	
+$(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
 $(BINOBJDIR):	| $(OBJDIR)
@@ -773,10 +773,10 @@ $(LIBOBJDIR):	| $(OBJDIR)
 $(LIBOBJSUBDIRS):	| $(LIBOBJDIR)
 		@-mkdir -p $(LIBOBJSUBDIRS)
 
-$(LIBDIR):	
+$(LIBDIR):
 		@-mkdir -p $(LIBDIR)
 
-$(BINDIR):	
+$(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
@@ -909,7 +909,7 @@ endif
 $(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(OBJSCIPLIBOBJFILES) 
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(OBJSCIPLIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -925,7 +925,7 @@ endif
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) 
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
