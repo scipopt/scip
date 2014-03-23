@@ -188,8 +188,6 @@
  * the slack variable has to start with "indslack" and end with the name of the corresponding linear constraint.
  *
  * @todo Check whether one can further use the fact that the slack variable is aggregated.
- *
- * @todo Check whether using an objective cutoff can be integrated into the alternative polyhedron.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -232,6 +230,9 @@
 #define EVENTHDLR_RESTART_NAME     "indicatorrestart"
 #define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1"
 
+#define EVENTHDLR_OBJCUT_NAME      "indicatorobjcut"
+#define EVENTHDLR_OBJCUT_DESC      "update bound in objectice cut"
+
 /* conflict handler properties */
 #define CONFLICTHDLR_NAME          "indicatorconflict"
 #define CONFLICTHDLR_DESC          "replace slack variables and generate logicor constraints"
@@ -249,6 +250,7 @@
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
 #define DEFAULT_TRYSOLFROMCOVER     FALSE    /**< Try to construct a feasible solution from a cover? */
 #define DEFAULT_USEOTHERCONSS       FALSE    /**< Collect other constraints to alternative LP? */
+#define DEFAULT_USEOBJECTIVECUT     FALSE    /**< Use objective cut with current best solution to alternative LP? */
 #define DEFAULT_UPDATEBOUNDS        FALSE    /**< Update bounds of original variables for separation? */
 #define DEFAULT_MAXCONDITIONALTLP     0.0    /**< max. estimated condition of the solution basis matrix of the alt. LP to be trustworthy (0.0 to disable check) */
 #define DEFAULT_MAXSEPACUTS           100    /**< maximal number of cuts separated per separation round */
@@ -290,9 +292,11 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlrbound;     /**< event handler for bound change events */
    SCIP_EVENTHDLR*       eventhdlrrestart;   /**< event handler for performing restarts */
+   SCIP_EVENTHDLR*       eventhdlrobjcut;    /**< event handler for objective cut */
    SCIP_Bool             removable;          /**< whether the separated cuts should be removable */
    SCIP_Bool             scaled;             /**< if first row of alt. LP has been scaled */
    SCIP_Bool             objindicatoronly;   /**< whether the objective is nonzero only for indicator variables */
+   SCIP_Bool             objothervarsonly;   /**< whether the objective is nonzero only for non-indicator variables */
    SCIP_Real             minabsobj;          /**< minimum absolute nonzero objective of indicator variables */
    SCIP_LPI*             altlp;              /**< alternative LP for cut separation */
    int                   nrows;              /**< # rows in the alt. LP corr. to original variables in linear constraints and slacks */
@@ -303,6 +307,7 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         ubhash;             /**< hash map from variable to index of upper bound column in alternative LP */
    SCIP_HASHMAP*         slackhash;          /**< hash map from slack variable to row index in alternative LP */
    int                   nslackvars;         /**< # slack variables */
+   int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
    int                   roundingrounds;     /**< number of rounds in separation */
    SCIP_Real             roundingminthres;   /**< minimal value for rounding in separation */
    SCIP_Real             roundingmaxthres;   /**< maximal value for rounding in separation */
@@ -337,6 +342,7 @@ struct SCIP_ConshdlrData
    int                   naddlincons;        /**< number of additional constraints */
    int                   maxaddlincons;      /**< maximal number of additional constraints */
    SCIP_Bool             useotherconss;      /**< Collect other constraints to alternative LP? */
+   SCIP_Bool             useobjectivecut;    /**< Use objective cut with current best solution to alternative LP? */
    SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
@@ -542,6 +548,70 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
    default:
       SCIPerrorMessage("invalid event type.\n");
       return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* forward declaration */
+static
+SCIP_RETCODE addObjcut(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/* exec the event handler for updating the objectice cut
+ *
+ * If the best primal bound has been improved, update objective cut.
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecIndicatorObjcut)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_Real objbnd;
+
+   assert( scip != NULL );
+   assert( eventhdlr != NULL );
+   assert( eventdata != NULL );
+   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_OBJCUT_NAME) == 0 );
+   assert( event != NULL );
+   assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND );
+
+   conshdlr = (SCIP_CONSHDLR*)eventdata;
+   assert( conshdlr != NULL );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+   assert( conshdlrdata->useobjectivecut );
+
+   if ( conshdlrdata->altlp == NULL )
+      return SCIP_OKAY;
+
+   objbnd = SCIPgetUpperbound(scip);
+   assert( ! SCIPisInfinity(scip, objbnd) );
+
+   SCIPdebugMessage("Update objective bound to %g.\n", objbnd);
+
+   /* possibly add column for objective cut */
+   if ( conshdlrdata->objcutindex < 0 )
+   {
+      SCIP_CALL( addObjcut(scip, conshdlr) );
+   }
+   else
+   {
+#ifndef NDEBUG
+      SCIP_Real oldbnd;
+      SCIP_CALL( SCIPlpiGetCoef(conshdlrdata->altlp, 0, conshdlrdata->objcutindex, &oldbnd) );
+      assert( SCIPisLT(scip, objbnd, oldbnd ) );
+#endif
+
+      /* update bound */
+      SCIP_CALL( SCIPlpiChgCoef(conshdlrdata->altlp, 0, conshdlrdata->objcutindex, objbnd) );
+
+#ifdef SCIP_OUTPUT
+      SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "alt.lp") );
+#endif
    }
 
    return SCIP_OKAY;
@@ -2407,6 +2477,249 @@ SCIP_RETCODE addAltLPRow(
    SCIPfreeBufferArray(scip, &matbeg);
    SCIPfreeBufferArray(scip, &newVars);
    SCIPfreeBufferArray(scip, &newRowsSlack);
+
+   conshdlrdata->scaled = FALSE;
+
+#ifdef SCIP_OUTPUT
+   SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "alt.lp") );
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** try to add objective cut as column to alternative LP */
+static
+SCIP_RETCODE addObjcut(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VAR** newvars;
+   SCIP_VAR** vars;
+   SCIP_Real* matval;
+   SCIP_Real* obj;
+   SCIP_Real* lb;
+   SCIP_Real* ub;
+   SCIP_Real objbnd;
+   int* matbeg;
+   int* matind;
+   int nnewvars = 0;
+   int nnewcols = 0;
+   int cnt = 0;
+   int ncols;
+   int nvars;
+   int v;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* skip procedure if already added */
+   if ( conshdlrdata->objcutindex >= 0 )
+      return SCIP_OKAY;
+
+   /* check whether we can add objective cut: all indicator variables have zero objective */
+   if ( ! conshdlrdata->objothervarsonly )
+      return SCIP_OKAY;
+
+   /* check whether we have a bound */
+   objbnd = SCIPgetUpperbound(scip);
+   assert( ! SCIPisInfinity(scip, -objbnd) );
+   if ( SCIPisInfinity(scip, objbnd) )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Add objective cut to alternative LP (obj. bound: %g).\n", objbnd);
+
+   /* possibly init alternative LP */
+   if ( conshdlrdata->altlp == NULL )
+   {
+      SCIP_CALL( initAlternativeLP(scip, conshdlr) );
+   }
+   assert( conshdlrdata->varhash != NULL );
+   assert( conshdlrdata->slackhash != NULL );
+   assert( conshdlrdata->lbhash != NULL );
+   assert( conshdlrdata->ubhash != NULL );
+
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(conshdlrdata->altlp, &nrows) );
+      assert( nrows == conshdlrdata->nrows );
+   }
+#endif
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matbeg, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matind, 2 * nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matval, 2 * nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &obj, 2 * nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lb, 2 * nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, 2 * nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nvars) );
+
+   /* store index of column in constraint */
+   SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altlp, &ncols) );
+   conshdlrdata->objcutindex = ncols;
+
+   /* handle first row in alternative LP */
+   if ( ! SCIPisFeasZero(scip, objbnd) )
+   {
+      matind[cnt] = 0;
+      matval[cnt++] = objbnd;
+   }
+
+   /* set up column (recognize new original variables) */
+   for (v = 0; v < nvars; ++v)
+   {
+      SCIP_VAR* var;
+      SCIP_Real objval;
+
+      var = vars[v];
+      assert( var != NULL );
+      objval = SCIPvarGetObj(var);
+
+      /* skip variables with zero objective - this includes slack and indicator variables */
+      if ( SCIPisZero(scip, objval) )
+         continue;
+
+      assert( ! SCIPhashmapExists(conshdlrdata->slackhash, var) );
+
+      /* if variable exists */
+      if ( SCIPhashmapExists(conshdlrdata->varhash, var) )
+         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+      else
+      {
+         /* add variable in map and array; remember to add a new row */
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) conshdlrdata->nrows) );
+         assert( conshdlrdata->nrows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+         SCIPdebugMessage("Inserted variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nrows);
+         matind[cnt] = (conshdlrdata->nrows)++;
+
+         /* store new variables */
+         newvars[nnewvars++] = var;
+      }
+      assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
+      matval[cnt++] = objval;
+   }
+
+   /* add rows corresponding to new vars */
+   if ( nnewvars > 0 )
+   {
+      SCIP_Real* lhs;
+      SCIP_Real* rhs;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nnewvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nnewvars) );
+      for (v = 0; v < nnewvars; ++v)
+      {
+         lhs[v] = 0.0;
+         rhs[v] = 0.0;
+      }
+      /* add new rows */
+      SCIP_CALL( SCIPlpiAddRows(conshdlrdata->altlp, nnewvars, lhs, rhs, NULL, 0, NULL, NULL, NULL) );
+
+      SCIPfreeBufferArray(scip, &lhs);
+      SCIPfreeBufferArray(scip, &rhs);
+   }
+
+   /* add column */
+   obj[0] = 0.0;
+   lb[0] = 0.0;
+   ub[0] = SCIPlpiInfinity(conshdlrdata->altlp);
+   matbeg[0] = 0;
+
+   SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altlp, 1, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
+
+   /* add columns corresponding to bounds of original variables */
+   cnt = 0;
+   for (v = 0; v < nnewvars; ++v)
+   {
+      SCIP_VAR* var;
+      SCIP_Real val;
+
+      var = newvars[v];
+
+      /* if the lower bound is finite */
+      val  = SCIPvarGetLbGlobal(var);
+      if ( ! SCIPisInfinity(scip, -val) )
+      {
+         matbeg[nnewcols] = cnt;
+         if ( ! SCIPisZero(scip, val) )
+         {
+            matind[cnt] = 0;
+            matval[cnt++] = -val;
+         }
+
+         assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
+         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         assert( 0 <= matind[cnt] && matind[cnt] < conshdlrdata->nrows );
+         matval[cnt++] = -1.0;
+
+         obj[nnewcols] = 0.0;
+         lb[nnewcols] = 0.0;
+         ub[nnewcols] = SCIPlpiInfinity(conshdlrdata->altlp);
+         ++conshdlrdata->nlbbounds;
+
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->lbhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
+         assert( SCIPhashmapExists(conshdlrdata->lbhash, var) );
+         SCIPdebugMessage("added column corr. to lower bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
+            val, SCIPvarGetName(var), ncols + 1 + nnewcols);
+         ++nnewcols;
+      }
+
+      /* if the upper bound is finite */
+      val = SCIPvarGetUbGlobal(var);
+      if ( ! SCIPisInfinity(scip, val) )
+      {
+         matbeg[nnewcols] = cnt;
+         if ( ! SCIPisZero(scip, val) )
+         {
+            matind[cnt] = 0;
+            matval[cnt++] = val;
+         }
+
+         assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
+         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         assert( 0 <= matind[cnt] && matind[cnt] < conshdlrdata->nrows );
+         matval[cnt++] = 1.0;
+
+         obj[nnewcols] = 0.0;
+         lb[nnewcols] = 0.0;
+         ub[nnewcols] = SCIPlpiInfinity(conshdlrdata->altlp);
+         ++conshdlrdata->nubbounds;
+
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->ubhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
+         assert( SCIPhashmapExists(conshdlrdata->ubhash, var) );
+
+         SCIPdebugMessage("added column corr. to upper bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
+            val, SCIPvarGetName(var), ncols + 1 + nnewcols);
+         ++nnewcols;
+      }
+   }
+
+   /* add columns if necessary */
+   if ( nnewcols > 0 )
+   {
+      SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altlp, nnewcols, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
+   }
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altlp, &cnt) );
+   assert( cnt == ncols + nnewcols + 1 );
+#endif
+
+   SCIPfreeBufferArray(scip, &newvars);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
+   SCIPfreeBufferArray(scip, &matind);
+   SCIPfreeBufferArray(scip, &matval);
+   SCIPfreeBufferArray(scip, &matbeg);
 
    conshdlrdata->scaled = FALSE;
 
@@ -4329,6 +4642,7 @@ void initConshdlrData(
    conshdlrdata->nlbbounds = 0;
    conshdlrdata->nubbounds = 0;
    conshdlrdata->nslackvars = 0;
+   conshdlrdata->objcutindex = -1;
    conshdlrdata->roundingminthres = 0.1;
    conshdlrdata->roundingmaxthres = 0.6;
    conshdlrdata->roundingrounds = 1;
@@ -4338,6 +4652,7 @@ void initConshdlrData(
    conshdlrdata->nbinvarszero = 0;
    conshdlrdata->performedrestart = FALSE;
    conshdlrdata->objindicatoronly = FALSE;
+   conshdlrdata->objothervarsonly = FALSE;
    conshdlrdata->minabsobj = 0.0;
 }
 
@@ -4484,6 +4799,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    }
 
    /* check each constraint */
+   conshdlrdata->objothervarsonly = TRUE;
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
@@ -4492,10 +4808,16 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       assert( conss[c] != NULL );
       assert( SCIPconsIsTransformed(conss[c]) );
 
+      /* SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) ); */
+
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
+      assert( consdata->binvar != NULL );
+      assert( consdata->slackvar != NULL );
 
-      /* SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) ); */
+      assert( SCIPisZero(scip, SCIPvarGetObj(consdata->slackvar)) );
+      if ( ! SCIPisZero(scip, varGetObjDelta(consdata->binvar)) )
+         conshdlrdata->objothervarsonly = FALSE;
 
       /* deactivate */
       if ( ! consdata->linconsactive )
@@ -4617,6 +4939,14 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
             }
             SCIPdebugMessage("Added %d additional columns from linear constraints to alternative LP.\n", cnt);
          }
+      }
+
+      /* add objective cut if required */
+      if ( conshdlrdata->useobjectivecut && conshdlrdata->altlp != NULL )
+      {
+         SCIP_CALL( addObjcut(scip, conshdlr) );
+         assert( conshdlrdata->eventhdlrobjcut != NULL );
+         SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, conshdlrdata->eventhdlrobjcut, (SCIP_EVENTDATA*) conshdlr, NULL) );
       }
    }
 
@@ -6134,31 +6464,23 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    /* create constraint handler data (used in conflicthdlrdata) */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
-   conshdlrdata->eventhdlrbound = NULL;
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrbound),
-         EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC, eventExecIndicatorBound, NULL) );
+   conshdlrdata->eventhdlrbound = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrbound),  EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC,
+         eventExecIndicatorBound, NULL) );
    assert(conshdlrdata->eventhdlrbound != NULL);
 
-   conshdlrdata->eventhdlrrestart = NULL;
    /* create event handler for restart events */
+   conshdlrdata->eventhdlrrestart = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrrestart), EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
          eventExecIndicatorRestart, NULL) );
    assert(conshdlrdata->eventhdlrrestart != NULL);
 
-   /* get event handler for bound change events */
-   if ( conshdlrdata->eventhdlrbound == NULL )
-   {
-      SCIPerrorMessage("event handler for indicator constraints not found.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* get event handler for bound change events */
-   if ( conshdlrdata->eventhdlrrestart == NULL )
-   {
-      SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+   /* create event handler for objective cut events */
+   conshdlrdata->eventhdlrobjcut = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrobjcut), EVENTHDLR_OBJCUT_NAME, EVENTHDLR_OBJCUT_DESC,
+         eventExecIndicatorObjcut, NULL) );
+   assert(conshdlrdata->eventhdlrobjcut != NULL);
 
    conshdlrdata->heurtrysol = NULL;
    conshdlrdata->sepaalternativelp = DEFAULT_SEPAALTERNATIVELP;
@@ -6330,6 +6652,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/useotherconss",
          "Collect other constraints to alternative LP?",
          &conshdlrdata->useotherconss, TRUE, DEFAULT_USEOTHERCONSS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/useobjectivecut",
+         "Use objective cut with current best solution to alternative LP?",
+         &conshdlrdata->useobjectivecut, TRUE, DEFAULT_USEOBJECTIVECUT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/trysolfromcover",
