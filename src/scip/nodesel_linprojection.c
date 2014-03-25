@@ -26,7 +26,6 @@
 #include "scip/nodesel_linprojection.h"
 #include "scip/event_solvingstage.h"
 
-#define FILEOUTPUT 0
 #define NODESEL_NAME            "linprojection"
 #define NODESEL_DESC            "uses a linear projection method to estimate the best MIP solution in the nodes subtree"
 #define NODESEL_STDPRIORITY     -30000
@@ -57,7 +56,7 @@
 #define EVENTHDLR_NAME         "linprojection"
 #define EVENTHDLR_DESC         "event handler for linprojection node events"
 #define EVENT_TYPE_LINPROJECTION SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE
-#define HEADER "NUMBER  NODELOWER NODEESTIM NODELINESTIM CUTOFFBOUND CLASSICESTIM NODELPCANDS OPTVAL"
+
 #define DEFAULT_ADDNODEDATA FALSE
 
 /* structure to collect descriptive statistics */
@@ -102,7 +101,6 @@ struct SCIP_NodeselData
    SCIP_DESCSTAT*        oldestimationstat;  /**< descriptive statistics of classic estimation method */
    SCIP_Real             optsolvalue;        /**< optimal solution value according to solu file */
    int                   nrootlpcands;       /**< number of root LP candidates */
-   char*                 filename;           /**< file to keep node results */
    SCIP_Bool             addnodedata;        /**< should data be added as node constraints? */
    int                   eventfilterpos;     /**< event filter position for node events */
 };
@@ -535,26 +533,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinprojection)
    {
       updateLinprojectionslope(scip, nodeseldata, nodelowerbound, nlpcands);
    }
-
-#ifdef FILEOUTPUT
-   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
-   {
-      FILE* file;
-
-      file = fopen(nodeseldata->filename, "a");
-      assert(file != NULL);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%lld %15g %15g %15g %15g %15g %10d %15g\n",
-            SCIPnodeGetNumber(focusnode),
-            SCIPgetExternalValue(scip, SCIPnodeGetLowerbound(focusnode)),
-            SCIPgetExternalValue(scip, SCIPnodeGetEstimate(focusnode)),
-            SCIPgetExternalValue(scip, nodeGetLinprojectionEstimate(focusnode, nodeseldata)),
-            SCIPgetExternalValue(scip, nodeseldata->cutoffbound),
-            nlpcands,
-            nodeseldata->optsolvalue);
-      fclose(file);
-   }
-#endif
-
    return SCIP_OKAY;
 
 }
@@ -580,30 +558,6 @@ SCIP_DECL_NODESELCOPY(nodeselCopyLinprojection)
 static
 SCIP_DECL_NODESELINIT(nodeselInitLinprojection)
 {
-#ifdef FILEOUTPUT
-   SCIP_NODESELDATA* nodeseldata;
-   FILE* file;
-   char filename[SCIP_MAXSTRLEN];
-   assert(scip != NULL);
-
-   nodeseldata = SCIPnodeselGetData(nodesel);
-   if( nodeseldata->filename != NULL )
-      SCIPfreeMemory(scip, &nodeseldata->filename);
-
-   sprintf(filename, "/OPTI/bzfhende/nodefiles/%s.npf",SCIPstringGetBasename(SCIPgetProbName(scip)));
-
-   SCIPduplicateMemoryArray(scip, &nodeseldata->filename, filename, strlen(filename) + 1);
-
-   /* open the file and overwrite its content */
-   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
-   {
-      file = fopen(nodeseldata->filename, "w+");
-      assert(file != NULL);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, HEADER"\n");
-      fclose(file);
-   }
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -689,9 +643,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeLinprojection)
 
    SCIPdescstatFree(scip, &nodeseldata->oldestimationstat);
    SCIPdescstatFree(scip, &nodeseldata->newestimationstat);
-
-   if( nodeseldata->filename != NULL )
-      SCIPfreeMemoryArray(scip, &nodeseldata->filename);
 
    SCIPfreeMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, NULL);
@@ -797,7 +748,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompLinprojection)
    return 0;
 }
 
-
 /*
  * node selector specific interface methods
  */
@@ -817,7 +767,6 @@ SCIP_RETCODE SCIPincludeNodeselLinprojection(
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->conshdlr = NULL;
    nodeseldata->nrootlpcands = 0;
-   nodeseldata->filename = NULL;
    nodeseldata->eventfilterpos = -1;
 
    SCIP_CALL( SCIPdescstatCreate(scip, &nodeseldata->oldestimationstat, "classic estimate") );

@@ -19,14 +19,16 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define FILEOUTPUT
 #include "scip/event_estimation.h"
 #include "scip/scip.h"
+#include <string.h>
+
 #define EVENTHDLR_NAME         "estimation"
 #define EVENTHDLR_DESC         "event handler for estimation event"
 #define EVENT_TYPE_ESTIMATION SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE
 #define DEFAULT_ENABLED        FALSE
-
+#define HEADER "NUMBER  PRIMAL LOWER ESTIM ROOTLPPSESTIM DEPTH"
 /*
  * Data structures
  */
@@ -41,6 +43,7 @@ struct SCIP_EventhdlrData
    SCIP_Real*           rootlpcandsfrac;
    SCIP_Bool            enabled;            /**< is the estimation event handler enabled? */
    int                  eventfilterpos;     /**< the event filter position, or -1, if event has not (yet) been caught */
+   char*                filename;           /**< file to keep node results */
 };
 
 /*
@@ -119,9 +122,11 @@ SCIP_Real recalcClassicEstimate(
       SCIP_Real upscore;
       SCIP_Real downscore;
 
-      upscore = SCIPgetVarPseudocostScore(scip, eventhdlrdata->rootlpcands[i], - eventhdlrdata->rootlpcandsfrac[i]);
-      downscore = SCIPgetVarPseudocostScore(scip, eventhdlrdata->rootlpcands[i], 1 - eventhdlrdata->rootlpcandsfrac[i]);
+      upscore = SCIPgetVarPseudocost(scip, eventhdlrdata->rootlpcands[i], SCIP_BRANCHDIR_UPWARDS);
+      downscore = SCIPgetVarPseudocost(scip, eventhdlrdata->rootlpcands[i], SCIP_BRANCHDIR_DOWNWARDS);
 
+      upscore *= (1.0 - eventhdlrdata->rootlpcandsfrac[i]);
+      downscore *= eventhdlrdata->rootlpcandsfrac[i];
       estimate += MIN(upscore, downscore);
    }
 
@@ -174,7 +179,41 @@ SCIP_DECL_EVENTFREE(eventFreeEstimation)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata->rootlpcands == NULL && eventhdlrdata->rootlpcandsfrac == NULL);
    assert(eventhdlrdata != NULL);
+
+   if( eventhdlrdata->filename != NULL )
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->filename);
+
    SCIPfreeMemory(scip, &eventhdlrdata);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_EVENTINIT(eventInitEstimation)
+{
+#ifdef FILEOUTPUT
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   FILE* file;
+   char filename[SCIP_MAXSTRLEN];
+   assert(scip != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   if( eventhdlrdata->filename != NULL )
+      SCIPfreeMemory(scip, &eventhdlrdata->filename);
+
+   sprintf(filename, "/OPTI/bzfhende/nodefiles/%s.npf",SCIPstringGetBasename(SCIPgetProbName(scip)));
+
+   SCIPduplicateMemoryArray(scip, &eventhdlrdata->filename, filename, strlen(filename) + 1);
+
+   /* open the file and overwrite its content */
+   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
+   {
+      file = fopen(eventhdlrdata->filename, "w+");
+      assert(file != NULL);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, HEADER"\n");
+      fclose(file);
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -243,6 +282,40 @@ SCIP_DECL_EVENTEXEC(eventExecEstimation)
       SCIP_CALL( storeRootLPSol(scip, eventhdlrdata) );
    }
 
+#ifdef FILEOUTPUT
+   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
+   {
+      FILE* file;
+      SCIP_Real lowerbound;
+      SCIP_Real estimate;
+      SCIP_Real upperbound;
+      SCIP_NODE* lowerboundnode;
+      SCIP_NODE* estimatenode;
+      int depth;
+
+
+      lowerboundnode = SCIPgetBestboundNode(scip);
+      estimatenode = SCIPgetBestNode(scip);
+      assert((lowerboundnode == NULL) == (estimatenode == NULL));
+
+      lowerbound = lowerboundnode != NULL ? SCIPnodeGetLowerbound(lowerboundnode) : SCIPinfinity(scip);
+      estimate = estimatenode != NULL ? SCIPnodeGetEstimate(estimatenode) : SCIPinfinity(scip);
+      upperbound = SCIPgetUpperbound(scip);
+      depth = SCIPnodeGetDepth(focusnode);
+      file = fopen(eventhdlrdata->filename, "a");
+      assert(file != NULL);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%lld %15g %15g %15g %15g %d\n",
+            SCIPnodeGetNumber(focusnode),
+            SCIPgetExternalValue(scip, upperbound),
+            SCIPgetExternalValue(scip, lowerbound),
+            SCIPgetExternalValue(scip, estimate),
+            SCIPgetExternalValue(scip, SCIPgetRootLPSolPscostEstimate(scip)),
+            depth);
+      fclose(file);
+   }
+#endif
+
+
    return SCIP_OKAY;
 }
 
@@ -261,6 +334,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstimation(
    eventhdlrdata->rootlpcands = NULL;
    eventhdlrdata->rootlpcandsfrac = NULL;
    eventhdlrdata->eventfilterpos = -1;
+   eventhdlrdata->filename = NULL;
 
    eventhdlr = NULL;
    /* include event handler into SCIP */
@@ -273,6 +347,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstimation(
    SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolEstimation) );
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolEstimation) );
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeEstimation) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitEstimation) );
 
    /* add estimation event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/estimation/enabled","enable event handler to perform estimation",
