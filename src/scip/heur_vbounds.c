@@ -665,7 +665,7 @@ SCIP_RETCODE applyVbounds(
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable lower bound and %d variable upper bounds\n",
+   SCIPdebugMessage("apply variable bounds heuristic at node %"SCIP_LONGINT_FORMAT" on %d variable lower bound and %d variable upper bounds\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nlbvars, nubvars);
 
    /* start probing */

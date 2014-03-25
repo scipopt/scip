@@ -3563,7 +3563,7 @@ SCIP_RETCODE focusnodeCleanupVars(
       }
    }
 
-   SCIPdebugMessage("delvars at node %lld, deleted %d vars\n", stat->nnodes, ndelvars);
+   SCIPdebugMessage("delvars at node %"SCIP_LONGINT_FORMAT", deleted %d vars\n", stat->nnodes, ndelvars);
 
    if( ndelvars > 0 )
    {

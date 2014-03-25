@@ -13583,11 +13583,11 @@ SCIP_RETCODE SCIPsolve(
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
          if( scip->stat->userrestart )
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-               "(run %d, node %lld) performing user restart\n",
+               "(run %d, node %"SCIP_LONGINT_FORMAT") performing user restart\n",
                scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
          else
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-               "(run %d, node %lld) restarting after %d global fixings of integer variables\n",
+               "(run %d, node %"SCIP_LONGINT_FORMAT") restarting after %d global fixings of integer variables\n",
                scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
          /* an extra blank line should be printed separately since the buffer message handler only handles up to one line
           * correctly */
@@ -16150,7 +16150,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
 
    assert(!SCIPinProbing(scip));
 
-   SCIPdebugMessage("starting strong branching mode%s: lpcount=%lld\n", enablepropagation ? " with propagation" : "", scip->stat->lpcount - scip->stat->nsbdivinglps);
+   SCIPdebugMessage("starting strong branching mode%s: lpcount=%"SCIP_LONGINT_FORMAT"\n", enablepropagation ? " with propagation" : "", scip->stat->lpcount - scip->stat->nsbdivinglps);
 
    /* start probing mode to allow propagation before solving the strong branching LPs; if no propagation should be done,
     * start the strong branching mode in the LP interface

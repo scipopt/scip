@@ -10403,7 +10403,9 @@ SCIP_RETCODE tightenWeights(
          {
             assert(newweight > weights[pos]);
 
-            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            SCIPdebugMessage("in constraint <%s> changing weight %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
+               SCIPconsGetName(cons), maxweight, newweight);
+
             consdataChgWeight(consdata, pos, newweight);
 
             ++pos;
@@ -10434,7 +10436,9 @@ SCIP_RETCODE tightenWeights(
             newweight = capacity - sumcoef;
             assert(newweight > weights[pos]);
 
-            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            SCIPdebugMessage("in constraint <%s> changing weight %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
+               SCIPconsGetName(cons), maxweight, newweight);
+
             consdataChgWeight(consdata, pos, newweight);
 
             break;

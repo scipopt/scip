@@ -1301,7 +1301,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
          heurdata->lpsolstat,
          heurdata->nredundantrows);
       SCIPstatisticMessage(
-         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %lld domain reductions,  ncutoffs: %d ,  LP iterations: %lld \n ",
+         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %"SCIP_LONGINT_FORMAT" domain reductions,  ncutoffs: %d ,  LP iterations: %"SCIP_LONGINT_FORMAT" \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
@@ -1851,7 +1851,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          ++nprobings;
          SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-         SCIPdebugMessage("Propagation finished! <%lld> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
+         SCIPdebugMessage("Propagation finished! <%"SCIP_LONGINT_FORMAT"> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
       assert(!cutoff || probing);
