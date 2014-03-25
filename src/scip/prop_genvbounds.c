@@ -2212,6 +2212,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
       /* free genvboundstore array */
       SCIPfreeMemoryArray(scip, &(propdata->genvboundstore));
 
+      /* set the number of genvbounds to zero */
+      propdata->ngenvbounds = 0;
+
       /* drop and free all events */
       SCIP_CALL( dropAndFreeEvents(scip, propdata) );
 
