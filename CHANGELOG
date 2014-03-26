@@ -4,6 +4,8 @@ SCIP version NEXT
 features:
 - new distribution branching rule to base decisions on row activity (normal) distribution over domain space
 
+parameters:
+- rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
 
 SCIP version 3.1.1
 ==================
