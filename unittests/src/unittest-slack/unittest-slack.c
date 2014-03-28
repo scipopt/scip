@@ -31,12 +31,6 @@
 
 #define CONSHDLR_NAME                        "superindicator"
 
-
-
-/*
- * SCIPsolveSlack()
- */
-
 /** type of bound relaxation in SCIPsolveSlack() method */
 enum SCIP_SlackType
 {
@@ -45,6 +39,11 @@ enum SCIP_SlackType
    SCIP_SLACKTYPE_BOTH  = 2                  /**< both bounds */
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
+
+
+/*
+ * SCIPsolveSlack()
+ */
 
 #ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
@@ -165,6 +164,7 @@ SCIP_RETCODE SCIPsolveSlack(
 #ifndef NDEBUG
    int minprio;
 #endif
+
    assert(scip != NULL);
    assert(status != NULL);
    assert(nconsgroups >= 0);
@@ -239,6 +239,7 @@ SCIP_RETCODE SCIPsolveSlack(
       SCIPerrorMessage("method <SCIPsolveSlack> has to be given at least one group of constraint to be relaxed.\n");
       return SCIP_INVALIDCALL;
    }
+
    /* check whether we have a binary variable on which we want to relax the bounds */
    for(c = 0; c < nvargroups; ++c)
    {
@@ -322,8 +323,9 @@ SCIP_RETCODE SCIPsolveSlack(
 
    /* remember all the binvars that will be created to return value at the end of the function */
    SCIP_CALL( SCIPallocMemoryArray(scip, &allbinvars, nconsgroups + nvargroups) );
-   count = 0;
+
    /* create the superindicator constraints for the member of the consgroups array */
+   count = 0;
    if( !consgroupisempty )
    {
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &copiedconsgroups, consgroups, nconsgroups) );
@@ -618,7 +620,6 @@ SCIP_RETCODE SCIPsolveSlack(
             SCIP_CALL( SCIPaddSolFree(scip, &(sols[c]), &stored) );
          }
          SCIPfreeMemoryArray(scip, &sols);
-
       }
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "launching the solving round for sets of priority %i.\n", currprio);
@@ -701,6 +702,7 @@ SCIP_RETCODE SCIPsolveSlack(
          SCIP_CALL( SCIPallocMemoryArray(scip, &(solsvals[c]), nvars) );
          SCIP_CALL( SCIPgetSolVals(scip, sols[c], nvars, vars, solsvals[c]) );
       }
+
       /* setting the value for the next set of constraint to make the current solution feasible in the next round.
        * cannot be done in problem stage (need to check the constraint) */
       if( !lastround )
@@ -809,9 +811,8 @@ SCIP_RETCODE SCIPsolveSlack(
       previousobjval = objval;
 
       SCIPfreeMemoryArray(scip, &solsvals);
-   } while (!lastround);
-
-
+   }
+   while (!lastround);
 
    if( optorig )
    {
@@ -869,9 +870,8 @@ SCIP_RETCODE SCIPsolveSlack(
    /* setting the returned value (only work on the best solution for now on)*/
    sols[0] = SCIPgetBestSol(scip);
    if(sol != NULL)
-   {
       *sol = sols[0];
-   }
+
    if(consgroupsslacks != NULL)
    {
       for( c = 0; c < nconsgroups + nvargroups; ++c)
@@ -925,10 +925,10 @@ SCIP_RETCODE SCIPsolveSlack(
  TERMINATE2:
    if(optorig)
       SCIPfreeMemoryArray(scip, &sols);
+
  TERMINATE1:
    if(!vargroupisempty && consviols != NULL)
       SCIPfreeMemoryArray(scip, &varboundconss);
-
 
    if( !consgroupisempty )
    {
@@ -980,6 +980,7 @@ static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSolveSlack)
 {  /*lint --e{715}*/
    SCIP_STATUS status;
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "solveslack called\n");
 
@@ -1070,15 +1071,11 @@ SCIP_RETCODE testslack(
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
 
-#if 0
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conss, nconss) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vars, nvars) );
-#endif
-
    conss = SCIPgetConss(scip);
    vars = SCIPgetVars(scip);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &usedvars, nvars) );
+
    /* sort the array of variable and only keep the non linear one */
    nusedvars = 0;
    for (c = 0; c < nvars; ++c)
@@ -1095,7 +1092,6 @@ SCIP_RETCODE testslack(
    nvargroups = (nusedvars + wsizevargroups -1) / wsizevargroups;
    nconsgroups = (nconss + wsizeconsgroups -1) / wsizeconsgroups;
 
-
    SCIP_CALL( SCIPallocMemoryArray(scip, &consgroups, nconsgroups) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &consgroupsizes, nconsgroups) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &consgroupprios, nconsgroups) );
@@ -1103,11 +1099,11 @@ SCIP_RETCODE testslack(
 
    if ( nvargroups > 0)
    {
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vargroups, nvargroups) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vargroupsizes, nvargroups) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vargroupprios, nvargroups) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vargroupweights, nvargroups) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &varslacktypes, nvargroups) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &vargroups, nvargroups) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &vargroupsizes, nvargroups) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &vargroupprios, nvargroups) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &vargroupweights, nvargroups) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &varslacktypes, nvargroups) );
    }
    else
    {
@@ -1120,20 +1116,19 @@ SCIP_RETCODE testslack(
    SCIP_CALL( SCIPallocMemoryArray(scip, &consgroupsslacks, nconsgroups + nvargroups) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &consviols, nconss + nvars) );
 
-
    count = 0;
    for (c = 0; c < nconsgroups ; ++c)
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &consgroups[c], wsizeconsgroups) );
 
-         for (d = 0; d < wsizeconsgroups && count < nconss; ++d)
-         {
-            consgroups[c][d] = conss[count];
-            ++count;
-         }
-         consgroupsizes[c] = d;
-         consgroupprios[c] = c;
-         consgroupweights[c] = 1;
+      for (d = 0; d < wsizeconsgroups && count < nconss; ++d)
+      {
+         consgroups[c][d] = conss[count];
+         ++count;
+      }
+      consgroupsizes[c] = d;
+      consgroupprios[c] = c;
+      consgroupweights[c] = 1;
    }
 
    count = 0;
@@ -1142,15 +1137,15 @@ SCIP_RETCODE testslack(
       SCIP_CALL( SCIPallocMemoryArray(scip, &vargroups[c], wsizevargroups) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &varslacktypes[c], wsizevargroups) );
 
-         for (d = 0; d < wsizevargroups && count < nusedvars; ++d)
-         {
-            vargroups[c][d] = usedvars[count];
-            varslacktypes[c][d] = SCIP_SLACKTYPE_BOTH;
-            ++count;
-         }
-         vargroupsizes[c] = d;
-         vargroupprios[c] = c;
-         vargroupweights[c] = 3;
+      for (d = 0; d < wsizevargroups && count < nusedvars; ++d)
+      {
+         vargroups[c][d] = usedvars[count];
+         varslacktypes[c][d] = SCIP_SLACKTYPE_BOTH;
+         ++count;
+      }
+      vargroupsizes[c] = d;
+      vargroupprios[c] = c;
+      vargroupweights[c] = 3;
    }
 
    if (returnvalue)
@@ -1165,7 +1160,6 @@ SCIP_RETCODE testslack(
    }
 
    /* free the memory */
-
    for (c = 0; c < nconsgroups ; ++c)
    {
       SCIPfreeMemoryArray(scip, &consgroups[c]);
@@ -1178,11 +1172,6 @@ SCIP_RETCODE testslack(
    }
 
    SCIPfreeMemory(scip, &sols);
-
-#if 0
-   SCIPfreeMemoryArray(scip, &conss);
-   SCIPfreeMemoryArray(scip, &vars);
-#endif
 
    SCIPfreeMemoryArray(scip, &consgroups);
    SCIPfreeMemoryArray(scip, &consgroupsizes);
@@ -1326,8 +1315,8 @@ SCIP_RETCODE SCIPrunSlackShell(
 /** main function */
 int
 main(
-   int                        argc,
-   char**                     argv
+   int                   argc,
+   char**                argv
    )
 {
    SCIP_RETCODE retcode;
