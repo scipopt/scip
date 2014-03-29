@@ -2808,7 +2808,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    }
 
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* @todo: check whether this code is needed anymore (this was the first version) */
    SCIP_Real viol;
    SCIP_Real tol;
@@ -3509,7 +3509,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    }
    BMSfreeMemoryArray(&bhead);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* old implementation */
    cnt = 0;
    for( i = 0; i < nrows; ++i )

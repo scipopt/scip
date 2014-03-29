@@ -2397,7 +2397,7 @@ SCIP_RETCODE SCIPcopyConss(
       nsourceconss = SCIPconshdlrGetNActiveConss(sourceconshdlrs[i]);
       sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* @todo using the following might reduce the number of copied constraints - check whether this is better */
       /* Get all checked constraints for copying; this included local constraints */
       if( !global )
