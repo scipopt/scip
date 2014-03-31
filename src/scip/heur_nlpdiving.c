@@ -2329,7 +2329,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
             {
-               SCIPwarningMessage(scip, "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+               if( termstat >= SCIP_NLPTERMSTAT_LICERR )
+               {
+                  SCIPwarningMessage(scip, "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+               }
                nlperror = TRUE;
                break;
             }
