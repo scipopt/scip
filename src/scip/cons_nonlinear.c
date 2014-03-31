@@ -4524,6 +4524,8 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    int i;
    int j;
 
+   static SCIP_Bool warned_highdim_concave = FALSE;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(ref != NULL);
@@ -4547,7 +4549,11 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /* size of LP is exponential in number of variables of tree, so do only for small trees */
    if( nvars > 10 )
    {
-      SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+      if( !warned_highdim_concave )
+      {
+         SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+         warned_highdim_concave = TRUE;
+      }
       return SCIP_OKAY;
    }
 
