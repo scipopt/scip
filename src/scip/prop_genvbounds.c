@@ -244,8 +244,6 @@ SCIP_Real getGenVBoundsMinActivity(
    {
       SCIP_Real bound;
 
-      assert(!SCIPisZero(scip, coefs[i]));
-
       /* get global or local bound */
       if( global )
          bound = coefs[i] > 0.0 ? SCIPvarGetLbGlobal(vars[i]) : SCIPvarGetUbGlobal(vars[i]);
