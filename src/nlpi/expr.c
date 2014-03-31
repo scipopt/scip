@@ -15197,7 +15197,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);
 
-            assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
+            assert((!SCIPisFinite(testval_before) && !SCIPisFinite(testval_after)) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
          }
       }
 #endif
