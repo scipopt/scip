@@ -3379,7 +3379,7 @@ SCIP_RETCODE reformulate(
    }
 
    /* for constraints with concave f(g(x)) with linear g:R^n -> R, n>1, reformulate to get a univariate concave function, since this is easier to underestimate
-    * @todo this does not work yet for sums of functions, e.g., polynomials with more than one monomial
+    * @todo this does not work yet for sums of functions other than polynomials
     */
    for( c = 0; c < nconss; ++c )
    {
@@ -3400,38 +3400,91 @@ SCIP_RETCODE reformulate(
        */
       consdata->forcebackprop = TRUE;
 
-      curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
-
-      /* if nothing concave, then continue */
-      if( (SCIPisInfinity(scip,  consdata->rhs) || curv != SCIP_EXPRCURV_CONCAVE) &&
-         ( SCIPisInfinity(scip, -consdata->lhs) || curv != SCIP_EXPRCURV_CONVEX) )
-         continue;
-
-      /* search for a descendant of node that has > 1 children
-       * after simiplifier run, there should be no constant expressions left */
-      multivarnode = consdata->exprgraphnode;
-      while( SCIPexprgraphGetNodeNChildren(multivarnode) == 1 )
-         multivarnode = SCIPexprgraphGetNodeChildren(multivarnode)[0];
-
-      /* if node expression is obviously univariate, then continue */
-      if( SCIPexprgraphGetNodeNChildren(multivarnode) == 0 )
+      if( SCIPexprgraphGetNodeOperator(consdata->exprgraphnode) == SCIP_EXPR_POLYNOMIAL )
       {
-         assert(SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_CONST || SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_VARIDX);
-         continue;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int m;
+         int f;
+
+         for( m = 0; m < SCIPexprgraphGetNodePolynomialNMonomials(consdata->exprgraphnode); ++m )
+         {
+            SCIP_CALL( SCIPexprgraphGetNodePolynomialMonomialCurvature(consdata->exprgraphnode, m, &curv) );
+
+            monomial = SCIPexprgraphGetNodePolynomialMonomials(consdata->exprgraphnode)[m];
+            assert(monomial != NULL);
+
+            /* if nothing concave, then continue */
+            if( (SCIPisInfinity(scip,  consdata->rhs) || curv != SCIP_EXPRCURV_CONCAVE) &&
+               ( SCIPisInfinity(scip, -consdata->lhs) || curv != SCIP_EXPRCURV_CONVEX) )
+               continue;
+
+            for( f = 0; f < SCIPexprGetMonomialNFactors(monomial); ++f )
+            {
+               multivarnode = SCIPexprgraphGetNodeChildren(consdata->exprgraphnode)[SCIPexprGetMonomialChildIndices(monomial)[f]];
+
+               /* search for a descendant of node that has > 1 children
+                * after simplifier run, there should be no constant expressions left
+                */
+               while( SCIPexprgraphGetNodeNChildren(multivarnode) == 1 )
+                  multivarnode = SCIPexprgraphGetNodeChildren(multivarnode)[0];
+
+               /* if node expression is obviously univariate, then continue */
+               if( SCIPexprgraphGetNodeNChildren(multivarnode) == 0 )
+               {
+                  assert(SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_CONST || SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_VARIDX);
+                  continue;
+               }
+
+               /* if multivarnode is a linear expression, then replace this by an auxiliary variable/node
+                * mark auxiliary variable as not to multiaggregate, so SCIP cannot undo what we just did
+                */
+               if( SCIPexprgraphGetNodeCurvature(multivarnode) == SCIP_EXPRCURV_LINEAR )
+               {
+                  SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
+                     (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
+                  SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+               }
+            }
+         }
       }
-
-      /* if node itself is multivariate, then continue */
-      if( multivarnode == consdata->exprgraphnode )
-         continue;
-
-      /* if multivarnode is a linear expression, then replace this by an auxiliary variable/node
-       * mark auxiliary variable as not to multiaggregate, so SCIP cannot undo what we just did */
-      if( SCIPexprgraphGetNodeCurvature(multivarnode) == SCIP_EXPRCURV_LINEAR )
+      else
       {
-         SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
-            (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
-         SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
-         SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+         curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
+
+         /* if nothing concave, then continue */
+         if( (SCIPisInfinity(scip,  consdata->rhs) || curv != SCIP_EXPRCURV_CONCAVE) &&
+            ( SCIPisInfinity(scip, -consdata->lhs) || curv != SCIP_EXPRCURV_CONVEX) )
+            continue;
+
+         /* search for a descendant of node that has > 1 children
+          * after simplifier run, there should be no constant expressions left
+          */
+         multivarnode = consdata->exprgraphnode;
+         while( SCIPexprgraphGetNodeNChildren(multivarnode) == 1 )
+            multivarnode = SCIPexprgraphGetNodeChildren(multivarnode)[0];
+
+         /* if node expression is obviously univariate, then continue */
+         if( SCIPexprgraphGetNodeNChildren(multivarnode) == 0 )
+         {
+            assert(SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_CONST || SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_VARIDX);
+            continue;
+         }
+
+         /* if node itself is multivariate, then continue */
+         if( multivarnode == consdata->exprgraphnode )
+            continue;
+
+         /* if multivarnode is a linear expression, then replace this by an auxiliary variable/node
+          * mark auxiliary variable as not to multiaggregate, so SCIP cannot undo what we just did
+          */
+         if( SCIPexprgraphGetNodeCurvature(multivarnode) == SCIP_EXPRCURV_LINEAR )
+         {
+            SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
+               (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
+            SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
+            SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+         }
       }
    }
 
