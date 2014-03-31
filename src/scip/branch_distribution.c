@@ -692,17 +692,8 @@ SCIP_RETCODE calcBranchScore(
          rowCalculateGauss(scip, branchruledata, row, &branchruledata->rowmeans[rowpos], &branchruledata->rowvariances[rowpos],
                &branchruledata->rowinfinitiesdown[rowpos], &branchruledata->rowinfinitiesup[rowpos]);
       }
-#if 0
-      {
-         rowCalculateGauss(scip, branchruledata, row, &rowmean, &rowvariance, &rowinfinitiesdown, &rowinfinitiesup);
-         assert(rowinfinitiesdown == branchruledata->rowinfinitiesdown[rowpos]);
-         assert(rowinfinitiesup == branchruledata->rowinfinitiesup[rowpos]);
-         assert(SCIPisFeasEQ(scip, rowmean, branchruledata->rowmeans[rowpos]));
-         assert(SCIPisFeasEQ(scip, rowvariance, branchruledata->rowvariances[rowpos]));
-      }
-#endif
 
-      /* retrieve the row distribution parameters from the branch rule data*/
+      /* retrieve the row distribution parameters from the branch rule data */
       rowmean = branchruledata->rowmeans[rowpos];
       rowvariance = branchruledata->rowvariances[rowpos];
       rowinfinitiesdown = branchruledata->rowinfinitiesdown[rowpos];
