@@ -25,8 +25,10 @@
 
 #define EVENTHDLR_NAME         "nodeevent"
 #define EVENTHDLR_DESC         "event handler for nodeevent event"
-#define EVENTTOCATCH SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODEINFEASIBLE
-
+#define EVENTTOCATCH SCIP_EVENTTYPE_NODEFOCUSED
+#define DEFAULT_ENABLED FALSE
+#define DEFAULT_ARRAYSIZE 150
+#define DEFAULT_DISPFREQ 10000
 /*
  * Data structures
  */
@@ -34,8 +36,14 @@
 /** event handler data */
 struct SCIP_EventhdlrData
 {
-   SCIP_Real avgcutoffdepth;
-   SCIP_Longint ncutoffnodes;
+   int*                  nnodesdepth;        /**< the number of nodes at a particular depth */
+   int                   nnodesdepthsize;    /**< size of the array */
+   int                   filterpos;          /**< filter position of this event for quicker dropping */
+   SCIP_Bool             enabled;            /**< user parameter to enable the event handler */
+   int                   dispfreq;
+   int                   maxnodes;           /**< maximum number of nodes at single depth */
+   int                   waist;              /**< depth of maxnodes (not necessarily unique)*/
+
 };
 
 /*
@@ -43,7 +51,190 @@ struct SCIP_EventhdlrData
  */
 
 /* put your local methods here, and declare them static */
+static
+SCIP_RETCODE ensureArraySize(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,
+   int                   newsize
+   )
+{
+   assert(scip != NULL);
+   assert(eventhdlrdata != NULL);
+   assert(eventhdlrdata->nnodesdepthsize == 0 || eventhdlrdata->nnodesdepth != NULL);
+   if( newsize > eventhdlrdata->nnodesdepthsize )
+   {
+      int neededsize;
+      int i;
 
+      neededsize = MAX(newsize, DEFAULT_ARRAYSIZE);
+      if( eventhdlrdata->nnodesdepthsize == 0 )
+      {
+         SCIP_CALL( SCIPallocMemoryArray(scip, &eventhdlrdata->nnodesdepth, neededsize) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->nnodesdepth, neededsize) );
+      }
+
+      for( i = eventhdlrdata->nnodesdepthsize; i < neededsize; ++i )
+         eventhdlrdata->nnodesdepth[i] = 0;
+
+      eventhdlrdata->nnodesdepthsize = neededsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void freeArray(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   assert(eventhdlrdata->nnodesdepthsize == 0 || eventhdlrdata->nnodesdepth != NULL);
+   if( eventhdlrdata->nnodesdepthsize > 0 )
+      SCIPfreeMemoryArray(scip, &eventhdlrdata->nnodesdepth);
+
+   eventhdlrdata->nnodesdepth = NULL;
+   eventhdlrdata->nnodesdepthsize = 0;
+}
+
+static
+void copyDepthData(
+   int*                  nodesdepth,         /**< array to copy nodes data to */
+   int                   nodesdepthsize,     /**< size of the array */
+   SCIP_NODE**           nodes,              /**< nodes to count depths */
+   int                   nodessize           /**< size of nodes array */
+   )
+{
+   int n;
+
+   for( n = 0; n < nodessize; ++n )
+   {
+      int depth;
+
+      depth = SCIPnodeGetDepth(nodes[n]);
+      assert(depth < nodesdepthsize);
+      assert(0 <= depth);
+      ++nodesdepth[depth];
+   }
+}
+
+static
+SCIP_Longint estimateTreeSize(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,
+   int*                  lastfulldepth,
+   int*                  waist,
+   int*                  maxdepth
+   )
+{
+
+   int* nodesdepth;
+   SCIP_Real lastlevelnodes;
+   int i;
+   SCIP_Real estimatednodes;
+   int minwaistlevel;
+   int maxwaistlevel;
+
+   if( eventhdlrdata->nnodesdepth == NULL )
+      return 0;
+
+   assert(lastfulldepth != NULL);
+   assert(waist != NULL);
+   assert(maxdepth != NULL);
+
+   /* during solving stage, the tree estimation gets refined by open nodes data */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_NODE** leaves;
+      SCIP_NODE** children;
+      SCIP_NODE** siblings;
+      int nsiblings;
+      int nchildren;
+      int nleaves;
+
+      leaves = NULL;
+      children = NULL;
+      siblings = NULL;
+      nchildren = nleaves = nsiblings = 0;
+
+      assert(eventhdlrdata->nnodesdepthsize > 0);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodesdepth, eventhdlrdata->nnodesdepthsize) );
+
+      BMScopyMemoryArray(nodesdepth, eventhdlrdata->nnodesdepth, eventhdlrdata->nnodesdepthsize);
+
+      SCIP_CALL( SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings) );
+
+      if( nsiblings > 0 )
+         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, siblings, nsiblings);
+      if( nchildren > 0 )
+         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, children, nchildren);
+      if( nleaves > 0 )
+         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, leaves, nleaves);
+   }
+   else
+      /* if scip is not in solving stage, the entire tree is in the eventhdlrdata */
+      nodesdepth = eventhdlrdata->nnodesdepth;
+
+   *maxdepth = 0;
+   *lastfulldepth = -1;
+   minwaistlevel = -1;
+   maxwaistlevel = 0;
+
+   /* loop over all depths with more than zero nodes. Determine waist, last full level, and maximum depth */
+   for( i = 0; i < eventhdlrdata->nnodesdepthsize && nodesdepth[i] > 0; ++i )
+   {
+      if( minwaistlevel == -1 && nodesdepth[i] > 0.5 * eventhdlrdata->maxnodes )
+      {
+         minwaistlevel = i;
+
+      }
+      if( minwaistlevel != -1 && nodesdepth[i] > 0.5 * eventhdlrdata->maxnodes )
+         maxwaistlevel = i;
+
+      if( i > 0 && *lastfulldepth == -1 && (nodesdepth[i] / nodesdepth[i - 1]) < 2 )
+      {
+         *lastfulldepth = i - 1;
+      }
+   }
+
+
+
+   assert(minwaistlevel <= maxwaistlevel);
+
+   assert(i == 0 || nodesdepth[i - 1] > 0);
+   *maxdepth = i - 1;
+   *waist = SCIPfeasCeil(scip, (minwaistlevel + maxwaistlevel) / 2.0);
+
+   estimatednodes = 1;
+   lastlevelnodes = 1;
+
+   for( i = 1; i <= *maxdepth; ++i )
+   {
+      SCIP_Real estimatedgamma;
+
+      if( i  < *lastfulldepth )
+         estimatedgamma = 2;
+      else if( i < *waist )
+         estimatedgamma = 2 - (i - *lastfulldepth + 1)/(SCIP_Real)(*waist - *lastfulldepth + 1);
+      else
+         estimatedgamma = 1 - (i - *waist + 1)/(SCIP_Real)(*maxdepth - *waist + 1);
+
+      lastlevelnodes = estimatedgamma * lastlevelnodes;
+      estimatednodes += lastlevelnodes;
+
+
+   }
+
+   /* nodesdepth is a buffer array only in solving stage */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      SCIPfreeBufferArray(scip, &nodesdepth);
+
+   return (SCIP_Longint)estimatednodes;
+
+}
 /*
  * Callback methods of event handler
  */
@@ -65,27 +256,68 @@ SCIP_DECL_EVENTFREE(eventFreeNodeevent)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Average bounding depth: %5.2f (%"SCIP_LONGINT_FORMAT" cutoffs)\n", eventhdlrdata->ncutoffnodes == 0 ? -1 : eventhdlrdata->avgcutoffdepth, eventhdlrdata->ncutoffnodes);
-
+   assert(eventhdlrdata->nnodesdepth == NULL);
    SCIPfreeMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
 }
 
+/** deinitialization method of event handler (called before branch and bound terminates) */
+static
+SCIP_DECL_EVENTEXITSOL(eventExitsolNodeevent)
+{
+
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   assert(!eventhdlrdata->enabled || eventhdlrdata->filterpos >= 0);
+
+   if( eventhdlrdata->filterpos >= 0 )
+   {
+      SCIP_CALL( SCIPdropEvent(scip, EVENTTOCATCH, eventhdlr, NULL, eventhdlrdata->filterpos) );
+      eventhdlrdata->filterpos = -1;
+   }
+
+   if( eventhdlrdata->enabled )
+   {
+      int lastfulldepth;
+      int waist;
+      int maxdepth;
+      SCIP_Longint estimatednodes;
+
+      lastfulldepth = 0;
+      waist = 0;
+      maxdepth = 0;
+
+      estimatednodes = estimateTreeSize(scip, eventhdlrdata, &lastfulldepth, &waist, &maxdepth);
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Explored nodes: %"SCIP_LONGINT_FORMAT", estimated number of nodes: %"SCIP_LONGINT_FORMAT" (%d,%d,%d)\n",
+            SCIPgetNNodes(scip), estimatednodes, lastfulldepth, waist, maxdepth);
+
+   }
+   freeArray(scip, eventhdlrdata);
+
+   return SCIP_OKAY;
+}
+
 /** initialization method of event handler (called after problem was transformed) */
 static
-SCIP_DECL_EVENTINIT(eventInitNodeevent)
+SCIP_DECL_EVENTINITSOL(eventInitsolNodeevent)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   eventhdlrdata->avgcutoffdepth = .0;
-   eventhdlrdata->ncutoffnodes = 0L;
-/*
-   SCIPcatchEvent(scip, EVENTTOCATCH, eventhdlr, NULL, NULL);
-*/
+   if( eventhdlrdata->enabled )
+   {
+      assert(eventhdlrdata->filterpos == -1);
+      SCIP_CALL( SCIPcatchEvent(scip, EVENTTOCATCH, eventhdlr, NULL, &eventhdlrdata->filterpos) );
+   }
+   eventhdlrdata->waist = 0;
+   eventhdlrdata->maxnodes = 1;
+
    return SCIP_OKAY;
 }
 
@@ -94,25 +326,39 @@ static
 SCIP_DECL_EVENTEXEC(eventExecNodeevent)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   int focusnodedepth;
 
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-
-   if( SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND )
+   focusnodedepth = SCIPgetFocusDepth(scip);
+   SCIP_CALL( ensureArraySize(scip, eventhdlrdata, SCIPgetMaxDepth(scip) + 1) );
+   assert(eventhdlrdata->nnodesdepth[focusnodedepth] >= 0);
+   ++eventhdlrdata->nnodesdepth[focusnodedepth];
+   if( eventhdlrdata->nnodesdepth[focusnodedepth] > eventhdlrdata->maxnodes )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Average bounding depth: %5.2f (%"SCIP_LONGINT_FORMAT" cutoffs)\n", eventhdlrdata->ncutoffnodes == 0 ? -1 : eventhdlrdata->avgcutoffdepth, eventhdlrdata->ncutoffnodes);
-   }
-   else if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_NODEINFEASIBLE) && !(SCIPinProbing(scip) || SCIPinDive(scip)) )
-   {
-      ++(eventhdlrdata->ncutoffnodes);
-
-      eventhdlrdata->avgcutoffdepth = (eventhdlrdata->ncutoffnodes - 1)/(SCIP_Real)(eventhdlrdata->ncutoffnodes) * eventhdlrdata->avgcutoffdepth;
-      eventhdlrdata->avgcutoffdepth += SCIPgetFocusDepth(scip)/(SCIP_Real)(eventhdlrdata->ncutoffnodes);
+      eventhdlrdata->waist = focusnodedepth;
+      eventhdlrdata->maxnodes = eventhdlrdata->nnodesdepth[focusnodedepth];
    }
 
+   if( SCIPgetNNodes(scip) >= eventhdlrdata->dispfreq && SCIPgetNNodes(scip) % eventhdlrdata->dispfreq == 0 )
+   {
+      int lastfulldepth;
+      int waist;
+      int maxdepth;
+      SCIP_Longint estimatednodes;
 
+      lastfulldepth = 0;
+      waist = 0;
+      maxdepth = 0;
+
+      estimatednodes = estimateTreeSize(scip, eventhdlrdata, &lastfulldepth, &waist, &maxdepth);
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Explored nodes: %"SCIP_LONGINT_FORMAT", estimated number of nodes: %"SCIP_LONGINT_FORMAT" (%d,%d,%d)\n",
+            SCIPgetNNodes(scip), estimatednodes, lastfulldepth, waist, maxdepth);
+
+   }
 
    return SCIP_OKAY;
 }
@@ -128,8 +374,9 @@ SCIP_RETCODE SCIPincludeEventHdlrNodeevent(
    /* create nodeevent event handler data */
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
 
-   /* TODO: (optional) create event handler specific data here */
-
+   eventhdlrdata->nnodesdepth = NULL;
+   eventhdlrdata->nnodesdepthsize = 0;
+   eventhdlrdata->filterpos = -1;
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
@@ -143,10 +390,13 @@ SCIP_RETCODE SCIPincludeEventHdlrNodeevent(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyNodeevent) );
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeNodeevent) );
-   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitNodeevent) );
+   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolNodeevent) );
+   SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolNodeevent) );
 
    /* add nodeevent event handler parameters */
-   /* TODO: (optional) add event handler specific parameters with SCIPaddTypeParam() here */
-
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "bla", &eventhdlrdata->enabled, FALSE,
+               DEFAULT_ENABLED, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "eventhdlr/"EVENTHDLR_NAME"/dispfreq", "bla", &eventhdlrdata->dispfreq, FALSE, DEFAULT_DISPFREQ,
+               1, INT_MAX / 4, NULL, NULL) );
    return SCIP_OKAY;
 }
