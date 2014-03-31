@@ -58,7 +58,7 @@
       *(cursize) = __newsize;                                           \
    } while( FALSE )
 
-#if 0 /* this macros is currently not used, which offends lint, so disable it */
+#ifdef SCIP_DISABLED_CODE /* this macros is currently not used, which offends lint, so disable it */
 /** ensures that two block memory arrays have at least a given size
  * if cursize is 0, then arrays can be NULL
  */
@@ -2104,7 +2104,7 @@ SCIP_DECL_EXPREVAL( exprevalTan )
 #define exprcurvTan exprcurvDefault
 
 /* erf and erfi do not seem to exists on every system, and we cannot really handle them anyway, so they are currently disabled */
-#if 0
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_EXPREVAL( exprevalErf )
 {

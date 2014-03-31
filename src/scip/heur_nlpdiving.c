@@ -1641,8 +1641,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    *result = SCIP_DIDNOTFIND;
 
-#if 0 /* def SCIP_DEBUG */
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) );
+#ifdef SCIP_DEBUG
+   /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
 #endif
 
    /* set iteration limit */

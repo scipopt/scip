@@ -1431,7 +1431,7 @@ SCIP_RETCODE eval(
    case SCIP_EXPR_TAN:
       val = tan(buf[0]);
       break;
-#if 0 /* these operators are currently disabled */
+#ifdef SCIP_DISABLED_CODE /* these operators are currently disabled */
    case SCIP_EXPR_ERF:
       val = erf(buf[0]);
       break;
