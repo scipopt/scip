@@ -28,7 +28,7 @@
 #define EVENTHDLR_DESC         "event handler for estimation event"
 #define EVENT_TYPE_ESTIMATION SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE
 #define DEFAULT_ENABLED        FALSE
-#define HEADER "NUMBER  PRIMAL LOWER ESTIM ROOTLPPSESTIM DEPTH"
+#define HEADER "NUMBER  PRIMAL LOWER ESTIM ROOTLPPSESTIM DEPTH NCANDS NODELOWER LPSTAT"
 /*
  * Data structures
  */
@@ -290,27 +290,30 @@ SCIP_DECL_EVENTEXEC(eventExecEstimation)
       SCIP_Real estimate;
       SCIP_Real upperbound;
       SCIP_NODE* lowerboundnode;
-      SCIP_NODE* estimatenode;
       int depth;
+      int nlpcands;
+
+      nlpcands = -1;
+
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         nlpcands = SCIPgetNLPBranchCands(scip);
 
 
       lowerboundnode = SCIPgetBestboundNode(scip);
-      estimatenode = SCIPgetBestNode(scip);
-      assert((lowerboundnode == NULL) == (estimatenode == NULL));
 
       lowerbound = lowerboundnode != NULL ? SCIPnodeGetLowerbound(lowerboundnode) : SCIPinfinity(scip);
-      estimate = estimatenode != NULL ? SCIPnodeGetEstimate(estimatenode) : SCIPinfinity(scip);
+      estimate = SCIPnodeGetEstimate(focusnode);
       upperbound = SCIPgetUpperbound(scip);
       depth = SCIPnodeGetDepth(focusnode);
       file = fopen(eventhdlrdata->filename, "a");
       assert(file != NULL);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%lld %15g %15g %15g %15g %d\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%lld %15g %15g %15g %15g %d %d %15g %d\n",
             SCIPnodeGetNumber(focusnode),
             SCIPgetExternalValue(scip, upperbound),
             SCIPgetExternalValue(scip, lowerbound),
             SCIPgetExternalValue(scip, estimate),
             SCIPgetExternalValue(scip, SCIPgetRootLPSolPscostEstimate(scip)),
-            depth);
+            depth, nlpcands, SCIPgetExternalValue(scip, SCIPnodeGetLowerbound(focusnode)), SCIPgetLPSolstat(scip));
       fclose(file);
    }
 #endif
