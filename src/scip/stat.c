@@ -412,8 +412,6 @@ void SCIPstatUpdatePrimalDualIntegral(
 
    /* if primal and dual bound have opposite signs, the gap always evaluates to 100.0% */
    assert(currentgap == 0.0 || currentgap == 100.0 || SCIPsetIsGE(set, primalbound * dualbound, 0.0));
-   assert(SCIPsetIsGE(set, stat->previousgap, currentgap) || (set->stage == SCIP_STAGE_EXITPRESOLVE
-         && SCIPsetIsFeasGE(set, stat->previousgap, currentgap)));
 
    /* update the integral based on previous information */
    stat->primaldualintegral += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
