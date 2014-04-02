@@ -5105,7 +5105,7 @@ SCIP_RETCODE exprParse(
       SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
       return SCIP_READERROR;
    }
-   else if( isalpha(*str) || *str == '_' )
+   else if( isalpha(*str) || *str == '_' || *str == '#' )
    {
       /* check for a variable, that was not recognized earlier because somebody omitted the '<' and '>' we need for
        * SCIPparseVarName, making everyones life harder;
@@ -5113,8 +5113,8 @@ SCIP_RETCODE exprParse(
        */
       const char* varnamestartptr = str;
 
-      /* allow only variable names containing characters, digits, and underscores here */
-      while( isalnum(str[0]) || str[0] == '_' )
+      /* allow only variable names containing characters, digits, hash marks, and underscores here */
+      while( isalnum(str[0]) || str[0] == '_' || str[0] == '#' )
          ++str;
 
       SCIP_CALL( exprparseReadVariable(blkmem, &varnamestartptr, expr, nvars, varnames, vartable, 1.0, str) );
