@@ -640,16 +640,15 @@ SCIP_RETCODE getConstraint(
    SCIP_CONS* cons;
    char* buf;
    char* copybuf;
-   int len;
-
+   SCIP_RETCODE retcode;
    SCIP_Bool separate;
    SCIP_Bool enforce;
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
    SCIP_Bool modifiable;
-
    SCIP_Bool success;
+   int len;
 
    buf = cipinput->strbuf;
 
@@ -688,11 +687,13 @@ SCIP_RETCODE getConstraint(
    copybuf[len - 1] = '\0';
 
    /* parse the constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, copybuf,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success) );
+   retcode = SCIPparseCons(scip, &cons, copybuf,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success);
 
    /* free temporary buffer */
    SCIPfreeMemoryArray(scip, &copybuf);
+
+   SCIP_CALL( retcode );
 
    if( !success )
    {

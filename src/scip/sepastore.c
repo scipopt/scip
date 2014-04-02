@@ -305,6 +305,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newlb;
 
          newlb = lhs/vals[0];
+         SCIPvarAdjustLb(var, set, &newlb);
 
          if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
@@ -315,6 +316,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newub;
 
          newub = lhs/vals[0];
+         SCIPvarAdjustUb(var, set, &newub);
 
          if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
@@ -332,6 +334,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newub;
 
          newub = rhs/vals[0];
+         SCIPvarAdjustUb(var, set, &newub);
 
          if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
@@ -342,6 +345,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newlb;
 
          newlb = rhs/vals[0];
+         SCIPvarAdjustLb(var, set, &newlb);
 
          if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
@@ -603,6 +607,9 @@ SCIP_RETCODE sepastoreApplyLb(
    assert(cutoff != NULL);
    assert(applied != NULL);
 
+   /* adjust bound to the one that would be applied, so the SCIPsetIsGT check below is more reliable */
+   SCIPvarAdjustLb(var, set, &bound);
+
    if( local )
    {
       /* apply the local bound change or detect a cutoff */
@@ -682,6 +689,9 @@ SCIP_RETCODE sepastoreApplyUb(
    assert(sepastore != NULL);
    assert(cutoff != NULL);
    assert(applied != NULL);
+
+   /* adjust bound to the one that would be applied, so the SCIPsetIsGT check below is more reliable */
+   SCIPvarAdjustUb(var, set, &bound);
 
    if( local )
    {

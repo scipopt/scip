@@ -137,10 +137,7 @@
 #define MAKECONTINTEGRAL          FALSE
 #define MAXWEIGHTRANGE            1e+05 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 
-#if 0
-#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
-#endif
-#define MAXAGGRLEN(nvars)          nvars              /**< currently very large to allow any generation */
+#define MAXAGGRLEN(nvars)         nvars      /**< currently very large to allow any generation; an alternative would be (0.1*(nvars)+1000) */
 
 
 /** separator data */
@@ -316,7 +313,7 @@ SCIP_RETCODE solCutIsViolated(
          /* compute coefficients */
          SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, cutcoefs, &rhs, &localrowsused, &localboundsused, &cutrank, &success) );
 
-#if 0
+#ifdef SCIP_MORE_DEBUG
          for (j = 0; j < (unsigned int) nvars; ++j)
          {
             if ( ! SCIPisZero(scip, cutcoefs[j]) )
@@ -2064,7 +2061,8 @@ SCIP_RETCODE subscipSetParams(
       }
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* the following possibly helps to improve performance (untested) */
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
 #else
 
@@ -2936,8 +2934,8 @@ SCIP_RETCODE createCGCutDirect(
    for (k = 0; k < nvars; ++k)
       cutact += cutcoefs[k] * varsolvals[k];
 
+#ifdef SCIP_DISABLED_CODE
    /* the following test should be treated with care because of numerical differences - see computeCut() */
-#if 0
    {
       /* check for correctness of computed values */
       SCIP* subscip;

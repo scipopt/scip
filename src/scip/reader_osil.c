@@ -925,7 +925,7 @@ SCIP_RETCODE readLinearCoefs(
          /* these asserts were checked above */
          assert(start[row] >= 0);
          assert(start[row+1] >= 0);
-         assert(start[row] < nnz);
+         assert(start[row] <= nnz);
          assert(start[row+1] <= nnz);
          for( pos = start[row]; pos < start[row+1]; ++pos )
          {

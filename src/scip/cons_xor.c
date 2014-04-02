@@ -2109,7 +2109,7 @@ SCIP_RETCODE checkSystemGF2(
          xoractive[i] = TRUE;
          ++nconssactive;
       }
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* The following can save time, if there are constraints with all variables fixed that are infeasible; this
        * should, however, be detected somewhere else, e.g., in propagateCons(). */
       else

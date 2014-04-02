@@ -305,7 +305,7 @@ void SCIPstatResetPresolving(
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;
 
-   SCIPstatResetCurrentRun(stat);
+   SCIPstatResetCurrentRun(stat, FALSE);
 }
 
 /** reset primal-dual integral */
@@ -412,8 +412,6 @@ void SCIPstatUpdatePrimalDualIntegral(
 
    /* if primal and dual bound have opposite signs, the gap always evaluates to 100.0% */
    assert(currentgap == 0.0 || currentgap == 100.0 || SCIPsetIsGE(set, primalbound * dualbound, 0.0));
-   assert(SCIPsetIsGE(set, stat->previousgap, currentgap) || (set->stage == SCIP_STAGE_EXITPRESOLVE
-         && SCIPsetIsFeasGE(set, stat->previousgap, currentgap)));
 
    /* update the integral based on previous information */
    stat->primaldualintegral += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
@@ -429,7 +427,8 @@ void SCIPstatUpdatePrimalDualIntegral(
 
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_Bool             solved              /**< is problem already solved? */
    )
 {
    assert(stat != NULL);
@@ -450,7 +449,6 @@ void SCIPstatResetCurrentRun(
    stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
    stat->lastbranchvar = NULL;
-   stat->status = SCIP_STATUS_UNKNOWN;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
    stat->nrootintfixingsrun = 0;
@@ -458,6 +456,9 @@ void SCIPstatResetCurrentRun(
    stat->nseparounds = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+
+   if( !solved )
+      stat->status = SCIP_STATUS_UNKNOWN;
 
    SCIPhistoryReset(stat->glbhistorycrun);
 

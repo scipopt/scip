@@ -1341,7 +1341,7 @@ void consdataSortLinearVars(
    consdata->linvarssorted = TRUE;
 }
 
-#if 0 /* no-one needs this routine currently */
+#ifdef SCIP_DISABLED_CODE /* no-one needs this routine currently */
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
 int consdataFindLinearVar(
@@ -4857,10 +4857,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -4884,10 +4884,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 

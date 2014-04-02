@@ -3767,7 +3767,7 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
       assert( spx->rep() == SPxSolver::ROW );
 
       /* In row case for computing the reduced costs one needs to pass through the basis. We skip this expensive part. */
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* Here is the code necessary to compute the reduced costs for row representation: */
       SCIP_Real sign = 1.0;
       if ( spx->getSense() == SPxLP::MINIMIZE )

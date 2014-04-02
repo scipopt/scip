@@ -2398,7 +2398,7 @@ SCIP_RETCODE SCIPcopyConss(
       nsourceconss = SCIPconshdlrGetNActiveConss(sourceconshdlrs[i]);
       sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* @todo using the following might reduce the number of copied constraints - check whether this is better */
       /* Get all checked constraints for copying; this included local constraints */
       if( !global )
@@ -10739,6 +10739,7 @@ SCIP_VAR* SCIPfindVar(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
@@ -12961,7 +12962,7 @@ SCIP_RETCODE initSolve(
    if( !solved )
    {
       /* reset statistics for current branch and bound run */
-      SCIPstatResetCurrentRun(scip->stat);
+      SCIPstatResetCurrentRun(scip->stat, solved);
       SCIPstatEnforceLPUpdates(scip->stat);
 
       /* LP is empty anyway; mark empty LP to be solved and update validsollp counter */
@@ -13139,7 +13140,10 @@ SCIP_RETCODE freeSolve(
    SCIPvbcExit(scip->stat->vbc, scip->set, scip->messagehdlr);
 
    /* reset statistics for current branch and bound run */
-   SCIPstatResetCurrentRun(scip->stat);
+   if( scip->stat->status == SCIP_STATUS_INFEASIBLE || scip->stat->status == SCIP_STATUS_OPTIMAL || scip->stat->status == SCIP_STATUS_UNBOUNDED || scip->stat->status == SCIP_STATUS_INFORUNBD )
+      SCIPstatResetCurrentRun(scip->stat, TRUE);
+   else
+      SCIPstatResetCurrentRun(scip->stat, FALSE);
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
@@ -13235,12 +13239,12 @@ SCIP_RETCODE freeTransform(
       if( scip->origprimal->nsols > 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-            "stored the %d best primal solutions in the original solution cadidate list\n", scip->origprimal->nsols);
+            "stored the %d best primal solutions in the original solution candidate list\n", scip->origprimal->nsols);
       }
       else if( scip->origprimal->nsols == 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-            "stored the best primal solution in the original solution cadidate list\n");
+            "stored the best primal solution in the original solution candidate list\n");
       }
    }
 
@@ -13552,6 +13556,12 @@ SCIP_RETCODE SCIPsolve(
    /* if the stage is already SCIP_STAGE_SOLVED do nothing */
    if( scip->set->stage == SCIP_STAGE_SOLVED )
       return SCIP_OKAY;
+
+   if( scip->stat->status == SCIP_STATUS_INFEASIBLE || scip->stat->status == SCIP_STATUS_OPTIMAL || scip->stat->status == SCIP_STATUS_UNBOUNDED || scip->stat->status == SCIP_STATUS_INFORUNBD )
+   {
+      SCIPwarningMessage(scip, "SCIPsolve() was called but problem was already solved, maybe a SCIPfreeTransform() was necessary to change the problem\n");
+      return SCIP_OKAY;
+   }
 
    /* check, if a node selector exists */
    if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )

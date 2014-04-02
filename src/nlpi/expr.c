@@ -58,7 +58,7 @@
       *(cursize) = __newsize;                                           \
    } while( FALSE )
 
-#if 0 /* this macros is currently not used, which offends lint, so disable it */
+#ifdef SCIP_DISABLED_CODE /* this macros is currently not used, which offends lint, so disable it */
 /** ensures that two block memory arrays have at least a given size
  * if cursize is 0, then arrays can be NULL
  */
@@ -2104,7 +2104,7 @@ SCIP_DECL_EXPREVAL( exprevalTan )
 #define exprcurvTan exprcurvDefault
 
 /* erf and erfi do not seem to exists on every system, and we cannot really handle them anyway, so they are currently disabled */
-#if 0
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_EXPREVAL( exprevalErf )
 {
@@ -5105,7 +5105,7 @@ SCIP_RETCODE exprParse(
       SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
       return SCIP_READERROR;
    }
-   else if( isalpha(*str) || *str == '_' )
+   else if( isalpha(*str) || *str == '_' || *str == '#' )
    {
       /* check for a variable, that was not recognized earlier because somebody omitted the '<' and '>' we need for
        * SCIPparseVarName, making everyones life harder;
@@ -5113,8 +5113,8 @@ SCIP_RETCODE exprParse(
        */
       const char* varnamestartptr = str;
 
-      /* allow only variable names containing characters, digits, and underscores here */
-      while( isalnum(str[0]) || str[0] == '_' )
+      /* allow only variable names containing characters, digits, hash marks, and underscores here */
+      while( isalnum(str[0]) || str[0] == '_' || str[0] == '#' )
          ++str;
 
       SCIP_CALL( exprparseReadVariable(blkmem, &varnamestartptr, expr, nvars, varnames, vartable, 1.0, str) );
@@ -7905,6 +7905,7 @@ SCIP_RETCODE SCIPexprParse(
    )
 {
    SCIP_HASHTABLE* vartable;
+   SCIP_RETCODE retcode;
 
    assert(blkmem != NULL);
    assert(expr != NULL);
@@ -7914,18 +7915,19 @@ SCIP_RETCODE SCIPexprParse(
    assert(varnames != NULL);
 
    *nvars = 0;
+   retcode = SCIP_OKAY;
 
    /* create a hash table for variable names and corresponding expression index
     * for each variable, we store its name, prefixed with the assigned index in the first sizeof(int) bytes
     */
    SCIP_CALL( SCIPhashtableCreate(&vartable, blkmem, 10, exprparseVarTableGetKey, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
 
-   SCIP_CALL( exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames,
-         vartable, 0) );
+   retcode = exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames, vartable,
+      0);
 
    SCIPhashtableFree(&vartable);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 
@@ -12386,6 +12388,86 @@ SCIP_Real SCIPexprgraphGetNodePolynomialConstant(
    return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->constant;
 }
 
+/** gives the curvature of a single monomial belonging to a SCIP_EXPR_POLYNOMIAL expression
+ *
+ * assumes that curvature of children and bounds of children and node itself are valid
+ */
+SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   int                   monomialidx,        /**< index of monomial */
+   SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
+   )
+{
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   SCIP_INTERVAL  childboundsstatic[SCIP_EXPRESSION_MAXCHILDEST];
+   SCIP_EXPRCURV  childcurvstatic[SCIP_EXPRESSION_MAXCHILDEST];
+   SCIP_INTERVAL* childbounds;
+   SCIP_EXPRCURV* childcurv;
+   SCIP_EXPRGRAPHNODE* child;
+   int i;
+
+   assert(node != NULL);
+   assert(node->depth >= 0); /* node should be in graph */
+   assert(node->pos >= 0);   /* node should be in graph */
+   assert(node->enabled);    /* node should be enabled, otherwise we may not have uptodate bounds and curvatures in children */
+   assert(node->boundstatus == SCIP_EXPRBOUNDSTATUS_VALID);  /* we assume node bounds to be valid */
+   assert(node->op == SCIP_EXPR_POLYNOMIAL);
+   assert(node->data.data != NULL);
+   assert(monomialidx >= 0);
+   assert(monomialidx < ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->nmonomials);
+   assert(curv != NULL);
+
+   if( SCIPintervalIsEmpty(node->bounds) )
+   {
+      *curv = SCIP_EXPRCURV_LINEAR;
+      return SCIP_OKAY;
+   }
+
+   monomial = ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->monomials[monomialidx];
+   assert(monomial != NULL);
+
+   /* if many children, get large enough memory to store children bounds */
+   if( monomial->nfactors > SCIP_EXPRESSION_MAXCHILDEST )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&childbounds, monomial->nfactors) );
+      SCIP_ALLOC( BMSallocMemoryArray(&childcurv, monomial->nfactors) );
+   }
+   else
+   {
+      childbounds = childboundsstatic;
+      childcurv   = childcurvstatic;
+   }
+
+   /* assemble bounds and curvature of children */
+   for( i = 0; i < monomial->nfactors; ++i )
+   {
+      child = node->children[monomial->childidxs[i]];
+      assert(child != NULL);
+
+      /* child should have valid and non-empty bounds */
+      assert(!(child->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDRELAXED));
+      assert(!SCIPintervalIsEmpty(child->bounds));
+      /* nodes at depth 0 are always linear */
+      assert(child->depth > 0 || child->curv == SCIP_EXPRCURV_LINEAR);
+
+      childbounds[i] = child->bounds;  /*lint !e644*/
+      childcurv[i]   = child->curv;    /*lint !e644*/
+   }
+
+   /* check curvature */
+   *curv = SCIPexprcurvMonomial(monomial->nfactors, monomial->exponents, NULL, childcurv, childbounds);
+   *curv = SCIPexprcurvMultiply(monomial->coef, *curv);
+
+   /* free memory, if allocated before */
+   if( childbounds != childboundsstatic )
+   {
+      BMSfreeMemoryArray(&childbounds);
+      BMSfreeMemoryArray(&childcurv);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets bounds of a node in an expression graph */
 SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
    SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
@@ -15197,7 +15279,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);
 
-            assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
+            assert((!SCIPisFinite(testval_before) && !SCIPisFinite(testval_after)) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
          }
       }
 #endif

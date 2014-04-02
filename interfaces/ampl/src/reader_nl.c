@@ -60,13 +60,6 @@
 
 struct cgrad;
 
-#if 0
-/** reader data */
-struct SCIP_ReaderData
-{
-};
-#endif
-
 /** problem data */
 struct SCIP_ProbData
 {
@@ -1086,7 +1079,7 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
  * Callback methods of reader
  */
 
-#if 0
+#if 0 /* TODO: implement, if one finds use for it */
 /** copy method for reader plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_READERCOPY(readerCopyNl)
@@ -1094,22 +1087,6 @@ SCIP_DECL_READERCOPY(readerCopyNl)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeReaderNl(scip) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-#if 0
-/** destructor of reader to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_READERFREE(readerFreeNl)
-{  /*lint --e{715}*/
-   SCIP_READERDATA* readerdata;
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-
-   SCIPfreeMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }

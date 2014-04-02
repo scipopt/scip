@@ -225,9 +225,7 @@ void clearPstack(
       (void) popPstack(ppos);
 }
 
-/** Returns the next character from the input buffer and fills the buffer if it is empty (similar to
- * fgetc()).
- */
+/** Returns the next character from the input buffer and fills the buffer if it is empty (similar to fgetc()). */
 static
 int mygetc(
    PPOS*                 ppos
@@ -239,7 +237,8 @@ int mygetc(
 
    if ( ppos->buf[ppos->pos] == '\0' )
    {
-#if 0
+#ifdef SCIP_DISABLED_CODE
+      /* the low level function gzread/fread used below seem to be faster */
       if ( NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp) )
          return EOF;
 #else
@@ -1236,6 +1235,8 @@ void xmlFreeAttr(
 {
    XML_ATTR* a;
 
+   /* Note: use an iterative implementation instead of a recursive one; the latter is much slower for large instances
+    * and might overflow the heap. */
    a = attr;
    while (a != NULL)
    {
@@ -1250,20 +1251,6 @@ void xmlFreeAttr(
       BMSfreeMemory(&a);
       a = b;
    }
-
-#if 0
-   if (a != NULL)
-   {
-      xmlFreeAttr(a->next);
-
-      assert(a->name  != NULL);
-      assert(a->value != NULL);
-
-      BMSfreeMemoryArray(&a->name);
-      BMSfreeMemoryArray(&a->value);
-      BMSfreeMemory(&a);
-   }
-#endif
 }
 
 /** free node */
@@ -1276,7 +1263,9 @@ void xmlFreeNode(
    if ( node == NULL )
       return;
 
-   /* free data from back to front (because free is faster this way) */
+   /* Free data from back to front (because free is faster this way). */
+   /* Note: use an iterative implementation instead of a recursive one; the latter is much slower for large instances
+    * and might overflow the heap. */
    n = node->lastchild;
    while ( n != NULL )
    {
@@ -1296,24 +1285,6 @@ void xmlFreeNode(
 
    BMSfreeMemoryArray(&node->name);
    BMSfreeMemory(&node);
-
-#if 0
-   if ( n != NULL )
-   {
-      xmlFreeNode(n->firstchild);
-      xmlFreeNode(n->nextsibl);
-      xmlFreeAttr(n->attrlist);
-
-      if ( n->data != NULL )
-      {
-         BMSfreeMemoryArray(&n->data);
-      }
-      assert(n->name != NULL);
-
-      BMSfreeMemoryArray(&n->name);
-      BMSfreeMemory(&n);
-   }
-#endif
 }
 
 /** output node */
@@ -1361,10 +1332,9 @@ const char* xmlGetAttrval(
          break;
    }
 
-#if 0
+#ifdef SCIP_DEBUG
    if (a == NULL)
-      infoMessage("Error: Attribute %s in TAG <%s> not found\n",
-         name, node->name);
+      infoMessage("Error: Attribute %s in TAG <%s> not found\n", name, node->name);
 #endif
 
    return (a == NULL) ? NULL : a->value;
@@ -1423,20 +1393,6 @@ const XML_NODE* xmlFindNode(
       if ( r != NULL )
          return r;
    }
-
-#if 0
-   if ( node->firstchild != NULL )
-   {
-      if (NULL != (n = xmlFindNode(node->firstchild, name)))
-         return n;
-   }
-
-   if ( node->nextsibl != NULL )
-   {
-      if (NULL != (n = xmlFindNode(node->nextsibl, name)))
-         return n;
-   }
-#endif
 
    return NULL;
 }

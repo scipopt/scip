@@ -11,6 +11,12 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
+  does nothing anymore
+- fixed memory leaks in case of erroneous parsing of constraints, e.g., non-linear constraints
+- added support for character '#' in variable names in old non-linear CIP format (i.e., names without "<" and ">")
+- fixed bug 702, removed too hard assert when casting too big values into SCIP_Longint
+
 
 SCIP version 3.1.0
 ==================

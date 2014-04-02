@@ -19200,11 +19200,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       obj[j] = 0.0;
       lb[j] = -SCIPlpiInfinity(lpi);
       ub[j] =  SCIPlpiInfinity(lpi);
-#if 0
       /* note: we could also use the original bounds - free variables seem to be faster. */
-      lb[j] = lp->cols[j]->lb;
-      ub[j] = lp->cols[j]->ub;
-#endif
    }
 
    /* add artificial alpha variable */

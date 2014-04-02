@@ -3920,8 +3920,8 @@ SCIP_RETCODE normalizeCons(
    {
       /* all coefficients are integral: divide them by their greatest common divisor */
       assert(SCIPisIntegral(scip, vals[0]));
+
       gcd = (SCIP_Longint)(REALABS(vals[0]) + feastol);
-      assert(gcd >= 1);
       for( i = 1; i < nvars && gcd > 1; ++i )
       {
          assert(SCIPisIntegral(scip, vals[i]));
@@ -3935,10 +3935,10 @@ SCIP_RETCODE normalizeCons(
          SCIPdebugPrintCons(scip, cons, NULL);
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
 
-	 if( consdata->validmaxabsval )
-	 {
-	    consdata->maxabsval /= REALABS((SCIP_Real)gcd);
-	 }
+         if( consdata->validmaxabsval )
+         {
+            consdata->maxabsval /= REALABS((SCIP_Real)gcd);
+         }
       }
    }
 

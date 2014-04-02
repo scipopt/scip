@@ -11989,7 +11989,8 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
          /* negated variables do not need to have a parent variables, and negated variables can exist in original
           * space
           */
-         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED )
+         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED &&
+            ((*var)->negatedvar->nparentvars == 0 || (*var)->negatedvar->parentvars[0] != *var) )
          {
             *scalar *= -1.0;
             *constant -= (*var)->data.negate.constant * (*scalar);

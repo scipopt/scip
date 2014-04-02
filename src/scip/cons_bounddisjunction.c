@@ -106,7 +106,7 @@
  * @{
  */
 
-#if 0 /* These only work if one also passes integral values in case of integral variables. This is not always the case and not even asserted. */
+#ifdef SCIP_DISABLED_CODE /* These only work if one also passes integral values in case of integral variables. This is not always the case and not even asserted. */
 /** use defines for numeric compare methods to be slightly faster for integral values */
 #define isFeasLT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) >  0.5 : SCIPisFeasLT(scip, val1, val2))
 #define isFeasLE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) > -0.5 : SCIPisFeasLE(scip, val1, val2))

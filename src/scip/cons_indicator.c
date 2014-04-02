@@ -33,7 +33,7 @@
  * \f$y\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
  * separate more inequalities.
  *
- * The name indicator apparently comes from ILOG CPLEX.
+ * The name indicator apparently comes from CPLEX.
  *
  *
  * @section SEPARATION Separation Methods
@@ -6449,7 +6449,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->eventhdlrrestart = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrrestart), EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
          eventExecIndicatorRestart, NULL) );
-   assert(conshdlrdata->eventhdlrrestart != NULL);
+   assert( conshdlrdata->eventhdlrrestart != NULL );
 
    /* create event handler for objective cut events */
    conshdlrdata->eventhdlrobjcut = NULL;
