@@ -7905,6 +7905,7 @@ SCIP_RETCODE SCIPexprParse(
    )
 {
    SCIP_HASHTABLE* vartable;
+   SCIP_RETCODE retcode;
 
    assert(blkmem != NULL);
    assert(expr != NULL);
@@ -7914,18 +7915,19 @@ SCIP_RETCODE SCIPexprParse(
    assert(varnames != NULL);
 
    *nvars = 0;
+   retcode = SCIP_OKAY;
 
    /* create a hash table for variable names and corresponding expression index
     * for each variable, we store its name, prefixed with the assigned index in the first sizeof(int) bytes
     */
    SCIP_CALL( SCIPhashtableCreate(&vartable, blkmem, 10, exprparseVarTableGetKey, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
 
-   SCIP_CALL( exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames,
-         vartable, 0) );
+   retcode = exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames, vartable,
+      0);
 
    SCIPhashtableFree(&vartable);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 

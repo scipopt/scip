@@ -8511,6 +8511,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_EXPRTREE* exprtree;
    SCIP_EXPR* expr;
    SCIP_VAR** exprvars;
+   SCIP_RETCODE retcode;
    int        nvars;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
@@ -8643,11 +8644,19 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       }
    }
 
+   retcode = SCIP_OKAY;
+
    /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
 
    /* parse expression */
-   SCIP_CALL( SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames) );
+   retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames);
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfreeBufferArray(scip, &varnames);
+      return retcode;
+   }
 
    /* get SCIP variables corresponding to variable names stored in varnames buffer */
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
@@ -8662,7 +8671,8 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       if( exprvars[i] == NULL )
       {
          SCIPerrorMessage("Unknown SCIP variable <%s> encountered in expression.\n", (char*)curvarname);
-         return SCIP_READERROR;
+         retcode = SCIP_READERROR;
+         goto TERMINATE;
       }
 
       curvarname += (strlen((char*)curvarname) + 1)/sizeof(int) + 1;
@@ -8684,6 +8694,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
+ TERMINATE:
    SCIPfreeBufferArray(scip, &exprvars);
    SCIPfreeBufferArray(scip, &varnames);
 
