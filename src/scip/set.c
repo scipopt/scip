@@ -339,6 +339,9 @@
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
 
+/* Emphasis settings */
+#define SCIP_DEFAULT_EMPH_HEURISTICS          0 /**< heuristic emphasis setting */
+
 
 
 /** calculate memory size for dynamically allocated arrays */
@@ -682,6 +685,18 @@ SCIP_RETCODE SCIPsetCopyParams(
    assert(targetset->scip != NULL);
 
    SCIP_CALL( SCIPparamsetCopyParams(sourceset->paramset, targetset->paramset, targetset, messagehdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** callback for changes in heuristics emphasis */
+static
+SCIP_DECL_PARAMCHGD(paramChgdEmphasisHeuristics)
+{
+   assert( param != NULL );
+   assert( 0 <= SCIPparamGetInt(param) && SCIPparamGetInt(param) < 4 );
+
+   SCIP_CALL( SCIPsetHeuristics(scip, (SCIP_PARAMSETTING) SCIPparamGetInt(param), FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1742,6 +1757,13 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
+
+   /* emphasis parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "emphasis/heuristics",
+         "heuristic emphasis setting (0 - default, 1 - aggressive, 2 - fast, 3 - off)",
+         &(*set)->emph_heuristics, FALSE, SCIP_DEFAULT_EMPH_HEURISTICS, 0, 3,
+         paramChgdEmphasisHeuristics, NULL) );
 
    return SCIP_OKAY;
 }
