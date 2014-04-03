@@ -1,0 +1,4 @@
+1. install the lemon graph library (http://lemon.cs.elte.hu/pub/doc/1.2.3/index.html)
+2. in the makefile, change LEMONINCLUDE and LEMONLIB to point to the directions of your lemon header and lib files
+3. compile using make
+4. (optional) test using the command make test
