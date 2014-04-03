@@ -4779,7 +4779,9 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
    assert( consdata != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("Deleting indicator constraint <%s>.\n", SCIPconsGetName(cons) );
+#endif
 
    /* drop events on transformed variables */
    if ( SCIPconsIsTransformed(cons) )
@@ -5637,7 +5639,9 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    assert( consdata != NULL );
    assert( consdata->binvar != NULL );
 
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("%socking constraint <%s>.\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons));
+#endif
 
    SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
 
@@ -5988,7 +5992,9 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("Disabling constraint <%s>.\n", SCIPconsGetName(cons));
+#endif
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
