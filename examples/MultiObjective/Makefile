@@ -22,9 +22,9 @@
 #-----------------------------------------------------------------------------
 
 SCIPDIR		=	../../
-SOPLEXDIR 	= 	$(SCIPDIR)/../soplex-1.7.1/src
-SOPLEXLIB 	= 	$(SOPLEXDIR)/../lib/
-LEMONDIR	= 	lib/lemon-src
+LEMONINCLUDE	= 	/client/include/lemon-1.2
+LEMONLIBDIR	= 	/client/lib/lemon-1.2
+LEMONLIB	= 	emon
 SOLDIR		=	solutions
 
 #-----------------------------------------------------------------------------
@@ -52,7 +52,7 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ) $(SECOBJS) )
 
 TESTSETDIR	=	testset
 TESTFILES       =       testset/*.mop
-INCLUDE 	= 	-I$(LEMONDIR) -I$(SOPLEXDIR)
+INCLUDE 	= 	-I$(LEMONINCLUDE)
 
 VERBOSE 	= 	false
 
@@ -138,6 +138,7 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(M
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) 	\
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -Wno-shadow $(LINKCXX_o) $@ \
+		$(LINKCXX_L)$(LEMONLIBDIR) $(LINKCXX_l)$(LEMONLIB)\
 		$(SOPLEXARGS)
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c

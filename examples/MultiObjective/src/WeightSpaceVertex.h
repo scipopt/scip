@@ -30,7 +30,6 @@
 
 #include "scip/def.h"
 #include "lemon/list_graph.h"
-#include "svector.h"
 
 /** data structure for a vertex of the weight space polyhedron */
 class WeightSpaceVertex
@@ -110,13 +109,14 @@ class WeightSpaceVertex
       const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
       );
 
-   /** calculates weight  based on incident points and nonzero dimensions */
-   void calculate_weight();
+/** calculates the weight w and the weighted objective value a 
+ *  based on w and a for the obsolete and the adjacent vertex */
+   void calculate_weight(
+      const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
+      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */      
+      const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
+   );
 
-   /** writes square matrix for the weight calculation equation system */
-   const soplex::SVector** fillMatrix(
-      unsigned int       nvars               /**< number of rows and columns in matrix */
-      );
 };
 
 #endif
