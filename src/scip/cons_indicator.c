@@ -4047,6 +4047,11 @@ SCIP_RETCODE separateIISRounding(
       int size = 0;
       int nCuts = 0;
       int j;
+#ifdef SCIP_DEBUG
+      int nvarsone = 0;
+      int nvarszero = 0;
+      int nvarsfrac = 0;
+#endif
 
       SCIPdebugMessage("Threshold: %f\n", threshold);
 
@@ -4058,6 +4063,15 @@ SCIP_RETCODE separateIISRounding(
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
          assert( consdata != NULL );
+
+#ifdef SCIP_DEBUG
+         if ( SCIPisFeasEQ(scip, SCIPgetVarSol(scip, consdata->binvar), 1.0) )
+            ++nvarsone;
+         else if ( SCIPisFeasZero(scip, SCIPgetVarSol(scip, consdata->binvar)) )
+            ++nvarszero;
+         else
+            ++nvarsfrac;
+#endif
 
          if ( SCIPisFeasLT(scip, SCIPgetVarSol(scip, consdata->binvar), threshold) )
          {
@@ -4082,6 +4096,10 @@ SCIP_RETCODE separateIISRounding(
          continue;
       }
       oldsize = size;
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("Vars with value 1: %d  0: %d  and fractional: %d.\n", nvarsone, nvarszero, nvarsfrac);
+#endif
 
       /* fix the variables in S */
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
