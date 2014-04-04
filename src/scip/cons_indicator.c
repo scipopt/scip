@@ -4486,6 +4486,28 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          assert( SCIPhashmapExists(conshdlrdata->slackhash, consdata->slackvar) );
          ++conshdlrdata->nslackvars;
       }
+
+      if ( conshdlrdata->genlogicor )
+      {
+         SCIP_CONSHDLR* logicorconshdlr;
+         int logicorsepafreq;
+         int sepafreq;
+
+         /* If we generate logicor constraints, make sure that we separate them with the same frequency */
+         logicorconshdlr = SCIPfindConshdlr(scip, "logicor");
+         if ( logicorconshdlr == NULL )
+         {
+            SCIPerrorMessage("Logicor constraint handler not included, cannto generate constraints.\n");
+            return SCIP_ERROR;
+         }
+         logicorsepafreq = SCIPconshdlrGetSepaFreq(logicorconshdlr);
+         sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
+         if ( sepafreq != -1 && ((logicorsepafreq == 0 && sepafreq > 0) || sepafreq < logicorsepafreq) )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Set sepafreq of logicor constraint handler to %d.\n", sepafreq);
+            SCIP_CALL( SCIPsetIntParam(scip, "constraints/logicor/sepafreq", sepafreq) );
+         }
+      }
    }
 
    /* check each constraint */
