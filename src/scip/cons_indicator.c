@@ -307,7 +307,8 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         slackhash;          /**< hash map from slack variable to row index in alternative LP */
    int                   nslackvars;         /**< # slack variables */
    int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
-   SCIP_Real             objupperbound;      /**< upper bound on objective stored in alternative LP (infinity if not added) */
+   SCIP_Real             objupperbound;      /**< best upper bound on objective known */
+   SCIP_Real             objaltlpbound;      /**< upper objective bound stored in alternative LP (infinity if not added) */
    int                   roundingrounds;     /**< number of rounds in separation */
    SCIP_Real             roundingminthres;   /**< minimal value for rounding in separation */
    SCIP_Real             roundingmaxthres;   /**< maximal value for rounding in separation */
@@ -2300,6 +2301,7 @@ SCIP_RETCODE addObjcut(
    /* create column */
    SCIP_CALL( addAltLPColumn(scip, conshdlr, conshdlrdata, NULL, nobjvars, objvars, objvals, conshdlrdata->objupperbound, 0.0, 1.0, FALSE, &conshdlrdata->objcutindex) );
    assert( conshdlrdata->objcutindex >= 0 );
+   conshdlrdata->objaltlpbound = conshdlrdata->objupperbound;
 
    SCIPfreeBufferArray(scip, &objvals);
    SCIPfreeBufferArray(scip, &objvars);
@@ -2369,20 +2371,26 @@ SCIP_RETCODE updateObjUpperbound(
    if ( conshdlrdata->altlp == NULL )
       return SCIP_OKAY;
 
+   /* first check whether we can improve the upper bound */
    objbnd = SCIPgetUpperbound(scip);
-   if ( SCIPisInfinity(scip, objbnd) )
+   if ( ! SCIPisInfinity(scip, objbnd) )
+   {
+      if ( SCIPisObjIntegral(scip) )
+         objbnd = SCIPfeasCeil(scip, objbnd) - (1.0 - SCIPcutoffbounddelta(scip));
+      else
+         objbnd -= SCIPcutoffbounddelta(scip);
+
+      if ( SCIPisLT(scip, objbnd, conshdlrdata->objupperbound) )
+         conshdlrdata->objupperbound = objbnd;
+   }
+
+   if ( SCIPisInfinity(scip, conshdlrdata->objupperbound) )
       return SCIP_OKAY;
 
-   if ( SCIPisObjIntegral(scip) )
-      objbnd = SCIPfeasCeil(scip, objbnd) - (1.0 - SCIPcutoffbounddelta(scip));
-   else
-      objbnd -= SCIPcutoffbounddelta(scip);
-
-   if ( SCIPisLT(scip, objbnd, conshdlrdata->objupperbound) )
+   /* if we can improve on the bound stored in the alternative LP */
+   if ( SCIPisLT(scip, conshdlrdata->objupperbound, conshdlrdata->objaltlpbound) )
    {
-      SCIPdebugMessage("Update objective bound to %g.\n", objbnd);
-
-      conshdlrdata->objupperbound = objbnd;
+      SCIPdebugMessage("Update objective bound to %g.\n", conshdlrdata->objupperbound);
 
       /* possibly add column for objective cut */
       if ( conshdlrdata->objcutindex < 0 )
@@ -2394,11 +2402,12 @@ SCIP_RETCODE updateObjUpperbound(
 #ifndef NDEBUG
          SCIP_Real oldbnd;
          SCIP_CALL( SCIPlpiGetCoef(conshdlrdata->altlp, 0, conshdlrdata->objcutindex, &oldbnd) );
-         assert( SCIPisEQ(scip, oldbnd, conshdlrdata->objupperbound) );
+         assert( SCIPisEQ(scip, oldbnd, conshdlrdata->objaltlpbound) );
 #endif
 
-      /* update bound */
-         SCIP_CALL( SCIPlpiChgCoef(conshdlrdata->altlp, 0, conshdlrdata->objcutindex, objbnd) );
+         /* update bound */
+         SCIP_CALL( SCIPlpiChgCoef(conshdlrdata->altlp, 0, conshdlrdata->objcutindex, conshdlrdata->objupperbound) );
+         conshdlrdata->objaltlpbound = conshdlrdata->objupperbound;
 
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "alt.lp") );
@@ -2635,7 +2644,7 @@ SCIP_RETCODE extendToCover(
       /* if the alternative polyhedron is infeasible, we found a cover */
       if ( infeasible )
       {
-         if ( conshdlrdata->trysolfromcover )
+         if ( conshdlrdata->trysolfromcover && conshdlrdata->heurtrysol != NULL )
          {
             /* Check whether we want to try to construct a feasible solution: there should be no integer/binary variables
              * except the indicator variables. Thus, there should be no integral variables and the number of indicator
@@ -2694,24 +2703,42 @@ SCIP_RETCODE extendToCover(
                /* the lp often reaches the objective limit - we currently do not use such solutions */
                if ( ! lperror && ! cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
                {
-                  SCIP_HEUR* trysol;
-                  SCIP_Bool stored;
+                  SCIP_Bool feasible;
                   SCIP_SOL* psol;
 
-                  trysol = SCIPfindHeur(scip, "trysol");
-                  SCIP_CALL( SCIPcreateSol(scip, &psol, trysol) );
+                  assert( conshdlrdata->heurtrysol != NULL );
+                  SCIP_CALL( SCIPcreateSol(scip, &psol, conshdlrdata->heurtrysol) );
 
                   /* copy the current LP solution to the working solution */
                   SCIP_CALL( SCIPlinkLPSol(scip, psol) );
 
-                  /* check solution for feasibility, and add it to solution store if possible neither integrality nor
-                   * feasibility of LP rows has to be checked, because this is already done in the LP resolve */
-                  SCIP_CALL( SCIPtrySol(scip, psol, TRUE, FALSE, TRUE, FALSE, &stored) );
+                  /* check solution for feasibility */
+#ifdef SCIP_DEBUG
+                  SCIP_CALL( SCIPcheckSol(scip, psol, TRUE, TRUE, TRUE, TRUE, &feasible) );
+#else
+                  /* not additional checks are needed, because this is already done in LP solve */
+                  SCIP_CALL( SCIPcheckSol(scip, psol, FALSE, FALSE, FALSE, FALSE, &feasible) );
+#endif
 
-                  if ( stored )
+                  /* tell heur_trysol about solution - it will pass it to SCIP */
+                  if ( feasible )
                   {
-                     SCIPdebugMessage("found feasible solution:\n");
-                     SCIPdebug( SCIP_CALL( SCIPprintSol(scip, psol, NULL, FALSE) ) );
+                     SCIP_Real objval;
+
+                     SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, psol) );
+                     objval = SCIPgetSolTransObj(scip, psol);
+                     SCIPdebugMessage("found feasible solution of value %g.\n", objval);
+#ifdef SCIP_MORE_DEBUG
+                     SCIP_CALL( SCIPprintSol(scip, psol, NULL, FALSE) );
+#endif
+                     if ( SCIPisLT(scip, objval, conshdlrdata->objupperbound) )
+                     {
+                        if ( SCIPisObjIntegral(scip) )
+                           objval = SCIPfeasCeil(scip, objval) - (1.0 - SCIPcutoffbounddelta(scip));
+                        else
+                           objval -= SCIPcutoffbounddelta(scip);
+                        conshdlrdata->objupperbound = objval;
+                     }
                   }
                   SCIP_CALL( SCIPfreeSol(scip, &psol) );
                }
@@ -4294,6 +4321,7 @@ void initConshdlrData(
    conshdlrdata->nslackvars = 0;
    conshdlrdata->objcutindex = -1;
    conshdlrdata->objupperbound = SCIPinfinity(scip);
+   conshdlrdata->objaltlpbound = SCIPinfinity(scip);
    conshdlrdata->roundingminthres = 0.1;
    conshdlrdata->roundingmaxthres = 0.6;
    conshdlrdata->roundingrounds = 1;
