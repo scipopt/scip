@@ -2652,7 +2652,8 @@ SCIP_RETCODE extendToCover(
       /* if the alternative polyhedron is infeasible, we found a cover */
       if ( infeasible )
       {
-         if ( conshdlrdata->trysolfromcover && conshdlrdata->heurtrysol != NULL )
+         /* we currently cannot call probing if there are cuts in the sepastore; @todo fix this */
+         if ( conshdlrdata->trysolfromcover && conshdlrdata->heurtrysol != NULL && SCIPgetNCuts(scip) == 0 )
          {
             /* Check whether we want to try to construct a feasible solution: there should be no integer/binary variables
              * except the indicator variables. Thus, there should be no integral variables and the number of indicator
