@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
+/* #define SCIP_MORE_DEBUG */
 /* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
@@ -4417,6 +4418,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+   SCIPdebugMessage("Initsol for indicator constraints ...\n");
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->slackhash == NULL );
@@ -4457,8 +4460,6 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       assert( conss != NULL );
       assert( conss[c] != NULL );
       assert( SCIPconsIsTransformed(conss[c]) );
-
-      /* SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) ); */
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
@@ -4844,7 +4845,9 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->eventhdlrbound != NULL );
 
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("Transforming indicator constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
+#endif
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -4999,7 +5002,9 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          assert( consdata->binvar != NULL );
          assert( ! SCIPconsIsModifiable(cons) );
 
-         /* SCIPdebugMessage("Presolving indicator constraint <%s>.\n", SCIPconsGetName(cons) ); */
+#ifdef SCIP_MORE_DEBUG
+         SCIPdebugMessage("Presolving indicator constraint <%s>.\n", SCIPconsGetName(cons) );
+#endif
 
          /* do nothing if the linear constraint is not active */
          if ( ! consdata->linconsactive )
@@ -5139,6 +5144,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    if ( conshdlrdata->addcouplingcons && conshdlrdata->addedcouplingcons )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("Possibly adding initial rows for %d indicator constraints.\n", nconss);
+
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
@@ -5153,8 +5160,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
       /* do not add inequalities if there are no linear constraints (no slack variable available) */
       if ( ! consdata->linconsactive )
          continue;
-
-      SCIPdebugMessage("Adding initial rows for indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       /* get upper bound for slack variable in linear constraint */
       ub = SCIPvarGetUbGlobal(consdata->slackvar);
@@ -5535,7 +5540,10 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
-      /* SCIPdebugMessage("Propagating indicator constraint <%s>.\n", SCIPconsGetName(cons) ); */
+
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebugMessage("Propagating indicator constraint <%s>.\n", SCIPconsGetName(cons) );
+#endif
 
       *result = SCIP_DIDNOTFIND;
 
@@ -5749,7 +5757,9 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    else
       consname = SCIPconsGetName(sourcecons);
 
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("Copying indicator constraint <%s> ...\n", consname);
+#endif
 
    if ( modifiable )
    {
@@ -5950,7 +5960,9 @@ SCIP_DECL_CONSENABLE(consEnableIndicator)
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("Enabling constraint <%s>.\n", SCIPconsGetName(cons));
+#endif
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
