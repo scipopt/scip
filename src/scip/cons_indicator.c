@@ -411,32 +411,40 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       /* if variable is now fixed to be positive */
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
          ++(consdata->nfixednonzero);
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+#endif
       break;
 
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if variable is now fixed to be negative */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
          ++(consdata->nfixednonzero);
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+#endif
       break;
 
    case SCIP_EVENTTYPE_LBRELAXED:
       /* if variable is not fixed to be positive anymore */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
          --(consdata->nfixednonzero);
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+#endif
       break;
 
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if variable is not fixed to be negative anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzero);
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+#endif
       break;
 
    default:
