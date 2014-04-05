@@ -2601,6 +2601,7 @@ SCIP_RETCODE extendToCover(
    SCIP_Bool*            S,                  /**< bitset of variables */
    int*                  size,               /**< size of S */
    SCIP_Real*            value,              /**< objective value of S */
+   SCIP_Bool*            chgupperbound,      /**< Has the upper bound been changed? */
    SCIP_Bool*            error,              /**< output: whether an error occured */
    int*                  nGen                /**< number of generated cuts */
    )
@@ -2615,14 +2616,18 @@ SCIP_RETCODE extendToCover(
    assert( S != NULL );
    assert( size != NULL );
    assert( value != NULL );
+   assert( chgupperbound != NULL );
+   assert( error != NULL );
    assert( nGen != NULL );
+
+   *chgupperbound = FALSE;
+   *error = FALSE;
+   *nGen = 0;
 
    SCIP_CALL( SCIPlpiGetNCols(lp, &nCols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &primsol, nCols) );
    assert( nconss <= nCols );
 
-   *nGen = 0;
-   *error = FALSE;
    do
    {
       SCIP_Bool infeasible;
@@ -2744,6 +2749,7 @@ SCIP_RETCODE extendToCover(
                         else
                            objval -= SCIPcutoffbounddelta(scip);
                         conshdlrdata->objupperbound = objval;
+                        *chgupperbound = TRUE;
                      }
                   }
                   SCIP_CALL( SCIPfreeSol(scip, &psol) );
@@ -3736,6 +3742,7 @@ SCIP_RETCODE enforceCuts(
    SCIP_LPI* lp;
    SCIP_Bool* S;
    SCIP_Real value = 0.0;
+   SCIP_Bool chgupperbound = FALSE;
    SCIP_Bool error;
    int size = 0;
    int nCuts;
@@ -3798,7 +3805,7 @@ SCIP_RETCODE enforceCuts(
 
    /* extend set S to a cover and generate cuts */
    error = FALSE;
-   SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &error, &nCuts) );
+   SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
    *nGen = nCuts;
 
    /* return with an error if no cuts have been produced and and error occured in extendToCover() */
@@ -4070,6 +4077,7 @@ SCIP_RETCODE separateIISRounding(
         rounds < conshdlrdata->roundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
         threshold -= conshdlrdata->roundingoffset)
    {
+      SCIP_Bool chgupperbound = FALSE;
       SCIP_Real value = 0.0;
       int size = 0;
       int nCuts = 0;
@@ -4132,7 +4140,7 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
 
       /* extend set S to a cover and generate cuts */
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &error, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
 
       /* we ignore errors in extendToCover */
       if ( nCuts > 0 )
@@ -4151,6 +4159,14 @@ SCIP_RETCODE separateIISRounding(
 
       /* reset bounds */
       SCIP_CALL( unfixAltLPVariables(scip, lp, nconss, conss, S) );
+
+      /* rerun current threshold if upper bound has been updated */
+      if ( chgupperbound )
+      {
+         SCIPdebugMessage("Rerun current threshold since upper objective bound has been changed.\n");
+         oldsize = -1;
+         threshold += conshdlrdata->roundingoffset;
+      }
    }
    SCIPdebugMessage("Generated %d IISs.\n", *nGen - nGenOld);
 
