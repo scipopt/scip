@@ -346,6 +346,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             useotherconss;      /**< Collect other constraints to alternative LP? */
    SCIP_Bool             useobjectivecut;    /**< Use objective cut with current best solution to alternative LP? */
    SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
+   char                  normtype;           /**< norm type for cut computation */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
@@ -2633,10 +2634,11 @@ SCIP_RETCODE extendToCover(
    {
       SCIP_Bool infeasible;
       SCIP_Real sum = 0.0;
+      SCIP_Real candObj = -1.0;
+      SCIP_Real norm = 1.0;
       int sizeIIS = 0;
       int candidate = -1;
       int candIndex = -1;
-      SCIP_Real candObj = -1.0;
       int j;
 
       if ( step == 0 )
@@ -2809,8 +2811,31 @@ SCIP_RETCODE extendToCover(
       assert( candidate >= 0 );
       assert( ! S[candidate] );
 
+      /* get the type of norm to use for efficacy calculations */
+      switch ( conshdlrdata->normtype )
+      {
+      case 'e':
+         norm = sqrt(sizeIIS);
+         break;
+      case 'm':
+         norm = 1.0;
+         break;
+      case 's':
+         norm = sizeIIS;
+         break;
+      case 'd':
+         norm = 1.0;
+         break;
+      default:
+         SCIPerrorMessage("Invalid efficacy norm parameter '%c'.\n", conshdlrdata->normtype);
+         SCIPABORT();
+         norm = 1.0; /*lint !e527*/
+      }
+
       /* update new set S */
-      SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %6g  (IIS size: %4d)\n", *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS);
+      SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d, eff.: %g)\n",
+         *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
+
       S[candidate] = TRUE;
       ++(*size);
       *value += candObj;
@@ -2819,7 +2844,7 @@ SCIP_RETCODE extendToCover(
       SCIP_CALL( fixAltLPVariable(lp, candIndex) );
 
       /* if cut is violated, i.e., sum - sizeIIS + 1 > 0 */
-      if ( SCIPisEfficacious(scip, sum - (SCIP_Real) (sizeIIS - 1)) )
+      if ( SCIPisEfficacious(scip, (sum - (SCIP_Real) (sizeIIS - 1))/norm) )
       {
          SCIP_Bool isLocal;
 
@@ -4360,6 +4385,7 @@ void initConshdlrData(
    conshdlrdata->objindicatoronly = FALSE;
    conshdlrdata->objothervarsonly = FALSE;
    conshdlrdata->minabsobj = 0.0;
+   conshdlrdata->normtype = 'e';
 }
 
 
@@ -4478,6 +4504,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->slackhash == NULL );
+
+   SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &conshdlrdata->normtype) );
 
    if ( conshdlrdata->sepaalternativelp )
    {
