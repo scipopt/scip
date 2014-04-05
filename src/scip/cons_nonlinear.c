@@ -4119,7 +4119,11 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    {
       assert(SCIPisFeasEQ(scip, vallb, valub));
       slope = 0.0;
-      constant = 0.5 * (vallb+valub);
+      /* choose most conservative value, so cut is also valid if above assert does not hold */
+      if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+         constant = MAX(vallb, valub);
+      else
+         constant = MIN(vallb, valub);
    }
    else
    {
