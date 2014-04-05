@@ -307,6 +307,7 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         ubhash;             /**< hash map from variable to index of upper bound column in alternative LP */
    SCIP_HASHMAP*         slackhash;          /**< hash map from slack variable to row index in alternative LP */
    int                   nslackvars;         /**< # slack variables */
+   int                   niiscutsgen;        /**< number of IIS-cuts generated */
    int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
    SCIP_Real             objupperbound;      /**< best upper bound on objective known */
    SCIP_Real             objaltlpbound;      /**< upper objective bound stored in alternative LP (infinity if not added) */
@@ -2593,7 +2594,7 @@ static
 SCIP_RETCODE extendToCover(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_LPI*             lp,                 /**< LP */
    SCIP_SOL*             sol,                /**< solution to be separated */
    SCIP_Bool             removable,          /**< whether cuts should be removable */
@@ -2608,6 +2609,9 @@ SCIP_RETCODE extendToCover(
    int*                  nGen                /**< number of generated cuts */
    )
 {
+#ifdef SCIP_DEBUG
+   char name[SCIP_MAXSTRLEN];
+#endif
    SCIP_Real* primsol;
    int step = 0;
    int nCols;
@@ -2889,7 +2893,12 @@ SCIP_RETCODE extendToCover(
             }
             assert( cnt == sizeIIS );
 
-            SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, "iis", cnt, vars, FALSE, TRUE, TRUE, TRUE, TRUE, isLocal, FALSE, TRUE, removable, FALSE) );
+#ifdef SCIP_DEBUG
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
+            SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, cnt, vars, FALSE, TRUE, TRUE, TRUE, TRUE, isLocal, FALSE, TRUE, removable, FALSE) );
+#else
+            SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, "", cnt, vars, FALSE, TRUE, TRUE, TRUE, TRUE, isLocal, FALSE, TRUE, removable, FALSE) );
+#endif
 
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
@@ -2908,7 +2917,12 @@ SCIP_RETCODE extendToCover(
             SCIP_Bool rowinfeasible;
 
             /* create row */
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "iis", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+#ifdef SCIP_DEBUG
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+#else
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+#endif
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* add variables corresponding to support to cut */
@@ -3964,19 +3978,20 @@ SCIP_RETCODE enforceIndicators(
    /* if some constraint has a linear constraint that is not active, we need to check feasibility via the alternative polyhedron */
    if ( (someLinconsNotActive || conshdlrdata->enforcecuts) && conshdlrdata->sepaalternativelp )
    {
-      int nGen;
+      int ngen;
 
-      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, NULL, genlogicor, &nGen) );
-      if ( nGen > 0 )
+      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, NULL, genlogicor, &ngen) );
+      if ( ngen > 0 )
       {
+         conshdlrdata->niiscutsgen += ngen;
          if ( genlogicor )
          {
-            SCIPdebugMessage("Generated %d constraints.\n", nGen);
+            SCIPdebugMessage("Generated %d constraints.\n", ngen);
             *result = SCIP_CONSADDED;
          }
          else
          {
-            SCIPdebugMessage("Generated %d cuts.\n", nGen);
+            SCIPdebugMessage("Generated %d cuts.\n", ngen);
             *result = SCIP_SEPARATED;
          }
          return SCIP_OKAY;
@@ -4292,14 +4307,14 @@ SCIP_RETCODE separateIndicators(
             {
                SCIP_ROW* row;
                SCIP_Bool infeasible;
-               char name[50];
 #ifndef NDEBUG
-               (void) SCIPsnprintf(name, 50, "couple%d", c);
-#else
-               name[0] = '\0';
-#endif
+               char name[50];
 
+               (void) SCIPsnprintf(name, 50, "couple%d", c);
                SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+#else
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+#endif
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
                SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
@@ -4340,6 +4355,8 @@ SCIP_RETCODE separateIndicators(
 
       if ( ncuts > noldcuts )
       {
+         conshdlrdata->niiscutsgen += ncuts;
+
          /* possibly overwrite result from separation above */
          if ( conshdlrdata->genlogicor )
             *result = SCIP_CONSADDED;
@@ -4386,6 +4403,7 @@ void initConshdlrData(
    conshdlrdata->objothervarsonly = FALSE;
    conshdlrdata->minabsobj = 0.0;
    conshdlrdata->normtype = 'e';
+   conshdlrdata->niiscutsgen = 0;
 }
 
 
