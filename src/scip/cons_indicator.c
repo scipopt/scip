@@ -271,6 +271,7 @@
 /* other values */
 #define OBJEPSILON                  0.001    /**< value to add to objective in alt. LP if the binary variable is 1 to get small IISs */
 #define SEPAALTTHRESHOLD               10    /**< only separate IIS cuts if the number of separated coupling cuts is less than this value */
+#define MAXROUNDINGROUNDS               1    /**< maximal number of rounds that produced cuts in separation */
 
 
 /** constraint data for indicator constraints */
@@ -309,7 +310,7 @@ struct SCIP_ConshdlrData
    int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
    SCIP_Real             objupperbound;      /**< best upper bound on objective known */
    SCIP_Real             objaltlpbound;      /**< upper objective bound stored in alternative LP (infinity if not added) */
-   int                   roundingrounds;     /**< number of rounds in separation */
+   int                   maxroundingrounds;  /**< maximal number of rounds that produced cuts in separation */
    SCIP_Real             roundingminthres;   /**< minimal value for rounding in separation */
    SCIP_Real             roundingmaxthres;   /**< maximal value for rounding in separation */
    SCIP_Real             roundingoffset;     /**< offset for rounding in separation */
@@ -4077,7 +4078,7 @@ SCIP_RETCODE separateIISRounding(
 
    /* loop through the possible thresholds */
    for (threshold = conshdlrdata->roundingmaxthres;
-        rounds < conshdlrdata->roundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
+        rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
         threshold -= conshdlrdata->roundingoffset)
    {
       SCIP_Bool chgupperbound = FALSE;
@@ -4350,7 +4351,7 @@ void initConshdlrData(
    conshdlrdata->objaltlpbound = SCIPinfinity(scip);
    conshdlrdata->roundingminthres = 0.1;
    conshdlrdata->roundingmaxthres = 0.6;
-   conshdlrdata->roundingrounds = 1;
+   conshdlrdata->maxroundingrounds = MAXROUNDINGROUNDS;
    conshdlrdata->roundingoffset = 0.1;
    conshdlrdata->addedcouplingcons = FALSE;
    conshdlrdata->ninitconss = 0;
