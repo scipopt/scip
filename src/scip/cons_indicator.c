@@ -3848,7 +3848,17 @@ SCIP_RETCODE enforceCuts(
 
    /* extend set S to a cover and generate cuts */
    error = FALSE;
-   SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
+   do
+   {
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
+
+      /* update upper bound */
+      if ( chgupperbound )
+      {
+         SCIP_CALL( updateObjUpperbound(scip, conshdlr, conshdlrdata) );
+      }
+   }
+   while ( chgupperbound && nCuts == 0 && ! error );
    *nGen = nCuts;
 
    /* return with an error if no cuts have been produced and and error occured in extendToCover() */
