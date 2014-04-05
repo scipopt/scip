@@ -6074,6 +6074,11 @@ SCIP_RETCODE generateCutLTI(
       rightrefactivity += consdata->factorright[i] * ref[i];
    }
 
+   /* if activities exceed "opposite" infinity, huge bounds seem to be involved, for which the below method is not prepared */
+   if( SCIPisInfinity(scip, leftminactivity)  || SCIPisInfinity(scip, -leftmaxactivity) ||
+       SCIPisInfinity(scip, rightminactivity) || SCIPisInfinity(scip, -rightmaxactivity) )
+      return SCIP_OKAY;
+
    /* if any of the factors is essentially fixed, give up and do usual method (numerically less sensitive, I hope) */
    if( SCIPisRelEQ(scip, leftminactivity, leftmaxactivity) || SCIPisRelEQ(scip, rightminactivity, rightmaxactivity) )
       return SCIP_OKAY;
