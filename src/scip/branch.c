@@ -2292,7 +2292,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          delta2 = 0.9*(SCIPsetInfinity(set)-lb);
          branchpoint = lb + MIN(delta1, delta2);
       }
-      else if( !SCIPsetIsGT(set, ub, branchpoint) )
+      else if( !SCIPsetIsRelGT(set, ub, branchpoint) )
       { 
          SCIP_Real ubabs;
          SCIP_Real delta1;
