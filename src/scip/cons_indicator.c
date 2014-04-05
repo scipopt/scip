@@ -2665,6 +2665,7 @@ SCIP_RETCODE extendToCover(
                SCIP_Bool lperror;
                SCIP_Bool cutoff;
 
+               SCIPdebugMessage("Trying to generate feasible solution ...\n");
                SCIP_CALL( SCIPstartProbing(scip) );
 
                /* fix variables */
@@ -2754,6 +2755,8 @@ SCIP_RETCODE extendToCover(
                   }
                   SCIP_CALL( SCIPfreeSol(scip, &psol) );
                }
+               else
+                  SCIPdebugMessage("Search for feasible solution unsuccessful.\n");
 
                SCIP_CALL( SCIPendProbing(scip) );
             }
@@ -2806,7 +2809,7 @@ SCIP_RETCODE extendToCover(
       assert( ! S[candidate] );
 
       /* update new set S */
-      SCIPdebugMessage("   size: %4d  add %4d with objective value %f and alt-LP solution value %g  (IIS size: %d)\n", *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS);
+      SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %6g  (IIS size: %4d)\n", *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS);
       S[candidate] = TRUE;
       ++(*size);
       *value += candObj;
