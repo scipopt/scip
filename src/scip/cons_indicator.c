@@ -1818,7 +1818,7 @@ SCIP_RETCODE addAltLPColumn(
    SCIP_VAR**            vars,               /**< variables for column */
    SCIP_Real*            vals,               /**< values for column */
    SCIP_Real             rhscoef,            /**< coefficient for first row */
-   SCIP_Real             objcoef,            /**< coefficient for first row */
+   SCIP_Real             objcoef,            /**< objective in alternative LP */
    SCIP_Real             sign,               /**< sign (+1,-1) for column */
    SCIP_Bool             colfree,            /**< whether column should be free, e.g., for equations */
    int*                  colindex            /**< index of new column (return value) */
@@ -2038,7 +2038,7 @@ SCIP_RETCODE addAltLPColumn(
 
          SCIP_CALL( SCIPhashmapInsert(conshdlrdata->ubhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
          assert( SCIPhashmapExists(conshdlrdata->ubhash, var) );
-         SCIPdebugMessage("Added column for to upper bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
+         SCIPdebugMessage("Added column for upper bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
             val, SCIPvarGetName(var), ncols + 1 + nnewcols);
          ++nnewcols;
       }
@@ -2306,7 +2306,7 @@ SCIP_RETCODE addObjcut(
       }
    }
 
-   /* create column */
+   /* create column (with rhs = upperbound, objective 0, and scaling factor 1.0) */
    SCIP_CALL( addAltLPColumn(scip, conshdlr, conshdlrdata, NULL, nobjvars, objvars, objvals, conshdlrdata->objupperbound, 0.0, 1.0, FALSE, &conshdlrdata->objcutindex) );
    assert( conshdlrdata->objcutindex >= 0 );
    conshdlrdata->objaltlpbound = conshdlrdata->objupperbound;
@@ -2794,6 +2794,7 @@ SCIP_RETCODE extendToCover(
                assert( ! S[j] );
                ++sizeIIS;
                sum += SCIPgetSolVal(scip, sol, consdata->binvar);
+
                /* take first element */
                if ( candidate < 0 )
                {
@@ -2837,7 +2838,7 @@ SCIP_RETCODE extendToCover(
       }
 
       /* update new set S */
-      SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d, eff.: %g)\n",
+      SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d, eff.: %g).\n",
          *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
 
       S[candidate] = TRUE;
@@ -4142,7 +4143,7 @@ SCIP_RETCODE separateIISRounding(
       int nvarsfrac = 0;
 #endif
 
-      SCIPdebugMessage("Threshold: %f.\n", threshold);
+      SCIPdebugMessage("Threshold: %g.\n", threshold);
 
       /* choose variables that have a value < current threshold value */
       for (j = 0; j < nconss; ++j)
@@ -4172,7 +4173,7 @@ SCIP_RETCODE separateIISRounding(
             S[j] = FALSE;
       }
 
-      if (size == nconss)
+      if ( size == nconss )
       {
          SCIPdebugMessage("All variables in the set. Continue ...\n");
          continue;
@@ -4187,7 +4188,7 @@ SCIP_RETCODE separateIISRounding(
       oldsize = size;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("Vars with value 1: %d  0: %d  and fractional: %d.\n", nvarsone, nvarszero, nvarsfrac);
+      SCIPdebugMessage("   Vars with value 1: %d  0: %d  and fractional: %d.\n", nvarsone, nvarszero, nvarsfrac);
 #endif
 
       /* fix the variables in S */
@@ -4207,9 +4208,6 @@ SCIP_RETCODE separateIISRounding(
          /* possibly update upper bound */
          SCIP_CALL( updateObjUpperbound(scip, conshdlr, conshdlrdata) );
       }
-
-      /* Note: checking for a primal solution is done in extendToCover(). */
-      SCIPdebugMessage("Produced cover of size %d with value %f.\n", size, value);
 
       /* reset bounds */
       SCIP_CALL( unfixAltLPVariables(scip, lp, nconss, conss, S) );
