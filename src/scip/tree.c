@@ -5117,7 +5117,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
    /* see comment in SCIPbranchVarVal (don't need check for infty here, as SCIPsetIsLT doesn't assert this, while SCIPisLT does) */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
-      SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
+      SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set) ||
       (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );
 
    downub = SCIP_INVALID;
@@ -5151,7 +5151,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
                   tree, lp, branchcand, eventqueue, var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
       }
-      else if( SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.0 * SCIPsetEpsilon(set) )
+      else if( SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set) )
       {
          /* if the only way to branch is such that in both sides the relative domain width becomes smaller epsilon,
           * then fix the variable in both branches right away

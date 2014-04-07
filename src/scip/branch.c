@@ -2232,12 +2232,12 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          {
             /* for very tiny intervals we set it exactly into the middle
              *   very tiny means here an interval where we could not create two branches with reldiff > eps
-             * however, if variable is almost fixed at -/+ infinity, suggest this infinity as branching point, what else could we do?
+             * however, if variable is almost fixed at -/+ infinity, suggest the non-finite value as branching point and let SCIPtreeBranchVar fix the variable there
              */
             if( SCIPsetIsInfinity(set, -lb) )
-               branchpoint = -SCIPsetInfinity(set);
+               branchpoint = ub;
             else if( SCIPsetIsInfinity(set, ub) )
-               branchpoint =  SCIPsetInfinity(set);
+               branchpoint = lb;
             else
                branchpoint = (lb+ub)/2.0;
          }
@@ -2253,11 +2253,11 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
             if( SCIPsetIsInfinity(set, ub) )
             {
-               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * SCIPsetInfinity(set) - lb);
+               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb));
             }
             else if( SCIPsetIsInfinity(set, -lb) )
             {
-               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * SCIPsetInfinity(set) + ub);
+               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub));
             }
 
             lbabs = REALABS(lb);
@@ -2286,8 +2286,8 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
                branchpoint = 0.0;
 
-            assert(SCIPsetIsRelLT(set, lb, branchpoint));
-            assert(SCIPsetIsRelLT(set, branchpoint, ub));
+            assert(SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), branchpoint));
+            assert(SCIPsetIsRelLT(set, branchpoint, SCIPvarGetUbLocal(var)));
          }
       }
       return branchpoint;
