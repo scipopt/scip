@@ -23,7 +23,8 @@
  * (finite) lower and upper bound, respectively, of the \f$ i \f$-th variable \f$x_i\f$.
  * Viewing every variable \f$x_i \f$ as (continuously) uniformly distributed within its bounds, we can approximately
  * understand the row activity \f$a(x)\f$ as a gaussian random variate with mean value \f$ \mu = E[a(x)] = \sum_i a_i\frac{l_i + u_i}{2}\f$
- * and variance \f$ \sigma^2 = \sum_i a_i^2 \frac{(u_i - l_i)^2}{12} \f$.
+ * and variance \f$ \sigma^2 = \sum_i a_i^2 \sigma_i^2 \f$, with \f$ \sigma_i^2 = \frac{(u_i - l_i)^2}{12}\f$ for
+ * continuous and \f$ \sigma_i^2 = \frac{(u_i - l_i + 1)^2 - 1}{12}\f$ for discrete variables.
  * With these two parameters, we can calculate the probability to satisfy the row in terms of the cumulative distribution
  * of the standard normal distribution: \f$ P(a(x) \leq b) = \Phi(\frac{b - \mu}{\sigma})\f$.
  *
@@ -236,6 +237,7 @@ void varCalcDistributionParameters(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
+   SCIP_VARTYPE          vartype,            /**< type of the variable */
    SCIP_Real*            mean,               /**< pointer to store mean value */
    SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
    )
@@ -258,7 +260,11 @@ void varCalcDistributionParameters(
    }
    else
    {
-      *variance = SQUARED(varub - varlb);
+      /* if the variable is continuous, we assume a continuous uniform distribution, otherwise a discrete one */
+      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         *variance = SQUARED(varub - varlb);
+      else
+         *variance = SQUARED(varub - varlb + 1) - 1;
       *variance /= 12.0;
       *mean = (varub + varlb) * .5;
    }
@@ -396,10 +402,12 @@ SCIP_Real rowCalcProbability(
 
 /** calculates the initial mean and variance of the row activity normal distribution.
  *
- *  The mean value m is given by m = \sum_i=1^n c_i * (lb_i +ub_i) / 2 where
- *  n is the number of variables, and c_i, lb_i, ub_i are the variable coefficient and
- *  bounds, respectively. With the same notation, the variance sigma2 is given by
- *  sigma2 = \sum_i=1^n c_i^2 * (ub_i - lb_i)^2 / 12.
+ *  The mean value \f$ \mu \f$ is given by \f$ \mu = \sum_i=1^n c_i * (lb_i +ub_i) / 2 \f$ where
+ *  \f$n \f$ is the number of variables, and \f$ c_i, lb_i, ub_i \f$ are the variable coefficient and
+ *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \$ is given by
+ *  \f$ \sigma^2 = \sum_i=1^n c_i^2 * \sigma^2_i \f$, with the variance being
+ *  \f$ \sigma^2_i = ((ub_i - lb_i + 1)^2 - 1) / 12 \f$ for integer variables and
+ *  \f$ \sigma^2_i = (ub_i - lb_i)^2 / 12 \f$ for continuous variables.
  */
 static
 void rowCalculateGauss(
@@ -496,12 +504,12 @@ void rowCalculateGauss(
                ++(*rowinfinitiesup);
          }
       }
-      varCalcDistributionParameters(scip, colvarlb, colvarub, &varmean, &varvariance);
+      varCalcDistributionParameters(scip, colvarlb, colvarub, SCIPvarGetType(colvar), &varmean, &varvariance);
 
       /* actual values are updated; the contribution of the variable to mu is the arithmetic mean of its bounds */
       *mu += colval * varmean;
 
-      /* the variance contribution of a variable is c^2 * (u - l)^2 / 12.0 */
+      /* the variance contribution of a variable is c^2 * (u - l)^2 / 12.0 for continuous and c^2 * ((u - l + 1)^2 - 1) / 12.0 for integer */
       squarecoeff = SQUARED(colval);
       *sigma2 += squarecoeff * varvariance;
 
@@ -609,6 +617,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real currentmean;      /* current mean value of variable uniform distribution */
    SCIP_Real meanup;           /* mean value of variable uniform distribution after branching up */
    SCIP_Real meandown;         /* mean value of variable uniform distribution after branching down*/
+   SCIP_VARTYPE vartype;
    int ncolrows;
    int i;
 
@@ -630,11 +639,12 @@ SCIP_RETCODE calcBranchScore(
    varlb = SCIPvarGetLbLocal(var);
    varub = SCIPvarGetUbLocal(var);
    assert(SCIPisFeasLT(scip, varlb, varub));
+   vartype = SCIPvarGetType(var);
 
    /* calculate mean and variance of variable uniform distribution before and after branching */
    currentmean = 0.0;
    squaredbounddiff = 0.0;
-   varCalcDistributionParameters(scip, varlb, varub, &currentmean, &squaredbounddiff);
+   varCalcDistributionParameters(scip, varlb, varub, vartype, &currentmean, &squaredbounddiff);
 
    newlb = SCIPfeasCeil(scip, lpsolval);
    newub = SCIPfeasFloor(scip, lpsolval);
@@ -642,12 +652,12 @@ SCIP_RETCODE calcBranchScore(
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
    meanup = 0.0;
-   varCalcDistributionParameters(scip, newlb, varub, &meanup, &squaredbounddiffup);
+   varCalcDistributionParameters(scip, newlb, varub, vartype, &meanup, &squaredbounddiffup);
 
    /* calculate the distribution mean and variance for a variable with finite lower bound */
    squaredbounddiffdown = 0.0;
    meandown = 0.0;
-   varCalcDistributionParameters(scip, varlb, newub, &meandown, &squaredbounddiffdown);
+   varCalcDistributionParameters(scip, varlb, newub, vartype, &meandown, &squaredbounddiffdown);
 
    /* initialize the variable's up and down score */
    *upscore = 0.0;
@@ -892,6 +902,7 @@ SCIP_RETCODE varProcessBoundChanges(
    SCIP_Real newlb;
    SCIP_Real oldub;
    SCIP_Real newub;
+   SCIP_VARTYPE vartype;
    int ncolrows;
    int r;
    int varindex;
@@ -930,8 +941,9 @@ SCIP_RETCODE varProcessBoundChanges(
    newvariance = 0.0;
    oldmean = 0.0;
    newmean = 0.0;
-   varCalcDistributionParameters(scip, oldlb, oldub, &oldmean, &oldvariance);
-   varCalcDistributionParameters(scip, newlb, newub, &newmean, &newvariance);
+   vartype = SCIPvarGetType(var);
+   varCalcDistributionParameters(scip, oldlb, oldub, vartype, &oldmean, &oldvariance);
+   varCalcDistributionParameters(scip, newlb, newub, vartype, &newmean, &newvariance);
 
    /* loop over all rows of this variable and update activity distribution */
    for( r = 0; r < ncolrows; ++r )
