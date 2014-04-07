@@ -48,8 +48,8 @@ void c_addObjective(
    );
 void c_addCost(
    struct Objectives* probdata,           /** problem data structure */
-   SCIP_VAR*             var,                
-   const char*           objname,            
+   SCIP_VAR*             var,
+   const char*           objname,
    SCIP_Real             val
    );
 struct Objectives* c_createProbdata(SCIP* scip);
