@@ -4688,12 +4688,15 @@ SCIP_RETCODE checkFactorable(
    {
       consdata->factorleft[i]  = sigma1 * a[posidx * n + i] - sigma2 * a[negidx * n + i];
       consdata->factorright[i] = sigma1 * a[posidx * n + i] + sigma2 * a[negidx * n + i];
+#ifdef NDEBUG /* in debug mode, we do this after the checks below */
       if( SCIPisZero(scip, consdata->factorleft[i]) )
          consdata->factorleft[i] = 0.0;
       if( SCIPisZero(scip, consdata->factorright[i]) )
          consdata->factorright[i] = 0.0;
+#endif
    }
 
+#ifdef SCIP_DEBUG
    SCIPdebugMessage("constraint <%s> has factorable quadratic form: (%g", SCIPconsGetName(cons), consdata->factorleft[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
    {
@@ -4707,6 +4710,7 @@ SCIP_RETCODE checkFactorable(
          SCIPdebugPrintf(" %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
    }
    SCIPdebugPrintf(")\n");
+#endif
 
 #ifndef NDEBUG
    /* check whether factorleft * factorright^T is matrix of augmented quadratic form */
@@ -4744,6 +4748,15 @@ SCIP_RETCODE checkFactorable(
 
       /* check diagonal elements */
       assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
+   }
+
+   /* set almost-zero's to zero */
+   for( i = 0; i < n; ++i )
+   {
+      if( SCIPisZero(scip, consdata->factorleft[i]) )
+         consdata->factorleft[i] = 0.0;
+      if( SCIPisZero(scip, consdata->factorright[i]) )
+         consdata->factorright[i] = 0.0;
    }
 #endif
 
