@@ -5231,7 +5231,7 @@ SCIP_RETCODE separatePoint(
       assert(conss != NULL);
 
       /* skip constraints that are not enabled */
-      if( !SCIPconsIsEnabled(conss[c]) )
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
