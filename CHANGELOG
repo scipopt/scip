@@ -7,6 +7,10 @@ features:
 parameters:
 - rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
 
+performance improvements:
+- improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
+  coefficients
+
 SCIP version 3.1.1
 ==================
 

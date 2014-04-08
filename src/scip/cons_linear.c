@@ -11858,20 +11858,33 @@ SCIP_RETCODE fullDualPresolve(
    BMSclearMemoryArray(nlocksdown, nvars);
    BMSclearMemoryArray(nlocksup, nvars);
 
-   /* Initialize isimplint array: variable may be implied integer if both bounds are integral.
+   /* Initialize isimplint array: variable may be implied integer if rounded to their best bound they are integral.
     * We better not use SCIPisFeasIntegral() in these checks.
     */
    for( v = 0; v < ncontvars; v++ )
    {
       SCIP_VAR* var;
+      SCIP_Real obj;
       SCIP_Real lb;
       SCIP_Real ub;
 
       var = vars[v + nintvars - nbinvars];
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
-      isimplint[v] = (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb))
-         && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub));
+
+      obj = SCIPvarGetObj(var);
+      if( SCIPisZero(scip, obj) )
+         isimplint[v] = (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb)) && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub));
+      else
+      {
+         if( SCIPisPositive(scip, obj) )
+            isimplint[v] = (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb));
+         else
+         {
+            assert(SCIPisNegative(scip, obj));
+            isimplint[v] = (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub));
+         }
+      }
    }
 
    /* scan all constraints */
