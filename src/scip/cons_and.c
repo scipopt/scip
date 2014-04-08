@@ -1334,7 +1334,7 @@ SCIP_RETCODE consdataLinearize(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
    /* if we only have two variables, we prefer a set packing constraint instead of a logicor constraint */
-   if( nvars == 2 )
+   if( nvars == 2 && !SCIPconsIsModifiable(cons) )
    {
       SCIP_Bool* negated;
       SCIP_Bool infeasible;
@@ -1681,8 +1681,22 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
+   /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
+   if( !consdata->nofixedzero )
+   {
+      for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search for operator fixed to zero */
+      {}
+      if( i < nvars )
+      {
+         /* fix resultant to zero */
+         SCIP_CALL( consdataFixResultantZero(scip, cons, resvar, i, cutoff, nfixedvars) );
+      }
+      else
+         consdata->nofixedzero = TRUE;
+   }
+
    /* check if resultant variables is globally fixed to zero */
-   if( !SCIPinProbing(scip) && !SCIPconsIsModifiable(cons) && SCIPvarGetUbGlobal(resvar) < 0.5 )
+   if( !SCIPinProbing(scip) && SCIPvarGetUbGlobal(resvar) < 0.5 )
    {
       SCIP_CALL( consdataLinearize(scip, cons, cutoff, nfixedvars, nupgdconss) );
 
@@ -1695,22 +1709,8 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
-   /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
-   if( !consdata->nofixedzero )
-   {
-      for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search for operator fixed to zero */
-      {}
-      if( i < nvars )
-      {
-         /* fix resultant to zero */
-         SCIP_CALL( consdataFixResultantZero(scip, cons, resvar, i, cutoff, nfixedvars) );
-
-         return SCIP_OKAY;
-      }
-      else
-         consdata->nofixedzero = TRUE;
-   }
-   assert(consdata->nofixedzero);
+   if( SCIPvarGetUbLocal(resvar) < 0.5 )
+      return SCIP_OKAY;
 
    /* if resultant is fixed to TRUE, all operator variables can be fixed to TRUE (rule (2)) */
    if( SCIPvarGetLbLocal(resvar) > 0.5 )
