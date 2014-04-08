@@ -31,13 +31,12 @@
  * Given a problem of the form
  *
  * \f$ \min Cx \f$ 
- * \f$ Ax <= b \f$
+ * \f$ Ax \leq b \f$
  * 
- * the algorithm computes all feasible solutions which minimize \f$ wCx \f$ for some \f$ w \geq 0 \f$
+ * the algorithm computes all feasible solutions which minimize \f$ w^TCx \f$ for some \f$ w \geq 0 \f$.
+ * From the example directory root you can call the program with the command
  * 
- * The program is called 
- * 
- * exa_can <instance>.momps [-v] [-t <time in seconds>]
+ * bin/multiopt <instance>.mop [-v] [-t <time in seconds>]
  *
  * The problem file has to be in mps format, except that more than one row is marked "N" indicating a cost vector.
  * The program expects a minimization problem.  The file ending has to be ".mop".
@@ -58,14 +57,14 @@
  * 
  * The program implements the Lifted Weightspace Algorithm.  Basically, in each iteration, the algorithm chooses a weight 
  * \f$ w \in W = \{ w \geq 0 | \sum w = 1 \} \f$ and uses
- * SCIP to solve the single objective problem with \f$ c = wC \f$ .
+ * SCIP to solve the single objective problem with \f$ c = w^TC \f$ .
  * To calculate the weights, the algorithm keeps track of the lifted weight space polyhedron 
- * \f$ P = \{ (a,w) \in R x W | a <= wCx  x \in X \} \f$
+ * \f$ P = \{ (a,w) \in R \times W | a \leq w^TCx,  x \in X \} \f$
  * where \f$ X \f$ is the set of solutions found so far. \f$ P \f$ is a convex polyhedron.
  * In each iteration, the algorithm chooses a vertex \f$ (a,w) \f$ of \f$ P \f$ such that \f$ w \f$ has not yet been used in weighted optimization.
  * Every time a new solution is found, \f$ P \f$ is updated.
  * 
  * To understand the algorithm, consider this: The problem of finding the minimal weighted objective value a for every weight \f$ w \f$
- * is equivalent to computing the set of all pairs \f$ (a,w) \f$ such that there exists a solution \f$ x \f$ with \f$ a \geq wCx\f$. \f$ P \f$ 
+ * is equivalent to computing the set of all pairs \f$ (a,w) \f$ such that there exists a solution \f$ x \f$ with \f$ a \geq w^TCx\f$. \f$ P \f$ 
  * is exactely the complement of that set. 
  */
