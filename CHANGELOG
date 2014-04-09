@@ -20,7 +20,11 @@ fixed bugs:
 - fixed memory leaks in case of erroneous parsing of constraints, e.g., non-linear constraints
 - added support for character '#' in variable names in old non-linear CIP format (i.e., names without "<" and ">")
 - fixed bug 702, removed too hard assert when casting too big values into SCIP_Longint
+- removed wrong break in cons_pseudoboolean
+- branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
 
+performance improvements:
+- improved activity-delta computation and thereby propagation for linear constraints
 
 SCIP version 3.1.0
 ==================

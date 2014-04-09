@@ -2225,14 +2225,21 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {
          /* if branching point is too close to the bounds, move more into the middle of the interval */
          if( SCIPrelDiff(ub, lb) <= 2.02 * SCIPsetEpsilon(set) )
          {
             /* for very tiny intervals we set it exactly into the middle
-             * very tiny means here an interval where we could not create two branches with reldiff > eps */
-            branchpoint = (lb+ub)/2.0;
+             *   very tiny means here an interval where we could not create two branches with reldiff > eps
+             * however, if variable is almost fixed at -/+ infinity, suggest the non-finite value as branching point and let SCIPtreeBranchVar fix the variable there
+             */
+            if( SCIPsetIsInfinity(set, -lb) )
+               branchpoint = ub;
+            else if( SCIPsetIsInfinity(set, ub) )
+               branchpoint = lb;
+            else
+               branchpoint = (lb+ub)/2.0;
          }
          else
          {
@@ -2242,6 +2249,16 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             SCIP_Real scale;
             SCIP_Real lbabs;
             SCIP_Real ubabs;
+
+            /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
+            if( SCIPsetIsInfinity(set, ub) )
+            {
+               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb));
+            }
+            else if( SCIPsetIsInfinity(set, -lb) )
+            {
+               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub));
+            }
 
             lbabs = REALABS(lb);
             ubabs = REALABS(ub);
@@ -2269,44 +2286,10 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
                branchpoint = 0.0;
 
-            assert(SCIPsetIsRelLT(set, lb, branchpoint));
-            assert(SCIPsetIsRelLT(set, branchpoint, ub));
+            assert(SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), branchpoint));
+            assert(SCIPsetIsRelLT(set, branchpoint, SCIPvarGetUbLocal(var)));
          }
       }
-      else if( SCIPsetIsRelEQ(set, lb, ub) )
-      {
-         /* variable is almost fixed at -/+ infinity, so suggest this infinity as branching point, what else could we do? */
-         branchpoint = lb < 0.0 ? -SCIPsetInfinity(set) : SCIPsetInfinity(set);
-      }
-      else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
-      {
-         SCIP_Real lbabs;
-         SCIP_Real delta1;
-         SCIP_Real delta2;
-
-         /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound, but not above infinity */
-         assert(!SCIPsetIsInfinity(set, -lb));
-         assert( SCIPsetIsInfinity(set,  ub));
-         lbabs = REALABS(lb);
-         delta1 = MAX(0.5 * lbabs, 1000);
-         delta2 = 0.9*(SCIPsetInfinity(set)-lb);
-         branchpoint = lb + MIN(delta1, delta2);
-      }
-      else if( !SCIPsetIsGT(set, ub, branchpoint) )
-      { 
-         SCIP_Real ubabs;
-         SCIP_Real delta1;
-         SCIP_Real delta2;
-
-         /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound, but not below infinity */
-         assert( SCIPsetIsInfinity(set, -lb));
-         assert(!SCIPsetIsInfinity(set,  ub));
-         ubabs = REALABS(ub);
-         delta1 = MAX(0.5 * ubabs, 1000);
-         delta2 = 0.9*(ub+SCIPsetInfinity(set));
-         branchpoint = ub - MIN(delta1, delta2);
-      }
-
       return branchpoint;
    }
    else

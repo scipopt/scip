@@ -331,8 +331,8 @@ SCIP_RETCODE updateBestCandidate(
       }
       else if( SCIPvarGetType(*bestvar) == SCIPvarGetType(cand) )
       { 
-         /* if both have the same type, take the one with larger diameter */
-         if( SCIPvarGetUbLocal(*bestvar) - SCIPvarGetLbLocal(*bestvar) < SCIPvarGetUbLocal(cand) - SCIPvarGetLbLocal(cand) )
+         /* if both have the same type, take the one with larger relative diameter */
+         if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) < SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
          {
             (*bestscore)   = branchscore;
             (*bestvar)     = cand;

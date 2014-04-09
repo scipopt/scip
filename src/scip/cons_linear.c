@@ -1203,6 +1203,29 @@ void consdataRecomputeGlbMaxactivity(
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
 
+/** calculates maximum absolute value of coefficients */
+static
+void consdataCalcMaxAbsval(
+   SCIP_CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   SCIP_Real absval;
+   int i;
+
+   assert(consdata != NULL);
+   assert(!consdata->validmaxabsval);
+   assert(consdata->maxabsval >= SCIP_INVALID);
+
+   consdata->validmaxabsval = TRUE;
+   consdata->maxabsval = 0.0;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      absval = consdata->vals[i];
+      absval = REALABS(absval);
+      consdata->maxabsval = MAX(consdata->maxabsval, absval);
+   }
+}
+
 /** recompute maximal activity contribution for a single variable */
 static
 void consdataRecomputeMaxActivityDelta(
@@ -1217,6 +1240,22 @@ void consdataRecomputeMaxActivityDelta(
    int v;
 
    consdata->maxactdelta = 0.0;
+
+   /* easy case, the problem consists only of binary variables, then the maximal activity delta is determined by the
+    * maximal absolute coefficient
+    */
+   if( SCIPgetNVars(scip) == SCIPgetNBinVars(scip) || (consdata->sorted && consdata->nvars > 0 &&
+         SCIPvarGetType(consdata->vars[consdata->nvars - 1]) == SCIP_VARTYPE_BINARY) )
+   {
+      if( !consdata->validmaxabsval )
+         consdataCalcMaxAbsval(consdata);
+
+      assert(consdata->validmaxabsval);
+      assert(consdata->maxabsval < SCIP_INVALID);
+
+      consdata->maxactdelta = consdata->maxabsval;
+      return;
+   }
 
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
@@ -1820,29 +1859,6 @@ void consdataUpdateChgCoef(
    /* @todo do something more clever here, e.g. if oldval * newval >= 0, do the update directly */
    consdataUpdateDelCoef(scip, consdata, var, oldval, checkreliability);
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
-}
-
-/** calculates maximum absolute value of coefficients */
-static
-void consdataCalcMaxAbsval(
-   SCIP_CONSDATA*        consdata            /**< linear constraint data */
-   )
-{
-   SCIP_Real absval;
-   int i;
-
-   assert(consdata != NULL);
-   assert(!consdata->validmaxabsval);
-   assert(consdata->maxabsval >= SCIP_INVALID);
-
-   consdata->validmaxabsval = TRUE;
-   consdata->maxabsval = 0.0;
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      absval = consdata->vals[i];
-      absval = REALABS(absval);
-      consdata->maxabsval = MAX(consdata->maxabsval, absval);
-   }
 }
 
 /** returns the maximum absolute value of all coefficients in the constraint */
