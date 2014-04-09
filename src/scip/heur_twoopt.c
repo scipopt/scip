@@ -508,7 +508,7 @@ SCIP_Real determineBound(
          if( rowpos >= 0 && !SCIPisFeasZero(scip, effect) )
          {
             /* effect does not equal zero, the bound is determined as minimum positive integer such that
-             * feasibility is remained in all constraints.
+             * feasibility of this constraint is maintained.
              * if constraint is an equality constraint, activity and lhs/rhs should be feasibly equal, which
              * will cause the method to return zero.
              */
@@ -517,6 +517,10 @@ SCIP_Real determineBound(
             activity = activities[rowpos];
             rhs = SCIProwGetRhs(row);
             lhs = SCIProwGetLhs(row);
+
+            /* if the row is an equation, abort because of effect being nonzero */
+            if( SCIPisFeasEQ(scip, lhs, rhs) )
+               return 0.0;
 
             assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
 
