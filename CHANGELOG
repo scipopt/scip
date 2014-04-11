@@ -15,6 +15,9 @@ fixed bugs:
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
 
+features:
+- added copy mechanism for conjunction constraints
+
 SCIP version 3.1.0
 ==================
 

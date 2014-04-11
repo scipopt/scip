@@ -250,7 +250,6 @@ SCIP_RETCODE checkAllConss(
  */
 
 
-#if 0
  /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
@@ -266,7 +265,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
 
    return SCIP_OKAY;
 }
-#endif
 
 
 /** frees specific constraint data */
@@ -656,6 +654,70 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyConjunction)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONS** sourceconss;
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   *valid = TRUE;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   sourceconss = sourcedata->conss;
+   nconss = sourcedata->nconss;
+
+   if( nconss > 0 )
+   {
+      assert(sourceconss != NULL);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
+
+      /* copy each constraint one by one */
+      for( c = 0; c < nconss && (*valid); ++c )
+      {
+         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourceconss[c], &conss[c], SCIPconsGetHdlr(sourceconss[c]),
+               varmap, consmap, SCIPconsGetName(sourceconss[c]),
+               SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]), SCIPconsIsEnforced(sourceconss[c]),
+               SCIPconsIsChecked(sourceconss[c]), SCIPconsIsPropagated(sourceconss[c]),
+               SCIPconsIsLocal(sourceconss[c]), SCIPconsIsModifiable(sourceconss[c]),
+               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), SCIPconsIsStickingAtNode(sourceconss[c]),
+               global, valid) );
+         assert(!(*valid) || conss[c] != NULL);
+      }
+
+      if( *valid )
+      {
+         if( name == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsConjunction(scip, cons, SCIPconsGetName(sourcecons), nconss, conss,
+                  enforce, check, local, modifiable, dynamic) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsConjunction(scip, cons, name, nconss, conss,
+                  enforce, check, local, modifiable, dynamic) );
+         }
+      }
+
+      /* release the copied constraints */
+      for( c = (*valid ? c - 1 : c - 2); c >= 0; --c )
+      {
+         assert(conss[c] != NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
+      }
+
+      SCIPfreeBufferArray(scip, &conss);
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * constraint specific interface methods
@@ -680,6 +742,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyConjunction, consCopyConjunction) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteConjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseConjunction) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolConjunction, CONSHDLR_MAXPREROUNDS,
