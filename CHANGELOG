@@ -10,6 +10,7 @@ fixed bugs:
 - removed wrong break in cons_pseudoboolean
 - branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
 - fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
+- corrected copy of disjunction constraints
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
