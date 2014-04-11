@@ -9093,19 +9093,25 @@ SCIP_RETCODE SCIPpermuteProb(
       int i;
 
       /* loop over all constraint handlers */
-      for( i = 0; i < nconshdlrs; ++i )      
+      for( i = 0; i < nconshdlrs; ++i )
       {
          SCIP_CONS** conss;
          int nconss;
 
          conss = SCIPconshdlrGetConss(conshdlrs[i]);
-         nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+
+         /* we must only permute active constraints */
+         if( SCIPisTransformed(scip) )
+            nconss = SCIPconshdlrGetNActiveConss(conshdlrs[i]);
+         else
+            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+
          assert(nconss == 0 || conss != NULL);
 
          SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
 
          /* readjust the mapping of constraints to array positions */
-         for( j = 0; j < nconss; ++j )      
+         for( j = 0; j < nconss; ++j )
             conss[j]->consspos = j;
       }
    }

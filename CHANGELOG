@@ -9,6 +9,7 @@ fixed bugs:
 - fixed bug 702, removed too hard assert when casting too big values into SCIP_Longint
 - removed wrong break in cons_pseudoboolean
 - branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
+- fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
