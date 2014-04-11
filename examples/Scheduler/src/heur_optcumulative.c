@@ -671,7 +671,8 @@ SCIP_DECL_HEUREXEC(heurExecOptcumulative)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("apply optcumulative heuristic at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMessage("apply optcumulative heuristic at node %"SCIP_LONGINT_FORMAT"\n",
+         SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    *result = SCIP_DIDNOTFIND;
 

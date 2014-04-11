@@ -1034,7 +1034,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymapback, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarlbMap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarubMap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
-   
+
    for( i = 0; i < nconsindicator; i++ )
    {
       SCIP_CONS** indicatorconss = SCIPconshdlrGetConss(conshdlrindicator);
@@ -1182,7 +1182,7 @@ SCIP_RETCODE createSubSCIP(
                      SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, indicatorcopy, -1.0) );
                      SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, indislackvarpos, 1.0) );
                      SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, indislackvarneg, -1.0) );
-                    
+
                      SCIP_CALL( SCIPhashmapInsert(heurdata->relaxconsindi, indicatorbinvar, cons) );
                      SCIP_CALL( SCIPhashmapInsert(heurdata->relaxconsindi, indicatorcopy, cons) );
 
@@ -1197,7 +1197,7 @@ SCIP_RETCODE createSubSCIP(
                      }
 
                      SCIP_CALL( SCIPchgVarType(heurdata->subscip, indicatorbinvar, SCIP_VARTYPE_CONTINUOUS, &feasible) );
-                    
+
                      SCIP_CALL( SCIPhashmapInsert(heurdata->slack2var, indislackvarpos, var) );
                      SCIP_CALL( SCIPhashmapInsert(heurdata->slack2var, indislackvarneg, var) );
                      SCIP_CALL( SCIPcaptureVar(heurdata->subscip, var) );
@@ -1255,7 +1255,7 @@ SCIP_RETCODE createSubSCIP(
          {
             if( SCIPhashmapGetImage(heurdata->indicators, vars[i]) == NULL )
                continue;
-            
+
             tmpvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, vars[k]);
             SCIP_CALL( SCIPchgVarType(heurdata->subscip, tmpvar, SCIP_VARTYPE_CONTINUOUS, &feasible) );
             SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, tmpvar, -SCIPinfinity(heurdata->subscip)) );
@@ -1796,7 +1796,7 @@ SCIP_RETCODE computeRanks(
             }
          }
       }
-      
+
       /* take the absolute value of each rank */
       absranks[j] = REALABS(ranks[j]);
    }
@@ -1862,13 +1862,13 @@ SCIP_Real maximalslack(
          }
       }
    }
-   
+
    if( ! maxslackset )
    {
       maxslack = 0;
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "could not find a variable with maximal slack!\n");
    }
-   
+
    assert(maxslack >= 0);
 
    if( heurdata->heurverblevel > 0 && maxslackset )
@@ -2188,7 +2188,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
             continue;
 
          nlrow = (SCIP_NLROW*)SCIPhashmapGetImage(heurdata->conss2nlrow, transcons);
-         
+
          if (nlrow != NULL)
          {
             SCIP_CALL( SCIPallocBlockMemoryArray(heurdata->subscip, &dualval, 1) ); /*lint !e506*/

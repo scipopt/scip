@@ -690,7 +690,7 @@ void SCIPsepaSetFreq(
    )
 {
    assert(sepa != NULL);
-   
+
    sepa->freq = freq;
 }
 

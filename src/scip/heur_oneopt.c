@@ -265,7 +265,7 @@ SCIP_DECL_HEURCOPY(heurCopyOneopt)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -388,7 +388,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
       SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
-      
+
       SCIP_SOL* startsol;
       SCIP_SOL** subsols;
       int nsubsols;
@@ -403,7 +403,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-      
+
       /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
       {
@@ -417,11 +417,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
-      
+
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-      
+
       /* copy complete SCIP instance */
       valid = FALSE;
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, &valid) );
@@ -499,7 +499,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 #endif
             SCIPwarningMessage(scip, "Error while solving subproblem in zeroobj heuristic; sub-SCIP terminated with code <%d>\n",retcode);
          }
-         
+
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
@@ -871,6 +871,6 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/beforepresol",
          "should the heuristic be called before presolving?",
          &heurdata->beforepresol, TRUE, DEFAULT_BEFOREPRESOL, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }

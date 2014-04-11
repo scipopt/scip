@@ -390,7 +390,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
 {
    assert(consdata != NULL);
    assert(consdata->nvars <= consdata->varssize);
-   
+
    if( num > consdata->varssize )
    {
       int newsize;
@@ -492,7 +492,7 @@ SCIP_RETCODE consdataFreeRows(
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
       SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->nrows);
-      
+
       consdata->nrows = 0;
    }
 
@@ -546,7 +546,7 @@ SCIP_RETCODE consdataFree(
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
- 
+
    return SCIP_OKAY;
 }
 
@@ -1334,7 +1334,7 @@ SCIP_RETCODE consdataLinearize(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
    /* if we only have two variables, we prefer a set packing constraint instead of a logicor constraint */
-   if( nvars == 2 )
+   if( nvars == 2 && !SCIPconsIsModifiable(cons) )
    {
       SCIP_Bool* negated;
       SCIP_Bool infeasible;
@@ -1681,8 +1681,22 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
+   /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
+   if( !consdata->nofixedzero )
+   {
+      for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search for operator fixed to zero */
+      {}
+      if( i < nvars )
+      {
+         /* fix resultant to zero */
+         SCIP_CALL( consdataFixResultantZero(scip, cons, resvar, i, cutoff, nfixedvars) );
+      }
+      else
+         consdata->nofixedzero = TRUE;
+   }
+
    /* check if resultant variables is globally fixed to zero */
-   if( !SCIPinProbing(scip) && !SCIPconsIsModifiable(cons) && SCIPvarGetUbGlobal(resvar) < 0.5 )
+   if( !SCIPinProbing(scip) && SCIPvarGetUbGlobal(resvar) < 0.5 )
    {
       SCIP_CALL( consdataLinearize(scip, cons, cutoff, nfixedvars, nupgdconss) );
 
@@ -1695,22 +1709,8 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
-   /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
-   if( !consdata->nofixedzero )
-   {
-      for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search for operator fixed to zero */
-      {}
-      if( i < nvars )
-      {
-         /* fix resultant to zero */
-         SCIP_CALL( consdataFixResultantZero(scip, cons, resvar, i, cutoff, nfixedvars) );
-
-         return SCIP_OKAY;
-      }
-      else
-         consdata->nofixedzero = TRUE;
-   }
-   assert(consdata->nofixedzero);
+   if( SCIPvarGetUbLocal(resvar) < 0.5 )
+      return SCIP_OKAY;
 
    /* if resultant is fixed to TRUE, all operator variables can be fixed to TRUE (rule (2)) */
    if( SCIPvarGetLbLocal(resvar) > 0.5 )
@@ -3268,7 +3268,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    int minidx;
    int mididx;
    int maxidx;
-   
+
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->sorted);
@@ -4588,13 +4588,13 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSPRINT(consPrintAnd)
 {  /*lint --e{715}*/
-   
+
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
-      
+
    return SCIP_OKAY;
 }
 
@@ -4612,7 +4612,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
 
    assert(valid != NULL);
    (*valid) = TRUE;
-   
+
    sourceresvar = SCIPgetResultantAnd(sourcescip, sourcecons);
 
    /* map resultant to active variable of the target SCIP  */
@@ -4629,7 +4629,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global, valid) );
@@ -4639,12 +4639,12 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
       if( !(*valid) )
          goto TERMINATE;
    }
-   
+
    if( name != NULL )
       consname = name;
    else
       consname = SCIPconsGetName(sourcecons);
- 
+
    /* creates and captures a and constraint */
    SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
@@ -4652,7 +4652,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
  TERMINATE:   
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
-   
+
    return SCIP_OKAY;
 }
 

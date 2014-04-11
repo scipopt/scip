@@ -73,7 +73,7 @@ SCIP_DECL_DISPCOPY(dispCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else

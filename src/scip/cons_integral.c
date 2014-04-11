@@ -49,7 +49,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIntegral)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;

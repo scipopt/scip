@@ -157,7 +157,7 @@
 static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
 static SCIP_BDCHGINFO*   confgraphcurrentbdchginfo = NULL;  /**< currently resolved bound change */
 static int               confgraphnconflictsets = 0;        /**< number of conflict sets marked in the graph */
- 
+
 /** writes a node section to the conflict graph file */
 static
 void confgraphWriteNode(
@@ -255,7 +255,7 @@ void confgraphAddBdchg(
    char depth[SCIP_MAXSTRLEN];
    int col;
 
-   
+
    switch( SCIPbdchginfoGetChgtype(bdchginfo) )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -1408,7 +1408,7 @@ SCIP_RETCODE conflictsetCalcInsertDepth(
    for( i = 0; i < conflictset->nbdchginfos; ++i )
    {
       int depth;
-         
+
       depth = SCIPbdchginfoGetDepth(conflictset->bdchginfos[i]);
       depth = MIN(depth, currentdepth+1); /* put diving/probing/strong branching changes in this depth level */
       branchingincluded[depth] = TRUE;
@@ -5582,7 +5582,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( !SCIPlpiIsPrimalInfeasible(lpi) )
    {
       SCIP_Real objval;
-         
+
       assert(!SCIPlpDivingObjChanged(lp));
 
       /* make sure, a dual feasible solution exists, that exceeds the objective limit;
@@ -5656,7 +5656,7 @@ SCIP_RETCODE conflictAnalyzeLP(
          SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
-   
+
    SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
       SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 #ifdef SCIP_DEBUG

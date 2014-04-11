@@ -64,7 +64,7 @@ struct SCIP_NlRow
    /* sides */
    SCIP_Real             lhs;                /**< left hand side */
    SCIP_Real             rhs;                /**< right hand side */
-   
+
    /* constant part */
    SCIP_Real             constant;           /**< constant value */
 

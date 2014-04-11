@@ -181,7 +181,7 @@ SCIP_DECL_READERCOPY(readerCopyFix)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderFix(scip) );
- 
+
    return SCIP_OKAY;
 }
 

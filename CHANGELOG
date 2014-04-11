@@ -4,11 +4,27 @@ SCIP version NEXT
 features:
 - new distribution branching rule to base decisions on row activity (normal) distribution over domain space
 
+parameters:
+- rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
+
+performance improvements:
+- improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
+  coefficients
 
 SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
+  does nothing anymore
+- fixed memory leaks in case of erroneous parsing of constraints, e.g., non-linear constraints
+- added support for character '#' in variable names in old non-linear CIP format (i.e., names without "<" and ">")
+- fixed bug 702, removed too hard assert when casting too big values into SCIP_Longint
+- removed wrong break in cons_pseudoboolean
+- branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
+
+performance improvements:
+- improved activity-delta computation and thereby propagation for linear constraints
 
 SCIP version 3.1.0
 ==================

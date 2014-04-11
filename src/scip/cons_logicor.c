@@ -339,10 +339,10 @@ SCIP_RETCODE consdataPrint(
 
    /* print variable list */
    SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
-   
+
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");
-   
+
    if( endline )
       SCIPinfoMessage(scip, file, "\n");
 
@@ -360,7 +360,7 @@ SCIP_RETCODE switchWatchedvars(
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(watchedvar1 == -1 || watchedvar1 != watchedvar2);
@@ -372,7 +372,7 @@ SCIP_RETCODE switchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -416,7 +416,7 @@ SCIP_RETCODE switchWatchedvars(
    /* set the new watched variables */
    consdata->watchedvar1 = watchedvar1;
    consdata->watchedvar2 = watchedvar2;
-   
+
    return SCIP_OKAY;
 }
 
@@ -563,7 +563,11 @@ SCIP_RETCODE delCoefPos(
  *  - fix the variable with the smallest object coefficient to one if the constraint is not modifiable and all
  *    variable are independant
  *  - fix all independant variables with negative object coefficient to one
- *  - fix all remaining independant variables to zero 
+ *  - fix all remaining independant variables to zero
+ *
+ *  also added the special case were exactly one variable is locked by this constraint and another variable without any
+ *  uplocks has a better objective value than this single variable
+ *  - here we fix the variable to 0.0 (if the objective contribution is non-negative)
  *
  * Note: the following dual reduction for logic or constraints is already performed by the presolver "dualfix"
  *       - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
@@ -585,6 +589,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_VAR* var;
    SCIP_VAR* activevar;
    SCIP_Real bestobjval;
+   SCIP_Real bestobjvalnouplocks;
    SCIP_Real objval;
    SCIP_Real fixval;
    SCIP_Bool infeasible;
@@ -593,6 +598,7 @@ SCIP_RETCODE dualPresolving(
    int nfixables;
    int nvars;
    int idx;
+   int idxnouplocks;
    int v;
 
    assert(scip != NULL);
@@ -625,7 +631,9 @@ SCIP_RETCODE dualPresolving(
 
    vars = consdata->vars;
    idx = -1;
+   idxnouplocks = -1;
    bestobjval = SCIP_INVALID;
+   bestobjvalnouplocks = SCIP_INVALID;
 
    nfixables = 0;
 
@@ -667,6 +675,19 @@ SCIP_RETCODE dualPresolving(
          return SCIP_OKAY;
       }
 
+      /* remember best variable with no uplocks, this variable dominates all other with exactly one downlock */
+      if( SCIPvarGetNLocksDown(var) > 1 && SCIPvarGetNLocksUp(var) == 0 )
+      {
+         SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
+
+         /* check if the current variable has a smaller objective coefficient then the best one */
+         if( SCIPisLT(scip, objval, bestobjval) )
+         {
+            idxnouplocks = v;
+            bestobjvalnouplocks = objval;
+         }
+      }
+
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
@@ -693,6 +714,38 @@ SCIP_RETCODE dualPresolving(
       }
    }
 
+   /* check if we have a single variable dominated by another */
+   if( nfixables == 1 && idxnouplocks >= 0 )
+   {
+      assert(bestobjvalnouplocks != SCIP_INVALID); /*lint !e777*/
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         var = vars[v];
+         assert(var != NULL);
+
+         /* check if a variable only appearing in this constraint is dominated by another */
+         if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 0 )
+         {
+            assert(idxnouplocks != v);
+
+            SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
+
+            if( SCIPisGE(scip, objval, bestobjvalnouplocks) && !SCIPisNegative(scip, objval) )
+            {
+               SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               assert(fixed);
+
+               SCIPdebugMessage(" -> dual fixing <%s> == 0.0\n", SCIPvarGetName(var));
+               ++(*nfixedvars);
+            }
+
+            break;
+         }
+      }
+   }
+
    if( nfixables < 2 )
       return SCIP_OKAY;
 
@@ -706,7 +759,7 @@ SCIP_RETCODE dualPresolving(
    /* fix all redundant variables to their best bound */
 
    /* first part of all variables */
-   for( v = 0; v < idx; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert(var != NULL);
@@ -715,6 +768,9 @@ SCIP_RETCODE dualPresolving(
        * variables
        */
       if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+         continue;
+
+      if( v == idx )
          continue;
 
       activevar = var;
@@ -738,44 +794,7 @@ SCIP_RETCODE dualPresolving(
       assert(!infeasible);
       assert(fixed);
 
-      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
-      ++(*nfixedvars);
-   }
-
-   /* second part of all variables */
-   for( v = idx + 1; v < nvars; ++v )
-   {
-      var = vars[v];
-      assert(var != NULL);
-
-      /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
-       * variables
-       */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
-         continue;
-
-      activevar = var;
-      negated = FALSE;
-
-      /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-      assert(SCIPvarIsActive(activevar));
-
-      if( negated )
-         objval = -SCIPvarGetObj(activevar);
-      else
-         objval = SCIPvarGetObj(activevar);
-
-      if( objval > 0.0 )
-         fixval = 0.0;
-      else
-         fixval = 1.0;
-
-      SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
-      assert(!infeasible);
-      assert(fixed);
-
-      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
+      SCIPdebugMessage(" -> dual fixing <%s> == %g\n", SCIPvarGetName(var), fixval);
       ++(*nfixedvars);
    }
 
@@ -1176,24 +1195,21 @@ SCIP_RETCODE mergeMultiples(
    SCIP_CALL( SCIPallocBufferArray(scip, &negarray, nvars) );
 
    vars = consdata->vars;
-   /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
-    * called before mergeMultiples()
-    */
-   for( v = nvars - 1; v >= 0; --v )
-   {
-      assert(SCIPvarIsActive(vars[v]) || (SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))));
-      negarray[v] = SCIPvarIsNegated(vars[v]);
-   }
 
    /* initialize entries array */
    for( v = nvars - 1; v >= 0; --v )
    {
-      assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
+      /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
+       * called before mergeMultiples()
+       */
+      assert(SCIPvarIsActive(vars[v]) ||
+         (SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))));
+      negarray[v] = SCIPvarIsNegated(vars[v]);
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
+      assert(SCIPvarIsActive(var));
 
       pos = SCIPvarGetProbindex(var);
 
-      assert(SCIPvarIsActive(var));
       /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
 	 || (SCIPvarIsBinary(var) &&
@@ -1209,6 +1225,7 @@ SCIP_RETCODE mergeMultiples(
    for( v = nvars - 1; v >= 0; --v )
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
+      assert(SCIPvarIsActive(var));
 
       pos = SCIPvarGetProbindex(var);
 
@@ -1359,13 +1376,13 @@ SCIP_RETCODE processWatchedVars(
          /* check, if the variable is fixed */
          if( SCIPvarGetUbLocal(vars[v]) < 0.5 )
             continue;
-         
+
          /* check, if the literal is satisfied */
          if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
          {
             assert(v != consdata->watchedvar1);
             assert(v != consdata->watchedvar2);
-            
+
             /* the variable is fixed to one, making the constraint redundant;
              * make sure, the feasible variable is watched and disable the constraint
              */
@@ -1382,7 +1399,7 @@ SCIP_RETCODE processWatchedVars(
             SCIP_CALL( disableCons(scip, cons) );
             return SCIP_OKAY;
          }
-         
+
          /* the variable is unfixed and can be used as watched variable */
          nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], SCIP_BRANCHDIR_DOWNWARDS);
          assert(nbranchings >= 0);
@@ -1617,7 +1634,7 @@ SCIP_RETCODE separateCons(
       SCIP_CONSDATA* consdata;
 
       assert(!addcut);
-      
+
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
@@ -1630,7 +1647,7 @@ SCIP_RETCODE separateCons(
          else
          {
             SCIP_Real feasibility;
-            
+
             assert(!SCIProwIsInLP(consdata->row));
             feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
             addcut = SCIPisFeasNegative(scip, feasibility);
@@ -1856,7 +1873,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLogicorcons)
    int minidx;
    int mididx;
    int maxidx;
-   
+
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->sorted);
@@ -1917,7 +1934,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
       /* get constraint from current hash table with same variables as cons0 */
       cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
- 
+
       if( cons1 != NULL )
       {
 #ifndef NDEBUG
@@ -1926,13 +1943,13 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
+
 #ifndef NDEBUG
          consdata1 = SCIPconsGetData(cons1);
 #endif
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
@@ -3787,7 +3804,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLogicor)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -4175,7 +4192,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
       *result = SCIP_SOLVELP;
    else if( infeasible )
       *result = SCIP_INFEASIBLE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -4645,7 +4662,7 @@ SCIP_DECL_CONSPRINT(consPrintLogicor)
    assert( cons != NULL );
 
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, FALSE) );
-    
+
    return SCIP_OKAY;
 }
 
@@ -4660,7 +4677,7 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
    /* get variables and coefficients of the source constraint */
    sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
    nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
-   
+
    if( name != NULL )
       consname = name;
    else
@@ -4671,7 +4688,7 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
          1.0, SCIPinfinity(scip), varmap, consmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL);
-   
+
    return SCIP_OKAY;
 }
 
@@ -4920,14 +4937,14 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    {
       SCIP_CONS* cons;
       char consname[SCIP_MAXSTRLEN];
-      
+
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
+
       *result = SCIP_CONSADDED;
    }
 

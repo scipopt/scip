@@ -148,7 +148,7 @@ SCIP_RETCODE SCIPincludeDialogXyz(
    parentdialog = SCIPgetRootDialog(scip);
    assert(parentdialog != NULL);
    /* TODO: (optional) change parent dialog from root dialog to another existing dialog (needs to be a menu) */
-   
+
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {

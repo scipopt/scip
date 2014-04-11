@@ -26,8 +26,6 @@
 #include <stdio.h>
 #include "scip/def.h"
 #include <iostream>
-#include "slufactor.h"
-#include "unitvector.h"
 #include "main.h"
 
 /** creates initial corner point */
@@ -41,7 +39,8 @@ WeightSpaceVertex::WeightSpaceVertex(
    weight_ = new std::vector<SCIP_Real>(dimension,0.);
    incident_solutions_.push_back(first_sol);
    nonzero_dimensions_.push_back(nonzeroDimension);
-   calculate_weight();
+   (*weight_)[nonzeroDimension] = 1.;
+   weighted_objective_value_ = (*first_sol)[nonzeroDimension];
 }
 
 /** creates a new point between obsolete and adjacent non obsolete point */
@@ -53,23 +52,13 @@ WeightSpaceVertex::WeightSpaceVertex(
    : nobjs_(obsolete->nobjs_)
 {
    weight_ = new std::vector<SCIP_Real>(nobjs_,0.);
+
    joinNonzeroDimensions(obsolete, adjacent);
    joinIncidentSolutions(obsolete, adjacent, new_sol);
 
-   if( incident_solutions_.size() != nonzero_dimensions_.size() )
-   {
-      std::cout << *(obsolete->getIncidentSolutions()->at(0)) << std::endl;
-      std::cout << (obsolete->getNonZeroDimensions()->at(0)) << std::endl;
-
-      std::cout << *(adjacent->getIncidentSolutions()->at(0)) << std::endl;
-      std::cout << adjacent->getNonZeroDimensions()->at(0) << std::endl;
-
-      std::cout << *(incident_solutions_[0]) << std::endl;
-      std::cout << nonzero_dimensions_.at(0) << ", ";
-      std::cout << nonzero_dimensions_.at(1) << std::endl;
-   }
    assert(incident_solutions_.size() == nonzero_dimensions_.size());
-   calculate_weight();
+
+   calculate_weight(obsolete, adjacent, new_sol);
 }
 
 /** creates dummy point */
@@ -226,74 +215,42 @@ void WeightSpaceVertex::joinIncidentSolutions(
    sort(incident_solutions_.begin(), incident_solutions_.end());
 }
 
-/** calculates the weight w and the weighted objective value a based on incident points and nonzero dimensions 
+/** calculates the weight w and the weighted objective value a 
+ *  based on w and a for the obsolete and the adjacent vertex
  *  by solving the equation system
- *  w * y = a for all incident solutions a
- *  w_1 + ... + w_p = 1 
- *  w_i = 0 for all i not in nonzero dimensions */
-void WeightSpaceVertex::calculate_weight()
-{
-   unsigned int nvars;
-   soplex::SSVector* result;
-   const soplex::SVector** matrix;
-   soplex::SLUFactor solver;
-
-   nvars  = incident_solutions_.size() + 1;
-   result = new soplex::SSVector(nvars);
-
-   matrix = fillMatrix(nvars);
-
-   solver.load(matrix, nvars);
-   solver.solveLeft(*result, soplex::UnitVector(nvars - 1) );
-
-   /* copy results */
-   for( unsigned int i = 0; i < nvars - 1; ++i )
-   {
-      (*weight_)[nonzero_dimensions_[i]] = (SCIP_Real)(*result)[i];
-   }
-
-   weighted_objective_value_ = (SCIP_Real)(*result)[nvars-1];
-
-   /*clean up */
-   for( unsigned int i = 0; i < nvars; ++i )
-   {
-      delete matrix[i];
-   }
-
-   delete result;
-   delete matrix;
-}
-
-/** writes square matrix for the weight calculation equation system */
-const soplex::SVector** WeightSpaceVertex::fillMatrix(
-   unsigned int          nvars               /**< number of rows and columns in matrix */
+ *  I) (a,w) = h * (a_obs, w_obs) + (1 - h) * (a_adj, w_adj)
+ *  II) a = w * y_new
+ *  through insertion of I) into II) and solving for h
+ */
+void WeightSpaceVertex::calculate_weight(
+      const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
+      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */      
+      const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
   )
 {
-   const soplex::SVector** matrix;
-   soplex::DSVector* column;
+   const std::vector<SCIP_Real>* weight_obs = obsolete->getWeight();
+   const std::vector<SCIP_Real>* weight_adj = adjacent->getWeight();
+   SCIP_Real wov_obs = obsolete->getWeightedObjectiveValue();
+   SCIP_Real wov_adj = adjacent->getWeightedObjectiveValue();
 
-   matrix = new const soplex::SVector*[nvars];
- 
-   for( unsigned int i = 0; i < nvars - 1; ++i )
-   {
-      column = new soplex::DSVector();
-      column->setMax(nvars);
-      for(unsigned int j=0; j<nvars-1; ++j)
-      {
-         (*column).add(j,(*incident_solutions_[i])[nonzero_dimensions_[j]]);
-      }
-      (*column).add(nvars-1,-1.);
-      matrix[i] = column;
-   }
-   column = new soplex::DSVector();
-   column->setMax(nvars);
-   for(unsigned int j=0; j<nvars-1; ++j)
-   {
-      (*column).add(j,1.);
-   }
-   (*column).add(nvars-1,0.);
-   matrix[nvars - 1] = column;
+   SCIP_Real excess_obs = wov_obs;
+   SCIP_Real excess_adj = wov_adj;
 
-   return matrix;
+   for( unsigned int i = 0; i < nobjs_; ++i )
+   {
+     excess_obs -= (*weight_obs)[i] * (*new_sol)[i];
+     excess_adj -= (*weight_adj)[i] * (*new_sol)[i];
+   }
+
+   SCIP_Real factor_obs = excess_adj / (excess_adj - excess_obs);
+   SCIP_Real factor_adj = 1 - factor_obs;
+
+   weighted_objective_value_ = factor_obs * wov_obs + factor_adj * wov_adj;
+
+   for( unsigned int i = 0; i < nobjs_; ++i )
+   {
+     (*weight_)[i] += factor_obs * (*weight_obs)[i] + factor_adj * (*weight_adj)[i];
+   }
 }
+
 

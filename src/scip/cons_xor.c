@@ -79,7 +79,7 @@
 #define MAXXORCONSSSYSTEM          1000 /**< maximal number of active constraints for which checking the system over GF2 is performed */
 #define MAXXORVARSSYSTEM           1000 /**< maximal number of variables in xor constraints for which checking the system over GF2 is performed */
 
-#define NROWS 4
+#define NROWS 5
 
 
 /*
@@ -226,7 +226,7 @@ SCIP_RETCODE consdataSwitchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -280,7 +280,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
 {
    assert(consdata != NULL);
    assert(consdata->nvars <= consdata->varssize);
-   
+
    if( num > consdata->varssize )
    {
       int newsize;
@@ -430,7 +430,7 @@ SCIP_RETCODE consdataFree(
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
- 
+
    return SCIP_OKAY;
 }
 
@@ -1339,7 +1339,7 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
    return SCIP_OKAY;
 }
 
-/** creates LP row corresponding to xor constraint: 
+/** creates LP row corresponding to xor constraint:
  *    x1 + ... + xn - 2q == rhs
  *  with internal integer variable q;
  *  in the special case of 3 variables and c = 0, the following linear system is created:
@@ -1353,7 +1353,7 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
  *    + x + y - z <= 1
  *    - x - y - z <= -1
  */
-static 
+static
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -1437,6 +1437,15 @@ SCIP_RETCODE createRelaxation(
       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
+
+      /* create extra LP row if integer variable exists */
+      if( consdata->intvar != NULL )
+      {
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 0.0, 0.0,
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+         SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[4], consdata->intvar, -2.0) );
+         SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[4], consdata->nvars, consdata->vars, 1.0) );
+      }
    }
    else
    {
@@ -1462,6 +1471,15 @@ SCIP_RETCODE createRelaxation(
       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), -1.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );
+
+      /* create extra LP row if integer variable exists */
+      if( consdata->intvar != NULL )
+      {
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 1.0, 1.0,
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+         SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[4], consdata->intvar, -2.0) );
+         SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[4], consdata->nvars, consdata->vars, 1.0) );
+      }
    }
 
    return SCIP_OKAY;
@@ -2109,7 +2127,7 @@ SCIP_RETCODE checkSystemGF2(
          xoractive[i] = TRUE;
          ++nconssactive;
       }
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* The following can save time, if there are constraints with all variables fixed that are infeasible; this
        * should, however, be detected somewhere else, e.g., in propagateCons(). */
       else
@@ -4055,7 +4073,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyXor)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -4712,7 +4730,7 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &targetvars);
-   
+
    return SCIP_OKAY;
 }
 
@@ -5110,7 +5128,7 @@ int SCIPgetNVarsXor(
       SCIPABORT();
       return -1;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5131,7 +5149,7 @@ SCIP_VAR** SCIPgetVarsXor(
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5151,7 +5169,7 @@ SCIP_Bool SCIPgetRhsXor(
       SCIPerrorMessage("constraint is not an xor constraint\n");
       SCIPABORT();
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

@@ -362,22 +362,22 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(result != NULL);
 
    SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
-   
+
    oldnvars = prob->nvars;
-   
+
    /* start timing */
    SCIPclockStart(pricer->pricerclock, set);
-   
+
    /* call external method */
    SCIP_CALL( pricer->pricerredcost(set->scip, pricer, lowerbound, stopearly, result) );
-   
+
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
-   
+
    /* evaluate result */
    pricer->ncalls++;
    pricer->nvarsfound += prob->nvars - oldnvars;
-   
+
    return SCIP_OKAY;
 }
 
@@ -400,22 +400,22 @@ SCIP_RETCODE SCIPpricerFarkas(
       return SCIP_OKAY;
 
    SCIPdebugMessage("executing Farkas pricing of variable pricer <%s>\n", pricer->name);
-   
+
    oldnvars = prob->nvars;
-   
+
    /* start timing */
    SCIPclockStart(pricer->pricerclock, set);
-   
+
    /* call external method */
    SCIP_CALL( pricer->pricerfarkas(set->scip, pricer) );
-   
+
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
-   
+
    /* evaluate result */
    pricer->ncalls++;
    pricer->nvarsfound += prob->nvars - oldnvars;
-   
+
    return SCIP_OKAY;
 }
 
@@ -584,7 +584,7 @@ void SCIPpricerSetPriority(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   
+
    pricer->priority = priority;
    set->pricerssorted = FALSE;
 }

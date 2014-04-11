@@ -61,7 +61,7 @@ SCIP_DECL_READERCOPY(readerCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPincludeReaderXyz(
    /* create xyz reader data */
    readerdata = NULL;
    /* TODO: (optional) create reader specific data here */
-   
+
    reader = NULL;
 
    /* include reader */
@@ -155,6 +155,6 @@ SCIP_RETCODE SCIPincludeReaderXyz(
 
    /* add xyz reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */
-   
+
    return SCIP_OKAY;
 }

@@ -22,16 +22,13 @@
 #-----------------------------------------------------------------------------
 
 SCIPDIR		=	../../
-SOPLEXDIR 	= 	$(SCIPDIR)/../soplex-1.7.1/src
-SOPLEXLIB 	= 	$(SOPLEXDIR)/../lib/
-LEMONDIR	= 	lib/lemon-src
 SOLDIR		=	solutions
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
-include $(SCIPDIR)/make/make.project
 
+include $(SCIPDIR)/make/make.project
 
 #-----------------------------------------------------------------------------
 # Main Program
@@ -52,15 +49,9 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ) $(SECOBJS) )
 
 TESTSETDIR	=	testset
 TESTFILES       =       testset/*.mop
-INCLUDE 	= 	-I$(LEMONDIR) -I$(SOPLEXDIR)
+INCLUDE 	= 	-Ilib/lemon-src
 
 VERBOSE 	= 	false
-
-ifeq ($(LPS),spx)
-SOPLEXARGS 	=	
-else
-SOPLEXARGS	= 	-L$(SOPLEXLIB) -lsoplex
-endif
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -95,6 +86,14 @@ doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
+.PHONY: libs    
+libs:		
+		@test -e "lib/lemon-lib/libemon.a" || (echo "Please create softlink lib/lemon-lib to lemon lib directory" && test )
+
+.PHONY: includes
+includes:		
+		@test -e "lib/lemon-src/lemon" || (echo "Please create softlink lib/lemon-src to lemon header file directory" && test)
+
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
@@ -113,7 +112,7 @@ $(TESTSETDIR):
 
 .PHONY: test
 test:           $(MAINFILE) $(TESTSETDIR)
-		for i in $(TESTFILES) ; do $(MAINFILE) $$i || break 1 ; done
+		@for i in $(TESTFILES) ; do $(MAINFILE) $$i || break 1 ; done
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -131,14 +130,15 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES) $(OBJS) $(EXTOBS) $(SOLDIR)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES) $(OBJS) $(EXTOBS) $(SOLDIR) libs includes
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(OBJS) $(EXTOBJS) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) 	\
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -Wno-shadow $(LINKCXX_o) $@ \
-		$(SOPLEXARGS)
+		$(LINKCXX_L)lib/lemon-lib $(LINKCXX_l)emon
+
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

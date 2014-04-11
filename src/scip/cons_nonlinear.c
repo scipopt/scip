@@ -1206,7 +1206,7 @@ void consdataSortLinearVars(
 }
 
 /* this function is currently not needed, but also to nice to be deleted, so it is only deactivated */
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
 int consdataFindLinearVar(
@@ -3379,7 +3379,7 @@ SCIP_RETCODE reformulate(
    }
 
    /* for constraints with concave f(g(x)) with linear g:R^n -> R, n>1, reformulate to get a univariate concave function, since this is easier to underestimate
-    * @todo this does not work yet for sums of functions, e.g., polynomials with more than one monomial
+    * @todo this does not work yet for sums of functions other than polynomials
     */
    for( c = 0; c < nconss; ++c )
    {
@@ -3400,38 +3400,91 @@ SCIP_RETCODE reformulate(
        */
       consdata->forcebackprop = TRUE;
 
-      curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
-
-      /* if nothing concave, then continue */
-      if( (SCIPisInfinity(scip,  consdata->rhs) || curv != SCIP_EXPRCURV_CONCAVE) &&
-         ( SCIPisInfinity(scip, -consdata->lhs) || curv != SCIP_EXPRCURV_CONVEX) )
-         continue;
-
-      /* search for a descendant of node that has > 1 children
-       * after simiplifier run, there should be no constant expressions left */
-      multivarnode = consdata->exprgraphnode;
-      while( SCIPexprgraphGetNodeNChildren(multivarnode) == 1 )
-         multivarnode = SCIPexprgraphGetNodeChildren(multivarnode)[0];
-
-      /* if node expression is obviously univariate, then continue */
-      if( SCIPexprgraphGetNodeNChildren(multivarnode) == 0 )
+      if( SCIPexprgraphGetNodeOperator(consdata->exprgraphnode) == SCIP_EXPR_POLYNOMIAL )
       {
-         assert(SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_CONST || SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_VARIDX);
-         continue;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int m;
+         int f;
+
+         for( m = 0; m < SCIPexprgraphGetNodePolynomialNMonomials(consdata->exprgraphnode); ++m )
+         {
+            SCIP_CALL( SCIPexprgraphGetNodePolynomialMonomialCurvature(consdata->exprgraphnode, m, &curv) );
+
+            monomial = SCIPexprgraphGetNodePolynomialMonomials(consdata->exprgraphnode)[m];
+            assert(monomial != NULL);
+
+            /* if nothing concave, then continue */
+            if( (SCIPisInfinity(scip,  consdata->rhs) || curv != SCIP_EXPRCURV_CONCAVE) &&
+               ( SCIPisInfinity(scip, -consdata->lhs) || curv != SCIP_EXPRCURV_CONVEX) )
+               continue;
+
+            for( f = 0; f < SCIPexprGetMonomialNFactors(monomial); ++f )
+            {
+               multivarnode = SCIPexprgraphGetNodeChildren(consdata->exprgraphnode)[SCIPexprGetMonomialChildIndices(monomial)[f]];
+
+               /* search for a descendant of node that has > 1 children
+                * after simplifier run, there should be no constant expressions left
+                */
+               while( SCIPexprgraphGetNodeNChildren(multivarnode) == 1 )
+                  multivarnode = SCIPexprgraphGetNodeChildren(multivarnode)[0];
+
+               /* if node expression is obviously univariate, then continue */
+               if( SCIPexprgraphGetNodeNChildren(multivarnode) == 0 )
+               {
+                  assert(SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_CONST || SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_VARIDX);
+                  continue;
+               }
+
+               /* if multivarnode is a linear expression, then replace this by an auxiliary variable/node
+                * mark auxiliary variable as not to multiaggregate, so SCIP cannot undo what we just did
+                */
+               if( SCIPexprgraphGetNodeCurvature(multivarnode) == SCIP_EXPRCURV_LINEAR )
+               {
+                  SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
+                     (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
+                  SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+               }
+            }
+         }
       }
-
-      /* if node itself is multivariate, then continue */
-      if( multivarnode == consdata->exprgraphnode )
-         continue;
-
-      /* if multivarnode is a linear expression, then replace this by an auxiliary variable/node
-       * mark auxiliary variable as not to multiaggregate, so SCIP cannot undo what we just did */
-      if( SCIPexprgraphGetNodeCurvature(multivarnode) == SCIP_EXPRCURV_LINEAR )
+      else
       {
-         SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
-            (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
-         SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
-         SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+         curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
+
+         /* if nothing concave, then continue */
+         if( (SCIPisInfinity(scip,  consdata->rhs) || curv != SCIP_EXPRCURV_CONCAVE) &&
+            ( SCIPisInfinity(scip, -consdata->lhs) || curv != SCIP_EXPRCURV_CONVEX) )
+            continue;
+
+         /* search for a descendant of node that has > 1 children
+          * after simplifier run, there should be no constant expressions left
+          */
+         multivarnode = consdata->exprgraphnode;
+         while( SCIPexprgraphGetNodeNChildren(multivarnode) == 1 )
+            multivarnode = SCIPexprgraphGetNodeChildren(multivarnode)[0];
+
+         /* if node expression is obviously univariate, then continue */
+         if( SCIPexprgraphGetNodeNChildren(multivarnode) == 0 )
+         {
+            assert(SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_CONST || SCIPexprgraphGetNodeOperator(multivarnode) == SCIP_EXPR_VARIDX);
+            continue;
+         }
+
+         /* if node itself is multivariate, then continue */
+         if( multivarnode == consdata->exprgraphnode )
+            continue;
+
+         /* if multivarnode is a linear expression, then replace this by an auxiliary variable/node
+          * mark auxiliary variable as not to multiaggregate, so SCIP cannot undo what we just did
+          */
+         if( SCIPexprgraphGetNodeCurvature(multivarnode) == SCIP_EXPRCURV_LINEAR )
+         {
+            SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
+               (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
+            SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
+            SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+         }
       }
    }
 
@@ -3609,10 +3662,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -4066,7 +4119,11 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    {
       assert(SCIPisFeasEQ(scip, vallb, valub));
       slope = 0.0;
-      constant = 0.5 * (vallb+valub);
+      /* choose most conservative value, so cut is also valid if above assert does not hold */
+      if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+         constant = MAX(vallb, valub);
+      else
+         constant = MIN(vallb, valub);
    }
    else
    {
@@ -4524,6 +4581,8 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    int i;
    int j;
 
+   static SCIP_Bool warned_highdim_concave = FALSE;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(ref != NULL);
@@ -4547,7 +4606,11 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /* size of LP is exponential in number of variables of tree, so do only for small trees */
    if( nvars > 10 )
    {
-      SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+      if( !warned_highdim_concave )
+      {
+         SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+         warned_highdim_concave = TRUE;
+      }
       return SCIP_OKAY;
    }
 
@@ -5168,7 +5231,7 @@ SCIP_RETCODE separatePoint(
       assert(conss != NULL);
 
       /* skip constraints that are not enabled */
-      if( !SCIPconsIsEnabled(conss[c]) )
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
@@ -8452,6 +8515,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_EXPRTREE* exprtree;
    SCIP_EXPR* expr;
    SCIP_VAR** exprvars;
+   SCIP_RETCODE retcode;
    int        nvars;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
@@ -8584,11 +8648,19 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       }
    }
 
+   retcode = SCIP_OKAY;
+
    /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
 
    /* parse expression */
-   SCIP_CALL( SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames) );
+   retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames);
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfreeBufferArray(scip, &varnames);
+      return retcode;
+   }
 
    /* get SCIP variables corresponding to variable names stored in varnames buffer */
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
@@ -8603,7 +8675,8 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       if( exprvars[i] == NULL )
       {
          SCIPerrorMessage("Unknown SCIP variable <%s> encountered in expression.\n", (char*)curvarname);
-         return SCIP_READERROR;
+         retcode = SCIP_READERROR;
+         goto TERMINATE;
       }
 
       curvarname += (strlen((char*)curvarname) + 1)/sizeof(int) + 1;
@@ -8625,6 +8698,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
+ TERMINATE:
    SCIPfreeBufferArray(scip, &exprvars);
    SCIPfreeBufferArray(scip, &varnames);
 

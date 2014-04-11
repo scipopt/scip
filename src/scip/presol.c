@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->ncalls = 0;
       presol->wasdelayed = FALSE;
    }
-   
+
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {
@@ -586,7 +586,7 @@ void SCIPpresolSetPriority(
 {
    assert(presol != NULL);
    assert(set != NULL);
-   
+
    presol->priority = priority;
    set->presolssorted = FALSE;
 }

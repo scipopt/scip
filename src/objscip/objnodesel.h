@@ -50,10 +50,10 @@ public:
 
    /** name of the node selector */
    char* scip_name_;
-   
+
    /** description of the node selector */
    char* scip_desc_;
-   
+
    /** priority of the node selector in standard mode */
    const int scip_stdpriority_;
 

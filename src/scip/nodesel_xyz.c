@@ -63,7 +63,7 @@ SCIP_DECL_NODESELCOPY(nodeselCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else

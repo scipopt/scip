@@ -1341,7 +1341,7 @@ void consdataSortLinearVars(
    consdata->linvarssorted = TRUE;
 }
 
-#if 0 /* no-one needs this routine currently */
+#ifdef SCIP_DISABLED_CODE /* no-one needs this routine currently */
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
 int consdataFindLinearVar(
@@ -4688,12 +4688,15 @@ SCIP_RETCODE checkFactorable(
    {
       consdata->factorleft[i]  = sigma1 * a[posidx * n + i] - sigma2 * a[negidx * n + i];
       consdata->factorright[i] = sigma1 * a[posidx * n + i] + sigma2 * a[negidx * n + i];
+#ifdef NDEBUG /* in debug mode, we do this after the checks below */
       if( SCIPisZero(scip, consdata->factorleft[i]) )
          consdata->factorleft[i] = 0.0;
       if( SCIPisZero(scip, consdata->factorright[i]) )
          consdata->factorright[i] = 0.0;
+#endif
    }
 
+#ifdef SCIP_DEBUG
    SCIPdebugMessage("constraint <%s> has factorable quadratic form: (%g", SCIPconsGetName(cons), consdata->factorleft[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
    {
@@ -4707,6 +4710,7 @@ SCIP_RETCODE checkFactorable(
          SCIPdebugPrintf(" %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
    }
    SCIPdebugPrintf(")\n");
+#endif
 
 #ifndef NDEBUG
    /* check whether factorleft * factorright^T is matrix of augmented quadratic form */
@@ -4744,6 +4748,15 @@ SCIP_RETCODE checkFactorable(
 
       /* check diagonal elements */
       assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
+   }
+
+   /* set almost-zero's to zero */
+   for( i = 0; i < n; ++i )
+   {
+      if( SCIPisZero(scip, consdata->factorleft[i]) )
+         consdata->factorleft[i] = 0.0;
+      if( SCIPisZero(scip, consdata->factorright[i]) )
+         consdata->factorright[i] = 0.0;
    }
 #endif
 
@@ -4857,10 +4870,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -4884,10 +4897,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -6073,6 +6086,11 @@ SCIP_RETCODE generateCutLTI(
       }
       rightrefactivity += consdata->factorright[i] * ref[i];
    }
+
+   /* if activities exceed "opposite" infinity, huge bounds seem to be involved, for which the below method is not prepared */
+   if( SCIPisInfinity(scip, leftminactivity)  || SCIPisInfinity(scip, -leftmaxactivity) ||
+       SCIPisInfinity(scip, rightminactivity) || SCIPisInfinity(scip, -rightmaxactivity) )
+      return SCIP_OKAY;
 
    /* if any of the factors is essentially fixed, give up and do usual method (numerically less sensitive, I hope) */
    if( SCIPisRelEQ(scip, leftminactivity, leftmaxactivity) || SCIPisRelEQ(scip, rightminactivity, rightmaxactivity) )
@@ -7730,7 +7748,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                   gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
             }
 
-            assert(!SCIPisNegative(scip, gap / MAX3(REALABS(xval), REALABS(yval), 1.0)));  /*lint !e666*/
+            assert(!SCIPisNegative(scip, gap / MAX3(MAX(REALABS(xlb), REALABS(xub)), MAX(REALABS(ylb), REALABS(yub)), 1.0)));  /*lint !e666*/
             if( gap < 0.0 )
                gap = 0.0;
          }

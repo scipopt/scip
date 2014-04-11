@@ -1301,7 +1301,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
          heurdata->lpsolstat,
          heurdata->nredundantrows);
       SCIPstatisticMessage(
-         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %lld domain reductions,  ncutoffs: %d ,  LP iterations: %lld \n ",
+         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %"SCIP_LONGINT_FORMAT" domain reductions,  ncutoffs: %d ,  LP iterations: %"SCIP_LONGINT_FORMAT" \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
@@ -1736,7 +1736,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       int nviolations;
       int permutedvarindex;
       SCIP_Bool marksuspicious;
-      
+
       permutedvarindex = permutation[c];
       optimalshiftvalue = 0.0;
       nviolations = 0;
@@ -1774,7 +1774,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          continue;
       }
-      
+
       marksuspicious = FALSE;
 
       /* check whether the variable is binary and has no locks in one direction, so that we want to fix it to the
@@ -1851,7 +1851,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          ++nprobings;
          SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-         SCIPdebugMessage("Propagation finished! <%lld> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
+         SCIPdebugMessage("Propagation finished! <%"SCIP_LONGINT_FORMAT"> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
       assert(!cutoff || probing);
@@ -1910,7 +1910,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                break;
          }
       }
-      
+
       if( marksuspicious )
       {
          /* mark the variable as suspicious */

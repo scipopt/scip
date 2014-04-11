@@ -195,7 +195,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
 #define SCIP_DEFAULT_LP_DISABLECUTOFF         2 /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
-#define SCIP_DEFAULT_LP_ROWREPSWITCH       -1.0 /**< simplex algorithm shall use row representation of the basis
+#define SCIP_DEFAULT_LP_ROWREPSWITCH        2.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit             
@@ -338,6 +338,9 @@
 /* Writing */
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
+
+/* Emphasis settings */
+#define SCIP_DEFAULT_EMPH_HEURISTICS          0 /**< heuristic emphasis setting */
 
 
 
@@ -613,7 +616,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
-  
+
 
    /* copy all node selector plugins */
    if( copynodeselectors && sourceset->nodesels != NULL )
@@ -682,6 +685,18 @@ SCIP_RETCODE SCIPsetCopyParams(
    assert(targetset->scip != NULL);
 
    SCIP_CALL( SCIPparamsetCopyParams(sourceset->paramset, targetset->paramset, targetset, messagehdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** callback for changes in heuristics emphasis */
+static
+SCIP_DECL_PARAMCHGD(paramChgdEmphasisHeuristics)
+{
+   assert( param != NULL );
+   assert( 0 <= SCIPparamGetInt(param) && SCIPparamGetInt(param) < 4 );
+
+   SCIP_CALL( SCIPsetHeuristics(scip, (SCIP_PARAMSETTING) SCIPparamGetInt(param), FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1742,6 +1757,13 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
+
+   /* emphasis parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "emphasis/heuristics",
+         "heuristic emphasis setting (0 - default, 1 - aggressive, 2 - fast, 3 - off)",
+         &(*set)->emph_heuristics, FALSE, SCIP_DEFAULT_EMPH_HEURISTICS, 0, 3,
+         paramChgdEmphasisHeuristics, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3386,7 +3408,7 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
 
    for( i = set->nnodesels; i > 0 && nodeselstdprio > SCIPnodeselGetStdPriority(set->nodesels[i-1]); --i )
       set->nodesels[i] = set->nodesels[i-1];
-   
+
    set->nodesels[i] = nodesel;
    set->nnodesels++;
 
@@ -3533,7 +3555,7 @@ SCIP_RETCODE SCIPsetIncludeDisp(
 {
    int i;
    int disppos;
-   
+
    assert(set != NULL);
    assert(disp != NULL);
    assert(!SCIPdispIsInitialized(disp));
@@ -3546,7 +3568,7 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    assert(set->ndisps < set->dispssize);
 
    disppos = SCIPdispGetPosition(disp);
-   
+
    for( i = set->ndisps; i > 0 && disppos < SCIPdispGetPosition(set->disps[i-1]); --i )
    {
       set->disps[i] = set->disps[i-1];
@@ -3732,7 +3754,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
    )
 {
    int i;
-   
+
    assert(set != NULL);
 
    /* active variable pricers */

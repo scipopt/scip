@@ -88,7 +88,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -131,7 +131,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    /* get presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
-   
+
    /* get the problem variables */
    scipvars = SCIPgetVars(scip);
    nbinvars = SCIPgetNBinVars(scip);
@@ -139,7 +139,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
    if( nvars == 0 )
       return SCIP_OKAY;
-   
+
    if( SCIPdoNotAggr(scip) )
       return SCIP_OKAY;
 
@@ -149,7 +149,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
     * the array and thereby interferes with our search loop
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nvars) );
-   
+
    /* scan the integer, implicit, and continuous variables for possible conversion */
    for( v = nvars - 1; v >= 0; --v )
    {
@@ -217,7 +217,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
          /* release variable */
          SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-         
+
          /* take care of statistic */
          (*naggrvars)++;
          *result = SCIP_SUCCESS;
@@ -226,7 +226,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &vars);
-   
+
    return SCIP_OKAY;
 }
 
@@ -270,6 +270,6 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
          "presolving/boundshift/integer", 
          "shift only integer ranges?",
          &presoldata->integer, TRUE, DEFAULT_INTEGER, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }

@@ -244,8 +244,6 @@ SCIP_Real getGenVBoundsMinActivity(
    {
       SCIP_Real bound;
 
-      assert(!SCIPisZero(scip, coefs[i]));
-
       /* get global or local bound */
       if( global )
          bound = coefs[i] > 0.0 ? SCIPvarGetLbGlobal(vars[i]) : SCIPvarGetUbGlobal(vars[i]);
@@ -2211,6 +2209,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
 
       /* free genvboundstore array */
       SCIPfreeMemoryArray(scip, &(propdata->genvboundstore));
+
+      /* set the number of genvbounds to zero */
+      propdata->ngenvbounds = 0;
 
       /* drop and free all events */
       SCIP_CALL( dropAndFreeEvents(scip, propdata) );

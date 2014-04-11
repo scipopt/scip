@@ -5841,12 +5841,6 @@ SCIP_RETCODE tryUpgradingLogicor(
       assert(nminvars > 0);
       assert(nminvars <= nmaxvars);
 
-      /* now we only want to handle the easy case where nminvars == nmaxvars
-       * @todo: implement for the othercase too
-       */
-      if( nminvars < nmaxvars )
-         break;
-
       nneweqvars = 0;
       for( v = 0, v2 = 0; v < neqvars && v2 < nvars; )
       {

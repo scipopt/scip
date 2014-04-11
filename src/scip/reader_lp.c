@@ -2468,7 +2468,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -2544,7 +2544,7 @@ void appendLine(
    (*linecnt) += (int) strlen(extension);
 
    SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)strlen(linebuffer));
-   
+
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
 }
@@ -2610,10 +2610,10 @@ void printRow(
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", linvals[v], varname);
-      
+
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
-   
+
    /* print quadratic part */
    if( nquadvarterms > 0 )
    {
@@ -2629,13 +2629,13 @@ void printRow(
 
          (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(quadvarterms[v].var));
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", quadvarterms[v].lincoef, varname);
-         
+
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
-      
+
       /* start quadratic part */
       appendLine(scip, file, linebuffer, &linecnt, " + [");
-      
+
       /* print square terms */
       for( v = 0; v < nquadvarterms; ++v )
       {
@@ -2648,10 +2648,10 @@ void printRow(
 
          (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(quadvarterms[v].var));
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", quadvarterms[v].sqrcoef, varname);
-         
+
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
-      
+
       /* print bilinear terms */
       for( v = 0; v < nbilinterms; ++v )
       {
@@ -2665,7 +2665,7 @@ void printRow(
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
-      
+
       /* end quadratic part */
       appendLine(scip, file, linebuffer, &linecnt, " ]");
    }
@@ -2718,7 +2718,7 @@ SCIP_RETCODE printQuadraticCons(
    assert( nbilinterms == 0 || bilinterms != NULL );
 
    assert( lhs <= rhs );
-   
+
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
@@ -2734,7 +2734,7 @@ SCIP_RETCODE printQuadraticCons(
       else
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
-         
+
          for( v = 0; v < nactivevars; ++v )
             activevals[v] = 1.0;
       }
@@ -2742,7 +2742,7 @@ SCIP_RETCODE printQuadraticCons(
       /* retransform given variables to active variables */
       SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
    }
-   
+
    /* print row(s) in LP format */
    if( SCIPisEQ(scip, lhs, rhs) )
    {
@@ -2779,7 +2779,7 @@ SCIP_RETCODE printQuadraticCons(
       SCIPfreeBufferArray(scip, &activevars);
       SCIPfreeBufferArray(scip, &activevals);
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2861,7 +2861,7 @@ SCIP_RETCODE printSOCCons(
    char varname[LP_MAX_NAMELEN];
    char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[LP_MAX_PRINTLEN];
-   
+
    SCIP_Real rhs;
 
    assert( scip != NULL );
@@ -2889,7 +2889,7 @@ SCIP_RETCODE printSOCCons(
       (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s:", rowname);
       appendLine(scip, file, linebuffer, &linecnt, consname);
    }
-   
+
    rhs = -SCIPgetLhsConstantSOC(scip, cons);
 
    /* print linear part of left hand side and add constant parts to rhs */
@@ -2908,13 +2908,13 @@ SCIP_RETCODE printSOCCons(
       /* we start a new line; therefore we tab this line */
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
-      
+
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", 2*offset*coef*coef, varname);
-      
+
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
-   
+
    /* print linear part from right hand side and add constant part to rhs */
    offset = SCIPgetRhsOffsetSOC(scip, cons);
    coef = SCIPgetRhsCoefSOC(scip, cons);
@@ -2922,9 +2922,9 @@ SCIP_RETCODE printSOCCons(
    {
       var = SCIPgetRhsVarSOC(scip, cons);
       assert( var != NULL );
-      
+
       rhs += coef * coef * offset * offset; 
-      
+
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
@@ -2950,13 +2950,13 @@ SCIP_RETCODE printSOCCons(
       /* we start a new line; therefore we tab this line */
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
-      
+
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", coef*coef, varname);
-      
+
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
-   
+
    /* print quadratic part of right hand side  */
    coef = SCIPgetRhsCoefSOC(scip, cons);
    if( coef != 0.0 )
@@ -2967,13 +2967,13 @@ SCIP_RETCODE printSOCCons(
       /* we start a new line; therefore we tab this line */
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
-      
+
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", -coef*coef, varname);
-      
+
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
-   
+
    /* end quadratic part */
    appendLine(scip, file, linebuffer, &linecnt, " ]");
 
@@ -3583,7 +3583,7 @@ SCIP_RETCODE SCIPwriteLp(
       if( ! transformed )
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
-      
+
       if( SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
@@ -3631,7 +3631,7 @@ SCIP_RETCODE SCIPwriteLp(
 
       /* in case the transformed is written only constraints are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
-      
+
       /* skip marked constraints in connection with indicator constraints */
       if( conshdlrInd != NULL && SCIPhashmapExists(consHidden, (void*) cons) )
       {
@@ -3860,7 +3860,7 @@ SCIP_RETCODE SCIPwriteLp(
 
       SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregated) );
    }
-   
+
    /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
    for( c = 0; c < nConsQuadratic; ++c )
    {
@@ -3875,7 +3875,7 @@ SCIP_RETCODE SCIPwriteLp(
    for( c = 0; c < nConsSOC; ++c )
    {
       cons = consSOC[c];
-      
+
       SCIP_CALL( collectAggregatedVars(scip, SCIPgetLhsVarsSOC(scip, cons), SCIPgetNLhsVarsSOC(scip, cons), &aggvars, &naggvars, &saggvars, varAggregated) );
       var = SCIPgetRhsVarSOC(scip, cons);
       SCIP_CALL( collectAggregatedVars(scip, &var, 1, &aggvars, &naggvars, &saggvars, varAggregated) );

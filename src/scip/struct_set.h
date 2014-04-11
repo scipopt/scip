@@ -291,7 +291,7 @@ struct SCIP_Set
    int                   mem_arraygrowinit;  /**< initial size of dynamically allocated arrays */
    int                   mem_treegrowinit;   /**< initial size of tree array */
    int                   mem_pathgrowinit;   /**< initial size of path array */
-   
+
    /* miscellaneous settings */
    SCIP_Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
    SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */
@@ -413,6 +413,9 @@ struct SCIP_Set
    int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
                                               *   0; using this parameter we can change the starting index to be
                                               *   different */
+
+   /* Emphasis */
+   int                   emph_heuristics;    /**< heuristic emphasis setting (0 - default, 1 - aggressive, 2 - fast, 3 - off) */
 };
 
 #ifdef __cplusplus

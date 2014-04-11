@@ -229,19 +229,6 @@ const char* mpsinputField5(
    return mpsi->f5;
 }
 
-#if 0
-/** returns the problem name */
-static
-const char* mpsinputProbname(
-   const MPSINPUT*       mpsi                /**< mps input structure */
-   )
-{
-   assert(mpsi != NULL);
-
-   return mpsi->probname;
-}
-#endif
-
 /** returns the objective sense */
 static
 SCIP_OBJSENSE mpsinputObjsense(
@@ -2324,36 +2311,6 @@ SCIP_RETCODE readMop(
  * Callback methods of reader
  */
 
-/** copy method for reader plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_READERCOPY(readerCopyMop)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of momps reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define readerCopyMop NULL
-#endif
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#if 0
-static
-SCIP_DECL_READERFREE(readerFreeMop)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of momps reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define readerFreeMop NULL
-#endif
-
-/** problem reading method of reader */
-#if 1
 /** problem reading method of reader */
 static SCIP_DECL_READERREAD(readerReadMop)
 { /*lint --e{715}*/
@@ -2375,23 +2332,6 @@ static SCIP_DECL_READERREAD(readerReadMop)
 
    return SCIP_OKAY;
 }
-#else
-#define readerReadMop NULL
-#endif
-
-#if 0
-/** problem writing method of reader */
-static
-SCIP_DECL_READERWRITE(readerWriteMop)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of momps reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define readerWriteMop NULL
-#endif
 
 /*
  * reader specific interface methods
@@ -2406,31 +2346,16 @@ SCIP_RETCODE SCIPincludeReaderMop(SCIP* scip /**< SCIP data structure */
 
    /* create multi objective mps reader data */
    readerdata = NULL;
-   /* TODO: (optional) create reader specific data here */
 
    reader = NULL;
 
    /* include reader */
-#if 0
-   /* use SCIPincludeReader() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyXyz, readerFreeXyz, readerReadXyz, readerWriteXyz, readerdata) );
-#else
-   /* use SCIPincludeReaderBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata));
 
    assert(reader != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMop));
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeMop));
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadMop));
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteMop));
-#endif
 
    /* add momps reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */

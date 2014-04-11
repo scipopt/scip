@@ -59,6 +59,16 @@
 #define MIN(x,y) ((x) <= (y) ? (x) : (y))
 #endif
 
+#ifndef SCIP_LONGINT_FORMAT
+#if defined(_WIN32) || defined(_WIN64)
+#define LONGINT_FORMAT           "I64d"
+#else
+#define LONGINT_FORMAT           "lld"
+#endif
+#else
+#define LONGINT_FORMAT SCIP_LONGINT_FORMAT
+#endif
+
 
 
 
@@ -207,7 +217,7 @@ void BMSdisplayMemory_call(
    printInfo("Total:    %8lld\n", memused);
    if( used != memused )
    {
-      errorMessage("Used memory in list sums up to %lld instead of %lld\n", used, memused);
+      errorMessage("Used memory in list sums up to %"LONGINT_FORMAT" instead of %"LONGINT_FORMAT"\n", used, memused);
    }
    checkMemlist();
 }
@@ -286,7 +296,7 @@ void* BMSallocClearMemory_call(
 {
    void* ptr;
 
-   debugMessage("calloc %lld elements of %lld bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
+   debugMessage("calloc %"LONGINT_FORMAT" elements of %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
 
    num = MAX(num, 1);
    size = MAX(size, 1);
@@ -295,7 +305,7 @@ void* BMSallocClearMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %lld bytes\n", ((long long) num) * ((long long) size));
+      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes\n", ((long long) num) * ((long long) size));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -314,7 +324,7 @@ void* BMSallocMemory_call(
 {
    void* ptr;
 
-   debugMessage("malloc %lld bytes [%s:%d]\n", (long long)size, filename, line);
+   debugMessage("malloc %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long)size, filename, line);
 
    size = MAX(size, 1);
    ptr = malloc(size);
@@ -322,7 +332,7 @@ void* BMSallocMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %lld bytes\n", (long long) size);
+      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes\n", (long long) size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -353,7 +363,7 @@ void* BMSreallocMemory_call(
    if( newptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for reallocation of %lld bytes\n", (long long) size);
+      printError("Insufficient memory for reallocation of %"LONGINT_FORMAT" bytes\n", (long long) size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -810,7 +820,7 @@ void unlinkChunk(
    assert(chkmem->elemsize == chunk->elemsize);
    assert(0 <= chunk->arraypos && chunk->arraypos < chkmem->nchunks);
    assert(chkmem->chunks[chunk->arraypos] == chunk);
-   
+
    debugMessage("unlinking chunk %p from chunk block %p [elemsize:%d, %d chunks]\n", 
       (void*)chunk, (void*)chkmem, chkmem->elemsize, chkmem->nchunks);
 
@@ -918,7 +928,7 @@ int createChunk(
    newchunk->eagerfreesize = 0;
    newchunk->arraypos = -1;
 
-   debugMessage("allocated new chunk %p: %d elements with size %lld\n", 
+   debugMessage("allocated new chunk %p: %d elements with size %"LONGINT_FORMAT"\n",
       (void*)newchunk, newchunk->storesize, (long long)(newchunk->elemsize));
 
    /* add new memory to the lazy free list */
@@ -1258,7 +1268,7 @@ void freeChkmemElement(
       BMS_CHKMEM* correctchkmem;
 
       printErrorHeader(filename, line);
-      printError("pointer %p does not belong to chunk block %p (size: %lld)\n", 
+      printError("pointer %p does not belong to chunk block %p (size: %"LONGINT_FORMAT")\n",
          ptr, chkmem, (long long)(chkmem->elemsize));
    }
 #endif
@@ -1401,7 +1411,7 @@ void BMSfreeChunkMemory_call(
 {
    assert(chkmem != NULL);
    assert((int)size == chkmem->elemsize);
-   
+
    debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, ptr, filename, line);
 
    if( ptr == NULL )
@@ -1413,7 +1423,7 @@ void BMSfreeChunkMemory_call(
 
    /* free memory in chunk block */
    freeChkmemElement(chkmem, ptr, filename, line);
-   
+
    checkChkmem(chkmem);
 }
 
@@ -1440,7 +1450,7 @@ long long BMSgetChunkMemoryUsed_call(
    chkmemused = 0;
    for( i = 0; i < chkmem->nchunks; ++i )
       chkmemused += (long long)(chkmem->chunks[i]->elemsize) * (long long)(chkmem->chunks[i]->storesize);
-   
+
    return chkmemused;
 }
 
@@ -1756,7 +1766,7 @@ void BMSfreeBlockMemory_call(
       if( chkmem == NULL )
       {
 	 printErrorHeader(filename, line);
-         printError("Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
+         printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"LONGINT_FORMAT"\n",
             ptr, (void*)blkmem, (long long) size);
 	 return;
       }
@@ -1764,7 +1774,7 @@ void BMSfreeBlockMemory_call(
 
       /* free memory in chunk block */
       freeChkmemElement(chkmem, ptr, filename, line);
-      
+
       blkmem->memused -= size;
       assert(blkmem->memused >= 0);
    }
@@ -1956,7 +1966,7 @@ void BMSdisplayBlockMemory_call(
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
-   printInfo("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
+   printInfo("%d blocks (%d unused), %"LONGINT_FORMAT" bytes allocated, %"LONGINT_FORMAT" bytes free",
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
@@ -2010,13 +2020,13 @@ void BMScheckEmptyBlockMemory_call(
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               printInfo("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
+               printInfo("%"LONGINT_FORMAT" bytes (%d elements of size %"LONGINT_FORMAT") not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               printInfo("%lld bytes (%d elements of size %lld) not freed.\n",
+               printInfo("%"LONGINT_FORMAT" bytes (%d elements of size %"LONGINT_FORMAT") not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
@@ -2027,5 +2037,5 @@ void BMScheckEmptyBlockMemory_call(
    }
 
    if( allocedmem != freemem )
-      printInfo("%lld bytes not freed in total.\n", allocedmem - freemem);
+      printInfo("%"LONGINT_FORMAT" bytes not freed in total.\n", allocedmem - freemem);
 }

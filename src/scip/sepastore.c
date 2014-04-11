@@ -305,6 +305,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newlb;
 
          newlb = lhs/vals[0];
+         SCIPvarAdjustLb(var, set, &newlb);
 
          if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
@@ -315,6 +316,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newub;
 
          newub = lhs/vals[0];
+         SCIPvarAdjustUb(var, set, &newub);
 
          if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
@@ -332,6 +334,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newub;
 
          newub = rhs/vals[0];
+         SCIPvarAdjustUb(var, set, &newub);
 
          if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
@@ -342,6 +345,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          SCIP_Real newlb;
 
          newlb = rhs/vals[0];
+         SCIPvarAdjustLb(var, set, &newlb);
 
          if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
@@ -417,7 +421,7 @@ SCIP_RETCODE sepastoreAddCut(
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[0]) );
          SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
       }
-      
+
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts = 0;
       sepastore->nforcedcuts = 0;
@@ -603,6 +607,9 @@ SCIP_RETCODE sepastoreApplyLb(
    assert(cutoff != NULL);
    assert(applied != NULL);
 
+   /* adjust bound to the one that would be applied, so the SCIPsetIsGT check below is more reliable */
+   SCIPvarAdjustLb(var, set, &bound);
+
    if( local )
    {
       /* apply the local bound change or detect a cutoff */
@@ -682,6 +689,9 @@ SCIP_RETCODE sepastoreApplyUb(
    assert(sepastore != NULL);
    assert(cutoff != NULL);
    assert(applied != NULL);
+
+   /* adjust bound to the one that would be applied, so the SCIPsetIsGT check below is more reliable */
+   SCIPvarAdjustUb(var, set, &bound);
 
    if( local )
    {
@@ -888,7 +898,7 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
    while( pos < sepastore->ncuts )
    {
       SCIP_Real thisortho;
-      
+
       /* update orthogonality */
       thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
       if( thisortho < sepastore->orthogonalities[pos] )
@@ -1181,7 +1191,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    {
       SCIP_ROW* cut;
       int bestpos;
-      
+
       /* get best non-forced cut */
       bestpos = sepastoreGetBestCut(sepastore);
       assert(sepastore->nforcedcuts <= bestpos && bestpos < sepastore->ncuts);
@@ -1190,7 +1200,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       cut = sepastore->cuts[bestpos];
       assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1 || !sepastoreIsBdchgApplicable(set, cut)); /* applicable bound changes are forced cuts */
       assert(!SCIPsetIsInfinity(set, sepastore->scores[bestpos]));
-      
+
       SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
          SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
          sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
@@ -1251,7 +1261,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[c]) );
          SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
       }
-      
+
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[c], blkmem, set, lp) );
    }
 

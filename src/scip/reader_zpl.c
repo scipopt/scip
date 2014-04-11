@@ -1318,7 +1318,7 @@ SCIP_DECL_READERCOPY(readerCopyZpl)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
- 
+
    return SCIP_OKAY;
 }
 

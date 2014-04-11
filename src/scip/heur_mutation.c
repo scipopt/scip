@@ -149,14 +149,14 @@ SCIP_RETCODE createSubproblem(
          lb = SCIPvarGetLbGlobal(subvars[i]);
          ub = SCIPvarGetUbGlobal(subvars[i]);
          assert(SCIPisLE(scip, lb, ub));
-         
+
          /* due to dual reductions, it may happen that the solution value is not in
             the variable's domain anymore */
          if( SCIPisLT(scip, solval, lb) )
             solval = lb;
          else if( SCIPisGT(scip, solval, ub) )
             solval = ub;
-         
+
          /* perform the bound change */
          if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
          {

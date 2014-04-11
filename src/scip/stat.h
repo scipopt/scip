@@ -117,7 +117,8 @@ void SCIPstatUpdatePrimalDualIntegral(
 /** reset current branch and bound run specific statistics */
 extern
 void SCIPstatResetCurrentRun(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_Bool             solved              /**< is problem already solved? */
    );
 
 /** resets display statistics, such that a new header line is displayed before the next display line */
