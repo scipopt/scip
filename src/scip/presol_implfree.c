@@ -40,7 +40,7 @@
 #define PRESOL_NAME            "implfree"
 #define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
 #define PRESOL_PRIORITY         12000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
 /*
@@ -1227,10 +1227,6 @@ SCIP_RETCODE isVarImpliedFree(
       SCIP_Real rowub;
       SCIP_Bool lbfound;
       SCIP_Bool ubfound;
-#if 0
-      if( *colpnt == row )
-         continue;
-#endif
 
       SCIP_CALL( getVarBoundsOfRow(scip,matrix,col,*colpnt,*valpnt,&rowlb,&lbfound,&rowub,&ubfound) );
 
@@ -1241,6 +1237,7 @@ SCIP_RETCODE isVarImpliedFree(
          impliedub = rowub;
    }
 
+   /* @todo: we need to consider infinity bounds */
    if( SCIPisFeasLE(scip,impliedub,varub) && SCIPisFeasLE(scip,varlb,impliedlb) )
       *impliedfree = TRUE;
 
@@ -1285,8 +1282,8 @@ SCIP_RETCODE advConsPresence(
    int* colend;
    int equalitycnt;
 
-   assert(0 < col && col < matrix->ncols);
-   assert(0 < row && row < matrix->nrows);
+   assert(0 <= col && col < matrix->ncols);
+   assert(0 <= row && row < matrix->nrows);
    assert(beneficial != NULL);
 
    colpnt = matrix->colmatind + matrix->colmatbeg[col];
