@@ -17,6 +17,7 @@ performance improvements:
 
 features:
 - added copy mechanism for conjunction constraints
+- added Makefile support for cygwin 64 Bit
 
 SCIP version 3.1.0
 ==================

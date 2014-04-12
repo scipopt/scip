@@ -1,0 +1,12 @@
+FLAGS		+=      #-DROUNDING_FE
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	$(GCCWARN) -m64
+CXXFLAGS	+=	$(GXXWARN) -m64 -std=c++0x
+ARFLAGS		=	crs
+LDFLAGS		+=      -m64
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline
