@@ -22,9 +22,14 @@ fixed bugs:
 - fixed bug 702, removed too hard assert when casting too big values into SCIP_Longint
 - removed wrong break in cons_pseudoboolean
 - branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
+- fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
+- corrected copy of disjunction constraints
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
+
+features:
+- added copy mechanism for conjunction constraints
 
 SCIP version 3.1.0
 ==================

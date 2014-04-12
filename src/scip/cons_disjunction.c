@@ -928,27 +928,41 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
 
    if( *valid )
    {
-      SCIP_CONS* relaxcons;
+      SCIP_CONS* sourcerelaxcons;
+      SCIP_CONS* targetrelaxcons;
 
-      relaxcons = sourcedata->relaxcons;
+      sourcerelaxcons = sourcedata->relaxcons;
+      targetrelaxcons = NULL;
 
-      if( relaxcons != NULL )
+      if( sourcerelaxcons != NULL )
       {
-         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, relaxcons, &relaxcons, SCIPconsGetHdlr(relaxcons),
-               varmap, consmap, SCIPconsGetName(relaxcons),
-               SCIPconsIsInitial(relaxcons), SCIPconsIsSeparated(relaxcons), SCIPconsIsEnforced(relaxcons),
-               SCIPconsIsChecked(relaxcons), SCIPconsIsPropagated(relaxcons),
-               SCIPconsIsLocal(relaxcons), SCIPconsIsModifiable(relaxcons),
-               SCIPconsIsDynamic(relaxcons), SCIPconsIsRemovable(relaxcons), SCIPconsIsStickingAtNode(relaxcons),
+         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcerelaxcons, &targetrelaxcons, SCIPconsGetHdlr(sourcerelaxcons),
+               varmap, consmap, SCIPconsGetName(sourcerelaxcons),
+               SCIPconsIsInitial(sourcerelaxcons), SCIPconsIsSeparated(sourcerelaxcons), SCIPconsIsEnforced(sourcerelaxcons),
+               SCIPconsIsChecked(sourcerelaxcons), SCIPconsIsPropagated(sourcerelaxcons),
+               SCIPconsIsLocal(sourcerelaxcons), SCIPconsIsModifiable(sourcerelaxcons),
+               SCIPconsIsDynamic(sourcerelaxcons), SCIPconsIsRemovable(sourcerelaxcons),
+               SCIPconsIsStickingAtNode(sourcerelaxcons),
                global, valid) );
       }
 
       if( *valid )
       {
-	 SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, relaxcons,
-	       initial, enforce, check, local, modifiable, dynamic) );
+         if( name == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, SCIPconsGetName(sourcecons), nconss, conss, targetrelaxcons,
+                  initial, enforce, check, local, modifiable, dynamic) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, targetrelaxcons,
+                  initial, enforce, check, local, modifiable, dynamic) );
+         }
 
-         SCIP_CALL( SCIPreleaseCons(scip, &relaxcons) );
+         if( targetrelaxcons != NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &targetrelaxcons) );
+         }
       }
    }
 

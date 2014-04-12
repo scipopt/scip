@@ -3098,6 +3098,7 @@ SCIP_RETCODE SCIPcopy(
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    SCIP_Bool consscopyvalid;
+   SCIP_Bool msghdlrquiet;
    char name[SCIP_MAXSTRLEN];
 
    assert(sourcescip != NULL);
@@ -3148,8 +3149,16 @@ SCIP_RETCODE SCIPcopy(
    /* construct name for the target SCIP using the source problem name and the given suffix string */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
+   /* store the quiet state of the message handler, if existent */
+   msghdlrquiet = SCIPmessagehdlrIsQuiet(targetscip->messagehdlr);
+
+   /* explicitly suppress output when copying parameters */
+   SCIPsetMessagehdlrQuiet(targetscip, TRUE);
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
+   /* restore original quiet state */
+   SCIPsetMessagehdlrQuiet(targetscip, msghdlrquiet);
 
    /* create problem in the target SCIP and copying the source original problem data */
    SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
@@ -9085,19 +9094,25 @@ SCIP_RETCODE SCIPpermuteProb(
       int i;
 
       /* loop over all constraint handlers */
-      for( i = 0; i < nconshdlrs; ++i )      
+      for( i = 0; i < nconshdlrs; ++i )
       {
          SCIP_CONS** conss;
          int nconss;
 
          conss = SCIPconshdlrGetConss(conshdlrs[i]);
-         nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+
+         /* we must only permute active constraints */
+         if( SCIPisTransformed(scip) )
+            nconss = SCIPconshdlrGetNActiveConss(conshdlrs[i]);
+         else
+            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+
          assert(nconss == 0 || conss != NULL);
 
          SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
 
          /* readjust the mapping of constraints to array positions */
-         for( j = 0; j < nconss; ++j )      
+         for( j = 0; j < nconss; ++j )
             conss[j]->consspos = j;
       }
    }
