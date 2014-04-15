@@ -29,6 +29,7 @@
 #define DEFAULT_ENABLED FALSE
 #define DEFAULT_ARRAYSIZE 150
 #define DEFAULT_DISPFREQ 10000
+#define DEFAULT_RANDSEED 314156
 /*
  * Data structures
  */
@@ -43,6 +44,7 @@ struct SCIP_EventhdlrData
    int                   dispfreq;
    int                   maxnodes;           /**< maximum number of nodes at single depth */
    int                   waist;              /**< depth of maxnodes (not necessarily unique)*/
+   unsigned int          randseed;           /**< random seed */
 
 };
 
@@ -104,10 +106,14 @@ void copyDepthData(
    int*                  nodesdepth,         /**< array to copy nodes data to */
    int                   nodesdepthsize,     /**< size of the array */
    SCIP_NODE**           nodes,              /**< nodes to count depths */
-   int                   nodessize           /**< size of nodes array */
+   int                   nodessize,          /**< size of nodes array */
+   int*                  maxnodes            /**< maximum number of nodes in single depth */
    )
 {
    int n;
+
+   assert(maxnodes != NULL);
+   assert(*maxnodes >= 0);
 
    for( n = 0; n < nodessize; ++n )
    {
@@ -117,7 +123,172 @@ void copyDepthData(
       assert(depth < nodesdepthsize);
       assert(0 <= depth);
       ++nodesdepth[depth];
+
+      if( nodesdepth[depth] > *maxnodes )
+         *maxnodes = nodesdepth[depth];
    }
+}
+
+static
+SCIP_Longint calcEstimation(
+   int                   maxdepth,
+   int                   lastfulldepth,
+   int                   waist
+)
+{
+   int i;
+   SCIP_Real lastlevelnodes;
+   SCIP_Real estimatednodes;
+
+   lastlevelnodes = 1.0;
+   estimatednodes = 1.0;
+
+   for( i = 1; i <= maxdepth; ++i )
+    {
+       SCIP_Real estimatedgamma;
+
+       if( i  < lastfulldepth )
+          estimatedgamma = 2;
+       else if( i < waist )
+          estimatedgamma = 2 - (i - lastfulldepth + 1)/(SCIP_Real)(waist - lastfulldepth + 1);
+       else
+          estimatedgamma = 1 - (i - waist + 1)/(SCIP_Real)(maxdepth - waist + 1);
+
+       lastlevelnodes = estimatedgamma * lastlevelnodes;
+       estimatednodes += lastlevelnodes;
+    }
+
+   return (SCIP_Longint)estimatednodes;
+}
+
+static
+void determineTreeCharacteristics(
+   SCIP*              scip,            /**< SCIP data structure */
+   int*               nnodesdepth,
+   int                nnodesdepthsize,
+   int*               lastfulldepth,
+   int*               waist,
+   int*               maxdepth,
+   int                maxnodes
+   )
+{
+   int i;
+   int minwaistlevel;
+   int maxwaistlevel;
+
+   *lastfulldepth = -1;
+   minwaistlevel = -1;
+   maxwaistlevel = 0;
+
+   /* loop over all depths with more than zero nodes. Determine waist, last full level, and maximum depth */
+   for( i = 0; i < nnodesdepthsize && nnodesdepth[i] > 0; ++i )
+   {
+      if( minwaistlevel == -1 && nnodesdepth[i] > 0.5 * maxnodes )
+      {
+         minwaistlevel = i;
+
+      }
+      if( minwaistlevel != -1 && nnodesdepth[i] > 0.5 * maxnodes )
+         maxwaistlevel = i;
+
+      if( i > 0 && *lastfulldepth == -1 && (nnodesdepth[i] / nnodesdepth[i - 1]) < 2 )
+      {
+         *lastfulldepth = i - 1;
+      }
+   }
+
+   assert(i == 0 || nnodesdepth[i - 1] > 0);
+   *maxdepth = i - 1;
+   assert(minwaistlevel <=maxwaistlevel);
+   *waist = SCIPfeasCeil(scip, (maxwaistlevel + minwaistlevel) / 2.0);
+}
+
+static
+SCIP_Longint calcTreeSizeActiveNodes(
+   SCIP_NODE**           opennodes,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,
+   int                   nopennodes,
+   int                   maxdepth,
+   int                   lastfulldepth,
+   int                   waist
+   )
+{
+   int n;
+   SCIP_Longint estimatednodes;
+
+   estimatednodes = 0L;
+   for( n = 0;  n < nopennodes; ++n )
+   {
+      SCIP_NODE* node;
+      int depth;
+      SCIP_Real factor;
+
+      node = opennodes[n];
+      depth = SCIPnodeGetDepth(node);
+      factor = (maxdepth - depth) / (SCIP_Real)(maxdepth);
+      factor = SCIPgetRandomReal(0, factor, &eventhdlrdata->randseed);
+      estimatednodes += calcEstimation((int)((maxdepth) * factor), (int)(lastfulldepth * factor), (int)(waist * factor));
+   }
+
+   return estimatednodes;
+}
+
+static
+SCIP_Longint estimateTreeSizeActiveNodes(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,
+   int*                  lastfulldepth,
+   int*                  waist,
+   int*                  maxdepth
+   )
+{
+
+   int* nodesdepth;
+   SCIP_Longint estimatednodes;
+
+   if( eventhdlrdata->nnodesdepth == NULL )
+      return 0;
+
+   assert(lastfulldepth != NULL);
+   assert(waist != NULL);
+   assert(maxdepth != NULL);
+
+   nodesdepth = eventhdlrdata->nnodesdepth;
+   estimatednodes = SCIPgetNNodes(scip);
+
+   /* loop over all depths with more than zero nodes. Determine waist, last full level, and maximum depth */
+   determineTreeCharacteristics(scip, nodesdepth, eventhdlrdata->nnodesdepthsize, lastfulldepth, waist, maxdepth, eventhdlrdata->maxnodes);
+
+   /* during solving stage, the tree estimation gets refined by open nodes data */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_NODE** leaves;
+      SCIP_NODE** children;
+      SCIP_NODE** siblings;
+      int nsiblings;
+      int nchildren;
+      int nleaves;
+
+      leaves = NULL;
+      children = NULL;
+      siblings = NULL;
+      nchildren = nleaves = nsiblings = 0;
+
+      assert(eventhdlrdata->nnodesdepthsize > 0);
+
+      SCIP_CALL( SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings) );
+
+      if( nsiblings > 0 )
+      {
+         estimatednodes += calcTreeSizeActiveNodes(siblings, eventhdlrdata, nsiblings, *maxdepth, *lastfulldepth, *waist);
+      }
+      if( nchildren > 0 )
+         estimatednodes += calcTreeSizeActiveNodes(children, eventhdlrdata, nchildren, *maxdepth, *lastfulldepth, *waist);
+      if( nleaves > 0 )
+         estimatednodes += calcTreeSizeActiveNodes(leaves, eventhdlrdata, nleaves, *maxdepth, *lastfulldepth, *waist);
+   }
+   return estimatednodes;
+
 }
 
 static
@@ -131,11 +302,8 @@ SCIP_Longint estimateTreeSize(
 {
 
    int* nodesdepth;
-   SCIP_Real lastlevelnodes;
-   int i;
-   SCIP_Real estimatednodes;
-   int minwaistlevel;
-   int maxwaistlevel;
+   SCIP_Longint estimatednodes;
+   int maxnodes;
 
    if( eventhdlrdata->nnodesdepth == NULL )
       return 0;
@@ -144,6 +312,7 @@ SCIP_Longint estimateTreeSize(
    assert(waist != NULL);
    assert(maxdepth != NULL);
 
+   maxnodes = eventhdlrdata->maxnodes;
    /* during solving stage, the tree estimation gets refined by open nodes data */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
@@ -168,71 +337,26 @@ SCIP_Longint estimateTreeSize(
       SCIP_CALL( SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings) );
 
       if( nsiblings > 0 )
-         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, siblings, nsiblings);
+         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, siblings, nsiblings, &maxnodes);
       if( nchildren > 0 )
-         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, children, nchildren);
+         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, children, nchildren, &maxnodes);
       if( nleaves > 0 )
-         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, leaves, nleaves);
+         copyDepthData(nodesdepth, eventhdlrdata->nnodesdepthsize, leaves, nleaves, &maxnodes);
    }
    else
       /* if scip is not in solving stage, the entire tree is in the eventhdlrdata */
       nodesdepth = eventhdlrdata->nnodesdepth;
 
-   *maxdepth = 0;
-   *lastfulldepth = -1;
-   minwaistlevel = -1;
-   maxwaistlevel = 0;
-
    /* loop over all depths with more than zero nodes. Determine waist, last full level, and maximum depth */
-   for( i = 0; i < eventhdlrdata->nnodesdepthsize && nodesdepth[i] > 0; ++i )
-   {
-      if( minwaistlevel == -1 && nodesdepth[i] > 0.5 * eventhdlrdata->maxnodes )
-      {
-         minwaistlevel = i;
+    determineTreeCharacteristics(scip, nodesdepth, eventhdlrdata->nnodesdepthsize, lastfulldepth, waist, maxdepth, eventhdlrdata->maxnodes);
 
-      }
-      if( minwaistlevel != -1 && nodesdepth[i] > 0.5 * eventhdlrdata->maxnodes )
-         maxwaistlevel = i;
-
-      if( i > 0 && *lastfulldepth == -1 && (nodesdepth[i] / nodesdepth[i - 1]) < 2 )
-      {
-         *lastfulldepth = i - 1;
-      }
-   }
-
-
-
-   assert(minwaistlevel <= maxwaistlevel);
-
-   assert(i == 0 || nodesdepth[i - 1] > 0);
-   *maxdepth = i - 1;
-   *waist = SCIPfeasCeil(scip, (minwaistlevel + maxwaistlevel) / 2.0);
-
-   estimatednodes = 1;
-   lastlevelnodes = 1;
-
-   for( i = 1; i <= *maxdepth; ++i )
-   {
-      SCIP_Real estimatedgamma;
-
-      if( i  < *lastfulldepth )
-         estimatedgamma = 2;
-      else if( i < *waist )
-         estimatedgamma = 2 - (i - *lastfulldepth + 1)/(SCIP_Real)(*waist - *lastfulldepth + 1);
-      else
-         estimatedgamma = 1 - (i - *waist + 1)/(SCIP_Real)(*maxdepth - *waist + 1);
-
-      lastlevelnodes = estimatedgamma * lastlevelnodes;
-      estimatednodes += lastlevelnodes;
-
-
-   }
+   estimatednodes = calcEstimation(*maxdepth, *lastfulldepth, *waist);
 
    /* nodesdepth is a buffer array only in solving stage */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       SCIPfreeBufferArray(scip, &nodesdepth);
 
-   return (SCIP_Longint)estimatednodes;
+   return estimatednodes;
 
 }
 /*
@@ -291,7 +415,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolNodeevent)
       waist = 0;
       maxdepth = 0;
 
-      estimatednodes = estimateTreeSize(scip, eventhdlrdata, &lastfulldepth, &waist, &maxdepth);
+      estimatednodes = estimateTreeSizeActiveNodes(scip, eventhdlrdata, &lastfulldepth, &waist, &maxdepth);
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Explored nodes: %"SCIP_LONGINT_FORMAT", estimated number of nodes: %"SCIP_LONGINT_FORMAT" (%d,%d,%d)\n",
             SCIPgetNNodes(scip), estimatednodes, lastfulldepth, waist, maxdepth);
@@ -317,6 +441,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolNodeevent)
    }
    eventhdlrdata->waist = 0;
    eventhdlrdata->maxnodes = 1;
+   eventhdlrdata->randseed = DEFAULT_RANDSEED;
 
    return SCIP_OKAY;
 }
@@ -353,11 +478,10 @@ SCIP_DECL_EVENTEXEC(eventExecNodeevent)
       waist = 0;
       maxdepth = 0;
 
-      estimatednodes = estimateTreeSize(scip, eventhdlrdata, &lastfulldepth, &waist, &maxdepth);
+      estimatednodes = estimateTreeSizeActiveNodes(scip, eventhdlrdata, &lastfulldepth, &waist, &maxdepth);
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Explored nodes: %"SCIP_LONGINT_FORMAT", estimated number of nodes: %"SCIP_LONGINT_FORMAT" (%d,%d,%d)\n",
             SCIPgetNNodes(scip), estimatednodes, lastfulldepth, waist, maxdepth);
-
    }
 
    return SCIP_OKAY;
