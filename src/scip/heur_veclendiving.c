@@ -314,6 +314,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
+   roundup = FALSE;
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
