@@ -12,6 +12,7 @@ fixed bugs:
 - branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
 - fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
 - corrected copy of disjunction constraints
+- forbid aggregations with scalar smaller feastol or larger 1/feastol
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
