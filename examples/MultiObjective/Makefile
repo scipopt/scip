@@ -24,6 +24,13 @@
 SCIPDIR		=	../../
 SOLDIR		=	solutions
 
+# define to be able to locate library files
+ifeq ($(OSTYPE),mingw)
+MULTOBJDIR		=	./
+else
+MULTOBJDIR		=	$(realpath .)
+endif
+
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
@@ -49,16 +56,21 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ) $(SECOBJS) )
 
 TESTSETDIR	=	testset
 TESTFILES       =       testset/*.mop
-INCLUDE 	= 	-Ilib/lemon-src
+#INCLUDE 	= 	-Ilib/lemon-src
 
 VERBOSE 	= 	false
-
+MAKELEMONLINKS = true
+FLAGS		+=	-I$(LIBDIR)/lemoninc
+LEMONLINKS	=	$(LIBDIR)/lemoninc
+LEMONLINKS	+=	$(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+LEMONLINKS	+=	$(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
 .SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+MAKE		+= -s
 endif
 
 .PHONY: all
@@ -86,13 +98,13 @@ doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
-.PHONY: libs    
-libs:		
-		@test -e "lib/lemon-lib/libemon.a" || (echo "Please create softlink lib/lemon-lib to lemon lib directory" && test )
+.PHONY: libs
+libs: 	$(LEMONLINKS)
+		@test -e $(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT) || test -e $(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) || (echo "Please create softlink lib/lemon-lib to lemon lib directory" && test )
 
 .PHONY: includes
 includes:		
-		@test -e "lib/lemon-src/lemon" || (echo "Please create softlink lib/lemon-src to lemon header file directory" && test)
+		@test -e $(LIBDIR)/lemoninc || (echo "Please create softlink lib/lemon-src to lemon header file directory" && test)
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
@@ -106,6 +118,9 @@ $(BINDIR):
 
 $(SOLDIR):
 		@-mkdir -p $(SOLDIR)
+
+$(LIBDIR):
+		@-mkdir -p $(LIBDIR)
 
 $(TESTSETDIR):
 		@-mkdir -p check/$(TESTSETDIR)
@@ -130,26 +145,61 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES) $(OBJS) $(EXTOBS) $(SOLDIR) libs includes
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR) includes libs
+		@$(MAKE) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES) $(OBJS) $(EXTOBS) $(SOLDIR)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(OBJS) $(EXTOBJS) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) 	\
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -Wno-shadow $(LINKCXX_o) $@ \
-		$(LINKCXX_L)lib/lemon-lib $(LINKCXX_l)emon
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)lemon.$(OSTYPE).$(ARCH).$(COMP)
 
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(INCLUDE) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(INCLUDE) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -Wno-shadow -c $< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -Wno-shadow -c $< $(CXX_o)$@
 
 info: 
 	@echo "$(MAINOBJFILES)"
 
+.PHONY: $(LEMONLINKS)
+$(LEMONLINKS):
+ifeq ($(MAKELEMONLINKS), true)
+		@$(SHELL) -ec 'if test ! -e $@ ; \
+			then \
+				DIRNAME=`dirname $@` ; \
+				BASENAMEA=`basename $@ .$(STATICLIBEXT)` ; \
+				BASENAMESO=`basename $@ .$(SHAREDLIBEXT)` ; \
+				echo ; \
+				echo "- preparing missing soft-link \"$@\":" ; \
+				if test -e $$DIRNAME/$$BASENAMEA.$(SHAREDLIBEXT) ; \
+				then \
+					echo "* this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMEA.$(SHAREDLIBEXT)\" already exists - press return to skip" ; \
+				fi ; \
+				if test -e $$DIRNAME/$$BASENAMESO.$(STATICLIBEXT) ; \
+				then \
+					echo "* this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMESO.$(STATICLIBEXT)\" already exists - press return to skip" ; \
+				fi ; \
+				echo "> Enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
+				echo -n "> " ; \
+				cd $$DIRNAME ; \
+				eval $(READ) TARGET ; \
+				cd - ; \
+				if test "$$TARGET" != "" ; \
+				then \
+					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
+					rm -f $@ ; \
+					$(LN_s) $$TARGET $@ ; \
+				else \
+					echo "* skipped creation of softlink \"$@\". Call \"make links\" if needed later." ; \
+				fi ; \
+				echo ; \
+			fi'
+endif
 
 #---- EOF --------------------------------------------------------------------
