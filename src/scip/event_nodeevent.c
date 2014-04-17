@@ -205,6 +205,7 @@ void determineTreeCharacteristics(
 
 static
 SCIP_Longint calcTreeSizeActiveNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           opennodes,
    SCIP_EVENTHDLRDATA*   eventhdlrdata,
    int                   nopennodes,
@@ -226,8 +227,17 @@ SCIP_Longint calcTreeSizeActiveNodes(
       node = opennodes[n];
       depth = SCIPnodeGetDepth(node);
       factor = (maxdepth - depth) / (SCIP_Real)(maxdepth);
-      factor = SCIPgetRandomReal(0, factor, &eventhdlrdata->randseed);
-      estimatednodes += calcEstimation((int)((maxdepth) * factor), (int)(lastfulldepth * factor), (int)(waist * factor));
+
+      if( SCIPgetCutoffbound(scip) != SCIPinfinity(scip) )
+         factor *= (SCIPgetCutoffbound(scip) - SCIPnodeGetLowerbound(node)) / (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
+      else
+         factor = SCIPgetRandomReal(0, factor, &eventhdlrdata->randseed);
+
+      if( SCIPisFeasZero(scip, factor) )
+         estimatednodes += 1;
+      else
+         //estimatednodes += calcEstimation(maxdepth - depth, (int)(lastfulldepth * factor), (int)(waist * factor));
+         estimatednodes += factor * SCIPgetNNodes(scip);
    }
 
    return estimatednodes;
@@ -280,12 +290,12 @@ SCIP_Longint estimateTreeSizeActiveNodes(
 
       if( nsiblings > 0 )
       {
-         estimatednodes += calcTreeSizeActiveNodes(siblings, eventhdlrdata, nsiblings, *maxdepth, *lastfulldepth, *waist);
+         estimatednodes += calcTreeSizeActiveNodes(scip, siblings, eventhdlrdata, nsiblings, *maxdepth, *lastfulldepth, *waist);
       }
       if( nchildren > 0 )
-         estimatednodes += calcTreeSizeActiveNodes(children, eventhdlrdata, nchildren, *maxdepth, *lastfulldepth, *waist);
+         estimatednodes += calcTreeSizeActiveNodes(scip, children, eventhdlrdata, nchildren, *maxdepth, *lastfulldepth, *waist);
       if( nleaves > 0 )
-         estimatednodes += calcTreeSizeActiveNodes(leaves, eventhdlrdata, nleaves, *maxdepth, *lastfulldepth, *waist);
+         estimatednodes += calcTreeSizeActiveNodes(scip, leaves, eventhdlrdata, nleaves, *maxdepth, *lastfulldepth, *waist);
    }
    return estimatednodes;
 
