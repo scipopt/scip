@@ -397,10 +397,10 @@ struct SCIP_Set
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
 
-   /* VBC tool settings */
-   char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
-   SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
-   SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+   /* visualization settings */
+   char*                 visual_vbcfilename; /**< name of the VBC tool output file, or - if no VBC output should be created */
+   SCIP_Bool             visual_realtime;    /**< should the real solving time be used instead of time step counter in visualization? */
+   SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */

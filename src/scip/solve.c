@@ -30,7 +30,7 @@
 #include "scip/stat.h"
 #include "scip/buffer.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/interrupt.h"
 #include "scip/event.h"
 #include "scip/lp.h"
@@ -4330,8 +4330,8 @@ SCIP_RETCODE SCIPsolveCIP(
       /* check for restart */
       if( !(*restart) )
       {
-         /* change color of node in VBC output */
-         SCIPvbcSolvedNode(stat->vbc, stat, focusnode);
+         /* change color of node in visualization */
+         SCIPvisualSolvedNode(stat->visual, stat, focusnode);
 
          /* check, if the current solution is feasible */
          if( !infeasible )
@@ -4380,8 +4380,8 @@ SCIP_RETCODE SCIPsolveCIP(
             /* node solution is not feasible */
             if( tree->nchildren == 0 )
             {
-               /* change color of node in VBC output */
-               SCIPvbcCutoffNode(stat->vbc, stat, focusnode);
+               /* change color of node in visualization output */
+               SCIPvisualCutoffNode(stat->visual, stat, focusnode);
 
                /* issue NODEINFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );

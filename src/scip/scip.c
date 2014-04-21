@@ -45,7 +45,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/interrupt.h"
 #include "scip/mem.h"
 #include "scip/misc.h"
@@ -13002,8 +13002,8 @@ SCIP_RETCODE initSolve(
       SCIP_CALL( SCIPnlpAddVars(scip->nlp, scip->mem->probmem, scip->set, scip->transprob->nvars, scip->transprob->vars) );
    }
 
-   /* create VBC output file */
-   SCIP_CALL( SCIPvbcInit(scip->stat->vbc, scip->mem->probmem, scip->set, scip->messagehdlr) );
+   /* possibly create visualization output file */
+   SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
@@ -13151,8 +13151,8 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
-   /* close VBC output file */
-   SCIPvbcExit(scip->stat->vbc, scip->set, scip->messagehdlr);
+   /* possibly close visualization output file */
+   SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
 
    /* reset statistics for current branch and bound run */
    if( scip->stat->status == SCIP_STATUS_INFEASIBLE || scip->stat->status == SCIP_STATUS_OPTIMAL || scip->stat->status == SCIP_STATUS_UNBOUNDED || scip->stat->status == SCIP_STATUS_INFORUNBD )

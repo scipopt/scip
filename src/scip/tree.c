@@ -28,7 +28,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -971,8 +971,8 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* update the estimate of the child */
    SCIPnodeSetEstimate(*node, set, estimate);
 
-   /* output node creation to VBC file */
-   SCIP_CALL( SCIPvbcNewChild(stat->vbc, stat, *node) );
+   /* output node creation to visualization file */
+   SCIP_CALL( SCIPvisualNewChild(stat->visual, stat, *node) );
 
    SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %u (prio: %g)\n",
       SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
@@ -1119,7 +1119,7 @@ void SCIPnodeCutoff(
    if( node->active )
       tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
 
-   SCIPvbcCutoffNode(stat->vbc, stat, node);
+   SCIPvisualCutoffNode(stat->visual, stat, node);
 
    SCIPdebugMessage("cutting off %s node #%"SCIP_LONGINT_FORMAT" at depth %d (cutoffdepth: %d)\n", 
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -1144,7 +1144,7 @@ void SCIPnodePropagateAgain(
       if( node->active )
          tree->repropdepth = MIN(tree->repropdepth, (int)node->depth);
 
-      SCIPvbcMarkedRepropagateNode(stat->vbc, stat, node);
+      SCIPvisualMarkedRepropagateNode(stat->visual, stat, node);
 
       SCIPdebugMessage("marked %s node #%"SCIP_LONGINT_FORMAT" at depth %d to be propagated again (repropdepth: %d)\n", 
          node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->repropdepth);
@@ -1241,7 +1241,7 @@ SCIP_RETCODE nodeRepropagate(
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
    initialreprop = node->reprop;
 
-   SCIPvbcRepropagatedNode(stat->vbc, stat, node);
+   SCIPvisualRepropagatedNode(stat->visual, stat, node);
 
    /* process the delayed events in order to flush the problem changes */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
@@ -3465,7 +3465,7 @@ SCIP_RETCODE nodeToLeaf(
    else
    {
       /* delete node due to bound cut off */
-      SCIPvbcCutoffNode(stat->vbc, stat, *node);
+      SCIPvisualCutoffNode(stat->visual, stat, *node);
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventqueue, tree, lp) );
    }
    assert(*node == NULL);
@@ -4767,7 +4767,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       {
          SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, stat, node);
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
    }
@@ -4780,7 +4780,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       {
          SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, stat, node);
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
    }
@@ -5269,8 +5269,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
-      /* output branching bound change to VBC file */
-      SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+      /* output branching bound change to visualization file */
+      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
       if( downchild != NULL )
          *downchild = node;
@@ -5294,8 +5294,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
       }
-      /* output branching bound change to VBC file */
-      SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+      /* output branching bound change to visualization file */
+      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
       if( eqchild != NULL )
          *eqchild = node;
@@ -5314,8 +5314,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
-      /* output branching bound change to VBC file */
-      SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+      /* output branching bound change to visualization file */
+      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
       if( upchild != NULL )
          *upchild = node;
@@ -5420,8 +5420,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
    SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
          var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
-   /* output branching bound change to VBC file */
-   SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+   /* output branching bound change to visualization file */
+   SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
    if( downchild != NULL )
       *downchild = node;
@@ -5440,8 +5440,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
    SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
          var, right, SCIP_BOUNDTYPE_LOWER, FALSE) );
-   /* output branching bound change to VBC file */
-   SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+   /* output branching bound change to visualization file */
+   SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
    if( upchild != NULL )
       *upchild = node;
@@ -5680,8 +5680,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             var, left , SCIP_BOUNDTYPE_LOWER, FALSE) );
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, right, SCIP_BOUNDTYPE_UPPER, FALSE) );
-         /* output branching bound change to VBC file */
-         SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+         /* output branching bound change to visualization file */
+         SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
          if( nchildren != NULL )
             ++*nchildren;
@@ -5760,8 +5760,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          }
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
-         /* output branching bound change to VBC file */
-         SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+         /* output branching bound change to visualization file */
+         SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
          if( nchildren != NULL )
             ++*nchildren;
@@ -5809,8 +5809,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, bnd, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
-         /* output branching bound change to VBC file */
-         SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+         /* output branching bound change to visualization file */
+         SCIP_CALL( SCIPvisualUpdateChild(stat->visual, stat, node) );
 
          if( nchildren != NULL )
             ++*nchildren;

@@ -13,9 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   vbc.c
- * @brief  methods for VBC Tool output
+/**@file   visual.c
+ * @brief  methods for creating output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -29,8 +30,8 @@
 #include "scip/clock.h"
 #include "scip/var.h"
 #include "scip/tree.h"
-#include "scip/vbc.h"
-#include "scip/struct_vbc.h"
+#include "scip/visual.h"
+#include "scip/struct_visual.h"
 
 
 /** returns the branching variable of the node, or NULL */
@@ -61,104 +62,104 @@ void getBranchInfo(
    (*boundtype) = (SCIP_BOUNDTYPE) domchgbound->boundchgs[0].boundtype;
 }
 
-/** creates VBC Tool data structure */
-SCIP_RETCODE SCIPvbcCreate(
-   SCIP_VBC**            vbc,                /**< pointer to store the VBC information */
+/** creates visualization data structure */
+SCIP_RETCODE SCIPvisualCreate(
+   SCIP_VISUAL**         visual,             /**< pointer to store visualization information */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   SCIP_ALLOC( BMSallocMemory(vbc) );
+   SCIP_ALLOC( BMSallocMemory(visual) );
 
-   (*vbc)->file = NULL;
-   (*vbc)->messagehdlr = messagehdlr;
-   (*vbc)->nodenum = NULL;
-   (*vbc)->timestep = 0;
-   (*vbc)->lastnode = NULL;
-   (*vbc)->lastcolor = SCIP_VBCCOLOR_NONE;
-   (*vbc)->userealtime = FALSE;
+   (*visual)->vbcfile = NULL;
+   (*visual)->messagehdlr = messagehdlr;
+   (*visual)->nodenum = NULL;
+   (*visual)->timestep = 0;
+   (*visual)->lastnode = NULL;
+   (*visual)->lastcolor = SCIP_VBCCOLOR_NONE;
+   (*visual)->userealtime = FALSE;
 
    return SCIP_OKAY;
 }
 
-/** frees VBC Tool data structure */
-void SCIPvbcFree(
-   SCIP_VBC**            vbc                 /**< pointer to store the VBC information */
+/** frees visualization data structure */
+void SCIPvisualFree(
+   SCIP_VISUAL**         visual              /**< pointer to store visualization information */
    )
 {
-   assert(vbc != NULL);
-   assert(*vbc != NULL);
-   assert((*vbc)->file == NULL);
-   assert((*vbc)->nodenum == NULL);
+   assert( visual != NULL );
+   assert( *visual != NULL );
+   assert( (*visual)->vbcfile == NULL );
+   assert( (*visual)->nodenum == NULL );
 
-   BMSfreeMemory(vbc);
+   BMSfreeMemory(visual);
 }
 
-/** initializes VBC information and creates a file for VBC output */
-SCIP_RETCODE SCIPvbcInit(
-   SCIP_VBC*             vbc,                /**< VBC information */
+/** initializes visualization information and creates a file for visualization output */
+SCIP_RETCODE SCIPvisualInit(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   assert(vbc != NULL);
-   assert(set != NULL);
-   assert(set->vbc_filename != NULL);
+   assert( visual != NULL );
+   assert( set != NULL );
+   assert( set->visual_vbcfilename != NULL );
 
-   if( set->vbc_filename[0] == '-' && set->vbc_filename[1] == '\0' )
+   if( set->visual_vbcfilename[0] == '-' && set->visual_vbcfilename[1] == '\0' )
       return SCIP_OKAY;
 
    SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-      "storing VBC information in file <%s>\n", set->vbc_filename);
-   vbc->file = fopen(set->vbc_filename, "w");
-   vbc->timestep = 0;
-   vbc->lastnode = NULL;
-   vbc->lastcolor = SCIP_VBCCOLOR_NONE;
-   vbc->userealtime = set->vbc_realtime;
+      "storing VBC information in file <%s>\n", set->visual_vbcfilename);
+   visual->vbcfile = fopen(set->visual_vbcfilename, "w");
+   visual->timestep = 0;
+   visual->lastnode = NULL;
+   visual->lastcolor = SCIP_VBCCOLOR_NONE;
+   visual->userealtime = set->visual_realtime;
 
-   if( vbc->file == NULL )
+   if( visual->vbcfile == NULL )
    {
-      SCIPerrorMessage("error creating file <%s>\n", set->vbc_filename);
-      SCIPprintSysError(set->vbc_filename);
+      SCIPerrorMessage("error creating file <%s>\n", set->visual_vbcfilename);
+      SCIPprintSysError(set->visual_vbcfilename);
       return SCIP_FILECREATEERROR;
    }
 
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#TYPE: COMPLETE TREE\n");
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#TIME: SET\n");
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#BOUNDS: SET\n");
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#INFORMATION: STANDARD\n");
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#NODE_NUMBER: NONE\n");
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "#TYPE: COMPLETE TREE\n");
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "#TIME: SET\n");
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "#BOUNDS: SET\n");
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "#INFORMATION: STANDARD\n");
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "#NODE_NUMBER: NONE\n");
 
-   SCIP_CALL( SCIPhashmapCreate(&vbc->nodenum, blkmem, SCIP_HASHSIZE_VBC) );
+   SCIP_CALL( SCIPhashmapCreate(&visual->nodenum, blkmem, SCIP_HASHSIZE_VBC) );
 
    return SCIP_OKAY;
 }
 
-/** closes the VBC output file */
-void SCIPvbcExit(
-   SCIP_VBC*             vbc,                /**< VBC information */
+/** closes the visualization output file */
+void SCIPvisualExit(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
   )
 {
-   assert(vbc != NULL);
-   assert(set != NULL);
+   assert( visual != NULL );
+   assert( set != NULL );
 
-   if( vbc->file != NULL )
+   if( visual->vbcfile != NULL )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
 
-      fclose(vbc->file);
-      vbc->file = NULL;
+      fclose(visual->vbcfile);
+      visual->vbcfile = NULL;
 
-      SCIPhashmapFree(&vbc->nodenum);
+      SCIPhashmapFree(&visual->nodenum);
    }
 }
 
-/** prints current solution time to VBC output file */
+/** prints current solution time to visualization output file */
 static
 void printTime(
-   SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -168,10 +169,10 @@ void printTime(
    int secs;
    int hunds;
 
-   assert(vbc != NULL);
-   assert(stat != NULL);
+   assert( visual != NULL );
+   assert( stat != NULL );
 
-   if( vbc->userealtime )
+   if( visual->userealtime )
    {
       double time;
       time = SCIPclockGetTime(stat->solvingtime);
@@ -179,8 +180,8 @@ void printTime(
    }
    else
    {
-      step = vbc->timestep;
-      vbc->timestep++;
+      step = visual->timestep;
+      visual->timestep++;
    }
    hours = (int)(step / (60*60*100));
    step %= 60*60*100;
@@ -190,12 +191,12 @@ void printTime(
    step %= 100;
    hunds = (int)step;
 
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
 }
 
-/** creates a new node entry in the VBC output file */
-SCIP_RETCODE SCIPvbcNewChild(
-   SCIP_VBC*             vbc,                /**< VBC information */
+/** creates a new node entry in the visualization output file */
+SCIP_RETCODE SCIPvisualNewChild(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -206,58 +207,58 @@ SCIP_RETCODE SCIPvbcNewChild(
    size_t parentnodenum;
    size_t nodenum;
 
-   assert(vbc != NULL);
-   assert(stat != NULL);
-   assert(node != NULL);
+   assert( visual != NULL );
+   assert( stat != NULL );
+   assert( node != NULL );
 
-   /* check, if VBC output should be created */
-   if( vbc->file == NULL )
+   /* check whether VBC output should be created */
+   if( visual->vbcfile == NULL )
       return SCIP_OKAY;
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return SCIP_OKAY;
 
    /* insert mapping node -> nodenum into hash map */
    if( stat->ncreatednodesrun >= (SCIP_Longint)INT_MAX )
    {
-      SCIPerrorMessage("too many nodes to store in the VBC file\n");
+      SCIPerrorMessage("too many nodes to store in the visualization file\n");
       return SCIP_INVALIDDATA;
    }
 
    nodenum = (size_t)stat->ncreatednodesrun;
    assert(nodenum > 0);
-   SCIP_CALL( SCIPhashmapInsert(vbc->nodenum, node, (void*)nodenum) );
+   SCIP_CALL( SCIPhashmapInsert(visual->nodenum, node, (void*)nodenum) );
 
    /* get nodenum of parent node from hash map */
-   parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(vbc->nodenum, node->parent) : 0);
+   parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, node->parent) : 0);
    assert(node->parent == NULL || parentnodenum > 0);
 
    /* get branching information */
    getBranchInfo(node, &branchvar, &branchtype, &branchbound);
 
-   printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "N %d %d %d\n", (int)parentnodenum, (int)nodenum, SCIP_VBCCOLOR_UNSOLVED);
-   printTime(vbc, stat);
+   printTime(visual, stat);
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "N %d %d %d\n", (int)parentnodenum, (int)nodenum, SCIP_VBCCOLOR_UNSOLVED);
+   printTime(visual, stat);
    if( branchvar != NULL )
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
          SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
          branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node));
    }
    else
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
    }
 
    return SCIP_OKAY;
 }
 
-/** updates a node entry in the VBC output file */
-SCIP_RETCODE SCIPvbcUpdateChild(
-   SCIP_VBC*             vbc,                /**< VBC information */
+/** updates a node entry in the visualization output file */
+SCIP_RETCODE SCIPvisualUpdateChild(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -267,36 +268,36 @@ SCIP_RETCODE SCIPvbcUpdateChild(
    SCIP_Real branchbound;
    size_t nodenum;
 
-   assert(vbc != NULL);
-   assert(stat != NULL);
-   assert(node != NULL);
+   assert( visual != NULL );
+   assert( stat != NULL );
+   assert( node != NULL );
 
    /* check, if VBC output should be created */
-   if( vbc->file == NULL )
+   if( visual->vbcfile == NULL )
       return SCIP_OKAY;
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return SCIP_OKAY;
 
    /* get node num from hash map */
-   nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
+   nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, node);
    assert(nodenum > 0);
 
    /* get branching information */
    getBranchInfo(node, &branchvar, &branchtype, &branchbound);
 
-   printTime(vbc, stat);
+   printTime(visual, stat);
    if( branchvar != NULL )
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
          SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
          branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node));
    }
    else
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
    }
 
@@ -306,31 +307,31 @@ SCIP_RETCODE SCIPvbcUpdateChild(
 /** changes the color of the node to the given color */
 static
 void vbcSetColor(
-   SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node,               /**< node to change color for */
    SCIP_VBCCOLOR         color               /**< new color of node, or SCIP_VBCCOLOR_NONE */
    )
 {
-   assert(vbc != NULL);
+   assert( visual != NULL );
    assert(node != NULL);
 
-   if( vbc->file != NULL && color != SCIP_VBCCOLOR_NONE && (node != vbc->lastnode || color != vbc->lastcolor) )
+   if( visual->vbcfile != NULL && color != SCIP_VBCCOLOR_NONE && (node != visual->lastnode || color != visual->lastcolor) )
    {
       size_t nodenum;
 
-      nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
+      nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, node);
       assert(nodenum > 0);
-      printTime(vbc, stat);
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "P %d %d\n", (int)nodenum, color);
-      vbc->lastnode = node;
-      vbc->lastcolor = color;
+      printTime(visual, stat);
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "P %d %d\n", (int)nodenum, color);
+      visual->lastnode = node;
+      visual->lastcolor = color;
    }
 }
 
 /** changes the color of the node to the color of solved nodes */
-void SCIPvbcSolvedNode(
-   SCIP_VBC*             vbc,                /**< VBC information */
+void SCIPvisualSolvedNode(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node, that was solved */
    )
@@ -340,46 +341,46 @@ void SCIPvbcSolvedNode(
    SCIP_Real branchbound;
    size_t nodenum;
 
-   assert(vbc != NULL);
+   assert( visual != NULL );
    assert(stat != NULL);
    assert(node != NULL);
 
    /* check, if VBC output should be created */
-   if( vbc->file == NULL )
+   if( visual->vbcfile == NULL )
       return;
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return;
 
    /* get node num from hash map */
-   nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
+   nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, node);
    assert(nodenum > 0);
 
    /* get branching information */
    getBranchInfo(node, &branchvar, &branchtype, &branchbound);
 
-   printTime(vbc, stat);
+   printTime(visual, stat);
 
    if( branchvar != NULL )
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
          SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
          branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node), stat->nnodes);
    }
    else
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node), stat->nnodes);
    }
 
-   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLVED);
+   vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLVED);
 }
 
 /** changes the color of the node to the color of cutoff nodes */
-void SCIPvbcCutoffNode(
-   SCIP_VBC*             vbc,                /**< VBC information */
+void SCIPvisualCutoffNode(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node, that was cut off */
    )
@@ -389,143 +390,142 @@ void SCIPvbcCutoffNode(
    SCIP_Real branchbound;
    size_t nodenum;
 
-   assert(vbc != NULL);
+   assert( visual != NULL );
    assert(stat != NULL);
    assert(node != NULL);
 
    /* check, if VBC output should be created */
-   if( vbc->file == NULL )
+   if( visual->vbcfile == NULL )
       return;
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return;
 
    /* get node num from hash map */
-   nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
+   nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, node);
    assert(nodenum > 0);
 
    /* get branching information */
    getBranchInfo(node, &branchvar, &branchtype, &branchbound);
 
-   printTime(vbc, stat);
+   printTime(visual, stat);
 
    if( branchvar != NULL )
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
          SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
          branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node), stat->nnodes);
    }
    else
    {
-      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node), stat->nnodes);
    }
 
-   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CUTOFF);
+   vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_CUTOFF);
 }
 
 /** changes the color of the node to the color of nodes where a conflict constraint was found */
-void SCIPvbcFoundConflict(
-   SCIP_VBC*             vbc,                /**< VBC information */
+void SCIPvisualFoundConflict(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node, where the conflict was found */
    )
 {
    assert(node != NULL);
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return;
 
-   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CONFLICT);
+   vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_CONFLICT);
 }
 
 /** changes the color of the node to the color of nodes that were marked to be repropagated */
-void SCIPvbcMarkedRepropagateNode(
-   SCIP_VBC*             vbc,                /**< VBC information */
+void SCIPvisualMarkedRepropagateNode(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node, that was marked to be repropagated */
    )
 {
    assert(node != NULL);
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return;
 
    /* if the node number is zero, then SCIP is currently in probing and wants to mark a probing node; however this node
     * is not part of the search tree */
    if( SCIPnodeGetNumber(node) > 0 )
-      vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_MARKREPROP);
+      vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_MARKREPROP);
 }
 
 /** changes the color of the node to the color of repropagated nodes */
-void SCIPvbcRepropagatedNode(
-   SCIP_VBC*             vbc,                /**< VBC information */
+void SCIPvisualRepropagatedNode(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node, that was repropagated */
    )
 {
    assert(node != NULL);
 
-   /* vbc is disabled on probing nodes */
+   /* visualization is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return;
 
-   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_REPROP);
+   vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_REPROP);
 }
 
 /** changes the color of the node to the color of nodes with a primal solution */
-void SCIPvbcFoundSolution(
-   SCIP_VBC*             vbc,                /**< VBC information */
+void SCIPvisualFoundSolution(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node where the solution was found, or NULL */
    )
 {
-   if( node != NULL && set->vbc_dispsols )
+   if( node != NULL && set->visual_dispsols )
    {
-      /* vbc is disabled on probing nodes */
+      /* visualization is disabled on probing nodes */
       if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
 	 return;
 
-      vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
+      vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLUTION);
    }
 }
 
-/** outputs a new global lower bound to the VBC output file */
-void SCIPvbcLowerbound(
-   SCIP_VBC*             vbc,                /**< VBC information */
+/** outputs a new global lower bound to the visualization output file */
+void SCIPvisualLowerbound(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             lowerbound          /**< new lower bound */
    )
 {
-   assert(vbc != NULL);
+   assert( visual != NULL );
 
    /* check, if VBC output should be created */
-   if( vbc->file == NULL )
+   if( visual->vbcfile == NULL )
       return;
 
-   printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "L %f\n", lowerbound);
+   printTime(visual, stat);
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "L %f\n", lowerbound);
 }
 
-/** outputs a new global upper bound to the VBC output file */
-void SCIPvbcUpperbound(
-   SCIP_VBC*             vbc,                /**< VBC information */
+/** outputs a new global upper bound to the visualization output file */
+void SCIPvisualUpperbound(
+   SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             upperbound          /**< new upper bound */
    )
 {
-   assert(vbc != NULL);
+   assert( visual != NULL );
 
    /* check, if VBC output should be created */
-   if( vbc->file == NULL )
+   if( visual->vbcfile == NULL )
       return;
 
-   printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "U %f\n", upperbound);
+   printTime(visual, stat);
+   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "U %f\n", upperbound);
 }
-

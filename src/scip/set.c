@@ -72,6 +72,7 @@
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
 #define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
 
+
 /* Conflict Analysis */
 
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.10 /**< maximal fraction of variables involved in a conflict constraint */
@@ -139,6 +140,7 @@
 
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 
+
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -202,10 +204,12 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 
+
 /* NLP */
 
 #define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be chosen by priority */
 #define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be always disabled? */
+
 
 /* Memory */
 
@@ -242,8 +246,10 @@
 
 
 /* Node Selection */
+
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
+
 
 /* Presolving */
 
@@ -261,6 +267,7 @@
                                                  *   for an additional restart */
 #define SCIP_DEFAULT_PRESOL_DONOTMULTAGGR FALSE /**< should multi-aggregation of variables be forbidden? */
 #define SCIP_DEFAULT_PRESOL_DONOTAGGR     FALSE /**< should aggregation of variables be forbidden? */
+
 
 /* Pricing */
 
@@ -319,14 +326,15 @@
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 
 
-/* VBC Tool output */
-#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
-                                                 *   created */
-#define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
-                                                 *   in VBC output? */
-#define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
+/* visualization output */
+
+#define SCIP_DEFAULT_VISUAL_VBCFILENAME     "-" /**< name of the VBC tool output file, or "-" if no VBC tool output should be created */
+#define SCIP_DEFAULT_VISUAL_REALTIME       TRUE /**< should the real solving time be used instead of a time step counter in visualization? */
+#define SCIP_DEFAULT_VISUAL_DISPSOLS      FALSE /**< should the node where solutions are found be visualized? */
+
 
 /* Reading */
+
 #define SCIP_DEFAULT_READ_INITIALCONSS     TRUE /**< should model constraints be marked as initial? */
 #define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
 #define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
@@ -335,11 +343,15 @@
                                                  *   0; using this parameter we can change the starting index to be
                                                  *   different */
 
+
 /* Writing */
+
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
 
+
 /* Emphasis settings */
+
 #define SCIP_DEFAULT_EMPH_HEURISTICS          0 /**< heuristic emphasis setting */
 
 
@@ -794,7 +806,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
    (*set)->extcodessize = 0;
-   (*set)->vbc_filename = NULL;
+   (*set)->visual_vbcfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->mem_externestim = 0;
@@ -1707,21 +1719,21 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->time_reading, FALSE, SCIP_DEFAULT_TIME_READING,
          NULL, NULL) );
 
-   /* VBC tool parameters */
+   /* visualization parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
-         "vbc/filename",
-         "name of the VBC Tool output file, or - if no VBC Tool output should be created",
-         &(*set)->vbc_filename, FALSE, SCIP_DEFAULT_VBC_FILENAME,
+         "visual/vbcfilename",
+         "name of the VBC tool output file, or - if no VBC tool output should be created",
+         &(*set)->visual_vbcfilename, FALSE, SCIP_DEFAULT_VISUAL_VBCFILENAME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "vbc/realtime",
-         "should the real solving time be used instead of a time step counter in VBC output?",
-         &(*set)->vbc_realtime, FALSE, SCIP_DEFAULT_VBC_REALTIME,
+         "visual/realtime",
+         "should the real solving time be used instead of a time step counter in visualization?",
+         &(*set)->visual_realtime, FALSE, SCIP_DEFAULT_VISUAL_REALTIME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "vbc/dispsols",
+         "visual/dispsols",
          "should the node where solutions are found be visualized?",
-         &(*set)->vbc_dispsols, FALSE, SCIP_DEFAULT_VBC_DISPSOLS,
+         &(*set)->visual_dispsols, FALSE, SCIP_DEFAULT_VISUAL_DISPSOLS,
          NULL, NULL) );
 
    /* Reading parameters */

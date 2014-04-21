@@ -28,7 +28,7 @@
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPnodepqBound(
          if( !parentfelldown )
             pos--;
 
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, stat, node);
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );

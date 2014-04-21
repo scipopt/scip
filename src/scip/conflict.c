@@ -119,7 +119,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/history.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"
@@ -2234,8 +2234,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
       SCIPdebugMessage("flushing %d conflict sets at focus depth %d (maxconflictsets: %d, maxsize: %d)\n",
          conflict->nconflictsets, focusdepth, maxconflictsets, maxsize);
 
-      /* mark the focus node to have produced conflict sets in the VBC tool output */
-      SCIPvbcFoundConflict(stat->vbc, stat, tree->path[focusdepth]);
+      /* mark the focus node to have produced conflict sets in the visualization output */
+      SCIPvisualFoundConflict(stat->visual, stat, tree->path[focusdepth]);
 
       /* insert the conflict sets at the corresponding nodes */
       nconflictsetsused = 0;

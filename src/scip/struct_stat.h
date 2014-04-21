@@ -33,7 +33,7 @@
 #include "scip/def.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
-#include "scip/type_vbc.h"
+#include "scip/type_visual.h"
 #include "scip/type_history.h"
 
 #ifdef __cplusplus
@@ -130,8 +130,8 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
-   SCIP_VBC*             vbc;                /**< VBC Tool information */
-   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
+   SCIP_VISUAL*          visual;             /**< visualization information */
+   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */

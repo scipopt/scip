@@ -13,30 +13,31 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_vbc.h
- * @brief  datastructures for VBC Tool output
+/**@file   struct_visual.h
+ * @brief  datastructures for output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_VBC_H__
-#define __SCIP_STRUCT_VBC_H__
+#ifndef __SCIP_STRUCT_VISUAL_H__
+#define __SCIP_STRUCT_VISUAL_H__
 
 #include <stdio.h>
 
 #include "scip/def.h"
-#include "scip/type_vbc.h"
+#include "scip/type_visual.h"
 #include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** VBC Tool data structure */
-struct SCIP_Vbc
+/** visual data structure */
+struct SCIP_Visual
 {
-   FILE*                 file;               /**< file to store VBC information */
+   FILE*                 vbcfile;            /**< file to store VBC information */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
    SCIP_Longint          timestep;           /**< time step counter for non real time output */

@@ -33,7 +33,7 @@
 #include "scip/prob.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/mem.h"
 #include "scip/history.h"
 
@@ -71,7 +71,7 @@ SCIP_RETCODE SCIPstatCreate(
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
-   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc, messagehdlr) );
+   SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -116,7 +116,7 @@ SCIP_RETCODE SCIPstatFree(
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
-   SCIPvbcFree(&(*stat)->vbc);
+   SCIPvisualFree(&(*stat)->visual);
 
    BMSfreeMemory(stat);
 

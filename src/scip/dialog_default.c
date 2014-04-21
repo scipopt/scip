@@ -4447,13 +4447,12 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
-   /* set vbc */
-   if( !SCIPdialogHasEntry(setmenu, "vbc") )
+   /* set visualization */
+   if( !SCIPdialogHasEntry(setmenu, "visual") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
-            NULL,
-            SCIPdialogExecMenu, NULL, NULL,
-            "vbc", "change parameters for VBC tool output", TRUE, NULL) );
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "visual", "change parameters for visualization output", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

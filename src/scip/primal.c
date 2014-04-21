@@ -25,7 +25,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -277,10 +277,10 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventqueue, tree, lp, cutoffbound) );
    }
 
-   /* update upper bound in VBC output */
+   /* update upper bound in visualization output */
    if( SCIPtreeGetCurrentDepth(tree) >= 0 )
    {
-      SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
+      SCIPvisualUpperbound(stat->visual, stat, primal->upperbound);
    }
 
    return SCIP_OKAY;
@@ -605,8 +605,8 @@ SCIP_RETCODE primalAddSol(
          (SCIP_Real)(primal->nsols - insertpos)/(SCIP_Real)(2.0*primal->nsols - 1.0));
    }
 
-   /* change color of node in VBC output */
-   SCIPvbcFoundSolution(stat->vbc, set, stat, SCIPtreeGetCurrentNode(tree));
+   /* change color of node in visualization output */
+   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree));
 
    /* check, if the global upper bound has to be updated */
    if( obj < primal->upperbound )
