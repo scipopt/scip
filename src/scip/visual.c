@@ -17,6 +17,13 @@
  * @brief  methods for creating output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ *
+ * Output can be generated for the following visualization tools:
+ *
+ * - VBCTOOL - a graphical interface for Visualization of Branch Cut algorithms @n
+ *   See <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">VBCTOOL</a>.
+ * - BAK: Branch-and-bound Analysis Kit @n
+ *   BAK is available through COIN-OR, see <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">BAK</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
