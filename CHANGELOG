@@ -5,6 +5,7 @@ features:
 - new distribution branching rule to base decisions on row activity (normal) distribution over domain space
 - new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible and to
   improve them by a one-opt local search.
+- can now output information for BAK: Branch-and-bound Analysis Kit
 
 parameters:
 - rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns

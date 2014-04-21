@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
    SCIP_NODE*            node                /**< new node, that was created */
    );
 
-/** changes the color of the node to the color of solved nodes */
+/** marks node as solved in visualization output file */
 EXTERN
 void SCIPvisualSolvedNode(
    SCIP_VISUAL*          visual,             /**< visualization information */

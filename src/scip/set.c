@@ -329,6 +329,7 @@
 /* visualization output */
 
 #define SCIP_DEFAULT_VISUAL_VBCFILENAME     "-" /**< name of the VBC tool output file, or "-" if no VBC tool output should be created */
+#define SCIP_DEFAULT_VISUAL_BAKFILENAME     "-" /**< name of the BAK tool output file, or "-" if no BAK tool output should be created */
 #define SCIP_DEFAULT_VISUAL_REALTIME       TRUE /**< should the real solving time be used instead of a time step counter in visualization? */
 #define SCIP_DEFAULT_VISUAL_DISPSOLS      FALSE /**< should the node where solutions are found be visualized? */
 
@@ -807,6 +808,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nextcodes = 0;
    (*set)->extcodessize = 0;
    (*set)->visual_vbcfilename = NULL;
+   (*set)->visual_bakfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->mem_externestim = 0;
@@ -1724,6 +1726,11 @@ SCIP_RETCODE SCIPsetCreate(
          "visual/vbcfilename",
          "name of the VBC tool output file, or - if no VBC tool output should be created",
          &(*set)->visual_vbcfilename, FALSE, SCIP_DEFAULT_VISUAL_VBCFILENAME,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "visual/bakfilename",
+         "name of the BAK tool output file, or - if no BAK tool output should be created",
+         &(*set)->visual_bakfilename, FALSE, SCIP_DEFAULT_VISUAL_BAKFILENAME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "visual/realtime",
