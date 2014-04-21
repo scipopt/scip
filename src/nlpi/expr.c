@@ -7915,15 +7915,13 @@ SCIP_RETCODE SCIPexprParse(
    assert(varnames != NULL);
 
    *nvars = 0;
-   retcode = SCIP_OKAY;
 
    /* create a hash table for variable names and corresponding expression index
     * for each variable, we store its name, prefixed with the assigned index in the first sizeof(int) bytes
     */
    SCIP_CALL( SCIPhashtableCreate(&vartable, blkmem, 10, exprparseVarTableGetKey, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
 
-   retcode = exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames, vartable,
-      0);
+   retcode = exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames, vartable, 0);
 
    SCIPhashtableFree(&vartable);
 
