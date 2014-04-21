@@ -470,7 +470,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/stat.o \
 			scip/tree.o \
 			scip/var.o \
-			scip/vbc.o \
+			scip/visual.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \

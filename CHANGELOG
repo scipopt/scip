@@ -3,7 +3,6 @@ SCIP version NEXT
 
 features:
 - new distribution branching rule to base decisions on row activity (normal) distribution over domain space
-
 - new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible and to
   improve them by a one-opt local search.
 
@@ -13,6 +12,9 @@ parameters:
 performance improvements:
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
   coefficients
+
+interface:
+- rename all file "*_vbc.?" to the more generic "*_visual.?"
 
 SCIP version 3.1.1
 ==================
