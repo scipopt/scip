@@ -180,7 +180,7 @@ void getRowData(
    SCIP_Real*            lhs,                /**< lhs of the row */
    SCIP_Real*            rhs,                /**< rhs of the row */
    int**                 indexpointer,       /**< pointer to store column indices which belong to the nonzeros */
-   int*                  nrowvals            /**< pointer to store number of nonzeros in the desired row */
+   int*                  nrowvals            /**< pointer to store number of nonzeros in the desired row (or NULL) */
    )
 {
    int arrayposition;
@@ -190,10 +190,13 @@ void getRowData(
 
    arrayposition = matrix->rowmatbegin[rowindex];
 
-   if( nrowvals != NULL && rowindex == matrix->nrows - 1 )
-      *nrowvals = matrix->nnonzs - arrayposition;
-   else if( nrowvals != NULL )
-      *nrowvals = matrix->rowmatbegin[rowindex + 1] - arrayposition;
+   if ( nrowvals != NULL )
+   {
+      if( rowindex == matrix->nrows - 1 )
+         *nrowvals = matrix->nnonzs - arrayposition;
+      else
+         *nrowvals = matrix->rowmatbegin[rowindex + 1] - arrayposition; /*lint !e679*/
+   }
 
    if( valpointer != NULL )
       *valpointer = &(matrix->rowmatvals[arrayposition]);
@@ -229,7 +232,7 @@ void getColumnData(
       if( colindex == matrix->ncols - 1 )
          *ncolvals = matrix->nnonzs - arrayposition;
       else
-         *ncolvals = matrix->colmatbegin[colindex + 1] - arrayposition;
+         *ncolvals = matrix->colmatbegin[colindex + 1] - arrayposition; /*lint !e679*/
    }
    if( valpointer != NULL )
       *valpointer = &(matrix->colmatvals[arrayposition]);
@@ -1022,7 +1025,7 @@ SCIP_RETCODE getOptimalShiftingValue(
       /* if we reached the last entry for the current step value, we have finished computing its sum and
        * update the step defining the minimum sum
        */
-      if( (i == nrows-1 || steps[i+1] > steps[i]) && sum < *rowviolations )
+      if( (i == nrows-1 || steps[i+1] > steps[i]) && sum < *rowviolations ) /*lint !e679*/
       {
          *rowviolations = sum;
          *beststep = direction * steps[i];
