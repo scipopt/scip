@@ -8663,6 +8663,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    /* get SCIP variables corresponding to variable names stored in varnames buffer */
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
 
+   assert( retcode == SCIP_OKAY );
    curvarname = varnames;
    for( i = 0; i < nvars; ++i )
    {
@@ -8700,7 +8701,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIPfreeBufferArray(scip, &exprvars);
    SCIPfreeBufferArray(scip, &varnames);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /*
