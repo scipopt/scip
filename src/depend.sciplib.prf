@@ -5407,7 +5407,7 @@ $(LIBOBJDIR)/scip/branch.o: src/scip/branch.c src/scip/def.h src/scip/type_retco
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/paramset.h src/scip/pub_paramset.h src/scip/event.h \
  src/scip/type_lp.h src/scip/type_primal.h src/scip/pub_event.h \
  src/scip/struct_event.h src/scip/lp.h src/scip/pub_lp.h \
@@ -5474,8 +5474,8 @@ $(LIBOBJDIR)/scip/conflict.o: src/scip/conflict.c src/scip/def.h src/scip/type_r
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
- src/scip/vbc.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/visual.h src/scip/history.h src/scip/struct_history.h \
  src/scip/paramset.h src/scip/pub_paramset.h src/scip/lp.h \
  src/scip/type_lp.h src/scip/pub_lp.h src/lpi/type_lpi.h \
  src/scip/struct_lp.h src/scip/var.h src/scip/type_primal.h \
@@ -5513,7 +5513,7 @@ $(LIBOBJDIR)/scip/cons.o: src/scip/cons.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/var.h src/scip/type_lp.h src/scip/type_primal.h \
  src/scip/pub_var.h src/scip/type_implics.h src/scip/struct_var.h \
  src/scip/implics.h src/scip/pub_implics.h src/scip/struct_implics.h \
@@ -5538,7 +5538,7 @@ $(LIBOBJDIR)/scip/cutpool.o: src/scip/cutpool.c src/scip/def.h src/scip/type_ret
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/lp.h src/scip/type_lp.h src/scip/pub_lp.h src/lpi/type_lpi.h \
  src/scip/struct_lp.h src/scip/cons.h src/scip/type_sepastore.h \
  src/scip/pub_cons.h src/scip/struct_cons.h src/scip/sepa.h \
@@ -5628,7 +5628,7 @@ $(LIBOBJDIR)/scip/disp.o: src/scip/disp.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/scip.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/scip.h \
  src/scip/type_lp.h src/scip/type_nlp.h src/scip/pub_branch.h \
  src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/struct_cons.h \
  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
@@ -5739,7 +5739,7 @@ $(LIBOBJDIR)/scip/implics.o: src/scip/implics.c src/scip/def.h src/scip/type_ret
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/event.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/event.h \
  src/scip/type_lp.h src/scip/type_primal.h src/scip/pub_event.h \
  src/scip/struct_event.h src/scip/var.h src/scip/pub_var.h \
  src/scip/type_implics.h src/scip/struct_var.h src/scip/implics.h \
@@ -5769,7 +5769,7 @@ $(LIBOBJDIR)/scip/lp.o: src/scip/lp.c src/scip/def.h src/scip/type_retcode.h \
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/intervalarith.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/intervalarith.h \
  src/scip/clock.h src/scip/misc.h src/scip/lp.h src/scip/type_lp.h \
  src/scip/pub_lp.h src/lpi/type_lpi.h src/scip/struct_lp.h src/scip/var.h \
  src/scip/type_primal.h src/scip/pub_var.h src/scip/type_implics.h \
@@ -5803,7 +5803,7 @@ $(LIBOBJDIR)/scip/nlp.o: src/scip/nlp.c src/scip/def.h src/scip/type_retcode.h \
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/intervalarith.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/intervalarith.h \
  src/scip/clock.h src/scip/nlp.h src/scip/type_lp.h \
  src/scip/type_primal.h src/scip/pub_nlp.h src/scip/type_nlp.h \
  src/scip/var.h src/scip/pub_var.h src/scip/type_implics.h \
@@ -5832,8 +5832,8 @@ $(LIBOBJDIR)/scip/nodesel.o: src/scip/nodesel.c src/scip/def.h src/scip/type_ret
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/clock.h \
  src/scip/stat.h src/scip/type_prob.h src/scip/type_mem.h \
- src/scip/struct_stat.h src/scip/type_vbc.h src/scip/type_history.h \
- src/scip/vbc.h src/scip/paramset.h src/scip/pub_paramset.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/type_history.h \
+ src/scip/visual.h src/scip/paramset.h src/scip/pub_paramset.h \
  src/scip/tree.h src/scip/type_lp.h src/scip/type_primal.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/lpi/type_lpi.h \
  src/scip/scip.h src/scip/type_nlp.h src/scip/pub_branch.h \
@@ -6033,7 +6033,7 @@ $(LIBOBJDIR)/scip/primal.o: src/scip/primal.c src/scip/def.h src/scip/type_retco
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/vbc.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/visual.h \
  src/scip/event.h src/scip/type_lp.h src/scip/type_primal.h \
  src/scip/pub_event.h src/scip/struct_event.h src/scip/lp.h \
  src/scip/pub_lp.h src/lpi/type_lpi.h src/scip/struct_lp.h src/scip/var.h \
@@ -6059,7 +6059,7 @@ $(LIBOBJDIR)/scip/prob.o: src/scip/prob.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/event.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/event.h \
  src/scip/type_lp.h src/scip/type_primal.h src/scip/pub_event.h \
  src/scip/struct_event.h src/scip/lp.h src/scip/pub_lp.h \
  src/lpi/type_lpi.h src/scip/struct_lp.h src/scip/var.h \
@@ -6085,7 +6085,7 @@ $(LIBOBJDIR)/scip/prop.o: src/scip/prop.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/paramset.h src/scip/pub_paramset.h src/scip/var.h \
  src/scip/type_lp.h src/scip/type_primal.h src/scip/pub_var.h \
  src/scip/type_implics.h src/scip/struct_var.h src/scip/implics.h \
@@ -6144,7 +6144,7 @@ $(LIBOBJDIR)/scip/relax.o: src/scip/relax.c src/scip/def.h src/scip/type_retcode
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/paramset.h src/scip/pub_paramset.h src/scip/scip.h \
  src/scip/type_lp.h src/scip/type_nlp.h src/scip/pub_branch.h \
  src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/struct_cons.h \
@@ -6183,8 +6183,8 @@ $(LIBOBJDIR)/scip/scip.o: src/scip/scip.c src/scip/def.h src/scip/type_retcode.h
  src/scip/type_dialog.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
  src/scip/pub_misc.h src/scip/type_misc.h src/scip/struct_misc.h \
  src/scip/stat.h src/scip/type_prob.h src/scip/type_mem.h \
- src/scip/struct_stat.h src/scip/type_vbc.h src/scip/type_history.h \
- src/scip/clock.h src/scip/vbc.h src/scip/interrupt.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/type_history.h \
+ src/scip/clock.h src/scip/visual.h src/scip/interrupt.h \
  src/scip/type_interrupt.h src/scip/mem.h src/scip/struct_mem.h \
  src/scip/misc.h src/scip/history.h src/scip/struct_history.h \
  src/scip/event.h src/scip/type_lp.h src/scip/type_primal.h \
@@ -6414,7 +6414,7 @@ $(LIBOBJDIR)/scip/sepa.o: src/scip/sepa.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/paramset.h src/scip/pub_paramset.h src/scip/sepastore.h \
  src/scip/type_lp.h src/scip/type_sepastore.h src/scip/scip.h \
  src/scip/type_nlp.h src/scip/pub_branch.h src/scip/pub_conflict.h \
@@ -6450,7 +6450,7 @@ $(LIBOBJDIR)/scip/sepastore.o: src/scip/sepastore.c src/scip/def.h src/scip/type
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/lp.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/lp.h \
  src/scip/type_lp.h src/scip/pub_lp.h src/lpi/type_lpi.h \
  src/scip/struct_lp.h src/scip/var.h src/scip/type_primal.h \
  src/scip/pub_var.h src/scip/type_implics.h src/scip/struct_var.h \
@@ -6476,7 +6476,7 @@ $(LIBOBJDIR)/scip/set.o: src/scip/set.c src/scip/def.h src/scip/type_retcode.h \
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/event.h src/scip/type_lp.h src/scip/type_primal.h \
  src/scip/pub_event.h src/scip/struct_event.h src/scip/lp.h \
  src/scip/pub_lp.h src/lpi/type_lpi.h src/scip/struct_lp.h \
@@ -6515,7 +6515,7 @@ $(LIBOBJDIR)/scip/sol.o: src/scip/sol.c src/scip/def.h src/scip/type_retcode.h \
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/misc.h src/scip/lp.h src/scip/type_lp.h src/scip/pub_lp.h \
  src/lpi/type_lpi.h src/scip/struct_lp.h src/scip/nlp.h \
  src/scip/type_primal.h src/scip/pub_nlp.h src/scip/type_nlp.h \
@@ -6543,8 +6543,8 @@ $(LIBOBJDIR)/scip/solve.o: src/scip/solve.c src/scip/def.h src/scip/type_retcode
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
- src/scip/vbc.h src/scip/interrupt.h src/scip/type_interrupt.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/visual.h src/scip/interrupt.h src/scip/type_interrupt.h \
  src/scip/event.h src/scip/type_lp.h src/scip/type_primal.h \
  src/scip/pub_event.h src/scip/struct_event.h src/scip/lp.h \
  src/scip/pub_lp.h src/lpi/type_lpi.h src/scip/struct_lp.h src/scip/var.h \
@@ -6585,9 +6585,10 @@ $(LIBOBJDIR)/scip/stat.o: src/scip/stat.c src/scip/def.h src/scip/type_retcode.h
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/prob.h \
  src/scip/type_lp.h src/scip/type_implics.h src/scip/type_prob.h \
  src/scip/type_primal.h src/scip/struct_prob.h src/scip/stat.h \
- src/scip/type_mem.h src/scip/struct_stat.h src/scip/type_vbc.h \
- src/scip/type_history.h src/scip/clock.h src/scip/vbc.h src/scip/mem.h \
- src/scip/struct_mem.h src/scip/history.h src/scip/struct_history.h
+ src/scip/type_mem.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/type_history.h src/scip/clock.h src/scip/visual.h \
+ src/scip/mem.h src/scip/struct_mem.h src/scip/history.h \
+ src/scip/struct_history.h
 $(LIBOBJDIR)/scip/tree.o: src/scip/tree.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/set.h src/blockmemshell/memory.h src/scip/buffer.h \
@@ -6603,8 +6604,8 @@ $(LIBOBJDIR)/scip/tree.o: src/scip/tree.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
- src/scip/vbc.h src/scip/event.h src/scip/type_lp.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/visual.h src/scip/event.h src/scip/type_lp.h \
  src/scip/type_primal.h src/scip/pub_event.h src/scip/struct_event.h \
  src/scip/lp.h src/scip/pub_lp.h src/lpi/type_lpi.h src/scip/struct_lp.h \
  src/scip/var.h src/scip/pub_var.h src/scip/type_implics.h \
@@ -6652,10 +6653,10 @@ $(LIBOBJDIR)/scip/var.o: src/scip/var.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_dialog.h src/nlpi/type_nlpi.h \
  src/nlpi/type_expr.h src/scip/sol.h src/scip/type_nlp.h \
  src/scip/pub_sol.h src/scip/struct_sol.h src/scip/stat.h \
- src/scip/struct_stat.h src/scip/type_vbc.h src/scip/tree.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/tree.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/scip/debug.h \
  src/scip/pub_history.h
-$(LIBOBJDIR)/scip/vbc.o: src/scip/vbc.c src/blockmemshell/memory.h src/scip/set.h \
+$(LIBOBJDIR)/scip/visual.o: src/scip/visual.c src/blockmemshell/memory.h src/scip/set.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/buffer.h \
  src/scip/type_set.h src/scip/type_buffer.h src/scip/type_stat.h \
@@ -6670,14 +6671,14 @@ $(LIBOBJDIR)/scip/vbc.o: src/scip/vbc.c src/blockmemshell/memory.h src/scip/set.
  src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_misc.h \
  src/scip/type_misc.h src/scip/struct_misc.h src/scip/stat.h \
  src/scip/type_prob.h src/scip/type_mem.h src/scip/struct_stat.h \
- src/scip/type_vbc.h src/scip/type_history.h src/scip/clock.h \
+ src/scip/type_visual.h src/scip/type_history.h src/scip/clock.h \
  src/scip/var.h src/scip/type_lp.h src/scip/type_primal.h \
  src/scip/pub_var.h src/scip/type_implics.h src/scip/struct_var.h \
  src/scip/implics.h src/scip/pub_implics.h src/scip/struct_implics.h \
  src/scip/history.h src/scip/struct_history.h src/scip/event.h \
  src/scip/pub_event.h src/scip/struct_event.h src/scip/tree.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/lpi/type_lpi.h \
- src/scip/vbc.h src/scip/struct_vbc.h
+ src/scip/visual.h src/scip/struct_visual.h
 $(LIBOBJDIR)/tclique/tclique_branch.o: src/tclique/tclique_branch.c src/tclique/tclique.h \
  src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
