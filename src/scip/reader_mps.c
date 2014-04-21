@@ -2921,7 +2921,7 @@ SCIP_RETCODE checkVarnames(
 
       /* insert variable with variable name into hash map */
       assert( !SCIPhashmapExists(*varnameHashmap, var) );
-      SCIP_CALL( SCIPhashmapInsert(*varnameHashmap, var, (void*) (size_t) varname) );
+      SCIP_CALL( SCIPhashmapInsert(*varnameHashmap, var, (void*) varname) );
 
       (*varnames)[v] = varname;
    }
@@ -3076,7 +3076,7 @@ void printColumnSection(
 
       /* get variable name */
       assert ( SCIPhashmapExists(varnameHashmap, var) );
-      varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
+      varname = (const char*) SCIPhashmapGetImage(varnameHashmap, var);
 
       /* output all entries of the same variable */
       do
@@ -4262,7 +4262,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* insert variable with variable name into hash map */
          varnames[nvars + c] = namestr;
          assert( !SCIPhashmapExists(varnameHashmap, var) );
-         SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
+         SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) namestr) );
 
          /* output row type (it is an equation) */
          SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) ); /* note that namestr above is freed via varnames */
@@ -4322,7 +4322,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
 	    /* insert variable with variable name into hash map */
 	    assert(!SCIPhashmapExists(varnameHashmap, var));
-	    SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
+	    SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) namestr) );
 
 	    /* add the fixed variables to the sparse matrix, needed for columns section */
 	    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
@@ -4379,7 +4379,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          {
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             printStart(scip, file, "", varname, (int) maxnamelen);
 
@@ -4408,7 +4408,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          {
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             printStart(scip, file, "", varname, (int) maxnamelen);
 
@@ -4456,7 +4456,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, quadvarterms[v].var) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, quadvarterms[v].var);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, quadvarterms[v].var);
 
             /* get coefficient as string */
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", quadvarterms[v].sqrcoef);
@@ -4476,11 +4476,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             /* get name of first variable */
             assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var1) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var1);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var1);
 
             /* get name of second variable */
             assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var2) );
-            varname2 = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var2);
+            varname2 = (const char*) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var2);
 
             /* get coefficient as string */
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.5*bilinterms[v].coef);
@@ -4527,7 +4527,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             /* get coefficient^2 as string */
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", coefs[v]*coefs[v]);
@@ -4543,7 +4543,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* get variable name */
          var = SCIPgetRhsVarSOC(scip, cons);
          assert ( SCIPhashmapExists(varnameHashmap, var) );
-         varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
+         varname = (const char*) SCIPhashmapGetImage(varnameHashmap, var);
 
          /* get -coefficient^2 as string */
          (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", -SCIPgetRhsCoefSOC(scip, cons)*SCIPgetRhsCoefSOC(scip, cons));
@@ -4583,13 +4583,13 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 0);
             assert( SCIPvarGetNegatedVar(binvar) != NULL );
             assert( SCIPhashmapExists(varnameHashmap, SCIPvarGetNegatedVar(binvar)) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, SCIPvarGetNegatedVar(binvar));
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, SCIPvarGetNegatedVar(binvar));
          }
          else
          {
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 1);
             assert ( SCIPhashmapExists(varnameHashmap, binvar) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, binvar);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, binvar);
          }
 
          /* write records */

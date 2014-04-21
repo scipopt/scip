@@ -833,7 +833,7 @@ SCIP_RETCODE SCIPapplyProximity(
 
          SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
          for( i = 0; i < nvars; i++ )
-            subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+            subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
          SCIP_CALL( createRows(scip, subscip, subvars) );
       }

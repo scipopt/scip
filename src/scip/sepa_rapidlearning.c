@@ -278,7 +278,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    for( i = 0; i < nvars; i++ )
    {
-      subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
       /* change implicit integer variables to integer type */
       if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
