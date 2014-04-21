@@ -202,6 +202,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
 #include "scip/heur_trysol.h"
+#include "scip/heur_indicator.h"
 #include "scip/pub_misc.h"
 
 
@@ -2661,111 +2662,28 @@ SCIP_RETCODE extendToCover(
       /* if the alternative polyhedron is infeasible, we found a cover */
       if ( infeasible )
       {
+         /* Note: checking for a primal solution is done in extendToCover(). */
+         SCIPdebugMessage("   size: %4d  produced possible cover with indicator variable objective value %f.\n", *size, *value);
+
          /* we currently cannot call probing if there are cuts in the sepastore; @todo fix this */
-         if ( conshdlrdata->trysolfromcover && conshdlrdata->heurtrysol != NULL && SCIPgetNCuts(scip) == 0 )
+         if ( conshdlrdata->trysolfromcover )
          {
             /* Check whether we want to try to construct a feasible solution: there should be no integer/binary variables
              * except the indicator variables. Thus, there should be no integral variables and the number of indicator
              * variables should at least (actually equal to) the number of binary variables. */
             if ( SCIPgetNIntVars(scip) == 0 && nconss >= SCIPgetNBinVars(scip) )
             {
-               SCIP_Bool lperror;
-               SCIP_Bool cutoff;
+               SCIP_HEUR* heurindicator;
 
-               SCIPdebugMessage("Trying to generate feasible solution ...\n");
-               SCIP_CALL( SCIPstartProbing(scip) );
-
-               /* fix variables */
-               for (j = 0; j < nconss; ++j)
+               heurindicator = SCIPfindHeur(scip, "indicator");
+               if ( heurindicator == NULL )
                {
-                  SCIP_CONSDATA* consdata;
-                  SCIP_VAR* binvar;
-
-                  assert( SCIPconsIsActive(conss[j]) );
-                  consdata = SCIPconsGetData(conss[j]);
-                  assert( consdata != NULL );
-                  binvar = consdata->binvar;
-                  assert( binvar != NULL );
-
-                  /* Fix binary variables not in cover to 1 and corresponding slack variables to 0. The other binary variables
-                   * are fixed to 0 */
-                  if ( ! S[j] )
-                  {
-                     SCIP_VAR* slackvar;
-
-                     /* to be sure check for non-fixed variables */
-                     if ( SCIPvarGetLbLocal(binvar) < 0.5 && SCIPvarGetUbLocal(binvar) > 0.5 )
-                     {
-                        SCIP_CALL( SCIPchgVarLbProbing(scip, binvar, 1.0) );
-                     }
-
-                     /* also fix slack variables to 0, because we cannot propagate below */
-                     slackvar = consdata->slackvar;
-                     assert( slackvar != NULL );
-                     if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(slackvar)) )
-                     {
-                        SCIP_CALL( SCIPchgVarUbProbing(scip, slackvar, 0.0) );
-                     }
-                  }
-                  else
-                  {
-                     if ( SCIPvarGetUbLocal(binvar) > 0.5 && SCIPvarGetLbLocal(binvar) < 0.5 )
-                     {
-                        SCIP_CALL( SCIPchgVarUbProbing(scip, binvar, 0.0) );
-                     }
-                  }
+                  SCIPerrorMessage("Could not find heuristic \"indictor\".\n");
+                  return SCIP_PLUGINNOTFOUND;
                }
 
-               /* Cannot call SCIPpropagateProbing() within separation - thus, we had to fix the slack variables above. */
-               SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-
-               /* the lp often reaches the objective limit - we currently do not use such solutions */
-               if ( ! lperror && ! cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-               {
-                  SCIP_Bool feasible;
-                  SCIP_SOL* psol;
-
-                  assert( conshdlrdata->heurtrysol != NULL );
-                  SCIP_CALL( SCIPcreateSol(scip, &psol, conshdlrdata->heurtrysol) );
-
-                  /* copy the current LP solution to the working solution */
-                  SCIP_CALL( SCIPlinkLPSol(scip, psol) );
-
-                  /* check solution for feasibility */
-#ifdef SCIP_DEBUG
-                  SCIP_CALL( SCIPcheckSol(scip, psol, TRUE, TRUE, TRUE, TRUE, &feasible) );
-#else
-                  /* not additional checks are needed, because this is already done in LP solve */
-                  SCIP_CALL( SCIPcheckSol(scip, psol, FALSE, FALSE, FALSE, FALSE, &feasible) );
-#endif
-
-                  /* tell heur_trysol about solution - it will pass it to SCIP */
-                  if ( feasible )
-                  {
-                     SCIP_Real objval;
-
-                     SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, psol) );
-                     objval = SCIPgetSolTransObj(scip, psol);
-                     SCIPdebugMessage("Found feasible solution of value %g.\n", objval);
-#ifdef SCIP_MORE_DEBUG
-                     SCIP_CALL( SCIPprintSol(scip, psol, NULL, FALSE) );
-#endif
-                     if ( SCIPisLT(scip, objval, conshdlrdata->objupperbound) )
-                     {
-                        if ( SCIPisObjIntegral(scip) )
-                           objval = SCIPfeasCeil(scip, objval) - (1.0 - SCIPcutoffbounddelta(scip));
-                        else
-                           objval -= SCIPcutoffbounddelta(scip);
-                        conshdlrdata->objupperbound = objval;
-                        *chgupperbound = TRUE;
-                     }
-                  }
-                  SCIP_CALL( SCIPfreeSol(scip, &psol) );
-               }
-               else
-                  SCIPdebugMessage("Search for feasible solution unsuccessful.\n");
-
-               SCIP_CALL( SCIPendProbing(scip) );
+               SCIP_CALL( SCIPheurPassIndicator(scip, heurindicator, nconss, conss, S) );
+               SCIPdebugMessage("Passed feasible solution to indicator heuristic.\n");
             }
          }
          break;

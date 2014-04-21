@@ -340,6 +340,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
 			scip/heur_zeroobj.o \
+			scip/heur_indicator.o \
 			scip/heur_intdiving.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
