@@ -98,6 +98,9 @@
 -e801  // Use of goto is deprecated
 -e740  // Unusual pointer cast (incompatible indirect types)
 
+//-e679  // Suspicious Truncation in arithmetic expression combining with pointer
+//-e507  // Size incompatibility, converting 8 byte pointer to 4 byte integral
+
 //-e506  // Constant value Boolean
 //-e534  // Ignoring return value of function
 //-e713  // loss of precision
