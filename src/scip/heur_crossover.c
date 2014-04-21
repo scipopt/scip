@@ -200,10 +200,10 @@ static void sortArray(
       j = i-1;
       while( j >= 0 && a[j] > tmp )
       {
-         a[j+1] = a[j];
+         a[j+1] = a[j]; /*lint !e679*/
          j = j-1;
       }
-      a[j+1] = tmp;
+      a[j+1] = tmp; /*lint !e679*/
    }
 }
 

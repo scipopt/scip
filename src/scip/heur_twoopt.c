@@ -947,7 +947,7 @@ SCIP_RETCODE optimize(
          DIRECTION bestmasterdir;
          DIRECTION bestslavedir;
 
-         master = vars[blockstart[b] + m];
+         master = vars[blockstart[b] + m]; /*lint !e679*/
          masterobj = SCIPvarGetObj(master);
          mastersolval = SCIPgetSolVal(scip, worksol, master);
 

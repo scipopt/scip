@@ -509,7 +509,7 @@ SCIP_RETCODE fillGlobalStartingData(
    {
       int j;
 
-      for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ )
+      for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ ) /*lint !e679*/
       {
          assert(j < propdata->ngenvbounds);
 
@@ -1332,7 +1332,7 @@ SCIP_RETCODE setUpEvents(
       int j;
 
       /* loop over all genvbounds in this component */
-      for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ )
+      for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ ) /*lint !e679*/
       {
          GENVBOUND* genvbound;
          int k;
@@ -1600,7 +1600,7 @@ SCIP_RETCODE applyGenVBounds(
 
       SCIPdebugMessage("starting in component %d at index %d\n", startingcomponents[i], startingindices[i]);
       for( j = startingindices[i]; j < propdata->componentsstart[startingcomponents[i] + 1] &&
-         *result != SCIP_CUTOFF; j++ )
+         *result != SCIP_CUTOFF; j++ ) /*lint !e679*/
       {
          assert(j < propdata->ngenvbounds);
 
