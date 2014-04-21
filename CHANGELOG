@@ -8,6 +8,9 @@ features:
 
 parameters:
 - rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
+- rename parameter "vbc/filename" to "visual/vbcfilename"
+- rename parameter "vbc/realtime" to "visual/realtime"
+- rename parameter "vbc/dispsols" to "visual/dispsols"
 
 performance improvements:
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
@@ -15,6 +18,8 @@ performance improvements:
 
 interface:
 - rename all file "*_vbc.?" to the more generic "*_visual.?"
+- submenu for setting "vbc" settings renamed to "visual"
+
 
 SCIP version 3.1.1
 ==================
