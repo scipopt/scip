@@ -8648,8 +8648,6 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       }
    }
 
-   retcode = SCIP_OKAY;
-
    /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
 
