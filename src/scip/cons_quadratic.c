@@ -10159,9 +10159,6 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                (consdata->nbilinterms == 0 && (!possquare || SCIPisInfinity(scip,  consdata->rhs))) ||
                (consdata->nbilinterms == 0 && (!negsquare || SCIPisInfinity(scip, -consdata->lhs))) )
                break;
-
-            /* invert lambda for second round */
-            lambda = 1.0 - lambda;
          }
       }
 
