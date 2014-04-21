@@ -210,17 +210,6 @@ SCIP_RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** gets number of LP rows needed for the LP relaxation of the constraint */
-static
-int consdataGetNRows(
-   SCIP_CONSDATA*        consdata            /**< constraint data */
-   )
-{
-   assert(consdata != NULL);
-
-   return consdata->nvars + 1;
-}
-
 /** catches events for the watched variable at given position */
 static
 SCIP_RETCODE consdataCatchWatchedEvents(
@@ -898,7 +887,7 @@ SCIP_RETCODE createRelaxation(
    nvars = consdata->nvars;
 
    /* get memory for rows */
-   consdata->nrows = consdataGetNRows(consdata);
+   consdata->nrows = nvars + 1;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->nrows) );
 
    /* creates LP rows corresponding to and constraint:
@@ -914,13 +903,13 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], nvars, consdata->vars, -1.0) );
 
    /* create operator rows */
-   for( i = 0; i < nvars; ++i )
+   for( i = 1; i <= nvars; ++i )
    {
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i+1], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->resvar, 1.0) );
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->vars[i], -1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
    }
 
    return SCIP_OKAY;
