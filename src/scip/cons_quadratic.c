@@ -8942,17 +8942,12 @@ SCIP_RETCODE propagateBoundsCons(
                {
                   if( quadminactinf == 0 || (quadminactinf == 1 && SCIPintervalGetInf(quadactcontr[i]) <= -intervalinfty) )
                   {
-                     /* the residual quad min activity w.r.t. quad var term i is finite */
-                     assert(!SCIPisInfinity(scip, -minquadactivity));  /*lint !e644*/
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeUpwards();
                      rhs2.sup = rhs.sup - minquadactivity;
+                     /* if the residual quad min activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadminactinf == 0 && SCIPintervalGetInf(quadactcontr[i]) != 0.0 )
-                     {
-                        /* the residual quad min activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
-                        assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(quadactcontr[i])));
                         rhs2.sup += SCIPintervalGetInf(quadactcontr[i]);
-                     }
                      SCIPintervalSetRoundingMode(roundmode);
                   }
                   else
@@ -8966,22 +8961,17 @@ SCIP_RETCODE propagateBoundsCons(
                   rhs2.sup = intervalinfty;
                }
 
-               /* setup rhs.inf = rhs.inf - (quadactivity.sup - quadactcontr[i].sup), see also above */
+               /* setup rhs2.inf = rhs.inf - (quadactivity.sup - quadactcontr[i].sup), see also above */
                if( SCIPintervalGetInf(rhs) > -intervalinfty )
                {
                   if( quadmaxactinf == 0 || (quadmaxactinf == 1 && SCIPintervalGetSup(quadactcontr[i]) >= intervalinfty) )
                   {
-                     /* the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
-                     assert(!SCIPisInfinity(scip, maxquadactivity));  /*lint !e644*/
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeDownwards();
                      rhs2.inf = rhs.inf - maxquadactivity;
-                     /* the residual quad max activity w.r.t. quad var term i is finite */
+                     /* if the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadmaxactinf == 0 && SCIPintervalGetSup(quadactcontr[i]) != 0.0 )
-                     {
-                        assert(!SCIPisInfinity(scip, SCIPintervalGetSup(quadactcontr[i])));
                         rhs2.inf += SCIPintervalGetSup(quadactcontr[i]);
-                     }
                      SCIPintervalSetRoundingMode(roundmode);
                   }
                   else
