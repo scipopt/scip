@@ -2593,6 +2593,18 @@ SCIP_RETCODE propagateCons(
                }
             }
 
+            if( SCIPisInfinity(scip, newlb) )
+            {
+               /* we cannot fix a variable to +infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->x), xlb, xub, newlb, xub);
+
+               *cutoff = TRUE;
+
+               /* analyze infeasibility */
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->x, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
+               break;
+            }
+
             if( !SCIPisInfinity(scip, -newlb) )
             {
                if( SCIPisLbBetter(scip, newlb, xlb, xub) )
@@ -2667,6 +2679,19 @@ SCIP_RETCODE propagateCons(
             if( consdata->zcoef > 0.0 )
             {
                newlb = newbd;
+
+               if( SCIPisInfinity(scip, newlb) )
+               {
+                  /* we cannot fix a variable to +infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, newlb, zub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_2, SCIP_BOUNDTYPE_LOWER) );
+                  break;
+               }
+
                if( SCIPisLbBetter(scip, newlb, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2693,6 +2718,19 @@ SCIP_RETCODE propagateCons(
             else
             {
                newub = newbd;
+
+               if( SCIPisInfinity(scip, -newub) )
+               {
+                  /* we cannot fix a variable to -infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, zlb, newub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_2, SCIP_BOUNDTYPE_UPPER) );
+                  break;
+               }
+
                if( SCIPisUbBetter(scip, newub, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2792,6 +2830,18 @@ SCIP_RETCODE propagateCons(
                }
             }
 
+            if( SCIPisInfinity(scip, -newub) )
+            {
+               /* we cannot fix a variable to -infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->x), xlb, xub, xlb, newub);
+
+               *cutoff = TRUE;
+
+               /* analyze infeasibility */
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->x, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
+               break;
+            }
+
             if( !SCIPisInfinity(scip, newub) )
             {
                if( SCIPisUbBetter(scip, newub, xlb, xub) )
@@ -2866,6 +2916,19 @@ SCIP_RETCODE propagateCons(
             if( consdata->zcoef > 0.0 )
             {
                newub = newbd;
+
+               if( SCIPisInfinity(scip, -newub) )
+               {
+                  /* we cannot fix a variable to -infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, zlb, newub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_4, SCIP_BOUNDTYPE_UPPER) );
+                  break;
+               }
+
                if( SCIPisUbBetter(scip, newub, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2892,6 +2955,19 @@ SCIP_RETCODE propagateCons(
             else
             {
                newlb = newbd;
+
+               if( SCIPisInfinity(scip, newlb) )
+               {
+                  /* we cannot fix a variable to +infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, newlb, zub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_4, SCIP_BOUNDTYPE_LOWER) );
+                  break;
+               }
+
                if( SCIPisLbBetter(scip, newlb, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
