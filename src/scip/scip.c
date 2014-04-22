@@ -21294,6 +21294,33 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
    return SCIPvarGetPseudocostCountCurrentRun(var, dir);
 }
 
+/** get pseudo cost variance of the variable, either for entire solve or only for current branch and bound run
+ *
+ *  @return returns the (corrected) variance of pseudo code information collected so far.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarPseudocostVariance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< only for pseudo costs of current branch and bound run */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostVariance", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert(var->scip == scip);
+
+   return SCIPvarGetPseudocostVariance(var, dir, onlycurrentrun);
+}
+
 /** gets the variable's pseudo cost score value for the given LP solution value
  *
  *  @return the variable's pseudo cost score value for the given LP solution value

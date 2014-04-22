@@ -13607,6 +13607,53 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    }
 }
 
+/** gets the an estimate of the variable's pseudo cost variance in direction \p dir */
+SCIP_Real SCIPvarGetPseudocostVariance(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< return pseudo cost variance only for current branch and bound run */
+   )
+{
+   assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return 0.0;
+      else
+         return SCIPvarGetPseudocostVariance(var->data.original.transvar, dir, onlycurrentrun);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      if( onlycurrentrun )
+         return SCIPhistoryGetPseudocostVariance(var->historycrun, dir);
+      else
+         return SCIPhistoryGetPseudocostVariance(var->history, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetPseudocostVariance(var->data.aggregate.var, dir, onlycurrentrun);
+      else
+         return SCIPvarGetPseudocostVariance(var->data.aggregate.var, SCIPbranchdirOpposite(dir), onlycurrentrun);
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetPseudocostVariance(var->negatedvar, SCIPbranchdirOpposite(dir), onlycurrentrun);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
 /** find the corresponding history entry if already existing, otherwise create new entry */
 static
 SCIP_RETCODE findValuehistoryEntry(

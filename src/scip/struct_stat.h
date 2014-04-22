@@ -131,7 +131,7 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
    SCIP_VBC*             vbc;                /**< VBC Tool information */
-   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
+   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */

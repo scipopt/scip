@@ -51,6 +51,8 @@
                                          *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
+#define DEFAULT_ERRORBASEDRELIABLITY FALSE /**< should reliability be based on relative errors? */
+#define DEFAULT_RELERRORTOLERANCE 0.1 /**< tolerance for relative errors to be reliable */
 
 
 /** branching rule data */
@@ -73,6 +75,8 @@ struct SCIP_BranchruleData
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
+   SCIP_Bool             errorbasedreliability; /**< should reliability be based on relative errors? */
+   SCIP_Real             relerrortolerance;  /**< tolerance for relative errors to be reliable */
 };
 
 
@@ -475,14 +479,56 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real downsize;
             SCIP_Real upsize;
             SCIP_Real size;
+            SCIP_Real relerrorup;
+            SCIP_Real relerrordown;
+            SCIP_Real relerror;
 
             /* check, if the pseudo cost score of the variable is reliable */
             downsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS);
             upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
+            relerrordown = 0.0;
+            relerrorup = 0.0;
+
+            /* use the relative error between the current mean pseudo cost value of the candidate and its upper
+             * confidence interval bound at confidence level of 95% for individual variable reliability.
+             * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
+             *
+             * the factor 1.96 comes from the 95% confidence interval
+             */
+            if( downsize >= 2.0 )
+            {
+               relerrordown = SCIPgetVarPseudocostVariance(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS, TRUE);
+               if( SCIPisFeasPositive(scip, relerrordown) )
+               {
+                  relerrordown = relerrordown / downsize;
+                  relerrordown = sqrt(relerrordown);
+                  relerrordown *= 1.96;
+                  assert(SCIPisFeasPositive(scip, SCIPgetVarPseudocostValCurrentRun(scip, branchcands[c], -1.0)));
+                  relerrordown /= SCIPgetVarPseudocostValCurrentRun(scip, branchcands[c], -1.0);
+               }
+               else
+                  relerrordown = 0.0;
+            }
+            if( upsize >= 2.0 )
+            {
+               relerrorup = SCIPgetVarPseudocostVariance(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS, TRUE);
+               if( SCIPisFeasPositive(scip, relerrorup) )
+               {
+                  relerrorup = relerrorup / downsize;
+                  relerrorup = sqrt(relerrorup);
+                  relerrorup *= 1.96;
+                  assert(SCIPisFeasPositive(scip, SCIPgetVarPseudocostValCurrentRun(scip, branchcands[c], +1.0)));
+                  relerrorup /= SCIPgetVarPseudocostVal(scip, branchcands[c], +1.0);
+               }
+               else
+                  relerrorup = 0.0;
+            }
+
+            relerror = MAX(relerrorup, relerrordown);
             /* use strong branching on variables with unreliable pseudo cost scores */
-            usesb = (size < reliable);
+            usesb = (size < reliable || (branchruledata->errorbasedreliability && relerror > branchruledata->relerrortolerance));
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
@@ -1131,6 +1177,12 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
          &branchruledata->probingbounds, TRUE, DEFAULT_PROBINGBOUNDS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/errorbasedreliability",
+         "should reliability be based on relative errors?", &branchruledata->errorbasedreliability, TRUE, DEFAULT_ERRORBASEDRELIABLITY,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/relerrortolerance", "relative error tolerance for reliability",
+         &branchruledata->relerrortolerance, TRUE, DEFAULT_RELERRORTOLERANCE, 0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
