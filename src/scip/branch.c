@@ -2308,8 +2308,8 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       else if( SCIPsetIsIntegral(set, branchpoint) )
       {
          /* if branchpoint is integral but not on bounds, then it should be one of the value {lb+1, ..., ub-1} */
-         assert(SCIPsetIsGE(set, branchpoint, lb + 1.0));
-         assert(SCIPsetIsLE(set, branchpoint, ub - 1.0));
+         assert(SCIPsetIsGE(set, SCIPsetRound(set, branchpoint), lb + 1.0));
+         assert(SCIPsetIsLE(set, SCIPsetRound(set, branchpoint), ub - 1.0));
          /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
           * @todo could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better? */
          return branchpoint - 0.5;
