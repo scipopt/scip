@@ -1297,6 +1297,14 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** gets the an estimate of the variable's pseudo cost variance in direction \p dir */
+extern
+SCIP_Real SCIPvarGetPseudocostVariance(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< return pseudo cost variance only for current branch and bound run */
+   );
+
 /** increases the VSIDS of the variable by the given weight */
 extern
 SCIP_RETCODE SCIPvarIncVSIDS(

@@ -133,6 +133,13 @@ SCIP_Real SCIPhistoryGetPseudocost(
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
+/** returns the variance of pseudo costs about the mean. */
+extern
+SCIP_Real SCIPhistoryGetPseudocostVariance(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        direction           /**< direction of variable: 1 for upwards history, 0 for downwards history */
+   );
+
 /** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in 
  *  the given branching direction
  */
@@ -260,6 +267,10 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
       ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)      \
       : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
          ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
+#define SCIPhistoryGetPseudocostVariance(history, dir)                  \
+   ( (history)->pscostcount[dir] >= 2.0 ? 1 / ((history)->pscostcount[dir] - 1)  \
+         * ((history)->pscostsquaressum[dir] - 1 / ((history)->pscostcount[dir]) * (history)->pscostsum[dir] * (history)->pscostsum[dir]) \
+         : 0.0)
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
 #define SCIPhistoryIncVSIDS(history,dir,weight) (history)->vsids[dir] += (weight)
