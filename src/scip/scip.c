@@ -38081,6 +38081,20 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPfeasCeil
 #undef SCIPfeasRound
 #undef SCIPfeasFrac
+#undef SCIPisDualfeasEQ
+#undef SCIPisDualfeasLT
+#undef SCIPisDualfeasLE
+#undef SCIPisDualfeasGT
+#undef SCIPisDualfeasGE
+#undef SCIPisDualfeasZero
+#undef SCIPisDualfeasPositive
+#undef SCIPisDualfeasNegative
+#undef SCIPisDualfeasIntegral
+#undef SCIPisDualfeasFracIntegral
+#undef SCIPdualfeasFloor
+#undef SCIPdualfeasCeil
+#undef SCIPdualfeasRound
+#undef SCIPdualfeasFrac
 #undef SCIPisLbBetter
 #undef SCIPisUbBetter
 #undef SCIPisRelEQ
@@ -38704,7 +38718,7 @@ SCIP_Real SCIPfeasCeil(
    return SCIPsetFeasCeil(scip->set, val);
 }
 
-/** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
+/** rounds value to the nearest integer in feasibility tolerance */
 SCIP_Real SCIPfeasRound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
@@ -38716,7 +38730,7 @@ SCIP_Real SCIPfeasRound(
    return SCIPsetFeasRound(scip->set, val);
 }
 
-/** returns fractional part of value, i.e. x - floor(x) */
+/** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */
 SCIP_Real SCIPfeasFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
@@ -38726,6 +38740,209 @@ SCIP_Real SCIPfeasFrac(
    assert(scip->set != NULL);
 
    return SCIPsetFeasFrac(scip->set, val);
+}
+
+/** checks, if relative difference of values is in range of dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasEQ(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return SCIPsetIsDualfeasEQ(scip->set, val1, val2);
+}
+
+/** checks, if relative difference val1 and val2 is lower than dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasLT(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return SCIPsetIsDualfeasLT(scip->set, val1, val2);
+}
+
+/** checks, if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasLE(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return SCIPsetIsDualfeasLE(scip->set, val1, val2);
+}
+
+/** checks, if relative difference of val1 and val2 is greater than dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasGT(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return SCIPsetIsDualfeasGT(scip->set, val1, val2);
+}
+
+/** checks, if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasGE(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return SCIPsetIsDualfeasGE(scip->set, val1, val2);
+}
+
+/** checks, if value is in range dual feasibility tolerance of 0.0 */
+SCIP_Bool SCIPisDualfeasZero(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsDualfeasZero(scip->set, val);
+}
+
+/** checks, if value is greater than dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasPositive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsDualfeasPositive(scip->set, val);
+}
+
+/** checks, if value is lower than -dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasNegative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsDualfeasNegative(scip->set, val);
+}
+
+/** checks, if value is integral within the LP dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsDualfeasIntegral(scip->set, val);
+}
+
+/** checks, if given fractional part is smaller than dual feasibility tolerance */
+SCIP_Bool SCIPisDualfeasFracIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsDualfeasFracIntegral(scip->set, val);
+}
+
+/** rounds value + dual feasibility tolerance down to the next integer */
+SCIP_Real SCIPdualfeasFloor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetDualfeasFloor(scip->set, val);
+}
+
+/** rounds value - dual feasibility tolerance up to the next integer */
+SCIP_Real SCIPdualfeasCeil(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetDualfeasCeil(scip->set, val);
+}
+
+/** rounds value to the nearest integer in dual feasibility tolerance */
+SCIP_Real SCIPdualfeasRound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetDualfeasRound(scip->set, val);
+}
+
+/** returns fractional part of value, i.e. x - floor(x) in dual feasibility tolerance */
+SCIP_Real SCIPdualfeasFrac(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetDualfeasFrac(scip->set, val);
 }
 
 /** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */

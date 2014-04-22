@@ -18758,7 +18758,7 @@ SCIP_Real SCIPfeasCeil(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
+/** rounds value to the nearest integer in feasibility tolerance */
 EXTERN
 SCIP_Real SCIPfeasRound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -18768,6 +18768,109 @@ SCIP_Real SCIPfeasRound(
 /** returns fractional part of value, i.e. x - floor(x) */
 EXTERN
 SCIP_Real SCIPfeasFrac(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** checks, if relative difference of values is in range of dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasEQ(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference val1 and val2 is lower than dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasLT(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasLE(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is greater than dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasGT(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasGE(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if value is in range dual feasibility tolerance of 0.0 */
+EXTERN
+SCIP_Bool SCIPisDualfeasZero(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** checks, if value is greater than dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasPositive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** checks, if value is lower than -dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasNegative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** checks, if value is integral within the LP dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** checks, if given fractional part is smaller than dual feasibility tolerance */
+EXTERN
+SCIP_Bool SCIPisDualfeasFracIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** rounds value + dual feasibility tolerance down to the next integer */
+EXTERN
+SCIP_Real SCIPdualfeasFloor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** rounds value - dual feasibility tolerance up to the next integer */
+EXTERN
+SCIP_Real SCIPdualfeasCeil(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** rounds value to the nearest integer in dual feasibility tolerance */
+EXTERN
+SCIP_Real SCIPdualfeasRound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** returns fractional part of value, i.e. x - floor(x) in dual feasibility tolerance */
+EXTERN
+SCIP_Real SCIPdualfeasFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
@@ -18937,6 +19040,20 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPfeasRound(scip, val)                  SCIPsetFeasRound((scip)->set, val)
 #define SCIPfeasFrac(scip, val)                   SCIPsetFeasFrac((scip)->set, val)
 
+#define SCIPisDualfeasEQ(scip, val1, val2)        SCIPsetIsDualfeasEQ((scip)->set, val1, val2)
+#define SCIPisDualfeasLT(scip, val1, val2)        SCIPsetIsDualfeasLT((scip)->set, val1, val2)
+#define SCIPisDualfeasLE(scip, val1, val2)        SCIPsetIsDualfeasLE((scip)->set, val1, val2)
+#define SCIPisDualfeasGT(scip, val1, val2)        SCIPsetIsDualfeasGT((scip)->set, val1, val2)
+#define SCIPisDualfeasGE(scip, val1, val2)        SCIPsetIsDualfeasGE((scip)->set, val1, val2)
+#define SCIPisDualfeasZero(scip, val)             SCIPsetIsDualfeasZero((scip)->set, val)
+#define SCIPisDualfeasPositive(scip, val)         SCIPsetIsDualfeasPositive((scip)->set, val)
+#define SCIPisDualfeasNegative(scip, val)         SCIPsetIsDualfeasNegative((scip)->set, val)
+#define SCIPisDualfeasIntegral(scip, val)         SCIPsetIsDualfeasIntegral((scip)->set, val)
+#define SCIPisDualfeasFracIntegral(scip, val)     SCIPsetIsDualfeasFracIntegral((scip)->set, val)
+#define SCIPdualfeasFloor(scip, val)              SCIPsetDualfeasFloor((scip)->set, val)
+#define SCIPdualfeasCeil(scip, val)               SCIPsetDualfeasCeil((scip)->set, val)
+#define SCIPdualfeasRound(scip, val)              SCIPsetDualfeasRound((scip)->set, val)
+#define SCIPdualfeasFrac(scip, val)               SCIPsetDualfeasFrac((scip)->set, val)
 
 #define SCIPisLbBetter(scip, newlb, oldlb, oldub) SCIPsetIsLbBetter(scip->set, newlb, oldlb, oldub)
 #define SCIPisUbBetter(scip, newub, oldlb, oldub) SCIPsetIsUbBetter(scip->set, newub, oldlb, oldub)
