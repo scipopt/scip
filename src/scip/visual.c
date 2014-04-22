@@ -79,6 +79,7 @@ SCIP_RETCODE SCIPvisualCreate(
    SCIP_ALLOC( BMSallocMemory(visual) );
 
    (*visual)->vbcfile = NULL;
+   (*visual)->bakfile = NULL;
    (*visual)->messagehdlr = messagehdlr;
    (*visual)->nodenum = NULL;
    (*visual)->timestep = 0;
@@ -97,6 +98,7 @@ void SCIPvisualFree(
    assert( visual != NULL );
    assert( *visual != NULL );
    assert( (*visual)->vbcfile == NULL );
+   assert( (*visual)->bakfile == NULL );
    assert( (*visual)->nodenum == NULL );
 
    BMSfreeMemory(visual);
