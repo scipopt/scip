@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPvisualInit(
    }
 
    /* possibly init hashmap for nodes */
-   if ( visual->vbcfile != NULL || visual->bakfile )
+   if ( visual->vbcfile != NULL || visual->bakfile != NULL )
    {
       SCIP_CALL( SCIPhashmapCreate(&visual->nodenum, blkmem, SCIP_HASHSIZE_VBC) );
    }
