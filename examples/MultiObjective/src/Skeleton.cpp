@@ -82,6 +82,8 @@ bool Skeleton::checkSolution(
       /* cost_vector is the first nondom_point */
       init(cost_vector);
       result = true;
+      n_new_vertices_ = cost_vector->size();
+      n_proc_vertices_ = 0;
    }
    else
    {
@@ -91,6 +93,11 @@ bool Skeleton::checkSolution(
       if(result)
       {
          addFacet(cost_vector);
+      }
+      else
+      {
+         n_new_vertices_ = 0;
+         n_proc_vertices_ = 1;
       }
    }
    return result;
@@ -239,6 +246,9 @@ void Skeleton::updateGraph()
 {
    WeightSpaceVertex*    obsolete_vertex;
 
+   n_proc_vertices_ = obsolete_nodes_->size();
+   n_new_vertices_ = cut_edges_->size();
+
    for( std::vector<lemon::ListGraph::Edge>::iterator it = cut_edges_->begin();
         it != cut_edges_->end();
         ++it )
@@ -315,6 +325,7 @@ void Skeleton::updateCorner(
    lemon::ListGraph::Node new_node;
    WeightSpaceVertex*  adjacent_vertex;
 
+   bool is_tested_node_ = (obsolete_vertex->getNode() == last_node_);
    new_node = graph_.addNode();
 
    /* marry node and vertex */
@@ -336,6 +347,11 @@ void Skeleton::updateCorner(
    }
    /* mark updated corner as new vertex */
    new_vertices_->push_back(obsolete_vertex);
+   if( !is_tested_node_ )
+   {
+      untested_nodes_.insert(new_node);
+      ++n_new_vertices_;
+   }
 }
 
 /** adds a graph node corresponding to new_vertex */
@@ -372,4 +388,16 @@ bool Skeleton::graphIsValid() const
       }
    }
    return true;
+}
+
+/** get number of vertices added in last checkSolution call*/
+int Skeleton::getNNewVertices() const
+{
+   return n_new_vertices_;
+}
+
+/** get number of vertices processed in last checkSolution call*/
+int Skeleton::getNProcessedVertices() const
+{
+   return n_proc_vertices_;
 }

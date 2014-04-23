@@ -15,7 +15,7 @@
 
 /**@file   main.cpp
  * @brief  main file
- * @author Timo Strunk
+n * @author Timo Strunk
  *
  * @desc   This is the main class of the program responsible for reading the arguments and running the program.
  *         Furthermore it is responsible for writing standard output.
@@ -102,6 +102,7 @@ SCIP_RETCODE Main::main()
 
    /* make enough space to write vectors */
    width_vec_ = WIDTH_VEC_ENTRY * solver_->getNObjs() + WIDTH_VEC_PADDING;
+
    printHeadline();
 
    /* main loop iterating over all weights */
@@ -117,6 +118,8 @@ SCIP_RETCODE Main::main()
 
       nnodes_total_ += solver_->getNNodesLastRun();
       niterations_total_ += solver_->getNLPIterationsLastRun();
+      n_v_new_total_ += solver_->getNNewVertices();
+      n_v_proc_total_ += solver_->getNProcessedVertices();
 
       printRun();
    }
@@ -234,9 +237,11 @@ void Main::printHeadline()
 {
    *os_ << std::setw(width_vec_)        << "Weight"
         << std::setw(width_vec_)        << "Cost"
-        << std::setw(WIDTH_TIME)        << "Time/s"
-        << std::setw(WIDTH_NODES)       << "Nodes"
-        << std::setw(WIDTH_ITERATIONS)  << "LP Iter"
+        << std::setw(WIDTH_DEFAULT)     << "Time/s"
+        << std::setw(WIDTH_DEFAULT)     << "Nodes"
+        << std::setw(WIDTH_DEFAULT)     << "LP Iter"
+        << std::setw(WIDTH_DEFAULT)     << "V_new"
+        << std::setw(WIDTH_DEFAULT)     << "V_proc"
         << "   Solution File"
         << std::endl;
 }
@@ -264,14 +269,12 @@ void Main::printRun()
    }
 
    /* print solver_ statistics */
-   *os_ << std::setw(WIDTH_TIME)
-       << std::setprecision(2)
-       << std::fixed
-       << solver_->getDurationLastRun()
-       << std::setw(WIDTH_NODES)
-       << solver_->getNNodesLastRun()
-       << std::setw(WIDTH_ITERATIONS)
-       << solver_->getNLPIterationsLastRun();
+   *os_  << std::setprecision(2) << std::fixed
+         << std::setw(WIDTH_DEFAULT) << solver_->getDurationLastRun()
+         << std::setw(WIDTH_DEFAULT) << solver_->getNNodesLastRun()
+         << std::setw(WIDTH_DEFAULT) << solver_->getNLPIterationsLastRun()
+         << std::setw(WIDTH_DEFAULT) << solver_->getNNewVertices()
+         << std::setw(WIDTH_DEFAULT) << solver_->getNProcessedVertices();
 
    /* print name of solution if optimum was found */
    if( solver_->foundNewOptimum() )
@@ -325,9 +328,11 @@ void Main::printBottomLine()
    *os_ << std::endl
         << std::setw(width_vec_ - 5)     << solver_->getNRuns()      << " runs"
         << std::setw(width_vec_ - 10)    << solver_->getNSolutions() << " solutions"
-        << std::setw(WIDTH_TIME)         << solver_->getTotalDuration()
-        << std::setw(WIDTH_NODES)        << nnodes_total_
-        << std::setw(WIDTH_ITERATIONS)   << niterations_total_
+        << std::setw(WIDTH_DEFAULT)      << solver_->getTotalDuration()
+        << std::setw(WIDTH_DEFAULT)      << nnodes_total_
+        << std::setw(WIDTH_DEFAULT)      << niterations_total_
+        << std::setw(WIDTH_DEFAULT)      << n_v_new_total_
+        << std::setw(WIDTH_DEFAULT)      << n_v_proc_total_
         << std::endl;
 }
 

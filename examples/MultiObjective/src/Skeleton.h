@@ -59,6 +59,12 @@ class Skeleton
       const std::vector<SCIP_Real>*     cost_vector    /**< cost vector that is a candidate to be a nondominated point */
       );
 
+   /** get number of vertices added in last checkSolution call*/
+   int getNNewVertices() const;
+
+   /** get number of vertices processed in last checkSolution call*/
+   int getNProcessedVertices() const;
+
  private:
    SCIP*                                          scip_;              /**< SCIP solver */
    std::set<lemon::ListGraph::Node>               untested_nodes_;    /**< nodes for which no weighted run has been
@@ -67,6 +73,10 @@ class Skeleton
    lemon::ListGraph::NodeMap<WeightSpaceVertex*>  vertex_map_;        /**< map from graph nodes to polygon vertex data */
    lemon::ListGraph::Node                         last_node_;         /**< last tested node */
    std::vector<WeightSpaceVertex*>                vertices_;          /**< list of all generated vertices */
+   int                                            n_new_vertices_;    /**< number of vertices added in last 
+								       *   checkSolution call*/
+   int                                            n_proc_vertices_;   /**< number of vertices processed in last 
+								       *   checkSolution call*/
 
    /* data structures for temporary use in update step*/
    const std::vector<SCIP_Real>*                  new_nondom_point_;  /**< new nondominated cost vector */

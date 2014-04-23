@@ -53,7 +53,7 @@
  * The example implements a version of the weight space decomposition algorithm specified in 
  * "An Exact Algorithm for Finding Extreme Supported Nondominated Points of Multiobjective Mixed Integer Programs"
  * by Özgür Özpeynirci and Murat Köksalan
- * Manage. Sci., 56(12):2302{2315, December 2010
+ * Manage. Sci., 56(12):2302{2315, December 2010}
  * 
  * The program implements the Lifted Weightspace Algorithm.  Basically, in each iteration, the algorithm chooses a weight 
  * \f$ w \in W = \{ w \geq 0 | \sum w = 1 \} \f$ and uses

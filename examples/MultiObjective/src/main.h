@@ -41,10 +41,7 @@ const SCIP_Bool     DEFAULT_WEIGHTED    = TRUE;
 const SCIP_Bool     DEFAULT_LOG         = FALSE;
 
 /* spacing constants for tabular printing */
-const int           WIDTH_SOLVER        = 13;
-const int           WIDTH_TIME          = 10;
-const int           WIDTH_NODES         = 10;
-const int           WIDTH_ITERATIONS    = 10;
+const int           WIDTH_DEFAULT       = 10;
 const int           WIDTH_FILE          = 40;
 const int           WIDTH_STORE         = 6;
 const int           WIDTH_VEC_ENTRY     = 12;
@@ -88,6 +85,8 @@ class Main
 
    int                   nnodes_total_;      /**< sum of branch and bound nodes used in all SCIP runs so far */
    int                   niterations_total_; /**< sum of lp iterations used in all SCIP runs so far */
+   int                   n_v_new_total_;     /**< sum of 1-skeleton vertices generated so far */
+   int                   n_v_proc_total_;    /**< sum of 1-skeleton vertices processed so far */
 
    /** read parameters from command line input */
    void readParameters(  

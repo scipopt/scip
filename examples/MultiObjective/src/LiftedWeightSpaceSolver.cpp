@@ -174,3 +174,15 @@ void LiftedWeightSpaceSolver::evaluateSolution()
       delete cost_vector_;
    }
 }
+
+/** get number of new vertices in the 1-skeleton added in last step*/
+int LiftedWeightSpaceSolver::getNNewVertices() const
+{
+   return skeleton_->getNNewVertices();
+}
+
+/** get number of vertices in the 1-skeleton processed in last step*/
+int LiftedWeightSpaceSolver::getNProcessedVertices() const
+{
+   return skeleton_->getNProcessedVertices();
+}

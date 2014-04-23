@@ -59,6 +59,12 @@ class LiftedWeightSpaceSolver : public WeightedSolver
    /** get total time for algorithm */
    SCIP_Real getTotalDuration() const;
 
+   /** get number of new vertices in the 1-skeleton added in last step*/
+   int getNNewVertices() const;
+
+   /** get number of vertices in the 1-skeleton processed in last step*/
+   int getNProcessedVertices() const;
+
  private:
    Skeleton*             skeleton_;             /**< lifted weight space polyhedron data structure */
    SCIP_CLOCK*           clock_iteration_;      /**< clock measuring the time needed for every iteration */
