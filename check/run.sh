@@ -36,8 +36,8 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
-$EXECNAME                < $TMPFILE >> $OUTFILE 2>>$ERRFILE
-retcode=$?
+$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
+retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then
   echo "$EXECNAME returned with error code $retcode." >>$ERRFILE
