@@ -109,6 +109,7 @@ BEGIN {
 #
 /^@01/ { 
    filename = $2;
+   grepresult = ""
 
    n  = split ($2, a, "/");
    m = split(a[n], b, ".");
@@ -383,7 +384,21 @@ BEGIN {
 # solution
 #
 /^Original Problem   : no problem exists./ { readerror = 1; }
-/^SCIP Status        :/ { aborted = 0; }
+/^SCIP Status        :/ {
+   # replace / by \/ in filename
+   fname = filename
+   gsub(/\//, "\\/",fname);
+
+   #grep between filename and next @01 for an error
+   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+   command | getline grepresult;
+
+   # set aborted flag correctly
+   if( grepresult == "" ) {
+      aborted = 0;
+   }
+}
+
 /solving was interrupted/ { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }

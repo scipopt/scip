@@ -35,7 +35,14 @@ date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
-$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
+
+$EXECNAME                < $TMPFILE >> $OUTFILE 2>>$ERRFILE
+retcode=$?
+if test $retcode != 0
+then
+  echo "$EXECNAME returned with error code $retcode." >>$ERRFILE
+fi
+
 date +"@04 %s"                      >> $OUTFILE
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
