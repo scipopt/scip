@@ -14,6 +14,7 @@ extern double atan2(double, double );
 extern double ceil(double );
 extern double cos(double );
 extern double cosh(double );
+extern double erf(double );
 extern double exp(double );
 extern double fabs(double );
 extern double floor(double );
