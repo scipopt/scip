@@ -2151,7 +2151,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vals[0] = cos(val);
       vars[1] = bvars[i];
       vals[1] = sin(val);
-      vars[2] = avars[i+1];
+      vars[2] = avars[i+1]; /*lint !e679*/
       vals[2] = -1.0;
 
       (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, i);
@@ -2170,7 +2170,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vals[0] = -sin(val);
       vars[1] = bvars[i];
       vals[1] = cos(val);
-      vars[2] = bvars[i+1];
+      vars[2] = bvars[i+1]; /*lint !e679*/
       vals[2] = -1.0;
 
       (void) SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
@@ -2189,7 +2189,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vals[0] = -sin(val);
       vars[1] = bvars[i];
       vals[1] = cos(val);
-      vars[2] = bvars[i+1];
+      vars[2] = bvars[i+1]; /*lint !e679*/
       vals[2] = 1.0;
 
       (void) SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, i);

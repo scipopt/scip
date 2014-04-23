@@ -18,7 +18,7 @@
  * @author Marc Pfetsch
  *
  * Write a weighted column/variable graph, i.e., the nodes correspond to the columns (variables) of
- * the constraint matrix. Two nodes are adjacent if the corresponding columns/variables have appear
+ * the constraint matrix. Two nodes are adjacent if the corresponding columns/variables appear
  * in a common row/constraint (with nonzero coefficient).  The weight is obtained by summing for
  * each row that produces an edge the absolute values of coefficients in the row; hence, we avoid
  * parallel edges.
@@ -252,7 +252,7 @@ SCIP_RETCODE createEdgesFromRow(
             G->A[s][k] = t;
             G->W[s][k] = w;
 
-            G->A[s][k+1] = -1;
+            G->A[s][k+1] = -1; /*lint !e679*/
             ++G->deg[s];
 
             /* backward edge */
@@ -263,7 +263,7 @@ SCIP_RETCODE createEdgesFromRow(
             G->A[t][k] = s;
             G->W[t][k] = w;
 
-            G->A[t][k+1] = -1;
+            G->A[t][k+1] = -1; /*lint !e679*/
             ++G->deg[t];
 
             /* increase number of edges */

@@ -26,6 +26,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed wrong pseudo cost updates during diving heuristic execution after backtracking
 - fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
   does nothing anymore
 - fixed memory leaks in case of erroneous parsing of constraints, e.g., non-linear constraints
@@ -35,12 +36,17 @@ fixed bugs:
 - branching for continuous variables with unbounded intervals now takes "branching/clamp" into account
 - fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
 - corrected copy of disjunction constraints
+- forbid aggregations with scalar smaller feastol or larger 1/feastol
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
 
 features:
 - added copy mechanism for conjunction constraints
+- added Makefile support for cygwin 64 Bit
+
+interface:
+- added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance
 
 SCIP version 3.1.0
 ==================

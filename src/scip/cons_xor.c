@@ -826,7 +826,7 @@ SCIP_RETCODE applyFixings(
    v = consdata->nvars-2;
    while ( v >= 0 )
    {
-      if( consdata->vars[v] == consdata->vars[v+1] )
+      if( consdata->vars[v] == consdata->vars[v+1] ) /*lint !e679*/
       {
          /* delete both variables */
          SCIPdebugMessage("xor constraint <%s>: deleting pair of equal variables <%s>\n",
@@ -836,11 +836,11 @@ SCIP_RETCODE applyFixings(
          (*nchgcoefs) += 2;
          v = MIN(v, consdata->nvars-1);
       }
-      else if( consdata->vars[v] == SCIPvarGetNegatedVar(consdata->vars[v+1]) )
+      else if( consdata->vars[v] == SCIPvarGetNegatedVar(consdata->vars[v+1]) ) /*lint !e679*/
       {
          /* delete both variables and negate the rhs */
          SCIPdebugMessage("xor constraint <%s>: deleting pair of negated variables <%s> and <%s>\n",
-            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[v+1]));
+            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[v+1])); /*lint !e679*/
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v+1) );
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          (*nchgcoefs) += 2;
@@ -848,7 +848,7 @@ SCIP_RETCODE applyFixings(
          v = MIN(v, consdata->nvars-1);
       }
       else
-         assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v+1]));
+         assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v+1])); /*lint !e679*/
       --v;
    }
 
@@ -1130,10 +1130,10 @@ SCIP_RETCODE addExtendedFlowFormulation(
       ++(*naddedconss);
 
       /* store variables */
-      consdata->extvars[4*i] = varnn;
-      consdata->extvars[4*i + 1] = varns;
-      consdata->extvars[4*i + 2] = varsn;
-      consdata->extvars[4*i + 3] = varss;
+      consdata->extvars[4*i] = varnn;      /*lint !e679*/
+      consdata->extvars[4*i + 1] = varns;  /*lint !e679*/
+      consdata->extvars[4*i + 2] = varsn;  /*lint !e679*/
+      consdata->extvars[4*i + 3] = varss;  /*lint !e679*/
 
       if ( varnn != NULL )
          ++(consdata->nextvars);

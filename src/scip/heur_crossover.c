@@ -200,10 +200,10 @@ static void sortArray(
       j = i-1;
       while( j >= 0 && a[j] > tmp )
       {
-         a[j+1] = a[j];
+         a[j+1] = a[j]; /*lint !e679*/
          j = j-1;
       }
-      a[j+1] = tmp;
+      a[j+1] = tmp; /*lint !e679*/
    }
 }
 
@@ -888,7 +888,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPallocBufferArray(scip, &selection, nusedsols) );
 
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);

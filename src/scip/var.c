@@ -4984,45 +4984,39 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    /* check if it is an easy aggregation that means:
     *
-    *   a*x + b*y == c -> x == -b/a * y + c/a iff b/a != 0 and abs(b/a) < infinity
+    *   a*x + b*y == c -> x == -b/a * y + c/a iff |b/a| > feastol and |a/b| > feastol
     */
-   if( !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx)) )
+   if( !SCIPsetIsFeasZero(set, scalary/scalarx) && !SCIPsetIsFeasZero(set, scalarx/scalary) )
    {
       if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
+      {
          easyaggr = TRUE;
+      }
       else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
+      {
          easyaggr = TRUE;
-   }
+      }
+      else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
+      {
+         /* we have an easy aggregation if we flip the variables x and y */
+         SCIP_VAR* var;
+         SCIP_Real scalar;
 
-   /* check if we have easy aggregation if we flip the variables x and y that means:
-    *
-    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(a/b) < infinity
-    */
-   if( !easyaggr && !SCIPsetIsZero(set, scalarx/scalary) && !SCIPsetIsInfinity(set, REALABS(scalarx/scalary))
-      && SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx))
-   {
-      SCIP_VAR* var;
-      SCIP_Real scalar;
-
-      /* switch the variables, such that varx is the aggregated variable */
-      var = vary;
-      vary = varx;
-      varx = var;
-      scalar = scalary;
-      scalary = scalarx;
-      scalarx = scalar;
-      easyaggr = TRUE;
-   }
-
-   /* if we did not find an easy aggregation so far, the aggregation is still easy if both variables are continuous
-    *
-    *   a*x + b*y == c -> x == -b/a * y + c/a iff b/a != 0 and abs(b/a) < infinty
-    */
-   if( !easyaggr && !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx))
-      && SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
-   {
-      assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS);
-      easyaggr = TRUE;
+         /* switch the variables, such that varx is the aggregated variable */
+         var = vary;
+         vary = varx;
+         varx = var;
+         scalar = scalary;
+         scalary = scalarx;
+         scalarx = scalar;
+         easyaggr = TRUE;
+      }
+      else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+      {
+         /* the aggregation is still easy if both variables are continuous */
+         assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
+         easyaggr = TRUE;
+      }
    }
 
    /* did we find an "easy" aggregation? */
@@ -7233,7 +7227,7 @@ SCIP_RETCODE varProcessChgLbLocal(
                 */
                if( parentnewbound > parentvar->glbdom.ub )
                {
-		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  /* due to numerics we only need to be feasible w.r.t. feasibility tolerance */
                   assert(SCIPsetIsFeasLE(set, parentnewbound, parentvar->glbdom.ub));
                   parentnewbound = parentvar->glbdom.ub;
                }
@@ -7261,7 +7255,7 @@ SCIP_RETCODE varProcessChgLbLocal(
                 */
                if( parentnewbound < parentvar->glbdom.lb )
                {
-		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  /* due to numerics we only need to be feasible w.r.t. feasibility tolerance */
                   assert(SCIPsetIsFeasGE(set, parentnewbound, parentvar->glbdom.lb));
                   parentnewbound = parentvar->glbdom.lb;
                }
@@ -7394,7 +7388,7 @@ SCIP_RETCODE varProcessChgUbLocal(
                 */
                if( parentnewbound < parentvar->glbdom.lb )
                {
-		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  /* due to numerics we only need to be feasible w.r.t. feasibility tolerance */
                   assert(SCIPsetIsFeasGE(set, parentnewbound, parentvar->glbdom.lb));
                   parentnewbound = parentvar->glbdom.lb;
                }
@@ -7421,7 +7415,7 @@ SCIP_RETCODE varProcessChgUbLocal(
                 */
                if( parentnewbound > parentvar->glbdom.ub )
                {
-		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  /* due to numerics we only need to be feasible w.r.t. feasibility tolerance */
                   assert(SCIPsetIsFeasLE(set, parentnewbound, parentvar->glbdom.ub));
                   parentnewbound = parentvar->glbdom.ub;
                }

@@ -636,7 +636,11 @@ BEGIN {
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
+      {
          timeout = 0;
+         if( memlimitreached )
+            tottime = max(endtime - starttime, timelimit);
+      }
 
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
