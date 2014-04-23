@@ -2733,18 +2733,19 @@ SCIP_RETCODE extendToCover(
       }
       assert( candidate >= 0 );
       assert( ! S[candidate] );
+      assert( sizeIIS > 0 );
 
       /* get the type of norm to use for efficacy calculations */
       switch ( conshdlrdata->normtype )
       {
       case 'e':
-         norm = sqrt(sizeIIS);
+         norm = sqrt((SCIP_Real) sizeIIS);
          break;
       case 'm':
          norm = 1.0;
          break;
       case 's':
-         norm = sizeIIS;
+         norm = (SCIP_Real) sizeIIS;
          break;
       case 'd':
          norm = 1.0;
