@@ -9096,6 +9096,7 @@ SCIP_RETCODE simplifyInequalities(
    int oldnchgsides;
    int candpos;
    int candpos2;
+   int offsetv;
    int nvars;
    int v;
 
@@ -9187,6 +9188,22 @@ SCIP_RETCODE simplifyInequalities(
       if( weights[nvars - 1] == 1 && weights[nvars - 2] == 1 )
          return SCIP_OKAY;
 
+      v = 0;
+      /* determine coefficients as big as the capacity, these we do not need to take into account when calculating the
+       * gcd
+       */
+      while( weights[v] == consdata->capacity )
+      {
+         ++v;
+         assert(v < nvars);
+      }
+
+      /* all but one variable are as big as the capacity, this is handled elsewhere */
+      if( v == nvars - 1 )
+         return SCIP_OKAY;
+
+      offsetv = v;
+
       gcd = -1;
       candpos = -1;
       candpos2 = -1;
@@ -9194,7 +9211,7 @@ SCIP_RETCODE simplifyInequalities(
       /* calculate greatest common divisor over all integer and binary variables and determine the candidate where we might
        * change the coefficient
        */
-      for( v = nvars - 1; v >= 0; --v )
+      for( v = nvars - 1; v >= offsetv; --v )
       {
          weight = weights[v];
          assert(weight >= 1);
@@ -9257,24 +9274,34 @@ SCIP_RETCODE simplifyInequalities(
       /* we should have found one coefficient, that led to a gcd of 1, otherwise we could normalize the constraint
        * further
        */
-      assert(candpos >= 0 && candpos < nvars);
+      assert(((candpos >= offsetv) || (candpos == -1 && offsetv > 0)) && candpos < nvars);
 
       /* determine the remainder of the capacity and the gcd */
       rest = consdata->capacity % gcd;
       assert(rest >= 0);
       assert(rest < gcd);
 
+      if( candpos == -1 )
+      {
+         /* we assume that the constraint was normalized */
+         assert(rest > 0);
+
+         /* replace old with new capacity */
+         consdata->capacity -= rest;
+         ++(*nchgsides);
+
+         /* replace old big coefficients with new capacity */
+         for( v = 0; v < offsetv; ++v )
+            consdataChgWeight(consdata, v, consdata->capacity);
+
+         *nchgcoefs += offsetv;
+         goto CONTINUE;
+      }
+
       /* determine the remainder of the coefficient candidate and the gcd */
       restweight = weights[candpos] % gcd;
       assert(restweight >= 1);
       assert(restweight < gcd);
-
-      if( rest > 0 )
-      {
-         /* replace old with new capacity */
-         consdata->capacity -= rest;
-         ++(*nchgsides);
-      }
 
       /* calculate new coefficient */
       if( restweight > rest )
@@ -9284,7 +9311,26 @@ SCIP_RETCODE simplifyInequalities(
 
       assert(newweight == 0 || SCIPcalcGreComDiv(gcd, newweight) == gcd);
 
-      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restweight = %"SCIP_LONGINT_FORMAT"; changing weight of variable <%s> to %"SCIP_LONGINT_FORMAT" and reduced capacity by %"SCIP_LONGINT_FORMAT"\n", gcd, rest, restweight, SCIPvarGetName(vars[candpos]), newweight, rest);
+      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restweight = %"SCIP_LONGINT_FORMAT"; possible new weight of variable <%s> %"SCIP_LONGINT_FORMAT", possible new capacity %"SCIP_LONGINT_FORMAT", offset of coefficients as big as capacity %d\n", gcd, rest, restweight, SCIPvarGetName(vars[candpos]), newweight, consdata->capacity - rest, offsetv);
+
+      /* must not change weights and capacity if one variable would be removed and we have a big coefficient,
+       * e.g., 11x1 + 6x2 + 6x3 + 5x4 <= 11 => gcd = 6, offsetv = 1 => newweight = 0, but we would lose x1 = 1 => x4 = 0
+       */
+      if( newweight == 0 && offsetv > 0 )
+         return SCIP_OKAY;
+
+      if( rest > 0 )
+      {
+         /* replace old with new capacity */
+         consdata->capacity -= rest;
+         ++(*nchgsides);
+
+         /* replace old big coefficients with new capacity */
+         for( v = 0; v < offsetv; ++v )
+            consdataChgWeight(consdata, v, consdata->capacity);
+
+         *nchgcoefs += offsetv;
+      }
 
       if( newweight == 0 )
       {
@@ -9304,6 +9350,7 @@ SCIP_RETCODE simplifyInequalities(
       assert(consdata->nvars == nvars);
       assert(consdata->weights == weights);
 
+   CONTINUE:
       /* now constraint can be normalized, dividing it by the gcd */
       for( v = nvars - 1; v >= 0; --v )
       {
