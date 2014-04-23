@@ -12394,7 +12394,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       /* merge constraint, so propagation works better */
       SCIP_CALL( mergeMultiples(scip, cons, &cutoff) );
       if( cutoff )
-         return SCIP_OKAY;
+         break;
 
       /* add cliques in the knapsack to the clique table */
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
