@@ -405,7 +405,7 @@ SCIP_Real rowCalcProbability(
  *
  *  The mean value \f$ \mu \f$ is given by \f$ \mu = \sum_i=1^n c_i * (lb_i +ub_i) / 2 \f$ where
  *  \f$n \f$ is the number of variables, and \f$ c_i, lb_i, ub_i \f$ are the variable coefficient and
- *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \$ is given by
+ *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \f$ is given by
  *  \f$ \sigma^2 = \sum_i=1^n c_i^2 * \sigma^2_i \f$, with the variance being
  *  \f$ \sigma^2_i = ((ub_i - lb_i + 1)^2 - 1) / 12 \f$ for integer variables and
  *  \f$ \sigma^2_i = (ub_i - lb_i)^2 / 12 \f$ for continuous variables.
