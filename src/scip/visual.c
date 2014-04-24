@@ -24,6 +24,7 @@
  *   See <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">VBCTOOL</a>.
  * - BAK: Branch-and-bound Analysis Kit @n
  *   BAK is available through COIN-OR, see <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">BAK</a>.
+ *   A description is <a href="http://www.optimization-online.org/DB_HTML/2007/09/1785.html">available</a> as well.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
