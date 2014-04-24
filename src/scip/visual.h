@@ -70,6 +70,7 @@ void SCIPvisualExit(
 EXTERN
 SCIP_RETCODE SCIPvisualNewChild(
    SCIP_VISUAL*          visual,             /**< visualization information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    );
@@ -87,6 +88,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
 EXTERN
 void SCIPvisualSolvedNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node, that was solved */
    );
@@ -95,6 +97,7 @@ void SCIPvisualSolvedNode(
 EXTERN
 void SCIPvisualCutoffNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node,               /**< node, that was cut off */
    SCIP_Bool             infeasible          /**< whether the node is infeasible (otherwise exceeded the cutoff bound) */
@@ -138,6 +141,7 @@ void SCIPvisualFoundSolution(
 EXTERN
 void SCIPvisualLowerbound(
    SCIP_VISUAL*          visual,             /**< visualization information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             lowerbound          /**< new lower bound */
    );
@@ -146,6 +150,7 @@ void SCIPvisualLowerbound(
 EXTERN
 void SCIPvisualUpperbound(
    SCIP_VISUAL*          visual,             /**< visualization information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             upperbound          /**< new upper bound */
    );

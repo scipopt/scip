@@ -972,7 +972,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIPnodeSetEstimate(*node, set, estimate);
 
    /* output node creation to visualization file */
-   SCIP_CALL( SCIPvisualNewChild(stat->visual, stat, *node) );
+   SCIP_CALL( SCIPvisualNewChild(stat->visual, set, stat, *node) );
 
    SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %u (prio: %g)\n",
       SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
@@ -1119,7 +1119,7 @@ void SCIPnodeCutoff(
    if( node->active )
       tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
 
-   SCIPvisualCutoffNode(stat->visual, stat, node, TRUE);
+   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
 
    SCIPdebugMessage("cutting off %s node #%"SCIP_LONGINT_FORMAT" at depth %d (cutoffdepth: %d)\n", 
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -3465,7 +3465,7 @@ SCIP_RETCODE nodeToLeaf(
    else
    {
       /* delete node due to bound cut off */
-      SCIPvisualCutoffNode(stat->visual, stat, *node, FALSE);
+      SCIPvisualCutoffNode(stat->visual, set, stat, *node, FALSE);
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventqueue, tree, lp) );
    }
    assert(*node == NULL);
@@ -4767,7 +4767,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       {
          SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
-         SCIPvisualCutoffNode(stat->visual, stat, node, FALSE);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
    }
@@ -4780,7 +4780,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       {
          SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
-         SCIPvisualCutoffNode(stat->visual, stat, node, FALSE);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
    }

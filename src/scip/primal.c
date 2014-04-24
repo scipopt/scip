@@ -280,7 +280,7 @@ SCIP_RETCODE primalSetUpperbound(
    /* update upper bound in visualization output */
    if( SCIPtreeGetCurrentDepth(tree) >= 0 )
    {
-      SCIPvisualUpperbound(stat->visual, stat, primal->upperbound);
+      SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
    }
 
    return SCIP_OKAY;

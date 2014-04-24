@@ -4331,7 +4331,7 @@ SCIP_RETCODE SCIPsolveCIP(
       if( !(*restart) )
       {
          /* change color of node in visualization */
-         SCIPvisualSolvedNode(stat->visual, stat, focusnode);
+         SCIPvisualSolvedNode(stat->visual, set, stat, focusnode);
 
          /* check, if the current solution is feasible */
          if( !infeasible )
@@ -4381,7 +4381,7 @@ SCIP_RETCODE SCIPsolveCIP(
             if( tree->nchildren == 0 )
             {
                /* change color of node in visualization output */
-               SCIPvisualCutoffNode(stat->visual, stat, focusnode, TRUE);
+               SCIPvisualCutoffNode(stat->visual, set, stat, focusnode, TRUE);
 
                /* issue NODEINFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
