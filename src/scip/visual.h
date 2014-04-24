@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_set.h"
+#include "scip/type_sol.h"
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_visual.h"
@@ -77,6 +78,7 @@ SCIP_RETCODE SCIPvisualNewChild(
 extern
 SCIP_RETCODE SCIPvisualUpdateChild(
    SCIP_VISUAL*          visual,             /**< visualization information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    );
@@ -94,7 +96,8 @@ EXTERN
 void SCIPvisualCutoffNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< node, that was cut off */
+   SCIP_NODE*            node,               /**< node, that was cut off */
+   SCIP_Bool             infeasible          /**< whether the node is infeasible (otherwise exceeded the cutoff bound) */
    );
 
 /** changes the color of the node to the color of nodes where a conflict constraint was found */
@@ -127,7 +130,8 @@ void SCIPvisualFoundSolution(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< node where the solution was found, or NULL */
+   SCIP_NODE*            node,               /**< node where the solution was found, or NULL */
+   SCIP_SOL*             sol                 /**< solution that has been found */
    );
 
 /** outputs a new global lower bound to the visualization output file */

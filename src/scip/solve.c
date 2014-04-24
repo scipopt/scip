@@ -4381,7 +4381,7 @@ SCIP_RETCODE SCIPsolveCIP(
             if( tree->nchildren == 0 )
             {
                /* change color of node in visualization output */
-               SCIPvisualCutoffNode(stat->visual, stat, focusnode);
+               SCIPvisualCutoffNode(stat->visual, stat, focusnode, TRUE);
 
                /* issue NODEINFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );

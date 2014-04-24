@@ -606,7 +606,7 @@ SCIP_RETCODE primalAddSol(
    }
 
    /* change color of node in visualization output */
-   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree));
+   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), sol);
 
    /* check, if the global upper bound has to be updated */
    if( obj < primal->upperbound )
