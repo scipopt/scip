@@ -666,6 +666,7 @@ void SCIPvisualFoundSolution(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node,               /**< node where the solution was found, or NULL */
+   SCIP_Bool             bettersol,          /**< the solution was better than the previous ones */
    SCIP_SOL*             sol                 /**< solution that has been found */
    )
 {
@@ -678,7 +679,7 @@ void SCIPvisualFoundSolution(
       }
    }
 
-   if ( visual->bakfile != NULL )
+   if ( visual->bakfile != NULL && bettersol )
    {
       SCIP_Real obj;
 
