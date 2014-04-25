@@ -12,6 +12,7 @@ parameters:
 - rename parameter "vbc/filename" to "visual/vbcfilename"
 - rename parameter "vbc/realtime" to "visual/realtime"
 - rename parameter "vbc/dispsols" to "visual/dispsols"
+- added parameter to switch pseudo cost update in diving heuristics (enabled by default)
 
 performance improvements:
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective

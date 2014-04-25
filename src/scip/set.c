@@ -66,6 +66,7 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
+#define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
 #define SCIP_DEFAULT_BRANCH_FORCEALL      FALSE /**< should all strong branching children be regarded even if
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
@@ -845,6 +846,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/delaypscostupdate",
          "should updating pseudo costs for continuous variables be delayed to the time after separation?",
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/divingpscost",
+         "should pseudo costs be updated also in diving and probing mode?",
+         &(*set)->branch_divingpscost, FALSE, SCIP_DEFAULT_BRANCH_DIVINGPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/forceallchildren",
