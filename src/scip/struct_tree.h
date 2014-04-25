@@ -52,18 +52,21 @@ struct SCIP_Probingnode
 /** sibling information (should not exceed the size of a pointer) */
 struct SCIP_Sibling
 {
+   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    int                   arraypos;           /**< position of node in the siblings array */
 };
 
 /** child information (should not exceed the size of a pointer) */
 struct SCIP_Child
 {
+   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    int                   arraypos;           /**< position of node in the children array */
 };
 
 /** leaf information (should not exceed the size of a pointer) */
 struct SCIP_Leaf
 {
+   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    SCIP_NODE*            lpstatefork;        /**< fork/subroot node defining the LP state of the leaf */
 };
 
@@ -115,6 +118,8 @@ struct SCIP_Node
    SCIP_Longint          number;             /**< successively assigned number of the node */
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
+   unsigned int          reoptredies;
+   unsigned int          reopt:1;
    union
    {
       SCIP_PROBINGNODE*  probingnode;        /**< data for probing nodes */
@@ -175,6 +180,7 @@ struct SCIP_Tree
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   SCIP_LPISTATE*        focuslpistate;      /**< LP state information of focus node */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */

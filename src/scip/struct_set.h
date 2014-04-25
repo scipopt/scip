@@ -354,6 +354,11 @@ struct SCIP_Set
    SCIP_Bool             prop_abortoncutoff; /**< should propagation be aborted immediately? setting this to FALSE could
                                               *   help conflict analysis to produce more conflict constraints */
 
+   /* reoptimization settings */
+   SCIP_Bool             reopt_enable;       /**< enable reoptimization */
+   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
+   SCIP_Bool             reopt_savelpbasis;  /**< save the LP basis of feasible and branched nodes during reoptimization */
+
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying separation

@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_tree.h"
+#include "scip/type_lpi.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
@@ -140,6 +141,34 @@ SCIP_Real SCIPnodeGetLowerbound(
 EXTERN
 SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
+   );
+
+EXTERN
+SCIP_Bool SCIPnodeGetReopt(
+   SCIP_NODE*            node
+   );
+
+/** sets the LPI state of the given child node */
+EXTERN
+SCIP_RETCODE SCIPchildSetLpistate(
+   SCIP_NODE*            node,               /**< node to set the LPI state for */
+   SCIP_LPISTATE*        lpistate            /**< LPI state */
+   );
+
+EXTERN
+SCIP_RETCODE SCIPnodeSetReopt(
+   SCIP_NODE*           node
+   );
+
+EXTERN
+int SCIPnodeGetReoptredies(
+   SCIP_NODE*           node
+   );
+
+EXTERN
+SCIP_RETCODE SCIPnodeSetReoptredies(
+   SCIP_NODE*           node,
+   unsigned int         nrredies
    );
 
 /** gets the domain change information of the node, i.e., the information about the differences in the

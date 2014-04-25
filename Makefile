@@ -293,7 +293,9 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
+			scip/branch_nodereopt.o \
 			scip/branch_pscost.o \
+			scip/branch_pseudo.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_abspower.o \
@@ -324,6 +326,9 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
+			scip/event_globalboundchg.o \
+			scip/event_nodereopt.o \
+			scip/event_solustore.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
@@ -389,6 +394,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
 			scip/reader_gms.o \

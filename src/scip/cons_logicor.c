@@ -4652,7 +4652,7 @@ SCIP_DECL_CONSPRINT(consPrintLogicor)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, FALSE) );
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, TRUE) );
     
    return SCIP_OKAY;
 }

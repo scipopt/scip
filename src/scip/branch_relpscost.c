@@ -811,7 +811,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-//   SCIPdebugMessage("Execlp method of relpscost branching\n");
    SCIPdebugMessage("Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
    
    /* get branching candidates */

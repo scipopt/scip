@@ -912,6 +912,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->number = 0;
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
+   (*node)->reoptredies = 0;
+   (*node)->reopt = FALSE,
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -952,6 +954,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
 
    /* mark node to be a child node */
    (*node)->nodetype = SCIP_NODETYPE_CHILD; /*lint !e641*/
+   (*node)->data.child.lpistate = NULL;
    (*node)->data.child.arraypos = -1;
 
    /* make focus node the parent of the new child */
@@ -1544,15 +1547,21 @@ SCIP_RETCODE SCIPnodeDelCons(
 }
 
 SCIP_RETCODE SCIPnodeGetAddedcons(
-      SCIP*                scip,
-      SCIP_NODE*           node,
-      SCIP_CONS**          addedcons
+      SCIP*               scip,
+      SCIP_NODE*          node,
+      SCIP_CONS**         addedcons
 )
 {
-   assert( node != NULL );
-   assert( node->conssetchg->naddedconss == 1 );
+   int cons;
 
-   (*addedcons) = node->conssetchg->addedconss[0];
+   assert( node != NULL );
+   assert( node->conssetchg->addedconss != NULL );
+   assert( node->conssetchg->naddedconss >= 1 );
+
+   for(cons = 0; cons < node->conssetchg->naddedconss; cons++)
+   {
+      addedcons[cons] = node->conssetchg->addedconss[cons];
+   }
 
    return SCIP_OKAY;
 }
@@ -2247,6 +2256,22 @@ void SCIPnodeSetEstimate(
    node->estimate = newestimate;
 }
 
+/** sets the LPI state of the given child node */
+SCIP_RETCODE SCIPchildSetLpistate(
+   SCIP_NODE*            node,               /**< node to set the LPI state for */
+   SCIP_LPISTATE*        lpistate            /**< LPI state */
+   )
+{
+   assert(node != NULL);
+   assert(lpistate != NULL);
+   assert(node->nodetype == SCIP_NODETYPE_CHILD);
+   assert(node->data.child.lpistate == NULL);
+
+   node->data.child.lpistate = lpistate;
+
+   return SCIP_OKAY;
+}
+
 /** propagates implications of binary fixings at the given node triggered by the implication graph and the clique table */
 SCIP_RETCODE SCIPnodePropagateImplics(
    SCIP_NODE*            node,               /**< node to propagate implications on */
@@ -2651,6 +2676,7 @@ void treeFindSwitchForks(
    lpfork = NULL;
    lpstatefork = NULL;
    subroot = NULL;
+
    while( !fork->active )
    {
       fork = fork->parent;
@@ -3293,6 +3319,11 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       tree->focuslpstatefork == NULL ? -1 : SCIPnodeGetNumber(tree->focuslpstatefork),
       tree->focuslpstatefork == NULL ? -1 : SCIPnodeGetDepth(tree->focuslpstatefork));
 
+   if( tree->focuslpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->focuslpistate) );
+   }
+
    lpstatefork = tree->focuslpstatefork;
 
    /* if there is no LP state defining fork, nothing can be done */
@@ -3374,6 +3405,8 @@ SCIP_RETCODE nodeToLeaf(
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
+   SCIP_LPISTATE* lpistate;
+
    assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
    assert(stat != NULL);
    assert(lpstatefork == NULL || lpstatefork->depth < (*node)->depth);
@@ -3387,7 +3420,9 @@ SCIP_RETCODE nodeToLeaf(
       SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node),
       lpstatefork == NULL ? -1 : SCIPnodeGetNumber(lpstatefork),
       lpstatefork == NULL ? -1 : SCIPnodeGetDepth(lpstatefork));
+   lpistate = (*node)->nodetype == SCIP_NODETYPE_SIBLING ? (*node)->data.sibling.lpistate : (*node)->data.child.lpistate;
    (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
+   (*node)->data.leaf.lpistate = lpistate;
    (*node)->data.leaf.lpstatefork = lpstatefork;
 
 #ifndef NDEBUG
@@ -3960,7 +3995,8 @@ void treeChildrenToSiblings(
       assert(SCIPnodeGetType(tree->siblings[i]) == SCIP_NODETYPE_CHILD);
       tree->siblings[i]->nodetype = SCIP_NODETYPE_SIBLING; /*lint !e641*/
 
-      /* because CHILD.arraypos and SIBLING.arraypos are on the same position, we do not have to copy it */
+      /* because CHILD and SIBLING structs contain the same data in the same order, we do not have to copy it */
+      assert(&(tree->siblings[i]->data.sibling.lpistate) == &(tree->siblings[i]->data.child.lpistate));
       assert(&(tree->siblings[i]->data.sibling.arraypos) == &(tree->siblings[i]->data.child.arraypos));
    }
 }
@@ -4045,7 +4081,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
    assert(lpfork == NULL || fork != NULL);
-   assert(lpstatefork == NULL || lpfork != NULL);
+   //assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 
    /* remember the depth of the common fork node for LP updates */
@@ -4207,7 +4243,7 @@ SCIP_RETCODE SCIPnodeFocus(
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_PSEUDOFORK);
    SCIPdebugMessage("focus node: new correctlpdepth=%d\n", tree->correctlpdepth);
-   
+
    /* set up the new lists of siblings and children */
    oldfocusnode = tree->focusnode;
    if( *node == NULL )
@@ -4227,6 +4263,8 @@ SCIP_RETCODE SCIPnodeFocus(
       switch( SCIPnodeGetType(*node) )
       {  
       case SCIP_NODETYPE_SIBLING:
+         tree->focuslpistate = (*node)->data.sibling.lpistate;
+
          /* reset plunging depth, if the selected node is better than all leaves */
          bestleaf = SCIPtreeGetBestLeaf(tree);
          if( bestleaf == NULL || SCIPnodepqCompare(tree->leaves, set, *node, bestleaf) <= 0 )
@@ -4243,6 +4281,8 @@ SCIP_RETCODE SCIPnodeFocus(
          break;
          
       case SCIP_NODETYPE_CHILD:
+         tree->focuslpistate = (*node)->data.child.lpistate;
+
          /* reset plunging depth, if the selected node is better than all leaves; otherwise, increase plunging depth */
          bestleaf = SCIPtreeGetBestLeaf(tree);
          if( bestleaf == NULL || SCIPnodepqCompare(tree->leaves, set, *node, bestleaf) <= 0 )
@@ -4264,6 +4304,8 @@ SCIP_RETCODE SCIPnodeFocus(
          break;
          
       case SCIP_NODETYPE_LEAF:
+         tree->focuslpistate = (*node)->data.leaf.lpistate;
+
          /* move siblings to the queue, make them LEAFs */
          SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
@@ -6630,6 +6672,43 @@ SCIP_Real SCIPnodeGetEstimate(
    assert(node != NULL);
 
    return node->estimate;
+}
+
+SCIP_Bool SCIPnodeGetReopt(
+   SCIP_NODE*           node
+   )
+{
+   assert(node != NULL);
+
+   return node->reopt;
+}
+
+SCIP_RETCODE SCIPnodeSetReopt(
+   SCIP_NODE*           node
+   )
+{
+   assert( node != NULL );
+   node->reopt = TRUE;
+   return SCIP_OKAY;
+}
+
+int SCIPnodeGetReoptredies(
+   SCIP_NODE*           node
+   )
+{
+   assert(node != NULL);
+
+   return node->reoptredies;
+}
+
+SCIP_RETCODE SCIPnodeSetReoptredies(
+   SCIP_NODE*           node,
+   unsigned int         nrredies
+   )
+{
+   assert(node != NULL);
+   node->reoptredies = nrredies;
+   return SCIP_OKAY;
 }
 
 /** gets the domain change information of the node, i.e., the information about the differences in the

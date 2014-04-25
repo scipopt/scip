@@ -60,6 +60,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
+   SCIP_CALL( SCIPincludeReaderDiff(scip) );
    SCIP_CALL( SCIPincludeReaderFix(scip) );
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
    SCIP_CALL( SCIPincludeReaderGms(scip) );
@@ -157,6 +158,15 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
+
+   /* reoptimization stuff */
+   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
+   SCIP_CALL( SCIPincludeBranchrulePseudo(scip) );
+//   SCIP_CALL( SCIPincludeEventHdlrFocusroot(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrGlobalboundchg(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrNodereopt(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSolustore(scip) );
+
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );

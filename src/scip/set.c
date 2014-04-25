@@ -262,6 +262,11 @@
 #define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
                                                  *   in case they are not present in the LP anymore? */
 
+/* Reoptimization */
+
+#define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
+#define SCIP_DEFAULT_REOPT_MAXSAVEDNODES    1e5 /**< maximum number of saved nodes */
+#define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
 
 /* Propagating */
 
@@ -1509,6 +1514,19 @@ SCIP_RETCODE SCIPsetCreate(
          "should propagation be aborted immediately? setting this to FALSE could help conflict analysis to produce more conflict constraints",
          &(*set)->prop_abortoncutoff, FALSE, SCIP_DEFAULT_PROP_ABORTONCUTOFF,
          NULL, NULL) );
+
+   /* reoptimization */
+   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/enable",
+         "should reoptimization used?",
+         &(*set)->reopt_enable, FALSE, SCIP_DEFAULT_REOPT_ENABLE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "reoptimization/maxsavednodes",
+         "maximal number of saved nodes",
+         &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, 0, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/savelpbasis",
+         "save LP basis of feasible and branched nodes during reoptimization",
+         &(*set)->reopt_savelpbasis, TRUE, SCIP_DEFAULT_REOPT_SAVELPBASIS, NULL, NULL) );
 
    /* separation parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

@@ -24,7 +24,6 @@
 #ifndef __SCIP_SCIPDEFPLUGINS_H__
 #define __SCIP_SCIPDEFPLUGINS_H__
 
-
 #include "scip/scip.h"
 
 /* include header files here, such that the user only has to include
@@ -130,6 +129,7 @@
 #include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
+#include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
 #include "scip/reader_gms.h"
@@ -158,6 +158,14 @@
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+
+/* reoptimization stuff */
+#include "scip/branch_nodereopt.h"
+#include "scip/branch_pseudo.h"
+//#include "scip/event_focusroot.h"
+#include "scip/event_globalboundchg.h"
+#include "scip/event_nodereopt.h"
+#include "scip/event_solustore.h"
 
 #include "nlpi/nlpi_ipopt.h"
 
