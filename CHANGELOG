@@ -14,6 +14,7 @@ fixed bugs:
 - corrected copy of disjunction constraints
 - forbid aggregations with scalar smaller feastol or larger 1/feastol
 - fixed bug 683, not recognizing errors/segfaults especially in free stage of SCIP by improving the check scripts
+- fixed bug in presolving of abspower constraints that lead to wrong variable locks
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
