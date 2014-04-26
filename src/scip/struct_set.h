@@ -416,9 +416,6 @@ struct SCIP_Set
    int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
                                               *   0; using this parameter we can change the starting index to be
                                               *   different */
-
-   /* Emphasis */
-   int                   emph_heuristics;    /**< heuristic emphasis setting (0 - default, 1 - aggressive, 2 - fast, 3 - off) */
 };
 
 #ifdef __cplusplus
