@@ -22,7 +22,7 @@
  * let \f$ a(x) = a_1 x_1 + \dots + a_n x_n \leq b \f$ be a row of the LP. Let further \f$ l_i, u_i \in R\f$ denote the
  * (finite) lower and upper bound, respectively, of the \f$ i \f$-th variable \f$x_i\f$.
  * Viewing every variable \f$x_i \f$ as (continuously) uniformly distributed within its bounds, we can approximately
- * understand the row activity \f$a(x)\f$ as a gaussian random variate with mean value \f$ \mu = E[a(x)] = \sum_i a_i\frac{l_i + u_i}{2}\f$
+ * understand the row activity \f$a(x)\f$ as a Gaussian random variate with mean value \f$ \mu = E[a(x)] = \sum_i a_i\frac{l_i + u_i}{2}\f$
  * and variance \f$ \sigma^2 = \sum_i a_i^2 \sigma_i^2 \f$, with \f$ \sigma_i^2 = \frac{(u_i - l_i)^2}{12}\f$ for
  * continuous and \f$ \sigma_i^2 = \frac{(u_i - l_i + 1)^2 - 1}{12}\f$ for discrete variables.
  * With these two parameters, we can calculate the probability to satisfy the row in terms of the cumulative distribution
@@ -51,7 +51,7 @@
  * J. Pryor and J.W. Chinneck:@n
  * Faster Integer-Feasibility in Mixed-Integer Linear Programs by Branching to Force Change@n
  * Computers and Operations Research, vol. 38, 2011, p. 1143–1152@n
- * (http://www.sce.carleton.ca/faculty/chinneck/docs/PryorChinneck.pdf)
+ * (Paper: <a href="http://www.sce.carleton.ca/faculty/chinneck/docs/PryorChinneck.pdf">PDF</a>).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
