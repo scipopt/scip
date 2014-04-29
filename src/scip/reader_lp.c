@@ -3233,6 +3233,7 @@ void checkConsnames(
 
    for( c = 0; c < nconss; ++c )
    {
+      assert( conss != NULL ); /* for lint */
       cons = conss[c];
       assert(cons != NULL );
 

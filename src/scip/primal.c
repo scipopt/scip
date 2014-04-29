@@ -280,7 +280,7 @@ SCIP_RETCODE primalSetUpperbound(
    /* update upper bound in visualization output */
    if( SCIPtreeGetCurrentDepth(tree) >= 0 )
    {
-      SCIPvisualUpperbound(stat->visual, stat, primal->upperbound);
+      SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
    }
 
    return SCIP_OKAY;
@@ -606,7 +606,7 @@ SCIP_RETCODE primalAddSol(
    }
 
    /* change color of node in visualization output */
-   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree));
+   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
 
    /* check, if the global upper bound has to be updated */
    if( obj < primal->upperbound )

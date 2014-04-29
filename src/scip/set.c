@@ -66,6 +66,7 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
+#define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
 #define SCIP_DEFAULT_BRANCH_FORCEALL      FALSE /**< should all strong branching children be regarded even if
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
@@ -332,6 +333,7 @@
 #define SCIP_DEFAULT_VISUAL_BAKFILENAME     "-" /**< name of the BAK tool output file, or "-" if no BAK tool output should be created */
 #define SCIP_DEFAULT_VISUAL_REALTIME       TRUE /**< should the real solving time be used instead of a time step counter in visualization? */
 #define SCIP_DEFAULT_VISUAL_DISPSOLS      FALSE /**< should the node where solutions are found be visualized? */
+#define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
 
 /* Reading */
@@ -349,11 +351,6 @@
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
-
-
-/* Emphasis settings */
-
-#define SCIP_DEFAULT_EMPH_HEURISTICS          0 /**< heuristic emphasis setting */
 
 
 
@@ -702,18 +699,6 @@ SCIP_RETCODE SCIPsetCopyParams(
    return SCIP_OKAY;
 }
 
-/** callback for changes in heuristics emphasis */
-static
-SCIP_DECL_PARAMCHGD(paramChgdEmphasisHeuristics)
-{
-   assert( param != NULL );
-   assert( 0 <= SCIPparamGetInt(param) && SCIPparamGetInt(param) < 4 );
-
-   SCIP_CALL( SCIPsetHeuristics(scip, (SCIP_PARAMSETTING) SCIPparamGetInt(param), FALSE) );
-
-   return SCIP_OKAY;
-}
-
 /** creates global SCIP settings */
 SCIP_RETCODE SCIPsetCreate(
    SCIP_SET**            set,                /**< pointer to SCIP settings */
@@ -844,6 +829,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/delaypscostupdate",
          "should updating pseudo costs for continuous variables be delayed to the time after separation?",
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/divingpscost",
+         "should pseudo costs be updated also in diving and probing mode?",
+         &(*set)->branch_divingpscost, FALSE, SCIP_DEFAULT_BRANCH_DIVINGPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/forceallchildren",
@@ -1742,6 +1732,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should the node where solutions are found be visualized?",
          &(*set)->visual_dispsols, FALSE, SCIP_DEFAULT_VISUAL_DISPSOLS,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "visual/objextern",
+         "should be output the external value of the objective?",
+         &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
+         NULL, NULL) );
 
    /* Reading parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1776,13 +1771,6 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
-
-   /* emphasis parameters */
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "emphasis/heuristics",
-         "heuristic emphasis setting (0 - default, 1 - aggressive, 2 - fast, 3 - off)",
-         &(*set)->emph_heuristics, FALSE, SCIP_DEFAULT_EMPH_HEURISTICS, 0, 3,
-         paramChgdEmphasisHeuristics, NULL) );
 
    return SCIP_OKAY;
 }

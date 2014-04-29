@@ -22,7 +22,7 @@
  * let \f$ a(x) = a_1 x_1 + \dots + a_n x_n \leq b \f$ be a row of the LP. Let further \f$ l_i, u_i \in R\f$ denote the
  * (finite) lower and upper bound, respectively, of the \f$ i \f$-th variable \f$x_i\f$.
  * Viewing every variable \f$x_i \f$ as (continuously) uniformly distributed within its bounds, we can approximately
- * understand the row activity \f$a(x)\f$ as a gaussian random variate with mean value \f$ \mu = E[a(x)] = \sum_i a_i\frac{l_i + u_i}{2}\f$
+ * understand the row activity \f$a(x)\f$ as a Gaussian random variate with mean value \f$ \mu = E[a(x)] = \sum_i a_i\frac{l_i + u_i}{2}\f$
  * and variance \f$ \sigma^2 = \sum_i a_i^2 \sigma_i^2 \f$, with \f$ \sigma_i^2 = \frac{(u_i - l_i)^2}{12}\f$ for
  * continuous and \f$ \sigma_i^2 = \frac{(u_i - l_i + 1)^2 - 1}{12}\f$ for discrete variables.
  * With these two parameters, we can calculate the probability to satisfy the row in terms of the cumulative distribution
@@ -51,7 +51,7 @@
  * J. Pryor and J.W. Chinneck:@n
  * Faster Integer-Feasibility in Mixed-Integer Linear Programs by Branching to Force Change@n
  * Computers and Operations Research, vol. 38, 2011, p. 1143–1152@n
- * (http://www.sce.carleton.ca/faculty/chinneck/docs/PryorChinneck.pdf)
+ * (Paper: <a href="http://www.sce.carleton.ca/faculty/chinneck/docs/PryorChinneck.pdf">PDF</a>).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -143,10 +143,10 @@ SCIP_RETCODE branchruledataEnsureArraySize(
       int v;
       int nvars;
 
-      SCIPallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesdown, newsize);
-      SCIPallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesup, newsize);
-      SCIPallocBlockMemoryArray(scip, &branchruledata->rowmeans, newsize);
-      SCIPallocBlockMemoryArray(scip, &branchruledata->rowvariances, newsize);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->rowmeans, newsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->rowvariances, newsize) );
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -184,10 +184,10 @@ SCIP_RETCODE branchruledataEnsureArraySize(
    }
    else
    {
-      SCIPreallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesdown, branchruledata->memsize, newsize);
-      SCIPreallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesup, branchruledata->memsize, newsize);
-      SCIPreallocBlockMemoryArray(scip, &branchruledata->rowmeans, branchruledata->memsize, newsize);
-      SCIPreallocBlockMemoryArray(scip, &branchruledata->rowvariances, branchruledata->memsize, newsize);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesdown, branchruledata->memsize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->rowinfinitiesup, branchruledata->memsize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->rowmeans, branchruledata->memsize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->rowvariances, branchruledata->memsize, newsize) );
    }
 
    /* loop over extended arrays and invalidate data to trigger initialization of this row when necessary */
@@ -304,6 +304,7 @@ SCIP_Real calcCumulativeDistribution(
       else
          return 0.0;
    }
+   assert( std != 0.0 ); /* for lint */
 
    /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
    normvalue = (value - mean)/(std * SQRTOFTWO);
@@ -404,7 +405,7 @@ SCIP_Real rowCalcProbability(
  *
  *  The mean value \f$ \mu \f$ is given by \f$ \mu = \sum_i=1^n c_i * (lb_i +ub_i) / 2 \f$ where
  *  \f$n \f$ is the number of variables, and \f$ c_i, lb_i, ub_i \f$ are the variable coefficient and
- *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \$ is given by
+ *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \f$ is given by
  *  \f$ \sigma^2 = \sum_i=1^n c_i^2 * \sigma^2_i \f$, with the variance being
  *  \f$ \sigma^2_i = ((ub_i - lb_i + 1)^2 - 1) / 12 \f$ for integer variables and
  *  \f$ \sigma^2_i = (ub_i - lb_i)^2 / 12 \f$ for continuous variables.
@@ -467,10 +468,10 @@ void rowCalculateGauss(
       varmean = 0.0;
       varvariance = 0.0;
       varindex = SCIPvarGetProbindex(colvar);
-      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
+      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777*/
 
       /* variable bounds need to be watched from now on */
-      if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
+      if( branchruledata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777*/
          branchruledataUpdateCurrentBounds(scip, branchruledata, colvar);
 
       assert(!SCIPisInfinity(scip, colvarlb));
@@ -697,7 +698,7 @@ SCIP_RETCODE calcBranchScore(
       SCIP_CALL( branchruledataEnsureArraySize(scip, branchruledata, rowpos) );
 
       /* calculate row activity distribution if this is the first candidate to appear in this row */
-      if( branchruledata->rowmeans[rowpos] == SCIP_INVALID )
+      if( branchruledata->rowmeans[rowpos] == SCIP_INVALID ) /*lint !e777*/
       {
          rowCalculateGauss(scip, branchruledata, row, &branchruledata->rowmeans[rowpos], &branchruledata->rowvariances[rowpos],
                &branchruledata->rowinfinitiesdown[rowpos], &branchruledata->rowinfinitiesup[rowpos]);
@@ -841,8 +842,8 @@ void branchruledataAddBoundChangeVar(
    }
 
    /* if none of the variables rows was calculated yet, variable needs not to be watched */
-   assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
-   if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
+   assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777*/
+   if( branchruledata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777*/
       return;
 
    /* add the variable to the branch rule data of variables to process updates for */
@@ -925,8 +926,8 @@ SCIP_RETCODE varProcessBoundChanges(
    oldub = branchruledata->currentubs[varindex];
 
    /* skip update if the variable has never been subject of previously calculated row activities */
-   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID));
-   if( oldlb == SCIP_INVALID )
+   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID)); /*lint !e777*/
+   if( oldlb == SCIP_INVALID ) /*lint !e777*/
       return SCIP_OKAY;
 
    newlb = SCIPvarGetLbLocal(var);
@@ -957,12 +958,12 @@ SCIP_RETCODE varProcessBoundChanges(
       SCIP_CALL( branchruledataEnsureArraySize(scip, branchruledata, rowpos) );
 
       /* only consider rows for which activity distribution was already calculated */
-      if( branchruledata->rowmeans[rowpos] != SCIP_INVALID )
+      if( branchruledata->rowmeans[rowpos] != SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_Real coeff;
          SCIP_Real coeffsquared;
          assert(branchruledata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
+               && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0)); /*lint !e777*/
 
          coeff = colvals[r];
          coeffsquared = SQUARED(coeff);
@@ -1185,14 +1186,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcand), SCIPvarGetUbLocal(lpcand)));
       assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
 
-      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
+      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777*/
       assert((branchruledata->currentlbs[varindex] == SCIP_INVALID)
-            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(lpcand), branchruledata->currentlbs[varindex]));
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(lpcand), branchruledata->currentlbs[varindex])); /*lint !e777*/
       assert((branchruledata->currentubs[varindex] == SCIP_INVALID)
-                  || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(lpcand), branchruledata->currentubs[varindex]));
+                  || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(lpcand), branchruledata->currentubs[varindex])); /*lint !e777*/
 
       /* if the branching rule has not captured the variable bounds yet, this can be done now */
-      if( branchruledata->currentlbs[varindex] == SCIP_INVALID )
+      if( branchruledata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777*/
       {
          branchruledataUpdateCurrentBounds(scip, branchruledata, lpcand);
       }
@@ -1276,7 +1277,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 /** event execution method of distribution branching which handles bound change events of variables */
 static
 SCIP_DECL_EVENTEXEC(eventExecDistribution)
-{
+{  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_VAR* var;

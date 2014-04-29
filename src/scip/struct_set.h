@@ -142,6 +142,7 @@ struct SCIP_Set
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
+   SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
    SCIP_Bool             branch_forceall;    /**< should all strong branching children be regarded even if
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
@@ -402,6 +403,7 @@ struct SCIP_Set
    char*                 visual_bakfilename; /**< name of the BAK tool output file, or - if no BAK output should be created */
    SCIP_Bool             visual_realtime;    /**< should the real solving time be used instead of time step counter in visualization? */
    SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
+   SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */
@@ -414,9 +416,6 @@ struct SCIP_Set
    int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
                                               *   0; using this parameter we can change the starting index to be
                                               *   different */
-
-   /* Emphasis */
-   int                   emph_heuristics;    /**< heuristic emphasis setting (0 - default, 1 - aggressive, 2 - fast, 3 - off) */
 };
 
 #ifdef __cplusplus

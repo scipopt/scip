@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPnodepqBound(
          if( !parentfelldown )
             pos--;
 
-         SCIPvisualCutoffNode(stat->visual, stat, node);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
