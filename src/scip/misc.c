@@ -367,7 +367,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
    return SCIP_OKAY;
 }
 
-/** frees priority queue, but not the data elements themselves */
+/** frees sparse solution */
 void SCIPsparseSolFree(
    SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
    )
