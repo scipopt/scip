@@ -41,6 +41,7 @@
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_ONEOPT        TRUE           /**< whether the one-opt heuristic should be started */
+#define DEFAULT_IMPROVESOLS   FALSE          /**< Try to improve other solutions by one-opt? */
 
 
 /** primal heuristic data */
@@ -50,7 +51,9 @@ struct SCIP_HeurData
    SCIP_CONS**           indconss;           /**< indicator constraints */
    SCIP_Bool*            solcand;            /**< bitset of indicator variables ind solution candidate */
    SCIP_Bool             oneopt;             /**< whether the one-opt heuristic should be started */
+   SCIP_CONSHDLR*        indicatorconshdlr;  /**< indicator constraint handler */
    SCIP_SOL*             lastsol;            /**< last solution considered for improvement */
+   SCIP_Bool             improvesols;        /**< Try to improve other solutions by one-opt? */
 };
 
 /*
@@ -66,7 +69,7 @@ SCIP_RETCODE tryOneOpt(
    int                   nindconss,          /**< number of indicator constraints */
    SCIP_CONS**           indconss,           /**< indicator constraints */
    SCIP_Bool*            solcand,            /**< values for indicator variables in partial solution */
-   SCIP_Bool*            foundsol            /**< whether a solution has been found */
+   int*                  nfoundsols          /**< number of solutions found */
    )
 {
    SCIP_Bool cutoff;
@@ -82,10 +85,10 @@ SCIP_RETCODE tryOneOpt(
    assert( heurdata != NULL );
    assert( nindconss == 0 || indconss != NULL );
    assert( solcand != NULL );
-   assert( foundsol != NULL );
+   assert( nfoundsols != NULL );
 
    SCIPdebugMessage("Performing one-opt ...\n");
-   *foundsol = FALSE;
+   *nfoundsols = 0;
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -93,16 +96,18 @@ SCIP_RETCODE tryOneOpt(
    {
       SCIP_VAR* binvar;
 
-      assert( SCIPconsIsActive(indconss[i]) );
+      /* skip nonactive constraints */
+      if ( ! SCIPconsIsActive(indconss[i]) )
+         continue;
+
       binvar = SCIPgetBinaryVarIndicator(indconss[i]);
       assert( binvar != NULL );
 
       /* skip constraints with fixed variables */
-      if ( SCIPvarGetLbLocal(binvar) < 0.5 && SCIPvarGetUbLocal(binvar) > 0.5 )
+      if ( SCIPvarGetUbLocal(binvar) < 0.5 || SCIPvarGetLbLocal(binvar) > 0.5 )
          continue;
 
       /* get rid of all bound changes */
-      SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
       SCIP_CALL( SCIPnewProbingNode(scip) );
       ++cnt;
 
@@ -111,7 +116,10 @@ SCIP_RETCODE tryOneOpt(
       {
          SCIP_Bool s;
 
-         assert( SCIPconsIsActive(indconss[c]) );
+         /* skip nonactive constraints */
+         if ( ! SCIPconsIsActive(indconss[c]) )
+            continue;
+
          binvar = SCIPgetBinaryVarIndicator(indconss[c]);
          assert( binvar != NULL );
 
@@ -141,7 +149,7 @@ SCIP_RETCODE tryOneOpt(
       SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, NULL) );
       if ( cutoff )
       {
-         SCIPdebugMessage("Hit cutoff in propagation.\n");
+         SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
          continue;
       }
 
@@ -154,9 +162,8 @@ SCIP_RETCODE tryOneOpt(
 #ifdef SCIP_DEBUG
          if ( lperror )
             SCIPdebugMessage("An LP error occured.\n");
-         else
-            SCIPdebugMessage("Hit cutoff in LP solving.\n");
 #endif
+         SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
          continue;
       }
 
@@ -167,16 +174,17 @@ SCIP_RETCODE tryOneOpt(
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
       /* check solution for feasibility */
-      SCIPdebugMessage("Found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
+      SCIPdebugMessage("One-opt found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
 
       /* only check integrality, because we solved an LP */
       SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &stored) );
       if ( stored )
-         *foundsol = TRUE;
+         ++(*nfoundsols);
+      SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
    }
    SCIP_CALL( SCIPendProbing(scip) );
 
-   SCIPdebugMessage("Finished one-opt (tried variables: %d).\n", cnt);
+   SCIPdebugMessage("Finished one-opt (tried variables: %d, found sols: %d).\n", cnt, *nfoundsols);
 
    return SCIP_OKAY;
 }
@@ -191,7 +199,7 @@ SCIP_RETCODE trySolCandidate(
    int                   nindconss,          /**< number of indicator constraints */
    SCIP_CONS**           indconss,           /**< indicator constraints */
    SCIP_Bool*            solcand,            /**< values for indicator variables in partial solution */
-   SCIP_Bool*            foundsol            /**< whether a solution has been found */
+   int*                  nfoundsols          /**< number of solutions found */
    )
 {
    SCIP_Bool cutoff;
@@ -205,10 +213,10 @@ SCIP_RETCODE trySolCandidate(
    assert( heurdata != NULL );
    assert( nindconss == 0 || indconss != NULL );
    assert( solcand != NULL );
-   assert( foundsol != NULL );
+   assert( nfoundsols != NULL );
 
    SCIPdebugMessage("Trying to generate feasible solution with indicators from solution candidate ...\n");
-   *foundsol = FALSE;
+   *nfoundsols = 0;
 
    SCIP_CALL( SCIPstartProbing(scip) );
    SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -218,7 +226,10 @@ SCIP_RETCODE trySolCandidate(
    {
       SCIP_VAR* binvar;
 
-      assert( SCIPconsIsActive(indconss[c]) );
+      /* skip nonactive constraints */
+      if ( ! SCIPconsIsActive(indconss[c]) )
+         continue;
+
       binvar = SCIPgetBinaryVarIndicator(indconss[c]);
       assert( binvar != NULL );
 
@@ -244,7 +255,7 @@ SCIP_RETCODE trySolCandidate(
    SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, NULL) );
    if ( cutoff )
    {
-      SCIPdebugMessage("Hit cutoff in propagation.\n");
+      SCIPdebugMessage("Solution candidate reaches cutoff (in propagation).\n");
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
    }
@@ -259,7 +270,7 @@ SCIP_RETCODE trySolCandidate(
       if ( lperror )
          SCIPdebugMessage("An LP error occured.\n");
       else
-         SCIPdebugMessage("Hit cutoff in LP solving.\n");
+         SCIPdebugMessage("Solution candidate reaches cutoff (in LP solving).\n");
 #endif
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
@@ -280,7 +291,7 @@ SCIP_RETCODE trySolCandidate(
    SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
    if ( stored )
    {
-      *foundsol = TRUE;
+      ++(*nfoundsols);
       SCIPdebugMessage("Solution is feasible and stored.\n");
    }
    else
@@ -289,16 +300,16 @@ SCIP_RETCODE trySolCandidate(
    /* only check integrality, because we solved an LP */
    SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &stored) );
    if ( stored )
-      *foundsol = TRUE;
+      ++(*nfoundsols);
 #endif
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* possibly perform one-opt */
    if ( stored && heurdata->oneopt )
    {
-      SCIP_Bool found = FALSE;
-      assert( *foundsol );
-      SCIP_CALL( tryOneOpt(scip, heur, heurdata, nindconss, indconss, solcand, &found) );
+      int nfound = 0;
+      assert( *nfoundsols > 0 );
+      SCIP_CALL( tryOneOpt(scip, heur, heurdata, nindconss, indconss, solcand, &nfound) );
    }
 
    return SCIP_OKAY;
@@ -319,6 +330,29 @@ SCIP_DECL_HEURCOPY(heurCopyIndicator)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurIndicator(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitIndicator)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( heur != NULL );
+   assert( scip != NULL );
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+   assert( heurdata->indicatorconshdlr == NULL );
+
+   heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
+   if ( heurdata->indicatorconshdlr == NULL )
+   {
+      SCIPwarningMessage(scip, "Could not find indicator constraint handler.\n");
+   }
 
    return SCIP_OKAY;
 }
@@ -352,22 +386,24 @@ static
 SCIP_DECL_HEUREXEC(heurExecIndicator)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   int nfoundsols = 0;
 
    assert( heur != NULL );
    assert( scip != NULL );
    assert( result != NULL );
 
+   *result = SCIP_DIDNOTRUN;
+
+   if ( SCIPgetSubscipDepth(scip) > 0 )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
-   *result = SCIP_DIDNOTRUN;
-
    /* call heuristic, if solution candidate is available */
    if ( heurdata->solcand != NULL )
    {
-      SCIP_Bool foundsol = FALSE;
-
       assert( heurdata->nindconss > 0 );
       assert( heurdata->indconss != NULL );
 
@@ -376,9 +412,9 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
       if ( SCIPgetNIntVars(scip) > 0 || heurdata->nindconss < SCIPgetNBinVars(scip) )
          return SCIP_OKAY;
 
-      SCIP_CALL( trySolCandidate(scip, heur, heurdata, heurdata->nindconss, heurdata->indconss, heurdata->solcand, &foundsol) );
+      SCIP_CALL( trySolCandidate(scip, heur, heurdata, heurdata->nindconss, heurdata->indconss, heurdata->solcand, &nfoundsols) );
 
-      if ( foundsol )
+      if ( nfoundsols > 0 )
          *result = SCIP_FOUNDSOL;
       else
          *result = SCIP_DIDNOTFIND;
@@ -386,6 +422,71 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
       /* free memory */
       SCIPfreeBlockMemoryArray(scip, &(heurdata->solcand), heurdata->nindconss);
       SCIPfreeBlockMemoryArray(scip, &(heurdata->indconss), heurdata->nindconss);
+   }
+   else
+   {
+      SCIP_CONS** indconss;
+      SCIP_Bool* solcand;
+      SCIP_SOL* bestsol;
+      int nindconss;
+      int i;
+
+      if ( heurdata->indicatorconshdlr == NULL )
+         return SCIP_OKAY;
+
+      /* check whether a new best solution has been found */
+      bestsol = SCIPgetBestSol(scip);
+      if ( bestsol == heurdata->lastsol )
+         return SCIP_OKAY;
+      heurdata->lastsol = bestsol;
+
+      /* avoid solutions produced by this heuristic */
+      if ( SCIPsolGetHeur(bestsol) == heur )
+         return SCIP_OKAY;
+
+      /* The heuristic will only be successful if there are no integral variables and no binary variables except the
+       * indicator variables. */
+      if ( SCIPgetNIntVars(scip) > 0 || SCIPconshdlrGetNConss(heurdata->indicatorconshdlr) < SCIPgetNBinVars(scip) )
+         return SCIP_OKAY;
+
+      nindconss = SCIPconshdlrGetNConss(heurdata->indicatorconshdlr);
+      if ( nindconss == 0 )
+         return SCIP_OKAY;
+
+      indconss = SCIPconshdlrGetConss(heurdata->indicatorconshdlr);
+      assert( indconss != NULL );
+
+      /* fill solutin candidate */
+      SCIP_CALL( SCIPallocBufferArray(scip, &solcand, nindconss) );
+      for (i = 0; i < nindconss; ++i)
+      {
+         SCIP_VAR* binvar;
+         SCIP_Real val;
+
+         solcand[i] = FALSE;
+         if ( SCIPconsIsActive(indconss[i]) )
+         {
+            binvar = SCIPgetBinaryVarIndicator(indconss[i]);
+            assert( binvar != NULL );
+
+            val = SCIPgetSolVal(scip, bestsol, binvar);
+            assert( SCIPisFeasIntegral(scip, val) );
+            if ( val > 0.5 )
+               solcand[i] = TRUE;
+         }
+      }
+
+      SCIPdebugMessage("Trying to improve best solution of value %f.\n", SCIPgetSolOrigObj(scip, bestsol) );
+
+      /* try one-opt heuristic */
+      SCIP_CALL( tryOneOpt(scip, heur, heurdata, nindconss, indconss, solcand, &nfoundsols) );
+
+      if ( nfoundsols > 0 )
+         *result = SCIP_FOUNDSOL;
+      else
+         *result = SCIP_DIDNOTFIND;
+
+      SCIPfreeBufferArray(scip, &solcand);
    }
 
    return SCIP_OKAY;
@@ -409,6 +510,8 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    heurdata->nindconss = 0;
    heurdata->indconss = NULL;
    heurdata->solcand = NULL;
+   heurdata->lastsol = NULL;
+   heurdata->indicatorconshdlr = NULL;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -419,6 +522,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIndicator) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIndicator) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeIndicator) );
 
    /* add parameters */
@@ -426,6 +530,11 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
          "heur/"HEUR_NAME"/oneopt",
          "whether the one-opt heuristic should be started",
          &heurdata->oneopt, TRUE, DEFAULT_ONEOPT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heur/"HEUR_NAME"/improvesols",
+         "Try to improve other solutions by one-opt?",
+         &heurdata->improvesols, TRUE, DEFAULT_IMPROVESOLS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
