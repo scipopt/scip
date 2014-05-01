@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPheurPassIndicator(
    SCIP_HEUR*            heur,               /**< indicator heuristic */
    int                   nindconss,          /**< number of indicator constraints */
    SCIP_CONS**           indconss,           /**< indicator constraints */
-   SCIP_Bool*            solcand             /**< values for indicator variables in partical solution */
+   SCIP_Bool*            solcand             /**< values for indicator variables in partial solution */
    );
 
 #ifdef __cplusplus
