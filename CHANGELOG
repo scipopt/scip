@@ -41,6 +41,11 @@ fixed bugs:
 - fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
 - corrected copy of disjunction constraints
 - forbid aggregations with scalar smaller feastol or larger 1/feastol
+- fixed bug 683, not recognizing errors/segfaults especially in free stage of SCIP by improving the check scripts
+- fixed bug in presolving of abspower constraints that lead to wrong variable locks
+- fixed bug where quieting a message handler also disabled writing to files other than stdout
+- fixed bug 708, special case of implications led to a fixing
+- allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
