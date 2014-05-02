@@ -17,6 +17,7 @@ fixed bugs:
 - fixed bug in presolving of abspower constraints that lead to wrong variable locks
 - fixed bug where quieting a message handler also disabled writing to files other than stdout
 - fixed bug 708, special case of implications led to a fixing
+- allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints

@@ -23414,6 +23414,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
@@ -23428,7 +23429,7 @@ SCIP_RETCODE SCIPmarkConsPropagate(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsMarkPropagate(cons, scip->set) );
 
