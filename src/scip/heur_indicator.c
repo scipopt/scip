@@ -346,12 +346,14 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
-   assert( heurdata->indicatorconshdlr == NULL );
 
-   heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
-   if ( heurdata->indicatorconshdlr == NULL )
+   if ( heurdata->indicatorconshdlr != NULL )
    {
-      SCIPwarningMessage(scip, "Could not find indicator constraint handler.\n");
+      heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
+      if ( heurdata->indicatorconshdlr == NULL )
+      {
+         SCIPwarningMessage(scip, "Could not find indicator constraint handler.\n");
+      }
    }
 
    return SCIP_OKAY;
