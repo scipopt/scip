@@ -56,6 +56,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPSOLVEFREQ           2 /**< frequency how often an LP resolve should be applied (every n'th depth in the tree) */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -84,6 +85,71 @@ struct SCIP_HeurData
 /*
  * local methods
  */
+
+/** sorts out candidate variables whose solution value is not within its local bounds anymore, because this variable
+ *  is not useful for the diving candidate selection */
+static
+SCIP_RETCODE getRemainingBranchCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            cands,              /**< candidate variables */
+   SCIP_Real*            candssol,           /**< solution values of candidates */
+   SCIP_Real*            candsfrac,          /**< fractional solution values of candidates */
+   int                   ncands,             /**< number of candidates */
+   int*                  nremainingcands     /**< pointer to store the number of remaining candidates */
+   )
+{
+   int c;
+
+   assert(nremainingcands != NULL);
+   *nremainingcands = ncands;
+   if( ncands == 0 )
+      return SCIP_OKAY;
+
+   /* check every candidate local bounds if solution value is still feasible */
+   while( c < *nremainingcands )
+   {
+      SCIP_VAR* cand;
+
+      cand = cands[c];
+      assert(cand != NULL);
+
+      /* if bounds are violated by current (last) LP solution value, swap variable with last remaining variable */
+      if( SCIPisLT(scip, SCIPvarGetUbLocal(cand), candssol[c]) || SCIPisGT(scip, SCIPvarGetLbLocal(cand), candssol[c]) )
+      {
+         if( c < *nremainingcands - 1 )
+         {
+            SCIP_VAR* tmpvar;
+            SCIP_Real tmpfrac;
+            SCIP_Real tmpsol;
+            int lastcandidx;
+
+            lastcandidx = *nremainingcands - 1;
+            tmpvar = cand;
+            tmpsol = candssol[c];
+            tmpfrac = candsfrac[c];
+
+            cands[c] = cands[lastcandidx];
+            candssol[c] = candssol[lastcandidx];
+            candsfrac[c] = candsfrac[lastcandidx];
+
+            cands[lastcandidx] = tmpvar;
+            candssol[lastcandidx] = tmpsol;
+            candsfrac[lastcandidx] = tmpfrac;
+         }
+
+         --(*nremainingcands);
+      }
+      else
+         /* go to next variable */
+         ++c;
+   }
+
+   assert(c == *nremainingcands);
+   assert(*nremainingcands >= 0);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** get indicator candidate variables */
@@ -358,9 +424,12 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    SCIP_CONS** indconss;
    SCIP_VAR** indcands;
    SCIP_VAR** lpcands;
+   SCIP_VAR** remainingcands; /* subset of lp cands */
    SCIP_VAR* bestcandvar;
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
+   SCIP_Real* remainingcandssol;
+   SCIP_Real* remainingcandsfrac;
    SCIP_Real* indcandssol;
    SCIP_Real* indcandfrac;
    SCIP_Real searchubbound;
@@ -378,12 +447,14 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    SCIP_Bool backtracked;
    SCIP_Bool backtrack;
    SCIP_Bool roundup;
+   SCIP_Bool solvelp;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nlpiterations;
    SCIP_Longint maxnlpiterations;
    int nindconss;
    int nlpcands;
+   int nremainingcands;
    int nindcands;
    int startnlpcands;
    int depth;
@@ -451,6 +522,11 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    /* get fractional variables that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &remainingcands, lpcands, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &remainingcandssol, lpcandssol, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &remainingcandsfrac, lpcandsfrac, nlpcands) );
+   nremainingcands = nlpcands;
+
    /* get indicator variable candidates */
    nindconss = 0;
    indconss = NULL;
@@ -470,7 +546,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          SCIP_CALL( SCIPallocBufferArray(scip, &indcandssol, nindconss) );
          SCIP_CALL( SCIPallocBufferArray(scip, &indcandfrac, nindconss) );
 
-         /* get indicator canditates */
+         /* get indicator candidates */
          SCIP_CALL( getIndCandVars(scip, indconss, nindconss, indcands, indcandssol, indcandfrac, &nindcands) );
       }
    }
@@ -547,12 +623,14 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands + nindcands;
    roundup = FALSE;
-   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   solvelp = TRUE;
+   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nremainingcands > 0
       && (divedepth < 10
-         || nlpcands <= startnlpcands - divedepth/2
+         || nlpcands <= startnlpcands - divedepth / 2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound))
       && !SCIPisStopped(scip) )
    {
+
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
 
@@ -573,9 +651,9 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       bestcandroundup = FALSE;
 
       /* get best lp candidate */
-      if ( nlpcands > 0 )
+      if ( nremainingcands > 0 )
       {
-         SCIP_CALL( getBestCandidate(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, &bestlpcand, &bestnviolrows, &bestcandsol, &bestcandfrac,
+         SCIP_CALL( getBestCandidate(scip, remainingcands, remainingcandssol, remainingcandsfrac, nremainingcands, &bestlpcand, &bestnviolrows, &bestcandsol, &bestcandfrac,
                &bestcandmayrounddown, &bestcandmayroundup, &bestcandroundup) );
          bestcandvar = lpcands[bestlpcand];
          assert(bestlpcand >= 0);
@@ -594,7 +672,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       }
 
       /* if all candidates are roundable, try to round the solution */
-      if( bestcandmayrounddown || bestcandmayroundup )
+      if( (bestcandmayrounddown || bestcandmayroundup) && solvelp )
       {
          SCIP_Bool success;
 
@@ -643,7 +721,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          {
             SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
                SCIPvarGetName(bestcandvar), SCIPvarGetLbLocal(bestcandvar), SCIPvarGetUbLocal(bestcandvar), bestcandsol);
-            assert(backtracked);
+
             break;
          }
 
@@ -693,7 +771,16 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 
          /* apply domain propagation */
          SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+
+         /* collect the number of remaining candidates after propagation */
          if( !cutoff )
+         {
+            SCIP_CALL( getRemainingBranchCandidates(scip, remainingcands, remainingcandssol, remainingcandsfrac, nlpcands, &nremainingcands) );
+         }
+         /* only solve the LP relaxation if LP solve frequency is met or no candidate is left from the last LP solve */
+         solvelp = (!cutoff && ((divedepth % DEFAULT_LPSOLVEFREQ) == 0 || nremainingcands == 0));
+
+         if( solvelp )
          {
             /* resolve the diving LP */
             /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -722,13 +809,17 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
             lpsolstat = SCIPgetLPSolstat(scip);
             assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
                   (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
+
+            /* we need to break here if the LP solve caused a cutoff */
+            if( cutoff )
+               break;
          }
 
          /* perform backtracking if a cutoff was detected */
          if( cutoff && !backtracked && heurdata->backtrack )
          {
             SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
-            SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+            SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
             SCIP_CALL( SCIPnewProbingNode(scip) );
             backtracked = TRUE;
             backtrack = TRUE;
@@ -738,8 +829,10 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       }
       while( backtrack );
 
-      if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+      if( solvelp && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
+/* pseudo cost update is not valid if we do not solve every node LP */
+#if 0
          /* get new objective value */
          oldobjval = objval;
          objval = SCIPgetLPObjval(scip);
@@ -758,17 +851,27 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
                SCIP_CALL( SCIPupdateVarPseudocost(scip, bestcandvar, 0.0 - bestcandfrac, objval - oldobjval, 1.0) );
             }
          }
+#endif
+         SCIPfreeBufferArray(scip, &remainingcandsfrac);
+         SCIPfreeBufferArray(scip, &remainingcandssol);
+         SCIPfreeBufferArray(scip, &remainingcands);
 
          /* get new fractional variables */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
-         /* get indicator canditates */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &remainingcands, lpcands, nlpcands) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &remainingcandssol, lpcandssol, nlpcands) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &remainingcandsfrac, lpcandsfrac, nlpcands) );
+         nremainingcands = nlpcands;
+
+
+         /* get indicator candidates */
          if ( nindconss > 0 )
          {
             SCIP_CALL( getIndCandVars(scip, indconss, nindconss, indcands, indcandssol, indcandfrac, &nindcands) );
          }
       }
-      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
+      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nremainingcands);
    }
 
    /* check if a solution has been found */
@@ -804,7 +907,11 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       SCIPfreeBufferArray(scip, &indcands);
    }
 
-   /* end diving */
+   SCIPfreeBufferArray(scip, &remainingcandsfrac);
+   SCIPfreeBufferArray(scip, &remainingcandssol);
+   SCIPfreeBufferArray(scip, &remainingcands);
+
+   /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 
    if( *result == SCIP_FOUNDSOL )
