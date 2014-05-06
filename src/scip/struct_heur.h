@@ -32,6 +32,28 @@
 extern "C" {
 #endif
 
+/** common settings for diving heuristics */
+struct SCIP_Diveset
+{
+   SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
+   SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
+   SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
+   SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   SCIP_Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
+   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
+   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
+   SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_DECL_DIVESETGETCANDS ((*divesetgetcands)); /**< allocate and get candidate variables for diving */
+   SCIP_DECL_DIVESETFREECANDS ((*divesetfreecands)); /**< free previously allocated variables for diving */
+   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)); /**< get preferred branching direction for a candidate */
+};
+
 /** primal heuristics data */
 struct SCIP_Heur
 {

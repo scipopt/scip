@@ -42,7 +42,7 @@ extern "C" {
 
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
-
+typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
 
 /** copy method for heuristic plugins (called when SCIP copies plugins)
  *
@@ -118,6 +118,22 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
  */
 #define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_HEURTIMING heurtiming, \
       SCIP_Bool nodeinfeasible, SCIP_RESULT* result)
+
+/** return sorted arrays of all branching candidates. The array of branching candidates is then processed
+ *  in the order defined by the callback.
+ */
+#define SCIP_DECL_DIVESETGETCANDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR*** branchcands, \
+      SCIP_Real** branchcandssol, SCIP_Real** branchcandsfrac, int* nbranchcands)
+
+/** free candidates storage allocated before
+ */
+#define SCIP_DECL_DIVESETFREECANDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR*** branchcands, \
+      SCIP_Real** branchcandssol, SCIP_Real** branchcandsfrac, int nbranchcands)
+
+/** returns the preferred branching direction of \p cand
+ *
+ */
+#define SCIP_DECL_DIVESETCANDBRANCHDIR(x) SCIP_BRANCHDIR x (SCIP* scip, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac)
 
 #ifdef __cplusplus
 }

@@ -3432,6 +3432,30 @@ SCIP_RETCODE SCIPsetHeurPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
+/** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
+ *  before this method can be called
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateDiveset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET**        diveset,            /**< common diving heuristic settings */
+   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs*/
+   SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
+   SCIP_Real             maxreldepth,        /**< maximal relative depth to start diving */
+   SCIP_Real             maxlpiterquot,      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   SCIP_Real             maxdiveubquot,      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveavgquot,     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_DECL_DIVESETGETCANDS ((*divesetgetcands)), /**< allocate and get candidate variables for diving */
+   SCIP_DECL_DIVESETFREECANDS ((*divesetfreecands)), /**< free previously allocated variables for diving */
+   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)) /**< get preferred branching direction for a candidate */
+   );
+
 /** creates an event handler and includes it in SCIP
  *
  *  @note method has all event handler callbacks as arguments and is thus changed every time a new
@@ -14298,6 +14322,16 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
 
    );
 
+EXTERN
+/** applies a diving within the limits of the diveset parameters */
+SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_DIVESET*      diveset,            /**< settings for diving */
+   SCIP_SOL*          worksol,            /**< non-NULL working solution */
+   SCIP_HEUR*         heur,               /**< the calling primal heuristic */
+   SCIP_RESULT*       result,             /**< SCIP result pointer */
+   SCIP_Bool          nodeinfeasible      /**< is the current node known to be infeasible? */
+   );
 /**@} */
 
 
