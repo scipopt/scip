@@ -158,7 +158,9 @@ do
                 export EXECNAME=$SCIPPATH/../$BINNAME
                 export BASENAME=$FILENAME
                 export FILENAME=$INSTANCE
-                export CLIENTTMPDIR=$CLIENTTMPDIR
+                export CLIENTTMPDIR
+                export HARDTIMELIMIT
+                export HARDMEMLIMIT
                 sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables
