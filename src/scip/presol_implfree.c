@@ -40,18 +40,9 @@
 #define PRESOL_NAME            "implfree"
 #define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
 #define PRESOL_PRIORITY         12000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
-/*
- * Data structures
-  */
-
-/** control parameters */
-struct SCIP_PresolData
-{
-   int                   dummy;
-};
 
 
 /********************************************************************/
@@ -512,7 +503,7 @@ SCIP_RETCODE initMatrix(
             && (strcmp(conshdlrname, "logicor") != 0) && (strcmp(conshdlrname, "knapsack") != 0)
             && (strcmp(conshdlrname, "varbound") != 0) )
          {
-            SCIPdebugMessage("unsupported constraint type <%s>: aborting domcol presolver\n", conshdlrname);
+            SCIPdebugMessage("unsupported constraint type <%s>: aborting implfree presolver\n", conshdlrname);
             break;
          }
       }
@@ -1351,15 +1342,13 @@ SCIP_RETCODE getMultiaggDelcons(
          {
             int* rowpnt;
             int* rowend;
-            SCIP_Real* valpnt;
 
             rowpnt = matrix->rowmatind + matrix->rowmatbeg[r];
             rowend = rowpnt + matrix->rowmatcnt[r];
-            valpnt = matrix->rowmatval + matrix->rowmatbeg[r];
 
             bestfillin = 1.0;
             bestvaridx = -1;
-            for( ; rowpnt < rowend; rowpnt++, valpnt++ )
+            for( ; rowpnt < rowend; rowpnt++ )
             {
                SCIP_VAR* var;
                SCIP_Bool goodconspresence;
@@ -1373,7 +1362,7 @@ SCIP_RETCODE getMultiaggDelcons(
                /* search for a continuous variable which is implied free, produces less fill-in
                 * and has an advantageous constraint presence
                 */
-               /* @todo: should we consider numerical stability too ? */
+               /* @todo: consider numerical stability ! */
 
                SCIP_CALL( advConsPresence(scip,matrix,*rowpnt,r,&goodconspresence) );
 
@@ -1428,27 +1417,11 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplfree)
    return SCIP_OKAY;
 }
 
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_PRESOLFREE(presolFreeImplfree)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* presoldata;
-
-   /* free presolver data */
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
-
-   SCIPfreeMemory(scip, &presoldata);
-   SCIPpresolSetData(presol, NULL);
-
-   return SCIP_OKAY;
-}
 
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 {  /*lint --e{715}*/
-   SCIP_PRESOLDATA* presoldata;
    CONSTRAINTMATRIX* matrix;
    SCIP_Bool initialized;
 
@@ -1460,9 +1433,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
 
    /* initialize constraint matrix */
    matrix = NULL;
@@ -1501,7 +1471,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                SCIP_Real aggrconst;
                SCIP_Bool infeasible;
                SCIP_Bool aggregated;
-               SCIP_Bool multiaggcoeffound;
                SCIP_CONS* multiaggcons;
                int row;
                int cnt;
@@ -1530,20 +1499,29 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
                cnt = 0;
                multiaggcoef = 0.0;
-               multiaggcoeffound = FALSE;
                for( ; rowpnt < rowend; rowpnt++, valpnt++ )
                {
                   if( *rowpnt == v )
                   {
                      multiaggcoef = *valpnt;
-                     multiaggcoeffound = TRUE;
                      continue;
                   }
 
                   vars[cnt++] = matrix->vars[*rowpnt];
                }
-               assert(multiaggcoeffound==TRUE);
-               aggrconst = matrix->rhs[row]/multiaggcoef;
+
+               /* avoid division by zero */
+               if( SCIPisEQ(scip,multiaggcoef,0.0) )
+                  continue;
+
+               /* it is possible to have an implied equality where we have
+                * to distinguished to cases
+                */
+               assert(SCIPisInfinity(scip,-matrix->lhs[row]) || SCIPisInfinity(scip,matrix->rhs[row]) || SCIPisEQ(scip,matrix->rhs[row],matrix->lhs[row]));
+               if( !SCIPisInfinity(scip,matrix->rhs[row]) )
+                  aggrconst = matrix->rhs[row]/multiaggcoef;
+               else
+                  aggrconst = matrix->lhs[row]/multiaggcoef;
 
                /* calculate scalars */
                rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
@@ -1604,17 +1582,12 @@ SCIP_RETCODE SCIPincludePresolImplfree(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
-
-   /* create domcol presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecImplfree, presoldata) );
+         PRESOL_DELAY, presolExecImplfree, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyImplfree) );
-   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeImplfree) );
 
    return SCIP_OKAY;
 }
