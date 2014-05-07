@@ -292,6 +292,7 @@ SCIP_DECL_DIVESETGETCANDS(divesetGetCandsCoefdiving)
 
    heurdata = SCIPheurGetData(SCIPdivesetGetHeur(diveset));
    nindcands = 0;
+   nindconss = 0;
    if( heurdata->indconshdlr != NULL )
    {
       indconss = SCIPconshdlrGetConss(heurdata->indconshdlr);
