@@ -87,31 +87,12 @@ SCIP_Real getVarBranchScore(
    {
       /* choose rounding direction:
        * - if variable may be rounded in both directions, round corresponding to the fractionality
-       * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
-       *   the current fractional solution
+       * - otherwise, round in the infeasible direction
        */
       if( mayrounddown && mayroundup )
          roundup = (candfrac > 0.5);
       else
          roundup = mayrounddown;
-
-      if( roundup )
-      {
-         candfrac = 1.0 - candfrac;
-         score = SCIPvarGetNLocksUp(cand);
-      }
-      else
-         score = SCIPvarGetNLocksDown(cand);
-
-      /* penalize too small fractions */
-      if( candfrac < 0.01 )
-         score *= 100;
-
-      /* prefer decisions on binary variables */
-      if( !SCIPvarIsBinary(cand) )
-         score *= 100;
-
-      return score + candfrac + SCIPgetNLPRows(scip);
    }
    else
    {
@@ -119,27 +100,32 @@ SCIP_Real getVarBranchScore(
       int nlocksdown = SCIPvarGetNLocksDown(cand);
       int nlocksup = SCIPvarGetNLocksUp(cand);
       roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candfrac > 0.5));
-      if( roundup )
-      {
-         score = nlocksup;
-         candfrac = 1.0 - candfrac;
-      }
-      else
-         score = nlocksdown;
-
-      /* penalize too small fractions */
-      if( candfrac < 0.01 )
-         score *= 100;
-
-      /* prefer decisions on binary variables */
-      if( !SCIPvarIsBinary(cand) )
-         score *= 100;
-
-      /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
-      assert( (0.0 < candfrac && candfrac < 1.0) || SCIPvarIsBinary(cand) );
-
-      return score + candfrac;
    }
+
+   if( roundup )
+   {
+      candfrac = 1.0 - candfrac;
+      score = SCIPvarGetNLocksUp(cand);
+   }
+   else
+      score = SCIPvarGetNLocksDown(cand);
+
+   /* penalize the variable if it may be rounded. */
+   if( mayrounddown || mayroundup )
+      score += SCIPgetNLPRows(scip);
+
+   /* penalize too small fractions */
+   if( candfrac < 0.01 )
+      score *= 100;
+
+   /* prefer decisions on binary variables */
+   if( !SCIPvarIsBinary(cand) )
+      score *= 100;
+
+   /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+   assert( (0.0 < candfrac && candfrac < 1.0) || SCIPvarIsBinary(cand) );
+
+   return score + candfrac;
 }
 
 static
@@ -380,7 +366,7 @@ SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirCoefdiving)
 {
    SCIP_Bool roundup;
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
-   SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
+   SCIP_Bool mayroundup = SCIPvarmayroundup(cand);
 
    if( mayrounddown && mayroundup )
       roundup = (candsfrac > 0.5);
