@@ -36,6 +36,9 @@
 
 #include "scip/struct_heur.h"
 
+#define MINTARGETDEPTHFRAC 0.01
+#define MAXTARGETDEPTHFRAC 0.7
+
 /** compares two heuristics w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
@@ -90,6 +93,7 @@ void SCIPdivesetReset(
 
    diveset->nlpiterations = 0L;
    diveset->nsuccess = 0;
+   diveset->targetdepthfrac = .5;
 }
 
 /** create a set of diving heuristic settings */
@@ -166,7 +170,7 @@ SCIP_RETCODE SCIPdivesetCreate(
          &(*diveset)->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
-         "heuristics/coefdiving/maxdiveubquotnosol",
+         paramname,
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
          &(*diveset)->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", name);
@@ -176,7 +180,7 @@ SCIP_RETCODE SCIPdivesetCreate(
          &(*diveset)->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
-         "heuristics/coefdiving/backtrack",
+         paramname,
          "use one level of backtracking if infeasibility is encountered?",
          &(*diveset)->backtrack, FALSE, backtrack, NULL, NULL) );
 
@@ -295,6 +299,26 @@ void SCIPdivesetIncreaseNsuccess(
    )
 {
    diveset->nsuccess++;
+}
+
+/** get the target depth fraction of the diving settings  */
+SCIP_Real SCIPdivesetGetTargetdepthfrac(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   return diveset->targetdepthfrac;
+}
+
+/** set the target depth fraction of the diving settings  */
+void SCIPdivesetSetTargetdepthfrac(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_Real             newval              /**< new value for target depth frac */
+   )
+{
+   newval = MAX(newval, MINTARGETDEPTHFRAC);
+   newval = MIN(newval, MAXTARGETDEPTHFRAC);
+
+   diveset->targetdepthfrac = newval;
 }
 
 /** frees memory of a diveset */

@@ -366,7 +366,7 @@ SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirCoefdiving)
 {
    SCIP_Bool roundup;
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
-   SCIP_Bool mayroundup = SCIPvarmayroundup(cand);
+   SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
 
    if( mayrounddown && mayroundup )
       roundup = (candsfrac > 0.5);

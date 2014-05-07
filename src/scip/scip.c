@@ -30127,6 +30127,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int divedepth;
    int bestlpcand;
    int nextcand;
+   int targetdepth;
 
    assert(scip != NULL);
    assert(result != NULL);
@@ -30240,10 +30241,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
          SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
-   /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
-    * - if possible, we dive at least with the depth 10
-    * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
-    */
    lperror = FALSE;
    cutoff = FALSE;
    divedepth = 0;
@@ -30251,7 +30248,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    roundup = FALSE;
    solvelp = TRUE;
    bestlpcand = -1;
-   nextcand = 0;
+
+   /* LP loop; every time a new LP was solved, conditions are checked
+    * dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
+    * - if possible, we dive at least with the depth 10
+    * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
+    */
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
             || nlpcands <= startnlpcands - divedepth / 2
@@ -30259,148 +30261,103 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             && !SCIPisStopped(scip) )
    {
       SCIP_BRANCHDIR nextcandbranchdir;
+      int nbacktracks;
+      int startdepth;
 
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      divedepth++;
+      /* determine the target depth (depth where the next LP should be solved) */
+      startdepth = divedepth;
+      targetdepth = MIN(nlpcands, maxdivedepth - divedepth);
+      targetdepth = divedepth + 1 + (int)(targetdepth * SCIPdivesetGetTargetdepthfrac(diveset));
 
-      /* choose variable fixing:
-       * - prefer variables that may not be rounded without destroying LP feasibility:
-       *   - of these variables, round variable with least number of locks in corresponding direction
-       * - if all remaining fractional variables may be rounded without destroying LP feasibility:
-       *   - round variable with least number of locks in opposite of its feasible rounding direction
+      assert(targetdepth > divedepth);
+
+      /* start with the first candidate in the sorted candidates array */
+      nextcand = 0;
+
+      /* start propagating candidate variables
+       *   - until the desired targetdepth is reached,
+       *   - or there is no further candidate variable left because of intermediate bound changes,
+       *   - or a cutoff is detected
        */
-
-      assert(nextcand <= nlpcands);
-      nextcandvar = lpcands[nextcand];
-      nextcandsol = lpcandssol[nextcand];
-      nextcandroundup = FALSE;
-      nextcandbranchdir = SCIPdivesetCandBranchdir(diveset, scip->set, nextcandvar, nextcandsol, lpcandsfrac[nextcand]);
-      nextcandroundup = nextcandbranchdir == SCIP_BRANCHDIR_UPWARDS;
-
-/* this code block does not need to be executed anymore if fast heuristics are applied after probing LP */
-#if 0
-      /* if all candidates are roundable, try to round the solution */
-      if( (bestcandmayrounddown || bestcandmayroundup) && solvelp )
-      {
-         SCIP_Bool success;
-
-         /* create solution from diving LP and try to round it */
-         SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-         SCIP_CALL( SCIProundSol(scip, worksol, &success) );
-
-         if( success )
-         {
-            SCIPdebugMessage("%s found roundable primal solution: obj=%g\n", SCIPheurGetName(heur), SCIPgetSolOrigObj(scip, worksol));
-
-            /* try to add solution to SCIP */
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
-
-            /* check, if solution was feasible and good enough */
-            if( success )
-            {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
-               *result = SCIP_FOUNDSOL;
-            }
-         }
-      }
-#endif
-      backtracked = FALSE;
       do
       {
-         backtrack = FALSE;
-         /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
-          * occured or variable was fixed by propagation while backtracking => Abort diving!
-          */
-         if( SCIPvarGetLbLocal(nextcandvar) >= SCIPvarGetUbLocal(nextcandvar) - 0.5 )
+         SCIP_CALL( SCIPnewProbingNode(scip) );
+         divedepth++;
+
+         assert(nextcand <= nlpcands);
+         nextcandvar = lpcands[nextcand];
+         nextcandsol = lpcandssol[nextcand];
+         nextcandroundup = FALSE;
+         nextcandbranchdir = SCIPdivesetCandBranchdir(diveset, scip->set, nextcandvar, nextcandsol, lpcandsfrac[nextcand]);
+         nextcandroundup = nextcandbranchdir == SCIP_BRANCHDIR_UPWARDS;
+
+         backtracked = FALSE;
+         do
          {
-            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
-                  SCIPvarGetName(nextcandvar), SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar), nextcandsol);
-            cutoff = TRUE;
-            break;
-         }
-         if( SCIPisFeasLT(scip, nextcandsol, SCIPvarGetLbLocal(nextcandvar)) || SCIPisFeasGT(scip, nextcandsol, SCIPvarGetUbLocal(nextcandvar)) )
-         {
-            SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
-                  SCIPvarGetName(nextcandvar), SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar), nextcandsol);
-
-            break;
-         }
-
-         /* apply rounding of best candidate */
-         if( nextcandroundup == !backtracked )
-         {
-            SCIP_Real value = SCIPfeasCeil(scip, nextcandsol);
-            if ( SCIPisFeasIntegral(scip, nextcandsol) )
-            {
-               /* only indicator variables can have integral solution value */
-               assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
-               value = 1.0;
-            }
-
-            /* round variable up */
-            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                  divedepth, maxdivedepth, SCIPdivesetGetNLPiterations(diveset), maxnlpiterations,
-                  SCIPvarGetName(nextcandvar),
-                  nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
-                  value, SCIPvarGetUbLocal(nextcandvar));
-
-            SCIP_CALL( SCIPchgVarLbProbing(scip, nextcandvar, value) );
-            roundup = TRUE;
-         }
-         else
-         {
-            SCIP_Real value = SCIPfeasFloor(scip, nextcandsol);
-
-            if ( SCIPisFeasIntegral(scip, nextcandsol) )
-            {
-               /* only indicator variables can have integral solution value */
-               assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
-               value = 0.0;
-            }
-            /* round variable down */
-            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                  divedepth, maxdivedepth, SCIPdivesetGetNLPiterations(diveset), maxnlpiterations,
-                  SCIPvarGetName(nextcandvar),
-                  nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
-                  SCIPvarGetLbLocal(nextcandvar), value);
-
-            SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
-            roundup = FALSE;
-         }
-
-         /* apply domain propagation */
-         SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
-
-         if( !cutoff )
-         {
-            /* resolve the diving LP */
-            /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-             * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+            backtrack = FALSE;
+            /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
+             * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
-#ifdef NDEBUG
-            SCIP_RETCODE retstat;
-            nlpiterations = SCIPgetNLPIterations(scip);
-            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror, &cutoff);
-            if( retstat != SCIP_OKAY )
+            if( SCIPvarGetLbLocal(nextcandvar) >= SCIPvarGetUbLocal(nextcandvar) - 0.5 )
             {
-               SCIPwarningMessage(scip, "Error while solving LP in Coefdiving heuristic; LP solve terminated with code <%d>\n",retstat);
-            }
-#else
-            nlpiterations = SCIPgetNLPIterations(scip);
-            SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - SCIPdivesetGetNLPiterations(diveset)), MINLPITER), &lperror, &cutoff) );
-#endif
-
-            if( lperror )
+               SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+                     SCIPvarGetName(nextcandvar), SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar), nextcandsol);
+               cutoff = TRUE;
                break;
-
-            /* update iteration count */
-            SCIPdivesetIncreaseNLPiterations(diveset, SCIPgetNLPIterations(scip) - nlpiterations);
-
-            /* get LP solution status, objective value, and fractional variables, that should be integral */
-            lpsolstat = SCIPgetLPSolstat(scip);
-            assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
-                  (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
             }
+            if( SCIPisFeasLT(scip, nextcandsol, SCIPvarGetLbLocal(nextcandvar)) || SCIPisFeasGT(scip, nextcandsol, SCIPvarGetUbLocal(nextcandvar)) )
+            {
+               SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+                     SCIPvarGetName(nextcandvar), SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar), nextcandsol);
+               cutoff = TRUE;
+               break;
+            }
+
+            /* apply rounding of best candidate */
+            if( nextcandroundup == !backtracked )
+            {
+               SCIP_Real value = SCIPfeasCeil(scip, nextcandsol);
+               if ( SCIPisFeasIntegral(scip, nextcandsol) )
+               {
+                  /* only indicator variables can have integral solution value */
+                  assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
+                  value = 1.0;
+               }
+
+               /* round variable up */
+               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                     divedepth, maxdivedepth, SCIPdivesetGetNLPiterations(diveset), maxnlpiterations,
+                     SCIPvarGetName(nextcandvar),
+                     nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
+                     value, SCIPvarGetUbLocal(nextcandvar));
+
+               SCIP_CALL( SCIPchgVarLbProbing(scip, nextcandvar, value) );
+               roundup = TRUE;
+            }
+            else
+            {
+               SCIP_Real value = SCIPfeasFloor(scip, nextcandsol);
+
+               if ( SCIPisFeasIntegral(scip, nextcandsol) )
+               {
+                  /* only indicator variables can have integral solution value */
+                  assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
+                  value = 0.0;
+               }
+               /* round variable down */
+               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                     divedepth, maxdivedepth, SCIPdivesetGetNLPiterations(diveset), maxnlpiterations,
+                     SCIPvarGetName(nextcandvar),
+                     nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
+                     SCIPvarGetLbLocal(nextcandvar), value);
+
+               SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
+               roundup = FALSE;
+            }
+
+            /* apply domain propagation */
+            SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+
 
             /* perform backtracking if a cutoff was detected */
             if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) )
@@ -30416,71 +30373,136 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
          while( backtrack );
 
-         if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+         /* if the last node was cut off, we have to decrease the target depth and backtrack accordingly */
+         if( cutoff )
          {
-            /* get new objective value */
-            oldobjval = objval;
-            objval = SCIPgetLPObjval(scip);
-
-            /* update pseudo cost values */
-            if( SCIPisGT(scip, objval, oldobjval) )
+            int reacheddepth = divedepth - 1;
+            /* evaluate how deep we went this time and be more conservative in the future, if possible
+             * if not even half the targeted depth was reached, decrease the depth quotient
+             */
+            if( reacheddepth < (targetdepth - startdepth) / 2 )
             {
-               if( roundup )
+               SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
+            }
+
+            if( SCIPdivesetUseBacktrack(diveset) && divedepth > startdepth + 1 )
+            {
+               SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) -1) );
+               --divedepth;
+               cutoff = FALSE;
+            }
+
+            nextcand = nlpcands;
+         }
+         else
+         {
+            /* we need to search for the next candidate in our list which was not previously fixed or whose LP solution
+             * is already infeasible
+             */
+            while( nextcand < nlpcands )
+            {
+               ++nextcand;
+               if( nextcand == nlpcands || (SCIPvarGetLbLocal(lpcands[nextcand]) >= SCIPvarGetUbLocal(lpcands[nextcand]) - 0.5)
+                     || SCIPisFeasLT(scip, lpcandssol[nextcand], SCIPvarGetLbLocal(lpcands[nextcand]))
+                     || SCIPisFeasGT(scip, lpcandssol[nextcand], SCIPvarGetUbLocal(lpcands[nextcand])) )
                {
-                  assert(nextcandroundup || backtracked);
-                  SCIP_CALL( SCIPupdateVarPseudocost(scip, nextcandvar, 1.0 - lpcandsfrac[nextcand], objval - oldobjval, 1.0) );
+                  SCIPdebugMessage(" <%s> solution value is fixed/outside the domain [%g,%g] (solval: %.9f), variable is skipped\n",
+                        SCIPvarGetName(lpcands[nextcand]), SCIPvarGetLbLocal(lpcands[nextcand]), SCIPvarGetUbLocal(lpcands[nextcand]), lpcandssol[nextcand]);
                }
                else
-               {
-                  assert(!nextcandroundup || backtracked);
-                  SCIP_CALL( SCIPupdateVarPseudocost(scip, nextcandvar, 0.0 - lpcandsfrac[nextcand], objval - oldobjval, 1.0) );
-               }
+                  break;
             }
-            SCIP_CALL( SCIPdivesetFreeCands(diveset, scip->set, &lpcands, &lpcandssol, &lpcandsfrac, nlpcands) );
-            /* get new fractional variables that should be integral */
-            SCIP_CALL( SCIPdivesetGetCands(diveset, scip->set, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
-
-            nextcand = 0;
          }
-         SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
       }
+      while( targetdepth > divedepth && nextcand < nlpcands );
 
-      /* check if a solution has been found */
-      if( nlpcands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+      /* reward the diving setting by increasing the dive depth quotient for future purpose */
+      if( divedepth == targetdepth )
       {
-         SCIP_Bool success;
-
-         /* create solution from diving LP */
-         SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-         SCIPdebugMessage("%s found primal solution: obj=%g\n", SCIPheurGetName(heur), SCIPgetSolOrigObj(scip, worksol));
-
-         /* try to add solution to SCIP */
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
-
-         /* check, if solution was feasible and good enough */
-         if( success )
+         SCIPdivesetSetTargetdepthfrac(diveset, 1.1 * SCIPdivesetGetTargetdepthfrac(diveset));
+      }
+      if( !cutoff )
+      {
+         /* resolve the diving LP */
+         /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+          * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+          */
+#ifdef NDEBUG
+         SCIP_RETCODE retstat;
+         nlpiterations = SCIPgetNLPIterations(scip);
+         retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - SCIPdivesetGetNLPiterations(diveset)), MINLPITER), &lperror, &cutoff);
+         if( retstat != SCIP_OKAY )
          {
-            SCIPdebugMessage(" -> solution was feasible and good enough\n");
-            *result = SCIP_FOUNDSOL;
+            SCIPwarningMessage(scip, "Error while solving LP in Coefdiving heuristic; LP solve terminated with code <%d>\n",retstat);
          }
+#else
+         nlpiterations = SCIPgetNLPIterations(scip);
+         SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - SCIPdivesetGetNLPiterations(diveset)), MINLPITER), &lperror, &cutoff) );
+#endif
+
+         if( lperror )
+            break;
+
+         /* update iteration count */
+         SCIPdivesetIncreaseNLPiterations(diveset, SCIPgetNLPIterations(scip) - nlpiterations);
+
+         /* get LP solution status, objective value, and fractional variables, that should be integral */
+         lpsolstat = SCIPgetLPSolstat(scip);
+         assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
+               (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
       }
 
-      if( nlpcands > 0 )
+      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
+
+      SCIP_CALL( SCIPdivesetFreeCands(diveset, scip->set, &lpcands, &lpcandssol, &lpcandsfrac, nlpcands) );
+      nextcand = 0;
+
+      if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
-         SCIP_CALL( SCIPdivesetFreeCands(diveset, scip->set, &lpcands, &lpcandssol, &lpcandsfrac, nlpcands) );
+         /* get new fractional variables that should be integral */
+         SCIP_CALL( SCIPdivesetGetCands(diveset, scip->set, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+
       }
+      else
+         nlpcands = 0;
+   }
 
-      /* end probing mode */
-      SCIP_CALL( SCIPendProbing(scip) );
+   /* check if a solution has been found */
+   if( nlpcands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_Bool success;
 
-      if( *result == SCIP_FOUNDSOL )
-         SCIPdivesetIncreaseNsuccess(diveset);
+      /* create solution from diving LP */
+      SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+      SCIPdebugMessage("%s found primal solution: obj=%g\n", SCIPheurGetName(heur), SCIPgetSolOrigObj(scip, worksol));
 
-      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
+      /* try to add solution to SCIP */
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
+
+      /* check, if solution was feasible and good enough */
+      if( success )
+      {
+         SCIPdebugMessage(" -> solution was feasible and good enough\n");
+         *result = SCIP_FOUNDSOL;
+      }
+   }
+
+   if( nlpcands > 0 )
+   {
+      SCIP_CALL( SCIPdivesetFreeCands(diveset, scip->set, &lpcands, &lpcandssol, &lpcandsfrac, nlpcands) );
+   }
+
+   /* end probing mode */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   if( *result == SCIP_FOUNDSOL )
+      SCIPdivesetIncreaseNsuccess(diveset);
+
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
          SCIPgetNNodes(scip), SCIPheurGetName(heur), nlpcands, divedepth, maxdivedepth, SCIPdivesetGetNLPiterations(diveset), maxnlpiterations,
          SCIPretransformObj(scip, objval), SCIPretransformObj(scip, searchbound), lpsolstat, cutoff);
 
-      return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 

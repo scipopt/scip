@@ -61,6 +61,19 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir))  /**< get preferred branching direction for a candidate */
    );
 
+/** get the target depth fraction of the diving settings  */
+extern
+SCIP_Real SCIPdivesetGetTargetdepthfrac(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** set the target depth fraction of the diving settings  */
+extern
+void SCIPdivesetSetTargetdepthfrac(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_Real             newval              /**< new value for target depth frac */
+   );
+
 /** get branching candidates defined by the diveset */
 extern
 SCIP_RETCODE SCIPdivesetGetCands(
