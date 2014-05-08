@@ -1545,7 +1545,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                   SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(probingvar));
                (*naggrvars)++;
             }
-            else if( *cutoff )
+            if( *cutoff )
             {
                SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible aggregation: %g<%s> - %g<%s> == %g\n",
                   SCIPvarGetName(probingvar), rightlb - leftub, SCIPvarGetName(var),
