@@ -59,7 +59,7 @@ TESTFILES       =       testset/*.mop
 #INCLUDE 	= 	-Ilib/lemon-src
 
 VERBOSE 	= 	false
-MAKELEMONLINKS = true
+MAKELEMONLINKS  = 	true
 FLAGS		+=	-I$(LIBDIR)/lemoninc
 LEMONLINKS	=	$(LIBDIR)/lemoninc
 LEMONLINKS	+=	$(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -97,14 +97,6 @@ doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) $(MAINNAME).dxy
-
-.PHONY: libs
-libs: 	$(LEMONLINKS)
-		@test -e $(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT) || test -e $(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) || (echo "Please create softlink lib/lemon-lib to lemon lib directory" && test )
-
-.PHONY: includes
-includes:		
-		@test -e $(LIBDIR)/lemoninc || (echo "Please create softlink lib/lemon-src to lemon header file directory" && test)
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
@@ -145,7 +137,7 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR) includes libs
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR)
 		@$(MAKE) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES) $(OBJS) $(EXTOBS) $(SOLDIR)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(OBJS) $(EXTOBJS) \
@@ -160,7 +152,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
-$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
+$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LEMONLINKS)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -Wno-shadow -c $< $(CXX_o)$@
 
@@ -168,7 +160,7 @@ info:
 	@echo "$(MAINOBJFILES)"
 
 .PHONY: $(LEMONLINKS)
-$(LEMONLINKS):
+$(LEMONLINKS): 
 ifeq ($(MAKELEMONLINKS), true)
 		@$(SHELL) -ec 'if test ! -e $@ ; \
 			then \

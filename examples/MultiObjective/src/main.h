@@ -27,6 +27,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include "scip/def.h"
 
@@ -51,6 +52,12 @@ const int           WIDTH_VEC_PADDING   = 4;
 std::ostream& operator<<(
    std::ostream&                   os,       /** stream the vector should be written to*/
    const std::vector<SCIP_Real>&   v         /** vector that should be written */
+   );
+
+/** return the scalar product of two vectors */
+SCIP_Real scalar_product( 
+   const std::vector<SCIP_Real>&   u, 
+   const std::vector<SCIP_Real>&   v
    );
 
 class WeightedSolver;

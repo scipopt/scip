@@ -107,6 +107,9 @@ class WeightedSolver
    /** get number of vertices in the 1-skeleton processed in last step*/
    virtual int getNProcessedVertices() const=0;
 
+   /** delete non extremal solutions */
+   SCIP_RETCODE enforceExtremality();
+
  protected:
    SCIP*                 scip_;                   /**< SCIP solver */
    SCIP_Real             timelimit_;              /**< maximal time for entire solve in seconds */

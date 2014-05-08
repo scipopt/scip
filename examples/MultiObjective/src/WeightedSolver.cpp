@@ -33,9 +33,11 @@
 #include "scip/scipdefplugins.h"
 #include "sys/stat.h"
 #include "reader_mop.h"
+#include "lpi/lpi.h"
 
 #include "WeightedSolver.h"
 #include "Objectives.h"
+#include "main.h"
 
 /** standard constructor */
 WeightedSolver::WeightedSolver(
@@ -58,7 +60,6 @@ WeightedSolver::WeightedSolver(
    SCIPincludeDefaultPlugins(scip_);
    SCIPincludeReaderMop(scip_);
    SCIPsetIntParam(scip_, "limits/maxorigsol", solstore);
-   SCIPsetIntParam(scip_, "limits/maxsol", solstore);
 }
 
 /** destructor */
@@ -184,6 +185,124 @@ SCIP_RETCODE WeightedSolver::writeSolution()
    /* write file */
    fsol = fopen(solution_file_name_.c_str(), "w");
    SCIP_CALL( SCIPprintSol(scip_, solution_, fsol, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** delete non extremal solutions */
+SCIP_RETCODE WeightedSolver::enforceExtremality()
+{
+   int ncols = nondom_points_.size();
+   int nrows = getNObjs() + 1; 
+   int nnonz = ncols * nrows;
+
+   SCIP_Real* obj = new SCIP_Real[ncols];
+   SCIP_Real* lb  = new SCIP_Real[ncols];
+   SCIP_Real* ub  = new SCIP_Real[ncols];
+
+   SCIP_Real* lhs = new SCIP_Real[nrows];
+   SCIP_Real* rhs = new SCIP_Real[nrows];
+
+   int*       beg = new int[ncols];
+   int*       ind = new int[nnonz];
+   SCIP_Real* val = new SCIP_Real[nnonz];
+
+   std::vector< const std::vector<SCIP_Real>* >::iterator it = nondom_points_.begin();
+
+   for( int j = 0; j < ncols; ++j )
+   {
+      obj[j] = 0.;
+      lb[j]  = 0.;
+      ub[j]  = 1.;
+      beg[j] = nrows * j;
+
+      for( int i = 0; i < nrows - 1; ++i )
+      {
+         ind[nrows * j + i] = i;
+         val[nrows * j + i] = (**it)[i];
+      }
+
+      ind[nrows * (j + 1) - 1] = nrows - 1;
+      val[nrows * (j + 1) - 1] = 1.;
+
+      ++it;
+   }
+
+   for( int i = 0; i < nrows - 1; ++i )
+   {
+      lhs[i] = - SCIPinfinity(scip_);
+      rhs[i] = 0.;
+   } 
+
+   lhs[nrows - 1] = 1.;
+   rhs[nrows - 1] = 1.;
+
+   SCIP_LPI* lpi;
+   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
+
+   SCIP_CALL( SCIPlpiLoadColLP(
+      lpi,
+      SCIP_OBJSEN_MINIMIZE,
+      ncols,
+      obj,
+      lb,
+      ub,
+      NULL,
+      nrows,
+      lhs,
+      rhs,
+      NULL,
+      nnonz,
+      beg,
+      ind,
+      val 
+    ) );		
+
+   SCIP_Real objval;
+   SCIP_Real one = 1.;
+   SCIP_Real zero = 0.;
+   it = nondom_points_.begin();
+
+   for( int j = 0; j < ncols; ++j )
+   {
+      SCIP_CALL( SCIPlpiChgObj(lpi, 1, &j, &one) );		
+
+      for( int i = 0; i < nrows - 1; ++i )
+      {
+         rhs[i] = (**it)[i];
+      }
+
+      SCIP_CALL( SCIPlpiChgSides(lpi, nrows, ind, lhs, rhs) );
+
+      SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+
+      assert( SCIPlpiIsOptimal(lpi) );
+
+      SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+
+      if( SCIPisEQ(scip_, objval, 0.) )
+      {
+         std::cout << "nonextremal point: " << **it << std::endl;
+         it = nondom_points_.erase(it);
+      }
+      else
+      {
+         ++it;         
+      }
+
+      SCIP_CALL( SCIPlpiChgObj(lpi, 1, &j, &zero) );		
+   }
+
+   delete obj;
+   delete lb;
+   delete ub;
+   delete lhs;
+   delete rhs;
+   delete beg;
+   delete ind;
+   delete val;
+
+   SCIP_CALL( SCIPlpiFree(&lpi) );
 
    return SCIP_OKAY;
 }

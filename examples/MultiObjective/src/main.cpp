@@ -15,7 +15,7 @@
 
 /**@file   main.cpp
  * @brief  main file
-n * @author Timo Strunk
+ * @author Timo Strunk
  *
  * @desc   This is the main class of the program responsible for reading the arguments and running the program.
  *         Furthermore it is responsible for writing standard output.
@@ -61,6 +61,29 @@ std::ostream& operator<<(
    os << ss.str();
 
    return os;
+}
+
+/** return the scalar product of two vectors */
+SCIP_Real scalar_product( 
+   const std::vector<SCIP_Real>&   u, 
+   const std::vector<SCIP_Real>&   v
+   )
+{
+   assert( u.size() == v.size() );
+
+   SCIP_Real result = 0.;
+
+   std::vector<SCIP_Real>::const_iterator uit = u.begin();
+   std::vector<SCIP_Real>::const_iterator vit = v.begin();
+   
+   while( uit != u.end() )
+   {
+      result += (*uit) * (*vit);
+      ++uit;
+      ++vit;
+   }
+
+   return result;
 }
 
 /** constructor from command line arguments */
@@ -125,6 +148,9 @@ SCIP_RETCODE Main::main()
    }
 
    evaluateStatus();
+
+   SCIP_CALL( solver_->enforceExtremality() );
+
    printBottomLine();
 
    return SCIP_OKAY;
@@ -326,8 +352,16 @@ void Main::evaluateStatus()
 void Main::printBottomLine()
 {
    *os_ << std::endl
-        << std::setw(width_vec_ - 5)     << solver_->getNRuns()      << " runs"
-        << std::setw(width_vec_ - 10)    << solver_->getNSolutions() << " solutions"
+        << std::setw(width_vec_)         << "Runs"
+        << std::setw(width_vec_)         << "Solutions"
+        << std::setw(WIDTH_DEFAULT)      << "Time/s"
+        << std::setw(WIDTH_DEFAULT)      << "Nodes"
+        << std::setw(WIDTH_DEFAULT)      << "LP Iter"
+        << std::setw(WIDTH_DEFAULT)      << "V_new"
+        << std::setw(WIDTH_DEFAULT)      << "V_proc"
+        << std::endl                     << std::endl
+        << std::setw(width_vec_)         << solver_->getNRuns()
+        << std::setw(width_vec_)         << solver_->getNSolutions()
         << std::setw(WIDTH_DEFAULT)      << solver_->getTotalDuration()
         << std::setw(WIDTH_DEFAULT)      << nnodes_total_
         << std::setw(WIDTH_DEFAULT)      << niterations_total_
