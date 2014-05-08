@@ -9030,13 +9030,21 @@ SCIP_RETCODE varAddImplic(
 
    if( var == implvar )
    {
-      /* variable implies itself: x == varfixing  =>  x == (impltype == SCIP_BOUNDTYPE_LOWER) */
-      assert(SCIPsetIsEQ(set, implbound, 0.0) || SCIPsetIsEQ(set, implbound, 1.0));
-      assert(SCIPsetIsEQ(set, implbound, 0.0) == (impltype == SCIP_BOUNDTYPE_UPPER));
-      assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
-      conflict = conflict || ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
-      if( !conflict )
-         return SCIP_OKAY;
+      /* special cases appear were a bound to a variable implies itself to be outside the bounds:
+       * x == varfixing  =>  x < 0 or x > 1
+       */
+      if( SCIPsetIsLT(set, implbound, 0.0) || SCIPsetIsGT(set, implbound, 1.0) )
+         conflict = TRUE;
+      else
+      {
+         /* variable implies itself: x == varfixing  =>  x == (impltype == SCIP_BOUNDTYPE_LOWER) */
+         assert(SCIPsetIsZero(set, implbound) || SCIPsetIsEQ(set, implbound, 1.0));
+         assert(SCIPsetIsZero(set, implbound) == (impltype == SCIP_BOUNDTYPE_UPPER));
+         assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
+         conflict = conflict || ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
+         if( !conflict )
+            return SCIP_OKAY;
+      }
    }
 
    /* check, if the variable is already fixed */

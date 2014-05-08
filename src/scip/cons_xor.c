@@ -4001,6 +4001,13 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
 
                   isbinary = (SCIPisZero(scip, lb) && SCIPisEQ(scip, ub, 1.0));
 
+                  /* you must not create an artificial integer variable if parity variable is already binary */
+                  if( SCIPvarIsBinary(parityvar) && !isbinary )
+                  {
+                     SCIPfreeBufferArray(scip, &xorvars);
+                     return SCIP_OKAY;
+                  }
+
                   (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_xor_upgr", SCIPvarGetName(parityvar));
                   SCIP_CALL( SCIPcreateVar(scip, &intvar, varname, lb, ub, 0.0,
                         isbinary ? SCIP_VARTYPE_BINARY : SCIP_VARTYPE_INTEGER,

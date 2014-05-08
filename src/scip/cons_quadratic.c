@@ -4569,6 +4569,7 @@ SCIP_RETCODE checkFactorable(
    SCIP_Real* eigvals;
    SCIP_Real sigma1;
    SCIP_Real sigma2;
+   SCIP_Bool success;
    int n;
    int i;
    int idx1;
@@ -4688,12 +4689,11 @@ SCIP_RETCODE checkFactorable(
    {
       consdata->factorleft[i]  = sigma1 * a[posidx * n + i] - sigma2 * a[negidx * n + i];
       consdata->factorright[i] = sigma1 * a[posidx * n + i] + sigma2 * a[negidx * n + i];
-#ifdef NDEBUG /* in debug mode, we do this after the checks below */
+      /* set almost-zero elements to zero */
       if( SCIPisZero(scip, consdata->factorleft[i]) )
          consdata->factorleft[i] = 0.0;
       if( SCIPisZero(scip, consdata->factorright[i]) )
          consdata->factorright[i] = 0.0;
-#endif
    }
 
 #ifdef SCIP_DEBUG
@@ -4712,53 +4712,48 @@ SCIP_RETCODE checkFactorable(
    SCIPdebugPrintf(")\n");
 #endif
 
-#ifndef NDEBUG
-   /* check whether factorleft * factorright^T is matrix of augmented quadratic form */
-   BMSclearMemoryArray(a, n*n);
+   /* check whether factorleft * factorright^T is matrix of augmented quadratic form
+    * we check here only the nonzero entries from the quadratic form
+    */
+   success = TRUE;
 
-   /* set lower triangular entries of A corresponding to bilinear terms */
+   /* check bilinear terms */
    for( i = 0; i < consdata->nbilinterms; ++i )
    {
       bilinterm = &consdata->bilinterms[i];
 
       SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, bilinterm->var1, &idx1) );
       SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, bilinterm->var2, &idx2) );
-      assert(idx1 >= 0);
-      assert(idx2 >= 0);
-      assert(idx1 != idx2);
 
-      a[MIN(idx1,idx2) * n + MAX(idx1,idx2)] = bilinterm->coef / 2.0;
+      if( !SCIPisRelEQ(scip, consdata->factorleft[idx1] * consdata->factorright[idx2] + consdata->factorleft[idx2] * consdata->factorright[idx1], bilinterm->coef) )
+      {
+         success = FALSE;
+         break;
+      }
    }
 
    /* set lower triangular entries of A corresponding to square and linear terms */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
-      a[i*n + i]   = consdata->quadvarterms[i].sqrcoef;
-      a[i*n + n-1] = consdata->quadvarterms[i].lincoef / 2.0;
+      if( !SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], consdata->quadvarterms[i].sqrcoef) )
+      {
+         success = FALSE;
+         break;
+      }
+
+      if( !SCIPisRelEQ(scip, consdata->factorleft[n-1] * consdata->factorright[i] + consdata->factorleft[i] * consdata->factorright[n-1], consdata->quadvarterms[i].lincoef) )
+      {
+         success = FALSE;
+         break;
+      }
    }
 
-   /* compare matrix entries */
-   for( i = 0; i < n; ++i )
+   if( !success )
    {
-      int j;
-
-      /* on off-diagonal elements, only the sum of corresponding entries need to coincide */
-      for( j = 0; j < i; ++j )
-         assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[j] + consdata->factorleft[j] * consdata->factorright[i], 2*a[j*n+i]));
-
-      /* check diagonal elements */
-      assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
+      SCIPdebugMessage("Factorization not accurate enough. Dropping it.\n");
+      SCIPfreeBlockMemoryArray(scip, &consdata->factorleft,  consdata->nquadvars + 1);
+      SCIPfreeBlockMemoryArray(scip, &consdata->factorright, consdata->nquadvars + 1);
    }
-
-   /* set almost-zero's to zero */
-   for( i = 0; i < n; ++i )
-   {
-      if( SCIPisZero(scip, consdata->factorleft[i]) )
-         consdata->factorleft[i] = 0.0;
-      if( SCIPisZero(scip, consdata->factorright[i]) )
-         consdata->factorright[i] = 0.0;
-   }
-#endif
 
  CLEANUP:
    SCIPfreeBufferArray(scip, &a);

@@ -3,8 +3,8 @@ SCIP version NEXT
 
 features:
 - new distribution branching rule to base decisions on row activity (normal) distribution over domain space
-- new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible and to
-  improve them by a one-opt local search.
+- new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible. It also
+  tries to improve them (or external solutions) by a one-opt local search.
 - can now output information for BAK: Branch-and-bound Analysis Kit
 
 parameters:
@@ -15,6 +15,7 @@ parameters:
 - added parameter to switch pseudo cost update in diving heuristics (enabled by default)
 - one can now set emphasis parameters at the beginning of a settings file; it should start with "emphasis:" and
   the contain the emphasis string, e.g., "emphasis: feasibility" or "emphasis: heuristics off".
+- new parameter "heur/indicator/improvesols" that turns on the improvement of external solutions by one-opt
 
 performance improvements:
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
@@ -40,6 +41,11 @@ fixed bugs:
 - fixed bug in SCIPpermuteProb(), when called in transformed stage and non-active constraints exist
 - corrected copy of disjunction constraints
 - forbid aggregations with scalar smaller feastol or larger 1/feastol
+- fixed bug 683, not recognizing errors/segfaults especially in free stage of SCIP by improving the check scripts
+- fixed bug in presolving of abspower constraints that lead to wrong variable locks
+- fixed bug where quieting a message handler also disabled writing to files other than stdout
+- fixed bug 708, special case of implications led to a fixing
+- allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints

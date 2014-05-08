@@ -998,7 +998,7 @@ SCIP_RETCODE applyGenVBound(
 #endif
 
    /* tighten bound globally */
-   if( global )
+   if( global || genvbound->ncoefs <= 0 )
    {
       if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
       {

@@ -7630,7 +7630,6 @@ SCIP_RETCODE deleteRedundantVars(
    assert(consdata != NULL);
    assert(0 < frontsum && frontsum < consdata->weightsum);
    assert(0 < splitpos && splitpos < consdata->nvars);
-   assert(consdata->sorted);
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
@@ -7639,6 +7638,14 @@ SCIP_RETCODE deleteRedundantVars(
    weights = consdata->weights;
    nvars = consdata->nvars;
    capacity = consdata->capacity;
+
+   /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+    * weight must not be sorted by their index
+    */
+#ifndef NDEBUG
+   for( w = nvars - 1; w > 0; --w )
+      assert(weights[w] <= weights[w-1]);
+#endif
 
    /* if there are no variables rear to splitpos, the constraint has no redundant variables */
    if( consdata->nvars - 1 == splitpos )
@@ -7685,13 +7692,13 @@ SCIP_RETCODE deleteRedundantVars(
          ++(*nchgsides);
       }
 
-      /* weight should be still sorted, because the reduction preserves this */
+      /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+       * weight must not be sorted by their index
+       */
 #ifndef NDEBUG
       for( w = consdata->nvars - 1; w > 0; --w )
          assert(weights[w] <= weights[w - 1]);
 #endif
-
-      consdata->sorted = TRUE;
    }
    /* rear items can only be redundant, when the sum is smaller to the weight at splitpos and all rear items would
     * always fit into the knapsack, therefor the item directly after splitpos needs to be smaller than the one at
@@ -7816,12 +7823,13 @@ SCIP_RETCODE deleteRedundantVars(
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &clqvars);
 
-            /* weight should be still sorted, because the reduction preserves this */
+            /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+             * weight must not be sorted by their index
+             */
 #ifndef NDEBUG
             for( w = consdata->nvars - 1; w > 0; --w )
                assert(weights[w] <= weights[w - 1]);
 #endif
-            consdata->sorted = TRUE;
          }
       }
 
@@ -8075,7 +8083,7 @@ void normalizeWeights(
       (*nchgcoefs) += consdata->nvars;
       (*nchgsides)++;
 
-      /* weight should be still sorted, because the reduction preserves this */
+      /* weight should still be sorted, because the reduction preserves this */
 #ifndef NDEBUG
       for( i = consdata->nvars - 1; i > 0; --i )
          assert(consdata->weights[i] <= consdata->weights[i - 1]);
@@ -8256,12 +8264,13 @@ SCIP_RETCODE dualWeightsTightening(
 
          consdata->capacity = newweight;
 
-         /* weight should be still sorted, because the reduction preserves this */
+         /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+          * weight must not be sorted by their index
+          */
 #ifndef NDEBUG
          for( v = nvars - 1; v > 0; --v )
             assert(weights[v] <= weights[v-1]);
 #endif
-         consdata->sorted = TRUE;
 
          return SCIP_OKAY;
       }
@@ -8313,13 +8322,13 @@ SCIP_RETCODE dualWeightsTightening(
 
             consdata->capacity = newweight;
 
-            /* weight should be still sorted, because the reduction preserves this */
+            /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+             * weight must not be sorted by their index
+             */
 #ifndef NDEBUG
             for( v = nvars - 1; v > 0; --v )
                assert(weights[v] <= weights[v-1]);
 #endif
-            consdata->sorted = TRUE;
-
             return SCIP_OKAY;
          }
       }
@@ -8376,13 +8385,13 @@ SCIP_RETCODE dualWeightsTightening(
 
          consdata->capacity = newweight;
 
-         /* weight should be still sorted, because the reduction preserves this */
+         /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+          * weight must not be sorted by their index
+          */
 #ifndef NDEBUG
          for( v = nvars - 1; v > 0; --v )
             assert(weights[v] <= weights[v-1]);
 #endif
-         consdata->sorted = TRUE;
-
          return SCIP_OKAY;
       }
    }
@@ -8623,13 +8632,13 @@ SCIP_RETCODE dualWeightsTightening(
             /* the new dualcapacity should still be equal to the (nvars - v + 1) */
             assert(consdata->weightsum - consdata->capacity == (SCIP_Longint)nvars - v + 1);
 
-            /* weight should be still sorted, because the reduction preserves this */
+            /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+             * weight must not be sorted by their index
+             */
 #ifndef NDEBUG
             for( w = nvars - 1; w > 0; --w )
                assert(weights[w] <= weights[w - 1]);
 #endif
-            consdata->sorted = TRUE;
-
             return SCIP_OKAY;
          }
 
@@ -8929,12 +8938,13 @@ SCIP_RETCODE dualWeightsTightening(
    }
    assert(weights[0] <= consdata->capacity);
 
-   /* weight should be still sorted, because the reduction preserves this */
+   /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal
+    * weight must not be sorted by their index
+    */
 #ifndef NDEBUG
    for( w = nvars - 1; w > 0; --w )
       assert(weights[w] <= weights[w - 1]);
 #endif
-   consdata->sorted = TRUE;
 
    if( oldnchgcoefs < *nchgcoefs )
    {
@@ -9144,11 +9154,15 @@ SCIP_RETCODE simplifyInequalities(
          return SCIP_OKAY;
    }
 
-   assert(consdata->sorted);
-
    vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
+
+#ifndef NDEBUG
+   /* constraint might not be sorted, but the weights are already sorted */
+   for( v = nvars - 1; v > 0; --v )
+      assert(weights[v] <= weights[v-1]);
+#endif
 
    /* determine greatest common divisor */
    gcd = weights[nvars - 1];
@@ -9168,11 +9182,16 @@ SCIP_RETCODE simplifyInequalities(
 
       consdata->capacity /= gcd;
       (*nchgsides)++;
-
-      consdata->sorted = TRUE;
    }
    assert(consdata->nvars == nvars);
-   assert(consdata->sorted);
+
+   /* weight should still be sorted, because the reduction preserves this, but corresponding variables with equal weight
+    * must not be sorted by their index
+    */
+#ifndef NDEBUG
+   for( v = nvars - 1; v > 0; --v )
+      assert(weights[v] <= weights[v-1]);
+#endif
 
    /* 3. start gcd procedure for all variables */
    do
@@ -12445,7 +12464,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       /* merge constraint, so propagation works better */
       SCIP_CALL( mergeMultiples(scip, cons, &cutoff) );
       if( cutoff )
-         return SCIP_OKAY;
+         break;
 
       /* add cliques in the knapsack to the clique table */
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );

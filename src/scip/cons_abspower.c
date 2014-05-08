@@ -691,9 +691,9 @@ SCIP_RETCODE presolveFindDuplicates(
                   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons1) );
                   SCIP_CALL( SCIPlockVarCons(scip, consdata1->x, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
                   if( consdata1->zcoef > 0.0 )
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
+                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
                   else
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
+                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
                }
                else
                {
