@@ -18,6 +18,7 @@ fixed bugs:
 - fixed bug where quieting a message handler also disabled writing to files other than stdout
 - fixed bug 708, special case of implications led to a fixing
 - allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
+- fixed bug, variable bounds detected wrong infeasibility
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
