@@ -30113,8 +30113,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
    SCIP_Bool backtrack;
-   SCIP_Bool roundup;
-   SCIP_Bool solvelp;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nlpiterations;
@@ -30125,7 +30123,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int maxdepth;
    int maxdivedepth;
    int divedepth;
-   int bestlpcand;
    int nextcand;
    int targetdepth;
 
@@ -30245,9 +30242,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
-   roundup = FALSE;
-   solvelp = TRUE;
-   bestlpcand = -1;
 
    /* LP loop; every time a new LP was solved, conditions are checked
     * dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
@@ -30263,16 +30257,23 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIP_BRANCHDIR nextcandbranchdir;
       int nbacktracks;
       int startdepth;
+      int ncandstofix;
+      int maxnbacktracks;
 
       /* determine the target depth (depth where the next LP should be solved) */
       startdepth = divedepth;
-      targetdepth = MIN(nlpcands, maxdivedepth - divedepth);
-      targetdepth = divedepth + 1 + (int)(targetdepth * SCIPdivesetGetTargetdepthfrac(diveset));
+      ncandstofix = MIN(nlpcands, maxdivedepth - divedepth);
+      ncandstofix = (int)(ncandstofix * SCIPdivesetGetTargetdepthfrac(diveset));
+      ncandstofix = MAX(ncandstofix, 1);
+      ncandstofix = MAX(ncandstofix, maxdivedepth - startdepth);
 
-      assert(targetdepth > divedepth);
+      targetdepth = divedepth + ncandstofix;
 
+      /*todo if there is only one candidate to fix, do not sort, but search for the minimum score variable */
       /* start with the first candidate in the sorted candidates array */
       nextcand = 0;
+      nbacktracks = 0;
+      maxnbacktracks = (1 + (ncandstofix / 2));
 
       /* start propagating candidate variables
        *   - until the desired targetdepth is reached,
@@ -30332,7 +30333,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                      value, SCIPvarGetUbLocal(nextcandvar));
 
                SCIP_CALL( SCIPchgVarLbProbing(scip, nextcandvar, value) );
-               roundup = TRUE;
             }
             else
             {
@@ -30352,7 +30352,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                      SCIPvarGetLbLocal(nextcandvar), value);
 
                SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
-               roundup = FALSE;
             }
 
             /* apply domain propagation */
@@ -30360,41 +30359,22 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
 
             /* perform backtracking if a cutoff was detected */
-            if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) )
+            if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) && nbacktracks < maxnbacktracks )
             {
                SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
                SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
                SCIP_CALL( SCIPnewProbingNode(scip) );
                backtracked = TRUE;
                backtrack = TRUE;
+               cutoff = FALSE;
+               ++nbacktracks;
             }
             else
                backtrack = FALSE;
          }
          while( backtrack );
 
-         /* if the last node was cut off, we have to decrease the target depth and backtrack accordingly */
-         if( cutoff )
-         {
-            int reacheddepth = divedepth - 1;
-            /* evaluate how deep we went this time and be more conservative in the future, if possible
-             * if not even half the targeted depth was reached, decrease the depth quotient
-             */
-            if( reacheddepth < (targetdepth - startdepth) / 2 )
-            {
-               SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
-            }
-
-            if( SCIPdivesetUseBacktrack(diveset) && divedepth > startdepth + 1 )
-            {
-               SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) -1) );
-               --divedepth;
-               cutoff = FALSE;
-            }
-
-            nextcand = nlpcands;
-         }
-         else
+         if( !cutoff )
          {
             /* we need to search for the next candidate in our list which was not previously fixed or whose LP solution
              * is already infeasible
@@ -30414,16 +30394,35 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             }
          }
       }
-      while( targetdepth > divedepth && nextcand < nlpcands );
+      while( !cutoff && targetdepth > divedepth && nextcand < nlpcands );
 
+#if 0
       /* reward the diving setting by increasing the dive depth quotient for future purpose */
-      if( divedepth == targetdepth )
+      if( !cutoff && (divedepth == targetdepth || nextcand == nlpcands ) )
       {
          SCIPdivesetSetTargetdepthfrac(diveset, 1.1 * SCIPdivesetGetTargetdepthfrac(diveset));
       }
+      else if( cutoff )
+      {
+         /* if the last node was cut off, we terminate the heuristic */
+         int reacheddepth = divedepth - startdepth - 1;
+         assert(reacheddepth >= 0);
+
+         /* evaluate how deep we went this time and be more conservative in the future, if possible
+          * if not even half the targeted depth was reached, decrease the depth quotient
+          */
+         if( reacheddepth < (targetdepth - startdepth) / 2 )
+         {
+            SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
+         }
+      }
+#endif
+
+      /* resolve the diving LP */
       if( !cutoff )
       {
-         /* resolve the diving LP */
+
+         assert(nextcand == nlpcands || targetdepth == divedepth);
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */

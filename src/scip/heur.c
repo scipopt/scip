@@ -93,7 +93,7 @@ void SCIPdivesetReset(
 
    diveset->nlpiterations = 0L;
    diveset->nsuccess = 0;
-   diveset->targetdepthfrac = .5;
+   diveset->targetdepthfrac = .2;
 }
 
 /** create a set of diving heuristic settings */
