@@ -34,6 +34,7 @@
 #include "Skeleton.h"
 #include "reader_mop.h"
 #include "Objectives.h"
+#include "main.h"
 
 #include "LiftedWeightSpaceSolver.h"
 
@@ -121,13 +122,6 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solve()
 
    /* actual SCIP solver call */
    SCIP_CALL( SCIPsolve( scip_ ) );
-   status_ = SCIPgetStatus(scip_);
-
-   /* process the result of the SCIP run */
-   if( status_ == SCIP_STATUS_OPTIMAL )
-   {
-      evaluateSolution();
-   }
 
    /* update SCIP run information */
    ++nruns_;
@@ -142,6 +136,23 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solve()
       /* SCIP was interrupted before entering solving stage */
       niterations_last_run_ = 0;
    }
+
+   status_ = SCIPgetStatus(scip_);
+
+   /* process the result of the SCIP run */
+   if( status_ == SCIP_STATUS_OPTIMAL )
+   {
+      solution_ = SCIPgetBestSol(scip_);
+
+      assert(solution_ != NULL);
+      assert(solution_->vals != NULL);
+
+      cost_vector_ = SCIPgetProbData(scip_)->objectives->calculateCost(scip_, solution_);
+
+      SCIP_CALL( ensureNonInfinity() );
+      evaluateSolution();
+   }
+
    /* stop the clock */
    SCIPstopClock(scip_, clock_iteration_);
    duration_last_run_ = SCIPgetClockTime(scip_, clock_iteration_);
@@ -155,14 +166,54 @@ SCIP_Real LiftedWeightSpaceSolver::getTotalDuration() const
    return SCIPgetClockTime(scip_, clock_total_);
 }
 
+/** reoptimize in case of infinite objective function value in any objective*/
+SCIP_RETCODE LiftedWeightSpaceSolver::ensureNonInfinity()
+{
+   Objectives* objectives = SCIPgetProbData(scip_)->objectives;
+
+   for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
+        it != cost_vector_->end();
+        ++it )
+   {
+      if( *it >= SCIPinfinity(scip_) / 1000. )
+      {
+         SCIP_CALL( SCIPfreeTransform(scip_) );
+         SCIP_CONS* cons;
+         SCIP_CALL( objectives->createObjectiveConstraint(
+               scip_,
+               &cons,
+               weight_,
+               scalar_product(*weight_, *cost_vector_)
+               ) );
+         SCIP_CALL( SCIPaddCons(scip_, cons) );
+         SCIP_CALL( objectives->setWeightedObjective(
+               scip_, 
+               first_weight_) );
+
+         SCIP_CALL( SCIPsolve( scip_ ) );
+
+         assert( SCIPgetStatus(scip_) == SCIP_STATUS_OPTIMAL );
+
+         SCIP_CALL( SCIPfreeTransform(scip_) );
+         SCIP_CALL( SCIPdelCons(scip_, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip_, &cons) );
+
+         solution_ = SCIPgetBestSol(scip_);
+
+         assert(solution_ != NULL);
+         assert(solution_->vals != NULL);
+
+         cost_vector_ = SCIPgetProbData(scip_)->objectives->calculateCost(scip_, solution_);
+         break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** get the MIP solution and check wheather it is a new optimum*/
 void LiftedWeightSpaceSolver::evaluateSolution()
 {
-   solution_ = SCIPgetBestSol(scip_);
-   assert(solution_ != NULL);
-   assert(solution_->vals != NULL);
-
-   cost_vector_ = SCIPgetProbData(scip_)->objectives->calculateCost(scip_, solution_);
    found_new_optimum_ = skeleton_->checkSolution(cost_vector_);
 
    if( found_new_optimum_ )

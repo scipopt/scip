@@ -74,6 +74,9 @@ class LiftedWeightSpaceSolver : public WeightedSolver
 
    /** get the MIP solution and check wheather it is a new optimum*/
    void evaluateSolution();
+   
+   /** reoptimize in case of infinite objective function value in any objective*/
+   SCIP_RETCODE ensureNonInfinity();
 };
 
 #endif

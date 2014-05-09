@@ -60,6 +60,14 @@ class Objectives
       const std::vector<SCIP_Real>*     weight    /**< vector containing weight for every objective */
       );
 
+   /** creates constraint of the form wCx <= b */
+   SCIP_RETCODE createObjectiveConstraint(
+      SCIP*                             scip,     /**< SCIP solver */
+      SCIP_CONS**                       cons,     /**< pointer for storing the created constraint */
+      const std::vector<SCIP_Real>*     weight,   /**< coefficients of cost vectors in constraint */
+      SCIP_Real                         rhs       /**< right hand side */
+      );
+
    /** calculate the vector containing the objective value of the current solution 
        for every objective */
    std::vector<SCIP_Real>* calculateCost(
@@ -73,6 +81,7 @@ class Objectives
  private:
    std::map< SCIP_VAR*, std::vector<SCIP_Real>* > cost_columns_; /**< map from SCIP variables to cost vectors */
    std::vector<std::string>                       objnames_;     /**< list of objective identifiers from mps file */
+   int                                            nconstraints_; /**< number of created objective constraints */
 
    /** find the objective index corresponding to the given name */
    int objIndex(

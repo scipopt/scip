@@ -28,13 +28,14 @@
 #include "scip/cons_linear.h"
 
 #include "LiftedWeightSpaceSolver.h"
-
 #include "Objectives.h"
+#include "main.h"
 
 using namespace std;
 
 /** default constructor */
 Objectives::Objectives()
+   : nconstraints_(0)
 {
 }
 
@@ -116,6 +117,53 @@ SCIP_RETCODE Objectives::setWeightedObjective(
       }
       SCIP_CALL( SCIPchgVarObj(scip, it->first, newobj) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** creates constraint of the form wCx <= b */
+SCIP_RETCODE Objectives::createObjectiveConstraint(
+   SCIP*                             scip,     /**< SCIP solver */
+   SCIP_CONS**                       cons,     /**< pointer for storing the created constraint */
+   const std::vector<SCIP_Real>*     weight,   /**< coefficients of cost vectors in constraint */
+   SCIP_Real                         rhs       /**< right hand side */
+   )
+{
+   char* name = new char[32];
+   int nvars = cost_columns_.size();
+   SCIP_VAR** vars = new SCIP_VAR*[nvars];
+   SCIP_Real* vals = new SCIP_Real[nvars];
+
+   int i = 0;
+
+   /* translate objective constraint coefficients to individual variable coefficients */
+   for( std::map< SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator jt = cost_columns_.begin();
+        jt != cost_columns_.end();
+        ++jt)
+   {
+      assert(jt->first != NULL);
+
+      vars[i] = jt->first;
+      vals[i] = scalar_product(*weight, *(jt->second));
+
+      ++i;
+   }    
+   
+   sprintf(name,"objcons%d",++nconstraints_);
+   SCIP_CALL( SCIPcreateConsBasicLinear(
+         scip,
+         cons,
+         name,
+         nvars,
+         vars, 
+         vals, 
+         -SCIP_DEFAULT_INFINITY, 
+         rhs
+         ));
+
+   delete name;
+   delete vars;
+   delete vals;
 
    return SCIP_OKAY;
 }
