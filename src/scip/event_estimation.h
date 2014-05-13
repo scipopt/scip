@@ -36,6 +36,16 @@ SCIP_Real SCIPgetRootLPSolPscostEstimate(
    SCIP*                 scip
    );
 
+SCIP_RETCODE SCIPgetCorrectedEstimateData(
+   SCIP*                 scip,
+   SCIP_Real*            mincorrectedestimate,
+   SCIP_Real*            rootcorrectedestim,
+   SCIP_Real*            minestimate,
+   int*                  nnodesbelowincumbentcorrected,
+   int*                  nnodesbelowincumbent,
+   SCIP_Bool             recalcestim
+);
+
 /** creates event handler for estimation event */
 EXTERN
 SCIP_RETCODE SCIPincludeEventHdlrEstimation(
