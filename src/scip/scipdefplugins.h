@@ -70,6 +70,7 @@
 #include "scip/event_solvingstage.h"
 #include "scip/event_nodeevent.h"
 #include "scip/event_estimation.h"
+#include "scip/event_logregression.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
