@@ -74,16 +74,15 @@ struct SCIP_HeurData
  *
  *  candidate which cannot be rounded trivially always have a lower score than roundable candidates
  */
-static
-SCIP_Real getVarScore(
+SCIP_Real SCIPgetFracdivingVarScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< diving candidate for score */
-   SCIP_Real             frac                /**< fractionality of candidate in (last) LP solution */
+   SCIP_Real             frac,               /**< fractionality of candidate in (last) LP solution */
+   SCIP_Bool             roundup             /**< should candidate be rounded up? */
    )
 {
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
-   SCIP_Bool roundup;
    SCIP_Real obj;
    SCIP_Real objnorm;
    SCIP_Real objgain;
@@ -97,17 +96,7 @@ SCIP_Real getVarScore(
    if( SCIPisPositive(scip, objnorm) )
       obj /= objnorm;
 
-
-   /* choose rounding direction:
-    * - if variable may be rounded in both directions, round corresponding to the fractionality
-    * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
-    *   the current fractional solution
-    */
-   if( mayrounddown != mayroundup )
-      roundup = mayrounddown;
-   else
-      roundup = (frac > 0.5);
-
+   /* calculate objective gain and fractionality for the selected rounding direction */
    if( roundup )
    {
       frac = 1.0 - frac;
@@ -264,7 +253,24 @@ SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirFracdiving)
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 {
-   return getVarScore(scip, cand, candsfrac);
+   SCIP_Bool mayrounddown;
+   SCIP_Bool mayroundup;
+   SCIP_Bool roundup;
+
+   mayrounddown = SCIPvarMayRoundDown(cand);
+   mayroundup = SCIPvarMayRoundUp(cand);
+
+   /* choose rounding direction:
+    * - if variable may be rounded in both directions, round corresponding to the fractionality
+    * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
+    *   the current fractional solution
+    */
+   if( mayrounddown != mayroundup )
+      roundup = mayrounddown;
+   else
+      roundup = (candsfrac > 0.5);
+
+   return SCIPgetFracdivingVarScore(scip, cand, candsfrac, roundup);
 }
 
 /*
