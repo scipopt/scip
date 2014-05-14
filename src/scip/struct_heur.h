@@ -50,9 +50,10 @@ struct SCIP_Diveset
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)); /**< get candidate score */
+   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)); /**< get preferred branching direction for a candidate */
    SCIP_DECL_DIVESETGETCANDS ((*divesetgetcands)); /**< allocate and get candidate variables for diving */
    SCIP_DECL_DIVESETFREECANDS ((*divesetfreecands)); /**< free previously allocated variables for diving */
-   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)); /**< get preferred branching direction for a candidate */
 };
 
 /** primal heuristics data */

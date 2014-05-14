@@ -3451,9 +3451,10 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< get candidate score */
+   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)), /**< get preferred branching direction for a candidate */
    SCIP_DECL_DIVESETGETCANDS ((*divesetgetcands)), /**< allocate and get candidate variables for diving */
-   SCIP_DECL_DIVESETFREECANDS ((*divesetfreecands)), /**< free previously allocated variables for diving */
-   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)) /**< get preferred branching direction for a candidate */
+   SCIP_DECL_DIVESETFREECANDS ((*divesetfreecands))  /**< free previously allocated variables for diving */
    );
 
 /** creates an event handler and includes it in SCIP

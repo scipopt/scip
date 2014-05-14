@@ -119,21 +119,62 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
 #define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_HEURTIMING heurtiming, \
       SCIP_Bool nodeinfeasible, SCIP_RESULT* result)
 
-/** return sorted arrays of all branching candidates. The array of branching candidates is then processed
- *  in the order defined by the callback.
- */
-#define SCIP_DECL_DIVESETGETCANDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR*** branchcands, \
-      SCIP_Real** branchcandssol, SCIP_Real** branchcandsfrac, int* nbranchcands)
 
-/** free candidates storage allocated before
+/* callbacks for diving heuristic specific settings */
+
+/** returns a score for the given candidate -- the best candidate minimizes the diving score
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - cand            : Branch candidate for which the score should be determined
+ *  - candsol         : solution value of candidate in LP relaxation solution
+ *  - candsfrac       : fractional part of solution value of candidate
  */
-#define SCIP_DECL_DIVESETFREECANDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR*** branchcands, \
-      SCIP_Real** branchcandssol, SCIP_Real** branchcandsfrac, int nbranchcands)
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_Real x (SCIP* scip, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac)
 
 /** returns the preferred branching direction of \p cand
  *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - cand            : Branch candidate for which the score should be determined
+ *  - candsol         : solution value of candidate in LP relaxation solution
+ *  - candsfrac       : fractional part of solution value of candidate
  */
 #define SCIP_DECL_DIVESETCANDBRANCHDIR(x) SCIP_BRANCHDIR x (SCIP* scip, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac)
+
+/** return arrays of all diving candidates
+ *
+ * This callback is optional. If not declared, the diving will be performed
+ *  on the set of LP branch candidates. This callback enables to consider other candidates than only LP branching candidates
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - diveset         : the dive set
+ *  - divecands       : reference to array of possible diving candidates
+ *  - divecandssol    : reference to array of diving candidate solution values
+ *  - divecandsfrac   : reference to array of diving candidate fractionalities
+ *  - ndivecands      : pointer to store the number of diving candidates
+ */
+#define SCIP_DECL_DIVESETGETCANDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR*** divecands, \
+      SCIP_Real** divecandssol, SCIP_Real** divecandsfrac, int* ndivecands)
+
+/** free candidates storage allocated before
+ *
+ *  this method should free all memory that was allocated during the divesetGetCandsXYZ callback. It is optional and only
+ *  required if memory was allocated within the (optinal )divesetGetCandsXYZ callback
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - diveset         : the dive set
+ *  - divecands       : reference to array of possible diving candidates
+ *  - divecandssol    : reference to array of diving candidate solution values
+ *  - divecandsfrac   : reference to array of diving candidate fractionalities
+ *  - ndivecands      : the number of diving candidates that was previously allocated
+ */
+#define SCIP_DECL_DIVESETFREECANDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR*** divecands, \
+      SCIP_Real** divecandssol, SCIP_Real** divecandsfrac, int ndivecands)
+
+
 
 #ifdef __cplusplus
 }

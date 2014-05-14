@@ -66,6 +66,7 @@ struct SCIP_HeurData
  * local methods
  */
 
+/** get diving score for variable */
 static
 SCIP_Real getVarScore(
    SCIP*                 scip,
@@ -197,53 +198,18 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-static
-SCIP_DECL_DIVESETGETCANDS(divesetGetCandsVeclendiving)
-{
-   *nbranchcands = SCIPgetNLPBranchCands(scip);
-   if( *nbranchcands > 0 )
-   {
-      SCIP_VAR** lpcands;
-      SCIP_Real* lpcandssol;
-      SCIP_Real* lpcandsfrac;
-      SCIP_Real* scores;
-      int c;
-
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, nbranchcands, NULL, NULL) );
-
-      SCIP_CALL( SCIPduplicateBufferArray(scip, branchcands, lpcands, *nbranchcands) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, branchcandssol, lpcandssol, *nbranchcands) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, branchcandsfrac, lpcandsfrac, *nbranchcands) );
-
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &scores, *nbranchcands) );
-      for( c = 0; c < *nbranchcands; ++c )
-         scores[c] = getVarScore(scip, lpcands[c], lpcandsfrac[c]);
-
-      SCIPsortRealRealRealPtr(scores, (*branchcandssol), (*branchcandsfrac), (void **)(*branchcands), *nbranchcands);
-
-      SCIPfreeBufferArray(scip, &scores);
-   }
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_DIVESETFREECANDS(divesetFreecandsVeclendiving)
-{
-   if( nbranchcands > 0 )
-   {
-      SCIPfreeBufferArray(scip, branchcandsfrac);
-      SCIPfreeBufferArray(scip, branchcandssol);
-      SCIPfreeBufferArray(scip, branchcands);
-   }
-
-   return SCIP_OKAY;
-}
-
+/** method that returns the preferred branching direction of a candidate */
 static
 SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirVeclendiving)
 {
    return SCIPvarGetObj(cand) >= 0 ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS;
+}
+
+/** returns a score for the given candidate - the best candidate minimizes the diving score */
+static
+SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
+{
+   return getVarScore(scip, cand, candsfrac);
 }
 
 /*
@@ -279,7 +245,7 @@ SCIP_RETCODE SCIPincludeHeurVeclendiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic) */
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetCandsVeclendiving, divesetFreecandsVeclendiving, divesetCandbranchdirVeclendiving) );
+         DEFAULT_BACKTRACK, divesetGetScoreVeclendiving, divesetCandbranchdirVeclendiving, NULL, NULL) );
 
    return SCIP_OKAY;
 }
