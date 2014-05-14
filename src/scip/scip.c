@@ -30177,7 +30177,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real searchavgbound;
    SCIP_Real searchbound;
    SCIP_Real objval;
-   SCIP_Real oldobjval;
    SCIP_Real nextcandsol;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
@@ -30331,6 +30330,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       int startdepth;
       int ncandstofix;
       int maxnbacktracks;
+      SCIP_Bool allroundable;
+      int c;
 
       /* determine the target depth (depth where the next LP should be solved) */
       startdepth = divedepth;
@@ -30340,6 +30341,44 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       ncandstofix = MAX(ncandstofix, maxdivedepth - startdepth);
 
       targetdepth = divedepth + ncandstofix;
+
+      /* loop over candidates and determine if they are roundable */
+      allroundable = TRUE;
+      c = 0;
+      while( allroundable && c < ndivecands )
+      {
+         if( SCIPvarMayRoundDown(divecands[c]) || SCIPvarMayRoundUp(divecands[c]) || SCIPisFeasIntegral(scip, divecandssol[c]) )
+            allroundable = TRUE;
+         else
+            allroundable = FALSE;
+         ++c;
+      }
+
+      /* if all candidates are roundable, try to round the solution */
+      if( allroundable )
+      {
+         SCIP_Bool success;
+
+         success = FALSE;
+         /* create solution from diving LP and try to round it */
+         SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+         SCIP_CALL( SCIProundSol(scip, worksol, &success) );
+
+         if( success )
+         {
+            SCIPdebugMessage("%s found roundable primal solution: obj=%g\n", SCIPheurGetName(heur), SCIPgetSolOrigObj(scip, worksol));
+
+            /* try to add solution to SCIP */
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
+
+            /* check, if solution was feasible and good enough */
+            if( success )
+            {
+               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               *result = SCIP_FOUNDSOL;
+            }
+         }
+      }
 
       /* start with the first candidate in the sorted candidates array */
       nextcand = -1;
@@ -30363,8 +30402,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       else
       {
          SCIP_Real minscore;
-         int c;
-
          /* find diving candidate with minimum score */
          minscore = SCIPinfinity(scip);
          for( c = 0; c < ndivecands; ++c )
@@ -30562,9 +30599,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIPdivesetIncreaseNLPiterations(diveset, SCIPgetNLPIterations(scip) - nlpiterations);
 
          /* get LP solution status, objective value, and fractional variables, that should be integral */
+         objval = SCIPgetLPObjval(scip);
          lpsolstat = SCIPgetLPSolstat(scip);
          assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
-               (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
+               (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, objval, SCIPgetCutoffbound(scip)))));
       }
 
       SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, ndivecands);
@@ -30576,7 +30614,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       {
          /* get new fractional variables that should be integral */
          SCIP_CALL( getDivingCandidates(scip, diveset, &divecands, &divecandssol, &divecandsfrac, &ndivecands, &memallocated) );
-
       }
       else
          ndivecands = 0;
@@ -30619,10 +30656,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 /*
  * branching methods
