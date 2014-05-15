@@ -9873,16 +9873,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 static
 SCIP_DECL_CONSDELETE(consDeleteQuadratic)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(consdata != NULL);
    assert(SCIPconsGetData(cons) == *consdata);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -12111,6 +12106,13 @@ void SCIPaddConstantQuadratic(
    assert(cons != NULL);
    assert(!SCIPisInfinity(scip, REALABS(constant)));
 
+   /* nlrow and solving data (see initsol) may become invalid when changing constraint */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsEnabled(cons) )
+   {
+      SCIPerrorMessage("Cannot modify enabled constraint in solving stage.\n");
+      SCIPABORT();
+   }
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->lhs <= consdata->rhs);
@@ -12141,6 +12143,13 @@ SCIP_RETCODE SCIPaddLinearVarQuadratic(
    assert(var  != NULL);
    assert(!SCIPisInfinity(scip, REALABS(coef)));
 
+   /* nlrow and solving data (see initsol) may become invalid when changing constraint */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsEnabled(cons) )
+   {
+      SCIPerrorMessage("Cannot modify enabled constraint in solving stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
    SCIP_CALL( addLinearCoef(scip, cons, var, coef) );
 
    return SCIP_OKAY;
@@ -12161,6 +12170,13 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
    assert(var  != NULL);
    assert(!SCIPisInfinity(scip, REALABS(lincoef)));
    assert(!SCIPisInfinity(scip, REALABS(sqrcoef)));
+
+   /* nlrow and solving data (see initsol) may become invalid when changing constraint */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsEnabled(cons) )
+   {
+      SCIPerrorMessage("Cannot modify enabled constraint in solving stage.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    SCIP_CALL( addQuadVarTerm(scip, cons, var, lincoef, sqrcoef, SCIPconsIsTransformed(cons)) );
 
@@ -12188,6 +12204,13 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
 
    if( SCIPisZero(scip, coef) )
       return SCIP_OKAY;
+
+   /* nlrow and solving data (see initsol) may become invalid when changing constraint */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsEnabled(cons) )
+   {
+      SCIPerrorMessage("Cannot modify enabled constraint in solving stage.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -12234,6 +12257,13 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
 
    if( SCIPisZero(scip, coef) )
       return SCIP_OKAY;
+
+   /* nlrow and solving data (see initsol) may become invalid when changing constraint */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsEnabled(cons) )
+   {
+      SCIPerrorMessage("Cannot modify enabled constraint in solving stage.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -12284,6 +12314,13 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    assert(var1 != NULL);
    assert(var2 != NULL);
    assert(!SCIPisInfinity(scip, REALABS(coef)));
+
+   /* nlrow and solving data (see initsol) may become invalid when changing constraint */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsEnabled(cons) )
+   {
+      SCIPerrorMessage("Cannot modify enabled constraint in solving stage.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    if( var1 == var2 )
    {
