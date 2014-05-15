@@ -258,6 +258,9 @@ SCIP_RETCODE SCIPgetCorrectedEstimateData(
    int nchildren;
    int nsiblings;
 
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
@@ -292,6 +295,64 @@ SCIP_RETCODE SCIPgetCorrectedEstimateData(
 
    return SCIP_OKAY;
 
+}
+
+int SCIPgetNRank1Nodes(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_NODE** leaves;
+   SCIP_NODE** children;
+   SCIP_NODE** siblings;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   int nleaves;
+   int nchildren;
+   int nsiblings;
+   int nrank1nodes;
+   int n;
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return 0;
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+   assert(eventhdlrdata != NULL);
+
+   nleaves = nchildren = nsiblings = 0;
+   nrank1nodes = 0;
+   SCIP_CALL( SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings) );
+
+   if( nchildren > 0 )
+   {
+      for( n = 0; n < nchildren; ++n )
+      {
+         SCIP_NODE* node = children[n];
+         DEPTHINFO* depthinfo = eventhdlrdata->depthinfos[SCIPnodeGetDepth(node)];
+         if( depthinfo->nnodes == 0 || depthinfo->minestimate > SCIPnodeGetEstimate(node) )
+            ++nrank1nodes;
+      }
+   }
+   if( nsiblings > 0 )
+   {
+      for( n = 0; n < nsiblings; ++n )
+      {
+         SCIP_NODE* node = siblings[n];
+         DEPTHINFO* depthinfo = eventhdlrdata->depthinfos[SCIPnodeGetDepth(node)];
+         if( depthinfo->nnodes == 0 || depthinfo->minestimate > SCIPnodeGetEstimate(node) )
+            ++nrank1nodes;
+      }
+   }
+   if( nleaves > 0 )
+   {
+      for( n = 0; n < nleaves; ++n )
+      {
+         SCIP_NODE* node = leaves[n];
+         DEPTHINFO* depthinfo = eventhdlrdata->depthinfos[SCIPnodeGetDepth(node)];
+         if( depthinfo->nnodes == 0 || depthinfo->minestimate > SCIPnodeGetEstimate(node) )
+            ++nrank1nodes;
+      }
+   }
+   return nrank1nodes;
 }
 
 static
@@ -349,7 +410,7 @@ SCIP_RETCODE storeDepthInfo(
       SCIP_CALL( SCIPallocMemoryArray(scip, &eventhdlrdata->depthinfos, 10) );
       newsize = 10;
    }
-   else if(nodedepth >= eventhdlrdata->maxdepth)
+   else if( nodedepth  + 1 >= eventhdlrdata->maxdepth )
    {
       assert(nodedepth > 0);
       SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->depthinfos, 2 * nodedepth) );
@@ -380,6 +441,13 @@ SCIP_RETCODE storeDepthInfo(
  * Callback methods of event handler
  */
 
+static
+SCIP_DECL_EVENTCOPY(eventCopyEstimation)
+{
+   SCIP_CALL( SCIPincludeEventHdlrEstimation(scip) );
+
+   return SCIP_OKAY;
+}
 /** initialization method of event handler (called after problem was transformed) */
 static
 SCIP_DECL_EVENTINITSOL(eventInitsolEstimation)
@@ -525,7 +593,6 @@ SCIP_DECL_EVENTEXEC(eventExecEstimation)
 
    SCIP_CALL( storeDepthInfo(scip, eventhdlrdata, focusnode) );
 
-
    if( eventhdlrdata->fileoutput && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
    {
       FILE* file;
@@ -575,6 +642,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstimation(
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    assert(eventhdlrdata != NULL);
+   eventhdlrdata->nrootlpcands = 0;
    eventhdlrdata->rootlpcands = NULL;
    eventhdlrdata->rootlpcandsfrac = NULL;
    eventhdlrdata->eventfilterpos = -1;
@@ -594,6 +662,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstimation(
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolEstimation) );
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeEstimation) );
    SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitEstimation) );
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyEstimation) );
 
    /* add estimation event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/estimation/enabled","enable event handler to perform estimation",

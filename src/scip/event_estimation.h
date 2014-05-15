@@ -36,6 +36,7 @@ SCIP_Real SCIPgetRootLPSolPscostEstimate(
    SCIP*                 scip
    );
 
+EXTERN
 SCIP_RETCODE SCIPgetCorrectedEstimateData(
    SCIP*                 scip,
    SCIP_Real*            mincorrectedestimate,
@@ -45,6 +46,11 @@ SCIP_RETCODE SCIPgetCorrectedEstimateData(
    int*                  nnodesbelowincumbent,
    SCIP_Bool             recalcestim
 );
+
+EXTERN
+int SCIPgetNRank1Nodes(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** creates event handler for estimation event */
 EXTERN

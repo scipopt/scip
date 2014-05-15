@@ -21,6 +21,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/event_logregression.h"
+#include "scip/event_estimation.h"
 #include "string.h"
 #include "math.h"
 
@@ -208,6 +209,10 @@ static
 SCIP_DECL_EVENTEXEC(eventExecLogregression)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   int nleavesbelowincumbent, nleavesbelowinccorrected;
+   SCIP_Real minestimate, mincorrectedestimate;
+   SCIP_Real rootcorrestimate;
+   int nnodesleft;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -221,6 +226,22 @@ SCIP_DECL_EVENTEXEC(eventExecLogregression)
       SCIP_CALL( updateRegression(scip, eventhdlrdata) );
    }
 
+   nnodesleft = SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNNodesLeft(scip) : 0;
+
+   mincorrectedestimate = rootcorrestimate = minestimate = SCIP_INVALID;
+   nleavesbelowincumbent = nleavesbelowinccorrected = 0;
+
+   SCIP_CALL( SCIPgetCorrectedEstimateData(scip, &mincorrectedestimate, &rootcorrestimate, &minestimate, &nleavesbelowinccorrected, &nleavesbelowincumbent, TRUE) );
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "    Currentestimates (root corr, min, mincorr, nbelow, ncorrbelow, n): %9.5f %9.5f %9.5f %d %d %d\n",
+         SCIPretransformObj(scip, rootcorrestimate),
+         SCIPretransformObj(scip, minestimate),
+         SCIPretransformObj(scip, mincorrectedestimate),
+         nleavesbelowincumbent, nleavesbelowinccorrected, nnodesleft);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, " N rank1 nodes: %d (%d)", SCIPgetNRank1Nodes(scip), nnodesleft);
+   SCIPverbMessage(scip ,SCIP_VERBLEVEL_NORMAL, NULL, " Time, nodes, LP iters: %.2f %"SCIP_LONGINT_FORMAT" %"SCIP_LONGINT_FORMAT"\n",
+         SCIPgetSolvingTime(scip), SCIPgetNNodes(scip), SCIPgetNLPIterations(scip))
+   ;
    if( eventhdlrdata->n >= 3 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "   regression updated: y = %.2f log(x) + %.2f, corr=%.2f\n", eventhdlrdata->c1, eventhdlrdata->c0,eventhdlrdata->corrcoef);
 
