@@ -30549,27 +30549,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
       while( !cutoff && targetdepth > divedepth && nextcand < ndivecands );
 
-#if 0
-      /* reward the diving setting by increasing the dive depth quotient for future purpose */
-      if( !cutoff && (divedepth == targetdepth || nextcand == ndivecands ) )
-      {
-         SCIPdivesetSetTargetdepthfrac(diveset, 1.1 * SCIPdivesetGetTargetdepthfrac(diveset));
-      }
-      else if( cutoff )
-      {
-         /* if the last node was cut off, we terminate the heuristic */
-         int reacheddepth = divedepth - startdepth - 1;
-         assert(reacheddepth >= 0);
-
-         /* evaluate how deep we went this time and be more conservative in the future, if possible
-          * if not even half the targeted depth was reached, decrease the depth quotient
-          */
-         if( reacheddepth < (targetdepth - startdepth) / 2 )
-         {
-            SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
-         }
-      }
-#endif
 
       /* resolve the diving LP */
       if( !cutoff )
@@ -30606,6 +30585,26 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
 
       SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, ndivecands);
+
+      /* reward the diving setting by increasing the dive depth quotient for future purpose */
+      if( !cutoff && (divedepth == targetdepth || nextcand == ndivecands ) )
+      {
+         SCIPdivesetSetTargetdepthfrac(diveset, 1.1 * SCIPdivesetGetTargetdepthfrac(diveset));
+      }
+      else if( cutoff )
+      {
+         /* if the last node was cut off, we terminate the heuristic */
+         int reacheddepth = divedepth - startdepth - 1;
+         assert(reacheddepth >= 0);
+
+         /* evaluate how deep we went this time and be more conservative in the future, if possible
+          * if not even half the targeted depth was reached, decrease the depth quotient
+          */
+         if( reacheddepth < (targetdepth - startdepth) / 2 )
+         {
+            SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
+         }
+      }
 
       SCIP_CALL( freeDivingCandidates(scip, diveset, &divecands, &divecandssol, &divecandsfrac, ndivecands, memallocated) );
       nextcand = 0;
