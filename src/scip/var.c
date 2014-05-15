@@ -11981,7 +11981,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
    assert(scalar != NULL);
    assert(constant != NULL);
 
-   while( SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL )
+   while( !SCIPvarIsOriginal(*var) )
    {
       /* if the variable has no parent variables, it was generated during solving and has no corresponding original
        * var

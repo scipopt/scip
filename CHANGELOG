@@ -19,6 +19,7 @@ fixed bugs:
 - fixed bug 708, special case of implications led to a fixing
 - allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
 - fixed bug, variable bounds detected wrong infeasibility
+- another bug fix when computing the original variable sum of a given variable in SCIPvarGetOrigvarSum()
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
