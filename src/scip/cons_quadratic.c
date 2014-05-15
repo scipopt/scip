@@ -9721,7 +9721,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
+ *
+ * NOTE: also called from SCIPcreateConsQuadratic(2) during solving stage
+ */
 static
 SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 {
@@ -11921,6 +11924,11 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIPdebugMessage("created quadratic constraint ");
    SCIPdebugPrintCons(scip, *cons, NULL);
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, cons, 1) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -12022,6 +12030,11 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
       assert(conshdlrdata->eventhdlr != NULL);
 
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
+   }
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, cons, 1) );
    }
 
    return SCIP_OKAY;
