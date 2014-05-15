@@ -24,7 +24,6 @@
  * @todo skip separation in enfolp if for current LP (check LP id) was already separated
  * @todo watch unbounded variables to enable/disable propagation
  * @todo sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
- * @todo do initsol/exitsol stuff also when a constraint is enabled/disabled during solve
  * @todo underestimate for multivariate concave quadratic terms as in cons_nonlinear
  */
 
@@ -9708,7 +9707,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
- * NOTE: also called from SCIPcreateConsQuadratic(2) during solving stage
+ * NOTE: also called from consEnableQuadratic during solving stage
  */
 static
 SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
@@ -9781,6 +9780,12 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
    }
 
+   if( SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
+   {
+      /* if called from consEnableQuadratic, then don't do below */
+      return SCIP_OKAY;
+   }
+
    conshdlrdata->newsoleventfilterpos = -1;
    if( nconss != 0 && conshdlrdata->linearizeheursol )
    {
@@ -9806,7 +9811,10 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
    return SCIP_OKAY;
 }
 
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed)
+ *
+ * NOTE: also called from consDisableQuadratic during solving stage
+ */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 {  /*lint --e{715}*/
@@ -9820,17 +9828,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->newsoleventfilterpos >= 0 )
-   {
-      SCIP_EVENTHDLR* eventhdlr;
-
-      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
-      conshdlrdata->newsoleventfilterpos = -1;
-   }
 
    for( c = 0; c < nconss; ++c )
    {
@@ -9850,6 +9847,23 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorleft,  consdata->nquadvars + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorright, consdata->nquadvars + 1);
+   }
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_EXITSOLVE )
+   {
+      /* if called from consDisableQuadratic, then don't do below */
+      return SCIP_OKAY;
+   }
+
+   if( conshdlrdata->newsoleventfilterpos >= 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
+      conshdlrdata->newsoleventfilterpos = -1;
    }
 
    return SCIP_OKAY;
@@ -10945,8 +10959,22 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
 
    SCIPdebugMessage("enable cons <%s>\n", SCIPconsGetName(cons));
 
+   if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
+   {
+      /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
+      SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
+      SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
+      SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
+   }
+
    /* catch variable events */
    SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
+   /* initialize solving data */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, &cons, 1) );
+   }
 
    return SCIP_OKAY;
 }
@@ -10966,6 +10994,12 @@ SCIP_DECL_CONSDISABLE(consDisableQuadratic)
    assert(conshdlrdata != NULL);
 
    SCIPdebugMessage("disable cons <%s>\n", SCIPconsGetName(cons));
+
+   /* free solving data */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( consExitsolQuadratic(scip, conshdlr, &cons, 1, FALSE) );
+   }
 
    /* drop variable events */
    SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
@@ -11931,18 +11965,8 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
 
    SCIPhashmapFree(&quadvaridxs);
 
-   /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
-   SCIP_CALL( mergeAndCleanBilinearTerms(scip, *cons) );
-   SCIP_CALL( mergeAndCleanQuadVarTerms(scip, *cons) );
-   SCIP_CALL( mergeAndCleanLinearVars(scip, *cons) );
-
    SCIPdebugMessage("created quadratic constraint ");
    SCIPdebugPrintCons(scip, *cons, NULL);
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, cons, 1) );
-   }
 
    return SCIP_OKAY;
 }
@@ -12037,11 +12061,6 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, FALSE) );
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, cons, 1) );
-   }
 
    return SCIP_OKAY;
 }
