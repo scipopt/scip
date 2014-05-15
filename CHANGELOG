@@ -30,6 +30,7 @@ features:
 
 interface:
 - added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance
+- forbid to call SCIPfixVar() in SCIP_STAGE_PRESOLVED stage, which is not allowed since it calls SCIPchgVarLb/Ub()
 
 SCIP version 3.1.0
 ==================
