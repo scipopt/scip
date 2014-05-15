@@ -24,7 +24,7 @@
  * @todo skip separation in enfolp if for current LP (check LP id) was already separated
  * @todo watch unbounded variables to enable/disable propagation
  * @todo sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
- * @todo catch/drop events in consEnable/consDisable, do initsol/exitsol stuff also when a constraint is enabled/disabled during solve
+ * @todo do initsol/exitsol stuff also when a constraint is enabled/disabled during solve
  * @todo underestimate for multivariate concave quadratic terms as in cons_nonlinear
  */
 
@@ -3992,7 +3992,6 @@ SCIP_RETCODE presolveUpgrade(
 
          /* delete upgraded constraint */
          SCIPdebugMessage("delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
          break;
@@ -9604,7 +9603,6 @@ static
 SCIP_DECL_CONSINIT(consInitQuadratic)
 {  /*lint --e{715} */
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -9615,12 +9613,6 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
-   /* catch variable events */
-   for( c = 0; c < nconss; ++c )
-   {
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -9630,19 +9622,12 @@ static
 SCIP_DECL_CONSEXIT(consExitQuadratic)
 {  /*lint --e{715} */
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   /* drop variable events */
-   for( c = 0; c < nconss; ++c )
-   {
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-   }
 
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->trysolheur = NULL;
@@ -9884,11 +9869,6 @@ SCIP_DECL_CONSDELETE(consDeleteQuadratic)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   if( SCIPconsIsTransformed(cons) )
-   {
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-   }
 
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -10706,7 +10686,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       }
       if( redundant )
       {
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          ++*ndelconss;
          *result = SCIP_SUCCESS;
@@ -10756,7 +10735,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
       {
          /* all variables fixed or removed, constraint function is 0.0 now */
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) ); /* well, there shouldn't be any variables left anyway */
          if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, consdata->lhs)) ||
             ( !SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasNegative(scip, consdata->rhs)) )
          { /* left hand side positive or right hand side negative */
@@ -10800,7 +10778,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             /* delete constraint if found redundant by bound tightening */
             if( redundant )
             {
-               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
                SCIP_CALL( SCIPdelCons(scip, conss[c]) );
                ++*ndelconss;
                *result = SCIP_SUCCESS;
@@ -10947,6 +10924,51 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
       /* @todo try to be more clever, but variable locks that depend on the bounds of other variables are not trival to maintain */
       SCIP_CALL( SCIPaddVarLocks(scip, consdata->quadvarterms[i].var, nlockspos+nlocksneg, nlockspos+nlocksneg) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** constraint enabling notification method of constraint handler */
+static
+SCIP_DECL_CONSENABLE(consEnableQuadratic)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(SCIPconsIsTransformed(cons));
+   assert(SCIPconsIsActive(cons));
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPdebugMessage("enable cons <%s>\n", SCIPconsGetName(cons));
+
+   /* catch variable events */
+   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint disabling notification method of constraint handler */
+static
+SCIP_DECL_CONSDISABLE(consDisableQuadratic)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(SCIPconsIsTransformed(cons));
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPdebugMessage("disable cons <%s>\n", SCIPconsGetName(cons));
+
+   /* drop variable events */
+   SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
    return SCIP_OKAY;
 }
@@ -11568,6 +11590,8 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyQuadratic, consCopyQuadratic) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableQuadratic) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitQuadratic) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreQuadratic) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolQuadratic) );
@@ -11905,15 +11929,6 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
       }
    }
 
-   if( SCIPisTransformed(scip) )
-   {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
-
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
-   }
-
    SCIPhashmapFree(&quadvaridxs);
 
    /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
@@ -12022,15 +12037,6 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, FALSE) );
-
-   if( SCIPisTransformed(scip) )
-   {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
-
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
-   }
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
