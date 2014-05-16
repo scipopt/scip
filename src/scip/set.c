@@ -141,6 +141,9 @@
 
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 
+/* Heuristics */
+
+#define SCIP_DEFAULT_HEUR_DIVESTARTFRAC         0.15 /**< start percentage of diving candidates that should be fixed before LP resolve */
 
 /* Limits */
 
@@ -1065,6 +1068,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should statistics be collected for variable domain value pairs?",
          &(*set)->history_valuebased, FALSE, SCIP_DEFAULT_HISTORY_VALUEBASED,
          NULL, NULL) );
+
+   /* heuristic parameters */
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divestartfrac",
+         "start percentage of diving candidates that should be fixed before LP resolve",
+         &(*set)->heur_divestartfrac, FALSE, SCIP_DEFAULT_HEUR_DIVESTARTFRAC,  0.01, 1.0, NULL, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

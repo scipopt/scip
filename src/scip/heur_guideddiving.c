@@ -145,7 +145,7 @@ SCIP_DECL_HEURINIT(heurInitGuideddiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data by resetting the diving settings */
-   SCIPdivesetReset(heurdata->diveset);
+   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }

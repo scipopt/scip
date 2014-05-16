@@ -75,6 +75,13 @@ void SCIPdivesetSetTargetdepthfrac(
    SCIP_Real             newval              /**< new value for target depth frac */
    );
 
+/** resets diving settings counters */
+extern
+void SCIPdivesetReset(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** get branching candidates defined by the diveset. This will call the divesetGetCandsXyz callback
  *  of the diving settings. If the diving setting has no such callback, this is indicated by
  *  assigning the value -1. The calling method can then use SCIPgetLPBranchCands() instead

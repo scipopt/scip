@@ -36,8 +36,8 @@
 
 #include "scip/struct_heur.h"
 
-#define MINTARGETDEPTHFRAC 0.01
-#define MAXTARGETDEPTHFRAC 0.7
+#define MINTARGETDEPTHFRAC 0.001
+#define MAXTARGETDEPTHFRAC 1.0
 
 /** compares two heuristics w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
@@ -86,14 +86,15 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 
 /* resets diving settings counters */
 void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset             /**< diveset to be reset */
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(diveset != NULL);
 
    diveset->nlpiterations = 0L;
    diveset->nsuccess = 0;
-   diveset->targetdepthfrac = .3;
+   diveset->targetdepthfrac = set->heur_divestartfrac;
 }
 
 /** create a set of diving heuristic settings */
@@ -187,7 +188,7 @@ SCIP_RETCODE SCIPdivesetCreate(
          "use one level of backtracking if infeasibility is encountered?",
          &(*diveset)->backtrack, FALSE, backtrack, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset);
+   SCIPdivesetReset(*diveset, set);
 
    return SCIP_OKAY;
 }

@@ -30158,6 +30158,17 @@ SCIP_RETCODE freeDivingCandidates(
    return SCIP_OKAY;
 }
 
+/** resets diving settings by both resetting counters and discarding adapted values through search */
+void SCIPresetDiveset(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_DIVESET*         diveset              /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   SCIPdivesetReset(diveset, scip->set);
+}
+
 /** applies a diving within the limits of the diveset parameters */
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */

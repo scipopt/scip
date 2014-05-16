@@ -123,7 +123,7 @@ SCIP_DECL_HEURINIT(heurInitPscostdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data */
-   SCIPdivesetReset(heurdata->diveset);
+   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }

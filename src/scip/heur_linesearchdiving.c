@@ -127,7 +127,7 @@ SCIP_DECL_HEURINIT(heurInitLinesearchdiving)
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data */
-   SCIPdivesetReset(heurdata->diveset);
+   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }

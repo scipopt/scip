@@ -182,7 +182,7 @@ SCIP_DECL_HEURINIT(heurInitFracdiving) /*lint --e{715}*/
 
    /* initialize data */
    assert(heurdata->diveset != NULL);
-   SCIPdivesetReset(heurdata->diveset);
+   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }

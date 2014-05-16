@@ -14323,6 +14323,13 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
 
    );
 
+/** resets diving settings by both resetting counters and discarding adapted values through search */
+EXTERN
+void SCIPresetDiveset(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_DIVESET*         diveset              /**< diving settings */
+   );
+
 EXTERN
 /** applies a diving within the limits of the diveset parameters */
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(

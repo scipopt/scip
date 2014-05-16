@@ -158,12 +158,6 @@ SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
-/** resets diving settings counters */
-EXTERN
-void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset             /**< diveset to be reset */
-   );
-
 /** get the heuristic to which this diving setting belongs */
 EXTERN
 SCIP_HEUR* SCIPdivesetGetHeur(
