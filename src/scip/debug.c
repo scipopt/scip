@@ -534,7 +534,8 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    if( solinnode != NULL)
       SCIPhashmapFree(&solinnode);
 
-   if( debugsol != NULL && SCIPgetStage(set->scip) == debugsolstage )
+   if( debugsol != NULL && ((SCIPgetStage(set->scip) > SCIP_STAGE_PROBLEM && debugsolstage > SCIP_STAGE_PROBLEM)
+         || (SCIPgetStage(set->scip) <= SCIP_STAGE_PROBLEM && debugsolstage <= SCIP_STAGE_PROBLEM)) )
    {
       SCIP_CALL( SCIPfreeSol(set->scip, &debugsol) );
    }
