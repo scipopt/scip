@@ -9724,7 +9724,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && !SCIPsetIsFeasPositive(set, vlbconstant))  )
+         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && SCIPsetIsFeasPositive(set, vlbconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
