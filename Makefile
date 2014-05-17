@@ -338,7 +338,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
-			scip/heur_zeroobj.o \
 			scip/heur_intdiving.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
@@ -350,8 +349,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_oneopt.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
-			scip/heur_rens.o \
 			scip/heur_randrounding.o \
+			scip/heur_rens.o \
 			scip/heur_rins.o \
 			scip/heur_rootsoldiving.o \
 			scip/heur_rounding.o \
@@ -365,6 +364,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_undercover.o \
 			scip/heur_vbounds.o \
 			scip/heur_veclendiving.o \
+			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
 			scip/message_default.o \
 			scip/nodesel_bfs.o \
@@ -403,8 +403,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_opb.o \
 			scip/reader_osil.o \
 			scip/reader_pip.o \
-			scip/reader_ppm.o \
 			scip/reader_pbm.o \
+			scip/reader_ppm.o \
 			scip/reader_rlp.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \
