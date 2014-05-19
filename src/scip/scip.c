@@ -30316,8 +30316,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
 
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing coefdiving heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n",
-         SCIPgetNNodes(scip), SCIPgetDepth(scip), ndivecands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing %s heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n",
+         SCIPgetNNodes(scip), SCIPheurGetName(heur), SCIPgetDepth(scip), ndivecands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
          SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
    lperror = FALSE;
@@ -30347,11 +30347,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* determine the target depth (depth where the next LP should be solved) */
       startdepth = divedepth;
       ncandstofix = MIN(ndivecands, maxdivedepth - divedepth);
-      ncandstofix = (int)(ncandstofix * SCIPdivesetGetTargetdepthfrac(diveset));
+      ncandstofix = (int)SCIPceil(scip, ncandstofix * SCIPdivesetGetTargetdepthfrac(diveset));
       ncandstofix = MAX(ncandstofix, 1);
-      ncandstofix = MAX(ncandstofix, maxdivedepth - startdepth);
-
       targetdepth = divedepth + ncandstofix;
+
+      SCIPdebugMessage("%s heuristic continues diving at depth %d, %d candidates left, %d candidates to fix\n",SCIPheurGetName(heur),startdepth, ndivecands, ncandstofix);
 
       /* loop over candidates and determine if they are roundable */
       allroundable = TRUE;
@@ -30453,7 +30453,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          nextcandroundup = FALSE;
 
          nextcandbranchdir = SCIPdivesetCandBranchdir(diveset, scip->set, nextcandvar, nextcandsol, divecandsfrac[nextcand]);
-         nextcandroundup = nextcandbranchdir == SCIP_BRANCHDIR_UPWARDS;
+         nextcandroundup = (nextcandbranchdir == SCIP_BRANCHDIR_UPWARDS);
 
          backtracked = FALSE;
          do
