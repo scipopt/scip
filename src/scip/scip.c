@@ -30415,6 +30415,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIP_Real minscore;
          /* find diving candidate with minimum score */
          minscore = SCIPinfinity(scip);
+         nextcand = 0;
          for( c = 0; c < ndivecands; ++c )
          {
             SCIP_Real score;
