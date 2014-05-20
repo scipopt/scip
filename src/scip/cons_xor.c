@@ -2106,6 +2106,11 @@ SCIP_RETCODE checkSystemGF2(
          assert( var != NULL );
          assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
+         /* replace negated variables */
+         if ( SCIPvarIsNegated(var) )
+            var = SCIPvarGetNegatedVar(var);
+         assert( var != NULL );
+
          /* consider nonfixed variables */
          if ( SCIPcomputeVarLbLocal(scip, var) < 0.5 && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
          {
@@ -4395,7 +4400,6 @@ SCIP_DECL_CONSPROP(consPropXor)
             SCIP_CALL( checkSystemGF2(scip, conss, nusefulconss, NULL, result) );
          }
       }
-
    }
 
    return SCIP_OKAY;

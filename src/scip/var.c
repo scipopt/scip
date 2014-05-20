@@ -9724,7 +9724,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && !SCIPsetIsZero(set, vlbconstant))  )
+         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && SCIPsetIsFeasPositive(set, vlbconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -10076,7 +10076,7 @@ SCIP_RETCODE SCIPvarAddVub(
          maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasLT(set, maxvub, xlb) || (var == vubvar && SCIPsetIsEQ(set, vubcoef, 1.0) && !SCIPsetIsZero(set, vubconstant))  )
+         if( SCIPsetIsFeasLT(set, maxvub, xlb) || (var == vubvar && SCIPsetIsEQ(set, vubcoef, 1.0) && SCIPsetIsFeasNegative(set, vubconstant))  )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -11981,7 +11981,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
    assert(scalar != NULL);
    assert(constant != NULL);
 
-   while( SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL )
+   while( !SCIPvarIsOriginal(*var) )
    {
       /* if the variable has no parent variables, it was generated during solving and has no corresponding original
        * var
