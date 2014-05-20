@@ -17,7 +17,7 @@
  * @brief  main file
  * @author Timo Strunk
  * @desc   This is the main class of the program responsible for reading the arguments and running the program.
- * Furthermore it is responsible for writing standard output.
+ *         Furthermore it is responsible for writing standard output.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,17 +34,9 @@
 #ifndef CLASS_MAIN
 #define CLASS_MAIN
 
-/* default parameters */
-const SCIP_Real     DEFAULT_TIMELIMIT   = 3600;
-const SCIP_Bool     DEFAULT_VERBOSE     = FALSE;
-const int           DEFAULT_SOLSTORE    = 1024;
-const SCIP_Bool     DEFAULT_WEIGHTED    = TRUE;
-const SCIP_Bool     DEFAULT_LOG         = FALSE;
-
 /* spacing constants for tabular printing */
 const int           WIDTH_DEFAULT       = 10;
 const int           WIDTH_FILE          = 40;
-const int           WIDTH_STORE         = 6;
 const int           WIDTH_VEC_ENTRY     = 12;
 const int           WIDTH_VEC_PADDING   = 4;
 
@@ -66,7 +58,7 @@ class WeightedSolver;
 class Main
 {
  public:
-  /** constructor from program arguments */
+  /** default constructor */
    Main();
 
    /** default destructor */
@@ -79,30 +71,14 @@ class Main
       );
 
  private:
-   char*                 filename_;          /**< problem file name */
-   SCIP_Bool             verbose_;           /**< whether to print more log text */
-   SCIP_Real             timelimit_;         /**< maximal time for entire solve */
-   int                   solstore_;          /**< maximal solution storage size */
-   SCIP_Bool             log_;               /**< whether to print log to file */
-
    WeightedSolver*       solver_;            /**< actual solver */
-
-   std::ostream*         os_;                /**< log output stream */
+   char*                 filename_;          /**< problem file name */
    int                   width_vec_;         /**< space for writing a vector to log */
 
    int                   nnodes_total_;      /**< sum of branch and bound nodes used in all SCIP runs so far */
    int                   niterations_total_; /**< sum of lp iterations used in all SCIP runs so far */
    int                   n_v_new_total_;     /**< sum of 1-skeleton vertices generated so far */
    int                   n_v_proc_total_;    /**< sum of 1-skeleton vertices processed so far */
-
-   /** read parameters from command line input */
-   void readParameters(  
-      int                 argc,               /**< number of command line arguments */
-      char**              argv                /**< command line arguments */
-      );
-
-   /** generates output stream according to log flag */
-   void makeOutputStream();
 
    /** prints comments about the result of file reading */
    SCIP_RETCODE readProblem(const char* filename);

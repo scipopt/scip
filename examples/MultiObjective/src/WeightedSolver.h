@@ -115,9 +115,13 @@ class WeightedSolver
    /** delete non extremal solutions */
    SCIP_RETCODE enforceExtremality();
 
+   /** return verblevel parameter set in SCIP */
+   int getVerbosity() const;
+
  protected:
    SCIP*                 scip_;                   /**< SCIP solver */
    SCIP_Real             timelimit_;              /**< maximal time for entire solve in seconds */
+   int                   verbosity_;
 
    bool                  found_new_optimum_;      /**< true if the last SCIP run found a new optimum */
    SCIP_SOL*             solution_;               /**< last found solution */

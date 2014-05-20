@@ -86,35 +86,19 @@ SCIP_Real scalar_product(
    return result;
 }
 
-/** constructor from command line arguments */
+/** default constructor */
 Main::Main()
-   :     filename_(NULL),
-         verbose_(DEFAULT_VERBOSE),
-         timelimit_(DEFAULT_TIMELIMIT),
-         solstore_(DEFAULT_SOLSTORE),
-         log_(DEFAULT_LOG),
-         solver_(NULL),
-         os_(NULL),
+   :     solver_(NULL),
+         filename_(NULL),
          nnodes_total_(0),
          niterations_total_(0)
 {
-   /*
-   readParameters(argc,argv );
-   solver_ = new LiftedWeightSpaceSolver(verbose_, timelimit_, solstore_);
-   makeOutputStream();
-   */
 }
 
 /** default destructor */
 Main::~Main()
 {
    delete solver_;
-
-   if( log_ )
-   {
-     static_cast<std::ofstream*>(os_)->close();
-     delete os_;
-   }
 }
 
 /** run the program */
@@ -138,7 +122,6 @@ SCIP_RETCODE Main::run(
       paramfilename = NULL;
    }
    solver_ = new LiftedWeightSpaceSolver(paramfilename);
-   os_  = &std::cout;
 
    SCIP_CALL( readProblem(argv[1]) );
 
@@ -173,72 +156,6 @@ SCIP_RETCODE Main::run(
    printBottomLine();
 
    return SCIP_OKAY;
-}
-
-/** read parameters from command line input */
-void Main::readParameters(
-   int                   argc,               /**< number of command line arguments */
-   char**                argv                /**< command line arguments */
-   )
-{
-   int i;
-
-   /* loop over arguments */
-   i = 1;
-   while( i < argc )
-   {
-      if( !strcmp(argv[i], "-v") )
-      {
-         verbose_ = TRUE;
-      }
-      else if( !strcmp(argv[i], "-l") )
-      {
-         log_ = TRUE;
-      }
-      else if( !strcmp(argv[i], "-t") )
-      {
-         ++i;
-         timelimit_ = atof(argv[i]);
-      }
-      else if( !strcmp(argv[i], "-s") )
-      {
-         ++i;
-         solstore_ = atoi(argv[i]);
-      }
-      else if( filename_ == NULL )
-      {
-         filename_ = argv[i];
-      }
-      /* else: ignore */
-      ++i;
-   }
-}
-
-/** generates output stream according to log flag */
-void Main::makeOutputStream()
-{
-   std::string           sfilename;
-   int                   startname;
-   std::string           logname;
-
-   if( log_ )
-   {
-      /* generate stream to output file */
-      os_       = new std::ofstream();
-      sfilename = std::string(filename_);
-      startname = sfilename.find_last_of("/\\");
-
-      logname   = "solutions"+sfilename.substr(
-         startname,
-         sfilename.length() - 4 - startname
-         ) + ".log";
-
-      static_cast<std::ofstream*>(os_)->open(logname.c_str());
-   }
-   else
-   {
-      os_  = &std::cout;
-   }
 }
 
 /** prints comments about the result of file reading */
@@ -280,7 +197,7 @@ SCIP_RETCODE Main::readProblem(const char* filename)
 /** prints head row for run statistics table */
 void Main::printHeadline()
 {
-   *os_ << std::setw(width_vec_)        << "Weight"
+   std::cout << std::setw(width_vec_)        << "Weight"
         << std::setw(width_vec_)        << "Cost"
         << std::setw(WIDTH_DEFAULT)     << "Time/s"
         << std::setw(WIDTH_DEFAULT)     << "Nodes"
@@ -294,27 +211,27 @@ void Main::printHeadline()
 /** prints statistics for last run in table row format */
 void Main::printRun()
 {
-   if( verbose_ )
+   if( solver_->getVerbosity() > 0 )
    {
-      *os_ << "----------------------------------------------------"<<std::endl;
+      std::cout << "----------------------------------------------------"<<std::endl;
       printHeadline();
    }
 
    /* print weight */
-   *os_ << std::setw(width_vec_) << *(solver_->getWeight());
+   std::cout << std::setw(width_vec_) << *(solver_->getWeight());
 
    /* print new optimum if one was found */
    if( solver_->foundNewOptimum() )
    {
-      *os_ << std::setw(width_vec_) << *(solver_->getCost());
+      std::cout << std::setw(width_vec_) << *(solver_->getCost());
    }
    else
    {
-      *os_ << std::setw(width_vec_) << "-";
+      std::cout << std::setw(width_vec_) << "-";
    }
 
    /* print solver_ statistics */
-   *os_  << std::setprecision(2) << std::fixed
+   std::cout  << std::setprecision(2) << std::fixed
          << std::setw(WIDTH_DEFAULT) << solver_->getDurationLastRun()
          << std::setw(WIDTH_DEFAULT) << solver_->getNNodesLastRun()
          << std::setw(WIDTH_DEFAULT) << solver_->getNLPIterationsLastRun()
@@ -324,14 +241,14 @@ void Main::printRun()
    /* print name of solution if optimum was found */
    if( solver_->foundNewOptimum() )
    {
-      *os_ << "   " << solver_->getSolutionFileName();
+      std::cout << "   " << solver_->getSolutionFileName();
    }
 
-   *os_ << std::endl;
+   std::cout << std::endl;
 
-   if(verbose_)
+   if( solver_->getVerbosity() > 0 )
    {
-      *os_ << std::endl;
+      std::cout << std::endl;
    }
 }
 
@@ -343,50 +260,50 @@ void Main::evaluateStatus()
    solver_status = solver_->getStatus();
    if( solver_status == SCIP_STATUS_TIMELIMIT )
    {
-      *os_ << " ABORTED: time limit reached" << std::endl;
+      std::cout << " ABORTED: time limit reached" << std::endl;
    }
    else if( solver_status == SCIP_STATUS_INFEASIBLE )
    {
-      *os_ << " ABORTED: problem is infeasible" << std::endl;
+      std::cout << " ABORTED: problem is infeasible" << std::endl;
    }
    else if( solver_status == SCIP_STATUS_UNBOUNDED )
    {
-      *os_ << " ABORTED: problem has at least one infeasible objective" << std::endl;
+      std::cout << " ABORTED: problem has at least one infeasible objective" << std::endl;
    }
    else if( solver_status == SCIP_STATUS_INFORUNBD )
    {
-      *os_ << " ABORTED: problem is infeasible or unbounded" << std::endl;
+      std::cout << " ABORTED: problem is infeasible or unbounded" << std::endl;
    }
    else if( solver_status == SCIP_STATUS_USERINTERRUPT )
    {
-      *os_ << " ABORTED: user interrupt" << std::endl;
+      std::cout << " ABORTED: user interrupt" << std::endl;
    }
    else if( solver_status != SCIP_STATUS_OPTIMAL )
    {
-      *os_ << " ABORTED: SCIP_STATUS = " << (int)solver_status << std::endl;
+      std::cout << " ABORTED: SCIP_STATUS = " << (int)solver_status << std::endl;
    }
 }
 
 /** prints overall statistics */
 void Main::printBottomLine()
 {
-   *os_ << std::endl
-        << std::setw(width_vec_)         << "Runs"
-        << std::setw(width_vec_)         << "Solutions"
-        << std::setw(WIDTH_DEFAULT)      << "Time/s"
-        << std::setw(WIDTH_DEFAULT)      << "Nodes"
-        << std::setw(WIDTH_DEFAULT)      << "LP Iter"
-        << std::setw(WIDTH_DEFAULT)      << "V_new"
-        << std::setw(WIDTH_DEFAULT)      << "V_proc"
-        << std::endl                     << std::endl
-        << std::setw(width_vec_)         << solver_->getNRuns()
-        << std::setw(width_vec_)         << solver_->getNSolutions()
-        << std::setw(WIDTH_DEFAULT)      << solver_->getTotalDuration()
-        << std::setw(WIDTH_DEFAULT)      << nnodes_total_
-        << std::setw(WIDTH_DEFAULT)      << niterations_total_
-        << std::setw(WIDTH_DEFAULT)      << n_v_new_total_
-        << std::setw(WIDTH_DEFAULT)      << n_v_proc_total_
-        << std::endl;
+   std::cout << std::endl
+             << std::setw(width_vec_)         << "Runs"
+             << std::setw(width_vec_)         << "Solutions"
+             << std::setw(WIDTH_DEFAULT)      << "Time/s"
+             << std::setw(WIDTH_DEFAULT)      << "Nodes"
+             << std::setw(WIDTH_DEFAULT)      << "LP Iter"
+             << std::setw(WIDTH_DEFAULT)      << "V_new"
+             << std::setw(WIDTH_DEFAULT)      << "V_proc"
+             << std::endl                     << std::endl
+             << std::setw(width_vec_)         << solver_->getNRuns()
+             << std::setw(width_vec_)         << solver_->getNSolutions()
+             << std::setw(WIDTH_DEFAULT)      << solver_->getTotalDuration()
+             << std::setw(WIDTH_DEFAULT)      << nnodes_total_
+             << std::setw(WIDTH_DEFAULT)      << niterations_total_
+             << std::setw(WIDTH_DEFAULT)      << n_v_new_total_
+             << std::setw(WIDTH_DEFAULT)      << n_v_proc_total_
+             << std::endl;
 }
 
 /** runs the program: reads specified instance file, calls the solver and prints out
@@ -396,10 +313,14 @@ int main(
    char**                argv           /** array of arguments */
    )
 {
-   Main* main;
+   SCIP_RETCODE retcode;
+   Main main;
 
-   main = new Main();
-   SCIP_CALL(main->run(argc, argv));
+   retcode = main.run(argc, argv);
+   if( retcode != SCIP_OKAY )
+   {
+      return -1;
+   }
 
    return 0;
 }

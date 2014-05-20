@@ -342,3 +342,9 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
 
    return SCIP_OKAY;
 }
+
+/** return verblevel parameter set in SCIP */
+int WeightedSolver::getVerbosity() const
+{
+   return verbosity_;
+}
