@@ -62,6 +62,42 @@ WeightedSolver::WeightedSolver(
    SCIPsetIntParam(scip_, "limits/maxorigsol", solstore);
 }
 
+/** SCIP style constructor */
+WeightedSolver::WeightedSolver(
+   const char*           paramfilename       /**< name of file with SCIP parameters */     
+   )
+   : scip_(NULL),
+     found_new_optimum_(false),
+     duration_last_run_(0),
+     status_(SCIP_STATUS_UNKNOWN),
+     nruns_(0),
+     weight_(NULL),
+     cost_vector_(NULL)
+{
+   SCIPcreate(&scip_);
+   assert(scip_ != NULL);
+   SCIPincludeDefaultPlugins(scip_);
+   SCIPincludeReaderMop(scip_);
+
+   if( paramfilename != NULL )
+   {
+      if( SCIPfileExists(paramfilename) )
+      {
+         std::cout << "reading parameter file <" << paramfilename << ">" << std::endl;
+         SCIPreadParams(scip_, paramfilename);
+      }
+      else
+         std::cout << "parameter file <" << paramfilename << "> not found - using default parameters" << std::endl;
+   }
+   else if( SCIPfileExists("scipmip.set") )
+   {
+      std::cout << "reading parameter file <scipmip.set>" << std::endl;
+      SCIPreadParams(scip_, "scipmip.set");
+   }
+
+   SCIPgetRealParam(scip_, "limits/time", &timelimit_);
+}
+
 /** destructor */
 WeightedSolver::~WeightedSolver()
 {

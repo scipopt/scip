@@ -67,16 +67,16 @@ class Main
 {
  public:
   /** constructor from program arguments */
-   Main(
-      int                argc,          /**< number of command line arguments */
-      char**             argv           /**< array of command line arguments */
-      );
+   Main();
 
    /** default destructor */
    ~Main();
 
    /** execute the program */
-   SCIP_RETCODE main();
+   SCIP_RETCODE run(
+      int                argc,               /**< number of command line arguments */
+      char**             argv                /**< array of command line arguments */
+      );
 
  private:
    char*                 filename_;          /**< problem file name */
@@ -105,7 +105,7 @@ class Main
    void makeOutputStream();
 
    /** prints comments about the result of file reading */
-   SCIP_RETCODE readFile();
+   SCIP_RETCODE readProblem(const char* filename);
 
    /** prints head row for run statistics table */
    void printHeadline();

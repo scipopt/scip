@@ -87,10 +87,7 @@ SCIP_Real scalar_product(
 }
 
 /** constructor from command line arguments */
-Main::Main(
-   int                argc,          /**< number of command line arguments */
-   char**             argv           /**< array of command line arguments */
-   )
+Main::Main()
    :     filename_(NULL),
          verbose_(DEFAULT_VERBOSE),
          timelimit_(DEFAULT_TIMELIMIT),
@@ -101,9 +98,11 @@ Main::Main(
          nnodes_total_(0),
          niterations_total_(0)
 {
+   /*
    readParameters(argc,argv );
    solver_ = new LiftedWeightSpaceSolver(verbose_, timelimit_, solstore_);
    makeOutputStream();
+   */
 }
 
 /** default destructor */
@@ -119,9 +118,29 @@ Main::~Main()
 }
 
 /** run the program */
-SCIP_RETCODE Main::main()
+SCIP_RETCODE Main::run(   
+   int                argc,          /**< number of command line arguments */
+   char**             argv           /**< array of command line arguments */
+   )
 {
-   SCIP_CALL( readFile() );
+   const char* paramfilename;
+   if(argc <= 1)
+   {
+      std::cout << "usage: multiopt <problem file>.mop [<parameter file>.set]" << std::endl;
+      return SCIP_READERROR;
+   }
+   else if(argc >= 3)
+   {
+      paramfilename = argv[2];
+   }
+   else
+   {
+      paramfilename = NULL;
+   }
+   solver_ = new LiftedWeightSpaceSolver(paramfilename);
+   os_  = &std::cout;
+
+   SCIP_CALL( readProblem(argv[1]) );
 
    /* make enough space to write vectors */
    width_vec_ = WIDTH_VEC_ENTRY * solver_->getNObjs() + WIDTH_VEC_PADDING;
@@ -223,27 +242,27 @@ void Main::makeOutputStream()
 }
 
 /** prints comments about the result of file reading */
-SCIP_RETCODE Main::readFile()
+SCIP_RETCODE Main::readProblem(const char* filename)
 {
    SCIP_RETCODE          result;
 
-   if( filename_ == NULL )
+   if( filename == NULL )
    {
      result = SCIP_NOFILE;
    }
    else
    {
       /* try to read input file and evaluate output */
-      result = solver_->readProblem(filename_);
+      result = solver_->readProblem(filename);
       if( result == SCIP_READERROR )
       {
         std::cout << "file not in multi objective mps format: "
-                  << filename_
+                  << filename
                   << std::endl;
       }
       else if( result == SCIP_NOFILE )
       {
-        std::cout << "file not found "<<filename_ << std::endl;
+        std::cout << "file not found "<< filename << std::endl;
       }
       else if( result == SCIP_PLUGINNOTFOUND)
       {
@@ -379,8 +398,8 @@ int main(
 {
    Main* main;
 
-   main = new Main(argc, argv);
-   SCIP_CALL(main->main());
+   main = new Main();
+   SCIP_CALL(main->run(argc, argv));
 
    return 0;
 }

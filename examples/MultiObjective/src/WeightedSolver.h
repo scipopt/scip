@@ -42,6 +42,11 @@ class WeightedSolver
       int                solstore            /**< number of solutions stored in SCIP */
       );
 
+   /** SCIP style constructor */
+   WeightedSolver(
+      const char*        paramfilename       /**< name of file with SCIP parameters */
+      );
+
    /** destructor */
    virtual ~WeightedSolver();
 

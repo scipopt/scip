@@ -53,6 +53,19 @@ LiftedWeightSpaceSolver::LiftedWeightSpaceSolver(
    skeleton_ = new Skeleton(scip_);
 }
 
+/** SCIP style constructor */
+LiftedWeightSpaceSolver::LiftedWeightSpaceSolver(
+   const char*           paramfilename       /**< name of file with SCIP parameters */ 
+      )
+   : WeightedSolver(paramfilename),
+     first_weight_(NULL)
+{
+   SCIPcreateClock(scip_, &clock_iteration_);
+   SCIPcreateClock(scip_, &clock_total_);
+
+   skeleton_ = new Skeleton(scip_);
+}
+
 /** default destructor */
 LiftedWeightSpaceSolver::~LiftedWeightSpaceSolver()
 {

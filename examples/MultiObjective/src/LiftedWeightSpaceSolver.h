@@ -44,6 +44,11 @@ class LiftedWeightSpaceSolver : public WeightedSolver
       int                solstore            /**< number of solutions stored in SCIP */
       );
 
+   /** SCIP style constructor */
+   LiftedWeightSpaceSolver(
+      const char*        paramfilename       /**< name of file with SCIP parameters */ 
+      );
+
    /** default destructor */
    virtual ~LiftedWeightSpaceSolver();
 
