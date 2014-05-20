@@ -421,6 +421,26 @@ SCIP_DECL_EVENTEXEC(eventExecTreeinfos)
    return SCIP_OKAY;
 }
 
+#define DISP_NAME_NRANK1NODES         "nrank1nodes"
+#define DISP_DESC_NRANK1NODES         "current number of rank1 nodes left"
+#define DISP_HEAD_NRANK1NODES         "rank1"
+#define DISP_WIDT_NRANK1NODES         7
+#define DISP_PRIO_NRANK1NODES         40000
+#define DISP_POSI_NRANK1NODES         500
+#define DISP_STRI_NRANK1NODES         TRUE
+
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNRank1Nodes)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NRANK1NODES) == 0);
+   assert(scip != NULL);
+
+   SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNRank1Nodes(scip), DISP_WIDT_NRANK1NODES);
+
+   return SCIP_OKAY;
+}
+
 /** creates event handler for treeinfos event */
 SCIP_RETCODE SCIPincludeEventHdlrTreeinfos(
    SCIP*                 scip                /**< SCIP data structure */
@@ -452,6 +472,10 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeinfos(
    /* add treeinfos event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/treeinfos/enabled","enable event handler to perform treeinfos",
                &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
+
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NRANK1NODES, DISP_DESC_NRANK1NODES, DISP_HEAD_NRANK1NODES, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNRank1Nodes, NULL, DISP_WIDT_NRANK1NODES, DISP_PRIO_NRANK1NODES, DISP_POSI_NRANK1NODES,
+         DISP_STRI_NRANK1NODES) );
 
    return SCIP_OKAY;
 }

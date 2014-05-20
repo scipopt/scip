@@ -241,7 +241,7 @@ SCIP_DECL_EVENTEXEC(eventExecLogregression)
          nleavesbelowincumbent, nleavesbelowinccorrected, nnodesleft);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, " N rank1 nodes: %d (%d)", SCIPgetNRank1Nodes(scip), nnodesleft);
    SCIPverbMessage(scip ,SCIP_VERBLEVEL_NORMAL, NULL, " Time, nodes, LP iters: %.2f %"SCIP_LONGINT_FORMAT" %"SCIP_LONGINT_FORMAT"\n",
-         SCIPgetSolvingTime(scip), SCIPgetNNodes(scip), SCIPgetNLPIterations(scip))
+         SCIPgetSolvingTime(scip), SCIPgetNNodes(scip), SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNLPIterations(scip): 0l)
    ;
    if( eventhdlrdata->n >= 3 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "   regression updated: y = %.2f log(x) + %.2f, corr=%.2f\n", eventhdlrdata->c1, eventhdlrdata->c0,eventhdlrdata->corrcoef);
