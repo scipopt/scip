@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_estimation.h
+/**@file   event_treeinfos.h
  * @ingroup EVENTS
- * @brief  eventhdlr for estimation event
+ * @brief  eventhdlr for treeinfos event
  * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EVENT_ESTIMATION_H__
-#define __SCIP_EVENT_ESTIMATION_H__
+#ifndef __SCIP_EVENT_TREEINFOS_H__
+#define __SCIP_EVENT_TREEINFOS_H__
 
 
 #include "scip/scip.h"
@@ -31,26 +31,16 @@
 extern "C" {
 #endif
 
+/** creates event handler for treeinfos event */
 EXTERN
-SCIP_Real SCIPgetRootLPSolPscostEstimate(
-   SCIP*                 scip
+SCIP_RETCODE SCIPincludeEventHdlrTreeinfos(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the current number of rank 1 nodes in the tree */
 EXTERN
-SCIP_RETCODE SCIPgetCorrectedEstimateData(
-   SCIP*                 scip,
-   SCIP_Real*            mincorrectedestimate,
-   SCIP_Real*            rootcorrectedestim,
-   SCIP_Real*            minestimate,
-   int*                  nnodesbelowincumbentcorrected,
-   int*                  nnodesbelowincumbent,
-   SCIP_Bool             recalcestim
-);
-
-/** creates event handler for estimation event */
-EXTERN
-SCIP_RETCODE SCIPincludeEventHdlrEstimation(
-   SCIP*                 scip                /**< SCIP data structure */
+int SCIPgetNRank1Nodes(
+   SCIP* scip
    );
 
 #ifdef __cplusplus
