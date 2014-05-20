@@ -30392,7 +30392,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
 
       /* start with the first candidate in the sorted candidates array */
-      nextcand = -1;
+      nextcand = 0;
 
       if( ncandstofix > 1 )
       {
@@ -30408,14 +30408,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIPsortRealRealRealPtr(scores, divecandssol, divecandsfrac, (void **)divecands, ndivecands);
 
          SCIPfreeBufferArray(scip, &scores);
-         nextcand = 0;
       }
       else
       {
          SCIP_Real minscore;
          /* find diving candidate with minimum score */
          minscore = SCIPinfinity(scip);
-         nextcand = 0;
          for( c = 0; c < ndivecands; ++c )
          {
             SCIP_Real score;
@@ -30431,7 +30429,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
       }
 
-      assert(nextcand >= 0);
       nbacktracks = 0;
       maxnbacktracks = (1 + (ncandstofix / 2));
 
