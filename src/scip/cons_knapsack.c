@@ -8105,7 +8105,7 @@ void normalizeWeights(
  *
  *  3. use the duality between a^Tx <= capacity   <=>   a^T~x >= weightsum - capacity to tighten weights, e.g.
  *
- *     11x1 + 10x2 + 7x3 + 7x4 + 5x5 <= 27    <=>   10~x1 + 10~x2 + 7~x3 + 7~x4 + 5~x5 >= 13
+ *     11x1 + 10x2 + 7x3 + 7x4 + 5x5 <= 27    <=>   11~x1 + 10~x2 + 7~x3 + 7~x4 + 5~x5 >= 13
  *
  *     the above constraint can be changed to       8~x1 + 8~x2 + 6.5~x3 + 6.5~x4 + 5~x5 >= 13
  *
@@ -9146,7 +9146,6 @@ SCIP_RETCODE simplifyInequalities(
 
       if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
-
       /* 2. delete redundant variables */
       SCIP_CALL( detectRedundantVars(scip, cons, ndelconss, nchgcoefs, nchgsides, naddconss) );
 
