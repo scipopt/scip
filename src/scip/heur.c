@@ -115,18 +115,13 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
-   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< get candidate score */
-   SCIP_DECL_DIVESETCANDBRANCHDIR ((*divesetcandbranchdir)), /**< get preferred branching direction for a candidate */
-   SCIP_DECL_DIVESETGETCANDS ((*divesetgetcands)), /**< allocate and get candidate variables for diving */
-   SCIP_DECL_DIVESETFREECANDS ((*divesetfreecands))  /**< free previously allocated variables for diving */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
    const char* name;
    assert(diveset != NULL);
    assert(set != NULL);
-   assert((divesetgetcands == NULL) == (divesetfreecands == NULL));
-   assert(divesetcandbranchdir != NULL);
    assert(divesetgetscore != NULL);
    assert(heur != NULL);
 
@@ -136,9 +131,6 @@ SCIP_RETCODE SCIPdivesetCreate(
 
    /* copy callbacks */
    (*diveset)->divesetgetscore = divesetgetscore;
-   (*diveset)->divesetcandbranchdir = divesetcandbranchdir;
-   (*diveset)->divesetgetcands = divesetgetcands;
-   (*diveset)->divesetfreecands = divesetfreecands;
    (*diveset)->heur = heur;
 
    /* add collection of diving heuristic specific parameters */
@@ -289,7 +281,7 @@ SCIP_Bool SCIPdivesetUseBacktrack(
 }
 
 /** increases LP iterations counter of diving settings */
-void SCIPdivesetIncreaseNLPiterations(
+void SCIPdivesetIncreaseNLPIterations(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
    )
@@ -337,96 +329,25 @@ SCIP_RETCODE SCIPdivesetFree(
    return SCIP_OKAY;
 }
 
-/** get branching candidates defined by the diveset. This will call the divesetGetCandsXyz callback
- *  of the diving settings. If the diving setting has no such callback, this is indicated by
- *  assigning the value -1. The calling method can then use SCIPgetLPBranchCands() instead
- */
-SCIP_RETCODE SCIPdivesetGetCands(
-   SCIP_DIVESET*         diveset,            /**< general diving settings */
-   SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_VAR***           divecands,          /**< pointer to store the diving candidates */
-   SCIP_Real**           divecandssol,       /**< pointer to store the LP solution values of the candidates */
-   SCIP_Real**           divecandsfrac,      /**< pointer to store the fractionalities of the candidates */
-   int*                  ndivecands          /**< pointer to store the number of candidates, or -1 */
-   )
-{
-   assert(diveset != NULL);
-
-   assert(set != NULL);
-   assert(set->scip != NULL);
-   assert(divecands != NULL);
-   assert(divecandssol != NULL);
-   assert(divecandsfrac != NULL);
-   assert(ndivecands != NULL);
-   assert(SCIPhasCurrentNodeLP(set->scip));
-   assert(SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_OPTIMAL);
-
-   if( diveset->divesetgetcands != NULL )
-   {
-      SCIP_CALL( diveset->divesetgetcands(set->scip, diveset, divecands, divecandssol, divecandsfrac, ndivecands) );
-
-      assert(*ndivecands == 0 || *divecands != NULL);
-   }
-   else
-      *ndivecands = -1;
-
-   return SCIP_OKAY;
-}
-
-/** free memory allocated during SCIPdivesetGetCands() */
-SCIP_RETCODE SCIPdivesetFreeCands(
-   SCIP_DIVESET*        diveset,             /**< general diving settings */
-   SCIP_SET*            set,                 /**< SCIP settings */
-   SCIP_VAR***          divecands,           /**< pointer to the diving candidates */
-   SCIP_Real**          divecandssol,        /**< pointer to LP solution values of the candidates */
-   SCIP_Real**          divecandsfrac,       /**< pointer to the fractionalities of the candidates */
-   int                  ndivecands           /**< the number of candidates that were allocated */
-   )
-{
-   assert(diveset != NULL);
-   assert(diveset->divesetgetcands != NULL);
-
-   assert(set != NULL);
-   assert(set->scip != NULL);
-   assert(divecands != NULL && *divecands != NULL);
-   assert(divecandssol != NULL && *divecandssol != NULL);
-   assert(divecandsfrac != NULL && *divecandsfrac != NULL);
-   assert(ndivecands > 0);
-
-   if( diveset->divesetfreecands != NULL )
-   {
-      SCIP_CALL( diveset->divesetfreecands(set->scip, diveset, divecands, divecandssol, divecandsfrac, ndivecands) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** request the (preferred) branching direction of a candidate variable */
-SCIP_BRANCHDIR SCIPdivesetCandBranchdir(
+/** stores the candidate score and preferred rounding direction for a candidate variable */
+SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
-   SCIP_Real             divecandfrac        /**< fractionality of the candidate */
+   SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
+   SCIP_Real*            candscore,          /**< pointer to store the candidate score */
+   SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
    )
-{
-   assert(diveset->divesetcandbranchdir != NULL);
-
-   return diveset->divesetcandbranchdir(set->scip, divecand, divecandsol, divecandfrac);
-}
-
-/** returns the candidate score for diving */
-SCIP_Real SCIPdivesetGetScore(
-   SCIP_DIVESET*         diveset,            /**< general diving settings */
-   SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
-   SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
-   SCIP_Real             divecandfrac        /**< fractionality of the candidate */
-)
 {
    assert(diveset->divesetgetscore != NULL);
+   assert(candscore != NULL);
+   assert(roundup != NULL);
+   assert(divecand != NULL);
 
-   return diveset->divesetgetscore(set->scip, divecand, divecandsol, divecandfrac);
+   SCIP_CALL( diveset->divesetgetscore(set->scip, divecand, divecandsol, divecandfrac, candscore, roundup) );
+
+   return SCIP_OKAY;
 }
 
 

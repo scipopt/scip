@@ -66,37 +66,6 @@ struct SCIP_HeurData
  * local methods
  */
 
-/** get diving score for variable */
-static
-SCIP_Real getVarScore(
-   SCIP*                 scip,
-   SCIP_VAR*             cand,
-   SCIP_Real             frac
-   )
-{
-   SCIP_Real obj;
-   SCIP_Real objdelta;
-   SCIP_Real score;
-   SCIP_Bool roundup;
-   int colveclen;
-
-   obj = SCIPvarGetObj(cand);
-   roundup = (obj >= 0.0);
-   objdelta = (roundup ? (1.0-frac)*obj : -frac * obj);
-   assert(objdelta >= 0.0);
-
-   colveclen = (SCIPvarGetStatus(cand) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(cand)) : 0);
-
-   /* smaller score is better */
-   score = (objdelta + SCIPsumepsilon(scip))/((SCIP_Real)colveclen+1.0);
-
-   /* prefer decisions on binary variables */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      score *= 1000.0;
-
-   return score;
-}
-
 /*
  * Callback methods
  */
@@ -198,18 +167,30 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** method that returns the preferred branching direction of a candidate */
-static
-SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirVeclendiving)
-{
-   return SCIPvarGetObj(cand) >= 0 ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS;
-}
-
-/** returns a score for the given candidate - the best candidate minimizes the diving score */
+/** calculate score and preferred rounding direction for the candidate variable */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
 {
-   return getVarScore(scip, cand, candsfrac);
+   SCIP_Real obj;
+   SCIP_Real objdelta;
+   SCIP_Real colveclen;
+
+   obj = SCIPvarGetObj(cand);
+   *roundup = (obj >= 0.0);
+   objdelta = ((*roundup) ? (1.0 - candsfrac) * obj : -candsfrac * obj);
+   assert(objdelta >= 0.0);
+
+   colveclen = (SCIPvarGetStatus(cand) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(cand)) : 0.0);
+
+   /* smaller score is better */
+   *score = (objdelta + SCIPsumepsilon(scip)) / (colveclen + 1.0);
+
+   /* prefer decisions on binary variables */
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+      *score *= 1000.0;
+
+   return SCIP_OKAY;
+
 }
 
 /*
@@ -245,7 +226,7 @@ SCIP_RETCODE SCIPincludeHeurVeclendiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic) */
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreVeclendiving, divesetCandbranchdirVeclendiving, NULL, NULL) );
+         DEFAULT_BACKTRACK, divesetGetScoreVeclendiving) );
 
    return SCIP_OKAY;
 }

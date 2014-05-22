@@ -65,63 +65,6 @@ struct SCIP_HeurData
  * local methods
  */
 
-/** score candidate variable
- *
- *  if candidate cannot be trivially rounded,
- *  score is the difference between frac and [frac] (rounding to the nearest integer)
- *
- *  if candidate can be trivially rounded in at least one direction, the objective gain is used to score the variables
- *
- *  candidate which cannot be rounded trivially always have a lower score than roundable candidates
- */
-SCIP_Real SCIPgetFracdivingVarScore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< diving candidate for score */
-   SCIP_Real             frac,               /**< fractionality of candidate in (last) LP solution */
-   SCIP_Bool             roundup             /**< should candidate be rounded up? */
-   )
-{
-   SCIP_Bool mayrounddown;
-   SCIP_Bool mayroundup;
-   SCIP_Real obj;
-   SCIP_Real objnorm;
-   SCIP_Real objgain;
-
-   mayrounddown = SCIPvarMayRoundDown(cand);
-   mayroundup = SCIPvarMayRoundUp(cand);
-   obj = SCIPvarGetObj(cand);
-   objnorm = SCIPgetObjNorm(scip);
-
-   /* divide by objective norm to normalize obj into [-1,1] */
-   if( SCIPisPositive(scip, objnorm) )
-      obj /= objnorm;
-
-   /* calculate objective gain and fractionality for the selected rounding direction */
-   if( roundup )
-   {
-      frac = 1.0 - frac;
-      objgain = obj * frac;
-   }
-   else
-      objgain = -obj * frac;
-
-   assert(objgain >= -1.0 && objgain <= 1.0);
-
-   /* penalize too small fractions */
-   if( frac < 0.01 )
-      frac += 10.0;
-
-   /* prefer decisions on binary variables */
-   if( !SCIPvarIsBinary(cand) )
-      frac *= 1000.0;
-
-   /* prefer variables which cannot be rounded by scoring their fractionality */
-   if( !(mayrounddown || mayroundup) )
-      return frac;
-   else
-      return 2.0 + objgain;
-}
-
 /*
  * Callback methods
  */
@@ -225,52 +168,64 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** returns the preferred branching direction of candidate */
-static
-SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirFracdiving)
-{
-   SCIP_Bool mayrounddown;
-   SCIP_Bool mayroundup;
-   SCIP_Bool roundup;
-
-   mayrounddown = SCIPvarMayRoundDown(cand);
-   mayroundup = SCIPvarMayRoundUp(cand);
-
-   /* choose rounding direction:
-    * - if variable may be rounded in both directions, round corresponding to the fractionality
-    * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
-    *   the current fractional solution
-    */
-   if( mayrounddown != mayroundup )
-      roundup = mayrounddown;
-   else
-      roundup = (candsfrac > 0.5);
-
-   return roundup ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS;
-}
-
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+ *  score
+ */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 {
+   SCIP_Real obj;
+   SCIP_Real objnorm;
+   SCIP_Real objgain;
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
-   SCIP_Bool roundup;
 
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
 
    /* choose rounding direction:
-    * - if variable may be rounded in both directions, round corresponding to the fractionality
+    * - if variable may be rounded in either both or neither direction, round corresponding to the fractionality
     * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
     *   the current fractional solution
     */
    if( mayrounddown != mayroundup )
-      roundup = mayrounddown;
+      *roundup = mayrounddown;
    else
-      roundup = (candsfrac > 0.5);
+      *roundup = (candsfrac > 0.5);
 
-   return SCIPgetFracdivingVarScore(scip, cand, candsfrac, roundup);
+   obj = SCIPvarGetObj(cand);
+   objnorm = SCIPgetObjNorm(scip);
+
+   /* divide by objective norm to normalize obj into [-1,1] */
+   if( SCIPisPositive(scip, objnorm) )
+      obj /= objnorm;
+
+   /* calculate objective gain and fractionality for the selected rounding direction */
+   if( *roundup )
+   {
+      candsfrac = 1.0 - candsfrac;
+      objgain = obj * candsfrac;
+   }
+      else
+         objgain = -obj * candsfrac;
+
+   assert(objgain >= -1.0 && objgain <= 1.0);
+
+      /* penalize too small fractions */
+      if( candsfrac < 0.01 )
+         candsfrac += 10.0;
+
+      /* prefer decisions on binary variables */
+      if( !SCIPvarIsBinary(cand) )
+         candsfrac *= 1000.0;
+
+      /* prefer variables which cannot be rounded by scoring their fractionality */
+      if( !(mayrounddown || mayroundup) )
+         *score = candsfrac;
+      else
+         *score =  2.0 + objgain;
+
+      return SCIP_OKAY;
 }
 
 /*
@@ -305,7 +260,7 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreFracdiving, divesetCandbranchdirFracdiving, NULL, NULL) );
+         DEFAULT_BACKTRACK, divesetGetScoreFracdiving) );
    return SCIP_OKAY;
 }
 

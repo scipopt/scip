@@ -179,11 +179,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
 
    rootsolval = SCIPvarGetRootSol(cand);
 
-   /* calculate distance to integral value divided by distance to root solution */
+   /* preferred branching direction is further away from the root LP solution */
    if( SCIPisLT(scip, candsol, rootsolval) )
    {
       /* round down*/
-      distquot = (candsol - SCIPfeasFloor(scip, candsol)) / (rootsolval - candsol);
+      *roundup = FALSE;
+      distquot = (candsfrac + SCIPsumepsilon(scip)) / (rootsolval - candsol);
 
       /* avoid roundable candidates */
       if( SCIPvarMayRoundDown(cand) )
@@ -192,37 +193,25 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
    else if( SCIPisGT(scip, candsol, rootsolval) )
    {
       /* round up */
-      distquot = (SCIPfeasCeil(scip, candsol) - candsol) / (candsol - rootsolval);
+      distquot = (1.0 - candsfrac) / (candsol - rootsolval);
 
       /* avoid roundable candidates */
       if( SCIPvarMayRoundUp(cand) )
          distquot *= 1000.0;
+      *roundup = TRUE;
    }
    else
-      /* round down */
+   {
+      /* if the solution values are equal, we arbitrarily select branching downwards;
+       * candidates with equal LP solution values are penalized with an infinite score
+       */
+      *roundup = FALSE;
       distquot = SCIPinfinity(scip);
+   }
 
-   return distquot;
-}
+   *score = distquot;
 
-/** returns the preferred branching direction of candidate */
-static
-SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirLinesearchdiving)
-{
-   SCIP_Real rootsolval;
-
-   rootsolval = SCIPvarGetRootSol(cand);
-
-   /* preferred branching direction is further away from the root LP solution */
-   if( SCIPisLT(scip, candsol, rootsolval) )
-      return SCIP_BRANCHDIR_DOWNWARDS;
-   else if( SCIPisGT(scip, candsol, rootsolval) )
-      return SCIP_BRANCHDIR_UPWARDS;
-
-   /* if the solution values are equal, we arbitrarily select branching downwards;
-    * candidates with equal LP solution values are penalized with an infinite score
-    */
-   return SCIP_BRANCHDIR_DOWNWARDS;
+   return SCIP_OKAY;
 }
 
 /*
@@ -257,6 +246,6 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreLinesearchdiving, divesetCandbranchdirLinesearchdiving, NULL, NULL) );
+         DEFAULT_BACKTRACK, divesetGetScoreLinesearchdiving) );
    return SCIP_OKAY;
 }

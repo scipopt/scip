@@ -61,7 +61,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_CONSHDLR*        indconshdlr;        /**< indicator constraint handler (or NULL) */
    SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
@@ -70,108 +69,6 @@ struct SCIP_HeurData
  * local methods
  */
 
-/** get candidate diving score */
-static
-SCIP_Real getVarScore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< candidate variable for diving */
-   SCIP_Real             candfrac            /**< candidate fractionality in last LP solution */
-   )
-{
-   SCIP_Bool roundup;
-   SCIP_Real score;
-   SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
-   SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
-
-   if( mayrounddown || mayroundup )
-   {
-      /* choose rounding direction:
-       * - if variable may be rounded in both directions, round corresponding to the fractionality
-       * - otherwise, round in the infeasible direction
-       */
-      if( mayrounddown && mayroundup )
-         roundup = (candfrac > 0.5);
-      else
-         roundup = mayrounddown;
-   }
-   else
-   {
-      /* the candidate may not be rounded */
-      int nlocksdown = SCIPvarGetNLocksDown(cand);
-      int nlocksup = SCIPvarGetNLocksUp(cand);
-      roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candfrac > 0.5));
-   }
-
-   if( roundup )
-   {
-      candfrac = 1.0 - candfrac;
-      score = SCIPvarGetNLocksUp(cand);
-   }
-   else
-      score = SCIPvarGetNLocksDown(cand);
-
-   /* penalize the variable if it may be rounded. */
-   if( mayrounddown || mayroundup )
-      score += SCIPgetNLPRows(scip);
-
-   /* penalize too small fractions */
-   if( candfrac < 0.01 )
-      score *= 100;
-
-   /* prefer decisions on binary variables */
-   if( !SCIPvarIsBinary(cand) )
-      score *= 100;
-
-   /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
-   assert( (0.0 < candfrac && candfrac < 1.0) || SCIPvarIsBinary(cand) );
-
-   return score + candfrac;
-}
-
-static
-SCIP_RETCODE getIndCandVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           indconss,           /**< indicator constraints */
-   int                   nindconss,          /**< number of indicator constraints */
-   SCIP_VAR**            indcands,           /**< indicator candidate variables */
-   SCIP_Real*            indcandssol,        /**< solution values of candidates */
-   SCIP_Real*            indcandfrac,        /**< fractionalities of candidates */
-   int*                  nindcands           /**< number of candidates */
-   )
-{
-   SCIP_VAR* binvar;
-   SCIP_Real val;
-   int c;
-
-   assert( scip != NULL );
-   assert( indconss != NULL );
-   assert( indcands != NULL );
-   assert( nindcands != NULL );
-   assert( indcandssol != NULL );
-   assert( indcandfrac != NULL );
-
-   *nindcands = 0;
-   for (c = 0; c < nindconss; ++c)
-   {
-      /* check whether constraint is violated */
-      if ( SCIPisViolatedIndicator(scip, indconss[c], NULL) )
-      {
-         binvar = SCIPgetBinaryVarIndicator(indconss[c]);
-         val = SCIPgetSolVal(scip, NULL, binvar);
-
-         /* fractional indicator variables are treated by lpcands */
-         if ( SCIPisFeasIntegral(scip, val) )
-         {
-            indcands[*nindcands] = binvar;
-            indcandssol[*nindcands] = val;
-            indcandfrac[*nindcands] = SCIPfrac(scip, val);
-            ++(*nindcands);
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
 
 /*
  * Callback methods
@@ -231,9 +128,6 @@ SCIP_DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
    /* initialize data */
    SCIPresetDiveset(scip, heurdata->diveset);
 
-   /* get indicator constraint handler */
-   heurdata->indconshdlr = SCIPfindConshdlr(scip, "indicator");
-
    return SCIP_OKAY;
 }
 
@@ -272,128 +166,56 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** return arrays of all diving candidates */
+/** returns a score for the given candidate -- the best candidate minimizes the diving score */
 static
-SCIP_DECL_DIVESETGETCANDS(divesetGetCandsCoefdiving)
+SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
 {
-   SCIP_HEURDATA* heurdata;
-   SCIP_VAR** indcands;
-   SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
-   SCIP_CONS** indconss;
-   SCIP_Real* indcandssol;
-   SCIP_Real* indcandsfrac;
-   int nlpcands;
-   int nindcands;
-   int nindconss;
-
-
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
-
-   heurdata = SCIPheurGetData(SCIPdivesetGetHeur(diveset));
-   nindcands = 0;
-   nindconss = 0;
-
-   /* if indicator variables are present, add them to the set of diving candidates */
-   if( heurdata->indconshdlr != NULL )
-   {
-      indconss = SCIPconshdlrGetConss(heurdata->indconshdlr);
-      nindconss = SCIPconshdlrGetNConss(heurdata->indconshdlr);
-
-      if ( nindconss > 0 )
-      {
-         /* get storage for candidate variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &indcands, nindconss) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &indcandssol, nindconss) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &indcandsfrac, nindconss) );
-
-         /* get indicator candidates */
-         SCIP_CALL( getIndCandVars(scip, indconss, nindconss, indcands, indcandssol, indcandsfrac, &nindcands) );
-      }
-   }
-
-   *ndivecands = nlpcands + nindcands;
-
-   if( *ndivecands > 0 )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, divecands, *ndivecands) );
-      SCIP_CALL( SCIPallocBufferArray(scip, divecandssol, *ndivecands) );
-      SCIP_CALL( SCIPallocBufferArray(scip, divecandsfrac, *ndivecands) );
-
-      /* copy LP branching candidates */
-      if( nlpcands > 0 )
-      {
-         BMScopyMemoryArray(*divecands, lpcands, nlpcands);
-         BMScopyMemoryArray(*divecandssol, lpcandssol, nlpcands);
-         BMScopyMemoryArray(*divecandsfrac, lpcandsfrac, nlpcands);
-      }
-
-      /* copy indicator variables */
-      if( nindcands > 0 )
-      {
-         BMScopyMemoryArray(&((*divecands)[nlpcands]), indcands, nindcands);
-         BMScopyMemoryArray(&((*divecandssol)[nlpcands]), indcandssol, nindcands);
-         BMScopyMemoryArray(&((*divecandsfrac)[nlpcands]), indcandsfrac, nindcands);
-      }
-   }
-
-   /* free indicator memory */
-   if( nindconss > 0 )
-   {
-      SCIPfreeBufferArray(scip, &indcandsfrac);
-      SCIPfreeBufferArray(scip, &indcandssol);
-      SCIPfreeBufferArray(scip, &indcands);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** free candidates storage allocated before */
-static
-SCIP_DECL_DIVESETFREECANDS(divesetFreecandsCoefdiving)
-{
-   if( ndivecands > 0 )
-   {
-      SCIPfreeBufferArray(scip, divecandsfrac);
-      SCIPfreeBufferArray(scip, divecandssol);
-      SCIPfreeBufferArray(scip, divecands);
-   }
-   return SCIP_OKAY;
-}
-
-/** returns the preferred branching direction of candidate variable */
-static
-SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirCoefdiving)
-{
-   SCIP_Bool roundup;
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
    SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
 
-   if( mayrounddown && mayroundup )
-      roundup = (candsfrac > 0.5);
-   else if( mayrounddown || mayroundup )
-      roundup = mayrounddown;
+   if( mayrounddown || mayroundup )
+   {
+      /* choose rounding direction:
+       * - if variable may be rounded in both directions, round corresponding to the fractionality
+       * - otherwise, round in the infeasible direction
+       */
+      if( mayrounddown && mayroundup )
+         *roundup = (candsfrac > 0.5);
+      else
+         *roundup = mayrounddown;
+   }
    else
    {
       /* the candidate may not be rounded */
       int nlocksdown = SCIPvarGetNLocksDown(cand);
       int nlocksup = SCIPvarGetNLocksUp(cand);
-      roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candsfrac > 0.5));
+      *roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candsfrac > 0.5));
    }
 
-   /* return corresponding branching direction */
-   if( roundup )
-      return SCIP_BRANCHDIR_UPWARDS;
+   if( *roundup )
+   {
+      candsfrac = 1.0 - candsfrac;
+      *score = SCIPvarGetNLocksUp(cand);
+   }
    else
-      return SCIP_BRANCHDIR_DOWNWARDS;
-}
+      *score = SCIPvarGetNLocksDown(cand);
 
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
-{
-   return getVarScore(scip, cand, candsfrac);
+   /* penalize the variable if it may be rounded. */
+   if( mayrounddown || mayroundup )
+      (*score) += SCIPgetNLPRows(scip);
+
+   /* penalize too small fractions */
+   if( candsfrac < 0.01 )
+      (*score) *= 100;
+
+   /* prefer decisions on binary variables */
+   if( !SCIPvarIsBinary(cand) )
+      (*score) *= 100;
+
+   /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+   assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -428,7 +250,7 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreCoefdiving, divesetCandbranchdirCoefdiving, divesetGetCandsCoefdiving, divesetFreecandsCoefdiving) );
+         DEFAULT_BACKTRACK, divesetGetScoreCoefdiving) );
    return SCIP_OKAY;
 }
 

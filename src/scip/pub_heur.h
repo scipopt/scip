@@ -232,7 +232,7 @@ SCIP_Bool SCIPdivesetUseBacktrack(
 
 /** increases LP iterations counter of diving settings */
 EXTERN
-void SCIPdivesetIncreaseNLPiterations(
+void SCIPdivesetIncreaseNLPIterations(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
    );

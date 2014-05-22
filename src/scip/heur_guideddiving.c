@@ -63,29 +63,6 @@ struct SCIP_HeurData
  * local methods
  */
 
-/** returns whether variable should be rounded up */
-static
-SCIP_Bool varRoundUp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< candidate variable */
-   SCIP_Real             candsol             /**< LP solution value of candidate */
-)
-{
-   SCIP_SOL* bestsol;
-   SCIP_Real bestsolval;
-   bestsol = SCIPgetBestSol(scip);
-   assert(bestsol != NULL);
-   assert(!SCIPsolIsOriginal(bestsol));
-
-   bestsolval = SCIPgetSolVal(scip, bestsol, cand);
-
-   /* variable should be rounded (guided) into the direction of its incumbent solution value */
-   if( candsol < bestsolval )
-      return TRUE;
-   else
-      return FALSE;
-}
-
 /*
  * Callback methods
  */
@@ -211,27 +188,63 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
 /* callbacks for diving */
 
-/** returns the preferred branching direction of candidate */
-static
-SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirGuideddiving)
-{
-   if( varRoundUp(scip, cand, candsol) )
-      return SCIP_BRANCHDIR_UPWARDS;
-   else
-      return SCIP_BRANCHDIR_DOWNWARDS;
-}
-
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+ *  score
+ */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
 {
-   SCIP_Bool roundup;
+   SCIP_SOL* bestsol;
+   SCIP_Real bestsolval;
+   SCIP_Real obj;
+   SCIP_Real objnorm;
+   SCIP_Real objgain;
 
-   /* the rounding direction is the direction towards the incumbent solution */
-   roundup = varRoundUp(scip, cand, candsol);
+   bestsol = SCIPgetBestSol(scip);
+   assert(bestsol != NULL);
+   assert(!SCIPsolIsOriginal(bestsol));
 
-   /* use fractionality score as in frac diving */
-   return SCIPgetFracdivingVarScore(scip, cand, candsfrac, roundup);
+   bestsolval = SCIPgetSolVal(scip, bestsol, cand);
+
+   /* variable should be rounded (guided) into the direction of its incumbent solution value */
+   if( candsol < bestsolval )
+      *roundup = TRUE;
+   else
+      *roundup = FALSE;
+
+   obj = SCIPvarGetObj(cand);
+   objnorm = SCIPgetObjNorm(scip);
+
+   /* divide by objective norm to normalize obj into [-1,1] */
+   if( SCIPisPositive(scip, objnorm) )
+      obj /= objnorm;
+
+   /* calculate objective gain and fractionality for the selected rounding direction */
+   if( roundup )
+   {
+      candsfrac = 1.0 - candsfrac;
+      objgain = obj * candsfrac;
+   }
+   else
+      objgain = -obj * candsfrac;
+
+   assert(objgain >= -1.0 && objgain <= 1.0);
+
+   /* penalize too small fractions */
+   if( candsfrac < 0.01 )
+      candsfrac += 10.0;
+
+   /* prefer decisions on binary variables */
+   if( !SCIPvarIsBinary(cand) )
+      candsfrac *= 1000.0;
+
+   /* prefer variables which cannot be rounded by scoring their fractionality */
+   if( !(SCIPvarMayRoundDown(cand) || SCIPvarMayRoundUp(cand)) )
+      *score = candsfrac;
+   else
+      *score = 2.0 + objgain;
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -266,7 +279,7 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreGuideddiving, divesetCandbranchdirGuideddiving, NULL, NULL) );
+         DEFAULT_BACKTRACK, divesetGetScoreGuideddiving) );
 
    return SCIP_OKAY;
 }

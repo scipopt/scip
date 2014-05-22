@@ -166,14 +166,16 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
  *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
  *  last the direction of smaller pseudo costs
  */
+
+/** returns a score for the given candidate -- the best candidate minimizes the diving score */
 static
-SCIP_BRANCHDIR getCandidateDirection(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< candidate for diving */
-   SCIP_Real             candsfrac,          /**< candidate fractionality */
-   SCIP_Real             candsol             /**< candidate LP solution value */
-   )
+SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 {
+   SCIP_BRANCHDIR dir;
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+   SCIP_Real pscostquot;
+
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
 
@@ -185,66 +187,24 @@ SCIP_BRANCHDIR getCandidateDirection(
    candsfrac = MAX(candsfrac, 0.1);
    candsfrac = MIN(candsfrac, 0.9);
 
-
-   if( mayrounddown != mayroundup )
-      return mayrounddown ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS;
-   else
-   {
-      /* choose rounding direction */
-      if( candsol < SCIPvarGetRootSol(cand) - 0.4 )
-         return SCIP_BRANCHDIR_DOWNWARDS;
-      else if( candsol > SCIPvarGetRootSol(cand) + 0.4 )
-         return SCIP_BRANCHDIR_UPWARDS;
-      else if( candsfrac < 0.3 )
-         return SCIP_BRANCHDIR_DOWNWARDS;
-      else if( candsfrac > 0.7 )
-         return SCIP_BRANCHDIR_UPWARDS;
-      else
-      {
-         SCIP_Real pscostdown;
-         SCIP_Real pscostup;
-
-         /* get pseudo costs in both directions */
-         pscostdown = SCIPgetVarPseudocostVal(scip, cand, 0.0 - candsfrac);
-         pscostup = SCIPgetVarPseudocostVal(scip, cand, 1.0 - candsfrac);
-         assert(pscostdown >= 0.0 && pscostup >= 0.0);
-         if( pscostdown < pscostup )
-            return SCIP_BRANCHDIR_DOWNWARDS;
-         else
-            return SCIP_BRANCHDIR_UPWARDS;
-      }
-   }
-}
-
-/** returns the preferred branching direction of candidate */
-static
-SCIP_DECL_DIVESETCANDBRANCHDIR(divesetCandbranchdirPscostdiving)
-{
-   return getCandidateDirection(scip, cand, candsfrac, candsol);
-}
-
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
-{
-   SCIP_BRANCHDIR dir;
-   SCIP_Real pscostdown;
-   SCIP_Real pscostup;
-   SCIP_Real pscostquot;
-
-   /* get candidate direction */
-   dir = getCandidateDirection(scip, cand, candsfrac, candsol);
-
-   /* bound fractions to not prefer variables that are nearly integral */
-   candsfrac = MAX(candsfrac, 0.1);
-   candsfrac = MIN(candsfrac, 0.9);
-
-   /* get pseudo cost quotient */
    pscostdown = SCIPgetVarPseudocostVal(scip, cand, 0.0 - candsfrac);
    pscostup = SCIPgetVarPseudocostVal(scip, cand, 1.0 - candsfrac);
-   assert(pscostdown >= 0.0 && pscostup >= 0.0);
 
-   if( dir == SCIP_BRANCHDIR_UPWARDS )
+   assert(pscostdown >= 0.0 && pscostup >= 0.0);
+   if( mayrounddown != mayroundup )
+      *roundup = mayrounddown;
+   else if( candsol < SCIPvarGetRootSol(cand) - 0.4 )
+      *roundup = FALSE;
+   else if( candsol > SCIPvarGetRootSol(cand) + 0.4 )
+      *roundup = TRUE;
+   else if( candsfrac < 0.3 )
+      *roundup = FALSE;
+   else if( candsfrac > 0.7 )
+      *roundup = TRUE;
+   else
+      *roundup = (pscostdown >= pscostup);
+
+   if( *roundup )
       pscostquot = sqrt(candsfrac) * (1.0 + pscostdown) / (1.0 + pscostup);
    else
       pscostquot = sqrt(1.0 - candsfrac) * (1.0 + pscostup) / (1.0 + pscostdown);
@@ -255,7 +215,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 
    assert(pscostquot >= 0);
    /* return negative cost quotient because diving algorithm minimizes the score */
-   return -pscostquot;
+   *score = -pscostquot;
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -290,7 +252,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScorePscostdiving, divesetCandbranchdirPscostdiving, NULL, NULL) );
+         DEFAULT_BACKTRACK, divesetGetScorePscostdiving) );
 
    return SCIP_OKAY;
    return SCIP_OKAY;
