@@ -554,7 +554,9 @@ void collectNonBinaryImplicationData(
       SCIP_VAR** implvars;
       SCIP_Real* implbounds;
       SCIP_BOUNDTYPE* implboundtypes;
+#if 0
       int nbinimplsvar;
+#endif
       int idx;
       int w;
 
@@ -562,11 +564,13 @@ void collectNonBinaryImplicationData(
       implvars = SCIPvarGetImplVars(var, value);
       implboundtypes = SCIPvarGetImplTypes(var, value);
       implbounds = SCIPvarGetImplBounds(var, value);
+#if 0
       nbinimplsvar = SCIPvarGetNBinImpls(var, value);
-
 
       /* update implication counter on all by non-binary implication implied variables */
       for( w = SCIPvarGetNImpls(var, value) - 1; w >= nbinimplsvar; --w )
+#endif
+      for( w = SCIPvarGetNImpls(var, value) - 1; w >= 0; --w )
       {
          assert(implvars != NULL);
          assert(implboundtypes != NULL);
@@ -740,6 +744,7 @@ void collectBinaryImplicationData(
    assert(implidx != NULL);
    assert(nimplidx != NULL);
 
+#if 0
    /* if the set variable is not yet redundant check the implication data */
    if( issetvar[varidx] > 0 )
    {
@@ -793,6 +798,7 @@ void collectBinaryImplicationData(
          }
       }
    }
+#endif
 }
 
 /** collect clique data on binary variables for variable set reduction and global bound implications */

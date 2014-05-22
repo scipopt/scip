@@ -6597,7 +6597,7 @@ SCIP_RETCODE extractCliques(
                assert(j >= 2);
 
                /* add clique with at least two variables */
-               SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), NULL, j - i, &infeasible, &nbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), NULL, j - i, FALSE, &infeasible, &nbdchgs) );
 
                if( infeasible )
                   *cutoff = TRUE;
@@ -6627,7 +6627,7 @@ SCIP_RETCODE extractCliques(
                         clqvars[lastfit + 1] = binvars[j];
 
                         /* add clique with at least two variables */
-                        SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, lastfit - i + 2, &infeasible, &nbdchgs) );
+                        SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, lastfit - i + 2, FALSE, &infeasible, &nbdchgs) );
 
                         if( infeasible )
                         {
@@ -6747,7 +6747,7 @@ SCIP_RETCODE extractCliques(
 
                assert(i - j >= 2);
                /* add clique with at least two variables */
-               SCIP_CALL( SCIPaddClique(scip, &(binvars[j+1]), NULL, i - j, &infeasible, &nbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, &(binvars[j+1]), NULL, i - j, FALSE, &infeasible, &nbdchgs) );
 
                if( infeasible )
                   *cutoff = TRUE;
@@ -6780,7 +6780,7 @@ SCIP_RETCODE extractCliques(
 
                         assert(i - lastfit + 2 >= 2);
                         /* add clique with at least two variables */
-                        SCIP_CALL( SCIPaddClique(scip, &(clqvars[lastfit - jstart - 2]), NULL, i - lastfit + 2, &infeasible, &nbdchgs) );
+                        SCIP_CALL( SCIPaddClique(scip, &(clqvars[lastfit - jstart - 2]), NULL, i - lastfit + 2, FALSE, &infeasible, &nbdchgs) );
 
                         if( infeasible )
                         {
@@ -6907,7 +6907,7 @@ SCIP_RETCODE extractCliques(
 
                assert(i - j >= 2);
                /* add negated clique with at least two variables */
-               SCIP_CALL( SCIPaddClique(scip, &(binvars[j+1]), values, i - j, &infeasible, &nbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, &(binvars[j+1]), values, i - j, FALSE, &infeasible, &nbdchgs) );
 
                if( infeasible )
                   *cutoff = TRUE;
@@ -6940,7 +6940,7 @@ SCIP_RETCODE extractCliques(
 
                         assert(i - lastfit + 2 >= 2);
                         /* add clique with at least two variables */
-                        SCIP_CALL( SCIPaddClique(scip, &(clqvars[lastfit - jstart - 2]), values, i - lastfit + 2, &infeasible, &nbdchgs) );
+                        SCIP_CALL( SCIPaddClique(scip, &(clqvars[lastfit - jstart - 2]), values, i - lastfit + 2, FALSE, &infeasible, &nbdchgs) );
 
                         if( infeasible )
                         {
@@ -7066,7 +7066,7 @@ SCIP_RETCODE extractCliques(
                assert(j >= 2);
 
                /* add negated clique with at least two variables */
-               SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), values, j - i, &infeasible, &nbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), values, j - i, FALSE, &infeasible, &nbdchgs) );
 
                if( infeasible )
                   *cutoff = TRUE;
@@ -7096,7 +7096,7 @@ SCIP_RETCODE extractCliques(
                         clqvars[lastfit + 1] = binvars[j];
 
                         /* add clique with at least two variables */
-                        SCIP_CALL( SCIPaddClique(scip, clqvars, values, lastfit - i + 2, &infeasible, &nbdchgs) );
+                        SCIP_CALL( SCIPaddClique(scip, clqvars, values, lastfit - i + 2, FALSE, &infeasible, &nbdchgs) );
 
                         if( infeasible )
                         {
@@ -7165,7 +7165,7 @@ SCIP_RETCODE extractCliques(
       for( i = 0; i < nvars; ++i )
          values[i] = (rhsclique == (vals[i] > 0.0));
 
-      SCIP_CALL( SCIPaddClique(scip, vars, values, nvars, &infeasible, &nbdchgs) );
+      SCIP_CALL( SCIPaddClique(scip, vars, values, nvars, SCIPisEQ(scip, consdata->lhs, consdata->rhs), &infeasible, &nbdchgs) );
 
       if( infeasible )
          *cutoff = TRUE;

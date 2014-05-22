@@ -85,6 +85,19 @@ int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
+/** returns whether the given clique is cleaned up */
+EXTERN
+SCIP_Bool SCIPcliqueIsCleanedUp(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   );
+
+/** return whether the given clique is an equation */
+EXTERN
+SCIP_Bool SCIPcliqueIsEquation(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   );
+
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -95,6 +108,8 @@ int SCIPcliqueGetId(
 #define SCIPcliqueGetVars(clique)                    ((clique)->vars)
 #define SCIPcliqueGetValues(clique)                  ((clique)->values)
 #define SCIPcliqueGetId(clique)                      ((clique)->id)
+#define SCIPcliqueIsCleanedUp(clique)                ((clique)->ncleanupvars == 0)
+#define SCIPcliqueIsEquation(clique)                 ((SCIP_Bool)(clique)->equation)
 
 #endif
 

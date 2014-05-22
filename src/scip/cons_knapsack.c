@@ -9899,9 +9899,11 @@ SCIP_RETCODE tightenWeightsLift(
       SCIP_Longint weight;
       SCIP_Bool value;
       int varprobindex;
+#if 0
       SCIP_VAR** implvars;
       SCIP_BOUNDTYPE* impltypes;
       int nimpls;
+#endif
       SCIP_CLIQUE** cliques;
       int ncliques;
       int j;
@@ -9951,6 +9953,7 @@ SCIP_RETCODE tightenWeightsLift(
          ++tmp;
       }
 
+#if 0
       /* get implications of the knapsack item fixed to one: x == 1 -> y == (1-v);
        * the negation of these implications (y == v -> x == 0) are the ones that we are interested in
        */
@@ -9994,6 +9997,7 @@ SCIP_RETCODE tightenWeightsLift(
             ++tmp;
          }
       }
+#endif
 
       /* get the cliques where the knapsack item is member of with value 1 */
       ncliques = SCIPvarGetNCliques(var, value);
@@ -10023,6 +10027,9 @@ SCIP_RETCODE tightenWeightsLift(
                continue;
 
             probindex = SCIPvarGetProbindex(cliquevars[k]);
+            if( probindex == -1 )
+               continue;
+
             assert(0 <= probindex && probindex < nbinvars);
             implvalue = cliquevalues[k];
 
@@ -11034,7 +11041,7 @@ SCIP_RETCODE addNegatedCliques(
 
                assert(beforelastweight > 0);
                /* add the clique to the clique table */
-               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                if( *cutoff )
                   goto TERMINATE;
                *nbdchgs += thisnbdchgs;
@@ -11054,7 +11061,7 @@ SCIP_RETCODE addNegatedCliques(
                      SCIPdebugPrintf("\n");
                   }
 #endif
-                  SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+                  SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                   if( *cutoff )
                      goto TERMINATE;
                   *nbdchgs += thisnbdchgs;
@@ -11227,7 +11234,7 @@ SCIP_RETCODE addCliques(
 
             assert(beforelastweight > 0);
             /* add the clique to the clique table */
-            SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+            SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
             if( *cutoff )
                goto TERMINATE;
             *nbdchgs += thisnbdchgs;
@@ -11244,7 +11251,7 @@ SCIP_RETCODE addCliques(
                   SCIPdebugPrintf("\n");
                }
 #endif
-               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                if( *cutoff )
                   goto TERMINATE;
                *nbdchgs += thisnbdchgs;
@@ -11272,7 +11279,7 @@ SCIP_RETCODE addCliques(
 #endif
 
       /* add the clique to the clique table */
-      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
       if( *cutoff )
          goto TERMINATE;
       *nbdchgs += thisnbdchgs;
@@ -11290,7 +11297,7 @@ SCIP_RETCODE addCliques(
             SCIPdebugPrintf("\n");
          }
 #endif
-         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
          if( *cutoff )
             goto TERMINATE;
          *nbdchgs += thisnbdchgs;

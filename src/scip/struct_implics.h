@@ -43,11 +43,10 @@ struct SCIP_VBounds
    int                   size;               /**< size of vars, coefs, and constants arrays */
 };
 
-/** implications for binary variable x in the form 
- *    x  <= 0  ==>  y <= b or y >= b (stored in arrays[0]) 
- *    x  >= 1  ==>  y <= b or y >= b (stored in arrays[1]) 
- *  implications with    binary variable y are stored at the beginning of arrays (sorted by pointer of y)
- *  implications with nonbinary variable y are stored at the end       of arrays (sorted by pointer of y)
+/** implications for binary variable x to non-binary variables y in the form
+ *    x  <= 0  ==>  y <= b or y >= b (stored in arrays[0])
+ *    x  >= 1  ==>  y <= b or y >= b (stored in arrays[1])
+ *  array is sorted by variable index of y
  */
 struct SCIP_Implics
 {
@@ -59,7 +58,6 @@ struct SCIP_Implics
                                               *   i.e., it was added as part of the transitive closure of another implication */
    int                   size[2];            /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
    int                   nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
-   int                   nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
 };
 
 /** single clique, stating that at most one of the binary variables can be fixed to the corresponding value */
@@ -69,8 +67,11 @@ struct SCIP_Clique
    SCIP_Bool*            values;             /**< values of the variables in the clique */
    int                   nvars;              /**< number of variables in the clique */
    int                   size;               /**< size of vars and values arrays */
-   unsigned int          id:31;              /**< unique identifier of clique */
+   int                   startcleanup;       /**< clean up position to start with */
+   int                   ncleanupvars;       /**< number of variables that need to be removed in clean up */
+   unsigned int          id:30;              /**< unique identifier of clique */
    unsigned int          eventsissued:1;     /**< were the IMPLADDED events on the variables already issued? */
+   unsigned int          equation:1;         /**< is the clique an equation or an inequality? */
 };
 
 /** list of cliques for a single variable */
@@ -84,6 +85,7 @@ struct SCIP_CliqueList
 /** collection of cliques */
 struct SCIP_CliqueTable
 {
+   SCIP_HASHTABLE*       hashtable;          /**< hashtable holding all cliques */
    SCIP_CLIQUE**         cliques;            /**< cliques stored in the table */
    int                   ncliques;           /**< number of cliques stored in the table */
    int                   size;               /**< size of cliques array */

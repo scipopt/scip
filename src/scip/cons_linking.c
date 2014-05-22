@@ -2618,7 +2618,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          /* add set partitioning condition as clique */
          int ncliquebdchgs;
 
-         SCIP_CALL( SCIPaddClique(scip, consdata->binvars, NULL, consdata->nbinvars, &infeasible, &ncliquebdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, consdata->binvars, NULL, consdata->nbinvars, TRUE, &infeasible, &ncliquebdchgs) );
          *nchgbds += ncliquebdchgs;
 
          if( infeasible )

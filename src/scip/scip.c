@@ -2885,7 +2885,9 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
          }
 
          /* create clique */
-         SCIP_CALL( SCIPaddClique(targetscip, targetclique, cliquevals, cliquesize, infeasible, &nboundchg) );
+         SCIP_CALL( SCIPaddClique(targetscip, targetclique, cliquevals, cliquesize, SCIPcliqueIsEquation(cliques[c]),
+               infeasible, &nboundchg) );
+
          if ( *infeasible )
          {
             SCIPfreeBufferArray(targetscip, &targetclique);
@@ -12042,7 +12044,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->probmem, scip->set) );
-   SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable) );
+   SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable, scip->set, scip->mem->probmem) );
 
    /* copy problem in solve memory */
    SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
@@ -12330,16 +12332,15 @@ SCIP_RETCODE exitPresolve(
     */
    if( !solved )
    {
+      int nlocalbdchgs = 0;
+
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
       SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, infeasible) );
+            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs, infeasible) );
 
-      if( *infeasible )
-      {
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "clique table cleanup detected infeasibility\n");
-      }
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "clique table cleanup detected %d bound changes%s\n", nlocalbdchgs, *infeasible ? " and infeasibility" : "");
    }
 
    /* exit presolving */
@@ -12652,17 +12653,15 @@ SCIP_RETCODE presolveRound(
     */
    if( !(*unbounded) && !(*infeasible) )
    {
-      SCIP_Bool infeas;
+      int nlocalbdchgs = 0;
 
       SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, &infeas) );
-      if( infeas )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "clique table cleanup detected infeasibility\n");
-      }
-      else if( scip->set->nheurs > 0 )
+            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs, infeasible) );
+
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "clique table cleanup detected %d bound changes%s\n", nlocalbdchgs, *infeasible ? " and infeasibility" : "");
+
+      if( !*infeasible && scip->set->nheurs > 0 )
       {
          /* call primal heuristics that are applicable during presolving */
          SCIP_Bool foundsol;
@@ -19706,6 +19705,25 @@ SCIP_RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
+   /* transform implication containing two binary variables to clique */
+   if( SCIPvarIsBinary(implvar) )
+   {
+      SCIP_VAR* vars[2];
+      SCIP_Bool vals[2];
+
+      assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
+      assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
+
+      vars[0] = var;
+      vars[1] = implvar;
+      vals[0] = varfixing;
+      vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+      SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+
+      return SCIP_OKAY;
+   }
+
    /* the implication graph can only handle 'real' binary (SCIP_VARTYPE_BINARY) variables, therefore we transform the
     * implication in variable bounds, (lowerbound of y will be abbreviated by lby, upperbound equivlaent) the follwing
     * four cases are:
@@ -19781,6 +19799,7 @@ SCIP_RETCODE SCIPaddClique(
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
+   SCIP_Bool             isequation,         /**< is the clique an equation or an inequality? */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
@@ -19791,6 +19810,7 @@ SCIP_RETCODE SCIPaddClique(
    if( nbdchgs != NULL )
       *nbdchgs = 0;
 
+#if 0
    if( nvars == 2 )
    {
       SCIP_Bool val0;
@@ -19864,11 +19884,12 @@ SCIP_RETCODE SCIPaddClique(
       }
    }
    else if( nvars >= 3 )
+#endif
    {
       /* add the clique to the clique table */
       SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, vars, values, nvars, infeasible,
-            nbdchgs) );
+            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, vars, values, nvars, isequation,
+            infeasible, nbdchgs) );
    }
 
    return SCIP_OKAY;
@@ -19971,7 +19992,10 @@ SCIP_RETCODE SCIPcalcCliquePartition(
          ncliquevars = 1;
 
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+#if 0
          if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) + SCIPvarGetNBinImpls(tmpvars[i], tmpvalues[i]) > 0 )
+#endif
+         if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) > 0 )
          {
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
@@ -20218,19 +20242,21 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP_CLIQUE** cliques;
    SCIP_VAR** clqvars;
    SCIP_VAR** allvars;
-   SCIP_VAR* var;
    SCIP_Bool* clqvalues;
+#if 0
+   SCIP_VAR* var;
    SCIP_BOUNDTYPE* impltypes;
+   int nbinimpls;
+   int start;
+   int end;
+   int a;
+#endif
    char nodename[SCIP_MAXSTRLEN];
    int nallvars;
    int nbinvars;
    int nintvars;
    int nimplvars;
-   int nbinimpls;
    int ncliques;
-   int start;
-   int end;
-   int a;
    int c;
    int v1;
    int v2;
@@ -20337,6 +20363,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
       }
    }
 
+#if 0
    if( writeimplications )
    {
       int d;
@@ -20416,7 +20443,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 }
       }
    }
-
+#endif
    /* free the hash map */
    SCIPhashmapFree(&nodehashmap);
 
@@ -38166,6 +38193,7 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "pos%d -> neg%d [dir=both];\n", v, v);
    }
 
+#if 0
    /* store edges */
    for( v = 0; v < nvars; ++v )
    {
@@ -38195,7 +38223,7 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
       }
       while( fix == TRUE );
    }
-
+#endif
    /* write footer */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "}\n");
 

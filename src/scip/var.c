@@ -1562,16 +1562,21 @@ SCIP_RETCODE varRemoveImplicsVbs(
       do
       {
          int nimpls;
+#if 0
          int nbinimpls;
+#endif
          SCIP_VAR** implvars;
          SCIP_BOUNDTYPE* impltypes;
          int i;
 
          nimpls = SCIPimplicsGetNImpls(var->implics, varfixing);
+#if 0
          nbinimpls = SCIPimplicsGetNBinImpls(var->implics, varfixing);
+#endif
          implvars = SCIPimplicsGetVars(var->implics, varfixing);
          impltypes = SCIPimplicsGetTypes(var->implics, varfixing);
 
+#if 0
          /* process the implications on binary variables */
          for( i = 0; i < nbinimpls; i++ )
          {
@@ -1600,9 +1605,10 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
             }
          }
-
          /* process the implications on non-binary variables */
          for( i = nbinimpls; i < nimpls; i++ )
+#endif
+         for( i = 0; i < nimpls; i++ )
          {
             SCIP_VAR* implvar;
             SCIP_BOUNDTYPE impltype;
@@ -1610,7 +1616,9 @@ SCIP_RETCODE varRemoveImplicsVbs(
             implvar = implvars[i];
             impltype = impltypes[i];
             assert(implvar != var);
+#if 0
             assert(SCIPvarGetType(implvar) != SCIP_VARTYPE_BINARY);
+#endif
 
             /* remove for all implications z == 0 / 1  ==>  x <= p / x >= p (x not binary)
              * the following variable bound from x's variable bounds 
@@ -4602,6 +4610,7 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarIsBinary(var) )
    {
       SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+#if 0
       if( var->cliquelist != NULL && SCIPvarIsBinary(aggvar) )
       {
          for( i = 0; i < 2; ++i )
@@ -4619,6 +4628,7 @@ SCIP_RETCODE SCIPvarAggregate(
             }
          }
       }
+#endif
       SCIPcliquelistFree(&var->cliquelist, blkmem);
    }
    assert(var->cliquelist == NULL);
@@ -9066,12 +9076,35 @@ SCIP_RETCODE varAddImplic(
    {
       assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
-      /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
-      SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n", 
-         SCIPvarGetName(var), varfixing,
-         SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
-      SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
-            isshortcut, &conflict, added) );
+#if 0 //todo
+      if( SCIPvarIsBinary(implvar) )
+      {
+         SCIP_VAR* vars[2];
+         SCIP_Bool vals[2];
+
+         assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
+         assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
+
+         vars[0] = var;
+         vars[1] = implvar;
+         vals[0] = varfixing;
+         vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+         /* add the clique to the clique table */
+         SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+
+         return SCIP_OKAY;
+      }
+      else
+#endif
+      {
+         /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
+         SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n",
+            SCIPvarGetName(var), varfixing,
+            SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
+         SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
+               isshortcut, &conflict, added) );
+      }
    }
    assert(!conflict || !(*added));
 
@@ -9130,6 +9163,7 @@ SCIP_RETCODE varAddImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* check, whether implied variable is binary */
+#if 0
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       SCIP_Bool inverseadded;
@@ -9206,6 +9240,9 @@ SCIP_RETCODE varAddImplic(
       }
    }
    else
+#else
+   if( !SCIPvarIsBinary(implvar) )
+#endif
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -10656,6 +10693,28 @@ SCIP_RETCODE SCIPvarsAddClique(
    return SCIP_OKAY;
 }
 
+/** adds a clique to the list of cliques of the given binary variable, but does not change the clique
+ *  itself
+ */
+SCIP_RETCODE SCIPvarAddCliqueToList(
+   SCIP_VAR*             var,                /**< problem variable  */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             value,              /**< value of the variable in the clique */
+   SCIP_CLIQUE*          clique              /**< clique that should be removed from the variable's clique list */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsBinary(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   /* add clique from variable's clique list */
+   SCIP_CALL( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, value, clique) );
+
+   return SCIP_OKAY;
+}
+
+
 /** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
@@ -10667,8 +10726,10 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarIsBinary(var)); 
+   assert(SCIPvarIsBinary(var));
+#if 0
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+#endif
 
    /* delete clique from variable's clique list */
    SCIP_CALL( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
@@ -10702,7 +10763,7 @@ SCIP_RETCODE SCIPvarDelClique(
       SCIP_CALL( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
 
       /* delete variable from clique */
-      SCIP_CALL( SCIPcliqueDelVar(clique, var, value) );
+      SCIPcliqueDelVar(clique, var, value);
 
       /* check consistency of cliquelist */
       SCIPcliquelistCheck(var->cliquelist, var);
@@ -12665,13 +12726,15 @@ SCIP_Real SCIPvarGetImplRedcost(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   SCIP_Real implredcost;
+#if 0
    SCIP_VAR** vars;
    SCIP_VAR* implvar;
    SCIP_BOUNDTYPE* boundtypes;
-   SCIP_Real implredcost;
    SCIP_Real redcost;
    int nbinvars;
    int v;
+#endif
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -12679,7 +12742,10 @@ SCIP_Real SCIPvarGetImplRedcost(
    /* get reduced cost of given variable */
    implredcost = SCIPvarGetRedcost(var, set, varfixing, stat, lp);
 
+   // todo check cliques for implied redcosts
+
    /* collect binary implication information */
+#if 0
    nbinvars = SCIPimplicsGetNBinImpls(var->implics, varfixing);
    vars =  SCIPimplicsGetVars(var->implics, varfixing);
    boundtypes = SCIPimplicsGetTypes(var->implics, varfixing);
@@ -12704,6 +12770,7 @@ SCIP_Real SCIPvarGetImplRedcost(
       if( !SCIPsetIsFeasZero(set, redcost) )
          implredcost += redcost;
    }
+#endif
 
    return implredcost;
 }
@@ -15652,7 +15719,9 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetVubCoefs
 #undef SCIPvarGetVubConstants
 #undef SCIPvarGetNImpls
+#if 0
 #undef SCIPvarGetNBinImpls
+#endif
 #undef SCIPvarGetImplVars
 #undef SCIPvarGetImplTypes
 #undef SCIPvarGetImplBounds
@@ -16665,6 +16734,7 @@ int SCIPvarGetNImpls(
    return SCIPimplicsGetNImpls(var->implics, varfixing);
 }
 
+#if 0
 /** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
  *  there are no implications for nonbinary variable x
  */
@@ -16678,6 +16748,7 @@ int SCIPvarGetNBinImpls(
 
    return SCIPimplicsGetNBinImpls(var->implics, varfixing);
 }
+#endif
 
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
@@ -16748,7 +16819,9 @@ int SCIPvarGetNCliques(
    )
 {
    assert(var != NULL);
+#if 0
    assert(SCIPvarIsActive(var));
+#endif
 
    return SCIPcliquelistGetNCliques(var->cliquelist, varfixing);
 }
@@ -16760,7 +16833,9 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    )
 {
    assert(var != NULL);
+#if 0
    assert(SCIPvarIsActive(var));
+#endif
 
    return SCIPcliquelistGetCliques(var->cliquelist, varfixing);
 }

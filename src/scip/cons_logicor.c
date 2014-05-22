@@ -3556,7 +3556,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
           * by the clique inequality ~x + ~y <= 1
           */
-         SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, FALSE, &implinfeasible, &nimplbdchgs) );
          *nchgbds += nimplbdchgs;
          if( implinfeasible )
          {

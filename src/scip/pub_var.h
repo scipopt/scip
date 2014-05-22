@@ -739,6 +739,7 @@ int SCIPvarGetNImpls(
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
+#if 0
 /** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
  *  there are no implications for nonbinary variable x
  */
@@ -747,6 +748,7 @@ int SCIPvarGetNBinImpls(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
+#endif
 
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
@@ -930,7 +932,9 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetVubCoefs(var)         (SCIPvboundsGetCoefs((var)->vubs))
 #define SCIPvarGetVubConstants(var)     (SCIPvboundsGetConstants((var)->vubs))
 #define SCIPvarGetNImpls(var, fix)      (SCIPimplicsGetNImpls((var)->implics, fix))
+#if 0
 #define SCIPvarGetNBinImpls(var, fix)   (SCIPimplicsGetNBinImpls((var)->implics, fix))
+#endif
 #define SCIPvarGetImplVars(var, fix)    (SCIPimplicsGetVars((var)->implics, fix))
 #define SCIPvarGetImplTypes(var, fix)   (SCIPimplicsGetTypes((var)->implics, fix))
 #define SCIPvarGetImplBounds(var, fix)  (SCIPimplicsGetBounds((var)->implics, fix))

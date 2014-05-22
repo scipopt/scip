@@ -4384,7 +4384,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4427,7 +4427,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4553,7 +4553,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4597,7 +4597,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 

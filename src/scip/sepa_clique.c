@@ -315,6 +315,7 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
    return SCIP_OKAY;
 }
 
+#if 0
 /** adds all variable/value pairs to the tclique graph that are contained in a 3-clique in the implication graph */
 static
 SCIP_RETCODE tcliquegraphAddImplicsVars(
@@ -649,6 +650,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** adds all implications between nodes in the tclique graph to the tclique graph */
 static
@@ -674,6 +676,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
    assert(tcliquegraph->adjnodessize == 0);
 
    nadjnodes = 0;
+#if 0
    for( i = 0; i < tcliquegraph->nnodes; ++i )
    {
       SCIP_VAR* var;
@@ -734,8 +737,8 @@ SCIP_RETCODE tcliquegraphAddImplics(
          }
       }
    }
+#endif
    assert(nadjnodes/2 == (nadjnodes+1)/2); /* we must have an even number of arcs */
-
    /* store final adjnodes index */
    tcliquegraph->adjnodesidxs[tcliquegraph->nnodes] = nadjnodes;
 
@@ -902,11 +905,13 @@ SCIP_RETCODE loadTcliquegraph(
    /* insert all variable/value pairs that are contained in an existing 3-clique */
    SCIP_CALL( tcliquegraphAddCliqueVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
 
+#if 0
    /* insert all variable/value pairs that are contained in a 3-clique in the implication graph */
    SCIP_CALL( tcliquegraphAddImplicsVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
 
    /* insert all variable/value pairs that have implications to two variables of the same existing clique */
    SCIP_CALL( tcliquegraphAddImplicsCliqueVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
+#endif
 
    /* add all implications between used variables to the tclique graph */
    SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );

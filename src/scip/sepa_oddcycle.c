@@ -393,9 +393,11 @@ SCIP_Bool isNeighbor(
          SCIP_Bool originala;
          SCIP_Bool originalb;
 
+#if 0
          unsigned int nbinimpls;
          SCIP_VAR** implvars;
          SCIP_BOUNDTYPE* impltypes;
+#endif
 #ifndef NDEBUG
          SCIP_Real* implbounds;
 #endif
@@ -425,17 +427,24 @@ SCIP_Bool isNeighbor(
          assert(b < nbinvars);
 
          /* nodes cannot be connected by trivial observations */
+#if 0
          if( ( SCIPvarGetNBinImpls(vars[a], originala) + SCIPvarGetNCliques(vars[a], originala) == 0 )
             || ( SCIPvarGetNBinImpls(vars[b], originalb) + SCIPvarGetNCliques(vars[b], originalb) == 0 ) )
             return FALSE;
          if( ( SCIPvarGetNBinImpls(vars[b], originalb) == 0 && SCIPvarGetNCliques(vars[a], originala) == 0 )
             || ( SCIPvarGetNBinImpls(vars[a], originala) == 0 && SCIPvarGetNCliques(vars[b], originalb) == 0 ) )
             return FALSE;
+#endif
+         if( SCIPvarGetNCliques(vars[a], originala) == 0 || SCIPvarGetNCliques(vars[b], originalb) == 0 )
+            return FALSE;
 
          /* @todo later: possible improvement: do this test for implications and cliques separately if this here is time consuming */
          /* one of the nodes seems to have more arcs than the other, we swap them (since adjacency is symmetric) */
+#if 0
          if( SCIPvarGetNBinImpls(vars[a], originala) + 2 * SCIPvarGetNCliques(vars[a], originala) >
             SCIPvarGetNBinImpls(vars[b], originalb) + 2 * SCIPvarGetNCliques(vars[b], originalb) )
+#endif
+         if( SCIPvarGetNCliques(vars[a], originala) > SCIPvarGetNCliques(vars[b], originalb) )
          {
             unsigned int temp;
             SCIP_Bool varfixingtemp;
@@ -448,6 +457,7 @@ SCIP_Bool isNeighbor(
             originala = varfixingtemp;
          }
 
+#if 0
          /* check whether there is an implication a = 1 -> b = 0 */
          nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[a], originala);
          implvars = SCIPvarGetImplVars(vars[a], originala);
@@ -477,7 +487,7 @@ SCIP_Bool isNeighbor(
                }
             }
          }
-
+#endif
          /* check whether a and b are contained in a clique */
          ncliques =  (unsigned int) SCIPvarGetNCliques(vars[a], originala);
          cliques = SCIPvarGetCliques(vars[a], originala);
@@ -1402,6 +1412,7 @@ SCIP_RETCODE addArc(
    return SCIP_OKAY;
 }
 
+#if 0
 /** add binary implications of the given node u @see createNextLevel() */
 static
 SCIP_RETCODE addNextLevelBinImpls(
@@ -1541,6 +1552,7 @@ SCIP_RETCODE addNextLevelBinImpls(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** add implications from cliques of the given node u
  *
@@ -1738,10 +1750,12 @@ SCIP_RETCODE insertSortedRootNeighbors(
    SCIP_Bool varfixing;
    unsigned int varsidx;
 
+#if 0
    /* storage for implications to the neighbors of the root node */
    unsigned int nbinimpls;
    SCIP_VAR** implvars;
    SCIP_BOUNDTYPE* impltypes;
+#endif
 
    /* storage for cliques to the neighbors of the root node */
    unsigned int ncliques;
@@ -1779,6 +1793,7 @@ SCIP_RETCODE insertSortedRootNeighbors(
    assert(! SCIPisFeasIntegral(scip, vals[varsidx]));
    nneighbors = 0;
 
+#if 0
    /* count implications of the root */
    nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[varsidx], varfixing);
    if( nbinimpls > 0 )
@@ -1819,7 +1834,7 @@ SCIP_RETCODE insertSortedRootNeighbors(
          }
       }
    }
-
+#endif
    /* count cliques of the root */
    ncliques = (unsigned int) SCIPvarGetNCliques(vars[varsidx], varfixing);
    if( ncliques > 0 )
@@ -2374,13 +2389,14 @@ SCIP_RETCODE createNextLevel(
       }
       else
       {
+#if 0
          /* add arc from u to all other neighbors of variable implication graph */
          SCIP_CALL( addNextLevelBinImpls(scip, sepadata, vars, vals, u, graph, level, inlevelgraph,
                newlevel, nnewlevel, &nAdj, success) );
 
          if( !(*success) )
             return SCIP_OKAY;
-
+#endif
          SCIP_CALL( addNextLevelCliques(scip, sepadata, vars, vals, u, graph, level, inlevelgraph,
                newlevel, nnewlevel, &nAdj, success) );
       }
@@ -2661,27 +2677,41 @@ SCIP_RETCODE separateHeur(
          continue;
 
       /* consider original and negated variable pair and skip variable if there is only one edge leaving the pair */
+#if 0
       if( (SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE) + SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 2)
          && (SCIPvarGetNCliques(vars[i % nbinvars], TRUE) + SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1) )
+#endif
+      if( SCIPvarGetNCliques(vars[i % nbinvars], TRUE) + SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
          continue;
 
       /* skip variable having too less implics and cliques itself */
       if( i < nbinvars )
       {
+#if 0
          if( SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE ) < 1 && SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) < 1 )
+#endif
+         if( SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) < 1 )
             continue;
-
+#if 0
          if( !(sepadata->addselfarcs) && SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE ) < 2
             && SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) < 1 )
+#endif
+         if( !(sepadata->addselfarcs) && SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) < 1 )
             continue;
       }
       else
       {
+#if 0
          if( SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 1 && SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
+#endif
+         if( SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
             continue;
 
+#if 0
          if( !(sepadata->addselfarcs) && SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 2
             && SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
+#endif
+         if( !(sepadata->addselfarcs) && SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
             continue;
       }
 
@@ -3546,9 +3576,12 @@ SCIP_RETCODE separateGLS(
       /* if the variable has a fractional value we add it to the graph */
       if( ! SCIPisFeasIntegral(scip, vals[i]) )
       {
+#if 0
          nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[i], original);
+#endif
          ncliques =  (unsigned int) SCIPvarGetNCliques(vars[i], original);
 
+#if 0
          /* insert arcs for binary implications (take var => getImpl(Bin) => getImplVar => add forward-arc) */
          /* add implications of implication-type "original" if current variable has them */
          if( nbinimpls >= 1 )
@@ -3560,7 +3593,7 @@ SCIP_RETCODE separateGLS(
             if( !success )
                goto TERMINATE;
          }
-
+#endif
          /* insert arcs for cliques (take var => getCliques => take cliquevar => add forward-arc) */
          /* add clique arcs of clique-type "original" if current variable has them */
          if( ncliques >= 1 )

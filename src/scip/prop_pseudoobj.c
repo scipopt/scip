@@ -915,7 +915,7 @@ SCIP_RETCODE collectMinactImplicVars(
          SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
       }
    }
-
+#if 0
    /* collect implications */
    vars = SCIPvarGetImplVars(var, varfixing);
    nbinvars = SCIPvarGetNBinImpls(var, varfixing);
@@ -931,7 +931,7 @@ SCIP_RETCODE collectMinactImplicVars(
          (*objchg) += collectMinactImplicVar(scip, vars[v], binobjvarmap, collectedvars, nbinobjvars, contributors, ncontributors);
       }
    }
-
+#endif
    return SCIP_OKAY;
 }
 
@@ -1092,6 +1092,7 @@ SCIP_RETCODE getMinactObjchg(
    return SCIP_OKAY;
 }
 
+#if 0
 /** returns the global (that means w.r.t. global bounds of the variables) objective change provided by the implication of
  *  the given variable by fixing it to the given bound w.r.t. maximum activity of the objective function
  *
@@ -1148,6 +1149,7 @@ SCIP_Real getMaxactImplicObjchg(
 
    return objchg;
 }
+#endif
 
 /** computes for the given binary variable the gloabl (that means w.r.t. global bounds of the variables) objective
  *  contribution by fixing it to given bound w.r.t. maximum activity of the objective function
@@ -1166,12 +1168,15 @@ SCIP_Real getMaxactObjchg(
    /* collects the contribution of the variable itself w.r.t. the worst bound */
    objchg = getVarObjchg(var, SCIPvarGetWorstBoundType(var), bound);
 
+   // todo use clique???
+#if 0
    /* check if the implications should be used to increase the objective contribution for given variable */
    if( useimplics )
    {
       /* add the objective contribution from the implication variable */
       objchg += getMaxactImplicObjchg(var, bound);
    }
+#endif
 
    return objchg;
 }
@@ -1220,8 +1225,10 @@ SCIP_RETCODE collectMinactVar(
    SCIP_Real lbobjchg;
    SCIP_Real ubobjchg;
    SCIP_Real objval;
+#if 0
    int nlbimplics;
    int nubimplics;
+#endif
    int nlbcliques;
    int nubcliques;
 
@@ -1235,14 +1242,19 @@ SCIP_RETCODE collectMinactVar(
    else
       (*collect) = TRUE;
 
+#if 0
    nlbimplics = SCIPvarGetNBinImpls(var, FALSE);
    nubimplics = SCIPvarGetNBinImpls(var, TRUE);
+#endif
 
    nlbcliques = SCIPvarGetNCliques(var,  FALSE);
    nubcliques = SCIPvarGetNCliques(var,  TRUE);
 
    /* check if implications should be used and if implications are existing */
+#if 0
    if( useimplics && nlbimplics + nubimplics + nlbcliques + nubcliques > 0 )
+#endif
+   if( useimplics && nlbcliques + nubcliques > 0 )
    {
       int nlbcontributors;
       int nubcontributors;
@@ -1256,7 +1268,10 @@ SCIP_RETCODE collectMinactVar(
       assert(!SCIPisNegative(scip, lbobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
+#if 0
          SCIP_BOUNDTYPE_LOWER, SCIPvarGetNBinImpls(var, (SCIP_Bool)SCIP_BOUNDTYPE_LOWER), nlbcontributors);
+#endif
+         SCIP_BOUNDTYPE_LOWER, 0, nlbcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
        * this covered by that implied variable
@@ -1276,7 +1291,10 @@ SCIP_RETCODE collectMinactVar(
       assert(!SCIPisNegative(scip, ubobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
+#if 0
          SCIP_BOUNDTYPE_UPPER, SCIPvarGetNBinImpls(var, (SCIP_Bool)SCIP_BOUNDTYPE_UPPER), nubcontributors);
+#endif
+         SCIP_BOUNDTYPE_UPPER, 0, nubcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
        * this covered by that implied variable

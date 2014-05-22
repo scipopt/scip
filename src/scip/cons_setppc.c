@@ -5275,7 +5275,8 @@ SCIP_RETCODE addCliques(
          /* add a set partitioning / packing constraint as clique */
          if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
          {
-            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars, &infeasible, &nlocalbdchgs) );
+            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars,
+                  ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING), &infeasible, &nlocalbdchgs) );
             *nchgbds += nlocalbdchgs;
 
             if( infeasible )
@@ -8700,7 +8701,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
          SCIP_Bool infeasible;
          int ncliquebdchgs;
 
-         SCIP_CALL( SCIPaddClique(scip, twovars, NULL, 2, &infeasible, &ncliquebdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, twovars, NULL, 2, FALSE, &infeasible, &ncliquebdchgs) );
 
          SCIPdebugMessage("new clique of conflict constraint %s led to %d fixings\n", consname, ncliquebdchgs);
 

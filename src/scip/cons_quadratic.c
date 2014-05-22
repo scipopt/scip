@@ -3286,7 +3286,9 @@ void getImpliedBounds(
    )
 {
    int nimpls;
+#if 0
    int nbinimpls;
+#endif
    SCIP_VAR** implvars;
    SCIP_BOUNDTYPE* impltypes;
    SCIP_Real* implbounds;
@@ -3306,7 +3308,9 @@ void getImpliedBounds(
    if( nimpls == 0 )
       return;
 
+#if 0
    nbinimpls  = SCIPvarGetNBinImpls (x, xval);
+#endif
    implvars   = SCIPvarGetImplVars  (x, xval);
    impltypes  = SCIPvarGetImplTypes (x, xval);
    implbounds = SCIPvarGetImplBounds(x, xval);
@@ -3315,6 +3319,8 @@ void getImpliedBounds(
    assert(impltypes != NULL);
    assert(implbounds != NULL);
 
+   // todo check in cliques
+#if 0
    if( SCIPvarGetType(y) == SCIP_VARTYPE_BINARY )
    {
       if( !SCIPsortedvecFindPtr((void**)implvars, SCIPvarComp, (void*)y, nbinimpls, &pos) )
@@ -3326,6 +3332,10 @@ void getImpliedBounds(
          return;
    }
    else
+      return;
+#endif
+
+   if( !SCIPsortedvecFindPtr((void**)implvars, SCIPvarComp, (void*)y, nimpls, &pos) )
       return;
 
    /* if there are several implications on y, go to the first one */

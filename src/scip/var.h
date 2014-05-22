@@ -1061,6 +1061,18 @@ SCIP_RETCODE SCIPvarDelClique(
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
    );
 
+/** adds a clique to the list of cliques of the given binary variable, but does not change the clique
+ *  itself
+ */
+extern
+SCIP_RETCODE SCIPvarAddCliqueToList(
+   SCIP_VAR*             var,                /**< problem variable  */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             value,              /**< value of the variable in the clique */
+   SCIP_CLIQUE*          clique              /**< clique that should be removed from the variable's clique list */
+   );
+
 /** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
