@@ -91,7 +91,9 @@ Main::Main()
    :     solver_(NULL),
          filename_(NULL),
          nnodes_total_(0),
-         niterations_total_(0)
+         niterations_total_(0),
+         n_v_new_total_(0),
+         n_v_proc_total_(0)
 {
 }
 
@@ -268,7 +270,7 @@ void Main::evaluateStatus()
    }
    else if( solver_status == SCIP_STATUS_UNBOUNDED )
    {
-      std::cout << " ABORTED: problem has at least one infeasible objective" << std::endl;
+      std::cout << " ABORTED: problem has at least one unbounded objective" << std::endl;
    }
    else if( solver_status == SCIP_STATUS_INFORUNBD )
    {

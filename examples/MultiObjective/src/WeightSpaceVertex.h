@@ -72,7 +72,7 @@ class WeightSpaceVertex
    SCIP_Real getWeightedObjectiveValue() const ;
 
    /** returns the weight */
-   const std::vector<SCIP_Real> * getWeight() const ;
+   const std::vector<SCIP_Real>* getWeight() const ;
    
    /** returns the set of axes where the weight is greater than 0 */
    const std::vector<unsigned int> * getNonZeroDimensions() const ;
@@ -90,23 +90,23 @@ class WeightSpaceVertex
 
  private:
    unsigned int                                   nobjs_;                       /**< number of objectives */
-   std::vector< const std::vector<SCIP_Real>* >   incident_solutions_;          /**< defining nondominated points */
+   std::vector< const std::vector<SCIP_Real>* >   incident_solutions_;          /**< incident nondominated points */
    std::vector<unsigned int>                      nonzero_dimensions_;          /**< axes where weight is > 0 */
    std::vector<SCIP_Real>*                        weight_;                      /**< weight vector */
    SCIP_Real                                      weighted_objective_value_;    /**< weighted objective value */
    lemon::ListGraph::Node                         node_;                        /**< associated graph node */
 
-   /** sets nonzero dimensions to union of given points nonzero dimensions */
-   void joinNonzeroDimensions(
-      const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
-      const WeightSpaceVertex*          adjacent            /**< adjacent non obsolete vertex */
-      );
-
-   /** sets incident solutions to intersection of given points incident solutions */
+   /** sets incident solutions to intersection of given points' incident solutions */
    void joinIncidentSolutions(
       const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
       const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */
       const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
+      );
+
+   /** sets nonzero dimensions to union of given points nonzero dimensions */
+   void joinNonzeroDimensions(
+      const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
+      const WeightSpaceVertex*          adjacent            /**< adjacent non obsolete vertex */
       );
 
 /** calculates the weight w and the weighted objective value a 
