@@ -30537,7 +30537,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
          /* store variable scores in temporary array */
          for( s = 0; s < ndivecands; ++s )
-            SCIPdivesetGetScore(diveset, scip->set, divecands[s], divecandssol[s], divecandsfrac[s], &(candscores[s]), &(candsroundup[s]));
+         {
+            SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, divecands[s], divecandssol[s], divecandsfrac[s],
+                  &(candscores[s]), &(candsroundup[s])) );
+         }
 
          SCIPsortRealRealRealBoolPtr(candscores, divecandssol, divecandsfrac, candsroundup, (void **)divecands, ndivecands);
 
@@ -30557,7 +30560,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             SCIP_Real score;
             SCIP_Bool roundup;
 
-            SCIPdivesetGetScore(diveset, scip->set, lpcands[c], lpcandssol[c], lpcandsfrac[c], &score, &roundup);
+            SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, lpcands[c], lpcandssol[c], lpcandsfrac[c], &score, &roundup) );
 
             /* new minimum found */
             if( score < minscore )
@@ -30575,7 +30578,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             SCIP_Real score;
             SCIP_Bool roundup;
 
-            SCIPdivesetGetScore(diveset, scip->set, indcands[c], indcandssol[c], indcandsfrac[c], &score, &roundup);
+            SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, indcands[c], indcandssol[c], indcandsfrac[c], &score, &roundup) );
 
             /* new minimum found */
             if( score < minscore )
