@@ -171,7 +171,6 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 {
-   SCIP_BRANCHDIR dir;
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
    SCIP_Real pscostquot;

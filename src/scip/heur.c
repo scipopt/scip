@@ -194,7 +194,7 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 }
 
 /** get the minimum relative depth of the diving settings */
-SCIP_Real SCIPdivesetGetMinreldepth(
+SCIP_Real SCIPdivesetGetMinRelDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -202,7 +202,7 @@ SCIP_Real SCIPdivesetGetMinreldepth(
 }
 
 /** get the maximum relative depth of the diving settings */
-SCIP_Real SCIPdivesetGetMaxreldepth(
+SCIP_Real SCIPdivesetGetMaxRelDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -210,7 +210,7 @@ SCIP_Real SCIPdivesetGetMaxreldepth(
 }
 
 /** get the number of successful runs of the diving settings */
-int SCIPdivesetGetNsuccess(
+int SCIPdivesetGetNSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -218,7 +218,7 @@ int SCIPdivesetGetNsuccess(
 }
 
 /** get the maximum LP iterations quotient of the diving settings */
-SCIP_Real SCIPdivesetGetMaxlpiterquot(
+SCIP_Real SCIPdivesetGetMaxLPIterQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -226,7 +226,7 @@ SCIP_Real SCIPdivesetGetMaxlpiterquot(
 }
 
 /** get the maximum LP iterations offset of the diving settings */
-int SCIPdivesetGetMaxlpiterofs(
+int SCIPdivesetGetMaxLPIterOffset(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -234,7 +234,7 @@ int SCIPdivesetGetMaxlpiterofs(
 }
 
 /** get the number of LP iterations of the diving settings */
-SCIP_Longint SCIPdivesetGetNLPiterations(
+SCIP_Longint SCIPdivesetGetNLPIterations(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -242,7 +242,7 @@ SCIP_Longint SCIPdivesetGetNLPiterations(
 }
 
 /** get the maximum upper bound quotient parameter of the diving settings if no solution is available */
-SCIP_Real SCIPdivesetGetMaxubquotnosol(
+SCIP_Real SCIPdivesetGetMaxUbQuotNoSol(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -250,14 +250,14 @@ SCIP_Real SCIPdivesetGetMaxubquotnosol(
 }
 
 /** get the average quotient parameter of the diving settings if no solution is available */
-SCIP_Real SCIPdivesetGetMaxavgquotnosol(
+SCIP_Real SCIPdivesetGetMaxAvgQuotNoSol(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    return diveset->maxdiveavgquotnosol;
 }
 /** get the maximum upper bound quotient parameter of the diving settings if an incumbent solution exists */
-SCIP_Real SCIPdivesetGetMaxubquot(
+SCIP_Real SCIPdivesetGetMaxUbQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -265,7 +265,7 @@ SCIP_Real SCIPdivesetGetMaxubquot(
 }
 
 /** get the average upper bound quotient parameter of the diving settings if an incumbent solution exists */
-SCIP_Real SCIPdivesetGetMaxavgquot(
+SCIP_Real SCIPdivesetGetMaxAvgQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
@@ -290,7 +290,7 @@ void SCIPdivesetIncreaseNLPIterations(
 }
 
 /** increases success counter of diving settings by 1 */
-void SCIPdivesetIncreaseNsuccess(
+void SCIPdivesetIncreaseNSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings which happened to earn the reward */
    )
 {
