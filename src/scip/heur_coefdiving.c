@@ -64,11 +64,9 @@ struct SCIP_HeurData
    SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
-
 /*
  * local methods
  */
-
 
 /*
  * Callback methods
@@ -217,7 +215,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
 
    return SCIP_OKAY;
 }
-
 
 /*
  * heuristic specific interface methods

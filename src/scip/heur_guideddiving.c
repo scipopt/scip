@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_guideddiving.h"
-#include "scip/heur_fracdiving.h"
 
 #define HEUR_NAME             "guideddiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of incumbent solutions"
@@ -57,7 +56,6 @@ struct SCIP_HeurData
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_DIVESET*         diveset;            /**< diving settings */
 };
-
 
 /*
  * local methods

@@ -42,23 +42,6 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** score candidate variable
- *
- *  if candidate cannot be trivially rounded,
- *  score is the difference between frac and [frac] (rounding to the nearest integer)
- *
- *  if candidate can be trivially rounded in at least one direction, the objective gain is used to score the variables
- *
- *  candidate which cannot be rounded trivially always have a lower score than roundable candidates
- */
-EXTERN
-SCIP_Real SCIPgetFracdivingVarScore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< diving candidate for score */
-   SCIP_Real             frac,               /**< fractionality of candidate in (last) LP solution */
-   SCIP_Bool             roundup             /**< should the variable be rounded up? */
-   );
-
 #ifdef __cplusplus
 }
 #endif
