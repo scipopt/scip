@@ -30551,9 +30551,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
             SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, lpcands[c], lpcandssol[c], lpcandsfrac[c], &score, &roundup) );
 
-            /* new minimum found */
-            if( score < minscore )
+            /* new minimum found (or no variable has been found previously and score is infinity) */
+            if( score < minscore || nextcandvar == NULL )
             {
+               assert( score < minscore || SCIPisInfinity(scip, score) );
                minscore = score;
                nextcandvar = lpcands[c];
                nextcandsol = lpcandssol[c];
@@ -30569,9 +30570,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
             SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, indcands[c], indcandssol[c], indcandsfrac[c], &score, &roundup) );
 
-            /* new minimum found */
-            if( score < minscore )
+            /* new minimum found (or no variable has been found previously and score is infinity) */
+            if( score < minscore || nextcandvar == NULL )
             {
+               assert( score < minscore || SCIPisInfinity(scip, score) );
                minscore = score;
                nextcandvar = indcands[c];
                nextcandsol = indcandssol[c];
