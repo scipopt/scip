@@ -264,6 +264,7 @@ public:
       setPricer(&m_price_steep);
 #if ((SOPLEX_VERSION == 170 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 170)
       SPxSolver::setMaxUpdates(500);
+      SPxSolver::hyperPricing(true);
 #endif
       /* no starter */
 
