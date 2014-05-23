@@ -30200,13 +30200,13 @@ void SCIPresetDiveset(
 
 /** performs a diving within the limits of the diveset parameters
  *
- *  this method performs a diving according to the settings defined by the diving settings \p diveset; Contrary to the
+ *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
  *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
  *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the
- *  score defined by the \p diveset.
+ *  score defined by the @p diveset.
  *  If more than one candidate should be selected, the candidates are sorted in nondecreasing order
  *  of their score.
  *
@@ -30219,14 +30219,12 @@ void SCIPresetDiveset(
  *
  *  @see heur_guideddiving.c for an example implementation of a dive set controlling the diving algorithm.
  *
- *  @see the parameter heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
- *        beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
+ *  @see the parameter @p heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
+ *       beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
  *
  *  @note the fraction of candidate variables is subject to change during solving. It is decreased by a factor of
  *        2 every time the algorithm could not dive half as deep as desired. However, if it succeeded, the fraction
  *        is multiplied by a factor of 1.1.
- *
- *
  */
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30266,11 +30264,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real* lpcandsfrac;
    int nlpcands;
 
-   SCIP_VAR** indcands;
-   SCIP_Real* indcandssol;
-   SCIP_Real* indcandsfrac;
+   SCIP_VAR** indcands = NULL;
+   SCIP_Real* indcandssol = NULL;
+   SCIP_Real* indcandsfrac = NULL;
+   int nindconss = 0;
    int nindcands;
-   int nindconss;
 
    assert(scip != NULL);
    assert(result != NULL);
@@ -30321,24 +30319,19 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, SCIPdivesetGetNLPIterations(diveset) + MINLPITER);
 
-   indconshdlr = SCIPfindConshdlr(scip, "indicator");
-   nindconss = 0;
    /* if indicator variables are present, add them to the set of diving candidates */
    /* todo maybe store those constraints once and not every time */
+   indconshdlr = SCIPfindConshdlr(scip, "indicator");
    if( indconshdlr != NULL )
+   {
       nindconss = SCIPconshdlrGetNConss(indconshdlr);
-   if ( nindconss > 0 )
-   {
-      /* get storage for candidate variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &indcands, nindconss) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &indcandssol, nindconss) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &indcandsfrac, nindconss) );
-   }
-   else
-   {
-      indcands = NULL;
-      indcandssol = NULL;
-      indcandsfrac = NULL;
+      if ( nindconss > 0 )
+      {
+         /* get storage for candidate variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &indcands, nindconss) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &indcandssol, nindconss) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &indcandsfrac, nindconss) );
+      }
    }
 
    /* get all current diving candidates */
@@ -30346,7 +30339,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          indcands, indcandssol, indcandsfrac, &nindcands) );
    ndivecands = nlpcands + nindcands;
 
-   /* don't try to dive, if there are no fractional variables */
+   /* don't try to dive, if there are no diving candidates */
    if( ndivecands == 0 )
    {
       if ( nindconss > 0 )
@@ -30364,26 +30357,24 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    if( SCIPgetNSolsFound(scip) == 0 )
    {
       if( SCIPdivesetGetMaxUbQuotNoSol(diveset) > 0.0 )
-         searchubbound = SCIPgetLowerbound(scip)
-         + SCIPdivesetGetMaxUbQuotNoSol(diveset) * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
+         searchubbound = SCIPgetLowerbound(scip) + SCIPdivesetGetMaxUbQuotNoSol(diveset) * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
       else
          searchubbound = SCIPinfinity(scip);
+
       if( SCIPdivesetGetMaxAvgQuotNoSol(diveset) > 0.0 )
-         searchavgbound = SCIPgetLowerbound(scip)
-         + SCIPdivesetGetMaxAvgQuotNoSol(diveset) * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
+         searchavgbound = SCIPgetLowerbound(scip) + SCIPdivesetGetMaxAvgQuotNoSol(diveset) * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
       else
          searchavgbound = SCIPinfinity(scip);
    }
    else
    {
       if( SCIPdivesetGetMaxUbQuot(diveset) > 0.0 )
-         searchubbound = SCIPgetLowerbound(scip)
-         + SCIPdivesetGetMaxUbQuot(diveset) * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
+         searchubbound = SCIPgetLowerbound(scip) + SCIPdivesetGetMaxUbQuot(diveset) * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
       else
          searchubbound = SCIPinfinity(scip);
+
       if( SCIPdivesetGetMaxAvgQuot(diveset) > 0.0 )
-         searchavgbound = SCIPgetLowerbound(scip)
-         + SCIPdivesetGetMaxAvgQuot(diveset) * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
+         searchavgbound = SCIPgetLowerbound(scip) + SCIPdivesetGetMaxAvgQuot(diveset) * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
       else
          searchavgbound = SCIPinfinity(scip);
    }
@@ -30465,9 +30456,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* if all candidates are roundable, try to round the solution */
       if( allroundable )
       {
-         SCIP_Bool success;
+         SCIP_Bool success = FALSE;
 
-         success = FALSE;
          /* create solution from diving LP and try to round it */
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
          SCIP_CALL( SCIProundSol(scip, worksol, &success) );
@@ -30475,10 +30465,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          /* succesfully rounded solutions are tried for primal feasibility */
          if( success )
          {
-            SCIP_Bool changed;
+            SCIP_Bool changed = FALSE;
             SCIPdebugMessage("%s found roundable primal solution: obj=%g\n", SCIPheurGetName(heur), SCIPgetSolOrigObj(scip, worksol));
 
-            changed = FALSE;
             /* adjust indicator constraints */
             if( indconshdlr != NULL )
             {
@@ -30727,7 +30716,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
       }
       while( !cutoff && targetdepth > divedepth && nextcand < ndivecands );
-
 
       assert(cutoff || nextcand == ndivecands || targetdepth == divedepth);
 
