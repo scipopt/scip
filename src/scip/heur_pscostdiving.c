@@ -254,6 +254,5 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
          DEFAULT_BACKTRACK, divesetGetScorePscostdiving) );
 
    return SCIP_OKAY;
-   return SCIP_OKAY;
 }
 

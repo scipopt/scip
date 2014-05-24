@@ -30568,6 +30568,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             SCIP_Real score;
             SCIP_Bool roundup;
 
+            assert( indcands != NULL && indcandssol != NULL && indcandsfrac != NULL );  /* for lint */
             SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, indcands[c], indcandssol[c], indcandsfrac[c], &score, &roundup) );
 
             /* new minimum found (or no variable has been found previously and score is infinity) */
@@ -30599,6 +30600,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          /* a next cand of -1 means that the best candidate was already selected prior to the loop */
          if( nextcand >= 0 )
          {
+            assert( divecands != NULL && divecandssol != NULL && candsroundup != NULL ); /* for lint */
             nextcandvar = divecands[nextcand];
             nextcandsol = divecandssol[nextcand];
             nextcandroundup = candsroundup[nextcand];

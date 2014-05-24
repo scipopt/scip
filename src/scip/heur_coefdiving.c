@@ -99,7 +99,7 @@ SCIP_DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPdivesetFree(&heurdata->diveset);
+   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
