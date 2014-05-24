@@ -9895,16 +9895,11 @@ SCIP_RETCODE tightenWeightsLift(
    memlimitreached = FALSE;
    for( i = 0; i < consdata->nvars && !memlimitreached; ++i )
    {
+      SCIP_CLIQUE** cliques;
       SCIP_VAR* var;
       SCIP_Longint weight;
       SCIP_Bool value;
       int varprobindex;
-#if 0
-      SCIP_VAR** implvars;
-      SCIP_BOUNDTYPE* impltypes;
-      int nimpls;
-#endif
-      SCIP_CLIQUE** cliques;
       int ncliques;
       int j;
 
@@ -9952,52 +9947,6 @@ SCIP_RETCODE tightenWeightsLift(
          tmpindices[tmp] = probindex;
          ++tmp;
       }
-
-#if 0
-      /* get implications of the knapsack item fixed to one: x == 1 -> y == (1-v);
-       * the negation of these implications (y == v -> x == 0) are the ones that we are interested in
-       */
-      nimpls = SCIPvarGetNBinImpls(var, value);
-      implvars = SCIPvarGetImplVars(var, value);
-      impltypes = SCIPvarGetImplTypes(var, value);
-
-      for( j = 0; j < nimpls && !memlimitreached; ++j )
-      {
-         int probindex;
-         SCIP_Bool implvalue;
-
-         assert(SCIPvarIsBinary(implvars[j]));
-         probindex = SCIPvarGetProbindex(implvars[j]);
-         assert(probindex < nbinvars);
-
-         /* this assert should hold, but if not there is a old continue later on */
-         assert(probindex >= 0);
-
-         /* consider only implications with active implvar */
-         if( probindex < 0 )
-            continue;
-
-         implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER); /* the negation of the implication */
-
-         /* insert the item into the list of the implied variable/value */
-         if( !zeroiteminserted[implvalue][probindex] )
-         {
-            if( firstidxs[implvalue][probindex] == 0 )
-            {
-               tmpboolindices2[tmp2] = implvalue;
-               tmpindices2[tmp2] = probindex;
-               ++tmp2;
-            }
-            SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
-                  &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
-                  &memlimitreached) );
-            zeroiteminserted[implvalue][probindex] = TRUE;
-            tmpboolindices[tmp] = implvalue;
-            tmpindices[tmp] = probindex;
-            ++tmp;
-         }
-      }
-#endif
 
       /* get the cliques where the knapsack item is member of with value 1 */
       ncliques = SCIPvarGetNCliques(var, value);

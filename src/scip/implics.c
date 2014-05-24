@@ -353,10 +353,6 @@ SCIP_DECL_SORTPTRCOMP(compVars)
 {  /*lint --e{715}*/
    SCIP_VAR* var1;
    SCIP_VAR* var2;
-#if 0
-   SCIP_VARTYPE var1type;
-   SCIP_VARTYPE var2type;
-#endif
    int var1idx;
    int var2idx;
 
@@ -364,10 +360,6 @@ SCIP_DECL_SORTPTRCOMP(compVars)
    var2 = (SCIP_VAR*)elem2;
    assert(var1 != NULL);
    assert(var2 != NULL);
-#if 0
-   var1type = SCIPvarGetType(var1);
-   var2type = SCIPvarGetType(var2);
-#endif
    var1idx = SCIPvarGetIndex(var1);
    var2idx = SCIPvarGetIndex(var2);
 
@@ -377,35 +369,6 @@ SCIP_DECL_SORTPTRCOMP(compVars)
       return +1;
    else
       return 0;
-
-#if 0
-   if( var1type == var2type )
-   {
-      if( var1idx < var2idx )
-         return -1;
-      else if( var1idx > var2idx )
-         return +1;
-      else
-         return 0;
-   }
-   else
-   {
-      if( var1type == SCIP_VARTYPE_BINARY )
-         return -1;
-      if( var2type == SCIP_VARTYPE_BINARY )
-         return +1;
-      else if( var1idx < var2idx )
-         return -1;
-      else if( var1idx > var2idx )
-         return +1;
-      else
-      {
-         SCIPABORT();
-         /*lint --e{527}*/
-         return 0;
-      }
-   }
-#endif
 }
 
 /** performs integrity check on implications data structure */
@@ -426,69 +389,16 @@ void checkImplics(
       SCIP_VAR** vars;
       SCIP_BOUNDTYPE* types;
       int nimpls;
-#if 0
-      SCIP_Real* bounds;
-      int nbinimpls;
-#endif
       int i;
 
       vars = implics->vars[varfixing];
       types = implics->types[varfixing];
       nimpls = implics->nimpls[varfixing];
-#if 0
-      bounds = implics->bounds[varfixing];
-      nbinimpls = implics->nbinimpls[varfixing];
 
-      assert(0 <= nbinimpls && nbinimpls <= nimpls && nimpls <= implics->size[varfixing]);
-      assert(nimpls == 0 || vars != NULL);
-      assert(nimpls == 0 || types != NULL);
-      assert(nimpls == 0 || bounds != NULL);
-
-      if( nbinimpls > 0 )
-      {
-         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
-          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
-          * SCIP_VARTYPE_BINARY) and second all others;
-          */
-         assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
-         assert((types[0] == SCIP_BOUNDTYPE_LOWER) == (bounds[0] > 0.5));
-         assert(SCIPsetIsFeasZero(set, bounds[0]) || SCIPsetIsFeasEQ(set, bounds[0], 1.0));
-      }
-
-      for( i = 1; i < nbinimpls; ++i )
-      {
-         int cmp;
-
-         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
-          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
-          * SCIP_VARTYPE_BINARY) and second all others;
-          */
-         assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
-         assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
-         assert(SCIPsetIsFeasZero(set, bounds[i]) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
-
-         cmp = compVars(vars[i-1], vars[i]);
-         assert(cmp <= 0);
-         assert((cmp == 0) == (vars[i-1] == vars[i]));
-         assert(cmp < 0 || (types[i-1] == SCIP_BOUNDTYPE_LOWER && types[i] == SCIP_BOUNDTYPE_UPPER));
-      }
-      for( i = nbinimpls; i < nimpls; ++i )
-#else
       assert(0 <= nimpls && nimpls <= implics->size[varfixing]);
-      for( i = 0; i < nimpls; ++i )
-#endif
+      for( i = 1; i < nimpls; ++i )
       {
          int cmp;
-
-#if 0
-         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
-          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
-          * SCIP_VARTYPE_BINARY) and second all others;
-          */
-         assert(SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY);
-#endif
-         if( i == 0 )
-            continue;
 
          cmp = compVars(vars[i-1], vars[i]);
          assert(cmp <= 0);
@@ -521,10 +431,6 @@ SCIP_RETCODE implicsCreate(
    (*implics)->ids[0] = NULL;
    (*implics)->size[0] = 0;
    (*implics)->nimpls[0] = 0;
-#if 0
-   (*implics)->nbinimpls[0] = 0;
-   (*implics)->nbinimpls[1] = 0;
-#endif
    (*implics)->vars[1] = NULL;
    (*implics)->types[1] = NULL;
    (*implics)->bounds[1] = NULL;
@@ -621,48 +527,16 @@ void implicsSearchVar(
    assert(posupper != NULL);
    assert(posadd != NULL);
 
-#if 0
-   /* set left and right pointer */
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+   if( implics->nimpls[varfixing] == 0 )
    {
-      /* check whether there are implications with binary variable y */
-      if( implics->nbinimpls[varfixing] == 0 )
-      {
-         /* there are no implications with binary variable y */
-         *posadd = 0;
-         *poslower = -1;
-         *posupper = -1;
-         return;
-      }      
-      left = 0;
-      right = implics->nbinimpls[varfixing] - 1;
+      /* there are no implications with non-binary variable y */
+      *posadd = 0;
+      *poslower = -1;
+      *posupper = -1;
+      return;
    }
-   else
-#endif
-   {
-#if 0
-      /* check whether there are implications with non-binary variable y */
-      if( implics->nimpls[varfixing] == implics->nbinimpls[varfixing] )
-#else
-      if( implics->nimpls[varfixing] == 0 )
-#endif
-      {
-         /* there are no implications with non-binary variable y */
-#if 0
-         *posadd = implics->nbinimpls[varfixing];
-#endif
-         *posadd = 0;
-         *poslower = -1;
-         *posupper = -1;
-         return;
-      }
-#if 0
-      left = implics->nbinimpls[varfixing];
-#else
-      left = 0;
-#endif
-      right = implics->nimpls[varfixing] - 1;
-   }
+   left = 0;
+   right = implics->nimpls[varfixing] - 1;
    assert(left <= right);
 
    /* search for the position in the sorted array (via binary search) */
@@ -782,11 +656,7 @@ SCIP_RETCODE SCIPimplicsAdd(
 #endif
 
    assert(implics != NULL);
-#if 0
-   assert(*implics == NULL || (*implics)->nbinimpls[varfixing] <= (*implics)->nimpls[varfixing]);
-#else
    assert(*implics == NULL || 0 <= (*implics)->nimpls[varfixing]);
-#endif
    assert(stat != NULL);
    assert(SCIPvarIsActive(implvar));
    assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE); 
@@ -884,10 +754,6 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
          (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
-#if 0
-         if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-            (*implics)->nbinimpls[varfixing]++;
-#endif
          (*implics)->nimpls[varfixing]++;
 #ifndef NDEBUG
          for( k = posadd-1; k >= 0; k-- )
@@ -959,10 +825,6 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
          (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
-#if 0
-         if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-            (*implics)->nbinimpls[varfixing]++;
-#endif
          (*implics)->nimpls[varfixing]++;
 #ifndef NDEBUG
          for( k = posadd-1; k >= 0; k-- )
@@ -1012,9 +874,6 @@ SCIP_RETCODE SCIPimplicsDel(
    assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower >= 0 && posadd == poslower) 
       || (impltype == SCIP_BOUNDTYPE_UPPER && posupper >= 0 && posadd == posupper));
    assert(0 <= posadd && posadd < (*implics)->nimpls[varfixing]);
-#if 0
-   assert((SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY) == (posadd < (*implics)->nbinimpls[varfixing]));
-#endif
    assert((*implics)->vars[varfixing][posadd] == implvar);
    assert((*implics)->types[varfixing][posadd] == impltype);
 
@@ -1028,14 +887,6 @@ SCIP_RETCODE SCIPimplicsDel(
       BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd]), &((*implics)->bounds[varfixing][posadd+1]), amount); /*lint !e866*/
    }
    (*implics)->nimpls[varfixing]--;
-
-#if 0
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-   {
-      assert(posadd < (*implics)->nbinimpls[varfixing]);
-      (*implics)->nbinimpls[varfixing]--;
-   }
-#endif
 
    /* free implics data structure, if it is empty */
    if( (*implics)->nimpls[0] == 0 && (*implics)->nimpls[1] == 0 )
@@ -1089,38 +940,6 @@ SCIP_Bool SCIPimplicsContainsImpl(
 /*
  * methods for cliques
  */
-
-#if 0
-/** creates a clique data structure */
-static
-SCIP_RETCODE cliqueCreate(
-   SCIP_CLIQUE**         clique,             /**< pointer to store clique data structure */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   size,               /**< initial size of clique */
-   int                   id                  /**< unique identifier of the clique */
-   )
-{
-   assert(clique != NULL);
-
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, clique) );
-   if( size > 0 )
-   {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*clique)->vars, size) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*clique)->values, size) );
-   }
-   else
-   {
-      (*clique)->vars = NULL;
-      (*clique)->values = NULL;
-   }
-   (*clique)->nvars = 0;
-   (*clique)->size = size;
-   (*clique)->id = (unsigned int)id;
-   (*clique)->eventsissued = FALSE;
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** creates a clique data structure with already created variables and values arrays in the size of 'size' */
 static
@@ -1430,15 +1249,6 @@ void SCIPcliqueDelVar(
 
    ++(clique->ncleanupvars);
    assert(clique->ncleanupvars <= clique->nvars);
-#if 0
-   /* remove entry from clique */
-   for( ; pos < clique->nvars-1; ++pos )
-   {
-      clique->vars[pos] = clique->vars[pos+1];
-      clique->values[pos] = clique->values[pos+1];
-   }
-   clique->nvars--;
-#endif
 }
 
 /** gets the position of the given clique in the cliques array; returns -1 if clique is not member of cliques array */
@@ -1618,10 +1428,7 @@ SCIP_RETCODE SCIPcliquelistAdd(
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
 
    BMSmoveMemoryArray(&((*cliquelist)->cliques[value][i+1]), &((*cliquelist)->cliques[value][i]), (*cliquelist)->ncliques[value] - i);
-#if 0
-   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i ) /*lint !e574*/
-      (*cliquelist)->cliques[value][i] = (*cliquelist)->cliques[value][i-1];
-#endif
+
    (*cliquelist)->cliques[value][i] = clique;
    (*cliquelist)->ncliques[value]++;
 
@@ -1806,23 +1613,6 @@ void SCIPcliquelistRemoveFromCliques(
                SCIPvarGetName(var), value, clique->id, clique->nvars);
 
             SCIPcliqueDelVar(clique, var, (SCIP_Bool)value);
-#if 0
-            int pos;
-
-            /* binary search the position of the variable in the clique */
-            pos = SCIPcliqueSearchVar(clique, var, (SCIP_Bool)value);
-            assert(0 <= pos && pos < clique->nvars);
-            assert(clique->vars[pos] == var);
-            assert(clique->values[pos] == (SCIP_Bool)value);
-
-            /* remove the entry from the clique */
-            if( clique->nvars - pos - 1 > 0 )
-            {
-               BMSmoveMemoryArray(&(clique->vars[pos]), &(clique->vars[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
-               BMSmoveMemoryArray(&(clique->values[pos]), &(clique->values[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
-            }
-            clique->nvars--;
-#endif
             cliqueCheck(clique);
          }
       }
@@ -2301,57 +2091,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CALL( mergeClique(clqvars, clqvalues, &nvars, &isequation, NULL, blkmem, set, stat, transprob, origprob, tree, lp,
          branchcand, eventqueue, &nlocalbdchgs, infeasible) );
 
-#if 0
-   /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
-    * new clique, and therefore the sortation before removing them should be ok, otherwise we may need to remove these
-    * variables before sorting
-    */
-   for( v = nvars - 1; v > 0; --v )
-   {
-      var = clqvars[v - 1];
-
-      /* only column and loose variables can exist now */
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-      assert(SCIPvarIsBinary(var));
-
-      /* do we have same variables at least twice? */
-      if( clqvars[v] == var )
-      {
-         /* do we have a pair of negated variables? */
-         if( clqvalues[v] != clqvalues[v - 1] )
-         {
-            /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
-
-            for( w = nvars - 1; w >= 0; --w )
-            {
-               if( clqvars[w] != var )
-               {
-                  SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                        eventqueue, !clqvalues[w], infeasible, &nlocalbdchgs) );
-
-                  if( *infeasible )
-                     break;
-               }
-            }
-
-            /* all variables are fixed so we can stop */
-            break;
-         }
-         /* do we have the same variable with the same clique value twice? */
-         else
-         {
-            /* a variable multiple times in one clique forces this variable to be zero */
-
-            SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                  !clqvalues[v], infeasible, &nlocalbdchgs) );
-
-            if( *infeasible )
-               break;
-         }
-      }
-   }
-#endif
    *nbdchgs += nlocalbdchgs;
 
    /* did we stop early do to a pair of negated variables? */
@@ -2362,49 +2101,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
       return SCIP_OKAY;
    }
-#if 0
-   else if( nlocalbdchgs > 0 )
-   {
-      /* infeasible should be handle before */
-      assert(!*infeasible);
-
-      /* we fixed a variable because it appears at least twice, now we need to remove the fixings */
-      /* @note that if we are in probing or solving stage, the fixation on the variable might not be carried out yet,
-       *       because it was contradicting a local bound
-       */
-
-      /* remove all inactive variables */
-      v = 0;
-      w = 0;
-      while( v < nvars )
-      {
-         var = clqvars[v];
-
-         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-            || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-            || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-
-         /* check that we have no variable fixed to one in the clique, these should already be handle before that */
-         assert(clqvalues[v] ? SCIPvarGetLbGlobal(var) < 0.5 : SCIPvarGetUbGlobal(var) > 0.5);
-
-         /* only remember active variables */
-         if( SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
-         {
-            /* we need to remove all fixed variables */
-            if( v > w  )
-            {
-               clqvars[w] = clqvars[v];
-               clqvalues[w] = clqvalues[v];
-            }
-
-            ++w;
-         }
-         ++v;
-      }
-
-      nvars = w;
-   }
-#endif
 
    /* if less than two variables are left over, the clique is redundant */
    if( nvars > 1 )
@@ -2728,8 +2424,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
-   SCIP_HASHTABLE* hashtable;
-   int hashtablesize;
    int i;
 
    assert(cliquetable != NULL);
@@ -2747,14 +2441,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
-#if 0
-   /* create hash table to test for multiple cliques */
-   hashtablesize = SCIPcalcHashtableSize(10*cliquetable->ncliques);
-   hashtablesize = MAX(hashtablesize, (set->misc_usesmalltables ? SCIP_HASHSIZE_CLIQUES_SMALL : SCIP_HASHSIZE_CLIQUES));
-   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
-         hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );
-#endif
-
    i = cliquetable->ncliques - 1;
    while( i >= 0 && !(*infeasible) )
    {
@@ -2763,15 +2449,14 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
       clique = cliquetable->cliques[i];
 
-#if 1
       if( clique->ncleanupvars == 0 )
       {
          --i;
          continue;
       }
 
+      /* remove not clean up clique from hastable */
       SCIP_CALL( SCIPhashtableRemove(cliquetable->hashtable, (void*)clique) );
-#endif
 
       SCIP_CALL( cliqueCleanup(clique, blkmem, set, stat, transprob, origprob, tree, lp,
                   branchcand, eventqueue, nchgbds, infeasible) );
@@ -2783,6 +2468,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
       if( clique->nvars == 2 && clique->equation && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING )
       {
+         //todo nvars == 2 && isequation remember! for aggregation
 #if 0
          SCIP_VAR* var0;
          SCIP_VAR* var1;
@@ -2846,42 +2532,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
          assert(aggregated || *infeasible);
 #endif
-         //todo nvars == 2 && isequation remember! for aggregation
-#if 0
-         /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
-         if( SCIPvarGetType(clique->vars[0]) == SCIP_VARTYPE_BINARY )
-         {
-            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
-                  branchcand, eventqueue,
-                  clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-                  (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
-         }
-	 else if( SCIPvarGetType(clique->vars[1]) == SCIP_VARTYPE_BINARY )
-         {
-            SCIP_CALL( SCIPvarAddImplic(clique->vars[1], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
-                  branchcand, eventqueue,
-                  clique->values[1], clique->vars[0], clique->values[0] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-                  (SCIP_Real)(!clique->values[0]), FALSE, infeasible, NULL) );
-         }
-         else
-         {
-            /* in case the variable are not of binary type we have to add the implication as variable bound */
-
-            assert(SCIPvarGetType(clique->vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(clique->vars[0]));
-
-            /* add variable upper or rather variable lower bound on vars[0] */
-            if( clique->values[0] )
-            {
-               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand, eventqueue,
-                     clique->vars[1], clique->values[1] ? -1.0 : 1.0, clique->values[1] ? 1.0 : 0.0, FALSE, infeasible, NULL) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand, eventqueue,
-                     clique->vars[1], clique->values[1] ? 1.0 : -1.0, clique->values[1] ? 0.0 : 1.0, FALSE, infeasible, NULL) );
-            }
-         }
-#endif
       }
 
       sameclique = SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
@@ -2939,11 +2589,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       --i;
    }
 
-#if 0
-   /* free hash table */
-   SCIPhashtableFree(&hashtable);
-#endif
-
    /* remember the number of fixed variables and cliques in order to avoid unnecessary cleanups */
    cliquetable->ncleanupfixedvars = stat->npresolfixedvars;
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
@@ -2971,9 +2616,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 #undef SCIPvboundsGetCoefs
 #undef SCIPvboundsGetConstants
 #undef SCIPimplicsGetNImpls
-#if 0
-#undef SCIPimplicsGetNBinImpls
-#endif
 #undef SCIPimplicsGetVars
 #undef SCIPimplicsGetTypes
 #undef SCIPimplicsGetBounds
@@ -3030,17 +2672,6 @@ int SCIPimplicsGetNImpls(
 {
    return implics != NULL ? implics->nimpls[varfixing] : 0;
 }
-
-#if 0
-/** gets number of implications on binary variables for a given binary variable fixing */
-int SCIPimplicsGetNBinImpls(
-   SCIP_IMPLICS*         implics,            /**< implication data */
-   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
-   )
-{
-   return implics != NULL ? implics->nbinimpls[varfixing] : 0;
-}
-#endif
 
 /** gets array with implied variables for a given binary variable fixing */
 SCIP_VAR** SCIPimplicsGetVars(

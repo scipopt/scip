@@ -192,15 +192,6 @@ int SCIPimplicsGetNImpls(
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    );
 
-#if 0
-/** gets number of implications on binary variables for a given binary variable fixing */
-extern
-int SCIPimplicsGetNBinImpls(
-   SCIP_IMPLICS*         implics,            /**< implication data */
-   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
-   );
-#endif
-
 /** gets array with implied variables for a given binary variable fixing */
 extern
 SCIP_VAR** SCIPimplicsGetVars(

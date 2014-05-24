@@ -827,7 +827,6 @@ SCIP_RETCODE collectMinactImplicVars(
    SCIP_CLIQUE* clique;
    SCIP_VAR** vars;
    SCIP_VAR* implvar;
-   SCIP_BOUNDTYPE* boundtypes;
    SCIP_Bool* values;
    SCIP_Bool varfixing;
    int nbinvars;
@@ -915,23 +914,7 @@ SCIP_RETCODE collectMinactImplicVars(
          SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
       }
    }
-#if 0
-   /* collect implications */
-   vars = SCIPvarGetImplVars(var, varfixing);
-   nbinvars = SCIPvarGetNBinImpls(var, varfixing);
-   boundtypes = SCIPvarGetImplTypes(var, varfixing);
 
-   /* loop over all implications */
-   for( v = 0; v < nbinvars; ++v )
-   {
-      assert(vars[v] != NULL);
-
-      if( boundtypes[v] == SCIPvarGetBestBoundType(vars[v]) )
-      {
-         (*objchg) += collectMinactImplicVar(scip, vars[v], binobjvarmap, collectedvars, nbinobjvars, contributors, ncontributors);
-      }
-   }
-#endif
    return SCIP_OKAY;
 }
 
@@ -1225,10 +1208,6 @@ SCIP_RETCODE collectMinactVar(
    SCIP_Real lbobjchg;
    SCIP_Real ubobjchg;
    SCIP_Real objval;
-#if 0
-   int nlbimplics;
-   int nubimplics;
-#endif
    int nlbcliques;
    int nubcliques;
 
@@ -1242,18 +1221,10 @@ SCIP_RETCODE collectMinactVar(
    else
       (*collect) = TRUE;
 
-#if 0
-   nlbimplics = SCIPvarGetNBinImpls(var, FALSE);
-   nubimplics = SCIPvarGetNBinImpls(var, TRUE);
-#endif
-
    nlbcliques = SCIPvarGetNCliques(var,  FALSE);
    nubcliques = SCIPvarGetNCliques(var,  TRUE);
 
    /* check if implications should be used and if implications are existing */
-#if 0
-   if( useimplics && nlbimplics + nubimplics + nlbcliques + nubcliques > 0 )
-#endif
    if( useimplics && nlbcliques + nubcliques > 0 )
    {
       int nlbcontributors;
@@ -1268,9 +1239,6 @@ SCIP_RETCODE collectMinactVar(
       assert(!SCIPisNegative(scip, lbobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
-#if 0
-         SCIP_BOUNDTYPE_LOWER, SCIPvarGetNBinImpls(var, (SCIP_Bool)SCIP_BOUNDTYPE_LOWER), nlbcontributors);
-#endif
          SCIP_BOUNDTYPE_LOWER, 0, nlbcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
@@ -1291,9 +1259,6 @@ SCIP_RETCODE collectMinactVar(
       assert(!SCIPisNegative(scip, ubobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
-#if 0
-         SCIP_BOUNDTYPE_UPPER, SCIPvarGetNBinImpls(var, (SCIP_Bool)SCIP_BOUNDTYPE_UPPER), nubcontributors);
-#endif
          SCIP_BOUNDTYPE_UPPER, 0, nubcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since

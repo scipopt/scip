@@ -19810,81 +19810,7 @@ SCIP_RETCODE SCIPaddClique(
    if( nbdchgs != NULL )
       *nbdchgs = 0;
 
-#if 0
-   if( nvars == 2 )
-   {
-      SCIP_Bool val0;
-      SCIP_Bool val1;
-
-      assert(vars != NULL);
-      if( values == NULL )
-      {
-         val0 = TRUE;
-         val1 = TRUE;
-      }
-      else
-      {
-         val0 = values[0];
-         val1 = values[1];
-      }
-
-      /* add the implications instead of the clique */
-      if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY )
-      {
-         /* this function call adds the implication form vars[0] to vars[1] as well as the implication from vars[1] to
-          * vars[0] if vars[1] in of binary type
-          */
-         SCIP_CALL( SCIPvarAddImplic(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, val0, vars[1],
-               val1 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
-      }
-      else if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_BINARY )
-      {
-         /* this function call adds the implication form vars[1] to vars[0] */
-         SCIP_CALL( SCIPvarAddImplic(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, val1, vars[0],
-               val0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
-      }
-      /* in case one both variables are not of binary type we have to add the implication as variable bounds */
-      else
-      {
-         /* both variables are not of binary type but are implicit binary; in that case we can only add this
-          * implication as variable bounds
-          */
-         assert(SCIPvarGetType(vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(vars[0]));
-         assert(SCIPvarGetType(vars[1]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(vars[1]));
-
-         /* add variable upper or rather variable lower bound on vars[0] */
-         if( val0 )
-         {
-            SCIP_CALL( SCIPvarAddVub(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[1],
-                  val1 ? -1.0 : 1.0, val1 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPvarAddVlb(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[1],
-                  val1 ? 1.0 : -1.0, val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
-         }
-
-         /* add variable upper or rather variable lower bound on vars[1] */
-         if( val1 )
-         {
-            SCIP_CALL( SCIPvarAddVub(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[0],
-                  val0 ? -1.0 : 1.0, val0 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPvarAddVlb(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[0],
-                  val0 ? 1.0 : -1.0, val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
-         }
-      }
-   }
-   else if( nvars >= 3 )
-#endif
+   if( nvars > 1 )
    {
       /* add the clique to the clique table */
       SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
@@ -19992,9 +19918,6 @@ SCIP_RETCODE SCIPcalcCliquePartition(
          ncliquevars = 1;
 
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-#if 0
-         if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) + SCIPvarGetNBinImpls(tmpvars[i], tmpvalues[i]) > 0 )
-#endif
          if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) > 0 )
          {
             /* greedily fill up the clique */
@@ -20243,14 +20166,6 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP_VAR** clqvars;
    SCIP_VAR** allvars;
    SCIP_Bool* clqvalues;
-#if 0
-   SCIP_VAR* var;
-   SCIP_BOUNDTYPE* impltypes;
-   int nbinimpls;
-   int start;
-   int end;
-   int a;
-#endif
    char nodename[SCIP_MAXSTRLEN];
    int nallvars;
    int nbinvars;
@@ -20278,7 +20193,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    ncliques = SCIPgetNCliques(scip);
 
    /* no cliques and do not wont to check for binary implications */
-   if( ncliques == 0 && !writeimplications )
+   if( ncliques == 0 )
       return SCIP_OKAY;
 
    /* open gml file */
@@ -20363,87 +20278,6 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
       }
    }
 
-#if 0
-   if( writeimplications )
-   {
-      int d;
-
-      /* write binary implications, new nodes and all arcs */
-      for( a = 0; a < 2; ++a )
-      {
-	 start = (a == 0 ? 0 : nbinvars + nintvars);
-	 end = (a == 0 ? nbinvars : nbinvars + nintvars + nimplvars);
-
-	 /* write arcs for implication on pure binary variables */
-	 for( v1 = start; v1 < end; ++v1 )
-	 {
-	    var = allvars[v1];
-	    assert((v1 < nbinvars) ? SCIPvarGetType(var) == SCIP_VARTYPE_BINARY : SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-
-	    for( d = 1; d >= 0; --d )
-	    {
-	       impltypes = SCIPvarGetImplTypes(var, (SCIP_Bool)d);
-	       clqvars = SCIPvarGetImplVars(var, (SCIP_Bool)d);
-	       id1 = (d == 1) ? SCIPvarGetProbindex(var) : (nallvars + SCIPvarGetProbindex(var));
-
-	       nbinimpls = SCIPvarGetNBinImpls(var, (SCIP_Bool)d);
-	       if( nbinimpls == 0 )
-		  continue;
-
-	       /* if corresponding node was not added yet, add it */
-	       if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
-	       {
-                  assert(id1 >= 0);
-		  SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1) );
-
-		  (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(var));
-
-		  /* write new gml node for new variable */
-                  if ( writenodeweights )
-                  {
-                     if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
-                        SCIPgmlWriteNodeWeight(gmlfile, (unsigned int)id1, nodename, NULL, NULL, NULL, SCIPgetSolVal(scip, NULL, var));
-                  }
-                  else
-                  {
-                     SCIPgmlWriteNode(gmlfile, (unsigned int)id1, nodename, NULL, NULL, NULL);
-                  }
-	       }
-
-	       /* write arcs for all cliques */
-	       for( v2 = nbinimpls - 1; v2 >= 0; --v2 )
-	       {
-		  id2 = (impltypes[v2] == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
-
-		  /* if corresponding node was not added yet, add it */
-		  if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
-		  {
-                     assert(id2 >= 0);
-		     SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1) );
-
-		     (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
-
-		     /* write new gml node for new variable */
-                     if ( writenodeweights )
-                     {
-                        if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) )
-                           SCIPgmlWriteNodeWeight(gmlfile, (unsigned int)id2, nodename, NULL, NULL, NULL, SCIPgetSolVal(scip, NULL, clqvars[v2]));
-                     }
-                     else
-                     {
-                        SCIPgmlWriteNode(gmlfile, (unsigned int)id2, nodename, NULL, NULL, NULL);
-                     }
-		  }
-
-		  /* write gml arc between resultant and operand */
-                  if ( ! writenodeweights || ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) &&  ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) ) )
-                     SCIPgmlWriteArc(gmlfile, (unsigned int)id1, (unsigned int)id2, NULL, NULL);
-	       }
-	    }
-	 }
-      }
-   }
-#endif
    /* free the hash map */
    SCIPhashmapFree(&nodehashmap);
 

@@ -1902,18 +1902,12 @@ SCIP_RETCODE detectImpliedBounds(
          {
             assert(SCIPsetIsZero(set, bounds[v]));
             bounds[v] = 1.0;
-#if 0
-            nbinimpls[v] = SCIPvarGetNBinImpls(var, TRUE) + (SCIP_Longint)SCIPvarGetNCliques(var, TRUE) * 2;
-#endif
             nbinimpls[v] = (SCIP_Longint)SCIPvarGetNCliques(var, TRUE) * 2;
          }
          else
          {
             assert(SCIPsetIsEQ(set, bounds[v], 1.0));
             bounds[v] = 0.0;
-#if 0
-            nbinimpls[v] = SCIPvarGetNBinImpls(var, FALSE) + (SCIP_Longint)SCIPvarGetNCliques(var, FALSE) * 2;
-#endif
             nbinimpls[v] = (SCIP_Longint)SCIPvarGetNCliques(var, FALSE) * 2;
          }
       }

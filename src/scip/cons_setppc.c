@@ -1895,21 +1895,11 @@ SCIP_RETCODE applyFixings(
             /* check, if the variable should be replaced with the representative */
             if( repvar != var )
             {
-#if 0
-#ifndef NDEBUG
-               int oldnfixedzeros = consdata->nfixedzeros;
-               int oldnfixedones = consdata->nfixedones;
-#endif
-#endif
                /* delete old (aggregated) variable */
                SCIP_CALL( delCoefPos(scip, cons, v) );
 
                /* add representative instead */
                SCIP_CALL( addCoef(scip, cons, repvar) );
-#if 0 /* if variable 'var' was multiaggregated to repvar, than repvar could have been fixed already */
-               assert(consdata->nfixedzeros == oldnfixedzeros);
-               assert(consdata->nfixedones == oldnfixedones);
-#endif
             }
             else
                ++v;

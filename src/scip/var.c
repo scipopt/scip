@@ -1561,53 +1561,15 @@ SCIP_RETCODE varRemoveImplicsVbs(
       varfixing = FALSE;
       do
       {
-         int nimpls;
-#if 0
-         int nbinimpls;
-#endif
          SCIP_VAR** implvars;
          SCIP_BOUNDTYPE* impltypes;
+         int nimpls;
          int i;
 
          nimpls = SCIPimplicsGetNImpls(var->implics, varfixing);
-#if 0
-         nbinimpls = SCIPimplicsGetNBinImpls(var->implics, varfixing);
-#endif
          implvars = SCIPimplicsGetVars(var->implics, varfixing);
          impltypes = SCIPimplicsGetTypes(var->implics, varfixing);
 
-#if 0
-         /* process the implications on binary variables */
-         for( i = 0; i < nbinimpls; i++ )
-         {
-            SCIP_VAR* implvar;
-            SCIP_BOUNDTYPE impltype;
-
-            implvar = implvars[i];
-            impltype = impltypes[i];
-            assert(implvar != var);
-            assert(SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY);
-
-            /* remove for all implications z == 0 / 1  ==>  x <= 0 / x >= 1 (x binary)
-             * the following implication from x's implications 
-             *   x == 1  ==>  z <= 0            , for z == 1  ==>  x <= 0
-             *   x == 0  ==>  z <= 0            , for z == 1  ==>  x >= 1
-             *
-             *   x == 1  ==>  z >= 1            , for z == 0  ==>  x <= 0
-             *   x == 0  ==>  z >= 1            , for z == 0  ==>  x >= 1
-             */
-            if( implvar->implics != NULL ) /* implvar may have been aggregated in the mean time */
-            {
-               SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> %s\n", 
-                  SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER),
-                  SCIPvarGetName(var), varfixing ? "<= 0 " : ">= 1");
-               SCIP_CALL( SCIPimplicsDel(&implvar->implics, blkmem, set, (impltype == SCIP_BOUNDTYPE_UPPER), var, 
-                     varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
-            }
-         }
-         /* process the implications on non-binary variables */
-         for( i = nbinimpls; i < nimpls; i++ )
-#endif
          for( i = 0; i < nimpls; i++ )
          {
             SCIP_VAR* implvar;
@@ -1616,9 +1578,6 @@ SCIP_RETCODE varRemoveImplicsVbs(
             implvar = implvars[i];
             impltype = impltypes[i];
             assert(implvar != var);
-#if 0
-            assert(SCIPvarGetType(implvar) != SCIP_VARTYPE_BINARY);
-#endif
 
             /* remove for all implications z == 0 / 1  ==>  x <= p / x >= p (x not binary)
              * the following variable bound from x's variable bounds 
@@ -4610,25 +4569,6 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarIsBinary(var) )
    {
       SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-#if 0
-      if( var->cliquelist != NULL && SCIPvarIsBinary(aggvar) )
-      {
-         for( i = 0; i < 2; ++i )
-         {
-            SCIP_CLIQUE** cliques;
-            int ncliques;
-
-            ncliques = SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i);
-            cliques = SCIPcliquelistGetCliques(var->cliquelist, (SCIP_Bool)i);
-            for( j = 0; j < ncliques && !(*infeasible); ++j )
-            {
-               SCIP_CALL( SCIPvarAddClique(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                     (SCIP_Bool)i, cliques[j], infeasible, NULL) );
-               assert(ncliques == SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i));
-            }
-         }
-      }
-#endif
       SCIPcliquelistFree(&var->cliquelist, blkmem);
    }
    assert(var->cliquelist == NULL);
@@ -10727,9 +10667,6 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
 {
    assert(var != NULL);
    assert(SCIPvarIsBinary(var));
-#if 0
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-#endif
 
    /* delete clique from variable's clique list */
    SCIP_CALL( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
@@ -15719,9 +15656,6 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetVubCoefs
 #undef SCIPvarGetVubConstants
 #undef SCIPvarGetNImpls
-#if 0
-#undef SCIPvarGetNBinImpls
-#endif
 #undef SCIPvarGetImplVars
 #undef SCIPvarGetImplTypes
 #undef SCIPvarGetImplBounds
@@ -16734,22 +16668,6 @@ int SCIPvarGetNImpls(
    return SCIPimplicsGetNImpls(var->implics, varfixing);
 }
 
-#if 0
-/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
- *  there are no implications for nonbinary variable x
- */
-int SCIPvarGetNBinImpls(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarIsActive(var));
-
-   return SCIPimplicsGetNBinImpls(var->implics, varfixing);
-}
-#endif
-
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
  *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
@@ -16819,7 +16737,7 @@ int SCIPvarGetNCliques(
    )
 {
    assert(var != NULL);
-#if 0
+#if 0 //???
    assert(SCIPvarIsActive(var));
 #endif
 
@@ -16833,7 +16751,7 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    )
 {
    assert(var != NULL);
-#if 0
+#if 0 //???
    assert(SCIPvarIsActive(var));
 #endif
 
