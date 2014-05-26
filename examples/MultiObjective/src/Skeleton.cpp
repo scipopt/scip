@@ -89,36 +89,72 @@ bool Skeleton::checkSolution(
    {
       /* cost_vector is a nondominated point if and only if it has a better weighted objective value
        * than all previous nondominated points with respect to the weight it optimizes */
-      result = makesObsolete(cost_vector, vertex_map_[last_node_]);
+      std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_vector);
+      facet->push_back(-1.);
+      result = makesObsolete(facet, vertex_map_[last_node_]);
       if(result)
       {
-         addFacet(cost_vector);
+         addFacet(facet);
       }
       else
       {
          n_new_vertices_ = 0;
          n_proc_vertices_ = 1;
+         delete facet;
       }
    }
+
    return result;
 }
+
+/** adds a weight space constraint after finding a primal ray with unbounded weighted objective */
+void Skeleton::addPrimalRay(
+   const std::vector<SCIP_Real>*     cost_ray       /**< cost vector of the unbounded primal ray */
+   )
+{
+   std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_ray);
+   facet->push_back(0.);
+   addFacet(facet);
+}
+
 
 /** init the polyhedron with the first solution */
 void Skeleton::init(
    const std::vector<SCIP_Real>*        first_nondom_point  /**< non dominated point defining the first facet */ 
    )
 {
-   int                        nobjs;
+   int                        nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
    WeightSpaceVertex*         vertex;
    lemon::ListGraph::Node     node;
 
+   std::vector<SCIP_Real>*    facet;
+   std::vector<SCIP_Real>*    weight;
+
+   /* create initial facets */
+   for( int i = 0; i < nobjs; ++i )
+   {
+      facet = new std::vector<SCIP_Real>(nobjs + 1, 0.);
+      (*facet)[i] = 1.;
+      facets_.push_back(facet);
+   }
+
+   std::vector< const std::vector<SCIP_Real>* > defining_facets(facets_);
+
+   facet = new std::vector<SCIP_Real>(*first_nondom_point);
+   facet->push_back(-1.);
+   facets_.push_back(facet);
+
    new_vertices_ = new std::vector<WeightSpaceVertex*>();
-   nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
 
    /* create a node and vertex for every corner of the weight space and a complete graph between them */
    for( int i = 0; i < nobjs; i++ )
    {
-      vertex = new WeightSpaceVertex(nobjs, first_nondom_point, i);
+      weight = new std::vector<SCIP_Real>(nobjs, 0.);
+      (*weight)[i] = 1.;
+      defining_facets[i] = facet;
+      vertex = new WeightSpaceVertex(defining_facets, weight, (*first_nondom_point)[i]);
+      defining_facets[i] = facets_[i];
+
       node = addNode(vertex);
 
       for( std::vector<WeightSpaceVertex*>::iterator it = new_vertices_->begin();
@@ -137,55 +173,39 @@ void Skeleton::init(
    delete new_vertices_;
 }
 
-/** weather the new solution makes a given point obsolete */
+/** wether the new facet makes a given point obsolete */
 bool Skeleton::makesObsolete(
-   const std::vector<SCIP_Real>*        cost_vector,        /**< cost vector of a solution */
+   const std::vector<SCIP_Real>*        facet,              /**< facet coefficient vector */
    const WeightSpaceVertex*             vertex              /**< vertex that might be obsolete */ 
    )
 {
-   SCIP_Real                       weighted_objective_value;
-   const std::vector<SCIP_Real>*   weight;
-
-   assert(cost_vector != NULL);
+   assert(facet != NULL);
    assert(vertex != NULL);
 
-   weighted_objective_value = 0.;
-   weight = vertex->getWeight();
+   int                           nobjs  = SCIPgetProbData(scip_)->objectives->getNObjs();
+   SCIP_Real                     slack  = (*facet)[nobjs] * vertex->getWeightedObjectiveValue();
+   const std::vector<SCIP_Real>* weight = vertex->getWeight();
 
    /* calculate the weighted objective value of cost_vector */
-   for( unsigned int j = 0; j < cost_vector->size(); j++ )
+   for( int j = 0; j < nobjs; j++ )
    {
-      weighted_objective_value += (*weight)[j] * cost_vector->at(j);
+      slack += (*weight)[j] * (*facet)[j];
    }
 
    /* compare weighted objective values */
-   if( SCIPgetObjsense(scip_) == SCIP_OBJSENSE_MAXIMIZE )
-   {
-      return SCIPisGT(
-         scip_,
-         weighted_objective_value,
-         vertex->getWeightedObjectiveValue()
-         );
-   }
-   else
-   {
-      return SCIPisLT(
-         scip_,
-         weighted_objective_value,
-         vertex->getWeightedObjectiveValue()
-         );
-   }
+   return (bool)SCIPisLT(scip_, slack, 0);
 }
 
 /** updates the polyhedron with the new solution */
 void Skeleton::addFacet(
-   const std::vector<SCIP_Real>*        nondom_point        /**< new nondominated cost vector */
+   const std::vector<SCIP_Real>*        facet        /**< new nondominated cost vector */
    )
 {
    lemon::ListGraph::Node     obs_node;
 
-   new_nondom_point_ = nondom_point;
-   new_vertices_     = new std::vector<WeightSpaceVertex*>();
+   new_facet_        = facet;
+   facets_.push_back(facet);
+
    unscanned_nodes_  = new std::queue<lemon::ListGraph::Node>();
    obsolete_nodes_   = new std::set<lemon::ListGraph::Node>();
    cut_edges_        = new std::vector<lemon::ListGraph::Edge>();
@@ -198,19 +218,32 @@ void Skeleton::addFacet(
    {
       obs_node = unscanned_nodes_->front();
       unscanned_nodes_->pop();
-      processObsoleteNode( obs_node);
+      scanNode(obs_node);
    }
 
-   updateGraph();
+   createNewVertices();
+   createNewEdges();
 
+   /* delete obsolete vertices */
+   for( std::set<lemon::ListGraph::Node>::iterator it = obsolete_nodes_->begin();
+        it != obsolete_nodes_->end();
+        ++it )
+   {
+      graph_.erase(*it);
+   }
+
+   n_proc_vertices_ = obsolete_nodes_->size();
+   n_new_vertices_ = new_vertices_->size();
+
+   delete new_vertices_;
    delete cut_edges_;
    delete obsolete_nodes_;
    delete unscanned_nodes_;
-   delete new_vertices_;
-}
+
+   assert(graphIsValid());}
 
 /** tests all the neighbours of an obsolete node for obsolecity and then removes the node */
-void Skeleton::processObsoleteNode(
+void Skeleton::scanNode(
    lemon::ListGraph::Node               obs_node            /**< a skeleton node marked as obsolete */
    )
 {
@@ -226,7 +259,7 @@ void Skeleton::processObsoleteNode(
       if( obsolete_nodes_->find(neighbour) == obsolete_nodes_->end() )
       {
          /* neighbour is not yet marked as obsolete */
-         if( makesObsolete(new_nondom_point_, adjacent_vertex) )
+         if( makesObsolete(new_facet_, adjacent_vertex) )
          {
             /* neighbour is obsolete, add it to the queue */
             obsolete_nodes_->insert(neighbour);
@@ -242,12 +275,12 @@ void Skeleton::processObsoleteNode(
    }
 }
 
-void Skeleton::updateGraph()
+/** calculate new vertices from obsolete vertices and add them to the graph */
+void Skeleton::createNewVertices()
 {
    WeightSpaceVertex*    obsolete_vertex;
 
-   n_proc_vertices_ = obsolete_nodes_->size();
-   n_new_vertices_ = cut_edges_->size();
+   new_vertices_     = new std::vector<WeightSpaceVertex*>();
 
    for( std::vector<lemon::ListGraph::Edge>::iterator it = cut_edges_->begin();
         it != cut_edges_->end();
@@ -265,9 +298,24 @@ void Skeleton::updateGraph()
       {
          updateCorner(obsolete_vertex);
       }
-      graph_.erase(*it);
    }
-   assert(graphIsValid());
+}
+
+/** calculate and add edges between all pairs of combinatorially adjacent new vertices */ 
+void Skeleton::createNewEdges()
+{
+   for( std::vector<WeightSpaceVertex*>::iterator qit = new_vertices_->begin();
+        qit < new_vertices_->end(); ++qit )
+   {
+      for( std::vector<WeightSpaceVertex*>::iterator pit = new_vertices_->begin();
+           pit < qit; ++pit )
+      {
+         if( (**pit).isNeighbour(*qit) )
+         {
+            graph_.addEdge((**pit).getNode(), (**qit).getNode());
+         }
+      }
+   }
 }
 
 /** creates a new node between an obsolete and a non obsolete node */
@@ -300,20 +348,11 @@ void Skeleton::makeIntermediaryPoint(
    new_vertex = new WeightSpaceVertex(
       obsolete_vertex,
       adjacent_vertex,
-      new_nondom_point_);
+      new_facet_);
    vertices_.push_back(new_vertex);
    new_node = addNode(new_vertex);
    graph_.addEdge(new_node, adjacent_node);
 
-   /* add a graph edge for all pairs of combinatorially adjacent new vertices */
-   for( std::vector<WeightSpaceVertex*>::iterator pit = new_vertices_->begin();
-        pit < new_vertices_->end(); ++pit )
-   {
-      if( (**pit).isNeighbour(new_vertex) )
-      {
-         graph_.addEdge((**pit).getNode(), new_node);
-      }
-   }
    new_vertices_->push_back(new_vertex);
 }
 
@@ -323,50 +362,33 @@ void Skeleton::updateCorner(
    )
 {
    lemon::ListGraph::Node new_node;
-   WeightSpaceVertex*  adjacent_vertex;
 
-   bool is_tested_node_ = (obsolete_vertex->getNode() == last_node_);
-   new_node = graph_.addNode();
+   bool untested = (obsolete_vertex->getNode() != last_node_);
+   new_node = addNode(obsolete_vertex, untested);
 
-   /* marry node and vertex */
-   obsolete_vertex->setNode(new_node);
-   vertex_map_[new_node] = obsolete_vertex;
+   obsolete_vertex->updateFacet(new_facet_);
 
-   obsolete_vertex->updateNondomPoint(new_nondom_point_);
-
-   /* insert new edges */
-   for( std::vector<WeightSpaceVertex*>::iterator pit = new_vertices_->begin();
-        pit < new_vertices_->end();
-        ++pit )
-   {
-      adjacent_vertex = *pit;
-      if( adjacent_vertex->isNeighbour(obsolete_vertex) )
-      {
-         graph_.addEdge(adjacent_vertex->getNode(), obsolete_vertex->getNode());
-      }
-   }
    /* mark updated corner as new vertex */
    new_vertices_->push_back(obsolete_vertex);
-   if( !is_tested_node_ )
-   {
-      untested_nodes_.insert(new_node);
-      ++n_new_vertices_;
-   }
 }
 
 /** adds a graph node corresponding to new_vertex */
 lemon::ListGraph::Node Skeleton::addNode(
-   WeightSpaceVertex*    new_vertex          /**< new vertex not yet represented in the graph */
+   WeightSpaceVertex*    new_vertex,         /**< new vertex not yet represented in the graph */
+   bool                  mark_untested       /**< set true if weight should be tested at some point */
    )
 {
    lemon::ListGraph::Node result;
 
    result = graph_.addNode();
-   untested_nodes_.insert(result);
-
    /* marry node and vertex */
    new_vertex->setNode(result);
    vertex_map_[result] = new_vertex;
+
+   if( mark_untested )
+   {
+      untested_nodes_.insert(result);
+   }
 
    return result;
 }
