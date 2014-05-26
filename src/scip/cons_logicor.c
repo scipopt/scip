@@ -714,6 +714,8 @@ SCIP_RETCODE dualPresolving(
       }
    }
 
+   nvars = consdata->nvars;
+
    /* check if we have a single variable dominated by another */
    if( nfixables == 1 && idxnouplocks >= 0 )
    {
