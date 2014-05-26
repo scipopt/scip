@@ -2052,13 +2052,13 @@ SCIP_RETCODE preprocessConstraintPairs(
                if ( SCIPisPositive(scip, consdata1->vbdcoef) )
                {
                   if ( ! SCIPisInfinity(scip, lhs) )
-                     bnd = (consdata1->lhs - consdata1->vbdcoef * lhs)/scalar;
+                     bnd = (consdata1->rhs - consdata1->vbdcoef * lhs)/scalar;
                }
                else
                {
                   assert( SCIPisNegative(scip, consdata1->vbdcoef) );
                   if ( ! SCIPisInfinity(scip, rhs) )
-                     bnd = (consdata1->lhs - consdata1->vbdcoef * rhs)/scalar;
+                     bnd = (consdata1->rhs - consdata1->vbdcoef * rhs)/scalar;
                }
 
                if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/

@@ -20,6 +20,7 @@ fixed bugs:
 - allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
 - fixed bug, variable bounds detected wrong infeasibility
 - another bug fix when computing the original variable sum of a given variable in SCIPvarGetOrigvarSum()
+- fixed bug in cons_varbound.c using the wrong constraint side for updating an upper bound
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
