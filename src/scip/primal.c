@@ -215,8 +215,10 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
 
          if( objval < SCIPprobGetObjlim(origprob, set) )
          {
-            SCIPdebugMessage("changing cutoff bound from %g to %g changes objective limit from %g to %g\n", primal->cutoffbound, cutoffbound, SCIPprobGetObjlim(origprob, set), objval);
+            SCIPdebugMessage("changing cutoff bound from %g to %g changes objective limit from %g to %g\n",
+               primal->cutoffbound, cutoffbound, SCIPprobGetObjlim(origprob, set), objval);
             SCIPprobSetObjlim(origprob, objval);
+            SCIPprobSetObjlim(transprob, objval);
          }
       }
 
