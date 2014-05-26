@@ -3275,7 +3275,7 @@ SCIP_RETCODE presolveTryAddAND(
 }
 
 /** gets bounds of variable y if x takes a certain value
- * checks whether x = xval has implications on y
+ *  checks whether x = xval has implications on y
  */
 static
 void getImpliedBounds(
@@ -3319,6 +3319,8 @@ void getImpliedBounds(
       if( !SCIPsortedvecFindPtr((void**)implvars, SCIPvarComp, (void*)y, nimpls, &pos) )
          return;
    }
+   else
+      return;
 
    /* if there are several implications on y, go to the first one */
    while( pos > 0 && implvars[pos-1] == y )
