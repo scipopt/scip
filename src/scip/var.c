@@ -8943,6 +8943,7 @@ SCIP_RETCODE varAddImplic(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -9016,14 +9017,14 @@ SCIP_RETCODE varAddImplic(
    {
       assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
-#if 0 //todo
+#if 1 //todo
       if( SCIPvarIsBinary(implvar) )
       {
          SCIP_VAR* vars[2];
          SCIP_Bool vals[2];
 
-         assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
-         assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
+         assert(SCIPsetIsFeasEQ(set, implbound, 1.0) || SCIPsetIsFeasZero(set, implbound));
+         assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPsetIsFeasZero(set, implbound));
 
          vars[0] = var;
          vars[1] = implvar;
@@ -9031,9 +9032,11 @@ SCIP_RETCODE varAddImplic(
          vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
 
          /* add the clique to the clique table */
-         SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPcliquetableAdd(cliquetable, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+               eventqueue, vars, vals, 2, FALSE, &conflict, nbdchgs) );
 
-         return SCIP_OKAY;
+         if( !conflict )
+            return SCIP_OKAY;
       }
       else
 #endif
@@ -9228,6 +9231,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -9252,16 +9256,18 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
 
    /* if variable has too many implications, the implication graph may become too dense */
+#if 0
    if( nimpls > MAXIMPLSCLOSURE )
       return SCIP_OKAY;
-
+#else
+   i = MIN(nimpls, MAXIMPLSCLOSURE) - 1;
+#endif
    /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
     * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
     * array over which we currently iterate; the only thing that can happen, is that elements of the array are
     * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
     * only thing that can happen is that we add the same implication twice - this does no harm
     */
-   i = nimpls-1;
    while ( i >= 0 && !(*infeasible) )
    {
       SCIP_Bool added;
@@ -9273,8 +9279,8 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
        */
       if( SCIPvarIsActive(implvars[i]) )
       {
-         SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               varfixing, implvars[i], impltypes[i], implbounds[i], TRUE, infeasible, nbdchgs, &added) );
+         SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand,
+               eventqueue, varfixing, implvars[i], impltypes[i], implbounds[i], TRUE, infeasible, nbdchgs, &added) );
          assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
          i = MIN(i, nimpls); /* some elements from the array could have been removed */
@@ -9301,6 +9307,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -9322,8 +9329,9 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(infeasible != NULL);
 
    /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
-   SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+   SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand, eventqueue,
          varfixing, implvar, impltype, implbound, FALSE, infeasible, nbdchgs, &added) );
+
    if( *infeasible || var == implvar || !transitive || !added )
       return SCIP_OKAY;
 
@@ -9337,14 +9345,14 @@ SCIP_RETCODE varAddTransitiveImplic(
       implvarfixing = (impltype == SCIP_BOUNDTYPE_LOWER);
 
       /* binary variable: implications of implvar */
-      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-            eventqueue, varfixing, implvar, implvarfixing, infeasible, nbdchgs) );
+      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+            branchcand, eventqueue, varfixing, implvar, implvarfixing, infeasible, nbdchgs) );
 
       /* inverse implication */
       if( !(*infeasible) )
       {
          SCIP_CALL( varAddTransitiveBinaryClosureImplic(implvar, blkmem, set, stat, transprob, origprob, tree, lp,
-               branchcand, eventqueue, !implvarfixing, var, !varfixing, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, !implvarfixing, var, !varfixing, infeasible, nbdchgs) );
       }
    }
    else
@@ -9401,14 +9409,16 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vlbcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
                i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
@@ -9469,14 +9479,16 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vubcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
                i = MIN(i, nvubvars); /* some elements from the array could have been removed */
@@ -9771,8 +9783,9 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
                 *   b < 0, x >= b*z + d  <->  z == 0 -> x >= d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
+               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive,
+                     infeasible, nbdchgs) );
             }
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
@@ -9780,8 +9793,8 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
                 *   b < 0, x >= b*z + d  <->  x == 0 -> z >= -d/b
                 */
-               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER),
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER),
                      -vlbconstant/vlbcoef, transitive, infeasible, nbdchgs) );
             }
             else
@@ -10123,8 +10136,9 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
                 *   b < 0, x <= b*z + d  <->  z == 1 -> x <= b+d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
+               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible,
+                     nbdchgs) );
             }
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
@@ -10132,8 +10146,8 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
                 *   b < 0, x <= b*z + d  <->  x == 1 -> z <= (1-d)/b
                 */
-               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, TRUE, vubvar, (vubcoef >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, TRUE, vubvar, (vubcoef >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
                      (1.0-vubconstant)/vubcoef, transitive, infeasible, nbdchgs) );
             }
             else
@@ -10258,8 +10272,8 @@ SCIP_RETCODE SCIPvarAddImplic(
          SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          if( SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED )
          {
-            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                  branchcand, eventqueue, varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
       }
       break;
