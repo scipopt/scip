@@ -171,7 +171,7 @@ struct SCIP_Profile
 struct SCIP_Digraph
 {
    int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
-   void***               arcdatas;           /**< arc datas corresponding to the arcs to successors given by the successors array  */
+   void***               arcdata;            /**< arc data corresponding to the arcs to successors given by the successors array  */
    void**                nodedata;           /**< data for each node of graph */
    int*                  successorssize;     /**< sizes of the successor lists for the nodes */
    int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */

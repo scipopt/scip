@@ -915,7 +915,7 @@ int* SCIPdigraphGetSuccessors(
    int                   node                /**< node for which the array of outgoing arcs is returned */
    );
 
-/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+/** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
 EXTERN
