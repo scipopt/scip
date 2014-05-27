@@ -230,8 +230,8 @@ SCIP_Bool isValueChar(
 
    if( isdigit((unsigned char)c) )
       return TRUE;
-   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
-   {
+   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && ( isdigit((unsigned char)nextc) || isspace((unsigned char)nextc) || nextc == 'e' || nextc == 'E') )
+   {  /* note: we allow for numbers like "24311." for which the next character should be a space or exponent sign */
       *hasdot = TRUE;
       return TRUE;
    }
