@@ -1625,7 +1625,7 @@ SCIP_RETCODE eventfilterEnsureMem(
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &eventfilter->eventtypes, eventfilter->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &eventfilter->eventhdlrs, eventfilter->size, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &eventfilter->eventdatas, eventfilter->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &eventfilter->eventdata, eventfilter->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &eventfilter->nextpos, eventfilter->size, newsize) );
       eventfilter->size = newsize;
    }
@@ -1646,7 +1646,7 @@ SCIP_RETCODE SCIPeventfilterCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, eventfilter) );
    (*eventfilter)->eventtypes = NULL;
    (*eventfilter)->eventhdlrs = NULL;
-   (*eventfilter)->eventdatas = NULL;
+   (*eventfilter)->eventdata = NULL;
    (*eventfilter)->nextpos = NULL;
    (*eventfilter)->size = 0;
    (*eventfilter)->len = 0;
@@ -1684,7 +1684,7 @@ SCIP_RETCODE SCIPeventfilterFree(
          if( (*eventfilter)->eventhdlrs[i]->eventdelete != NULL )
          {
             SCIP_CALL( (*eventfilter)->eventhdlrs[i]->eventdelete(set->scip, (*eventfilter)->eventhdlrs[i],
-                  &(*eventfilter)->eventdatas[i]) );
+                  &(*eventfilter)->eventdata[i]) );
          }
       }
    }
@@ -1692,7 +1692,7 @@ SCIP_RETCODE SCIPeventfilterFree(
    /* free event filter data */
    BMSfreeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventtypes, (*eventfilter)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventhdlrs, (*eventfilter)->size);
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventdatas, (*eventfilter)->size);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventdata, (*eventfilter)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*eventfilter)->nextpos, (*eventfilter)->size);
    BMSfreeBlockMemory(blkmem, eventfilter);
 
@@ -1756,7 +1756,7 @@ SCIP_RETCODE SCIPeventfilterAdd(
 
    eventfilter->eventtypes[pos] = eventtype;
    eventfilter->eventhdlrs[pos] = eventhdlr;
-   eventfilter->eventdatas[pos] = eventdata;
+   eventfilter->eventdata[pos] = eventdata;
    eventfilter->nextpos[pos] = -2;
 
    if( filterpos != NULL )
@@ -1782,7 +1782,7 @@ int eventfilterSearch(
 
    for( i = eventfilter->len - 1; i >= 0; --i )
    {
-      if( eventdata == eventfilter->eventdatas[i]
+      if( eventdata == eventfilter->eventdata[i]
          && eventhdlr == eventfilter->eventhdlrs[i]
          && eventtype == eventfilter->eventtypes[i]
          && eventfilter->nextpos[i] == -2 )
@@ -1822,7 +1822,7 @@ SCIP_RETCODE SCIPeventfilterDel(
    assert(0 <= filterpos && filterpos < eventfilter->len);
    assert(eventfilter->eventtypes[filterpos] == eventtype);
    assert(eventfilter->eventhdlrs[filterpos] == eventhdlr);
-   assert(eventfilter->eventdatas[filterpos] == eventdata);
+   assert(eventfilter->eventdata[filterpos] == eventdata);
    assert(eventfilter->nextpos[filterpos] == -2);
 
    /* if updates are delayed, insert entry into the list of delayed deletions;
@@ -1936,7 +1936,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
       if( (eventtype & eventtypes[i]) != 0 )
       {
          /* call event handler */
-         SCIP_CALL( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdatas[i]) );
+         SCIP_CALL( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdata[i]) );
          processed = TRUE;
       }
    }

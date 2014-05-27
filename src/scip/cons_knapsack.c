@@ -170,12 +170,12 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< variables in knapsack constraint */
    SCIP_Longint*         weights;            /**< weights of variables in knapsack constraint */
-   SCIP_EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
+   SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
    int*                  cliquepartition;    /**< clique indices of the clique partition */
    int*                  negcliquepartition; /**< clique indices of the negated clique partition */
    SCIP_ROW*             row;                /**< corresponding LP row */
    int                   nvars;              /**< number of variables in knapsack constraint */
-   int                   varssize;           /**< size of vars, weights, and eventdatas arrays */
+   int                   varssize;           /**< size of vars, weights, and eventdata arrays */
    int                   ncliques;           /**< number of cliques in the clique partition */
    int                   nnegcliques;        /**< number of cliques in the negated clique partition */
    SCIP_Longint          capacity;           /**< capacity of knapsack */
@@ -320,7 +320,7 @@ void sortItems(
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
    assert(consdata->nvars == 0 || consdata->weights != NULL);
-   assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
+   assert(consdata->nvars == 0 || consdata->eventdata != NULL);
    assert(consdata->nvars == 0 || (consdata->cliquepartition != NULL && consdata->negcliquepartition != NULL));
 
    if( !consdata->sorted )
@@ -334,7 +334,7 @@ void sortItems(
       SCIPsortDownLongPtrPtrIntInt(
          consdata->weights,
          (void**)consdata->vars,
-         (void**)consdata->eventdatas,
+         (void**)consdata->eventdata,
          consdata->cliquepartition,
          consdata->negcliquepartition,
          consdata->nvars);
@@ -353,7 +353,7 @@ void sortItems(
             /* sort all corresponding parts of arrays for which the weights are equal by using the variable index */
             SCIPsortPtrPtrIntInt(
                (void**)(&(consdata->vars[w+1])),
-               (void**)(&(consdata->eventdatas[w+1])),
+               (void**)(&(consdata->eventdata[w+1])),
                &(consdata->cliquepartition[w+1]),
                &(consdata->negcliquepartition[w+1]),
                SCIPvarComp,
@@ -482,15 +482,15 @@ SCIP_RETCODE catchEvents(
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
    assert(consdata->nvars == 0 || consdata->weights != NULL);
-   assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
+   assert(consdata->nvars == 0 || consdata->eventdata != NULL);
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
+      SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[i], consdata, consdata->weights[i]) );
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], 
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
-            eventhdlr, consdata->eventdatas[i], &consdata->eventdatas[i]->filterpos) );
+            eventhdlr, consdata->eventdata[i], &consdata->eventdata[i]->filterpos) );
    }
 
    return SCIP_OKAY;
@@ -509,15 +509,15 @@ SCIP_RETCODE dropEvents(
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
    assert(consdata->nvars == 0 || consdata->weights != NULL);
-   assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
+   assert(consdata->nvars == 0 || consdata->eventdata != NULL);
 
    for( i = 0; i < consdata->nvars; i++)
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i],
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
-            eventhdlr, consdata->eventdatas[i], consdata->eventdatas[i]->filterpos) );
-      SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[i]) );
+            eventhdlr, consdata->eventdata[i], consdata->eventdata[i]->filterpos) );
+      SCIP_CALL( eventdataFree(scip, &consdata->eventdata[i]) );
    }
 
    return SCIP_OKAY;
@@ -544,13 +544,13 @@ SCIP_RETCODE consdataEnsureVarsSize(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->varssize, newsize) );
       if( transformed )
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdata, consdata->varssize, newsize) );
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->cliquepartition, consdata->varssize, newsize) );
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->negcliquepartition, consdata->varssize, newsize) );
       }
       else
       {
-         assert(consdata->eventdatas == NULL);
+         assert(consdata->eventdata == NULL);
          assert(consdata->cliquepartition == NULL);
          assert(consdata->negcliquepartition == NULL);
       }
@@ -633,7 +633,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity;
-   (*consdata)->eventdatas = NULL;
+   (*consdata)->eventdata = NULL;
    (*consdata)->cliquepartition = NULL;
    (*consdata)->negcliquepartition = NULL;
    (*consdata)->row = NULL;
@@ -664,7 +664,7 @@ SCIP_RETCODE consdataCreate(
       }
 
       /* allocate memory for additional data structures */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdata, (*consdata)->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, (*consdata)->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->negcliquepartition, (*consdata)->nvars) );
 
@@ -701,10 +701,10 @@ SCIP_RETCODE consdataFree(
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
-   if( (*consdata)->eventdatas != NULL )
+   if( (*consdata)->eventdata != NULL )
    {
       SCIP_CALL( dropEvents(scip, *consdata, eventhdlr) );
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize);
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdata, (*consdata)->varssize);
    }
    if( (*consdata)->negcliquepartition != NULL )
    {
@@ -756,11 +756,11 @@ void consdataChgWeight(
    if( SCIPvarGetLbLocal(consdata->vars[item]) > 0.5 )
       consdata->onesweightsum += (newweight - oldweight);
 
-   if( consdata->eventdatas != NULL )
+   if( consdata->eventdata != NULL )
    {
-      assert(consdata->eventdatas[item] != NULL);
-      assert(consdata->eventdatas[item]->weight == oldweight);
-      consdata->eventdatas[item]->weight = newweight;
+      assert(consdata->eventdata[item] != NULL);
+      assert(consdata->eventdata[item]->weight == oldweight);
+      consdata->eventdata[item]->weight = newweight;
    }
 
    consdata->propagated = FALSE;
@@ -6239,12 +6239,12 @@ SCIP_RETCODE addCoef(
 
          conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
          assert(conshdlrdata != NULL);
-         SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
+         SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[consdata->nvars-1], consdata, weight) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var,
                SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
                | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
-               conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1],
-               &consdata->eventdatas[consdata->nvars-1]->filterpos) );
+               conshdlrdata->eventhdlr, consdata->eventdata[consdata->nvars-1],
+               &consdata->eventdata[consdata->nvars-1]->filterpos) );
 
          if( !consdata->existmultaggr && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
             consdata->existmultaggr = TRUE;
@@ -6305,8 +6305,8 @@ SCIP_RETCODE delCoefPos(
       SCIP_CALL( SCIPdropVarEvent(scip, var,
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
-            conshdlrdata->eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
-      SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[pos]) );
+            conshdlrdata->eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
+      SCIP_CALL( eventdataFree(scip, &consdata->eventdata[pos]) );
    }
 
    /* update weight sums */
@@ -6319,8 +6319,8 @@ SCIP_RETCODE delCoefPos(
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
    consdata->weights[pos] = consdata->weights[consdata->nvars-1];
-   if( consdata->eventdatas != NULL )
-      consdata->eventdatas[pos] = consdata->eventdatas[consdata->nvars-1];
+   if( consdata->eventdata != NULL )
+      consdata->eventdata[pos] = consdata->eventdata[consdata->nvars-1];
 
    /* release variable */
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -6562,7 +6562,7 @@ SCIP_RETCODE mergeMultiples(
    assert(consdata->vars != NULL || consdata->nvars == 0);
 
    /* sorting array after indices of variables, that's only for faster merging */ 
-   SCIPsortPtrPtrLongIntInt((void**)consdata->vars, (void**)consdata->eventdatas, consdata->weights, 
+   SCIPsortPtrPtrLongIntInt((void**)consdata->vars, (void**)consdata->eventdata, consdata->weights, 
       consdata->cliquepartition, consdata->negcliquepartition, SCIPvarCompActiveAndNegated, consdata->nvars);
 
    /* knapsack-sorting (decreasing weights) now lost */ 
