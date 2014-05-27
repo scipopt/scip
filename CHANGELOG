@@ -48,6 +48,9 @@ fixed bugs:
 - allow to call SCIPmarkConsPropagate() in INITPRESOLVE stage
 - fixed bug, variable bounds detected wrong infeasibility
 - another bug fix when computing the original variable sum of a given variable in SCIPvarGetOrigvarSum()
+- fixed bug in cons_varbound.c using the wrong constraint side for updating an upper bound
+- fixed missing memory allocation for node data in digraphs
+- allow to read numbers like "42856." in lp-format
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
@@ -59,6 +62,9 @@ features:
 interface:
 - added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance
 - forbid to call SCIPfixVar() in SCIP_STAGE_PRESOLVED stage, which is not allowed since it calls SCIPchgVarLb/Ub()
+- rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData(); SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
+- rename array arcdatas in digraph to arcdata
+
 
 SCIP version 3.1.0
 ==================

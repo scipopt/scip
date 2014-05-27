@@ -2093,6 +2093,10 @@ SCIP_RETCODE reformReplaceNode(
 
    SCIP_CALL( SCIPexprgraphMoveNodeParents(exprgraph, node, replacement) );
 
+   /* node was not captured by any constraint */
+   if( *node == NULL )
+      return SCIP_OKAY;
+
    /* if node still exists, then because it is captured by some constraint (it should not have parents anymore)
     * thus, look into the given constraints and replace their exprgraphnode by replacement
     * @todo may be expensive when this is done more often, esp. when we know that node will not be freed due to an added auxiliary constraint

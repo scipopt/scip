@@ -5331,12 +5331,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    assert(digraph != NULL);
    assert(nnodes > 0);
 
-   /* allocate memory for the graph and the arrays storing arcs and datas */
+   /* allocate memory for the graph and the arrays storing arcs and data */
    SCIP_ALLOC( BMSallocMemory(digraph) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdata, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
@@ -5362,16 +5363,17 @@ SCIP_RETCODE SCIPdigraphResize(
    if( nnodes <= digraph->nnodes )
       return SCIP_OKAY;
 
-   /* reallocate memory for increasing the arrays storing arcs and datas */
+   /* reallocate memory for increasing the arrays storing arcs and data */
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
    {
-      digraph->nodedatas[n] = NULL;
+      digraph->nodedata[n] = NULL;
       digraph->successorssize[n] = 0;
       digraph->nsuccessors[n] = 0;
    }
@@ -5382,7 +5384,10 @@ SCIP_RETCODE SCIPdigraphResize(
    return SCIP_OKAY;
 }
 
-/** copies directed graph structure */
+/** copies directed graph structure
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
@@ -5399,22 +5404,25 @@ SCIP_RETCODE SCIPdigraphCopy(
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
 
-   /* copy arcs and datas */
+   /* copy arcs and data */
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
 
-   /* copy lists of successors and arc datas */
+   /* copy lists of successors and arc data */
    for( i = 0; i < nnodes; ++i )
    {
       if( sourcedigraph->nsuccessors[i] > 0 )
       {
          assert(sourcedigraph->successors[i] != NULL);
-         assert(sourcedigraph->arcdatas[i] != NULL);
+         assert(sourcedigraph->arcdata[i] != NULL);
          SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]),
-               sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]),
+               sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
+      /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
+      (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
@@ -5452,7 +5460,7 @@ SCIP_RETCODE SCIPdigraphSetSizes(
    for( i = 0; i < digraph->nnodes; ++i )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -5470,11 +5478,11 @@ void SCIPdigraphFree(
    assert(digraph != NULL);
    assert(*digraph != NULL);
 
-   /* free arrays storing the successor nodes and arc datas */
+   /* free arrays storing the successor nodes and arc data */
    for( i = (*digraph)->nnodes - 1; i >= 0; --i )
    {
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
-      BMSfreeMemoryArrayNull(&(*digraph)->arcdatas[i]);
+      BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
    }
 
    /* free components structure */
@@ -5485,10 +5493,11 @@ void SCIPdigraphFree(
    assert((*digraph)->componentstarts == NULL);
 
    /* free directed graph data structure */
+   BMSfreeMemoryArray(&(*digraph)->nodedata);
    BMSfreeMemoryArray(&(*digraph)->successorssize);
    BMSfreeMemoryArray(&(*digraph)->nsuccessors);
    BMSfreeMemoryArray(&(*digraph)->successors);
-   BMSfreeMemoryArray(&(*digraph)->arcdatas);
+   BMSfreeMemoryArray(&(*digraph)->arcdata);
 
    BMSfreeMemory(digraph);
 }
@@ -5515,13 +5524,13 @@ SCIP_RETCODE ensureSuccessorsSize(
       {
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
          digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
    }
 
@@ -5549,7 +5558,7 @@ SCIP_RETCODE SCIPdigraphAddArc(
 
    /* add arc */
    digraph->successors[startnode][digraph->nsuccessors[startnode]] = endnode;
-   digraph->arcdatas[startnode][digraph->nsuccessors[startnode]] = data;
+   digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
    return SCIP_OKAY;
@@ -5587,7 +5596,7 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 
    /* add arc */
    digraph->successors[startnode][nsuccessors] = endnode;
-   digraph->arcdatas[startnode][nsuccessors] = data;
+   digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
 
    return SCIP_OKAY;
@@ -5604,7 +5613,7 @@ int SCIPdigraphGetNNodes(
 }
 
 /** returns the node data, or NULL if no data exist */
-void* SCIPdigraphGetNodeDatas(
+void* SCIPdigraphGetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the node data is returned */
    )
@@ -5613,14 +5622,14 @@ void* SCIPdigraphGetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   return digraph->nodedatas[node];
+   return digraph->nodedata[node];
 }
 
 /** sets the node data
  *
  *  @note The old user pointer is not freed. This has to be done by the user
  */
-void SCIPdigraphSetNodeDatas(
+void SCIPdigraphSetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    void*                 dataptr,            /**< user node data pointer, or NULL */
    int                   node                /**< node for which the node data is returned */
@@ -5630,7 +5639,7 @@ void SCIPdigraphSetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   digraph->nodedatas[node] = dataptr;
+   digraph->nodedata[node] = dataptr;
 }
 
 /** returns the total number of arcs in the given digraph */
@@ -5682,7 +5691,7 @@ int* SCIPdigraphGetSuccessors(
    return digraph->successors[node];
 }
 
-/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+/** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
 void** SCIPdigraphGetSuccessorsDatas(
@@ -5695,9 +5704,9 @@ void** SCIPdigraphGetSuccessorsDatas(
    assert(node < digraph->nnodes);
    assert(digraph->nsuccessors[node] >= 0);
    assert(digraph->nsuccessors[node] <= digraph->successorssize[node]);
-   assert(digraph->arcdatas != NULL);
+   assert(digraph->arcdata != NULL);
 
-   return digraph->arcdatas[node];
+   return digraph->arcdata[node];
 }
 
 /** performs depth-first-search in the given directed graph from the given start node */
