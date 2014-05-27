@@ -52,9 +52,12 @@ SCIP_RETCODE SCIPreoptFree(
 /** add a solution to sols */
 extern
 SCIP_RETCODE SCIPreoptAddSol(
+   SCIP*                 scip,
    SCIP_REOPT*           reopt,
    SCIP_SET*             set,
+   SCIP_STAT*            stat,
    SCIP_SOL*             sol,
+   SCIP_Bool*            added,
    int                   run
    );
 

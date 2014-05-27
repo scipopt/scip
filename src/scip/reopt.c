@@ -128,7 +128,7 @@ SCIP_RETCODE addSols(
       SCIP_SOL* sol;
       SCIP_Real solobj;
 
-      sol = reopt->sols[run][s];
+      sol = reopt->sols[run][s]->sol;
 
       SCIPsolRecomputeObj(sol, set, stat, origprob);
 
@@ -193,6 +193,181 @@ SCIP_Real reoptSimilarity(
    return sim/scale;
 }
 
+static
+SCIP_RETCODE createSolTree(
+   SCIP_REOPT*           reopt
+)
+{
+   assert(reopt != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(&reopt->soltree) );
+   reopt->soltree->nsols = 0;
+
+   SCIP_ALLOC( BMSallocMemory(&reopt->soltree->root) );
+   reopt->soltree->root->father = NULL;
+   reopt->soltree->root->rchild = NULL;
+   reopt->soltree->root->lchild = NULL;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE soltreefreeNode(
+   SCIP*                 scip,
+   SCIP_REOPT*           reopt,
+   SCIP_SOLNODE*         node
+)
+{
+   assert(reopt != NULL);
+   assert(node != NULL);
+
+   /* free recursive right subtree */
+   if( node->rchild != NULL )
+   {
+      SCIP_CALL( soltreefreeNode(scip, reopt, node->rchild) );
+   }
+
+   /* free recursive left subtree */
+   if( node->lchild != NULL )
+   {
+      SCIP_CALL( soltreefreeNode(scip, reopt, node->lchild) );
+   }
+
+   if( node->sol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &node->sol) );
+   }
+
+   /* free this nodes */
+   BMSfreeMemoryNull(&node);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE freeSolTree(
+   SCIP*                 scip,
+   SCIP_REOPT*           reopt
+)
+{
+   assert(reopt != NULL);
+   assert(reopt->soltree != NULL);
+   assert(reopt->soltree->root != NULL);
+
+   SCIP_CALL( soltreefreeNode(scip, reopt, reopt->soltree->root) );
+
+   BMSfreeMemory(&reopt->soltree);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE soltreeAddNode(
+   SCIP_REOPT*           reopt,
+   SCIP_SOLNODE*         father,
+   SCIP_Bool             rchild,
+   SCIP_Bool             lchild,
+   SCIP_Real             val
+)
+{
+   SCIP_SOLNODE* newnode;
+
+   assert(reopt != NULL);
+   assert(father != NULL);
+   assert(rchild == !lchild);
+   assert((rchild && father->rchild == NULL) || (lchild && father->lchild == NULL));
+
+   SCIP_ALLOC( BMSallocMemory(&newnode) );
+   newnode->sol = NULL;
+   newnode->father = father;
+   newnode->rchild = NULL;
+   newnode->lchild = NULL;
+   newnode->val = val;
+
+   if( rchild )
+      father->rchild = newnode;
+   else
+      father->lchild = newnode;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE soltreeAddSol(
+   SCIP*                 scip,
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   SCIP_VAR**            vars,
+   SCIP_SOL*             sol,
+   SCIP_SOLNODE**        solnode,
+   int                   nvars,
+   SCIP_Bool*            added
+)
+{
+   SCIP_SOLNODE* cursolnode;
+   int* varidlist;
+   int varid;
+   int orderid;
+
+   assert(reopt != NULL);
+   assert(sol != NULL);
+
+   cursolnode = reopt->soltree->root;
+   (*added) = FALSE;
+
+   for(orderid = 0; orderid < nvars; orderid++)
+   {
+      const char* varname;
+      SCIP_Real objval;
+
+      varid = orderid;
+      varname = SCIPvarGetName(vars[varid]);
+
+      assert(SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY);
+
+      objval = SCIPsolGetVal(sol, set, stat, vars[varid]);
+      if( SCIPsetIsFeasEQ(set, objval, 0) )
+      {
+         if( cursolnode->rchild == NULL )
+         {
+            SCIP_CALL( soltreeAddNode(reopt, cursolnode, TRUE, FALSE, objval) );
+            assert(cursolnode->rchild != NULL);
+            (*added) = TRUE;
+         }
+         cursolnode = cursolnode->rchild;
+      }
+      else
+      {
+         assert(SCIPsetIsFeasEQ(set, objval, 1));
+         if( cursolnode->lchild == NULL )
+         {
+            SCIP_CALL( soltreeAddNode(reopt, cursolnode, FALSE, TRUE, objval) );
+            assert(cursolnode->lchild != NULL);
+            (*added) = TRUE;
+         }
+         cursolnode = cursolnode->lchild;
+      }
+   }
+
+   if( (*added) )
+   {
+      SCIP_SOL* copysol;
+      SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
+
+      cursolnode->sol = copysol;
+      (*solnode) = cursolnode;
+   }
+
+#ifdef SCIP_DEBUG
+   {
+      printf(">> %s\n", (*added) ? "add sol" : "skip sol");
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
 /*
  * public methods
  */
@@ -230,6 +405,9 @@ SCIP_RETCODE SCIPreoptCreate(
       (*reopt)->objs[s] = NULL;
    }
 
+   /* create SCIP_SOLTREE */
+   SCIP_CALL( createSolTree((*reopt)) );
+
    return SCIP_OKAY;
 }
 
@@ -246,15 +424,14 @@ SCIP_RETCODE SCIPreoptFree(
    assert(reopt != NULL);
    assert(*reopt != NULL);
 
+   /* free solution tree */
+   SCIP_CALL( freeSolTree(scip, (*reopt)) );
+
    /* free solutions */
    for( p = (*reopt)->runsize-1; p >= 0; --p )
    {
       if( (*reopt)->sols[p] != NULL )
       {
-         for( s = (*reopt)->nsols[p]-1; s >= 0; --s )
-         {
-            SCIP_CALL( SCIPfreeSol(scip, &(*reopt)->sols[p][s]) );
-         }
          BMSfreeMemoryArrayNull(&(*reopt)->sols[p]);
       }
 
@@ -263,7 +440,7 @@ SCIP_RETCODE SCIPreoptFree(
          BMSfreeMemoryArrayNull(&(*reopt)->objs[p]);
       }
    }
-   SCIPhashmapFree(&(*reopt)->varnamehash);
+
    BMSfreeMemoryArrayNull(&(*reopt)->sols);
    BMSfreeMemoryArrayNull(&(*reopt)->nsols);
    BMSfreeMemoryArrayNull(&(*reopt)->solssize);
@@ -276,12 +453,16 @@ SCIP_RETCODE SCIPreoptFree(
 
 /** add a solution to the last run */
 SCIP_RETCODE SCIPreoptAddSol(
+   SCIP*                 scip,
    SCIP_REOPT*           reopt,
    SCIP_SET*             set,
+   SCIP_STAT*            stat,
    SCIP_SOL*             sol,
+   SCIP_Bool*            added,
    int                   run
 )
 {
+   SCIP_SOLNODE* solnode;
    int num;
    int insertpos;
 
@@ -293,17 +474,26 @@ SCIP_RETCODE SCIPreoptAddSol(
    assert(reopt->sols[run] != NULL);
 
    if( set->reopt_savesols == -1 )
-      num = reopt->solssize[run];
+      num = reopt->nsols[run]+1;
    else
       num = set->reopt_savesols;
 
    /* check memory */
    SCIP_CALL( ensureSolsSize(reopt, set, num, run) );
 
-   /** add solution */
-   insertpos = reopt->nsols[run];
-   reopt->sols[run][insertpos] = sol;
-   reopt->nsols[run]++;
+   /** ad solution to solution tree */
+   SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetVars(scip), sol, &solnode, SCIPgetNVars(scip), added) );
+
+   if( (*added) )
+   {
+      assert(solnode != NULL);
+
+      /** add solution */
+      insertpos = reopt->nsols[run];
+      reopt->sols[run][insertpos] = solnode;
+      reopt->nsols[run]++;
+      assert(set->reopt_savesols == -1 || reopt->nsols[run] <= set->reopt_savesols);
+   }
 
    return SCIP_OKAY;
 }
@@ -460,30 +650,14 @@ SCIP_RETCODE SCIPreoptSaveObj(
 
    vars = SCIPgetVars(scip);
 
-   /* create hashtable which links variable names and indices */
-   if( reopt->varnamehash == NULL )
-   {
-      SCIP_CALL( SCIPhashmapCreate(&reopt->varnamehash, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-
-      for(id = 0; id < SCIPgetNVars(scip); id++)
-      {
-         assert(!SCIPhashmapExists(reopt->varnamehash, (void*) SCIPvarGetName(vars[id])));
-         SCIP_CALL( SCIPhashmapInsert(reopt->varnamehash, (void*) SCIPvarGetName(vars[id]), (void*) (size_t) id) );
-      }
-   }
-
    /* get memory */
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &reopt->objs[run], SCIPgetNVars(scip)) );
 
-   /* hash variables and coefficients */
+   /* save coefficients */
+   vars = SCIPgetVars(scip);
    for(id = 0; id < SCIPgetNVars(scip); id++)
    {
-      int linkedID;
-
-      assert(SCIPhashmapExists(reopt->varnamehash, (void*) SCIPvarGetName(vars[id])));
-
-      linkedID = (int) (size_t) SCIPhashmapGetImage(reopt->varnamehash, (void*) SCIPvarGetName(vars[id]));
-      reopt->objs[run][linkedID] = SCIPvarGetObj(vars[id]);
+      reopt->objs[run][id] = SCIPvarGetObj(vars[id]);
    }
 
 #ifdef SCIP_DEBUG
@@ -493,14 +667,10 @@ SCIP_RETCODE SCIPreoptSaveObj(
 
       for(id = 0; id < SCIPgetNVars(scip); id++)
       {
-         int linkedID;
          SCIP_Real objval;
          const char* name;
 
-         assert(SCIPhashmapExists(reopt->varnamehash, (void*) SCIPvarGetName(vars[id])));
-
-         linkedID = (int) (size_t) SCIPhashmapGetImage(reopt->varnamehash, (void*) SCIPvarGetName(vars[id]));
-         objval = reopt->objs[run][linkedID];
+         objval = reopt->objs[run][id];
          name = SCIPvarGetName(vars[id]);
 
          if( objval != 0 )

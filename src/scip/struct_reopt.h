@@ -31,10 +31,10 @@
 extern "C" {
 #endif
 
-/** primal data and solution storage */
+/** reopt data and solution storage */
 struct SCIP_Reopt
 {
-   SCIP_SOL***           sols;               /**< solutions of the reoptimization runs */
+   SCIP_SOLNODE***       sols;               /**< solutions of the reoptimization runs */
 
    int                   run;                /**< current position in the sols array*/
    int                   runsize;            /**< allocated memory for runs */
@@ -43,8 +43,26 @@ struct SCIP_Reopt
 
    SCIP_Bool*            solsused;           /**< True or False if the solutions in run x were used at least once */
 
-   SCIP_HASHMAP*         varnamehash;        /**< hashmap which hashed varnames to indices */
    SCIP_Real**           objs;               /**< list of objective coefficients */
+
+   SCIP_SOLTREE*         soltree;            /**< tree to handle all saved solutions */
+};
+
+/** nodes of SCIP_SolTree */
+struct SCIP_SolNode
+{
+   SCIP_SOL*             sol;
+   SCIP_SOLNODE*         father;
+   SCIP_SOLNODE*         rchild;
+   SCIP_SOLNODE*         lchild;
+   int                   val;
+};
+
+/** tree for solution */
+struct SCIP_SolTree
+{
+   SCIP_SOLNODE*         root;
+   int                   nsols;
 };
 
 #ifdef __cplusplus

@@ -29,6 +29,10 @@ extern "C" {
 
 typedef struct SCIP_Reopt SCIP_REOPT;           /**< primal data */
 
+typedef struct SCIP_SolTree SCIP_SOLTREE;       /**< tree to check solutions */
+
+typedef struct SCIP_SolNode SCIP_SOLNODE;       /**< nodes of SCIP_SOLTREE */
+
 #ifdef __cplusplus
 }
 #endif

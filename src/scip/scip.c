@@ -13341,24 +13341,23 @@ SCIP_RETCODE SCIPsolve(
       /* start clock */
       SCIP_CALL( SCIPstartSaveTime(scip) );
 
-//      /* save the objective function */
-//      SCIP_CALL( SCIPreoptSaveObj(scip->reopt, scip->set, SCIPgetVars(scip), scip->mem->probmem,
-//            SCIPgetNVars(scip), SCIPgetNObjVars(scip), scip->stat->reopt_nruns) );
-
       /* save found solutions */
       if( scip->set->reopt_savesols != 0 )
       {
          int nsols;
+         int naddedsols;
          int s;
 
          nsols = scip->set->reopt_savesols == -1 ? scip->primal->nsols : MIN(scip->primal->nsols, scip->set->reopt_savesols);
+         naddedsols = 0;
 
          /* allocate memory */
          SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, nsols) );
 
-         for( s = 0; s < nsols; ++s )
+         for( s = 0; s < scip->primal->nsols && naddedsols < nsols; ++s )
          {
             SCIP_SOL* sol;
+            SCIP_Bool added;
 
             sol = scip->primal->sols[s];
             assert(sol != NULL);
@@ -13369,9 +13368,10 @@ SCIP_RETCODE SCIPsolve(
                SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
             }
 
-            SCIP_SOL* copysol;
-            SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
-            SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, copysol, scip->stat->reopt_nruns) );
+            SCIP_CALL( SCIPreoptAddSol(scip, scip->reopt, scip->set, scip->stat, sol, &added, scip->stat->reopt_nruns) );
+
+            if( added )
+               naddedsols++;
          }
       }
 

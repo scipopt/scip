@@ -274,7 +274,7 @@
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        5 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS          -1 /**< save n best solutions found so far (-1: all) */
-#define SCIP_DEFAULT_REOPT_OBJSIM          0.54 /**< reuse stored solutions only if the similarity of the new and the old objective
+#define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 
 /* Propagating */
