@@ -826,6 +826,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* disable output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+      /* disable reoptimization */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
       /* check whether there is enough time and memory left */
       SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
       if( !SCIPisInfinity(scip, timelimit) )

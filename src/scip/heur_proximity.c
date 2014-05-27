@@ -837,6 +837,9 @@ SCIP_RETCODE SCIPapplyProximity(
       }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
+      /* disable reoptimization */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
       /* create event handler for LP events */
       eventhdlr = NULL;
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecProximity, NULL) );

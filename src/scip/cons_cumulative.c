@@ -1396,6 +1396,9 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
+   /* disable reoptimization */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 

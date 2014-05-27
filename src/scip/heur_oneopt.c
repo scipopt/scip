@@ -441,9 +441,12 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* try to add new solution to sub-SCIP and free it immediately */
       valid = FALSE;
-      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );      
+      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );
       SCIPfreeBufferArray(scip, &subsolvals);
       SCIPhashmapFree(&varmapfw);
+
+      /* disable reoptimization */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
 
       /* deactivate basically everything except oneopt in the sub-SCIP */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );

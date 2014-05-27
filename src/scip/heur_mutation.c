@@ -454,6 +454,9 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
+   /* disable reoptimization */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 

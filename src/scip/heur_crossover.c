@@ -920,6 +920,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+   /* disable reoptimization */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
 #ifdef SCIP_DEBUG
    /* for debugging DINS, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
