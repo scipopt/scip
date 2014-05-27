@@ -5337,6 +5337,7 @@ SCIP_RETCODE SCIPdigraphCreate(
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdatas, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
@@ -5367,11 +5368,12 @@ SCIP_RETCODE SCIPdigraphResize(
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
    {
-      digraph->nodedatas[n] = NULL;
+      digraph->nodedata[n] = NULL;
       digraph->successorssize[n] = 0;
       digraph->nsuccessors[n] = 0;
    }
@@ -5382,7 +5384,10 @@ SCIP_RETCODE SCIPdigraphResize(
    return SCIP_OKAY;
 }
 
-/** copies directed graph structure */
+/** copies directed graph structure
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
@@ -5402,6 +5407,7 @@ SCIP_RETCODE SCIPdigraphCopy(
    /* copy arcs and datas */
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
 
    /* copy lists of successors and arc datas */
    for( i = 0; i < nnodes; ++i )
@@ -5415,6 +5421,8 @@ SCIP_RETCODE SCIPdigraphCopy(
          SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]),
                sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
+      /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
+      (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
@@ -5485,6 +5493,7 @@ void SCIPdigraphFree(
    assert((*digraph)->componentstarts == NULL);
 
    /* free directed graph data structure */
+   BMSfreeMemoryArray(&(*digraph)->nodedata);
    BMSfreeMemoryArray(&(*digraph)->successorssize);
    BMSfreeMemoryArray(&(*digraph)->nsuccessors);
    BMSfreeMemoryArray(&(*digraph)->successors);
@@ -5604,7 +5613,7 @@ int SCIPdigraphGetNNodes(
 }
 
 /** returns the node data, or NULL if no data exist */
-void* SCIPdigraphGetNodeDatas(
+void* SCIPdigraphGetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the node data is returned */
    )
@@ -5613,14 +5622,14 @@ void* SCIPdigraphGetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   return digraph->nodedatas[node];
+   return digraph->nodedata[node];
 }
 
 /** sets the node data
  *
  *  @note The old user pointer is not freed. This has to be done by the user
  */
-void SCIPdigraphSetNodeDatas(
+void SCIPdigraphSetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    void*                 dataptr,            /**< user node data pointer, or NULL */
    int                   node                /**< node for which the node data is returned */
@@ -5630,7 +5639,7 @@ void SCIPdigraphSetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   digraph->nodedatas[node] = dataptr;
+   digraph->nodedata[node] = dataptr;
 }
 
 /** returns the total number of arcs in the given digraph */
