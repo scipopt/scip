@@ -24,6 +24,7 @@ performance improvements:
 interface:
 - rename all file "*_vbc.?" to the more generic "*_visual.?"
 - submenu for setting "vbc" settings renamed to "visual"
+- rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
 
 
 SCIP version 3.1.1

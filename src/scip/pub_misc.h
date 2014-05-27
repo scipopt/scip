@@ -919,7 +919,7 @@ int* SCIPdigraphGetSuccessors(
  *  array must not be changed from outside
  */
 EXTERN
-void** SCIPdigraphGetSuccessorsDatas(
+void** SCIPdigraphGetSuccessorsData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    );

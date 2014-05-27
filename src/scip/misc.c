@@ -5694,7 +5694,7 @@ int* SCIPdigraphGetSuccessors(
 /** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
-void** SCIPdigraphGetSuccessorsDatas(
+void** SCIPdigraphGetSuccessorsData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    )
