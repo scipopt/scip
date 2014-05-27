@@ -34,6 +34,7 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/disp.h"
+#include "scip/reopt.h"
 #include "scip/pub_message.h"
 
 

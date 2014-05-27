@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderSol(scip) );
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
+   SCIP_CALL( SCIPincludeRelaxReoptsolvelp(scip) );
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
    SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
@@ -96,9 +97,14 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+   SCIP_CALL( SCIPincludeBranchrulePseudo(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrGlobalboundchg(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrNodereopt(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSolustore(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
@@ -158,15 +164,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
-
-   /* reoptimization stuff */
-   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
-   SCIP_CALL( SCIPincludeBranchrulePseudo(scip) );
-//   SCIP_CALL( SCIPincludeEventHdlrFocusroot(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrGlobalboundchg(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrNodereopt(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrSolustore(scip) );
-
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );

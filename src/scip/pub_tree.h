@@ -70,6 +70,19 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
+/** SPECIAL FOR REOPTIMIZATION: returns the set of variable branchings that were performed until a given ancestor node (nodes on the path to the given parent) to create this node */
+EXTERN
+void SCIPnodeGetAncestorBranchingsReopt(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_NODE*            parent,             /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
+   );
+
 /** outputs the path into given file stream in GML format */
 EXTERN
 SCIP_RETCODE SCIPnodePrintAncestorBranchings(
@@ -144,7 +157,7 @@ SCIP_Real SCIPnodeGetEstimate(
    );
 
 EXTERN
-SCIP_Bool SCIPnodeGetReopt(
+int SCIPnodeGetReopt(
    SCIP_NODE*            node
    );
 
@@ -157,7 +170,8 @@ SCIP_RETCODE SCIPchildSetLpistate(
 
 EXTERN
 SCIP_RETCODE SCIPnodeSetReopt(
-   SCIP_NODE*           node
+   SCIP_NODE*            node,
+   int                   id
    );
 
 EXTERN

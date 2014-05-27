@@ -315,7 +315,6 @@ void SCIPnodeGetPseudoBranchings(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            pseudobranchvars,   /**< array of variables on which the branching has been performed in the parent node */
    SCIP_Real*            pseudobranchbounds, /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
    int*                  npseudobranchvars,  /**< number of variables on which branching has been performed in the parent node
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */

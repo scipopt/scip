@@ -303,6 +303,7 @@ struct SCIP_Set
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
+   SCIP_Bool             misc_reusesols;     /**< should solutions from orig space used in primal space after transformation? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -358,6 +359,12 @@ struct SCIP_Set
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
    SCIP_Bool             reopt_savelpbasis;  /**< save the LP basis of feasible and branched nodes during reoptimization */
+   SCIP_Bool             reopt_saveglbcons;  /**< save global constraints to separate solutions found so far */
+   SCIP_Bool             reopt_saveloccons;  /**< save local constraints to separate solutions found so far */
+   int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
+   int                   reopt_solvelpdiff;  /**< difference of path length between two ancestor nodes to solve the LP */
+   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
+   SCIP_Real             reopt_objsim;       /**< similarity of two objective functions to reuse stored solutions. */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound

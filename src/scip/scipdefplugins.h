@@ -35,7 +35,9 @@
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_mostinf.h"
+#include "scip/branch_nodereopt.h"
 #include "scip/branch_pscost.h"
+#include "scip/branch_pseudo.h"
 #include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"
 #include "scip/cons_abspower.h"
@@ -65,6 +67,9 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/disp_default.h"
+#include "scip/event_globalboundchg.h"
+#include "scip/event_nodereopt.h"
+#include "scip/event_solustore.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
@@ -144,6 +149,7 @@
 #include "scip/reader_sol.h"
 #include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
+#include "scip/relax_reoptsolvelp.h"
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
@@ -158,14 +164,6 @@
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
-
-/* reoptimization stuff */
-#include "scip/branch_nodereopt.h"
-#include "scip/branch_pseudo.h"
-//#include "scip/event_focusroot.h"
-#include "scip/event_globalboundchg.h"
-#include "scip/event_nodereopt.h"
-#include "scip/event_solustore.h"
 
 #include "nlpi/nlpi_ipopt.h"
 

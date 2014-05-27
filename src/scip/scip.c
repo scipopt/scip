@@ -56,6 +56,7 @@
 #include "scip/prob.h"
 #include "scip/sol.h"
 #include "scip/primal.h"
+#include "scip/reopt.h"
 #include "scip/tree.h"
 #include "scip/pricestore.h"
 #include "scip/sepastore.h"
@@ -83,6 +84,8 @@
 #include "scip/dialog_default.h"
 #include "scip/message_default.h"
 
+#include "scip/branch_nodereopt.h"
+
 /* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
  * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal'
  * in the variable data structure. This would allow to have (multi)aggregated variables in the original problem.
@@ -99,7 +102,6 @@
 //#ifndef NDEBUG
 #include "scip/struct_scip.h"
 //#endif
-
 
 /*
  * Local methods
@@ -702,6 +704,10 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->sepastore = NULL;
    (*scip)->cutpool = NULL;
    (*scip)->delayedcutpool = NULL;
+
+   /* disable reoptimization if (*scip)->set->reopt_maxsavednodes = 0 */
+   if( (*scip)->set->reopt_enable && (*scip)->set->reopt_maxsavednodes == 0 )
+      (*scip)->set->reopt_enable = FALSE;
 
    SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
 
@@ -8250,6 +8256,12 @@ SCIP_RETCODE SCIPcreateProb(
    /* create solution pool for original solution candidates */
    SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
 
+   /* create reoptimization data */
+   if(scip->set->reopt_enable)
+   {
+      SCIP_CALL( SCIPreoptCreate(&scip->reopt) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -8770,6 +8782,10 @@ SCIP_RETCODE SCIPfreeProb(
       assert(scip->set->nactivepricers == 0);
 
       /* free original primal solution candidate pool, original problem and problem statistics data structures */
+      if( scip->set->reopt_enable )
+      {
+         SCIP_CALL( SCIPreoptFree(scip, &scip->reopt, scip->mem->probmem) );
+      }
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
@@ -11641,7 +11657,6 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool reopt;
    int nfeassols;
    int ncandsols;
    int h;
@@ -11706,56 +11721,76 @@ SCIP_RETCODE SCIPtransformProb(
    /* check solution of solution candidate storage */
    nfeassols = 0;
    ncandsols = scip->origprimal->nsols;
-   SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &reopt) );
 
-   for( s = scip->origprimal->nsols - 1; s >= 0; --s )
+   /* start clock */
+   SCIP_CALL( SCIPstartUpdatesoluTime(scip) );
+
+   if( scip->set->reopt_enable && scip->stat->reopt_nruns >= 1 )
    {
-      SCIP_Bool feasible;
-      SCIP_SOL* sol ;
+      /* start clock */
+      SCIP_CALL( SCIPstartUpdatesoluTime(scip) );
 
-      sol =  scip->origprimal->sols[s];
+      SCIP_CALL( SCIPreoptUpdateSols(scip, scip->reopt, scip->primal, scip->mem->probmem,
+            scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
+            scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, scip->set->reopt_objsim));
 
-      if( reopt )
+      /* stop clock */
+      SCIP_CALL( SCIPstopUpdatesoluTime(scip) );
+   }
+   else
+   {
+      for( s = scip->origprimal->nsols - 1; s >= 0; --s )
       {
-         /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
-          * including modifiable constraints
-          */
-         SCIP_CALL( checkSolOrig(scip, sol, &feasible,
-               (scip->set->disp_verblevel >= SCIP_VERBLEVEL_HIGH ? scip->set->misc_printreason : FALSE),
-               FALSE, TRUE, TRUE, TRUE, TRUE) );
+         SCIP_Bool feasible;
+         SCIP_SOL* sol ;
 
-         if( feasible )
+         sol =  scip->origprimal->sols[s];
+
+         if( scip->set->misc_reusesols )
          {
-            SCIP_Real solobj;
+            /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
+             * including modifiable constraints
+             */
+            SCIP_CALL( checkSolOrig(scip, sol, &feasible,
+                  (scip->set->disp_verblevel >= SCIP_VERBLEVEL_HIGH ? scip->set->misc_printreason : FALSE),
+                  FALSE, TRUE, TRUE, TRUE, TRUE) );
 
-            SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
-
-            solobj = SCIPsolGetObj(sol, scip->set, scip->transprob);
-
-            /* we do not want to add solutions with objective value +infinity */
-            if( !SCIPisInfinity(scip, solobj) && !SCIPisInfinity(scip, -solobj) )
+            if( feasible )
             {
-               SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-               SCIP_Bool stored;
+               SCIP_Real solobj;
 
-               /* add primal solution to solution storage by copying it */
-               SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-                     scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
+               SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
-               if( stored )
+               solobj = SCIPsolGetObj(sol, scip->set, scip->transprob);
+
+               /* we do not want to add solutions with objective value +infinity */
+               if( !SCIPisInfinity(scip, solobj) && !SCIPisInfinity(scip, -solobj) )
                {
-                  nfeassols++;
+                  SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+                  SCIP_Bool stored;
 
-                  if( bestsol != SCIPgetBestSol(scip) )
-                     SCIPstoreSolutionGap(scip);
+                  /* add primal solution to solution storage by copying it */
+                  SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
+                        scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
+
+                  if( stored )
+                  {
+                     nfeassols++;
+
+                     if( bestsol != SCIPgetBestSol(scip) )
+                        SCIPstoreSolutionGap(scip);
+                  }
                }
             }
          }
-      }
 
-      SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
-      scip->origprimal->nsols--;
+         SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
+         scip->origprimal->nsols--;
+      }
    }
+
+   /* stop clock */
+   SCIP_CALL( SCIPstopUpdatesoluTime(scip) );
 
    assert(scip->origprimal->nsols == 0);
 
@@ -11765,12 +11800,11 @@ SCIP_RETCODE SCIPtransformProb(
          "%d/%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
          nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
    }
-   else if( ncandsols > 0 && reopt )
+   else if( ncandsols > 0 && !scip->set->reopt_enable && scip->set->misc_reusesols )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "all solutions given by solution candidate storage are infeasible\n\n");
    }
-
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -12357,6 +12391,7 @@ SCIP_RETCODE presolve(
 
    /* start presolving timer */
    SCIPclockStart(scip->stat->presolvingtime, scip->set);
+   SCIPclockStart(scip->stat->presolvingtimeoverall, scip->set);
 
    /* initialize presolving */
    if( scip->set->stage == SCIP_STAGE_TRANSFORMED )
@@ -12524,6 +12559,7 @@ SCIP_RETCODE presolve(
 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
+   SCIPclockStop(scip->stat->presolvingtimeoverall, scip->set);
 
    /* print presolving statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
@@ -12842,25 +12878,28 @@ SCIP_RETCODE freeTransform(
 
    assert(scip->origprimal->nsols == 0);
 
-   nsols = MIN(scip->set->limit_maxorigsol, scip->primal->nsols);
-   stored = TRUE;
-
-   /* copy best primal solution to original solution candidate list */
-   for( s = 0; s < nsols; ++s )
+   if( !scip->set->reopt_enable )
    {
-      SCIP_SOL* sol;
+      nsols = MIN(scip->set->limit_maxorigsol, scip->primal->nsols);
+      stored = TRUE;
 
-      sol = scip->primal->sols[s];
-      assert(sol != NULL);
-
-      if( !SCIPsolIsOriginal(sol) )
+      /* copy best primal solution to original solution candidate list */
+      for( s = 0; s < nsols; ++s )
       {
-         /* retransform solution into the original problem space */
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
-      }
+         SCIP_SOL* sol;
 
-      /* add solution to original candidate solution storage */
-      SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+         assert(sol != NULL);
+         sol = scip->primal->sols[s];
+
+         if( !SCIPsolIsOriginal(sol) )
+         {
+            /* retransform solution into the original problem space */
+            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+         }
+
+         /* add solution to original candidate solution storage */
+         SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+      }
    }
 
    /* free transformed problem data structures */
@@ -12935,6 +12974,14 @@ SCIP_RETCODE displayRelevantStats(
             SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
 
+      /* display reoptimization statistics */
+      if( scip->set->reopt_enable )
+      {
+         SCIPmessagePrintInfo(scip->messagehdlr, "Init Time    (sec) : %.2f\n", SCIPclockGetTime(scip->stat->revivetime) + SCIPclockGetTime(scip->stat->updatesolutime));
+         SCIPmessagePrintInfo(scip->messagehdlr, "   Solution Update : %.2f\n", SCIPclockGetTime(scip->stat->updatesolutime));
+         SCIPmessagePrintInfo(scip->messagehdlr, "Saving Time  (sec) : %.2f\n", SCIPclockGetTime(scip->stat->savetime));
+      }
+
       /* check solution for feasibility in original problem */
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
       {
@@ -12986,6 +13033,7 @@ SCIP_RETCODE SCIPpresolve(
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
+   SCIPclockStart(scip->stat->solvingtimeoverall, scip->set);
 
    /* capture the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )
@@ -13103,6 +13151,7 @@ SCIP_RETCODE SCIPpresolve(
 
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
+   SCIPclockStop(scip->stat->solvingtimeoverall, scip->set);
 
    if( scip->set->stage == SCIP_STAGE_SOLVED )
    {
@@ -13143,6 +13192,21 @@ SCIP_RETCODE SCIPsolve(
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( scip->set->reopt_enable )
+   {
+      /* decrease number of reopt_runs */
+      scip->stat->reopt_nruns++;
+
+      /* start clock */
+      SCIP_CALL( SCIPstartSaveTime(scip) );
+
+      /* save the objective function */
+      SCIP_CALL( SCIPreoptSaveObj(scip, scip->reopt, scip->set, scip->stat->reopt_nruns) );
+
+      /* stop clock */
+      SCIP_CALL( SCIPstopSaveTime(scip) );
+   }
+
    /* if the stage is already SCIP_STAGE_SOLVED do nothing */
    if( scip->set->stage == SCIP_STAGE_SOLVED )
       return SCIP_OKAY;
@@ -13156,6 +13220,7 @@ SCIP_RETCODE SCIPsolve(
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
+   SCIPclockStart(scip->stat->solvingtimeoverall, scip->set);
 
    /* capture the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )
@@ -13166,6 +13231,7 @@ SCIP_RETCODE SCIPsolve(
 
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
+
    do
    {
       if( restart )
@@ -13194,12 +13260,25 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
+         /* check if reoptimization is enabled and global constraints saved */
+         if( scip->set->stage == SCIP_STAGE_PROBLEM
+          && scip->stat->reopt_nruns >= 1
+          && scip->set->reopt_enable )
+         {
+            SCIP_CALL( SCIPbranchruleNodereoptRestartCheck(scip) );
+
+            if( scip->set->reopt_saveglbcons )
+            {
+               SCIP_CALL( SCIPbranchruleNodereoptAddGlobalCons(scip) );
+            }
+         }
+
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
-	 /* remember that we already printed the relevant statistics */
-	 if( scip->set->stage == SCIP_STAGE_SOLVED )
-	    statsprinted = TRUE;
+         /* remember that we already printed the relevant statistics */
+         if( scip->set->stage == SCIP_STAGE_SOLVED )
+            statsprinted = TRUE;
 
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
             break;
@@ -13257,8 +13336,57 @@ SCIP_RETCODE SCIPsolve(
    if( scip->set->misc_catchctrlc )
       SCIPinterruptRelease(scip->interrupt);
 
+   if( scip->set->reopt_enable )
+   {
+      /* start clock */
+      SCIP_CALL( SCIPstartSaveTime(scip) );
+
+//      /* save the objective function */
+//      SCIP_CALL( SCIPreoptSaveObj(scip->reopt, scip->set, SCIPgetVars(scip), scip->mem->probmem,
+//            SCIPgetNVars(scip), SCIPgetNObjVars(scip), scip->stat->reopt_nruns) );
+
+      /* save found solutions */
+      if( scip->set->reopt_savesols != 0 )
+      {
+         int nsols;
+         int s;
+
+         nsols = scip->set->reopt_savesols == -1 ? scip->primal->nsols : MIN(scip->primal->nsols, scip->set->reopt_savesols);
+
+         /* allocate memory */
+         SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, nsols) );
+
+         for( s = 0; s < nsols; ++s )
+         {
+            SCIP_SOL* sol;
+
+            sol = scip->primal->sols[s];
+            assert(sol != NULL);
+
+            if( !SCIPsolIsOriginal(sol) )
+            {
+               /* retransform solution into the original problem space */
+               SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+            }
+
+            SCIP_SOL* copysol;
+            SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
+            SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, copysol, scip->stat->reopt_nruns) );
+         }
+      }
+
+#ifdef SCIP_DEBUG
+      {
+         printf(">> saved %d solution.\n", nsols);
+      }
+#endif
+      /* stop clock */
+      SCIP_CALL( SCIPstopSaveTime(scip) );
+   }
+
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
+   SCIPclockStop(scip->stat->solvingtimeoverall, scip->set);
 
    if( !statsprinted )
    {
@@ -29704,6 +29832,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_FREETRANS
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -29720,7 +29849,7 @@ SCIP_RETCODE SCIPcreateSolCopy(
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE) );
 
    /* check if we want to copy the current solution, which is the same as creating a current solution */
    if( sourcesol == NULL )
@@ -29729,7 +29858,26 @@ SCIP_RETCODE SCIPcreateSolCopy(
    }
    else
    {
-      SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, sourcesol) );
+      switch( scip->set->stage )
+      {
+      case SCIP_STAGE_PROBLEM:
+      case SCIP_STAGE_FREETRANS:
+      case SCIP_STAGE_SOLVED:
+         SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
+         break;
+      case SCIP_STAGE_TRANSFORMING:
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+         SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, sourcesol) );
+         break;
+      default:
+         assert(FALSE);
+      }
    }
 
    return SCIP_OKAY;
@@ -29818,6 +29966,9 @@ SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
 
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
+      /* disable reoptimization */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
       /* copy the original problem to the sub-SCIP */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * norigvars)) );
       SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
@@ -29857,7 +30008,7 @@ SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
                SCIP_VAR* negvar;
                SCIP_CONS* linkcons;
 
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "pos");
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "run");
                SCIP_CALL( SCIPcreateVar(subscip, &posvar, name, 0.0, SCIPinfinity(scip), 1.0,
                      SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(subscip, posvar) );
@@ -32514,6 +32665,25 @@ SCIP_RETCODE SCIPprintNodeRootPath(
 
    return SCIP_OKAY;
 }
+
+/** sets whether the LP should be solved at the focus node
+ *
+ *  @note In order to have an effect, this method needs to be called after a node is focused but before the LP is
+ *        solved.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPsetFocusnodeLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             solvelp             /**< should the LP be solved? */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetFocusnodeLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPtreeSetFocusNodeLP(scip->tree, solvelp);
+}
+
 
 
 /*
@@ -35478,6 +35648,98 @@ SCIP_RETCODE SCIPprintStatistics(
    }  /*lint !e788*/
 }
 
+/** outputs reoptimization statistics
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPprintReoptStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPprintReoptStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_SOLVED:
+      {
+         int nsolssaved;
+         int nsolsused;
+
+         nsolssaved = scip->set->reopt_enable ? SCIPreoptNSavedSols(scip->reopt) : 0;
+         nsolsused = scip->set->reopt_enable ? SCIPreoptNUsedSols(scip->reopt) : 0;
+
+         if( scip->set->reopt_enable )
+         {
+            SCIP_CALL( SCIPbranchruleNodereoptGetStatistic(scip,
+                     &scip->stat->reopt_feasnodesoverall, &scip->stat->reopt_feasnodes,
+                     &scip->stat->reopt_infeasnodesoverall, &scip->stat->reopt_infeasnodes,
+                     &scip->stat->reopt_prunednodesoverall, &scip->stat->reopt_prunednodes,
+                     &scip->stat->reopt_rediednodesoverall, &scip->stat->reopt_rediednodes,
+                     &scip->stat->reopt_nruns, NULL, NULL) );
+
+         }
+         else
+         {
+            scip->stat->reopt_feasnodesoverall = 0;
+            scip->stat->reopt_feasnodes = 0;
+            scip->stat->reopt_infeasnodesoverall = 0;
+            scip->stat->reopt_infeasnodes = 0;
+            scip->stat->reopt_prunednodesoverall = 0;
+            scip->stat->reopt_prunednodes = 0;
+            scip->stat->reopt_rediednodesoverall = 0;
+            scip->stat->reopt_rediednodes = 0;
+            scip->stat->reopt_nruns = 0;
+         }
+
+         /* decrease nruns by 1 to count the first non-reopt run */
+         scip->stat->reopt_nruns++;
+
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->reopt_nruns);
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time               :\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtimeoverall));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtimeoverall));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  init time        : %10.2f\n", SCIPclockGetTime(scip->stat->revivetimeoverall) + SCIPclockGetTime(scip->stat->updatesolutimeoverall));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  update time      : %10.2f (included in init)\n", SCIPclockGetTime(scip->stat->updatesolutimeoverall));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  save time  (sec) : %10.2f\n", SCIPclockGetTime(scip->stat->savetimeoverall));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Nodes              :       feas     infeas     pruned     redied\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
+               scip->stat->reopt_feasnodesoverall, scip->stat->reopt_infeasnodesoverall,
+               scip->stat->reopt_prunednodesoverall, scip->stat->reopt_rediednodesoverall);
+         if( scip->stat->reopt_nruns == 0 )
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n", 0, 0, 0, 0);
+
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
+                  (SCIP_Real)scip->stat->reopt_feasnodesoverall/scip->stat->reopt_nruns,
+                  (SCIP_Real)scip->stat->reopt_infeasnodesoverall/scip->stat->reopt_nruns,
+                  (SCIP_Real)scip->stat->reopt_prunednodesoverall/scip->stat->reopt_nruns,
+                  (SCIP_Real)scip->stat->reopt_rediednodesoverall/scip->stat->reopt_nruns);
+         }
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Solutions          :      saved     reused\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", nsolssaved, nsolsused);
+         if( scip->stat->reopt_nruns == 0 )
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", 0, 0);
+         else
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", (SCIP_Real)nsolssaved/scip->stat->reopt_nruns, (SCIP_Real)nsolsused/scip->stat->reopt_nruns);
+
+
+
+         return SCIP_OKAY;
+      }
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+}
+
 /** outputs history statistics about branchings on variables
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -35913,6 +36175,7 @@ SCIP_RETCODE SCIPstartSolvingTime(
    SCIP_CALL( checkStage(scip, "SCIPstartSolvingTime", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIPclockStart(scip->stat->solvingtime, scip->set);
+   SCIPclockStart(scip->stat->solvingtimeoverall, scip->set);
 
    return SCIP_OKAY;
 }
@@ -35945,6 +36208,165 @@ SCIP_RETCODE SCIPstopSolvingTime(
    SCIP_CALL( checkStage(scip, "SCIPstopSolvingTime", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIPclockStop(scip->stat->solvingtime, scip->set);
+   SCIPclockStop(scip->stat->solvingtimeoverall, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** starts the current initialization time
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPstartInitTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstartInitTime", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPclockStart(scip->stat->revivetime, scip->set);
+   SCIPclockStart(scip->stat->revivetimeoverall, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** stops the current initialization time in seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPstopInitTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstopInitTime", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPclockStop(scip->stat->revivetime, scip->set);
+   SCIPclockStop(scip->stat->revivetimeoverall, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** starts the current update time
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPstartUpdatesoluTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstartUpdatesoluTime", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPclockStart(scip->stat->updatesolutime, scip->set);
+   SCIPclockStart(scip->stat->updatesolutimeoverall, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** stops the current update time in seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPstopUpdatesoluTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstopUpdatesoluTime", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPclockStop(scip->stat->updatesolutime, scip->set);
+   SCIPclockStop(scip->stat->updatesolutimeoverall, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** starts the current save time
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPstartSaveTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstartSaveTime", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockStart(scip->stat->savetime, scip->set);
+   SCIPclockStart(scip->stat->savetimeoverall, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** stops the current save time in seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPstopSaveTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstopSaveTime", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockStop(scip->stat->savetime, scip->set);
+   SCIPclockStop(scip->stat->savetimeoverall, scip->set);
 
    return SCIP_OKAY;
 }

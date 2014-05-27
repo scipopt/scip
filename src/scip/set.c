@@ -230,6 +230,8 @@
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
+#define SCIP_DEFAULT_MISC_REUSESOLS        TRUE /**< should solutions from orig space used in primal space after transformation */
+
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
@@ -265,8 +267,15 @@
 /* Reoptimization */
 
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
-#define SCIP_DEFAULT_REOPT_MAXSAVEDNODES    1e5 /**< maximum number of saved nodes */
+#define SCIP_DEFAULT_REOPT_MAXSAVEDNODES INT_MAX/**< maximum number of saved nodes */
 #define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
+#define SCIP_DEFAULT_REOPT_SAVEGLBCONS    FALSE /**< save global constraints to separate solutions found so far */
+#define SCIP_DEFAULT_REOPT_SAVELOCCONS    FALSE /**< save local constraints to separate solutions found so far */
+#define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
+#define SCIP_DEFAULT_REOPT_SOLVELPDIFF        5 /**< difference of path length between two ancestor nodes to solve the LP */
+#define SCIP_DEFAULT_REOPT_SAVESOLS          -1 /**< save n best solutions found so far (-1: all) */
+#define SCIP_DEFAULT_REOPT_OBJSIM          0.54 /**< reuse stored solutions only if the similarity of the new and the old objective
+                                                     function is greater or equal than this value */
 
 /* Propagating */
 
@@ -1352,6 +1361,11 @@ SCIP_RETCODE SCIPsetCreate(
             "should SCIP calculate the primal dual integral value?",
             &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
             NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/reusesols",
+            "should solutions from orig space used in primal space after transformation?",
+            &(*set)->misc_reusesols, FALSE, SCIP_DEFAULT_MISC_REUSESOLS,
+            NULL, NULL) );
 
 
    /* node selection */
@@ -1516,17 +1530,51 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* reoptimization */
-   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/enable",
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/enable",
          "should reoptimization used?",
-         &(*set)->reopt_enable, FALSE, SCIP_DEFAULT_REOPT_ENABLE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "reoptimization/maxsavednodes",
+         &(*set)->reopt_enable, FALSE, SCIP_DEFAULT_REOPT_ENABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/maxsavednodes",
          "maximal number of saved nodes",
-         &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, 0, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/savelpbasis",
+         &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/savelpbasis",
          "save LP basis of feasible and branched nodes during reoptimization",
-         &(*set)->reopt_savelpbasis, TRUE, SCIP_DEFAULT_REOPT_SAVELPBASIS, NULL, NULL) );
+         &(*set)->reopt_savelpbasis, TRUE, SCIP_DEFAULT_REOPT_SAVELPBASIS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/saveglbcons",
+         "save global constraints to separate solutions found so far.",
+         &(*set)->reopt_saveglbcons, TRUE, SCIP_DEFAULT_REOPT_SAVEGLBCONS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/saveloccons",
+         "save local constraints to separate solutions found so far.",
+         &(*set)->reopt_saveloccons, TRUE, SCIP_DEFAULT_REOPT_SAVELOCCONS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/solvelp",
+         "strategy for solving the LP at nodes from reoptimization (0: only at leafs, 1: at each node, 2: only below root, 3: difference to previous node).",
+         &(*set)->reopt_solvelp, TRUE, SCIP_DEFAULT_REOPT_SOLVELP, 0, 3,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/solvelpdiff",
+         "difference of path length between ancestor nodes to solve the LP.",
+         &(*set)->reopt_solvelpdiff, TRUE, SCIP_DEFAULT_REOPT_SOLVELPDIFF, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/savesols",
+         "number of best solutions which should be saved for the following runs. (-1: save all)",
+         &(*set)->reopt_savesols, TRUE, SCIP_DEFAULT_REOPT_SAVESOLS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "reoptimization/objsim",
+         "similarity of two objective function to reuse stored solutions.",
+         &(*set)->reopt_objsim, TRUE, SCIP_DEFAULT_REOPT_OBJSIM, 0, 1,
+         NULL, NULL) );
 
    /* separation parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

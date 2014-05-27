@@ -913,7 +913,7 @@ SCIP_RETCODE nodeCreate(
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
    (*node)->reoptredies = 0;
-   (*node)->reopt = FALSE,
+   (*node)->reopt = -1,
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -6674,7 +6674,7 @@ SCIP_Real SCIPnodeGetEstimate(
    return node->estimate;
 }
 
-SCIP_Bool SCIPnodeGetReopt(
+int SCIPnodeGetReopt(
    SCIP_NODE*           node
    )
 {
@@ -6684,11 +6684,14 @@ SCIP_Bool SCIPnodeGetReopt(
 }
 
 SCIP_RETCODE SCIPnodeSetReopt(
-   SCIP_NODE*           node
+   SCIP_NODE*            node,
+   int                   id
    )
 {
-   assert( node != NULL );
-   node->reopt = TRUE;
+   assert(node != NULL);
+   assert(id == -1 || 1 <= id);
+
+   node->reopt = id;
    return SCIP_OKAY;
 }
 
@@ -6785,7 +6788,6 @@ void SCIPnodeGetPseudoBranchings(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            pseudobranchvars,   /**< array of variables on which the branching has been performed in the parent node */
    SCIP_Real*            pseudobranchbounds, /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
    int*                  npseudobranchvars,  /**< number of variables on which branching has been performed in the parent node
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
@@ -6799,7 +6801,6 @@ void SCIPnodeGetPseudoBranchings(
    assert(node != NULL);
    assert(pseudobranchvars != NULL);
    assert(pseudobranchbounds != NULL);
-   assert(boundtypes != NULL);
    assert(npseudobranchvars != NULL);
    assert(pseudobranchvarssize >= 0);
 
@@ -6838,7 +6839,6 @@ void SCIPnodeGetPseudoBranchings(
       {
          assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
          pseudobranchvars[i-nboundchgs+(*npseudobranchvars)] = boundchgs[i].var;
-         boundtypes[i-nboundchgs+(*npseudobranchvars)] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
          pseudobranchbounds[i-nboundchgs+(*npseudobranchvars)] = boundchgs[i].newbound;
       }
    }
@@ -6961,6 +6961,45 @@ void SCIPnodeGetAncestorBranchings(
       SCIPnodeGetParentBranchings(node, &branchvars[start], &branchbounds[start], &boundtypes[start], &nodenbranchvars, size);
       *nbranchvars += nodenbranchvars;
       
+      node = node->parent;
+   }
+}
+
+/** SPECIAL FOR REOPTIMIZATION: returns the set of variable branchings that were performed until a ancestor nodes (nodes on the path to the given parent) to create this node */
+void SCIPnodeGetAncestorBranchingsReopt(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_NODE*            parent,             /**< node data of the last ancestor node */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
+   )
+{
+   assert(node != NULL);
+   assert(parent != NULL);
+   assert(branchvars != NULL);
+   assert(branchbounds != NULL);
+   assert(boundtypes != NULL);
+   assert(nbranchvars != NULL);
+   assert(branchvarssize >= 0);
+
+   (*nbranchvars) = 0;
+
+   while( SCIPnodeGetNumber(node) != SCIPnodeGetNumber(parent) )
+   {
+      int nodenbranchvars;
+      int start;
+      int size;
+
+      start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
+      size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
+
+      SCIPnodeGetParentBranchings(node, &branchvars[start], &branchbounds[start], &boundtypes[start], &nodenbranchvars, size);
+      *nbranchvars += nodenbranchvars;
+
       node = node->parent;
    }
 }

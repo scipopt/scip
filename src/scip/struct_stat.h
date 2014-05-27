@@ -106,7 +106,9 @@ struct SCIP_Stat
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
+   SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
+   SCIP_CLOCK*           presolvingtimeoverall;/**< total time used for presolving during reoptimization */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
    SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
    SCIP_CLOCK*           lexduallptime;      /**< lexicographic dual LP solution time */
@@ -119,6 +121,12 @@ struct SCIP_Stat
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
+   SCIP_CLOCK*           revivetime;         /**< time needed for initialize reoptimization */
+   SCIP_CLOCK*           revivetimeoverall;  /**< time needed for initialize reoptimization */
+   SCIP_CLOCK*           updatesolutime;     /**< time needed for update solutions during reoptimization */
+   SCIP_CLOCK*           updatesolutimeoverall;/**< time needed for update solutions during reoptimization */
+   SCIP_CLOCK*           savetime;           /**< time needed for save nodes during reoptimization */
+   SCIP_CLOCK*           savetimeoverall;    /**< time needed for save nodes during reoptimization */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
@@ -194,6 +202,17 @@ struct SCIP_Stat
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
+   int                   reopt_nruns;        /**< number of reoptimization runs */
+   int                   reopt_feasnodes;    /**< number of feasible nodes in reoptimization */
+   int                   reopt_feasnodesoverall;/**< number of feasible nodes in reoptimization */
+   int                   reopt_infeasnodes;  /**< number of infeasible nodes in reoptimization */
+   int                   reopt_infeasnodesoverall;/**< number of infeasible nodes in reoptimization */
+   int                   reopt_prunednodes;  /**< number of pruned nodes in reoptimization */
+   int                   reopt_prunednodesoverall;/**< number of pruned nodes in reoptimization */
+   int                   reopt_rediednodes;  /**< number of redied nodes in reoptimization */
+   int                   reopt_rediednodesoverall;/**< number of redied nodes in reoptimization */
+   int                   reopt_strbrnodes;   /**< number of strongbranched  nodes in reoptimization */
+   int                   reopt_strbrnodesoverall;/**< number of strongbranched nodes in reoptimization */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

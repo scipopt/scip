@@ -53,7 +53,9 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_ALLOC( BMSallocMemory(stat) );
 
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lexduallptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -66,6 +68,12 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->revivetime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->revivetimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->savetime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->savetimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->updatesolutime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->updatesolutimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -80,6 +88,12 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
    (*stat)->subscipdepth = 0;
+   (*stat)->reopt_feasnodesoverall = 0;
+   (*stat)->reopt_infeasnodesoverall = 0;
+   (*stat)->reopt_prunednodesoverall = 0;
+   (*stat)->reopt_strbrnodesoverall = 0;
+   (*stat)->reopt_rediednodesoverall = 0;
+   (*stat)->reopt_nruns = -1;
 
    SCIPstatReset(*stat, set);
 
@@ -96,7 +110,9 @@ SCIP_RETCODE SCIPstatFree(
    assert(*stat != NULL);
 
    SCIPclockFree(&(*stat)->solvingtime);
+   SCIPclockFree(&(*stat)->solvingtimeoverall);
    SCIPclockFree(&(*stat)->presolvingtime);
+   SCIPclockFree(&(*stat)->presolvingtimeoverall);
    SCIPclockFree(&(*stat)->primallptime);
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->lexduallptime);
@@ -109,6 +125,12 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
+   SCIPclockFree(&(*stat)->revivetime);
+   SCIPclockFree(&(*stat)->revivetimeoverall);
+   SCIPclockFree(&(*stat)->savetime);
+   SCIPclockFree(&(*stat)->savetimeoverall);
+   SCIPclockFree(&(*stat)->updatesolutime);
+   SCIPclockFree(&(*stat)->updatesolutimeoverall);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -176,6 +198,9 @@ void SCIPstatReset(
    SCIPclockReset(stat->nodeactivationtime);
    SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
+   SCIPclockReset(stat->revivetime);
+   SCIPclockReset(stat->savetime);
+   SCIPclockReset(stat->updatesolutime);
 
    SCIPhistoryReset(stat->glbhistory);
 
@@ -257,6 +282,11 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+   stat->reopt_feasnodes = 0;
+   stat->reopt_infeasnodes = 0;
+   stat->reopt_prunednodes = 0;
+   stat->reopt_strbrnodes = 0;
+   stat->reopt_rediednodes = 0;
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
