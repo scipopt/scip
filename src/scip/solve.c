@@ -56,7 +56,7 @@
 #include "scip/prop.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
-
+#include "scip/event_treeinfos.h"
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
 
@@ -4268,6 +4268,8 @@ SCIP_RETCODE SCIPsolveCIP(
          focusnode = nextnode;
          nextnode = NULL;
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+         SCIP_CALL( SCIPstoreTreeInfo(set->scip, focusnode) );
 
          /* start node activation timer */
          SCIPclockStart(stat->nodeactivationtime, set);

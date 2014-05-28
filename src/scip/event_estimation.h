@@ -33,7 +33,16 @@ extern "C" {
 
 EXTERN
 SCIP_Real SCIPgetRootLPSolPscostEstimate(
-   SCIP*                 scip
+   SCIP*                 scip,
+   SCIP_Bool             corrected
+   );
+
+EXTERN
+SCIP_RETCODE SCIPupdatePsCostContributionRootSolEstimate(
+   SCIP* scip,
+   SCIP_VAR* var,
+   SCIP_Real solvaldelta,
+   SCIP_Real oldpscostval
    );
 
 EXTERN

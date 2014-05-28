@@ -41,7 +41,8 @@ struct SCIP_EventhdlrData
    SCIP_VAR**           rootlpcands;
    int                  nrootlpcands;
    SCIP_Real*           rootlpcandsfrac;
-   SCIP_Real            rootestim;
+   SCIP_Real            rootcorrestim;
+   SCIP_Real            pscostcontribution;
    SCIP_Real            correctionfactor;
    SCIP_Bool            enabled;            /**< is the estimation event handler enabled? */
    int                  eventfilterpos;     /**< the event filter position, or -1, if event has not (yet) been caught */
@@ -127,21 +128,20 @@ SCIP_RETCODE storeRootLPSol(
 }
 
 static
-SCIP_Real recalcClassicEstimate(
+void recalcClassicEstimate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
    SCIP_Real estimate;
    int i;
-   SCIP_Real pscostcontribution;
    SCIP_Real incumbentsol;
    estimate = SCIPgetLowerboundRoot(scip);
 
    if( eventhdlrdata->nrootlpcands == 0 || eventhdlrdata->rootlpcands == NULL )
-      return SCIP_INVALID;
+      return;
 
-   pscostcontribution = 0.0;
+   eventhdlrdata->pscostcontribution = 0.0;
    for( i = 0; i < eventhdlrdata->nrootlpcands; ++i )
    {
       SCIP_Real upscore;
@@ -152,18 +152,74 @@ SCIP_Real recalcClassicEstimate(
 
       upscore *= (1.0 - eventhdlrdata->rootlpcandsfrac[i]);
       downscore *= eventhdlrdata->rootlpcandsfrac[i];
-      pscostcontribution += MIN(upscore, downscore);
+      eventhdlrdata->pscostcontribution += MIN(upscore, downscore);
    }
    incumbentsol = SCIPgetUpperbound(scip);
-   eventhdlrdata->correctionfactor = calcCorrectionFactor(scip, estimate, estimate + pscostcontribution, incumbentsol);
+   eventhdlrdata->correctionfactor = calcCorrectionFactor(scip, estimate, estimate + eventhdlrdata->pscostcontribution, incumbentsol);
 
-   eventhdlrdata->rootestim = estimate + eventhdlrdata->correctionfactor * pscostcontribution;
+   eventhdlrdata->rootcorrestim = estimate + eventhdlrdata->correctionfactor * eventhdlrdata->pscostcontribution;
+}
 
-   return eventhdlrdata->rootestim;
+SCIP_RETCODE SCIPupdatePsCostContributionRootSolEstimate(
+   SCIP* scip,
+   SCIP_VAR* var,
+   SCIP_Real solvaldelta,
+   SCIP_Real oldpscostval
+   )
+{
+   SCIP_Real upscore, downscore, oldupscore, olddownscore;
+   SCIP_Real downfrac, upfrac;
+   SCIP_VARSTATUS status;
+   SCIP_Real rootlpsol;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   status = SCIPvarGetStatus(var);
+   if( !(status == SCIP_VARSTATUS_COLUMN || status == SCIP_VARSTATUS_FIXED) )
+      return SCIP_OKAY;
+   rootlpsol = SCIPvarGetRootSol(var);
+
+   if( SCIPisFeasIntegral(scip, rootlpsol) )
+      return SCIP_OKAY;
+
+   if( SCIPisPositive(scip, solvaldelta) )
+   {
+      oldupscore = oldpscostval;
+      olddownscore = SCIPgetVarPseudocost(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+   }
+   else if( SCIPisFeasNegative(scip, solvaldelta) )
+   {
+      oldupscore = SCIPgetVarPseudocost(scip, var, SCIP_BRANCHDIR_UPWARDS);
+      olddownscore = oldpscostval;
+   }
+   else
+      return SCIP_OKAY;
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+
+   if( eventhdlrdata->nrootlpcands == 0 || eventhdlrdata->rootlpcands == NULL )
+      return SCIP_OKAY;
+
+   upscore = SCIPgetVarPseudocost(scip, var, SCIP_BRANCHDIR_UPWARDS);
+   downscore = SCIPgetVarPseudocost(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+   assert(oldupscore >= 0 && upscore >= 0 && downscore >= 0 && olddownscore >= 0);
+   downfrac = (rootlpsol - SCIPfloor(scip, rootlpsol));
+   upfrac = SCIPceil(scip, rootlpsol) - rootlpsol;
+   olddownscore *= downfrac;
+   oldupscore *= upfrac;
+   downscore *= downfrac;
+   upscore *= upfrac;
+
+   eventhdlrdata->pscostcontribution -= MIN(oldupscore, olddownscore);
+   eventhdlrdata->pscostcontribution += MIN(upscore, downscore);
+
+   eventhdlrdata->correctionfactor = calcCorrectionFactor(scip, SCIPgetLowerboundRoot(scip), SCIPgetLowerboundRoot(scip) + eventhdlrdata->pscostcontribution, SCIPgetUpperbound(scip));
+
+   return SCIP_OKAY;
 }
 
 SCIP_Real SCIPgetRootLPSolPscostEstimate(
-   SCIP*                 scip
+   SCIP*                 scip,
+   SCIP_Bool             corrected
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
@@ -174,7 +230,13 @@ SCIP_Real SCIPgetRootLPSolPscostEstimate(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   return recalcClassicEstimate(scip, eventhdlrdata);
+   if( eventhdlrdata->rootlpcands == NULL )
+      return SCIP_INVALID;
+
+   if( corrected )
+      return SCIPgetLowerboundRoot(scip) + eventhdlrdata->correctionfactor * eventhdlrdata->pscostcontribution;
+   else
+      return SCIPgetLowerboundRoot(scip) + eventhdlrdata->pscostcontribution;
 }
 
 static
@@ -199,8 +261,8 @@ void nodesUpdateEstimateData(
    SCIP_Real   incumbentsol,
    SCIP_Real*  minestimate,
    SCIP_Real*  mincorrectedestimate,
-   int*        nnodesbelowincumbent,
-   int*        nnodesbelowincumbentcorrected,
+   int*        rootestimumbent,
+   int*        rootestimumbentcorrected,
    SCIP_Real   correctionfactor
    )
 {
@@ -215,9 +277,9 @@ void nodesUpdateEstimateData(
       correctedestim = nodeGetCorrectedEstimate(nodes[n], correctionfactor);
 
       if( estim < incumbentsol )
-         (*nnodesbelowincumbent)++;
+         (*rootestimumbent)++;
       if( correctedestim < incumbentsol )
-         (*nnodesbelowincumbentcorrected)++;
+         (*rootestimumbentcorrected)++;
 
       if( estim < *minestimate )
          *minestimate = estim;
@@ -231,8 +293,8 @@ SCIP_RETCODE SCIPgetCorrectedEstimateData(
    SCIP_Real*            mincorrectedestimate,
    SCIP_Real*            rootcorrectedestim,
    SCIP_Real*            minestimate,
-   int*                  nnodesbelowincumbentcorrected,
-   int*                  nnodesbelowincumbent,
+   int*                  rootestimumbentcorrected,
+   int*                  rootestimumbent,
    SCIP_Bool             recalcestim
 )
 {
@@ -256,30 +318,30 @@ SCIP_RETCODE SCIPgetCorrectedEstimateData(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   recalcestim = (recalcestim || eventhdlrdata->rootestim == SCIP_INVALID );
+   recalcestim = (recalcestim || eventhdlrdata->rootcorrestim == SCIP_INVALID );
 
    if( recalcestim )
-      *rootcorrectedestim = recalcClassicEstimate(scip , eventhdlrdata);
-   else
-      *rootcorrectedestim = eventhdlrdata->rootestim;
+      recalcClassicEstimate(scip , eventhdlrdata);
+
+   *rootcorrectedestim = eventhdlrdata->rootcorrestim;
 
    incumbentsol = SCIPgetUpperbound(scip);
 
-   *nnodesbelowincumbent = 0;
-   *nnodesbelowincumbentcorrected = 0;
+   *rootestimumbent = 0;
+   *rootestimumbentcorrected = 0;
    *mincorrectedestimate = SCIPinfinity(scip);
    *minestimate = SCIPinfinity(scip);
 
    nleaves = nchildren = nsiblings = 0;
    SCIP_CALL( SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings) );
    if( nchildren > 0 )
-      nodesUpdateEstimateData(children, nchildren, incumbentsol, minestimate, mincorrectedestimate, nnodesbelowincumbent, nnodesbelowincumbentcorrected,
+      nodesUpdateEstimateData(children, nchildren, incumbentsol, minestimate, mincorrectedestimate, rootestimumbent, rootestimumbentcorrected,
             eventhdlrdata->correctionfactor);
    if( nsiblings > 0 )
-      nodesUpdateEstimateData(siblings, nsiblings, incumbentsol, minestimate, mincorrectedestimate, nnodesbelowincumbent, nnodesbelowincumbentcorrected,
+      nodesUpdateEstimateData(siblings, nsiblings, incumbentsol, minestimate, mincorrectedestimate, rootestimumbent, rootestimumbentcorrected,
             eventhdlrdata->correctionfactor);
    if( nleaves > 0 )
-         nodesUpdateEstimateData(leaves, nleaves, incumbentsol, minestimate, mincorrectedestimate, nnodesbelowincumbent, nnodesbelowincumbentcorrected,
+         nodesUpdateEstimateData(leaves, nleaves, incumbentsol, minestimate, mincorrectedestimate, rootestimumbent, rootestimumbentcorrected,
                eventhdlrdata->correctionfactor);
 
 
@@ -308,7 +370,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstimation)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata->eventfilterpos == -1);
    eventhdlrdata->correctionfactor = 1.0;
-   eventhdlrdata->rootestim = SCIP_INVALID;
+   eventhdlrdata->rootcorrestim = SCIP_INVALID;
+   eventhdlrdata->pscostcontribution = 0;
 
    if( eventhdlrdata->enabled )
    {
@@ -457,11 +520,43 @@ SCIP_DECL_EVENTEXEC(eventExecEstimation)
             SCIPgetExternalValue(scip, upperbound),
             SCIPgetExternalValue(scip, lowerbound),
             SCIPgetExternalValue(scip, estimate),
-            SCIPgetExternalValue(scip, SCIPgetRootLPSolPscostEstimate(scip)),
+            SCIPgetExternalValue(scip, eventhdlrdata->rootcorrestim),
             depth, nlpcands, SCIPgetExternalValue(scip, SCIPnodeGetLowerbound(focusnode)), SCIPgetLPSolstat(scip));
       fclose(file);
    }
 
+   return SCIP_OKAY;
+}
+
+#define DISP_NAME_ROOTESTIM         "rootestim"
+#define DISP_DESC_ROOTESTIM         "current number of encountered infeasible leaves"
+#define DISP_HEAD_ROOTESTIM         "rootestim"
+#define DISP_WIDT_ROOTESTIM         13
+#define DISP_PRIO_ROOTESTIM         40000
+#define DISP_POSI_ROOTESTIM         1000
+#define DISP_STRI_ROOTESTIM         TRUE
+
+static
+SCIP_DECL_DISPOUTPUT(dispOutputRootestim)
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_Real rootestim;
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ROOTESTIM) == 0);
+   assert(scip != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+   recalcClassicEstimate(scip, eventhdlrdata);
+
+   if( eventhdlrdata->nrootlpcands == 0 || eventhdlrdata->rootlpcands == NULL )
+      rootestim = SCIP_INVALID;
+   else
+      rootestim = SCIPgetLowerboundRoot(scip) + eventhdlrdata->pscostcontribution;
+
+   if( rootestim == SCIP_INVALID )
+      SCIPinfoMessage(scip, file, "     --      ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e", SCIPretransformObj(scip, rootestim));
    return SCIP_OKAY;
 }
 
@@ -502,6 +597,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstimation(
                &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/estimation/fileoutput","should file output be generated? ",
          &eventhdlrdata->fileoutput, FALSE, DEFAULT_FILEOUTPUT, NULL, NULL) );
+
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_ROOTESTIM, DISP_DESC_ROOTESTIM, DISP_HEAD_ROOTESTIM, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputRootestim, NULL, DISP_WIDT_ROOTESTIM, DISP_PRIO_ROOTESTIM, DISP_POSI_ROOTESTIM,
+         DISP_STRI_ROOTESTIM) );
 
    return SCIP_OKAY;
 }

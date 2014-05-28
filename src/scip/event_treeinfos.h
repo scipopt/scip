@@ -43,6 +43,30 @@ int SCIPgetNRank1Nodes(
    SCIP* scip
    );
 
+/** returns the current number of open nodes which have an estimate lower than the incumbent solution */
+EXTERN
+int SCIPgetNNodesBelowIncumbent(
+   SCIP* scip
+   );
+
+EXTERN
+SCIP_RETCODE SCIPstoreTreeInfo(
+   SCIP* scip,
+   SCIP_NODE* focusnode
+   );
+
+/** returns the number of leaves which hit the objective limit */
+EXTERN
+SCIP_Longint SCIPgetNObjLeaves(
+   SCIP* scip
+   );
+
+/** returns the number of leaves which happened to be infeasible */
+EXTERN
+SCIP_Longint SCIPgetNInfeasLeaves(
+   SCIP* scip
+   );
+
 #ifdef __cplusplus
 }
 #endif

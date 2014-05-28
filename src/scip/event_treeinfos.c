@@ -25,8 +25,8 @@
 
 #define EVENTHDLR_NAME         "treeinfos"
 #define EVENTHDLR_DESC         "event handler for treeinfos event"
-#define EVENT_TYPE_TREEINFOS  SCIP_EVENTTYPE_NODEFOCUSED | SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_BESTSOLFOUND
-#define DEFAULT_ENABLED        FALSE
+#define EVENT_TYPE_TREEINFOS  SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_BESTSOLFOUND
+#define DEFAULT_ENABLED        TRUE
 #define HEADER "NUMBER  PRIMAL LOWER ESTIM ROOTLPPSESTIM DEPTH NCANDS NODELOWER LPSTAT"
 #define DEFAULT_FILEOUTPUT FALSE
 /*
@@ -48,6 +48,14 @@ struct DepthInfo
 
 typedef struct DepthInfo DEPTHINFO;
 
+/** information about leaves of the tree */
+struct LeafInfo
+{
+   SCIP_Longint         nobjleaves; /**< the number of leave nodes that hit the objective limit */
+   SCIP_Longint         ninfeasleaves; /**< the number of leaf nodes that were infeasible */
+};
+typedef struct LeafInfo LEAFINFO;
+
 /** event handler data */
 struct SCIP_EventhdlrData
 {
@@ -56,6 +64,8 @@ struct SCIP_EventhdlrData
    DEPTHINFO**          depthinfos;
    int                  maxdepth;
    int                  nrank1nodes;        /**< number of rank1 nodes */
+   int                  nnodesbelowincumbent; /* number of open nodes with an estimate lower than the current incumbent */
+   LEAFINFO*            leafinfo;
 };
 
 /*
@@ -105,6 +115,7 @@ SCIP_RETCODE nodesUpdateRank1Nodes(
    {
       SCIP_NODE* node = nodes[n];
       DEPTHINFO* depthinfo = eventhdlrdata->depthinfos[SCIPnodeGetDepth(node)];
+      SCIP_Real estim = SCIPnodeGetEstimate(node);
 
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF
             || SCIPnodeGetType(node) == SCIP_NODETYPE_SIBLING);
@@ -128,6 +139,8 @@ SCIP_RETCODE nodesUpdateRank1Nodes(
          assert(depthinfo->minnodes[pos] == node);
          ++eventhdlrdata->nrank1nodes;
       }
+      if( SCIPisLT(scip, estim, SCIPgetUpperbound(scip) ) )
+         ++eventhdlrdata->nnodesbelowincumbent;
    }
 
    return SCIP_OKAY;
@@ -171,6 +184,48 @@ int SCIPgetNRank1Nodes(
       return -1;
 }
 
+/** returns the current number of open nodes which have an estimate lower than the incumbent solution */
+int SCIPgetNNodesBelowIncumbent(
+   SCIP* scip
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      return eventhdlrdata->nnodesbelowincumbent;
+   else
+      return -1;
+}
+
+/** returns the number of leaves which hit the objective limit */
+SCIP_Longint SCIPgetNObjLeaves(
+   SCIP* scip
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      return eventhdlrdata->leafinfo->nobjleaves;
+   else
+      return -1;
+}
+
+/** returns the number of leaves which happened to be infeasible */
+SCIP_Longint SCIPgetNInfeasLeaves(
+   SCIP* scip
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      return eventhdlrdata->leafinfo->ninfeasleaves;
+   else
+      return -1;
+}
+
 /** discards all previous depth information and renews it afterwards */
 static
 SCIP_RETCODE storeRank1Nodes(
@@ -193,6 +248,7 @@ SCIP_RETCODE storeRank1Nodes(
       eventhdlrdata->depthinfos[d]->nminnodes = 0;
 
    eventhdlrdata->nrank1nodes = 0;
+   eventhdlrdata->nnodesbelowincumbent = 0;
 
    assert(eventhdlrdata != NULL);
 
@@ -254,6 +310,8 @@ void updateDepthinfo(
    if( SCIPisLT(scip, SCIPnodeGetEstimate(node), depthinfo->minestimate) )
       depthinfo->minestimate = SCIPnodeGetEstimate(node);
 
+   if( SCIPisLT(scip, SCIPnodeGetEstimate(node), SCIPgetUpperbound(scip) ) && SCIPnodeGetDepth(node) > 0 )
+      eventhdlrdata->nnodesbelowincumbent--;
    /* loop over remaining, unsolved nodes and decide whether they are still rank1 nodes */
    while(  depthinfo->nminnodes > 0 && SCIPisGT(scip, SCIPnodeGetEstimate(depthinfo->minnodes[depthinfo->nminnodes - 1]), depthinfo->minestimate) )
    {
@@ -283,7 +341,7 @@ SCIP_RETCODE storeDepthInfo(
       SCIP_CALL( SCIPallocMemoryArray(scip, &eventhdlrdata->depthinfos, 10) );
       newsize = 10;
    }
-   else if( nodedepth  + 1 >= eventhdlrdata->maxdepth )
+   else if( nodedepth + 1 >= eventhdlrdata->maxdepth )
    {
       assert(nodedepth > 0);
       SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->depthinfos, 2 * nodedepth) );
@@ -309,6 +367,70 @@ SCIP_RETCODE storeDepthInfo(
    return SCIP_OKAY;
 }
 
+SCIP_RETCODE SCIPstoreTreeInfo(
+   SCIP* scip,
+   SCIP_NODE* focusnode
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   if( focusnode == NULL )
+      return SCIP_OKAY;
+
+   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
+   SCIP_CALL( storeDepthInfo(scip, eventhdlrdata, focusnode) );
+
+   return SCIP_OKAY;
+}
+
+static
+void updateLeafInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEAFINFO*             leafinfo,           /**< leaf information structure */
+   SCIP_EVENTTYPE        eventtype           /**< the event at the node in question */
+   )
+{
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT )
+      ++(leafinfo->nobjleaves);
+   else if( eventtype & SCIP_EVENTTYPE_NODEINFEASIBLE )
+      ++(leafinfo->ninfeasleaves);
+}
+
+static
+void resetLeafInfo(
+   LEAFINFO*             leafinfo            /**< leaf information structure */
+   )
+{
+   leafinfo->ninfeasleaves = 0;
+   leafinfo->nobjleaves = 0;
+}
+
+static
+SCIP_RETCODE createLeafInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEAFINFO**            leafinfo            /**< leaf information structure */
+   )
+{
+   assert(leafinfo != NULL);
+   assert(*leafinfo == NULL);
+   SCIP_CALL( SCIPallocMemory(scip, leafinfo) );
+
+   resetLeafInfo(*leafinfo);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE freeLeafInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEAFINFO**            leafinfo            /**< leaf information structure */
+   )
+{
+   assert(*leafinfo != NULL);
+   SCIPfreeMemory(scip, leafinfo);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -332,6 +454,10 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeinfos)
    assert(eventhdlrdata->eventfilterpos == -1);
    eventhdlrdata->depthinfos = NULL;
    eventhdlrdata->maxdepth = 0;
+   eventhdlrdata->nnodesbelowincumbent = 0;
+   eventhdlrdata->nrank1nodes = 0;
+
+   resetLeafInfo(eventhdlrdata->leafinfo);
 
    if( eventhdlrdata->enabled )
    {
@@ -349,6 +475,8 @@ SCIP_DECL_EVENTFREE(eventFreeTreeinfos)
    assert(scip != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
+
+   SCIP_CALL( freeLeafInfo(scip, &eventhdlrdata->leafinfo) );
 
    SCIPfreeMemory(scip, &eventhdlrdata);
 
@@ -385,6 +513,47 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeinfos)
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+static
+int checkLeavesBelowIncumbent(
+   SCIP* scip
+   )
+{
+   SCIP_NODE** nodes;
+   int nnodes;
+   int n;
+   SCIP_Real upperbound = SCIPgetUpperbound(scip);
+   int nodesbelow = 0;
+
+   SCIPgetChildren(scip, &nodes, &nnodes);
+
+   for( n = 0; n < nnodes; ++n )
+   {
+      if( SCIPisLT(scip, SCIPnodeGetEstimate(nodes[n]), upperbound) )
+         ++nodesbelow;
+   }
+
+   SCIPgetSiblings(scip, &nodes, &nnodes);
+
+   for( n = 0; n < nnodes; ++n )
+   {
+      if( SCIPisLT(scip, SCIPnodeGetEstimate(nodes[n]), upperbound) )
+         ++nodesbelow;
+   }
+
+   SCIPgetLeaves(scip, &nodes, &nnodes);
+
+   for( n = 0; n < nnodes; ++n )
+   {
+      if( SCIPisLT(scip, SCIPnodeGetEstimate(nodes[n]), upperbound) )
+         ++nodesbelow;
+   }
+
+   assert(nodesbelow <= SCIPgetNNodesLeft(scip));
+   return nodesbelow;
+}
+#endif
+
 /** execution method of event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecTreeinfos)
@@ -398,18 +567,12 @@ SCIP_DECL_EVENTEXEC(eventExecTreeinfos)
    eventtype = SCIPeventGetType(event);
 
    assert(eventtype & (EVENT_TYPE_TREEINFOS));
+   assert((eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) || eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
 
    if( eventtype & SCIP_EVENTTYPE_BESTSOLFOUND )
    {
       SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
    }
-   else if( eventtype & SCIP_EVENTTYPE_NODEFOCUSED )
-   {
-      SCIP_NODE* focusnode;
-      focusnode = SCIPgetCurrentNode(scip);
-      storeDepthInfo(scip, eventhdlrdata, focusnode);
-   }
-
    else if( eventtype & SCIP_EVENTTYPE_NODEBRANCHED )
    {
       SCIP_NODE** children;
@@ -417,6 +580,13 @@ SCIP_DECL_EVENTEXEC(eventExecTreeinfos)
       SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
       SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, children, nchildren) );
    }
+   else if( eventtype & SCIP_EVENTTYPE_NODESOLVED )
+   {
+      updateLeafInfo(scip, eventhdlrdata->leafinfo, eventtype);
+   }
+
+   assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+   assert(eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
 
    return SCIP_OKAY;
 }
@@ -441,6 +611,68 @@ SCIP_DECL_DISPOUTPUT(dispOutputNRank1Nodes)
    return SCIP_OKAY;
 }
 
+
+#define DISP_NAME_NOBJLEAVES         "nobjleaves"
+#define DISP_DESC_NOBJLEAVES         "current number of encountered objective limit leaves"
+#define DISP_HEAD_NOBJLEAVES         "leavO"
+#define DISP_WIDT_NOBJLEAVES         6
+#define DISP_PRIO_NOBJLEAVES         40000
+#define DISP_POSI_NOBJLEAVES         600
+#define DISP_STRI_NOBJLEAVES         TRUE
+
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNObjLeaves)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NOBJLEAVES) == 0);
+   assert(scip != NULL);
+
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNObjLeaves(scip), DISP_WIDT_NOBJLEAVES);
+
+   return SCIP_OKAY;
+}
+
+#define DISP_NAME_NINFEASLEAVES         "ninfeasleaves"
+#define DISP_DESC_NINFEASLEAVES         "current number of encountered infeasible leaves"
+#define DISP_HEAD_NINFEASLEAVES         "leavI"
+#define DISP_WIDT_NINFEASLEAVES         6
+#define DISP_PRIO_NINFEASLEAVES         40000
+#define DISP_POSI_NINFEASLEAVES         800
+#define DISP_STRI_NINFEASLEAVES         TRUE
+
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNInfeasLeaves)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NINFEASLEAVES) == 0);
+   assert(scip != NULL);
+
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNInfeasLeaves(scip), DISP_WIDT_NINFEASLEAVES);
+
+   return SCIP_OKAY;
+}
+
+#define DISP_NAME_NNODESBELOWINC         "nnodesbelowinc"
+#define DISP_DESC_NNODESBELOWINC         "current number of encountered infeasible leaves"
+#define DISP_HEAD_NNODESBELOWINC         "nbInc"
+#define DISP_WIDT_NNODESBELOWINC         6
+#define DISP_PRIO_NNODESBELOWINC         40000
+#define DISP_POSI_NNODESBELOWINC         550
+#define DISP_STRI_NNODESBELOWINC         TRUE
+
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNnodesbelowinc)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NNODESBELOWINC) == 0);
+   assert(scip != NULL);
+
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNNodesBelowIncumbent(scip), DISP_WIDT_NNODESBELOWINC);
+
+   return SCIP_OKAY;
+}
+
+
 /** creates event handler for treeinfos event */
 SCIP_RETCODE SCIPincludeEventHdlrTreeinfos(
    SCIP*                 scip                /**< SCIP data structure */
@@ -456,6 +688,8 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeinfos(
    eventhdlrdata->eventfilterpos = -1;
    eventhdlrdata->depthinfos = NULL;
    eventhdlrdata->maxdepth = 0;
+   eventhdlrdata->leafinfo = NULL;
+   SCIP_CALL( createLeafInfo(scip, &eventhdlrdata->leafinfo) );
 
    eventhdlr = NULL;
    /* include event handler into SCIP */
@@ -477,5 +711,15 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeinfos(
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNRank1Nodes, NULL, DISP_WIDT_NRANK1NODES, DISP_PRIO_NRANK1NODES, DISP_POSI_NRANK1NODES,
          DISP_STRI_NRANK1NODES) );
 
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NOBJLEAVES, DISP_DESC_NOBJLEAVES, DISP_HEAD_NOBJLEAVES, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNObjLeaves, NULL, DISP_WIDT_NOBJLEAVES, DISP_PRIO_NOBJLEAVES, DISP_POSI_NOBJLEAVES,
+         DISP_STRI_NOBJLEAVES) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NINFEASLEAVES, DISP_DESC_NINFEASLEAVES, DISP_HEAD_NINFEASLEAVES, SCIP_DISPSTATUS_ON,
+            NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNInfeasLeaves, NULL, DISP_WIDT_NINFEASLEAVES, DISP_PRIO_NINFEASLEAVES, DISP_POSI_NINFEASLEAVES,
+            DISP_STRI_NINFEASLEAVES) );
+
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NNODESBELOWINC, DISP_DESC_NNODESBELOWINC, DISP_HEAD_NNODESBELOWINC, SCIP_DISPSTATUS_ON,
+            NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNnodesbelowinc, NULL, DISP_WIDT_NNODESBELOWINC, DISP_PRIO_NNODESBELOWINC, DISP_POSI_NNODESBELOWINC,
+            DISP_STRI_NNODESBELOWINC) );
    return SCIP_OKAY;
 }

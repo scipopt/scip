@@ -86,6 +86,8 @@
 #include "scip/dialog_default.h"
 #include "scip/message_default.h"
 
+#include "scip/event_estimation.h"
+
 /* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
  * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal' 
  * in the variable data structure. This would allow to have (multi)aggregated variables in the original problem.

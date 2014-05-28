@@ -25,6 +25,7 @@
 
 #include "scip/event_solvingstage.h"
 #include "string.h"
+#include "scip/event_treeinfos.h"
 
 #define EVENTHDLR_NAME         "solvingstage"
 #define EVENTHDLR_DESC         "event handler for events which influence the solving stage"
@@ -38,10 +39,16 @@
 #define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//testset//"
 #define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"
 #define DEFAULT_SETNAME "default.set"
-#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND /**< the actual event to be caught */
+#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED /**< the actual event to be caught */
 #define DEFAULT_LAMBA12 0.6 /* gap to reach for phase transition phase 1 -> phase 2 */
 #define DEFAULT_LAMBA23 0.03 /* gap to reach for phase transition phase 2 -> phase 3 */
 #define MAXGAP 1
+#define TRANSITIONMETHODS "celor" /**< how to do the transition from phase2 -> phase3? (c)orrected estimate based,
+                                      (e)stimate beased, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
+                                      (r)ank1 node based */
+#define DEFAULT_TRANSITIONMETHOD 'r' /**< the default transition method */
+#define DEFAULT_NODEOFFSET 50        /**< default node offset */
+#define DEFAULT_FALLBACK FALSE       /**< should the phase transition fall back to suboptimal stage? */
 
 /** enumerator to represent the event handler solving stage */
 enum SolvingStage
@@ -71,6 +78,11 @@ struct SCIP_EventhdlrData
    SCIP_Real            lambda12;            /**< gap to reach for phase transition phase 1 -> phase 2 */
    SCIP_Real            lambda23;            /**< gap to reach for phase transition phase 2 -> phase 3 */
    SOLVINGSTAGE         solvingstage;        /**< the current solving stage */
+   char                 transitionmethod;    /**< how to do the transition from phase2 -> phase3? (c)orrected estimate based,
+                                                  (e)stimate beased, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
+                                                  (r)ank1 node based */
+   SCIP_Longint         nodeoffset;          /**< node offset for triggering rank1 node based phased transition */
+   SCIP_Bool            fallback;             /**< should the phase transition fall back to suboptimal stage? */
 };
 
 /*
@@ -173,6 +185,49 @@ SCIP_Real getGap(
    }
 }
 
+static
+SCIP_Bool transitionPhase3(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   SCIP_Real primalbound;
+   SCIP_Real referencevalue;
+
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
+      return TRUE;
+
+   switch( eventhdlrdata->transitionmethod )
+   {
+      case 'r':
+         if( SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNRank1Nodes(scip) == 0 )
+         {
+
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a rank 1 transition: nodes: %lld, rank1: %d bound: %9.5g\n",
+                  SCIPgetNNodes(scip), SCIPgetNRank1Nodes(scip), SCIPgetPrimalbound(scip));
+            return TRUE;
+         }
+         break;
+      case 'o':
+         referencevalue = eventhdlrdata->optimalvalue;
+         primalbound = SCIPgetPrimalbound(scip);
+         if(!SCIPisInfinity(scip, REALABS(primalbound)) && !SCIPisInfinity(scip, referencevalue) )
+            return SCIPisFeasZero(scip, getGap(scip, primalbound, referencevalue));
+         break;
+      case 'c':
+         return FALSE;
+      case 'e':
+         return FALSE;
+      case 'l':
+         return FALSE;
+      default:
+         return FALSE;
+      break;
+   }
+
+   return FALSE;
+}
+
 /* determine the solving phase -> phase 1: gap > lambda12, phase2: lambda12 > gap > lambda23, phase 3: gap <= lambda23 */
 static
 void determineSolvingStage(
@@ -180,23 +235,13 @@ void determineSolvingStage(
    SCIP_EVENTHDLRDATA* eventhdlrdata
    )
 {
-   SCIP_Real primalgap; /* primal optimal gap */
-   SCIP_Real referencevalue;
-
    /* use the optimal value as reference value unless it is not available in which case we take the dual bound instead */
-   if( !SCIPisInfinity(scip, eventhdlrdata->optimalvalue) )
-      referencevalue = eventhdlrdata->optimalvalue;
-   else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-      referencevalue = SCIPgetDualbound(scip);
-   else
-      referencevalue = SCIPinfinity(scip);
-
-   primalgap = getGap(scip, SCIPgetPrimalbound(scip), referencevalue);
-   if( SCIPgetNSols(scip) == 0 || SCIPisFeasGT(scip, primalgap, eventhdlrdata->lambda12) )
+   if( SCIPgetNSols(scip) == 0 )
       eventhdlrdata->solvingstage = SOLVINGSTAGE_NOSOLUTION;
-   else if( SCIPisGT(scip, primalgap, eventhdlrdata->lambda23) )
+   else if( eventhdlrdata->solvingstage != SOLVINGSTAGE_OPTIMAL || eventhdlrdata->fallback )
       eventhdlrdata->solvingstage = SOLVINGSTAGE_SUBOPTIMAL;
-   else
+
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_SUBOPTIMAL && transitionPhase3(scip, eventhdlrdata) )
       eventhdlrdata->solvingstage = SOLVINGSTAGE_OPTIMAL;
 }
 
@@ -215,6 +260,9 @@ SCIP_RETCODE applySolvingStage(
    determineSolvingStage(scip, eventhdlrdata);
 
    if( stagebefore != SOLVINGSTAGE_NOSOLUTION && stagebefore == eventhdlrdata->solvingstage )
+      return SCIP_OKAY;
+
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
       return SCIP_OKAY;
 
    switch (eventhdlrdata->solvingstage)
@@ -373,7 +421,7 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
-   assert(SCIPeventGetType(event) & EVENTHDLR_EVENT);
+   assert(SCIPeventGetType(event) & (EVENTHDLR_EVENT));
 
    if( eventhdlrdata->enabled )
    {
@@ -443,5 +491,14 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
 
    SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/infeasiblesetname", "settings file for infeasible solving stage",
                &eventhdlrdata->infeasiblesetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
+
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nodeoffset", "node offset", &eventhdlrdata->nodeoffset,
+         FALSE, DEFAULT_NODEOFFSET, 1, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/fallback", "should the event handler fall back from optimal stage?",
+            &eventhdlrdata->fallback, FALSE, DEFAULT_FALLBACK, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip ,"eventhdlr/"EVENTHDLR_NAME"/transitionmethod", "transition method 'c','e','l','o','r'",
+         &eventhdlrdata->transitionmethod, FALSE, DEFAULT_TRANSITIONMETHOD, TRANSITIONMETHODS, NULL, NULL) );
+
    return SCIP_OKAY;
 }
