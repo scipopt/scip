@@ -2057,7 +2057,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
          isequation = isequation && !(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
       }
    }
-   *nbdchgs += nlocalbdchgs;
+
+   if( nbdchgs != NULL )
+      *nbdchgs += nlocalbdchgs;
 
    /* did we fix all variables? */
    if( v >= 0 )
@@ -2070,7 +2072,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
             SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, !clqvalues[0], infeasible, &nlocalbdchgs) );
-            *nbdchgs += nlocalbdchgs;
+            if( nbdchgs != NULL )
+               *nbdchgs += nlocalbdchgs;
          }
          else if( nvars == 0 )
             *infeasible = TRUE;
@@ -2091,7 +2094,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CALL( mergeClique(clqvars, clqvalues, &nvars, &isequation, NULL, blkmem, set, stat, transprob, origprob, tree, lp,
          branchcand, eventqueue, &nlocalbdchgs, infeasible) );
 
-   *nbdchgs += nlocalbdchgs;
+   if( nbdchgs != NULL )
+      *nbdchgs += nlocalbdchgs;
 
    /* did we stop early do to a pair of negated variables? */
    if( nvars == 0 || *infeasible )
