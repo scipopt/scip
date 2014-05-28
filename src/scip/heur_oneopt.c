@@ -193,6 +193,8 @@ SCIP_Real calcShiftVal(
          }
 #endif
          shiftval = MIN(shiftval, shiftvalrow);
+         /* shiftvalrow might be negative, if we detected infeasibility -> make sure that shiftval is >= 0 */
+         shiftval = MAX(shiftval, 0.0);
       }
    }
    if( shiftdown )
@@ -713,6 +715,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             shiftval = calcShiftVal(scip, var, solval, activities);
             SCIPdebugMessage(" -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
             assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
+            assert( SCIPisFeasGE(scip, solval+shiftval, SCIPvarGetLbGlobal(var)) && SCIPisFeasLE(scip, solval+shiftval, SCIPvarGetUbGlobal(var)));
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
             SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
          }
