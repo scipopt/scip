@@ -25,8 +25,8 @@
 
 #include "scip/heur_oneopt.h"
 
-/* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
- *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
+/* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
+ *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
  */
 
 #define HEUR_NAME             "oneopt"
@@ -37,7 +37,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_AFTERNODE
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_WEIGHTEDOBJ   TRUE           /**< should the objective be weighted with the potential shifting value when sorting the shifting candidates? */
 #define DEFAULT_DURINGROOT    TRUE           /**< should the heuristic be called before and during the root node? */
@@ -69,7 +69,7 @@ SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                            */
+   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                         */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
@@ -109,6 +109,7 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/** compute value by which the solution of variable @p var can be shifted */
 static
 SCIP_Real calcShiftVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -125,11 +126,11 @@ SCIP_Real calcShiftVal(
    SCIP_COL* col;
    SCIP_ROW** colrows;
    SCIP_Real* colvals;
+   SCIP_Bool shiftdown;
 
    int ncolrows;
    int i;
 
-   SCIP_Bool shiftdown;
 
    /* get variable's solution value, global bounds and objective coefficient */
    lb = SCIPvarGetLbGlobal(var);
@@ -854,8 +855,8 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOneopt) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolOneopt) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolOneopt) );
-   /* add oneopt primal heuristic parameters */
 
+   /* add oneopt primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/weightedobj",
          "should the objective be weighted with the potential shifting value when sorting the shifting candidates?",
          &heurdata->weightedobj, TRUE, DEFAULT_WEIGHTEDOBJ, NULL, NULL) );
