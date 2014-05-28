@@ -9017,7 +9017,6 @@ SCIP_RETCODE varAddImplic(
    {
       assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
-#if 1 //todo
       if( SCIPvarIsBinary(implvar) )
       {
          SCIP_VAR* vars[2];
@@ -9039,7 +9038,6 @@ SCIP_RETCODE varAddImplic(
             return SCIP_OKAY;
       }
       else
-#endif
       {
          /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
          SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n",
@@ -9106,86 +9104,7 @@ SCIP_RETCODE varAddImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* check, whether implied variable is binary */
-#if 0
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-   {
-      SCIP_Bool inverseadded;
-
-      assert(SCIPsetIsEQ(set, implbound, 0.0) == (impltype == SCIP_BOUNDTYPE_UPPER));
-      assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
-
-      /* add inverse implication y == 0/1 -> x == 0/1 to the implications list of y:
-       *   x == 0 -> y == 0  <->  y == 1 -> x == 1
-       *   x == 1 -> y == 0  <->  y == 1 -> x == 0
-       *   x == 0 -> y == 1  <->  y == 0 -> x == 1
-       *   x == 1 -> y == 1  <->  y == 0 -> x == 0
-       */
-      SCIPdebugMessage("adding inverse implication: <%s> == %d  ==>  <%s> == %d\n",
-         SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER), SCIPvarGetName(var), !varfixing);
-      SCIP_CALL( SCIPimplicsAdd(&implvar->implics, blkmem, set, stat, 
-            (impltype == SCIP_BOUNDTYPE_UPPER), var, varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, 
-            varfixing ? 0.0 : 1.0, isshortcut, &conflict, &inverseadded) );
-      assert(inverseadded == !conflict); /* if there is no conflict, the implication must not be redundant */
-
-      /* on conflict, fix the variable to the opposite value */
-      if( conflict )
-      {
-         SCIPdebugMessage(" -> implication yields a conflict: fix <%s> == %d\n", 
-            SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER);
-
-         /* remove the original implication (which is now redundant due to the fixing of the implvar) */
-         SCIPdebugMessage(" -> deleting implication: <%s> == %u  ==>  <%s> %s %g\n", 
-            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            implbound);
-         SCIP_CALL( SCIPimplicsDel(&var->implics, blkmem, set, varfixing, implvar, impltype) );
-
-         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
-          * with the local bound, in this case we need to store the bound change as pending bound change
-          */
-         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
-         {
-            assert(tree != NULL);
-            assert(transprob != NULL);
-            assert(SCIPprobIsTransformed(transprob));
-
-            /* fix implvar */
-            if( impltype == SCIP_BOUNDTYPE_UPPER )
-            {
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, lp, branchcand, eventqueue, implvar, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, lp, branchcand, eventqueue, implvar, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
-            }
-         }
-         else
-         {
-            /* fix implvar */
-            if( impltype == SCIP_BOUNDTYPE_UPPER )
-            {
-               SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
-            }
-         }
-
-         if( nbdchgs != NULL )
-            (*nbdchgs)++;
-      }
-      else if( inverseadded )
-      {
-         /* issue IMPLADDED event */
-         SCIP_CALL( varEventImplAdded(implvar, blkmem, set, eventqueue) );
-      }
-   }
-   else
-#else
    if( !SCIPvarIsBinary(implvar) )
-#endif
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -9256,12 +9175,8 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
 
    /* if variable has too many implications, the implication graph may become too dense */
-#if 0
-   if( nimpls > MAXIMPLSCLOSURE )
-      return SCIP_OKAY;
-#else
    i = MIN(nimpls, MAXIMPLSCLOSURE) - 1;
-#endif
+
    /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
     * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
     * array over which we currently iterate; the only thing that can happen, is that elements of the array are
@@ -16751,9 +16666,6 @@ int SCIPvarGetNCliques(
    )
 {
    assert(var != NULL);
-#if 0 //???
-   assert(SCIPvarIsActive(var));
-#endif
 
    return SCIPcliquelistGetNCliques(var->cliquelist, varfixing);
 }
@@ -16765,9 +16677,6 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    )
 {
    assert(var != NULL);
-#if 0 //???
-   assert(SCIPvarIsActive(var));
-#endif
 
    return SCIPcliquelistGetCliques(var->cliquelist, varfixing);
 }
