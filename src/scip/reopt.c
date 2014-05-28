@@ -100,6 +100,129 @@ SCIP_RETCODE ensureRunSize(
  * local methods
  */
 
+static
+int soltreeNInducedtSols(
+   SCIP_SOLNODE*         node
+)
+{
+   assert(node != NULL);
+
+   if( node->rchild == NULL && node->lchild == NULL )
+      return 1;
+   else
+   {
+      if( node->rchild == NULL )
+         return soltreeNInducedtSols(node->lchild);
+      else if( node->lchild == NULL )
+         return soltreeNInducedtSols(node->rchild);
+      else
+         return soltreeNInducedtSols(node->rchild) + soltreeNInducedtSols(node->lchild);
+   }
+}
+
+/* subroutine to calculate Hamming-Distance */
+static
+SCIP_Real soltreeHammingDistSub(
+   SCIP*                 scip,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   SCIP_SOL*             sol,
+   SCIP_SOLNODE*         node,
+   SCIP_VAR**            vars,
+   int                   id
+)
+{
+   SCIP_Real hamdist;
+   SCIP_Real objval;
+
+   assert(scip != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(sol != NULL);
+   assert(node != NULL);
+   assert(vars != NULL);
+
+   if( node->lchild == NULL && node->rchild == NULL )
+      return 0;
+
+   assert(0 <= id && id < SCIPgetNVars(scip));
+
+   hamdist = 0.0;
+   objval = SCIPsolGetVal(sol, set, stat, vars[id]);
+
+   if( SCIPsetIsFeasEQ(set, objval, 0) )
+   {
+      if( node->lchild != NULL )
+         hamdist += (soltreeNInducedtSols(node->lchild)
+                   + soltreeHammingDistSub(scip, set, stat, sol, node->lchild, vars, id+1));
+
+      if( node->rchild != NULL )
+         hamdist += soltreeHammingDistSub(scip, set, stat, sol, node->rchild, vars, id+1);
+   }
+   else
+   {
+      if( node->rchild != NULL )
+         hamdist += (soltreeNInducedtSols(node->rchild)
+                   + soltreeHammingDistSub(scip, set, stat, sol, node->rchild, vars, id+1));
+
+      if( node->lchild != NULL )
+         hamdist += soltreeHammingDistSub(scip, set, stat, sol, node->lchild, vars, id+1);
+   }
+
+   return hamdist;
+}
+
+/* return the average Hamming-Distance of a given solution
+ * to all saved solutions */
+static
+SCIP_Real soltreeGetHammingDist(
+   SCIP*                 scip,
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   SCIP_SOL*             sol
+)
+{
+   SCIP_VAR** vars;
+   SCIP_Real hamdist;
+   SCIP_Real objval;
+
+   assert(scip != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(sol != NULL);
+
+   hamdist = 0.0;
+
+   /** there are no solutions */
+   if( reopt->soltree->root->lchild == NULL && reopt->soltree->root->rchild == NULL )
+      return 1.0;
+
+   vars = SCIPgetVars(scip);
+   objval = SCIPsolGetVal(sol, set, stat, vars[0]);
+
+   if( SCIPsetIsFeasEQ(set, objval, 0) )
+   {
+      if( reopt->soltree->root->lchild != NULL )
+         hamdist += (soltreeNInducedtSols(reopt->soltree->root->lchild)
+                   + soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->lchild, vars, 1));
+
+      if( reopt->soltree->root->rchild != NULL )
+         hamdist += soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->rchild, vars, 1);
+   }
+   else
+   {
+      if( reopt->soltree->root->rchild != NULL )
+         hamdist += (soltreeNInducedtSols(reopt->soltree->root->rchild)
+                   + soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->rchild, vars, 1));
+
+      if( reopt->soltree->root->lchild != NULL )
+         hamdist += soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->lchild, vars, 1);
+   }
+
+   return hamdist/(soltreeNInducedtSols(reopt->soltree->root)*SCIPgetNVars(scip));
+}
+
 /* add solutions to origprimal space */
 static
 SCIP_RETCODE addSols(
@@ -244,6 +367,7 @@ SCIP_RETCODE soltreefreeNode(
    return SCIP_OKAY;
 }
 
+/* free solution tree */
 static
 SCIP_RETCODE freeSolTree(
    SCIP*                 scip,
@@ -254,6 +378,7 @@ SCIP_RETCODE freeSolTree(
    assert(reopt->soltree != NULL);
    assert(reopt->soltree->root != NULL);
 
+   /* free all nodes recursive */
    SCIP_CALL( soltreefreeNode(scip, reopt, reopt->soltree->root) );
 
    BMSfreeMemory(&reopt->soltree);
@@ -261,6 +386,7 @@ SCIP_RETCODE freeSolTree(
    return SCIP_OKAY;
 }
 
+/* add a node to the solution tree */
 static
 SCIP_RETCODE soltreeAddNode(
    SCIP_REOPT*           reopt,
@@ -292,6 +418,7 @@ SCIP_RETCODE soltreeAddNode(
    return SCIP_OKAY;
 }
 
+/* add a solution */
 static
 SCIP_RETCODE soltreeAddSol(
    SCIP*                 scip,
@@ -306,6 +433,7 @@ SCIP_RETCODE soltreeAddSol(
 )
 {
    SCIP_SOLNODE* cursolnode;
+   SCIP_Real hamdist;
    int* varidlist;
    int varid;
    int orderid;
@@ -315,8 +443,20 @@ SCIP_RETCODE soltreeAddSol(
 
    cursolnode = reopt->soltree->root;
    (*added) = FALSE;
+   hamdist = 0.0;
 
-   for(orderid = 0; orderid < nvars; orderid++)
+   /* the minimal Hamming-Distance of two different solutions
+    * at least 1/SCIPgetNVars(scip); we do not need to calculate
+    * the average distance if reopt_minavghamdist < 1/SCIPgetNVars(scip) */
+   if( set->reopt_minavghamdist >= 1/SCIPgetNVars(scip) )
+      hamdist = soltreeGetHammingDist(scip, reopt, set, stat, sol);
+   else
+      hamdist = set->reopt_minavghamdist;
+
+   /* add the solution iff the solution differs in at least one variable
+    * to all saved solution and the avarage Hamming-Distance is greater or
+    * equal to reopt_minavghamdist */
+   for(orderid = 0; orderid < nvars && hamdist >= set->reopt_minavghamdist; orderid++)
    {
       const char* varname;
       SCIP_Real objval;
@@ -350,6 +490,7 @@ SCIP_RETCODE soltreeAddSol(
       }
    }
 
+   /* the solution was added */
    if( (*added) )
    {
       SCIP_SOL* copysol;
@@ -361,7 +502,10 @@ SCIP_RETCODE soltreeAddSol(
 
 #ifdef SCIP_DEBUG
    {
-      printf(">> %s\n", (*added) ? "add sol" : "skip sol");
+      if( set->reopt_minavghamdist < 1/SCIPgetNVars(scip) )
+         printf(">> solution%s added (Hamming-Distance --).\n", (*added) ? "" : " not");
+      else
+         printf(">> solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
    }
 #endif
 
@@ -386,7 +530,6 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->nsols = NULL;
    (*reopt)->solssize = NULL;
    (*reopt)->solsused = NULL;
-   (*reopt)->varnamehash = NULL;
    (*reopt)->runsize = 200;
    (*reopt)->run = -1;
 
@@ -575,7 +718,11 @@ SCIP_RETCODE SCIPreoptUpdateSols(
    for(run = reopt->run; run >= 0; run--)
    {
       SCIP_Real sim;
-      sim = reoptSimilarity(scip, reopt, run, reopt->run+1);
+
+      if( set->reopt_objsim == 0 )
+         sim = 1;
+      else
+         sim = reoptSimilarity(scip, reopt, run, reopt->run+1);
 
       if( sim >= simparam )
       {
@@ -585,7 +732,10 @@ SCIP_RETCODE SCIPreoptUpdateSols(
 
 #ifdef SCIP_DEBUG
          {
-            printf(">> add %d solutions from run %d (lambda = %.4f).\n", naddedsols, run, sim);
+            if( set->reopt_objsim == 0  )
+               printf(">> add %d solutions from run %d (lambda --).\n", naddedsols, run);
+            else
+               printf(">> add %d solutions from run %d (lambda %.4f).\n", naddedsols, run, sim);
          }
 #endif
       }
@@ -644,6 +794,12 @@ SCIP_RETCODE SCIPreoptSaveObj(
    int id;
 
    assert(reopt != NULL);
+
+   /* at this moment we need the objective only
+    * to decide if we want to add solution or not,
+    * so we can skip this if objsim == 0 */
+   if( set->reopt_objsim == 0 )
+      return SCIP_OKAY;
 
    /* check memory */
    SCIP_CALL( ensureRunSize(reopt, set, run) );

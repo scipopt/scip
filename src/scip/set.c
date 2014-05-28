@@ -274,6 +274,7 @@
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        5 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS          -1 /**< save n best solutions found so far (-1: all) */
+#define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
 #define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 
@@ -1569,6 +1570,11 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/savesols",
          "number of best solutions which should be saved for the following runs. (-1: save all)",
          &(*set)->reopt_savesols, TRUE, SCIP_DEFAULT_REOPT_SAVESOLS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "reoptimization/minavghamdist",
+         "minimal average Hamming-Distance between a solution and the solution.",
+         &(*set)->reopt_minavghamdist, TRUE, SCIP_DEFAULT_REOPT_MINAVGHAMDIST, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsim",

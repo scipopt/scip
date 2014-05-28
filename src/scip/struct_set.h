@@ -364,6 +364,7 @@ struct SCIP_Set
    int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
    int                   reopt_solvelpdiff;  /**< difference of path length between two ancestor nodes to solve the LP */
    int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
+   SCIP_Real             reopt_minavghamdist;/**< minimal average Hamming-Distance between a solution and the solution pool. */
    SCIP_Real             reopt_objsim;       /**< similarity of two objective functions to reuse stored solutions. */
 
    /* separation settings */
