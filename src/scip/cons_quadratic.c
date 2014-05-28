@@ -3278,7 +3278,8 @@ SCIP_RETCODE presolveTryAddAND(
  *  checks whether x = xval has implications on y
  */
 static
-void getImpliedBounds(
+SCIP_RETCODE getImpliedBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             x,                  /**< variable which implications to check */
    SCIP_Bool             xval,               /**< value of x to check for (TRUE for 1, FALSE for 0) */
    SCIP_VAR*             y,                  /**< variable to check if bounds can be reduced */
@@ -3291,6 +3292,7 @@ void getImpliedBounds(
    int nimpls;
    int pos;
 
+   assert(scip != NULL);
    assert(x != NULL);
    assert(y != NULL);
    assert(resultant != NULL);
@@ -3298,12 +3300,30 @@ void getImpliedBounds(
    SCIPintervalSetBounds(resultant, MIN(SCIPvarGetLbGlobal(y), SCIPvarGetUbGlobal(y)), MAX(SCIPvarGetLbGlobal(y), SCIPvarGetUbGlobal(y)));  /*lint !e666 */
 
    if( !SCIPvarIsBinary(x) || !SCIPvarIsActive(x) )
-      return;
+      return SCIP_OKAY;
+
+   /* check in cliques for binary to binary implications */
+   if( SCIPvarIsBinary(y) )
+   {
+      resultant->inf = MAX(resultant->inf, MIN(resultant->sup, 0.0));
+      resultant->sup = MIN(resultant->sup, MAX(resultant->inf, 1.0));
+
+      if( SCIPhaveVarsCommonClique(scip, x, xval, y, TRUE, FALSE) )
+      {
+         resultant->sup = MIN(resultant->sup, MAX(resultant->inf, 0.0));
+      }
+      else if( SCIPhaveVarsCommonClique(scip, x, xval, y, FALSE, FALSE) )
+      {
+         resultant->inf = MAX(resultant->inf, MIN(resultant->sup, 1.0));
+      }
+
+      return SCIP_OKAY;
+   }
 
    /* analyze implications for x = xval */
    nimpls = SCIPvarGetNImpls(x, xval);
    if( nimpls == 0 )
-      return;
+      return SCIP_OKAY;
 
    implvars   = SCIPvarGetImplVars  (x, xval);
    impltypes  = SCIPvarGetImplTypes (x, xval);
@@ -3313,14 +3333,9 @@ void getImpliedBounds(
    assert(impltypes != NULL);
    assert(implbounds != NULL);
 
-   // todo check in cliques
-   if( SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
-   {
-      if( !SCIPsortedvecFindPtr((void**)implvars, SCIPvarComp, (void*)y, nimpls, &pos) )
-         return;
-   }
-   else
-      return;
+   /* find implications */
+   if( !SCIPsortedvecFindPtr((void**)implvars, SCIPvarComp, (void*)y, nimpls, &pos) )
+      return SCIP_OKAY;
 
    /* if there are several implications on y, go to the first one */
    while( pos > 0 && implvars[pos-1] == y )
@@ -3339,6 +3354,8 @@ void getImpliedBounds(
    }
 
    assert(!SCIPintervalIsEmpty(*resultant));
+
+   return SCIP_OKAY;
 }
 
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
@@ -3468,11 +3485,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
             assert(bilincoef != 0.0);
 
             /* get activity of bilincoef * x if y = 0 */
-            getImpliedBounds(y, FALSE, bvar, &act0);
+            SCIP_CALL( getImpliedBounds(scip, y, FALSE, bvar, &act0) );
             SCIPintervalMulScalar(SCIPinfinity(scip), &act0, act0, bilincoef);
 
             /* get activity of bilincoef * x if y = 1 */
-            getImpliedBounds(y,  TRUE, bvar, &act1);
+            SCIP_CALL( getImpliedBounds(scip, y,  TRUE, bvar, &act1) );
             SCIPintervalMulScalar(SCIPinfinity(scip), &act1, act1, bilincoef);
 
             /* skip products that give rise to very large coefficients (big big-M's) */
@@ -4268,7 +4285,7 @@ SCIP_RETCODE presolveApplyImplications(
          y = consdata->bilinterms[k].var1 == x ? consdata->bilinterms[k].var2 : consdata->bilinterms[k].var1;
          assert(x != y);
 
-         getImpliedBounds(x, TRUE, y, &implbnds);
+         SCIP_CALL( getImpliedBounds(scip, x, TRUE, y, &implbnds) );
          if( SCIPisZero(scip, implbnds.inf) && SCIPisZero(scip, implbnds.sup) )
          {
             /* if x = 1 implies y = 0, then we can remove the bilinear term x*y, since it is always 0
@@ -4280,7 +4297,7 @@ SCIP_RETCODE presolveApplyImplications(
             continue;
          }
 
-         getImpliedBounds(x, FALSE, y, &implbnds);
+         SCIP_CALL( getImpliedBounds(scip, x, FALSE, y, &implbnds) );
          if( SCIPisZero(scip, implbnds.inf) && SCIPisZero(scip, implbnds.sup) )
          {
             /* if x = 0 implies y = 0, then we can replace the bilinear term x*y by y
