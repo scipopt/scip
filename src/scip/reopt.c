@@ -251,32 +251,38 @@ SCIP_RETCODE addSols(
       SCIP_SOL* sol;
       SCIP_Real solobj;
 
-      sol = reopt->sols[run][s]->sol;
-
-      SCIPsolRecomputeObj(sol, set, stat, origprob);
-
-      solobj = SCIPsolGetObj(sol, set, transprob);
-
-      /* we do not want to add solutions with objective value +infinity */
-      if( !SCIPisInfinity(set->scip, solobj) && !SCIPisInfinity(set->scip, -solobj) )
+      /* add a solution one once, if it occurs in more
+       * than one run */
+      if( !reopt->sols[run][s]->updated )
       {
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
-         SCIP_Bool stored;
+         sol = reopt->sols[run][s]->sol;
+         SCIPsolRecomputeObj(sol, set, stat, origprob);
+         solobj = SCIPsolGetObj(sol, set, transprob);
 
-         /* add primal solution to solution storage by copying it */
-         SCIP_CALL( SCIPprimalAddSol(primal, probmem, set, messagehdlr, stat, origprob, transprob,
-               tree, lp, eventqueue, eventfilter, sol, &stored) );
-
-         if( stored )
+         /* we do not want to add solutions with objective value +infinity */
+         if( !SCIPisInfinity(set->scip, solobj) && !SCIPisInfinity(set->scip, -solobj) )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
-               SCIPstoreSolutionGap(set->scip);
+            SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+            SCIP_Bool stored;
+
+            /* add primal solution to solution storage by copying it */
+            SCIP_CALL( SCIPprimalAddSol(primal, probmem, set, messagehdlr, stat, origprob, transprob,
+                  tree, lp, eventqueue, eventfilter, sol, &stored) );
+
+            if( stored )
+            {
+               if( bestsol != SCIPgetBestSol(set->scip) )
+                  SCIPstoreSolutionGap(set->scip);
+            }
          }
+
+         /* mark the solution as already added */
+         reopt->sols[run][s]->updated = TRUE;
+
+         (*naddedsols)++;
       }
    }
    reopt->solsused[run] = TRUE;
-
-   (*naddedsols) = reopt->nsols[run];
 
    return SCIP_OKAY;
 }
@@ -405,6 +411,7 @@ SCIP_RETCODE soltreeAddNode(
 
    SCIP_ALLOC( BMSallocMemory(&newnode) );
    newnode->sol = NULL;
+   newnode->updated = FALSE;
    newnode->father = father;
    newnode->rchild = NULL;
    newnode->lchild = NULL;
@@ -448,7 +455,7 @@ SCIP_RETCODE soltreeAddSol(
    /* the minimal Hamming-Distance of two different solutions
     * at least 1/SCIPgetNVars(scip); we do not need to calculate
     * the average distance if reopt_minavghamdist < 1/SCIPgetNVars(scip) */
-   if( set->reopt_minavghamdist >= 1/SCIPgetNVars(scip) )
+   if( set->reopt_minavghamdist >= (SCIP_Real)1/SCIPgetNVars(scip) )
       hamdist = soltreeGetHammingDist(scip, reopt, set, stat, sol);
    else
       hamdist = set->reopt_minavghamdist;
@@ -491,12 +498,21 @@ SCIP_RETCODE soltreeAddSol(
    }
 
    /* the solution was added */
-   if( (*added) )
+   if( (*added) || hamdist >= set->reopt_minavghamdist )
    {
       SCIP_SOL* copysol;
-      SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
 
-      cursolnode->sol = copysol;
+      if( (*added) )
+      {
+         SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
+         cursolnode->sol = copysol;
+      }
+      else
+         /* this is a pseudo add; we do not want to save this solution
+          * more than once, but we will link this solution to the solution
+          * storage of this round */
+         (*added) = TRUE;
+
       (*solnode) = cursolnode;
    }
 
@@ -510,6 +526,33 @@ SCIP_RETCODE soltreeAddSol(
 #endif
 
    return SCIP_OKAY;
+}
+
+/* set all marks updated to FALSE */
+static
+void resetMarks(
+   SCIP_SOLNODE*         node
+)
+{
+   assert(node != NULL);
+
+   if( node->rchild != NULL || node->lchild != NULL )
+   {
+      /* the node is no leaf */
+      assert(node->sol == NULL);
+      assert(!node->updated);
+
+      if( node->rchild != NULL )
+         resetMarks(node->rchild);
+      if( node->lchild != NULL )
+         resetMarks(node->lchild);
+   }
+   else
+   {
+      /* the node is a leaf */
+      assert(node->sol != NULL);
+      node->updated = FALSE;
+   }
 }
 
 /*
@@ -740,6 +783,9 @@ SCIP_RETCODE SCIPreoptUpdateSols(
 #endif
       }
    }
+
+   /* reset the marks for added solutions */
+   resetMarks(reopt->soltree->root);
 
    return SCIP_OKAY;
 }

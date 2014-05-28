@@ -55,6 +55,7 @@ struct SCIP_SolNode
    SCIP_SOLNODE*         father;
    SCIP_SOLNODE*         rchild;
    SCIP_SOLNODE*         lchild;
+   SCIP_Bool             updated;
    int                   val;
 };
 
