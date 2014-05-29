@@ -727,6 +727,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
    *result = SCIP_DIDNOTRUN;
 
    /* loop through all constraints */
@@ -745,9 +746,11 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
       SCIPdebugMessage("propagating linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       *result = SCIP_DIDNOTFIND;
+
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
       assert( consdata->vars != NULL );
+
       vars = consdata->vars;
       n = consdata->n;
 
@@ -760,7 +763,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       continue;
 
 	    /* if x[i][j] == 1 then x[j][i] = 0 */
-	    if ( (SCIPvarGetLbLocal(vars[i][j]) > 0.5) )
+	    if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
 	    {
 	       SCIP_Bool infeasible, tightened;
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
@@ -769,6 +772,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  SCIPdebugMessage(" -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
@@ -778,7 +782,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	    }
 
 	    /* if x[i][j] == 0 then x[j][i] = 1 */
-	    if ( (SCIPvarGetUbLocal(vars[i][j]) < 0.5) )
+	    if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 )
 	    {
 	       SCIP_Bool infeasible, tightened;
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], TRUE, cons, i*n + j, &infeasible, &tightened) );
@@ -787,6 +791,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  SCIPdebugMessage(" -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
@@ -801,7 +806,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  continue;
 
 	       /* if x[i][j] == 1 and x[j][k] == 1 then x[k][i] = 0 */
-	       if ( (SCIPvarGetLbLocal(vars[i][j]) > 0.5) && (SCIPvarGetLbLocal(vars[j][k]) > 0.5))
+	       if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 && SCIPvarGetLbLocal(vars[j][k]) > 0.5 )
 	       {
 		  SCIP_Bool infeasible, tightened;
 		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
@@ -811,6 +816,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
                      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );
                      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		     *result = SCIP_CUTOFF;
 		     return SCIP_OKAY;
