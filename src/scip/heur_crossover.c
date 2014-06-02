@@ -901,6 +901,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    heurdata->prevbestsol = SCIPgetBestSol(scip);
    heurdata->prevlastsol = sols[heurdata->nusedsols-1];
 
+   /* disable reoptimization */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
    /* if creation of sub-SCIP was aborted (e.g. due to number of fixings), free sub-SCIP and abort */
    if( !success )
    {
@@ -919,9 +922,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
 
 #ifdef SCIP_DEBUG
    /* for debugging DINS, enable MIP output */

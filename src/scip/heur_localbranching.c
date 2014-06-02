@@ -521,6 +521,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
+   /* disable reoptimization */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
+
    /* if the subproblem could not be created, free memory and return */
    if( !success )
    {
@@ -530,9 +533,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
 
 #ifndef SCIP_DEBUG
    /* disable output to console */
