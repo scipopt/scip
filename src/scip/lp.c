@@ -16122,6 +16122,12 @@ SCIP_RETCODE SCIPlpGetSol(
       }
       else
       {
+         /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
+         if( dualfeasible == NULL && lpicols[c]->basisstatus == SCIP_BASESTAT_BASIC )
+         {
+            lpicols[c]->redcost = 0.0;
+         }
+
          /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
           * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
           * bounds, its reduced cost must be zero
