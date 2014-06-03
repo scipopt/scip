@@ -19,7 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #include <assert.h>
 
 #include "scip/def.h"
@@ -296,30 +296,37 @@ SCIP_Real reoptSimilarity(
    int                   obj2_id
 )
 {
-   SCIP_Real sim;
+   SCIP_Real norm_n1;
+   SCIP_Real norm_n2;
+   SCIP_Real scalarproduct;
    int id;
-   int scale;
 
    /* calc similarity */
-   scale = 0;
-   sim = 0.0;
+   norm_n1 = 0.0;
+   norm_n2 = 0.0;
+   scalarproduct = 0.0;
    for(id = 0; id < SCIPgetNVars(scip); id++)
    {
-      if(reopt->objs[obj1_id][id] != 0 || reopt->objs[obj2_id][id] != 0)
-      {
-         SCIP_Real c1;
-         SCIP_Real c2;
+      SCIP_Real c1;
+      SCIP_Real c2;
 
-         c1 = reopt->objs[obj1_id][id];
-         c2 = reopt->objs[obj2_id][id];
+      c1 = reopt->objs[obj1_id][id];
+      c2 = reopt->objs[obj2_id][id];
 
-         sim += MAX(0, MIN(c1/c2, c2/c1) );
+      /** vector product */
+      scalarproduct += c1*c2;
 
-         scale++;
-      }
+      /** norm of normalvector to obj1 */
+      norm_n1 += c1*c1;
+
+      /** norm of normalvector to obj1 */
+      norm_n2 += c2*c2;
    }
 
-   return sim/scale;
+   norm_n1 = sqrt(norm_n1);
+   norm_n2 = sqrt(norm_n2);
+
+   return scalarproduct/(norm_n1*norm_n2);
 }
 
 static
@@ -518,7 +525,7 @@ SCIP_RETCODE soltreeAddSol(
 
 #ifdef SCIP_DEBUG
    {
-      if( set->reopt_minavghamdist < 1/SCIPgetNVars(scip) )
+      if( set->reopt_minavghamdist < (SCIP_Real)1/SCIPgetNVars(scip) )
          printf(">> solution%s added (Hamming-Distance --).\n", (*added) ? "" : " not");
       else
          printf(">> solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
@@ -864,21 +871,7 @@ SCIP_RETCODE SCIPreoptSaveObj(
 
 #ifdef SCIP_DEBUG
    {
-      printf(">> saved obj in run %d:\n", run);
-      printf("   obj: ");
-
-      for(id = 0; id < SCIPgetNVars(scip); id++)
-      {
-         SCIP_Real objval;
-         const char* name;
-
-         objval = reopt->objs[run][id];
-         name = SCIPvarGetName(vars[id]);
-
-         if( objval != 0 )
-            printf("%s%f%s ", objval < 0 ? "" : "+", objval, name);
-      }
-      printf("\n");
+      printf(">> saved obj for run %d ...\n", run);
    }
 #endif
 
