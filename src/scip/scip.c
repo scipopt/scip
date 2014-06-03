@@ -11753,7 +11753,8 @@ SCIP_RETCODE SCIPtransformProb(
              */
             SCIP_CALL( checkSolOrig(scip, sol, &feasible,
                   (scip->set->disp_verblevel >= SCIP_VERBLEVEL_HIGH ? scip->set->misc_printreason : FALSE),
-                  FALSE, TRUE, TRUE, TRUE, TRUE) );
+                  FALSE, !scip->set->reopt_enable, !scip->set->reopt_enable,
+                  !scip->set->reopt_enable, !scip->set->reopt_enable) );
 
             if( feasible )
             {

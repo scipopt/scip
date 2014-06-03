@@ -41,8 +41,6 @@ struct SCIP_Reopt
    int*                  solssize;           /**< size of sols[x] arrays */
    int*                  nsols;              /**< number of solutions stored in sols[x] array */
 
-   SCIP_Bool*            solsused;           /**< True or False if the solutions in run x were used at least once */
-
    SCIP_Real**           objs;               /**< list of objective coefficients */
 
    SCIP_SOLTREE*         soltree;            /**< tree to handle all saved solutions */
@@ -56,6 +54,7 @@ struct SCIP_SolNode
    SCIP_SOLNODE*         rchild;
    SCIP_SOLNODE*         lchild;
    SCIP_Bool             updated;
+   SCIP_Bool             used;
    int                   val;
 };
 

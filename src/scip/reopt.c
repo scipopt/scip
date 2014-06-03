@@ -19,7 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <assert.h>
 
 #include "scip/def.h"
@@ -77,7 +77,6 @@ SCIP_RETCODE ensureRunSize(
       SCIP_ALLOC( BMSreallocMemoryArray(&reopt->sols, newsize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&reopt->nsols, newsize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&reopt->solssize, newsize) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&reopt->solsused, newsize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&reopt->objs, newsize) );
 
       for(s = reopt->runsize; s < newsize; s++)
@@ -86,7 +85,6 @@ SCIP_RETCODE ensureRunSize(
          reopt->objs[s] = NULL;
          reopt->nsols[s] = 0;
          reopt->solssize[s] = 0;
-         reopt->solsused[s] = FALSE;
       }
 
       reopt->runsize = newsize;
@@ -225,7 +223,7 @@ SCIP_Real soltreeGetHammingDist(
 
 /* add solutions to origprimal space */
 static
-SCIP_RETCODE addSols(
+SCIP_RETCODE soltreeUpdateSols(
    SCIP_REOPT*           reopt,
    SCIP_PRIMAL*          primal,
    BMS_BLKMEM*           probmem,
@@ -276,13 +274,13 @@ SCIP_RETCODE addSols(
             }
          }
 
-         /* mark the solution as already added */
+         /* mark the solution as already added and used */
          reopt->sols[run][s]->updated = TRUE;
+         reopt->sols[run][s]->used = TRUE;
 
          (*naddedsols)++;
       }
    }
-   reopt->solsused[run] = TRUE;
 
    return SCIP_OKAY;
 }
@@ -340,6 +338,8 @@ SCIP_RETCODE createSolTree(
    reopt->soltree->nsols = 0;
 
    SCIP_ALLOC( BMSallocMemory(&reopt->soltree->root) );
+   reopt->soltree->root->sol = NULL;
+   reopt->soltree->root->updated = FALSE;
    reopt->soltree->root->father = NULL;
    reopt->soltree->root->rchild = NULL;
    reopt->soltree->root->lchild = NULL;
@@ -537,7 +537,7 @@ SCIP_RETCODE soltreeAddSol(
 
 /* set all marks updated to FALSE */
 static
-void resetMarks(
+void soltreeResetMarks(
    SCIP_SOLNODE*         node
 )
 {
@@ -550,9 +550,9 @@ void resetMarks(
       assert(!node->updated);
 
       if( node->rchild != NULL )
-         resetMarks(node->rchild);
+         soltreeResetMarks(node->rchild);
       if( node->lchild != NULL )
-         resetMarks(node->lchild);
+         soltreeResetMarks(node->lchild);
    }
    else
    {
@@ -560,6 +560,28 @@ void resetMarks(
       assert(node->sol != NULL);
       node->updated = FALSE;
    }
+}
+
+/* return the number of used solutions */
+static
+int soltreeGetNUsedSols(
+   SCIP_SOLNODE*         node
+)
+{
+   int nusedsols;
+
+   assert(node != NULL);
+
+   nusedsols = 0;
+
+   if(node->lchild != NULL)
+      nusedsols += soltreeGetNUsedSols(node->lchild);
+   if(node->rchild != NULL)
+      nusedsols += soltreeGetNUsedSols(node->rchild);
+   if(node->rchild == NULL && node->lchild == NULL && node->used)
+      nusedsols = 1;
+
+   return nusedsols;
 }
 
 /*
@@ -579,21 +601,18 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->sols = NULL;
    (*reopt)->nsols = NULL;
    (*reopt)->solssize = NULL;
-   (*reopt)->solsused = NULL;
    (*reopt)->runsize = 200;
    (*reopt)->run = -1;
 
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->sols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->nsols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->solssize, (*reopt)->runsize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->solsused, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->objs, (*reopt)->runsize) );
 
    for(s = 0; s < (*reopt)->runsize; s++)
    {
       (*reopt)->nsols[s] = 0;
       (*reopt)->solssize[s] = 0;
-      (*reopt)->solsused[s] = FALSE;
       (*reopt)->sols[s] = NULL;
       (*reopt)->objs[s] = NULL;
    }
@@ -637,7 +656,6 @@ SCIP_RETCODE SCIPreoptFree(
    BMSfreeMemoryArrayNull(&(*reopt)->sols);
    BMSfreeMemoryArrayNull(&(*reopt)->nsols);
    BMSfreeMemoryArrayNull(&(*reopt)->solssize);
-   BMSfreeMemoryArrayNull(&(*reopt)->solsused);
    BMSfreeMemoryArrayNull(&(*reopt)->objs);
    BMSfreeMemory(reopt);
 
@@ -763,6 +781,10 @@ SCIP_RETCODE SCIPreoptUpdateSols(
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
 
+   /** we can skip this method if we have no solutions saved */
+   if( set->reopt_savesols == 0 )
+      return SCIP_OKAY;
+
    naddedsols = 0;
 
    for(run = reopt->run; run >= 0; run--)
@@ -776,7 +798,7 @@ SCIP_RETCODE SCIPreoptUpdateSols(
 
       if( sim >= simparam )
       {
-         SCIP_CALL( addSols(reopt, primal, probmem, set, messagehdlr,
+         SCIP_CALL( soltreeUpdateSols(reopt, primal, probmem, set, messagehdlr,
                stat, origprob, transprob, tree, lp, eventqueue, eventfilter,
                run, &naddedsols) );
 
@@ -792,7 +814,7 @@ SCIP_RETCODE SCIPreoptUpdateSols(
    }
 
    /* reset the marks for added solutions */
-   resetMarks(reopt->soltree->root);
+   soltreeResetMarks(reopt->soltree->root);
 
    return SCIP_OKAY;
 }
@@ -808,10 +830,10 @@ int SCIPreoptNSavedSols(
    assert(reopt != NULL);
 
    nsavedsols = 0;
-   for(r = reopt->run; r >= 0; r--)
-   {
-      nsavedsols += reopt->nsols[r];
-   }
+
+   if( reopt->soltree->root != NULL )
+      nsavedsols = soltreeNInducedtSols(reopt->soltree->root);
+
    return nsavedsols;
 }
 
@@ -826,11 +848,9 @@ int SCIPreoptNUsedSols(
    assert(reopt != NULL);
 
    nsolsused = 0;
-   for(r = reopt->run; r >= 0; r--)
-   {
-      if( reopt->solsused[r] )
-         nsolsused += reopt->nsols[r];
-   }
+
+   if( reopt->soltree->root != NULL )
+      nsolsused = soltreeGetNUsedSols(reopt->soltree->root);
 
    return nsolsused;
 }
