@@ -328,7 +328,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/disp_default.o \
 			scip/event_globalboundchg.o \
 			scip/event_nodereopt.o \
-			scip/event_solustore.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \

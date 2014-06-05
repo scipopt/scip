@@ -104,7 +104,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeEventHdlrGlobalboundchg(scip) );
    SCIP_CALL( SCIPincludeEventHdlrNodereopt(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrSolustore(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );

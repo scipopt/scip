@@ -69,7 +69,6 @@
 #include "scip/disp_default.h"
 #include "scip/event_globalboundchg.h"
 #include "scip/event_nodereopt.h"
-#include "scip/event_solustore.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
