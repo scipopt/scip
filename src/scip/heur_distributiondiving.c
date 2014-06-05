@@ -57,6 +57,11 @@
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
+#define SCOREPARAM_VALUES "lhwvd"
+#define SCOREPARAM_VALUESLEN 5
+#define DEFAULT_SCOREPARAM 'v'
+#define DEFAULT_REVOLVINGSCORE FALSE /**< should the score parameter revolve through all possible values */
+
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -93,6 +98,7 @@ struct SCIP_HeurData
    int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
 
    char                  scoreparam;         /**< score parameter to be used */
+   SCIP_Bool             revolvingscore;     /**< should the heuristic iterate through the possible score values? */
    SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
 };
 
@@ -914,6 +920,7 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
    int bestcand;
    int c;
    int nlprows;
+   char scoreparam;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -1032,6 +1039,11 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
 
+   if( heurdata->revolvingscore )
+      scoreparam = SCOREPARAM_VALUES[SCIPheurGetNCalls(heur) % SCOREPARAM_VALUESLEN];
+   else
+      scoreparam = heurdata->scoreparam;
+
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing distributiondiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
@@ -1049,8 +1061,9 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound))
       && !SCIPisStopped(scip) )
    {
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      divedepth++;
+      SCIP_Bool bestmayround;
+      SCIP_Bool mayroundup;
+      SCIP_Bool mayrounddown;
 
       /* process pending bound change events */
       while( heurdata->nupdatedvars > 0 )
@@ -1073,12 +1086,15 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
       bestcand = -1;
       bestscore = -1.0;
       bestdivedir = SCIP_BRANCHDIR_AUTO;
+      bestmayround = TRUE;
 
       for( c = 0; c < nlpcands; ++c )
       {
          SCIP_Real upscore;
          SCIP_Real downscore;
          SCIP_VAR* lpcand;
+         SCIP_Bool takeit;
+         SCIP_Real score;
          int varindex;
 
          lpcand = lpcands[c];
@@ -1106,45 +1122,60 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
 
          upscore = 0.0;
          downscore = 0.0;
-
+         takeit = FALSE;
          /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
          SCIP_CALL( calcBranchScore(scip, heurdata, lpcand, lpcandssol[c],
-               &upscore, &downscore, heurdata->scoreparam) );
+               &upscore, &downscore, scoreparam) );
+         mayrounddown = SCIPvarMayRoundDown(lpcand);
+         mayroundup = SCIPvarMayRoundUp(lpcand);
+
+         score = SCIPgetBranchScore(scip, lpcand, downscore, upscore);
 
          /* if weighted scoring is enabled, use the branching score method of SCIP to weigh up and down score */
          if( heurdata->usescipscore )
          {
-            SCIP_Real score;
-
-            score = SCIPgetBranchScore(scip, lpcand, downscore, upscore);
-
             /* select the candidate with the highest branching score */
-            if( score > bestscore )
+            if( mayrounddown || mayroundup )
             {
-               bestscore = score;
-               bestcand = c;
-               /* prioritize branching direction with the higher score */
-               if( upscore > downscore )
-                  bestdivedir = SCIP_BRANCHDIR_UPWARDS;
-               else
-                  bestdivedir = SCIP_BRANCHDIR_DOWNWARDS;
+               if( bestmayround && score > bestscore )
+                 takeit = TRUE;
+            }
+            else
+            {
+               if( bestmayround || score > bestscore )
+                  takeit = TRUE;
             }
          }
          else
          {
             /* no weighted score; keep candidate which has the single highest score in one direction */
-            if( upscore > bestscore && upscore > downscore )
+            if( mayrounddown || mayroundup )
             {
-               bestscore = upscore;
+               if( bestmayround )
+               {
+                  if( upscore > bestscore && upscore > downscore )
+                     takeit = TRUE;
+                  else if( downscore > bestscore )
+                     takeit = TRUE;
+               }
+            }
+            else
+               if( bestmayround || (upscore > bestscore && upscore > downscore) )
+                  takeit = TRUE;
+               else if( downscore > bestscore )
+                  takeit = TRUE;
+         }
+
+         if( takeit )
+         {
+            bestscore = heurdata->usescipscore ? score : MAX(upscore, downscore);
+            bestcand = c;
+            bestmayround = bestmayround && (mayroundup || mayrounddown);
+            /* prioritize branching direction with the higher score */
+            if( upscore > downscore )
                bestdivedir = SCIP_BRANCHDIR_UPWARDS;
-               bestcand = c;
-            }
-            else if( downscore > bestscore )
-            {
-               bestscore = downscore;
+            else
                bestdivedir = SCIP_BRANCHDIR_DOWNWARDS;
-               bestcand = c;
-            }
          }
 
          SCIPdebugMessage("  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcand), downscore, upscore);
@@ -1152,10 +1183,33 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
       }
       assert(bestcand != -1);
 
+      if( bestmayround )
+      {
+         SCIP_Bool success;
+
+         success = FALSE;
+         SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success));
+
+         if( success )
+         {
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+
+            /* check, if solution was feasible and good enough */
+            if( success )
+            {
+               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               *result = SCIP_FOUNDSOL;
+            }
+         }
+      }
+
       var = lpcands[bestcand];
 
       backtracked = FALSE;
       divedir = bestdivedir;
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+      divedepth++;
 
       do
       {
@@ -1358,7 +1412,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentubs = NULL;
 
    heurdata->scoreparam = 'l';
-   heurdata->usescipscore = TRUE;
+   heurdata->usescipscore = FALSE;
 
    /* create event handler first to finish branch rule data */
    eventhdlrdata = NULL;
@@ -1423,5 +1477,13 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          "use one level of backtracking if infeasibility is encountered?",
          &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/scoreparam",
+         "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
+         &heurdata->scoreparam, TRUE, DEFAULT_SCOREPARAM, SCOREPARAM_VALUES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+            "heuristics/distributiondiving/revolvingscore",
+            "should the heuristic iterate through the score parameters?",
+            &heurdata->revolvingscore, TRUE, DEFAULT_REVOLVINGSCORE, NULL, NULL) );
    return SCIP_OKAY;
 }

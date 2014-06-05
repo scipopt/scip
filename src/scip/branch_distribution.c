@@ -235,18 +235,19 @@ void branchruledataUpdateCurrentBounds(
 }
 
 /** calculate the variable's distribution parameters (mean and variance) for the bounds specified in the arguments.
- *  special treatment of infinite bounds necessary
- */
+ *  special treatment of infinite bounds necessary */
 void SCIPvarCalcDistributionParameters(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
+   SCIP_VARTYPE          vartype,            /**< type of the variable */
    SCIP_Real*            mean,               /**< pointer to store mean value */
    SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
    )
 {
    assert(mean != NULL);
    assert(variance != NULL);
+
    /* calculate mean and variance of variable uniform distribution before and after branching */
    if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
    {
@@ -262,7 +263,11 @@ void SCIPvarCalcDistributionParameters(
    }
    else
    {
-      *variance = SQUARED(varub - varlb);
+      /* if the variable is continuous, we assume a continuous uniform distribution, otherwise a discrete one */
+      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         *variance = SQUARED(varub - varlb);
+      else
+         *variance = SQUARED(varub - varlb + 1) - 1;
       *variance /= 12.0;
       *mean = (varub + varlb) * .5;
    }
@@ -606,6 +611,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real currentmean;      /* current mean value of variable uniform distribution */
    SCIP_Real meanup;           /* mean value of variable uniform distribution after branching up */
    SCIP_Real meandown;         /* mean value of variable uniform distribution after branching down*/
+   SCIP_VARTYPE vartype;
    int ncolrows;
    int i;
 
@@ -627,6 +633,7 @@ SCIP_RETCODE calcBranchScore(
    varlb = SCIPvarGetLbLocal(var);
    varub = SCIPvarGetUbLocal(var);
    assert(SCIPisFeasLT(scip, varlb, varub));
+   vartype = SCIPvarGetType(var);
 
    /* calculate mean and variance of variable uniform distribution before and after branching */
    currentmean = 0.0;
@@ -899,6 +906,7 @@ SCIP_RETCODE varProcessBoundChanges(
    SCIP_Real newlb;
    SCIP_Real oldub;
    SCIP_Real newub;
+   SCIP_VARTYPE vartype;
    int ncolrows;
    int r;
    int varindex;
