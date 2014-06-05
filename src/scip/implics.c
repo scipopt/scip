@@ -1486,7 +1486,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    assert((*cliquelist)->cliques[value][pos] == clique);
 
    /* remove clique from list */
-   // todo maybe buffered deletion
+   /* @todo maybe buffered deletion */
    (*cliquelist)->ncliques[value]--;
    if( pos < (*cliquelist)->ncliques[value] )
    {
@@ -1782,6 +1782,8 @@ SCIP_RETCODE mergeClique(
 
    assert(nclqvars != NULL);
 
+   SCIPdebugMessage("starting merging %d variables in clique\n", *nclqvars);
+
    if( *nclqvars == 0 )
       return SCIP_OKAY;
 
@@ -1822,6 +1824,8 @@ SCIP_RETCODE mergeClique(
 
             onefixfound = TRUE;
 
+            SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
+
             /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
             for( w = *nclqvars - 1; w >= 0; --w )
             {
@@ -1833,6 +1837,8 @@ SCIP_RETCODE mergeClique(
                   }
                   SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                         eventqueue, !clqvalues[w], infeasible, &nlocalbdchgs) );
+
+                  SCIPdebugMessage("fixed var %s with value %d to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
 
                   if( *infeasible )
                      break;
@@ -1852,6 +1858,8 @@ SCIP_RETCODE mergeClique(
             /* a variable multiple times in one clique forces this variable to be zero */
             SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                   !clqvalues[v], infeasible, &nlocalbdchgs) );
+
+            SCIPdebugMessage("same var %s twice in a clique with value %d fixed to %d (was %s)\n", SCIPvarGetName(var), clqvalues[v], clqvalues[v] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
 
             if( *infeasible )
                break;
@@ -1926,7 +1934,11 @@ SCIP_RETCODE mergeClique(
    if( !onefixfound && *isequation )
    {
       if( *nclqvars == 0 )
+      {
+         SCIPdebugMessage("empty equation clique left over -> infeasible\n");
+
          *infeasible = TRUE;
+      }
       else if( *nclqvars == 1 )
       {
          nlocalbdchgs = 0;
@@ -1941,14 +1953,12 @@ SCIP_RETCODE mergeClique(
          SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                clqvalues[0], infeasible, &nlocalbdchgs) );
 
+         SCIPdebugMessage("fixed last clique var %s with value %d to %d (was %s)\n", SCIPvarGetName(clqvars[0]), clqvalues[0], clqvalues[0] ? 1 : 0, *infeasible ? "infeasible" : "feasible");
+
          *nbdchgs += nlocalbdchgs;
 
          *nclqvars = 0;
          *isequation = FALSE;
-      }
-      else if( *nclqvars == 2 )
-      {
-         //todo aggregate
       }
    }
 
@@ -1990,7 +2000,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    assert(cliquetable != NULL);
    assert(vars != NULL);
 
-   SCIPdebugMessage("adding clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
+   SCIPdebugMessage("trying to add clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
 
    /* check clique on debugging solution */
    SCIP_CALL( SCIPdebugCheckClique(set, vars, values, nvars) ); /*lint !e506 !e774*/
@@ -2016,8 +2026,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
    /* get active variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&clqvars, &clqvalues, nvars) );
 
-   // todo debug messages
-
    /* remove all inactive vars */
    for( v = nvars - 1; v >= 0; --v )
    {
@@ -2032,12 +2040,16 @@ SCIP_RETCODE SCIPcliquetableAdd(
       /* if we have a variables already fixed to one in the clique, fix all other to zero */
       if( (clqvalues[v] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[v] && SCIPvarGetUbGlobal(var) < 0.5) )
       {
+         SCIPdebugMessage("in a clique var %s with value %d is fixed to %d -> fix the rest\n", SCIPvarGetName(var), clqvalues[v], clqvalues[v] ? 1 : 0);
+
          for( w = nvars - 1; w >= 0; --w )
          {
             if( clqvars[w] != var )
             {
                SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                      eventqueue, !clqvalues[w], infeasible, &nlocalbdchgs) );
+
+               SCIPdebugMessage("fixed var %s with value %d to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
 
                if( *infeasible )
                   break;
@@ -2061,8 +2073,18 @@ SCIP_RETCODE SCIPcliquetableAdd(
    if( nbdchgs != NULL )
       *nbdchgs += nlocalbdchgs;
 
-   /* did we fix all variables? */
+   /* did we fix all variables or are we infeasible? */
    if( v >= 0 )
+   {
+      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
+      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
+
+      return SCIP_OKAY;
+   }
+   assert(!*infeasible);
+
+   /* check if only one or less variables are left */
+   if( v < 0 && nvars <= 1)
    {
       if( isequation )
       {
@@ -2071,12 +2093,19 @@ SCIP_RETCODE SCIPcliquetableAdd(
             nlocalbdchgs = 0;
 
             SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, !clqvalues[0], infeasible, &nlocalbdchgs) );
+                  eventqueue, clqvalues[0], infeasible, &nlocalbdchgs) );
+
+            SCIPdebugMessage("fixed last clique var %s with value %d to %d (was %s)\n", SCIPvarGetName(clqvars[0]), clqvalues[0], clqvalues[0] ? 1 : 0, *infeasible ? "infeasible" : "feasible");
+
             if( nbdchgs != NULL )
                *nbdchgs += nlocalbdchgs;
          }
          else if( nvars == 0 )
+         {
+            SCIPdebugMessage("empty equation clique left over -> infeasible\n");
+
             *infeasible = TRUE;
+         }
       }
 
       BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
@@ -2110,7 +2139,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
    if( nvars > 1 )
    {
       SCIP_CLIQUE* sameclique;
-      //todo nvars == 2 && isequation aggregate
+
+      /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 ) */
 
       /* create the clique data structure */
       SCIP_CALL( cliqueCreateWithData(&clique, blkmem, size, clqvars, clqvalues, nvars, cliquetable->ncreatedcliques, isequation) );
@@ -2119,6 +2149,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
       if( sameclique == NULL )
       {
+         SCIPdebugMessage("adding clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
+
          cliquetable->ncreatedcliques++;
 
          /* add clique to clique table */
@@ -2133,7 +2165,12 @@ SCIP_RETCODE SCIPcliquetableAdd(
       }
       else
       {
+         SCIPdebugMessage("same clique %p already found in cliquetable -> discard new one\n", (void*) sameclique);
+
          /* update equation status of clique */
+         /* @note if we might change the order of the clique, e.g. put the equations up front, we should rather remove
+          *       the sameclique from the hashmap while adding the new clique
+          */
          if( !sameclique->equation && clique->equation )
             sameclique->equation = TRUE;
 
@@ -2144,6 +2181,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    else
    {
       assert(!isequation);
+      assert(nvars == 1);
 
       BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
       BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
@@ -2375,10 +2413,6 @@ SCIP_RETCODE cliqueCleanup(
 
             return SCIP_OKAY;
          }
-         else if( clique->nvars == 2 )
-         {
-            //todo aggregate
-         }
       }
 
       if( needsorting )
@@ -2396,6 +2430,8 @@ SCIP_RETCODE cliqueCleanup(
          clique->equation = isequation;
       }
 
+      /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 ) */
+
       clique->ncleanupvars = 0;
       clique->startcleanup = -1;
    }
@@ -2410,9 +2446,7 @@ SCIP_RETCODE cliqueCleanup(
    return SCIP_OKAY;
 }
 
-/** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
- *  into implications; removes double entries from the clique table
- */
+/** removes all empty and single variable cliques from the clique table; removes double entries from the clique table */
 SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2442,6 +2476,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       && cliquetable->ncliques == cliquetable->ncleanupcliques )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("cleaning up clique table with %d cliques\n", cliquetable->ncliques);
+
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
@@ -2470,10 +2506,10 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
       assert(clique->ncleanupvars == 0);
 
+      /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING */
+#if 0
       if( clique->nvars == 2 && clique->equation && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING )
       {
-         //todo nvars == 2 && isequation remember! for aggregation
-#if 0
          SCIP_VAR* var0;
          SCIP_VAR* var1;
          SCIP_Real scalarx;
@@ -2535,8 +2571,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 	    var0, var1, scalarx, scalary, rhs, infeasible, &aggregated) );
 
          assert(aggregated || *infeasible);
-#endif
       }
+#endif
 
       sameclique = SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
 
@@ -2555,9 +2591,9 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          {
             assert(sameclique->nvars >= 2);
 
-            //todo if we might change the order of the clique, e.g. put the equations up front, we should rather remove
-            //the samclique from the hashmap while adding the new clique
-
+            /* @note if we might change the order of the clique, e.g. put the equations up front, we should rather remove
+             *       the sameclique from the hashmap while adding the new clique
+             */
             sameclique->equation = TRUE;
          }
 
@@ -2597,6 +2633,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupfixedvars = stat->npresolfixedvars;
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
    cliquetable->ncleanupcliques = cliquetable->ncliques;
+
+   SCIPdebugMessage("cleaned up clique table has %d cliques left\n", cliquetable->ncliques);
 
    /* process events */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, lp, branchcand, NULL) );

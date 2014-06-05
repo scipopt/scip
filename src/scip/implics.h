@@ -347,9 +347,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    );
 
-/** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
- *  into implications; removes double entries from the clique table
- */
+/** removes all empty and single variable cliques from the clique table; removes double entries from the clique table */
 extern
 SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
