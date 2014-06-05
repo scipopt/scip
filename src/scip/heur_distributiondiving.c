@@ -29,9 +29,9 @@
 
 #define HEUR_NAME             "distributiondiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'f'
+#define HEUR_DISPCHAR         'd'
 #define HEUR_PRIORITY         -1003000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -60,7 +60,7 @@
 #define SCOREPARAM_VALUES "lhwvd"
 #define SCOREPARAM_VALUESLEN 5
 #define DEFAULT_SCOREPARAM 'v'
-#define DEFAULT_REVOLVINGSCORE FALSE /**< should the score parameter revolve through all possible values */
+#define DEFAULT_REVOLVINGSCORE TRUE /**< should the score parameter revolve through all possible values */
 
 
 /* locally defined heuristic data */
