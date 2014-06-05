@@ -296,32 +296,6 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
    return SCIP_OKAY;
 }
 
-/** adds all implications between nodes in the tclique graph to the tclique graph */
-static
-SCIP_RETCODE tcliquegraphAddImplics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   TCLIQUE_GRAPH*        tcliquegraph,       /**< tclique graph data */
-   int**                 cliquegraphidx      /**< array to store tclique graph node index of variable/value pairs */
-   )
-{
-   assert(cliquegraphidx != NULL);
-   assert(cliquegraphidx[0] != NULL);
-   assert(cliquegraphidx[1] != NULL);
-
-   /* there is nothing to do, if the graph is empty */
-   if( tcliquegraph == NULL )
-      return SCIP_OKAY;
-
-   /* the tclique graph should currently contain no implications */
-   assert(tcliquegraph->adjnodes == NULL);
-   assert(tcliquegraph->adjnodessize == 0);
-
-   /* store final adjnodes index */
-   tcliquegraph->adjnodesidxs[tcliquegraph->nnodes] = 0;
-
-   return SCIP_OKAY;
-}
-
 /** constructs dense clique incidence matrix */
 static
 SCIP_RETCODE tcliquegraphConstructCliqueTable(
@@ -481,11 +455,6 @@ SCIP_RETCODE loadTcliquegraph(
 
    /* insert all variable/value pairs that are contained in an existing 3-clique */
    SCIP_CALL( tcliquegraphAddCliqueVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
-
-   // clean up next function call, does not seem to do something anymore
-
-   /* add all implications between used variables to the tclique graph */
-   SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );
 
    /* it occurs that it might be that some cliques were not yet removed from the global clique array, so SCIPgetNClique
     * can be greater than 0, even if there is no clique with some variables left */
