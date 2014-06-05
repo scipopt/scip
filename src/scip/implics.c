@@ -1699,6 +1699,7 @@ SCIP_RETCODE SCIPcliquetableCreate(
    (*cliquetable)->ncleanupfixedvars = 0;
    (*cliquetable)->ncleanupaggrvars = 0;
    (*cliquetable)->ncleanupcliques = 0;
+   (*cliquetable)->nentries = 0;
 
    return SCIP_OKAY;
 }
@@ -2157,6 +2158,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
          SCIP_CALL( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
          cliquetable->cliques[cliquetable->ncliques] = clique;
          cliquetable->ncliques++;
+         cliquetable->nentries += nvars;
 
          SCIP_CALL( SCIPhashtableInsert(cliquetable->hashtable, (void*)clique) );
 
@@ -2446,6 +2448,27 @@ SCIP_RETCODE cliqueCleanup(
    return SCIP_OKAY;
 }
 
+#if !defined(NDEBUG) && defined(SCIP_MORE_DEBUG)
+/** checks whether clique appears in all clique lists of the involved variables */
+static
+void checkNEntries(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   SCIP_Longint nentries = 0;
+   int c;
+
+   assert(cliquetable != NULL);
+
+   for( c = cliquetable->ncliques - 1; c >= 0; --c )
+      nentries += cliquetable->cliques[c]->nvars;
+
+   assert(nentries == cliquetable->nentries);
+}
+#else
+#define checkNEntries(cliquetable) /**/
+#endif
+
 /** removes all empty and single variable cliques from the clique table; removes double entries from the clique table */
 SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -2476,7 +2499,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       && cliquetable->ncliques == cliquetable->ncleanupcliques )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("cleaning up clique table with %d cliques\n", cliquetable->ncliques);
+   SCIPdebugMessage("cleaning up clique table with %d cliques (with %"SCIP_LONGINT_FORMAT" entries)\n", cliquetable->ncliques, cliquetable->nentries);
 
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
@@ -2497,6 +2520,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
       /* remove not clean up clique from hastable */
       SCIP_CALL( SCIPhashtableRemove(cliquetable->hashtable, (void*)clique) );
+      cliquetable->nentries -= clique->nvars;
+      assert(cliquetable->nentries >= 0);
 
       SCIP_CALL( cliqueCleanup(clique, blkmem, set, stat, transprob, origprob, tree, lp,
                   branchcand, eventqueue, nchgbds, infeasible) );
@@ -2610,6 +2635,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       }
       else
       {
+         cliquetable->nentries += clique->nvars;
+
          SCIP_CALL( SCIPhashtableInsert(cliquetable->hashtable, (void*)clique) );
          if( !clique->eventsissued )
          {
@@ -2634,7 +2661,9 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
    cliquetable->ncleanupcliques = cliquetable->ncliques;
 
-   SCIPdebugMessage("cleaned up clique table has %d cliques left\n", cliquetable->ncliques);
+   checkNEntries(cliquetable);
+
+   SCIPdebugMessage("cleaned up clique table has %d cliques left (with %"SCIP_LONGINT_FORMAT" entries)\n", cliquetable->ncliques, cliquetable->nentries);
 
    /* process events */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, lp, branchcand, NULL) );
@@ -2673,6 +2702,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 #undef SCIPcliquelistCheck
 #undef SCIPcliquetableGetNCliques
 #undef SCIPcliquetableGetCliques
+#undef SCIPcliquetableGetNEntries
 
 /** gets number of variable bounds contained in given variable bounds data structure */
 int SCIPvboundsGetNVbds(
@@ -2840,7 +2870,7 @@ void SCIPcliquelistCheck(
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
-   /* @todo might need to change ifndef NDEBUG to ifdef SCIP_MOREDEBUG because it can take at lot of time to check for
+   /* @todo might need to change ifndef NDEBUG to ifdef SCIP_MORE_DEBUG because it can take at lot of time to check for
     *       correctness
     */
 #ifndef NDEBUG
@@ -2894,4 +2924,14 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
    assert(cliquetable != NULL);
 
    return cliquetable->cliques;
+}
+
+/** gets the number of entries in the whole clique table */
+SCIP_Longint SCIPcliquetableGetNEntries(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   assert(cliquetable != NULL);
+
+   return cliquetable->nentries;
 }

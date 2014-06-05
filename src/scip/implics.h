@@ -397,6 +397,12 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
+/** gets the number of entries in the whole clique table */
+extern
+SCIP_Longint SCIPcliquetableGetNEntries(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -408,6 +414,7 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
 #define SCIPcliquelistCheck(cliquelist, var)         /**/
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 #define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
+#define SCIPcliquetableGetNEntries(cliquetable)      ((cliquetable)->nentries)
 
 #endif
 

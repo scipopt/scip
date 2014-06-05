@@ -93,6 +93,7 @@ struct SCIP_CliqueTable
    int                   ncleanupfixedvars;  /**< number of fixed variables when the last cleanup was performed */
    int                   ncleanupaggrvars;   /**< number of aggregated variables when the last cleanup was performed */
    int                   ncleanupcliques;    /**< number of cliques stored when the last cleanup was performed */
+   SCIP_Longint          nentries;           /**< number of entries in the whole clique table */
 };
 
 #ifdef __cplusplus
