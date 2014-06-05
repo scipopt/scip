@@ -2627,25 +2627,6 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       SCIP_CALL(
             SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &branchruledata->maxsavednodes));
 
-//      if (branchruledata->maxsavednodes == 0)
-//      {
-//         /* disable reoptimization */
-//         branchruledata->reopt = FALSE;
-//         branchruledata->init = FALSE;
-//
-////         /* disable reoptimization global */
-////         SCIP_CALL( SCIPchgBoolParam(scip, SCIPgetParam(scip, "reoptimization/enable"), FALSE) );
-//
-//         /* disable eventhdlrs */
-//         SCIPeventhdlrNodereoptDisable(scip);
-//         SCIPeventhdlrSolustoreDisable(scip);
-//
-//         /* disable pseudo branching rule */
-//         SCIPbranchrulePseudoDisable(scip);
-//
-//         return SCIP_OKAY;
-//      }
-
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/savelpbasis", &branchruledata->savelpbasis));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/saveglbcons", &branchruledata->saveglbcons));
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/solvelp", &branchruledata->solvelp));
@@ -2691,8 +2672,6 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
 
       /** data structure for nodes, init data for root node at position 0 */
       SCIP_CALL(SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata), branchruledata->allocmemsizenodedata));
-//      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->currentleafIDs), branchruledata->allocmemsizeNodeID) );
-//      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodetoid), branchruledata->allocmemsizeNodeID) );
 
       /** allocate memory for the root */
       SCIP_CALL(SCIPallocMemory(scip, &branchruledata->nodedata[0]));
@@ -2821,24 +2800,6 @@ SCIP_DECL_BRANCHFREE(branchFreenodereopt)
       int nodeID;
 
       assert(branchruledata->reopt);
-
-//      printf("\n\n----------\nReoptimization:\n");
-//      printf("                     %6s%6s\n", "avg", "max");
-//      printf("    feasible nodes   %6.2f%6u\n",
-//            branchruledata->nfeasnodes / (float) branchruledata->nruns,
-//            branchruledata->nfeasnodesmax);
-//      printf("  infeasible nodes   %6.2f%6u\n",
-//            branchruledata->ninfeasnodes / (float) branchruledata->nruns,
-//            branchruledata->ninfeasnodesmax);
-//      printf("      pruned nodes   %6.2f%6u\n",
-//            branchruledata->nprunednodes / (float) branchruledata->nruns,
-//            branchruledata->nprunednodesmax);
-//      printf("          pb nodes   %6.2f%6u\n\n",
-//            branchruledata->npbnodes / (float) branchruledata->nruns,
-//            branchruledata->npbnodesmax);
-//      printf("          glb cons   %6u\n", branchruledata->nconsglobaladded);
-//      printf("          restarts   %6u\n", branchruledata->nrestarts);
-//      printf("            rounds   %6u\n\n", branchruledata->nruns);
 
       /** free data of unrevived nodes */
       for (nodeID = 0; nodeID < branchruledata->allocmemsizenodedata; nodeID++)
