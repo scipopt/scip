@@ -375,7 +375,7 @@ SCIP_RETCODE soltreefreeNode(
    }
 
    /* free this nodes */
-   BMSfreeMemoryNull(&node);
+   BMSfreeMemory(&node);
 
    return SCIP_OKAY;
 }
@@ -644,19 +644,19 @@ SCIP_RETCODE SCIPreoptFree(
    {
       if( (*reopt)->sols[p] != NULL )
       {
-         BMSfreeMemoryArrayNull(&(*reopt)->sols[p]);
+         BMSfreeMemoryArray(&(*reopt)->sols[p]);
       }
 
       if( (*reopt)->objs[p] != NULL )
       {
-         BMSfreeMemoryArrayNull(&(*reopt)->objs[p]);
+         BMSfreeMemoryArray(&(*reopt)->objs[p]);
       }
    }
 
-   BMSfreeMemoryArrayNull(&(*reopt)->sols);
-   BMSfreeMemoryArrayNull(&(*reopt)->nsols);
-   BMSfreeMemoryArrayNull(&(*reopt)->solssize);
-   BMSfreeMemoryArrayNull(&(*reopt)->objs);
+   BMSfreeMemoryArray(&(*reopt)->sols);
+   BMSfreeMemoryArray(&(*reopt)->nsols);
+   BMSfreeMemoryArray(&(*reopt)->solssize);
+   BMSfreeMemoryArray(&(*reopt)->objs);
    BMSfreeMemory(reopt);
 
    return SCIP_OKAY;
