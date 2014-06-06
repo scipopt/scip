@@ -2058,6 +2058,25 @@ SCIP_RETCODE spxSolve(
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
 #endif
 
+   /* delete starting basis if solving from scratch */
+   if( lpi->spx->getFromScratch() )
+   {
+      try
+      {
+         lpi->spx->clearBasis();
+      }
+      catch(SPxException x)
+      {
+#ifndef NDEBUG
+         std::string s = x.what();
+         SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
+         assert( lpi->spx->status() != SPxSolver::OPTIMAL );
+         return SCIP_LPERROR;
+      }
+   }
+   assert(!lpi->spx->getFromScratch() || lpi->spx->status() == SPxSolver::NO_PROBLEM);
+
    SPxSolver::Status status = lpi->spx->doSolve();
    SCIPdebugMessage(" -> SoPlex status: %d, basis status: %d\n", lpi->spx->status(), lpi->spx->basisStatus());
    lpi->solved = TRUE;
