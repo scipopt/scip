@@ -30743,7 +30743,18 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 #endif
 
          if( lperror )
+         {
+            /* free stored buffer arrays */
+            if( ncandstofix > 1 )
+            {
+               SCIPfreeBufferArray(scip, &candsroundup);
+               SCIPfreeBufferArray(scip, &divecandsfrac);
+               SCIPfreeBufferArray(scip, &divecandssol);
+               SCIPfreeBufferArray(scip, &divecands);
+            }
+
             break;
+         }
 
          /* update iteration count */
          SCIPdivesetIncreaseNLPIterations(diveset, SCIPgetNLPIterations(scip) - nlpiterations);
