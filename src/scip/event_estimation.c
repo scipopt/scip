@@ -114,7 +114,7 @@ SCIP_RETCODE storeRootLPSol(
    {
       dataFreeRootLPSol(scip, eventhdlrdata);
    }
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT )
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcandsroot, NULL, &lpcandsfrac, &eventhdlrdata->nrootlpcands, NULL, NULL) );
    }
