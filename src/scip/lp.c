@@ -9237,7 +9237,10 @@ SCIP_RETCODE SCIPlpGetBase(
 SCIP_RETCODE SCIPlpGetBInvRow(
    SCIP_LP*              lp,                 /**< LP data */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    assert(lp != NULL);
@@ -9247,7 +9250,7 @@ SCIP_RETCODE SCIPlpGetBInvRow(
    assert(0 <= r && r < lp->nrows);  /* the basis matrix is nrows x nrows */
    assert(coef != NULL);
 
-   SCIP_CALL( SCIPlpiGetBInvRow(lp->lpi, r, coef) );
+   SCIP_CALL( SCIPlpiGetBInvRow(lp->lpi, r, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -9260,7 +9263,10 @@ SCIP_RETCODE SCIPlpGetBInvCol(
                                               *   to get the array which links the B^-1 column numbers to the row and
                                               *   column numbers of the LP! c must be between 0 and nrows-1, since the
                                               *   basis has the size nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    assert(lp != NULL);
@@ -9270,7 +9276,7 @@ SCIP_RETCODE SCIPlpGetBInvCol(
    assert(0 <= c && c < lp->nrows);  /* the basis matrix is nrows x nrows */
    assert(coef != NULL);
 
-   SCIP_CALL( SCIPlpiGetBInvCol(lp->lpi, c, coef) );
+   SCIP_CALL( SCIPlpiGetBInvCol(lp->lpi, c, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -9280,7 +9286,10 @@ SCIP_RETCODE SCIPlpGetBInvARow(
    SCIP_LP*              lp,                 /**< LP data */
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPlpGetBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {
    assert(lp != NULL);
@@ -9290,7 +9299,7 @@ SCIP_RETCODE SCIPlpGetBInvARow(
    assert(0 <= r && r < lp->nrows);  /* the basis matrix is nrows x nrows */
    assert(coef != NULL);
 
-   SCIP_CALL( SCIPlpiGetBInvARow(lp->lpi, r, binvrow, coef) );
+   SCIP_CALL( SCIPlpiGetBInvARow(lp->lpi, r, binvrow, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -9301,7 +9310,10 @@ SCIP_RETCODE SCIPlpGetBInvARow(
 SCIP_RETCODE SCIPlpGetBInvACol(
    SCIP_LP*              lp,                 /**< LP data */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {
    assert(lp != NULL);
@@ -9311,7 +9323,7 @@ SCIP_RETCODE SCIPlpGetBInvACol(
    assert(0 <= c && c < lp->ncols);
    assert(coef != NULL);
 
-   SCIP_CALL( SCIPlpiGetBInvACol(lp->lpi, c, coef) );
+   SCIP_CALL( SCIPlpiGetBInvACol(lp->lpi, c, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -9407,6 +9419,7 @@ SCIP_RETCODE SCIPlpSumRows(
 /** returns the maximum absolute row weight in the given weight vector, and calculates the sparsity pattern of the weights */
 static
 SCIP_Real getMaxAbsWeightCalcSparsity(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
@@ -9417,6 +9430,7 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
    SCIP_Real maxabsweight;
    int r;
 
+   assert(set != NULL);
    assert(lp != NULL);
    assert(weights != NULL);
    assert(rowinds != NULL);
@@ -9431,7 +9445,7 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
       SCIP_Real absweight;
 
       /* skip unused rows */
-      if( weights[r] == 0.0 )
+      if( SCIPsetIsZero(set, weights[r]) )
          continue;
 
       /* record the row in the sparsity pattern */
@@ -9446,6 +9460,53 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
 
    return maxabsweight;
 }
+
+/** returns the maximum absolute row weight in the given weight vector using given sparsity pattern */
+static
+SCIP_Real getMaxAbsWeight(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  rowinds,            /**< array of sparsity pattern of used rows; size lp->nrows */
+   int*                  nrowinds,           /**< pointer to store number of used rows */
+   int*                  rowlensum           /**< pointer to store total number of non-zeros in used rows */
+   )
+{
+   SCIP_Real maxabsweight;
+   int r;   /* index used for reading from the row*/
+   int w;   /* auxiliary index to skip zeros in weights array */
+
+   assert(set != NULL);
+   assert(lp != NULL);
+   assert(weights != NULL);
+   assert(rowinds != NULL);
+   assert(nrowinds != NULL);
+
+   *rowlensum = 0;
+
+   maxabsweight = 0.0;
+   w = 0;
+   for( r = 0; r < *nrowinds; ++r )
+   {
+      SCIP_Real absweight;
+
+      /* remove zeros from the sparsity pattern */
+      if( SCIPsetIsZero(set, weights[rowinds[r]]) )
+         continue;
+
+      rowinds[w] = rowinds[r];
+      ++w;
+
+      (*rowlensum) += SCIProwGetNNonz(lp->rows[rowinds[r]]);
+
+      absweight = REALABS(weights[rowinds[r]]);
+      maxabsweight = MAX(maxabsweight, absweight);
+   }
+   (*nrowinds) = w;
+
+   return maxabsweight;
+}
+
 
 /** adds a single row to an aggregation */
 static
@@ -9525,11 +9586,13 @@ void sumMIRRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   SCIP_Real             knownmaxweight,     /**< largest magnitude of weights. Set to 0 if compress == TRUE */
    int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   SCIP_Bool             compress,           /**< if rowinds is unknown and weights should be compressed */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size prob->nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
@@ -9566,8 +9629,8 @@ void sumMIRRow(
    assert(localrowsused != NULL);
    assert(rowtoolong != NULL);
 
+   rowlensum = 0;
    *nvarinds = 0;
-   *nrowinds = 0;
    *mirrhs = 0.0;
    *emptyrow = TRUE;
    *localrowsused = FALSE;
@@ -9576,9 +9639,23 @@ void sumMIRRow(
    /* initialize varused array */
    BMSclearMemoryArray(varused, prob->nvars);
 
+   /* if compression of the dense weight vector is required  */
    /* search the maximal absolute weight and calculate the row sparsity pattern */
-   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds, &rowlensum);
-   maxweight *= ABS(scale);
+   if( compress )
+   {
+      maxweight = getMaxAbsWeightCalcSparsity(set, lp, weights, rowinds, nrowinds, &rowlensum);
+   }
+   else
+   {
+      /* search the maximal absolute weight using the given row sparsity pattern */
+      if( knownmaxweight == -1 )
+      {
+         assert(*nrowinds > -1);
+         maxweight = getMaxAbsWeight(set, lp, weights, rowinds, nrowinds, &rowlensum);
+      }
+      else
+         maxweight = knownmaxweight;
+   }
 
    /* if the total number of non-zeros is way too large, we just skip this aggregation */
    if( rowlensum/5 > maxmksetcoefs )
@@ -9586,6 +9663,8 @@ void sumMIRRow(
       *rowtoolong = TRUE;
       return;
    }
+
+   maxweight *= ABS(scale);
 
    /* calculate the row summation */
    BMSclearMemoryArray(mircoef, prob->nvars);
@@ -10846,16 +10925,20 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
-   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,  
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
    int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1 if sparsity information is unknown */
+   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is unknown */
+   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
+   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
@@ -10884,6 +10967,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Bool localrowsused;
    SCIP_Bool localbdsused;
    SCIP_Bool rowtoolong;
+   SCIP_Bool compress;
 
    assert(lp != NULL);
    assert(lp->solved || sol != NULL);
@@ -10910,11 +10994,34 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varused, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varinds, prob->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
+
+   /* if sparse information of weights is known, there is no need
+    * to compute rowinds */
+   if( weightinds == NULL )
+   {
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
+      compress = TRUE;
+   }
+   else
+   {
+      compress = FALSE;
+
+      /* weightinds is the indices of the weights vector.
+       * rowinds is the indices of the weights vector that is modified in the sumMIRRow function.
+       * duplication of weightinds is necessary to ensure weightinds is not modified. */
+      SCIP_CALL( SCIPsetDuplicateBufferArray(set, &rowinds, weightinds, nweightinds) );
+      nrowinds = nweightinds;
+
+      if( rowlensum/5 > maxmksetcoefs )
+      {
+         *cutislocal = FALSE;
+         goto TERMINATE;
+      }
+   }
 
    /* calculate the row summation */
-   sumMIRRow(set, prob, lp, weights, sidetypes, scale, allowlocal,
-      maxmksetcoefs, maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+   sumMIRRow(set, prob, lp, weights, maxweight, sidetypes, scale, allowlocal,
+      maxmksetcoefs, maxweightrange, compress, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
       &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
    *cutislocal = localrowsused;
@@ -11090,7 +11197,6 @@ void sumStrongCGRow(
    assert(localrowsused != NULL);
 
    *nvarinds = 0;
-   *nrowinds = 0;
    *localrowsused = FALSE;
    *strongcgrhs = 0.0;
    *emptyrow = TRUE;
@@ -11100,7 +11206,12 @@ void sumStrongCGRow(
    BMSclearMemoryArray(varused, prob->nvars);
 
    /* search the maximal absolute weight and calculate the row sparsity pattern */
-   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds, &rowlensum);
+   if( *nrowinds == -1 )
+      maxweight = getMaxAbsWeightCalcSparsity(set, lp, weights, rowinds, nrowinds, &rowlensum);
+   else
+      maxweight = getMaxAbsWeight(set, lp, weights, rowinds, nrowinds, &rowlensum);
+
+
    maxweight *= ABS(scale);
 
    /* if the total number of non-zeros is way too large, we just skip this aggregation */
@@ -11910,6 +12021,8 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  rowinds,            /**< array to store indices of non-zero entries of the weights arrray */
+   int                   nrowinds,           /**< number of non-zero entries in weights array */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
@@ -11924,9 +12037,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    int* boundtype;
    SCIP_Bool* varused;
    int* varinds;
-   int* rowinds;
    int nvarinds;
-   int nrowinds;
    SCIP_Real rhs;
    SCIP_Real downrhs;
    SCIP_Real f0;
@@ -11936,6 +12047,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Bool localrowsused;
    SCIP_Bool localbdsused;
    SCIP_Bool rowtoolong;
+   SCIP_Bool cleanuprowinds;
 
    assert(lp != NULL);
    assert(lp->solved);
@@ -11947,6 +12059,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    assert(cutactivity != NULL);
    assert(success != NULL);
    assert(cutislocal != NULL);
+   assert(rowinds != NULL || nrowinds == -1);
 
    SCIPdebugMessage("calculating strong CG cut (scale: %g)\n", scale);
 
@@ -11961,10 +12074,17 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varused, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varinds, prob->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
+
+   /* allocate memory for sparsity structure in case it has not been provided already */
+   cleanuprowinds = FALSE;
+   if( rowinds == NULL )
+   {
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
+      cleanuprowinds = TRUE;
+   }
 
    /* calculate the row summation */
-   sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
+   sumStrongCGRow(set, prob, lp, weights, scale, allowlocal,
       maxmksetcoefs, maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
       &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
@@ -12075,7 +12195,11 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
 
  TERMINATE:
    /* free temporary memory */
-   SCIPsetFreeBufferArray(set, &rowinds);
+   if( cleanuprowinds )
+   {
+      SCIPsetFreeBufferArray(set, &rowinds);
+   }
+
    SCIPsetFreeBufferArray(set, &varinds);
    SCIPsetFreeBufferArray(set, &varused);
    SCIPsetFreeBufferArray(set, &boundtype);
@@ -13051,9 +13175,9 @@ SCIP_RETCODE lpLexDualSimplex(
                for( j = 0; j < lp->nlpicols; ++j )
                {
                   if( fixedc[j] )
-		  {
+                  {
                      SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
-		  }
+                  }
                   else
                   {
                      char cstart = '[';

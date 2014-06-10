@@ -24694,7 +24694,10 @@ SCIP_RETCODE SCIPgetLPBasisInd(
 SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBInvRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -24705,7 +24708,7 @@ SCIP_RETCODE SCIPgetLPBInvRow(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPlpGetBInvRow(scip->lp, r, coef) );
+   SCIP_CALL( SCIPlpGetBInvRow(scip->lp, r, coef, inds, ninds) );
 
    /* debug check if the coef is the r-th line of the inverse matrix B^-1 */
    SCIP_CALL( SCIPdebugCheckBInvRow(scip, r, coef) ); /*lint !e506 !e774*/
@@ -24730,7 +24733,10 @@ SCIP_RETCODE SCIPgetLPBInvCol(
                                               *   to get the array which links the B^-1 column numbers to the row and
                                               *   column numbers of the LP! c must be between 0 and nrows-1, since the
                                               *   basis has the size nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBInvCol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -24741,7 +24747,7 @@ SCIP_RETCODE SCIPgetLPBInvCol(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPlpGetBInvCol(scip->lp, c, coef) );
+   SCIP_CALL( SCIPlpGetBInvCol(scip->lp, c, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -24760,7 +24766,10 @@ SCIP_RETCODE SCIPgetLPBInvARow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< array to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< array to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBInvARow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -24771,7 +24780,7 @@ SCIP_RETCODE SCIPgetLPBInvARow(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPlpGetBInvARow(scip->lp, r, binvrow, coef) );
+   SCIP_CALL( SCIPlpGetBInvARow(scip->lp, r, binvrow, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -24790,7 +24799,10 @@ SCIP_RETCODE SCIPgetLPBInvARow(
 SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBInvACol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -24801,7 +24813,7 @@ SCIP_RETCODE SCIPgetLPBInvACol(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPlpGetBInvACol(scip->lp, c, coef) );
+   SCIP_CALL( SCIPlpGetBInvACol(scip->lp, c, coef, inds, ninds) );
 
    return SCIP_OKAY;
 }
@@ -24860,6 +24872,12 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1.0 if sparsity information is
+                                              *   unknown */
+   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is
+                                              *   unknown */
+   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
+   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
@@ -24876,8 +24894,8 @@ SCIP_RETCODE SCIPcalcMIR(
 
    SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob, sol,
          boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs,
-         maxweightrange, minfrac, maxfrac, weights, sidetypes, scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity,
-         success, cutislocal, cutrank) );
+         maxweightrange, minfrac, maxfrac, weights, maxweight, weightinds, nweightinds, rowlensum, sidetypes,
+         scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity, success, cutislocal, cutrank) );
 
    return SCIP_OKAY;
 }
@@ -24903,6 +24921,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   int*                  inds,               /**< indices of non-zero entries in weights array */
+   int                   ninds,              /**< number of indices of non-zero entries in weights array */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the strong CG row */
@@ -24915,7 +24935,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_CALL( checkStage(scip, "SCIPcalcStrongCG", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpCalcStrongCG(scip->lp, scip->set, scip->stat, scip->transprob,
-         boundswitch, usevbds, allowlocal, maxmksetcoefs, maxweightrange, minfrac, maxfrac, weights, scale,
+         boundswitch, usevbds, allowlocal, maxmksetcoefs, maxweightrange, minfrac, maxfrac, weights, inds, ninds, scale,
          mircoef, mirrhs, cutactivity, success, cutislocal, cutrank) );
 
    return SCIP_OKAY;

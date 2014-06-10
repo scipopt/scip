@@ -198,6 +198,7 @@ SCIP_RETCODE generateAverageRay(
    SCIP_Real** tableaurows;
    SCIP_Real* rownorm;
    SCIP_Real rowweight;
+   int* tableaurowinds;                           /* indices of non-zero entries */
 
    int nrows;
    int i;
@@ -219,18 +220,35 @@ SCIP_RETCODE generateAverageRay(
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
-   for( i = nrows - 1; i >= 0; --i )
-      rownorm[i] = 0;
+   BMSclearMemoryArray(rownorm, nrows);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &tableaurowinds, nrows) );
 
    /* get the relevant columns of the simplex tableau */
    for( j = nsubspacevars-1; j >= 0; --j )
    {
+      int ntableaurowinds;
+      int tableaurowind;
+
       assert(SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])) >= 0);
-      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])), tableaurows[j]) );
-      for( i = nrows - 1; i >= 0; --i )
-         rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
+      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])), tableaurows[j], tableaurowinds, &ntableaurowinds) );
+
+      if( ntableaurowinds == -1 )
+      {
+         for( i = nrows - 1; i >= 0; --i )
+            rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
+      }
+      else
+      {
+         for( i = ntableaurowinds - 1; i >= 0; --i )
+         {
+            tableaurowind = tableaurowinds[i];
+            rownorm[tableaurowind] += tableaurows[j][tableaurowind] * tableaurows[j][tableaurowind];
+         }
+      }
    }
 
+   /* @TODO maybe we can use the sparsitiy informations in this loop (inds, ninds) */
    /* take average over all rows of the tableau */
    for( i = nrows - 1; i >= 0; --i )
    {
@@ -257,6 +275,7 @@ SCIP_RETCODE generateAverageRay(
    }
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &tableaurowinds);
    SCIPfreeBufferArray(scip, &rownorm);
    for( j = nsubspacevars - 1; j >= 0; --j )
    {

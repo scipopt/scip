@@ -20,6 +20,7 @@ parameters:
 performance improvements:
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
   coefficients
+- using sparsity information of the SoPlex LP
 
 interface:
 - rename all file "*_vbc.?" to the more generic "*_visual.?"

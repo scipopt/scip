@@ -3317,7 +3317,10 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
@@ -3329,7 +3332,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(r >= 0);
    assert(r < lpi->spx->numRowsReal());
 
-   if( ! lpi->spx->getBasisInverseRowReal(r, coef) )
+   if( ! lpi->spx->getBasisInverseRowReal(r, coef, inds, ninds) )
       return SCIP_LPERROR;
 
    return SCIP_OKAY;
@@ -3343,7 +3346,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
@@ -3352,7 +3358,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   if( ! lpi->spx->getBasisInverseColReal(c, coef) )
+   if( ! lpi->spx->getBasisInverseColReal(c, coef, inds, ninds) )
       return SCIP_LPERROR;
 
    return SCIP_OKAY;
@@ -3363,7 +3369,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIP_Real* buf;
@@ -3386,13 +3395,16 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    if( binvrow == NULL )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&buf, nrows) );
-      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buf) );
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buf, inds, ninds) );
       binv = buf;
    }
    else
       binv = const_cast<SCIP_Real*>(binvrow);
 
    assert(binv != NULL);
+
+   /* mark sparsity pattern as invalid */
+   *ninds = -1;
 
    // @todo exploit sparsity in binv by looping over nrows
    /* calculate the scalar product of the row in B^-1 and A */
@@ -3410,9 +3422,13 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
+   /* create a new uninitialized full vector */
    DVector col(lpi->spx->numRowsReal());
 
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
@@ -3425,11 +3441,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(c >= 0);
    assert(c < lpi->spx->numColsReal());
 
-   // @todo why is clear() needed?
+   /* @todo implement this with sparse vectors */
+   /* mark sparsity pattern as invalid */
+   *ninds = -1;
+
+   /* col needs to be cleared because copying colVectorReal only regards nonzeros */
    col.clear();
    col = lpi->spx->colVectorReal(c);
-   // @todo col should be of this size already
-   col.reDim(lpi->spx->numRowsReal());
 
    /* solve */
    if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )

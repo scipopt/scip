@@ -634,22 +634,22 @@ public:
       Real timelimit;
       try
       {
-	 m_stat = SPxSolver::solve();
+         m_stat = SPxSolver::solve();
       }
       catch(SPxException x)
       {
-	 std::string s = x.what();
+         std::string s = x.what();
          if( printwarning )
          {
             SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
          }
-	 m_stat = SPxSolver::status();
+         m_stat = SPxSolver::status();
 
-	 /* since it is not clear if the status in SoPlex are set correctly
-	  * we want to make sure that if an error is thrown the status is
+         /* since it is not clear if the status in SoPlex are set correctly
+          * we want to make sure that if an error is thrown the status is
           * not OPTIMAL anymore.
           */
-	 assert( m_stat != SPxSolver::OPTIMAL );
+         assert( m_stat != SPxSolver::OPTIMAL );
       }
 
       /* save iteration count */
@@ -843,18 +843,18 @@ public:
       /* delete starting basis if solving from scratch */
       if ( getFromScratch() )
       {
-	 try
-	 {
-	    SPxSolver::reLoad();
-	 }
-	 catch(SPxException x)
-	 {
-	    std::string s = x.what();
-	    SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-	    m_stat = SPxSolver::status();
-	    assert( m_stat != SPxSolver::OPTIMAL );
-	    return m_stat;
-	 }
+         try
+         {
+            SPxSolver::reLoad();
+         }
+         catch(SPxException x)
+         {
+            std::string s = x.what();
+            SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+            m_stat = SPxSolver::status();
+            assert( m_stat != SPxSolver::OPTIMAL );
+            return m_stat;
+         }
       }
       assert(!getFromScratch() || getBasisStatus() == SPxBasis::NO_PROBLEM);
 
@@ -1212,33 +1212,33 @@ public:
       // compute size
       if ( namestoragesize == 0 )
       {
-	 // the following may overestimate the space requirements
-	 *storageleft = -m_colnames->memSize();
+         // the following may overestimate the space requirements
+         *storageleft = -m_colnames->memSize();
       }
       else
       {
-	 NameSet* names = m_colnames;
-	 assert( names != 0 );
-	 int sizeleft = namestoragesize;
-	 char* s = namestorage;
-	 for (int j = firstcol; j <= lastcol; ++j)
-	 {
-	    const char* t = (*names)[j];
-	    colnames[j-firstcol] = s;
-	    while( *t != '\0' && sizeleft >= 0 )
-	    {
-	       *(s++) = *(t++);
-	       --sizeleft;
-	    }
-	    *(s++) = '\0';
-	 }
-	 if ( sizeleft == 0 )
-	 {
-	    *storageleft = namestoragesize - m_colnames->memSize();
-	    assert( *storageleft <= 0 );
-	 }
-	 else
-	    *storageleft = sizeleft;
+         NameSet* names = m_colnames;
+         assert( names != 0 );
+         int sizeleft = namestoragesize;
+         char* s = namestorage;
+         for (int j = firstcol; j <= lastcol; ++j)
+         {
+            const char* t = (*names)[j];
+            colnames[j-firstcol] = s;
+            while( *t != '\0' && sizeleft >= 0 )
+            {
+               *(s++) = *(t++);
+               --sizeleft;
+            }
+            *(s++) = '\0';
+         }
+         if ( sizeleft == 0 )
+         {
+            *storageleft = namestoragesize - m_colnames->memSize();
+            assert( *storageleft <= 0 );
+         }
+         else
+            *storageleft = sizeleft;
       }
    }
 
@@ -1257,33 +1257,33 @@ public:
       // compute size
       if ( namestoragesize == 0 )
       {
-	 // the following may overestimate the space requirements
-	 *storageleft = -m_rownames->memSize();
+         // the following may overestimate the space requirements
+         *storageleft = -m_rownames->memSize();
       }
       else
       {
-	 NameSet* names = m_rownames;
-	 assert( names != 0 );
-	 int sizeleft = namestoragesize;
-	 char* s = namestorage;
-	 for (int i = firstrow; i <= lastrow; ++i)
-	 {
-	    const char* t = (*names)[i];
-	    rownames[i-firstrow] = s;
-	    while( *t != '\0' && sizeleft >= 0 )
-	    {
-	       *(s++) = *(t++);
-	       --sizeleft;
-	    }
-	    *(s++) = '\0';
-	 }
-	 if ( sizeleft == 0 )
-	 {
-	    *storageleft = m_rownames->memSize() - namestoragesize;
-	    assert( *storageleft <= 0 );
-	 }
-	 else
-	    *storageleft = sizeleft;
+         NameSet* names = m_rownames;
+         assert( names != 0 );
+         int sizeleft = namestoragesize;
+         char* s = namestorage;
+         for (int i = firstrow; i <= lastrow; ++i)
+         {
+            const char* t = (*names)[i];
+            rownames[i-firstrow] = s;
+            while( *t != '\0' && sizeleft >= 0 )
+            {
+               *(s++) = *(t++);
+               --sizeleft;
+            }
+            *(s++) = '\0';
+         }
+         if ( sizeleft == 0 )
+         {
+            *storageleft = m_rownames->memSize() - namestoragesize;
+            assert( *storageleft <= 0 );
+         }
+         else
+            *storageleft = sizeleft;
       }
    }
 }; /*lint !e1748*/
@@ -1990,8 +1990,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    {
       for( i = 0; i < ncols; ++i )
       {
-	 assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
-	 lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
+         assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+         lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
          assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]));
       }
    }
@@ -2034,8 +2034,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    {
       for( i = 0; i < nrows; ++i )
       {
-	 assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
-	 lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
+         assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
+         lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
          assert(lpi->spx->lhs(ind[i]) <= lpi->spx->rhs(ind[i]));
       }
    }
@@ -2120,8 +2120,8 @@ SCIP_RETCODE SCIPlpiChgObj(
    {
       for( i = 0; i < ncols; ++i )
       {
-	 assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
-	 lpi->spx->changeObj(ind[i], obj[i]);
+         assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+         lpi->spx->changeObj(ind[i], obj[i]);
       }
    }
    catch(SPxException x)
@@ -3758,9 +3758,9 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
    {
       /* in column case the reduced costs are available: */
       if (spx->getSense() == SPxLP::MINIMIZE)
-	 *val = spx->pVec()[col] - spx->maxObj()[col];
+         *val = spx->pVec()[col] - spx->maxObj()[col];
       else
-	 *val = spx->maxObj()[col] - spx->pVec()[col];
+         *val = spx->maxObj()[col] - spx->pVec()[col];
    }
    else
    {
@@ -3771,20 +3771,20 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
       /* Here is the code necessary to compute the reduced costs for row representation: */
       SCIP_Real sign = 1.0;
       if ( spx->getSense() == SPxLP::MINIMIZE )
-	 sign = -1.0;
+         sign = -1.0;
 
       if ( spx->isColBasic(col) )
       {
-	 /* It seems necessary to search through the basis in order to find the correct position */
+         /* It seems necessary to search through the basis in order to find the correct position */
          for (int i = spx->dim() - 1; i >= 0; --i)
          {
-	    SPxId id = spx->basis().baseId(i);
+            SPxId id = spx->basis().baseId(i);
             if ( id.isSPxColId() && col == spx->number(SPxColId(id)) )
-	    {
-	       *val = sign * spx->fVec()[i];
-	       break;
-	    }
-	 }
+            {
+               *val = sign * spx->fVec()[i];
+               break;
+            }
+         }
       }
 #endif
    }
@@ -3841,23 +3841,23 @@ SCIP_RETCODE SCIPlpiGetBase(
    {
       for( i = 0; i < lpi->spx->nCols(); ++i )
       {
-	 SCIP_Real val = 0.0;
+         SCIP_Real val = 0.0;
          switch( lpi->spx->getBasisColStatus(i) )
          {
          case SPxSolver::BASIC:
             cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
             break;
          case SPxSolver::FIXED:
-	    /* Get reduced cost estimation. If the estimation is not correct this should not hurt:
-	     * If the basis is loaded into SoPlex again, the status is converted to FIXED again; in
-	     * this case there is no problem at all. If the basis is saved and/or used in some other
-	     * solver, it usually is very cheap to perform the pivots necessary to get an optimal
-	     * basis. */
-	    SCIP_CALL( getRedCostEst(lpi->spx, i, &val) );
-	    if( val < 0.0 )  /* reduced costs < 0 => UPPER  else => LOWER */
-	       cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
-	    else
-	       cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
+            /* Get reduced cost estimation. If the estimation is not correct this should not hurt:
+             * If the basis is loaded into SoPlex again, the status is converted to FIXED again; in
+             * this case there is no problem at all. If the basis is saved and/or used in some other
+             * solver, it usually is very cheap to perform the pivots necessary to get an optimal
+             * basis. */
+            SCIP_CALL( getRedCostEst(lpi->spx, i, &val) );
+            if( val < 0.0 )  /* reduced costs < 0 => UPPER  else => LOWER */
+               cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
+            else
+               cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
             break;
          case SPxSolver::ON_LOWER:
             cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
@@ -4084,7 +4084,10 @@ SCIP_RETCODE prepareFactorization(
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
@@ -4100,19 +4103,35 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    {
       SPxSolver* spx = lpi->spx;
 
-      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-
       /* in the column case use the existing factorization */
       if ( spx->rep() == SPxSolver::COLUMN )
       {
-         DVector e(spx->nRows());
+         SSVector x(spx->nRows());
+         spx->basis().coSolve(x, spx->unitVector(r));
 
-         /* prepare unit vector */
-         e.clear();
-         e[r] = 1.0;
-
-         /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
-         spx->basis().coSolve(x, e);
+         /* copy sparse data to dense result vector based on coef array */
+         if( ninds != NULL && inds != NULL )
+         {
+            int idx;
+            /* during solving SoPlex may have destroyed the sparsity structure so we need to restore it */
+            x.setup();
+            *ninds = x.size();
+            for( int i = 0; i < *ninds; ++i )
+            {
+               idx = x.index(i);
+               coef[idx] = x[idx];
+               /* set sparsity pattern of coef array */
+               inds[i] = idx;
+            }
+         }
+         else
+         {
+            /* @todo check whether we only need to copy nonzeros to coef - is coef cleared? */
+            Vector y(spx->nRows(), coef);
+            y = x;
+            if( ninds != NULL )
+               *ninds = -1;
+         }
       }
       else
       {
@@ -4133,6 +4152,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
          /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
          lpi->factorization->solveLeft(x, e);
 #else
+         Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
          /**@todo should rhs be a reference? */
          DSVector rhs(spx->nCols());
          SSVector y(spx->nCols());
@@ -4199,6 +4219,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
             assert(x[index] == 0.0);
             x[index] = 1.0;
          }
+
+         // @todo implement returning of sparsity information like in column wise case
+         if( ninds != NULL )
+            *ninds = -1;
 
          /* free memory */
          BMSfreeMemoryArray(&bind);
@@ -4342,7 +4366,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
@@ -4350,6 +4377,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+
+   /* mark sparsity pattern as invalid */
+   if( ninds != NULL )
+      *ninds = -1;
 
    /* prepare unit vector */
    DVector e(lpi->spx->nRows());
@@ -4371,7 +4402,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SCIP_Real* buf;
@@ -4394,13 +4428,17 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    if( binvrow == NULL )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&buf, nrows) );
-      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buf) );
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buf, inds, ninds) );
       binv = buf;
    }
    else
       binv = const_cast<SCIP_Real*>(binvrow);
 
    assert(binv != NULL);
+
+   /* mark sparsity pattern as invalid */
+   if( ninds != NULL )
+      *ninds = -1;
 
    /* calculate the scalar product of the row in B^-1 and A */
    soplex::Vector binvvec(nrows, binv);
@@ -4417,7 +4455,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    DVector col(lpi->spx->nRows());
@@ -4431,6 +4472,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* extract column c of A */
    assert(c >= 0);
    assert(c < lpi->spx->nCols());
+
+   /* mark sparsity pattern as invalid */
+   if( ninds != NULL )
+      *ninds = -1;
 
    col.clear();
    col = lpi->spx->colVector(c);
@@ -4797,13 +4842,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          break;
       case SCIP_PRICING_STEEP:
          lpi->spx->setSteepPricer();
-	 break;
+         break;
       case SCIP_PRICING_STEEPQSTART:
          lpi->spx->setSteepQStartPricer();
-	 break;
+         break;
       case SCIP_PRICING_DEVEX:
          lpi->spx->setDevexPricer();
-	 break;
+         break;
       default:
          return SCIP_LPERROR;
       }
@@ -4991,7 +5036,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    try
    {
       if( !lpi->spx->readLP(fname) )
-	 return SCIP_READERROR;
+         return SCIP_READERROR;
    }
    catch(SPxException x)
    {
