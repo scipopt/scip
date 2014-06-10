@@ -18,11 +18,23 @@ parameters:
 - new parameter "heur/indicator/improvesols" that turns on the improvement of external solutions by one-opt
 
 performance improvements:
+- adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
+  the next depth to perform an LP solve is determined dynamically based on the heuristic success so far
+  and the difference between the depth and the maximum dive depth; if more than one candidate should
+  be rounded, all candidates are sorted w.r.t. the diving score and then attempted in order of their score
+  unless their LP solution has already become infeasible from intermediate propagations.
+- all hard diving heuristics additionally consider indicator variables as candidate variables and try to 
+  make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
   coefficients
 - using sparsity information of the SoPlex LP
 
 interface:
+- new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
+  without 'obj' at the beginning) create their diveset and store it in their heuristic data.
+- new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
+- new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP resolve according to
+  the diveset argument.
 - rename all file "*_vbc.?" to the more generic "*_visual.?"
 - submenu for setting "vbc" settings renamed to "visual"
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
