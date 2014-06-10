@@ -119,7 +119,8 @@ struct SCIP_Node
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
    int                   reoptredies;
-   int                   reopt;
+   int                   reoptID;
+   SCIP_REOPTTYPE        reopttype;
    union
    {
       SCIP_PROBINGNODE*  probingnode;        /**< data for probing nodes */

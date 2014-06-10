@@ -913,7 +913,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
    (*node)->reoptredies = 0;
-   (*node)->reopt = -1,
+   (*node)->reoptID = -1,
+   (*node)->reopttype = SCIP_REOPTTYPE_NONE,
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -6674,16 +6675,44 @@ SCIP_Real SCIPnodeGetEstimate(
    return node->estimate;
 }
 
-int SCIPnodeGetReopt(
+SCIP_REOPTTYPE SCIPnodeGetReopttype(
    SCIP_NODE*           node
    )
 {
    assert(node != NULL);
 
-   return node->reopt;
+   return node->reopttype;
 }
 
-SCIP_RETCODE SCIPnodeSetReopt(
+SCIP_RETCODE SCIPnodeSetReopttype(
+   SCIP_NODE*            node,
+   SCIP_REOPTTYPE        reopttype
+   )
+{
+   assert(node != NULL);
+   assert(reopttype == SCIP_REOPTTYPE_NONE
+       || reopttype == SCIP_REOPTTYPE_TRANSIT
+       || reopttype == SCIP_REOPTTYPE_LOGICORNODE
+       || reopttype == SCIP_REOPTTYPE_STRBRANCHED
+       || reopttype == SCIP_REOPTTYPE_LEAF
+       || reopttype == SCIP_REOPTTYPE_INFEASIBLE
+       || reopttype == SCIP_REOPTTYPE_PRUNED
+       || reopttype == SCIP_REOPTTYPE_FEASIBLE);
+
+   node->reopttype = reopttype;
+   return SCIP_OKAY;
+}
+
+int SCIPnodeGetReoptID(
+   SCIP_NODE*           node
+   )
+{
+   assert(node != NULL);
+
+   return node->reoptID;
+}
+
+SCIP_RETCODE SCIPnodeSetReoptID(
    SCIP_NODE*            node,
    int                   id
    )
@@ -6691,7 +6720,7 @@ SCIP_RETCODE SCIPnodeSetReopt(
    assert(node != NULL);
    assert(id == -1 || 1 <= id);
 
-   node->reopt = id;
+   node->reoptID = id;
    return SCIP_OKAY;
 }
 

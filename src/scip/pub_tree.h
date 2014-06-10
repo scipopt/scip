@@ -29,6 +29,7 @@
 #include "scip/type_misc.h"
 #include "scip/type_tree.h"
 #include "scip/type_lpi.h"
+#include "scip/type_reopt.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
@@ -156,8 +157,14 @@ SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
    );
 
+
 EXTERN
-int SCIPnodeGetReopt(
+SCIP_REOPTTYPE SCIPnodeGetReopttype(
+   SCIP_NODE*           node
+   );
+
+EXTERN
+int SCIPnodeGetReoptID(
    SCIP_NODE*            node
    );
 
@@ -169,7 +176,13 @@ SCIP_RETCODE SCIPchildSetLpistate(
    );
 
 EXTERN
-SCIP_RETCODE SCIPnodeSetReopt(
+SCIP_RETCODE SCIPnodeSetReopttype(
+   SCIP_NODE*            node,
+   SCIP_REOPTTYPE        type
+   );
+
+EXTERN
+SCIP_RETCODE SCIPnodeSetReoptID(
    SCIP_NODE*            node,
    int                   id
    );

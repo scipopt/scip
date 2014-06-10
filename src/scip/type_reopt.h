@@ -33,6 +33,20 @@ typedef struct SCIP_SolTree SCIP_SOLTREE;       /**< tree to check solutions */
 
 typedef struct SCIP_SolNode SCIP_SOLNODE;       /**< nodes of SCIP_SOLTREE */
 
+/* type of nodes during reoptimization */
+enum SCIP_ReoptType
+{
+   SCIP_REOPTTYPE_NONE        = 0,
+   SCIP_REOPTTYPE_TRANSIT     = 1,
+   SCIP_REOPTTYPE_LOGICORNODE = 2,
+   SCIP_REOPTTYPE_STRBRANCHED = 3,
+   SCIP_REOPTTYPE_LEAF        = 4,
+   SCIP_REOPTTYPE_INFEASIBLE  = 5,
+   SCIP_REOPTTYPE_PRUNED      = 6,
+   SCIP_REOPTTYPE_FEASIBLE    = 7
+};
+typedef enum SCIP_ReoptType SCIP_REOPTTYPE;     /**< type nodes during reoptimization */
+
 #ifdef __cplusplus
 }
 #endif

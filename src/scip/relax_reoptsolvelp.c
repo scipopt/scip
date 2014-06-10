@@ -119,7 +119,7 @@ SCIP_DECL_RELAXEXEC(relaxExecreoptsolvelp)
    node = SCIPgetCurrentNode(scip);
 
    /** check is the node come from reoptimiziation */
-   if( SCIPnodeGetReopt(node) > -1 && relaxdata->lastnode != SCIPnodeGetNumber(node) )
+   if( SCIPnodeGetReoptID(node) > -1 && relaxdata->lastnode != SCIPnodeGetNumber(node) )
    {
       relaxdata->lastnode = SCIPnodeGetNumber(node);
       SCIP_CALL( SCIPbranchruleNodereoptSolveLP(scip, node, &solvelp) );

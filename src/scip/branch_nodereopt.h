@@ -73,11 +73,9 @@ SCIP_RETCODE SCIPbranchruleNodereoptSetRootLPI(
 
 extern
 SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
-   SCIP*                  scip,
-   SCIP_NODE*             node,               /** current node */
-   SCIP_Bool              pruned,             /** true if a pruned node should saved */
-   SCIP_Bool              feasible,           /** true if a feasible node should saved */
-   SCIP_Bool              pseudobranched      /** true if a pseudo-branched node should saved */
+   SCIP*                 scip,
+   SCIP_NODE*            node,               /** current node */
+   SCIP_REOPTTYPE        reopttype
    );
 
 extern
