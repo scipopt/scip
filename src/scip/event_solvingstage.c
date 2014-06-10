@@ -49,6 +49,7 @@
 #define DEFAULT_TRANSITIONMETHOD 'r' /**< the default transition method */
 #define DEFAULT_NODEOFFSET 50        /**< default node offset */
 #define DEFAULT_FALLBACK FALSE       /**< should the phase transition fall back to suboptimal stage? */
+#define DEFAULT_INTERRUPTOPTIMAL FALSE /**< should solving process be interrupted if optimal solution was found? */
 
 /** enumerator to represent the event handler solving stage */
 enum SolvingStage
@@ -83,6 +84,7 @@ struct SCIP_EventhdlrData
                                                   (r)ank1 node based */
    SCIP_Longint         nodeoffset;          /**< node offset for triggering rank1 node based phased transition */
    SCIP_Bool            fallback;             /**< should the phase transition fall back to suboptimal stage? */
+   SCIP_Bool            interruptoptimal;     /**< interrupt after optimal solution was found */
 };
 
 /*
@@ -212,14 +214,17 @@ SCIP_Bool transitionPhase3(
          referencevalue = eventhdlrdata->optimalvalue;
          primalbound = SCIPgetPrimalbound(scip);
          if(!SCIPisInfinity(scip, REALABS(primalbound)) && !SCIPisInfinity(scip, referencevalue) )
-            return SCIPisFeasZero(scip, getGap(scip, primalbound, referencevalue));
+            return SCIPisEQ(scip, primalbound, referencevalue);
          break;
       case 'c':
          return FALSE;
+         break;
       case 'e':
          return FALSE;
+         break;
       case 'l':
          return FALSE;
+         break;
       default:
          return FALSE;
       break;
@@ -256,14 +261,22 @@ SCIP_RETCODE applySolvingStage(
    SOLVINGSTAGE stagebefore;
    char paramfilename[256];
 
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
+      return SCIP_OKAY;
+
    stagebefore = eventhdlrdata->solvingstage;
    determineSolvingStage(scip, eventhdlrdata);
+
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->transitionmethod == 'o' &&
+         eventhdlrdata->interruptoptimal )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Solution is optimal. Calling user interruption\n");
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
 
    if( stagebefore != SOLVINGSTAGE_NOSOLUTION && stagebefore == eventhdlrdata->solvingstage )
       return SCIP_OKAY;
 
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
-      return SCIP_OKAY;
 
    switch (eventhdlrdata->solvingstage)
    {
@@ -286,6 +299,8 @@ SCIP_RETCODE applySolvingStage(
    }
    assert(paramfilename != NULL);
    file = fopen(paramfilename, "r");
+
+
    if( file == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d \n", eventhdlrdata->solvingstage);
@@ -293,13 +308,21 @@ SCIP_RETCODE applySolvingStage(
    }
    else
    {
+      char transitionmethod;
+      SCIP_Bool interruptoptimal;
+
       fclose(file);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d -- \n", eventhdlrdata->solvingstage);
       //SCIP_CALL( SCIPresetParams(scip) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file %s\n", paramfilename);
+      interruptoptimal = eventhdlrdata->interruptoptimal;
+      transitionmethod = eventhdlrdata->transitionmethod;
+
       SCIP_CALL( SCIPreadParams(scip, paramfilename) );
 
       eventhdlrdata->enabled = TRUE;
+      eventhdlrdata->transitionmethod = transitionmethod;
+      eventhdlrdata->interruptoptimal = interruptoptimal;
    }
 
    return SCIP_OKAY;
@@ -499,6 +522,8 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
             &eventhdlrdata->fallback, FALSE, DEFAULT_FALLBACK, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip ,"eventhdlr/"EVENTHDLR_NAME"/transitionmethod", "transition method 'c','e','l','o','r'",
          &eventhdlrdata->transitionmethod, FALSE, DEFAULT_TRANSITIONMETHOD, TRANSITIONMETHODS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/interruptoptimal", "should the event handler interrupt after optimal solution was found?",
+               &eventhdlrdata->interruptoptimal, FALSE, DEFAULT_INTERRUPTOPTIMAL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
