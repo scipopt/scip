@@ -13349,7 +13349,7 @@ SCIP_RETCODE SCIPsolve(
          int naddedsols;
          int s;
 
-         nsols = scip->set->reopt_savesols == -1 ? scip->primal->nsols : MIN(scip->primal->nsols, scip->set->reopt_savesols);
+         nsols = MIN(scip->primal->nsols, scip->set->reopt_savesols);
          naddedsols = 0;
 
          /* allocate memory */

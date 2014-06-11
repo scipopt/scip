@@ -268,12 +268,16 @@
 
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_MAXSAVEDNODES INT_MAX/**< maximum number of saved nodes */
+#define SCIP_DEFAULT_REOPT_DYNAMIXDIFF     TRUE /**< should the maximal number of bound changes in two ancestor
+                                                     nodes calculated automaticaly, depending on the number of variables? */
+#define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
+                                                     such that the path get not shrunk */
 #define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
 #define SCIP_DEFAULT_REOPT_SAVEGLBCONS    FALSE /**< save global constraints to separate solutions found so far */
 #define SCIP_DEFAULT_REOPT_SAVELOCCONS    FALSE /**< save local constraints to separate solutions found so far */
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        5 /**< difference of path length between two ancestor nodes to solve the LP */
-#define SCIP_DEFAULT_REOPT_SAVESOLS          -1 /**< save n best solutions found so far (-1: all) */
+#define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
 #define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
@@ -1542,6 +1546,16 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/dynamicdiffofnodes",
+         "should maximal number of bound changes calculated automatically, depending on number of variables?",
+         &(*set)->reopt_dynamicdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_DYNAMIXDIFF,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/maxdiffofnodes",
+         "maximal number of bound changes between two ancestor nodes such that the path get not shrunk.",
+         &(*set)->reopt_maxdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_MAXDIFFOFNODES, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/savelpbasis",
          "save LP basis of feasible and branched nodes during reoptimization",
          &(*set)->reopt_savelpbasis, TRUE, SCIP_DEFAULT_REOPT_SAVELPBASIS,
@@ -1568,8 +1582,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/savesols",
-         "number of best solutions which should be saved for the following runs. (-1: save all)",
-         &(*set)->reopt_savesols, TRUE, SCIP_DEFAULT_REOPT_SAVESOLS, -1, INT_MAX,
+         "number of best solutions which should be saved for the following runs.",
+         &(*set)->reopt_savesols, TRUE, SCIP_DEFAULT_REOPT_SAVESOLS, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/minavghamdist",

@@ -357,7 +357,10 @@ struct SCIP_Set
 
    /* reoptimization settings */
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
+   SCIP_Bool             reopt_dynamicdiffofnodes; /**< should the maximal number of bound changes calculated automatically,
+                                                  depending on the number of variables? */
    int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
+   int                   reopt_maxdiffofnodes;/**< maximal number of children */
    SCIP_Bool             reopt_savelpbasis;  /**< save the LP basis of feasible and branched nodes during reoptimization */
    SCIP_Bool             reopt_saveglbcons;  /**< save global constraints to separate solutions found so far */
    SCIP_Bool             reopt_saveloccons;  /**< save local constraints to separate solutions found so far */

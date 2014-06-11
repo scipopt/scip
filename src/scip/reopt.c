@@ -684,7 +684,7 @@ SCIP_RETCODE SCIPreoptAddSol(
 
    assert(reopt->sols[run] != NULL);
 
-   if( set->reopt_savesols == -1 )
+   if( set->reopt_savesols == INT_MAX )
       num = reopt->nsols[run]+1;
    else
       num = set->reopt_savesols;
@@ -703,7 +703,7 @@ SCIP_RETCODE SCIPreoptAddSol(
       insertpos = reopt->nsols[run];
       reopt->sols[run][insertpos] = solnode;
       reopt->nsols[run]++;
-      assert(set->reopt_savesols == -1 || reopt->nsols[run] <= set->reopt_savesols);
+      assert(reopt->nsols[run] <= set->reopt_savesols);
    }
 
    return SCIP_OKAY;
