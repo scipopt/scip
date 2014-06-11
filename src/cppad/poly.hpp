@@ -146,7 +146,6 @@ $end
 ------------------------------------------------------------------------------
 */
 // BEGIN C++
-# include <cstddef>  // used to defined size_t
 # include <cppad/check_simple_vector.hpp>
 
 namespace CppAD {    // BEGIN CppAD namespace
