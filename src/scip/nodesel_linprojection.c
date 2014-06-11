@@ -266,23 +266,17 @@ SCIP_CONSDATA* nodeGetLinprojectionData(
    int c;
 
    assert(node != NULL);
+   assert( SCIPnodeGetDepth(node) >= nodeseldata->rootconsdepth );
    conssetchg = SCIPnodeGetConssetchg(node);
 
-   /* if no conssetchg exists, this node is either too deep and no consdata has been created yet, or the node is shallow
-    * such that local constraints at this node are effectively globally valid */
-   if( conssetchg == NULL )
+   /* this node is effectively the root node */
+   if( SCIPnodeGetDepth(node) == nodeseldata->rootconsdepth )
    {
-      assert( SCIPnodeGetDepth(node) >= nodeseldata->rootconsdepth );
-
-      /* this node is effectively the root node */
-      if( SCIPnodeGetDepth(node) == nodeseldata->rootconsdepth )
-      {
-         assert(nodeseldata->rootnodecons != NULL);
-         return SCIPconsGetData(nodeseldata->rootnodecons);
-      }
-
-      return NULL;
+      assert(nodeseldata->rootnodecons != NULL);
+      return SCIPconsGetData(nodeseldata->rootnodecons);
    }
+   else if( conssetchg == NULL )
+      return NULL;
 
    SCIPconssetchgGetAddedConsData(conssetchg, &nodeconss, &nnodeconss);
    assert(nnodeconss == 0 || nodeconss != NULL);
@@ -294,7 +288,6 @@ SCIP_CONSDATA* nodeGetLinprojectionData(
 
       cons = nodeconss[c];
 
-      /* TODO replace the slow string comparison method by a faster method comparing constraint handlers */
       if(SCIPconsGetHdlr(cons) != nodeseldata->conshdlr)
          continue;
 
@@ -385,7 +378,7 @@ void selectBestNode(
       SCIP_Real nodelinprojectionestimate;
       assert(nodes[c] != NULL);
       nodelinprojectionestimate = nodeGetLinprojectionEstimate(nodes[c], nodeseldata);
-      if( SCIPisLT(scip, nodelinprojectionestimate, *bestnodeestimate) )
+      if( *selnode == NULL || SCIPisLT(scip, nodelinprojectionestimate, *bestnodeestimate) )
       {
          *bestnodeestimate = nodelinprojectionestimate;
          *selnode = nodes[c];
@@ -461,7 +454,7 @@ void updateLinprojectionslope(
    root = SCIPgetRootNode(scip);
    assert(root != NULL);
 
-   rootlowerbound = SCIPnodeGetLowerbound(root);
+   rootlowerbound = SCIPgetLowerboundRoot(scip);
    assert(nodeseldata->rootnodecons != NULL);
    rootconsdata = SCIPconsGetData(nodeseldata->rootnodecons);
    nrootlpcands = rootconsdata->nodenlpcands;
@@ -725,7 +718,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectLinprojection)
 
       }
    }
-   assert(selnode != NULL);
+   assert(*selnode != NULL);
    SCIPdebugMessage("Selection of node %"SCIP_LONGINT_FORMAT" with estimate %g\n", SCIPnodeGetNumber(*selnode), bestnodeestimate);
 
    return SCIP_OKAY;
