@@ -143,7 +143,7 @@ checkCutoffReason(
          if( strongbranched )
          {
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
-            SCIP_CALL(SCIPbranchrulePseudoNodeFinished(scip, eventnode));
+            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
@@ -169,9 +169,9 @@ checkCutoffReason(
           */
          if( strongbranched )
          {
-            SCIP_CALL(SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1));
+            SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
-            SCIP_CALL(SCIPbranchrulePseudoNodeFinished(scip, eventnode));
+            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
@@ -431,42 +431,42 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
    }
 #endif
 
-   /** check if the seen nodes array is big enough */
-   if (SCIPnodeGetNumber(eventnode) >= eventhdlrdata->allocseennodes)
-   {
-      int i;
-      SCIPreallocMemoryArray(scip, &(eventhdlrdata->seennodes), SCIPnodeGetNumber(eventnode) + 100);
-      for (i = eventhdlrdata->allocseennodes - 1; i < SCIPnodeGetNumber(eventnode) + 100; ++i)
-         eventhdlrdata->seennodes[i] = 0;
+//   /** check if the seen nodes array is big enough */
+//   if (SCIPnodeGetNumber(eventnode) >= eventhdlrdata->allocseennodes)
+//   {
+//      int i;
+//      SCIPreallocMemoryArray(scip, &(eventhdlrdata->seennodes), SCIPnodeGetNumber(eventnode) + 100);
+//      for (i = eventhdlrdata->allocseennodes - 1; i < SCIPnodeGetNumber(eventnode) + 100; ++i)
+//         eventhdlrdata->seennodes[i] = 0;
+//
+//      eventhdlrdata->allocseennodes = SCIPnodeGetNumber(eventnode) + 100;
+//   }
 
-      eventhdlrdata->allocseennodes = SCIPnodeGetNumber(eventnode) + 100;
-   }
-
-   assert(SCIPnodeGetNumber(eventnode) < eventhdlrdata->allocseennodes);
-
-   eventhdlrdata->highestseennodenr = (SCIPnodeGetNumber(eventnode) > eventhdlrdata->highestseennodenr ?
-               SCIPnodeGetNumber(eventnode) : eventhdlrdata->highestseennodenr);
+//   assert(SCIPnodeGetNumber(eventnode) < eventhdlrdata->allocseennodes);
+//
+//   eventhdlrdata->highestseennodenr = (SCIPnodeGetNumber(eventnode) > eventhdlrdata->highestseennodenr ?
+//               SCIPnodeGetNumber(eventnode) : eventhdlrdata->highestseennodenr);
 
    /** if the current node is the root, than clear the data structure, set the new event and return */
    if (SCIPgetRootNode(scip) == eventnode)
    {
-      if (eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 0)
-      {
-         switch (SCIPeventGetType(event))
-            {
-         case SCIP_EVENTTYPE_NODEBRANCHED:
-            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 1;
-            break;
-
-         case SCIP_EVENTTYPE_NODEINFEASIBLE:
-            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
-            break;
-
-         case SCIP_EVENTTYPE_NODEFEASIBLE:
-            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 3;
-            break;
-            }
-      }
+//      if (eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 0)
+//      {
+//         switch (SCIPeventGetType(event))
+//            {
+//         case SCIP_EVENTTYPE_NODEBRANCHED:
+//            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 1;
+//            break;
+//
+//         case SCIP_EVENTTYPE_NODEINFEASIBLE:
+//            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
+//            break;
+//
+//         case SCIP_EVENTTYPE_NODEFEASIBLE:
+//            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 3;
+//            break;
+//            }
+//      }
 
       eventhdlrdata->lastnodenr = SCIPnodeGetNumber(eventnode);
       eventhdlrdata->lasteventtype = SCIPeventGetType(event);
@@ -488,49 +488,50 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
 
 
    /** check if we have already seen this node */
-   if (eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] != 0)
+   if (SCIPgetRootNode(scip) == eventnode && SCIPgetNChildren(scip) > 0
+    && SCIPeventGetType(event) != SCIP_EVENTTYPE_NODEBRANCHED)
    {
       /** the node was already seen as branched node and the only allowed event is NODEINFEASIBLE
        * we don't save this node because we have already saved the children.
        */
-      if (eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 1)
+      if (SCIPnodeGetReopttype(eventnode) <= SCIP_REOPTTYPE_STRBRANCHED)//(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 1)
       {
          assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE);
-         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
          return SCIP_OKAY;
       }
       else
       {
-         printf("Node %llu was already seen as %u and is now %x, this is not allowed!\n",
-               SCIPnodeGetNumber(eventnode),
-               eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1], SCIPeventGetType(event));
-         assert(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 1);
+//         printf("Node %llu was already seen as %u and is now %x, this is not allowed!\n",
+//               SCIPnodeGetNumber(eventnode),
+//               eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1], SCIPeventGetType(event));
+         assert(SCIPnodeGetReopttype(eventnode) <= SCIP_REOPTTYPE_STRBRANCHED);
+//         assert(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 1);
       }
    }
-   else
-      switch (SCIPeventGetType(event))
-         {
-      case SCIP_EVENTTYPE_NODEBRANCHED:
-         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 1;
-         break;
+//   else
+//      switch (SCIPeventGetType(event))
+//         {
+//      case SCIP_EVENTTYPE_NODEBRANCHED:
+//         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 1;
+//         break;
+//
+//      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+//         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
+//         break;
+//
+//      case SCIP_EVENTTYPE_NODEFEASIBLE:
+//         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 3;
+//         break;
+//         }
 
-      case SCIP_EVENTTYPE_NODEINFEASIBLE:
-         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
-         break;
-
-      case SCIP_EVENTTYPE_NODEFEASIBLE:
-         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 3;
-         break;
-         }
-
-   assert(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] > 0
-       && eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode)] <= 3);
-   assert(eventhdlrdata->lastnodenr != SCIPnodeGetNumber(eventnode));
+//   assert(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] > 0
+//       && eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode)] <= 3);
+//   assert(eventhdlrdata->lastnodenr != SCIPnodeGetNumber(eventnode));
 
    checkCutoffReason(scip, eventhdlrdata, event);
 
-   eventhdlrdata->lastnodenr = SCIPnodeGetNumber(eventnode);
-   eventhdlrdata->lasteventtype = SCIPeventGetType(event);
+//   eventhdlrdata->lastnodenr = SCIPnodeGetNumber(eventnode);
+//   eventhdlrdata->lasteventtype = SCIPeventGetType(event);
 
    return SCIP_OKAY;
 }

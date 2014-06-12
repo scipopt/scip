@@ -837,14 +837,14 @@ SCIP_RETCODE saveGlobalCons(
       SCIP_CALL( resizeGlobalsConsData(scip, branchruledata) );
    }
 
-   nbinvars = SCIPgetNBinVars(scip);
+   nbinvars = SCIPgetNOrigBinVars(scip);
 
    /** ensure that all variables are binary */
-   if(nbinvars == SCIPgetNVars(scip))
+   if(nbinvars == SCIPgetNOrigVars(scip))
    {
       /** allocate memory at position nconsglobal and increase the counter */
       SCIP_CALL( SCIPallocMemory(scip, &branchruledata->globalcons[branchruledata->nconsglobal]) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vars, SCIPgetVars(scip), nbinvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vars, SCIPgetOrigVars(scip), nbinvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vals, nbinvars) );
 
       branchruledata->globalcons[branchruledata->nconsglobal]->constype = REOPT_CONSTYPE_SEPA;
@@ -1447,6 +1447,52 @@ SCIP_RETCODE changeAncestorBranchings(
 }
 
 /*
+ * move all children to the next saved node
+ *
+ * if a node get branched and has neither an added constraints nor
+ * exceed the number of bound changes the compared to the next saved
+ * node the parameter 'maxdiffofnodes'.
+ */
+static
+SCIP_RETCODE moveChildrenUp(
+   SCIP_BRANCHRULEDATA*  branchruledata,
+   int                   nodeID,
+   int                   destnodeID
+)
+{
+   assert(branchruledata != NULL);
+   assert(nodeID >= 1);
+   assert(destnodeID >= 0);
+   assert(branchruledata->nodedata[nodeID]->nodechilds != NULL);
+
+   while(!SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds))
+   {
+      SCIP_VAR** vars;
+      int childID;
+      int varnr;
+
+      childID = (int) (size_t) SCIPqueueRemove(branchruledata->nodedata[nodeID]->nodechilds);
+      SCIP_CALL(SCIPduplicateMemoryArray(scip, &vars, branchruledata->nodedata[nodeID]->vars, branchruledata->nodedata[nodeID]->nvars));
+
+      assert(branchruledata->nodedata[childID]->allocmem >= branchruledata->nodedata[childID]->nvars + branchruledata->nodedata[nodeID]->nvars);
+
+      /** save branching information */
+      for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
+      {
+         branchruledata->nodedata[childID]->vars[branchruledata->nodedata[childID]->nvars] = vars[varnr];
+         branchruledata->nodedata[childID]->varbounds[branchruledata->nodedata[childID]->nvars] = branchruledata->nodedata[nodeID]->varbounds[varnr];
+         branchruledata->nodedata[childID]->varboundtypes[branchruledata->nodedata[childID]->nvars] = branchruledata->nodedata[nodeID]->varboundtypes[varnr];
+         branchruledata->nodedata[childID]->nvars++;
+      }
+
+      SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[destnodeID]->nodechilds, (void* ) (size_t ) childID));
+      SCIPfreeMemoryArray(scip, &vars);
+   }
+
+   return SCIP_OKAY;
+}
+
+/*
  * generate local constraints and add them
  */
 static
@@ -1855,9 +1901,6 @@ SCIP_RETCODE Exec(
       assert(branchruledata->nodedata[childID]->reopttype >= SCIP_REOPTTYPE_TRANSIT);
       SCIPnodeSetReopttype(child1, branchruledata->nodedata[childID]->reopttype);
 
-      /* change REOPTTYPE */
-//      branchruledata->nodedata[childID]->reopttype = SCIP_REOPTTYPE_TRANSIT;
-
       /** check if child2 includes some added constraints, save this node and set REOPT to true */
       if(child2 != NULL && SCIPnodeGetNAddedcons(scip, child2) > 0)
       {
@@ -1866,63 +1909,6 @@ SCIP_RETCODE Exec(
       }
 
       curChild++;
-   }
-
-   /** move all children to the next saved node above, if nodeID != 0 and there are no added constraints */
-   if(nodeID > 0 && (branchruledata->nodedata[nodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss)))
-   {
-      SCIP_NODE* parent;
-      int parentID;
-      int nbndchgs;
-
-      assert(branchruledata->nodedata[nodeID]->nodechilds != NULL );
-      assert(!SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds));
-
-      /** find next saved node above */
-      SCIP_CALL( getLastSavedNode(scip, branchruledata, SCIPgetCurrentNode(scip), &parent, &parentID, &nbndchgs) );
-      assert(parentID != nodeID);
-      assert(branchruledata->nodedata[parentID] != NULL );
-      assert(branchruledata->nodedata[parentID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds));
-
-      /** check if we need this node as a TRANSIT */
-      if( nbndchgs <= branchruledata->maxdiffofnodes )
-      {
-         /** move all children to the next saved node above */
-         while(!SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds))
-         {
-            SCIP_VAR** vars;
-            int childID;
-            int varnr;
-            childID = (int) (size_t) SCIPqueueRemove(branchruledata->nodedata[nodeID]->nodechilds);
-            SCIP_CALL(SCIPduplicateMemoryArray(scip, &vars, branchruledata->nodedata[nodeID]->vars, branchruledata->nodedata[nodeID]->nvars));
-
-            /** reallocate memory if necessary */
-            if(branchruledata->nodedata[childID]->allocmem < branchruledata->nodedata[childID]->nvars
-                  + branchruledata->nodedata[nodeID]->nvars)
-            {
-               assert(FALSE); /* this should never be the case */
-               branchruledata->nodedata[childID]->allocmem = SCIPgetNVars(scip);
-               SCIP_CALL( SCIPreallocMemoryArray(scip, &(branchruledata->nodedata[childID]->vars), branchruledata->nodedata[childID]->allocmem) );
-               SCIP_CALL( SCIPreallocMemoryArray(scip, &(branchruledata->nodedata[childID]->varbounds), branchruledata->nodedata[childID]->allocmem) );
-               SCIP_CALL( SCIPreallocMemoryArray(scip, &(branchruledata->nodedata[childID]->varboundtypes), branchruledata->nodedata[childID]->allocmem) );
-            }
-
-            /** save branching information */
-            for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
-            {
-               branchruledata->nodedata[childID]->vars[branchruledata->nodedata[childID]->nvars] = vars[varnr];
-               branchruledata->nodedata[childID]->varbounds[branchruledata->nodedata[childID]->nvars] = branchruledata->nodedata[nodeID]->varbounds[varnr];
-               branchruledata->nodedata[childID]->varboundtypes[branchruledata->nodedata[childID]->nvars] = branchruledata->nodedata[nodeID]->varboundtypes[varnr];
-               branchruledata->nodedata[childID]->nvars++;
-            }
-
-            SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[parentID]->nodechilds, (void* ) (size_t ) childID));
-            SCIPfreeMemoryArray(scip, &vars);
-         }
-
-         /* delete this node */
-         SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, SCIPgetCurrentNode(scip), TRUE, FALSE) );
-      }
    }
 
    return SCIP_OKAY;
@@ -2069,6 +2055,37 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       /** update LPI state if node is pseudobranched or feasible */
       switch (reopttype) {
          case SCIP_REOPTTYPE_TRANSIT:
+            assert(branchruledata->nodedata[nodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss));
+
+            if( branchruledata->nodedata[nodeID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds) )
+            {
+               SCIP_NODE* parent;
+               int parentID;
+               int nbndchgdiff;
+
+               SCIP_CALL( getLastSavedNode(scip, branchruledata, node, &parent, &parentID, &nbndchgdiff) );
+               assert(parentID != nodeID);
+               assert(branchruledata->nodedata[parentID] != NULL );
+               assert(branchruledata->nodedata[parentID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds));
+
+               /* check if we can move all children to the next saved node above */
+               if( nbndchgdiff <= branchruledata->maxdiffofnodes )
+               {
+                  SCIP_CALL( moveChildrenUp(branchruledata, nodeID, parentID) );
+
+                  /* delete this node */
+                  SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, node, TRUE, FALSE) );
+
+                  /** stop clock */
+                  SCIP_CALL(SCIPstopSaveTime(scip));
+
+                  return SCIP_OKAY;
+               }
+            }
+            goto TRANSIT;
+
+            break;
+
          case SCIP_REOPTTYPE_LOGICORNODE:
          case SCIP_REOPTTYPE_LEAF:
             goto TRANSIT;
@@ -2079,6 +2096,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
             {
                SCIP_CALL(saveLPIstate(scip, branchruledata, node, nodeID));
             }
+
             goto PSEUDO;
             break;
 
@@ -2815,8 +2833,8 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       SCIP_CALL(SCIPallocClearMemoryArray(scip, &(branchruledata->globalcons), branchruledata->allocmemglobalcons));
 
       /** change parameters */
-      SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
-      SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
+//      SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
+//      SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
       SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxrounds", 0));
       SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxroundsroot", 0));
 

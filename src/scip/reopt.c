@@ -459,13 +459,17 @@ SCIP_RETCODE soltreeAddSol(
    (*added) = FALSE;
    hamdist = 0.0;
 
-   /* the minimal Hamming-Distance of two different solutions
-    * at least 1/SCIPgetNVars(scip); we do not need to calculate
-    * the average distance if reopt_minavghamdist < 1/SCIPgetNVars(scip) */
-   if( set->reopt_minavghamdist >= (SCIP_Real)1/SCIPgetNVars(scip) )
-      hamdist = soltreeGetHammingDist(scip, reopt, set, stat, sol);
-   else
+   /** either all variables are delete or the given minimal Hamming-Distance is at most
+    *  1/SCIPgetNVars(scip), which is the minimum possible Hamming-Distance.
+    */
+   if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist <= (SCIP_Real)1/SCIPgetNVars(scip) )
+   {
       hamdist = set->reopt_minavghamdist;
+   }
+   else
+   {
+      hamdist = soltreeGetHammingDist(scip, reopt, set, stat, sol);
+   }
 
    /* add the solution iff the solution differs in at least one variable
     * to all saved solution and the avarage Hamming-Distance is greater or
@@ -525,7 +529,7 @@ SCIP_RETCODE soltreeAddSol(
 
 #ifdef SCIP_DEBUG
    {
-      if( set->reopt_minavghamdist < (SCIP_Real)1/SCIPgetNVars(scip) )
+      if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist < (SCIP_Real)1/SCIPgetNVars(scip) )
          printf(">> solution%s added (Hamming-Distance --).\n", (*added) ? "" : " not");
       else
          printf(">> solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
@@ -693,7 +697,7 @@ SCIP_RETCODE SCIPreoptAddSol(
    SCIP_CALL( ensureSolsSize(reopt, set, num, run) );
 
    /** ad solution to solution tree */
-   SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetVars(scip), sol, &solnode, SCIPgetNVars(scip), added) );
+   SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetOrigVars(scip), sol, &solnode, SCIPgetNOrigVars(scip), added) );
 
    if( (*added) )
    {
