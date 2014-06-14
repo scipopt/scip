@@ -3556,16 +3556,14 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
                                               *  (-1: if we do not store sparsity informations) */
    )
 {
-   int* sub;
    int nrows;
-   int numnz;
    int i;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   SCIPdebugMessage("Calling SCIPlpiGetBInvRow (%d)\n",lpi->lpid);
+   SCIPdebugMessage("Calling SCIPlpiGetBInvRow (%d)\n", lpi->lpid);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
    MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_ON) );
@@ -3728,7 +3726,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 #endif
 
       for (i = 0; i < numnz; ++i)
-         coef[sub[i]] = val[i];
+         coef[inds[i]] = val[i];
 
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
