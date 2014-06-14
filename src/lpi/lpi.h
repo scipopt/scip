@@ -738,7 +738,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
-/** get dense row of inverse basis matrix B^-1 */
+/** get row of inverse basis matrix B^-1 */
 EXTERN
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -749,7 +749,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
                                                *  (-1: if we do not store sparsity informations) */
    );
 
-/** get dense column of inverse basis matrix B^-1 */
+/** get column of inverse basis matrix B^-1 */
 EXTERN
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -764,7 +764,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                                *  (-1: if we do not store sparsity informations) */
    );
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+/** get row of inverse basis matrix times constraint matrix B^-1 * A */
 EXTERN
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -776,7 +776,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
                                               *  (-1: if we do not store sparsity informations) */
    );
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+/** get column of inverse basis matrix times constraint matrix B^-1 * A */
 EXTERN
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
