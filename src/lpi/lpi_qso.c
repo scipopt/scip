@@ -2655,7 +2655,9 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
-   int rval = 0, nrows, ncols;
+   int nrows;
+   int ncols;
+   int stat;
    register int i;
 
    assert(lpi!=NULL);
@@ -2665,8 +2667,14 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    nrows = QSget_rowcount(lpi->prob);
    ncols = QSget_colcount(lpi->prob);
-   rval = QSget_basis_order( lpi->prob, bind);
-   QS_CONDRET(rval);
+
+   QS_CONDRET( QSget_status(lpi->prob, &stat) );
+   if ( stat == QS_LP_UNSOLVED || stat == QS_LP_MODIFIED || stat == QS_LP_NUMERR )
+   {
+      QS_CONDRET( QSopt_dual(lpi->prob, &(lpi->solstat)) );
+   }
+
+   QS_CONDRET( QSget_basis_order( lpi->prob, bind) );
 
    /* transform QSopt basis header into SCIP format */
    for( i = 0; i < nrows; ++i )
