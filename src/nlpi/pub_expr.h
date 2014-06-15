@@ -247,6 +247,12 @@ SCIP_Real* SCIPexprGetMonomialExponents(
    SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
    );
 
+/** gets user data of a user expression */
+EXTERN
+SCIP_USEREXPRDATA* SCIPexprGetUserData(
+   SCIP_EXPR*              expr
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -275,6 +281,7 @@ SCIP_Real* SCIPexprGetMonomialExponents(
 #define SCIPexprGetMonomialNFactors(monomial)     (monomial)->nfactors
 #define SCIPexprGetMonomialChildIndices(monomial) (monomial)->childidxs
 #define SCIPexprGetMonomialExponents(monomial)    (monomial)->exponents
+#define SCIPexprGetUserData(expr)                 ((SCIP_EXPRDATA_USER*)(expr)->data.data)->userdata
 
 #endif
 
@@ -548,6 +555,22 @@ void SCIPexprMergeMonomialFactors(
 EXTERN
 void SCIPexprSortMonomials(
    SCIP_EXPR*            expr                /**< polynomial expression */
+   );
+
+/** creates a user expression */
+EXTERN
+SCIP_RETCODE SCIPexprCreateUser(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression */
+   SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
+   SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
+   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    );
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
@@ -1080,6 +1103,12 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
    );
 
+/** gives the user data belonging to a SCIP_EXPR_USER expression */
+EXTERN
+SCIP_USEREXPRDATA* SCIPexprgraphGetNodeUserData(
+   SCIP_EXPRGRAPHNODE*   node
+   );
+
 /** gets bounds of a node in an expression graph */
 EXTERN
 SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
@@ -1128,6 +1157,7 @@ SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
 #define SCIPexprgraphGetNodePolynomialMonomials(node)    ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->monomials
 #define SCIPexprgraphGetNodePolynomialNMonomials(node)   ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->nmonomials
 #define SCIPexprgraphGetNodePolynomialConstant(node)     ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->constant
+#define SCIPexprgraphGetNodeUserData(node)               ((SCIP_EXPRDATA_USER*)(node)->data.data)->userdata
 #define SCIPexprgraphGetNodeBounds(node)                 (node)->bounds
 #define SCIPexprgraphGetNodeVal(node)                    (node)->value
 #define SCIPexprgraphGetNodeCurvature(node)              (node)->curv
@@ -1184,6 +1214,20 @@ SCIP_RETCODE SCIPexprgraphNodePolynomialAddMonomials(
    int                   nmonomials,         /**< number of monomials */
    SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
    SCIP_Bool             copymonomials       /**< whether to copy monomials or to assume ownership */
+   );
+
+/** creates an expression graph node for a user expression */
+EXTERN
+SCIP_RETCODE SCIPexprgraphCreateNodeUser(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression */
+   SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
+   SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
+   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    );
 
 /** given a node of an expression graph, splitup a linear part which variables are not used somewhere else in the same expression

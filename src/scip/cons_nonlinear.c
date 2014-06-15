@@ -2972,6 +2972,7 @@ SCIP_RETCODE reformulate(
             /* do not increase i, since node was removed and not necessarily replaced here */
             break;
          }
+
          case SCIP_EXPR_POLYNOMIAL:
          {
             /* if polynomial has several monomials, replace by a sum of nodes each having a single monomial and one that has all linear and quadratic monomials
@@ -3375,9 +3376,24 @@ SCIP_RETCODE reformulate(
             break;
          }
 
+         case SCIP_EXPR_USER:
+         {
+            /* ensure all children are linear */
+            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons) );
+            if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
+            {
+               ++i;
+               break;
+            }
+
+            /* if curvature is still unknown, abort for now */
+            SCIPerrorMessage("user expression with unknown curvature not supported\n");
+            return SCIP_ERROR;
+         }
+
          case SCIP_EXPR_LAST:
-         default:
-            SCIPerrorMessage("got expression with invalid operand\n");
+            SCIPABORT();
+            break;
          }
       }
    }
