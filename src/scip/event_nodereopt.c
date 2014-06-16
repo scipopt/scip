@@ -143,7 +143,7 @@ checkCutoffReason(
          if( strongbranched )
          {
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
-            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode) );
+            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
@@ -171,7 +171,7 @@ checkCutoffReason(
          {
             SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
-            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode) );
+            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
@@ -232,13 +232,37 @@ checkCutoffReason(
          {
             if (eventnode != SCIPgetRootNode(scip))
             {
-               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+               /* the node is strong branched and is infeasible, we can cutoff this subtree */
+               if( solstat == SCIP_LPSOLSTAT_INFEASIBLE && strongbranched )
+               {
+                  /* add a dummy variable, because the bound changes were not global in the
+                   * sense of effective root depth */
+                  if( SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
+                  {
+                     SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
+                  }
+                  printf(">> infeasible subtree in node %d.\n", SCIPnodeGetNumber(eventnode));
+                  SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+                  SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_INFSUBTREE) );
+               }
+               /* the two remaining cases are:
+                * 1) the node is strong branched, but the LP is not infeasible, we have to
+                *    save this nodes and can delete strong branch information
+                * 2) the node is neither strong branched nor is the LP infeasible, we have to
+                *    add the node */
+               else
+               {
+                  assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE);
+
+                  SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+
+                  if( SCIPgetEffectiveRootDepth(scip) == SCIPnodeGetDepth(eventnode) && strongbranched )
+                  {
+                     SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
+                  }
+               }
             }
 
-            if( solstat == SCIP_LPSOLSTAT_INFEASIBLE && strongbranched )
-            {
-               printf("INF CUT ! ! ! !\n");
-            }
          }
          else
          {
@@ -251,13 +275,8 @@ checkCutoffReason(
                SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, eventnode, FALSE, TRUE) );
             }
 
-            /* create a cut (if enabled) */
+            /* increase number of infeasible nodes, add a global cut (if enabled) */
             SCIP_CALL(SCIPbranchruleNodereoptInfNode(scip, eventnode, event));
-         }
-
-         if( SCIPgetEffectiveRootDepth(scip) == SCIPnodeGetDepth(eventnode) && strongbranched )
-         {
-            SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
          }
       }
       else

@@ -94,6 +94,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->reopt_strbrnodesoverall = 0;
    (*stat)->reopt_rediednodesoverall = 0;
    (*stat)->reopt_nruns = -1;
+   (*stat)->reopt_infsubtrees = 0;
 
    SCIPstatReset(*stat, set);
 

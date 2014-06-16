@@ -213,6 +213,7 @@ struct SCIP_Stat
    int                   reopt_rediednodesoverall;/**< number of redied nodes in reoptimization */
    int                   reopt_strbrnodes;   /**< number of strongbranched  nodes in reoptimization */
    int                   reopt_strbrnodesoverall;/**< number of strongbranched nodes in reoptimization */
+   int                   reopt_infsubtrees;  /** number of infeasible subtress */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

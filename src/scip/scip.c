@@ -35681,7 +35681,7 @@ SCIP_RETCODE SCIPprintReoptStatistics(
                      &scip->stat->reopt_infeasnodesoverall, &scip->stat->reopt_infeasnodes,
                      &scip->stat->reopt_prunednodesoverall, &scip->stat->reopt_prunednodes,
                      &scip->stat->reopt_rediednodesoverall, &scip->stat->reopt_rediednodes,
-                     &scip->stat->reopt_nruns, NULL, NULL) );
+                     &scip->stat->reopt_nruns, NULL, NULL, &scip->stat->reopt_infsubtrees) );
 
          }
          else
@@ -35695,6 +35695,7 @@ SCIP_RETCODE SCIPprintReoptStatistics(
             scip->stat->reopt_rediednodesoverall = 0;
             scip->stat->reopt_rediednodes = 0;
             scip->stat->reopt_nruns = 0;
+            scip->stat->reopt_infsubtrees = 0;
          }
 
          /* decrease nruns by 1 to count the first non-reopt run */
@@ -35730,7 +35731,7 @@ SCIP_RETCODE SCIPprintReoptStatistics(
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", 0, 0);
          else
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", (SCIP_Real)nsolssaved/scip->stat->reopt_nruns, (SCIP_Real)nsolsused/scip->stat->reopt_nruns);
-
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "inf Subtress       : %10d\n", scip->stat->reopt_infsubtrees);
 
 
          return SCIP_OKAY;

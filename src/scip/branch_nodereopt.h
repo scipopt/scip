@@ -102,7 +102,8 @@ SCIP_RETCODE SCIPbranchruleNodereoptGetStatistic(
    int*                  nrediednodesround,
    int*                  nruns,
    int*                  nrestarts,
-   int*                  nrestartsround
+   int*                  nrestartsround,
+   int*                  ninfsubtrees
    );
 
 extern

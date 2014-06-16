@@ -275,8 +275,8 @@
 #define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
 #define SCIP_DEFAULT_REOPT_SAVEGLBCONS    FALSE /**< save global constraints to separate solutions found so far */
 #define SCIP_DEFAULT_REOPT_SAVELOCCONS    FALSE /**< save local constraints to separate solutions found so far */
-#define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
-#define SCIP_DEFAULT_REOPT_SOLVELPDIFF        5 /**< difference of path length between two ancestor nodes to solve the LP */
+#define SCIP_DEFAULT_REOPT_SOLVELP            4 /**< strategy for solving the LP at nodes from reoptimization */
+#define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
 #define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
@@ -1572,12 +1572,12 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelp",
-         "strategy for solving the LP at nodes from reoptimization (0: only at leafs, 1: at each node, 2: only below root, 3: difference to previous node).",
-         &(*set)->reopt_solvelp, TRUE, SCIP_DEFAULT_REOPT_SOLVELP, 0, 3,
+         "at which reopttype should the LP be solved? (1: transit, 2: strong branched, 3: w/ added logicor, 4: only leafs).",
+         &(*set)->reopt_solvelp, TRUE, SCIP_DEFAULT_REOPT_SOLVELP, 1, 4,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelpdiff",
-         "difference of path length between ancestor nodes to solve the LP.",
+         "difference of boundchanges between ancestor nodes to solve the LP.",
          &(*set)->reopt_solvelpdiff, TRUE, SCIP_DEFAULT_REOPT_SOLVELPDIFF, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

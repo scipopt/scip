@@ -50,12 +50,6 @@
 /*
  * Data structures
  */
-enum Reopt_ConsType
-{
-   REOPT_CONSTYPE_SEPA = 0,
-   REOPT_CONSTYPE_PSEUDO = 1
-};
-typedef enum Reopt_ConsType REOPT_CONSTYPE;
 
 struct LogicOrData
 {
@@ -524,7 +518,8 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
  */
 SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
    SCIP*                 scip,
-   SCIP_NODE*            node
+   SCIP_NODE*            node,
+   REOPT_CONSTYPE        constype
 )
 {
    SCIP_BRANCHRULE* branchrule;
@@ -594,8 +589,8 @@ SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
       }
    }
 
-   /* set SCIP_CONSTYPE default to REOPT_CONSTYPE_PSEUDO */
-   branchruledata->consdata[branchruledata->nodeID]->constype = REOPT_CONSTYPE_PSEUDO;
+   /* set REOPT_CONSTYPE */
+   branchruledata->consdata[branchruledata->nodeID]->constype = constype;
 
    assert( branchruledata->consdata[branchruledata->nodeID]->nvars > 0 );
    assert( branchruledata->consdata[branchruledata->nodeID]->allocmem > 0 );
