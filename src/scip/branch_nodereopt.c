@@ -2514,36 +2514,21 @@ SCIP_RETCODE SCIPbranchruleNodereoptSolveLP(
    /* the root LP should be always solved */
    if( nodeID == 0 )
       return SCIP_OKAY;
-   /* a leaf should be always solved */
-   else if( SCIPnodeGetReopttype(node) >= SCIP_REOPTTYPE_LEAF )
-      return SCIP_OKAY;
    else
       switch (branchruledata->solvelp) {
-         /* solve only leafs */
+         /* solve all LPs */
          case 0:
             if( SCIPnodeGetReopttype(node) < SCIP_REOPTTYPE_LEAF )
-               (*solvelp) = FALSE;
-            break;
-         /* solve each LP */
-         case 1:
-            if( SCIPnodeGetReopttype(node) < SCIP_REOPTTYPE_LOGICORNODE )
-               (*solvelp) = FALSE;
-            break;
-         /* solve only LP below the root */
-         case 2:
-            if( SCIPnodeGetDepth(node) > 1 && SCIPnodeGetReopttype(node) < SCIP_REOPTTYPE_LOGICORNODE )
-               (*solvelp) = FALSE;
-            break;
-         /* solve LP if depth modulo solvelpdiff = 0 or a leaf */
-         case 3:
-            if( SCIPnodeGetDepth(node) % branchruledata->solvelpdiff != 0 )
             {
-               assert(SCIPnodeGetReopttype(node) < SCIP_REOPTTYPE_LEAF);
+               if( SCIPnodeGetDepth(node) % branchruledata->solvelpdiff != 0
+                && branchruledata->nodedata[nodeID]->nvars < branchruledata->solvelpdiff)
                (*solvelp) = FALSE;
             }
             break;
+
          default:
-            SCIPABORT();
+            if( (int) SCIPnodeGetReopttype(node) < branchruledata->solvelp )
+               (*solvelp) = FALSE;
             break;
       }
 
