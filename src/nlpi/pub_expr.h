@@ -619,6 +619,16 @@ SCIP_RETCODE SCIPexprSimplify(
    SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
    );
 
+/** evaluates an expression w.r.t. given values for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEvalShallow(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            argvals,            /**< values for children, can be NULL if the expression has no children */
+   SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression operand is not a variable */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression operand is not a parameter */
+   SCIP_Real*            val                 /**< buffer to store value */
+   );
+
 /** evaluates an expression w.r.t. a point */
 EXTERN
 SCIP_RETCODE SCIPexprEval(
@@ -626,6 +636,17 @@ SCIP_RETCODE SCIPexprEval(
    SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression is constant */
    SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
    SCIP_Real*            val                 /**< buffer to store value */
+   );
+
+/** evaluates an expression w.r.t. given interval values for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEvalIntShallow(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        argvals,            /**< interval values for children, can be NULL if the expression has no children */
+   SCIP_INTERVAL*        varvals,            /**< interval values for variables, can be NULL if the expression is constant */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_INTERVAL*        val                 /**< buffer to store value */
    );
 
 /** evaluates an expression w.r.t. an interval */
@@ -636,6 +657,27 @@ SCIP_RETCODE SCIPexprEvalInt(
    SCIP_INTERVAL*        varvals,            /**< interval values for variables, can be NULL if the expression is constant */
    SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
    SCIP_INTERVAL*        val                 /**< buffer to store value */
+   );
+
+/** evaluates a user expression w.r.t. given values for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEvalUser(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            argvals,            /**< values for children */
+   SCIP_Real*            val,                /**< buffer to store function value */
+   SCIP_Real*            gradient,           /**< buffer to store gradient values, or NULL if not requested */
+   SCIP_Real*            hessian             /**< buffer to store values of full Hessian, or NULL if not requested */
+   );
+
+/** evaluates a user expression w.r.t. an interval */
+EXTERN
+SCIP_RETCODE SCIPexprEvalIntUser(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        argvals,            /**< values for children */
+   SCIP_INTERVAL*        val,                /**< buffer to store value */
+   SCIP_INTERVAL*        gradient,           /**< buffer to store gradient values, or NULL if not requested */
+   SCIP_INTERVAL*        hessian             /**< buffer to store values of full Hessian, or NULL if not requested */
    );
 
 /** tries to determine the curvature type of an expression w.r.t. given variable domains */

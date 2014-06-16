@@ -3072,7 +3072,7 @@ SCIP_DECL_EXPREVAL( exprevalUser )
 
    exprdata = (SCIP_EXPRDATA_USER*) opdata.data;
 
-   SCIP_CALL( exprdata->eval(exprdata->userdata, nargs, argvals, result) );
+   SCIP_CALL( exprdata->eval(exprdata->userdata, nargs, argvals, result, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3087,7 +3087,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntUser )
 
    if( exprdata->inteval != NULL )
    {
-      SCIP_CALL( exprdata->inteval(infinity, exprdata->userdata, nargs, argvals, result) );
+      SCIP_CALL( exprdata->inteval(infinity, exprdata->userdata, nargs, argvals, result, NULL, NULL) );
    }
    else
    {
@@ -7563,6 +7563,25 @@ SCIP_RETCODE SCIPexprSimplify(
    return SCIP_OKAY;
 }
 
+/** evaluates an expression w.r.t. given values for children expressions */
+SCIP_RETCODE SCIPexprEvalShallow(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            argvals,            /**< values for children, can be NULL if the expression has no children */
+   SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression operand is not a variable */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression operand is not a parameter */
+   SCIP_Real*            val                 /**< buffer to store value */
+   )
+{
+   assert(expr != NULL);
+   assert(argvals != NULL || expr->nchildren == 0);
+
+   /* evaluate this expression */
+   assert( exprOpTable[expr->op].eval != NULL );
+   SCIP_CALL( exprOpTable[expr->op].eval(expr->data, expr->nchildren, argvals, varvals, param, val) );
+
+   return SCIP_OKAY;
+}
+
 /** evaluates an expression w.r.t. a point */
 SCIP_RETCODE SCIPexprEval(
    SCIP_EXPR*            expr,               /**< expression */
@@ -7600,6 +7619,26 @@ SCIP_RETCODE SCIPexprEval(
    {
       BMSfreeMemoryArray(&buf);
    }
+
+   return SCIP_OKAY;
+}
+
+/** evaluates an expression w.r.t. given interval values for children expressions */
+SCIP_RETCODE SCIPexprEvalIntShallow(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        argvals,            /**< interval values for children, can be NULL if the expression has no children */
+   SCIP_INTERVAL*        varvals,            /**< interval values for variables, can be NULL if the expression is constant */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_INTERVAL*        val                 /**< buffer to store value */
+   )
+{
+   assert(expr != NULL);
+   assert(argvals != NULL || expr->nchildren == 0);
+
+   /* evaluate this expression */
+   assert( exprOpTable[expr->op].inteval != NULL );
+   SCIP_CALL( exprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, argvals, varvals, param, val) );
 
    return SCIP_OKAY;
 }
@@ -7642,6 +7681,51 @@ SCIP_RETCODE SCIPexprEvalInt(
    {
       BMSfreeMemoryArray(&buf);
    }
+
+   return SCIP_OKAY;
+}
+
+/** evaluates a user expression w.r.t. given values for children expressions */
+SCIP_RETCODE SCIPexprEvalUser(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            argvals,            /**< values for children */
+   SCIP_Real*            val,                /**< buffer to store function value */
+   SCIP_Real*            gradient,           /**< buffer to store gradient values, or NULL if not requested */
+   SCIP_Real*            hessian             /**< buffer to store values of full Hessian, or NULL if not requested */
+   )
+{
+   SCIP_EXPRDATA_USER* exprdata;
+
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_USER);
+   assert(argvals != NULL || expr->nchildren == 0);
+
+   exprdata = (SCIP_EXPRDATA_USER*) expr->data.data;
+
+   SCIP_CALL( exprdata->eval(exprdata->userdata, expr->nchildren, argvals, val, gradient, hessian) );
+
+   return SCIP_OKAY;
+}
+
+/** evaluates a user expression w.r.t. an interval */
+SCIP_RETCODE SCIPexprEvalIntUser(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        argvals,            /**< values for children */
+   SCIP_INTERVAL*        val,                /**< buffer to store value */
+   SCIP_INTERVAL*        gradient,           /**< buffer to store gradient values, or NULL if not requested */
+   SCIP_INTERVAL*        hessian             /**< buffer to store values of full Hessian, or NULL if not requested */
+   )
+{
+   SCIP_EXPRDATA_USER* exprdata;
+
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_USER);
+   assert(argvals != NULL || expr->nchildren == 0);
+
+   exprdata = (SCIP_EXPRDATA_USER*) expr->data.data;
+
+   SCIP_CALL( exprdata->inteval(infinity, exprdata->userdata, expr->nchildren, argvals, val, gradient, hessian) );
 
    return SCIP_OKAY;
 }

@@ -224,9 +224,11 @@ typedef struct SCIP_UserExprData SCIP_USEREXPRDATA; /**< the user data of a user
  * - data      user expression data
  * - nargs     number of arguments
  * - argvals   values of arguments
- * - result    buffer where to store result of evaluation
+ * - funcvalue buffer where to store result of function evaluation
+ * - gradient  buffer where to store result of gradient evaluation (NULL if not requested)
+ * - hessian   buffer where to store result of Hessian evaluation (NULL if not requested, currently full dense matrix)
  */
-#define SCIP_DECL_USEREXPREVAL(x) SCIP_RETCODE x (SCIP_USEREXPRDATA* data, int nargs, SCIP_Real* argvals, SCIP_Real* result)
+#define SCIP_DECL_USEREXPREVAL(x) SCIP_RETCODE x (SCIP_USEREXPRDATA* data, int nargs, SCIP_Real* argvals, SCIP_Real* funcvalue, SCIP_Real* gradient, SCIP_Real* hessian)
 
 /** signature of an user's expression (interval) evaluation function
  * The function should return an empty interval if the function is undefined for the given arguments.
@@ -235,9 +237,11 @@ typedef struct SCIP_UserExprData SCIP_USEREXPRDATA; /**< the user data of a user
  * - data      user expression data
  * - nargs     number of arguments
  * - argvals   interval values of arguments
- * - result    buffer where to store result of evaluation
+ * - funvalue  buffer where to store result of function evaluation
+ * - gradient  buffer where to store result of gradient evaluation (NULL if not requested)
+ * - hessian   buffer where to store result of Hessian evaluation (NULL if not requested, currently full dense matrix)
  */
-#define SCIP_DECL_USEREXPRINTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* result)
+#define SCIP_DECL_USEREXPRINTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* funcvalue, SCIP_INTERVAL* gradient, SCIP_INTERVAL* hessian)
 
 /** signature of a user's expression curvature check function
  *
