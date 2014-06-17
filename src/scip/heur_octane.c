@@ -202,7 +202,7 @@ SCIP_RETCODE generateAverageRay(
    int* ntableaurowinds;                     /* number of non-zero entries */
    SCIP_Bool* usedrowids = NULL;             /* visited row indices */
    int* rowids;                              /* row indices */
-   int nrowids;                              /* number of row indices */
+   int nrowids = 0;                          /* number of row indices */
    int tableaurowind;
    int nrows;
    int i;
@@ -258,7 +258,6 @@ SCIP_RETCODE generateAverageRay(
             SCIP_CALL( SCIPallocBufferArray(scip, &rowids, nrows) );
             SCIP_CALL( SCIPallocBufferArray(scip, &usedrowids, nrows) );
             BMSclearMemoryArray(usedrowids, nrows);
-            nrowids = 0;
          }
 
          for( i = ntableaurowinds[j] - 1; i >= 0; --i )
@@ -314,6 +313,7 @@ SCIP_RETCODE generateAverageRay(
       assert(usedrowids != NULL);
       assert(rowids != NULL);
       assert(sparse == 1);
+      assert(0 <= nrowids && nrowids <= nrows);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
 
@@ -327,6 +327,7 @@ SCIP_RETCODE generateAverageRay(
          if( SCIPisFeasZero(scip, rownorm[r]) )
          {
             usedrowids[r] = FALSE;
+            --nrowids;
             continue;
          }
          else
@@ -338,6 +339,7 @@ SCIP_RETCODE generateAverageRay(
             if( SCIPisFeasZero(scip, rowweights[r]) )
             {
                usedrowids[r] = FALSE;
+               --nrowids;
                continue;
             }
          }
@@ -345,17 +347,20 @@ SCIP_RETCODE generateAverageRay(
             rowweights[r] = 1.0;
       }
 
-      /* take average over all rows of the tableau */
-      for( j = nsubspacevars - 1; j >= 0; --j )
+      if( nrowids > 0 )
       {
-         for( k = ntableaurowinds[j] - 1; k >= 0; --k )
+         /* take average over all rows of the tableau */
+         for( j = nsubspacevars - 1; j >= 0; --j )
          {
-            tableaurowind = tableaurowinds[j][k];
-
-            if( usedrowids[tableaurowind] )
+            for( k = ntableaurowinds[j] - 1; k >= 0; --k )
             {
-               raydirection[j] += tableaurows[j][tableaurowind] / (rownorm[tableaurowind] * rowweights[tableaurowind]);
-               assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+               tableaurowind = tableaurowinds[j][k];
+
+               if( usedrowids[tableaurowind] )
+               {
+                  raydirection[j] += tableaurows[j][tableaurowind] / (rownorm[tableaurowind] * rowweights[tableaurowind]);
+                  assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+               }
             }
          }
       }
