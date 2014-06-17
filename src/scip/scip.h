@@ -11122,9 +11122,9 @@ EXTERN
 SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *  (-1: if we do not store sparsity informations) */
    );
 
@@ -11146,9 +11146,9 @@ SCIP_RETCODE SCIPgetLPBInvCol(
                                               *   to get the array which links the B^-1 column numbers to the row and
                                               *   column numbers of the LP! c must be between 0 and nrows-1, since the
                                               *   basis has the size nrows * nrows */
-   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *  (-1: if we do not store sparsity informations) */
    );
 
@@ -11167,9 +11167,9 @@ SCIP_RETCODE SCIPgetLPBInvARow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *  (-1: if we do not store sparsity informations) */
    );
 
@@ -11188,9 +11188,9 @@ EXTERN
 SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
-   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *  (-1: if we do not store sparsity informations) */
    );
 
@@ -11283,8 +11283,9 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
-   int*                  inds,               /**< indices of non-zero entries in weights array */
-   int                   ninds,              /**< number of indices of non-zero entries in weights array */
+   int*                  inds,               /**< indices of non-zero entries in weights array, or NULL */
+   int                   ninds,              /**< number of indices of non-zero entries in weights array, -1 if inds is
+                                              *   NULL */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the strong CG row */
