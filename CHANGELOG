@@ -25,6 +25,7 @@ fixed bugs:
 - allow to read numbers like "42856." in lp-format
 - fixed bug in heur_oneopt: avoid bound violations if shift value is negative due to infeasibilities
 - fixed setting solution value of multi-aggregated var in xml-solution case
+- fixed wrong output of status when an objective limit was imposed but not reached yet
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
