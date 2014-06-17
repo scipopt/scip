@@ -124,6 +124,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
+XPRESS		=	xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis

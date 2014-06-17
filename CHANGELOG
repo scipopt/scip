@@ -6,6 +6,8 @@ features:
 - new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible. It also
   tries to improve them (or external solutions) by a one-opt local search.
 - can now output information for BAK: Branch-and-bound Analysis Kit
+- added scripts check_xpress.awk, check_xpress.sh, evalcheck_xpress.sh and check_cluster_xpress.sh and target
+  "testclusterxpress" and "testxpress" in Makefile
 
 parameters:
 - rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns

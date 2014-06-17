@@ -648,6 +648,11 @@ testcplex:
 		cd check; \
 		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
+.PHONY: testxpress
+testxpress:
+		cd check; \
+		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
 .PHONY: testmosek
 testmosek:
 		cd check; \
