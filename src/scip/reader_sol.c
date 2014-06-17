@@ -153,7 +153,7 @@ SCIP_RETCODE readSol(
       else
       {
          SCIP_RETCODE retcode;
-         retcode =  SCIPsetSolVal(scip, sol, var, value);
+         retcode = SCIPsetSolVal(scip, sol, var, value);
 
          if( retcode == SCIP_INVALIDDATA )
          {
@@ -258,9 +258,9 @@ SCIP_RETCODE readXMLSol(
    unknownvariablemessage = FALSE;
    for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
    {
+      SCIP_VAR* var;
       const char* varname;
       const char* varvalue;
-      SCIP_VAR* var;
       SCIP_Real value;
       int nread;
 
@@ -314,8 +314,34 @@ SCIP_RETCODE readXMLSol(
          }
       }
 
-      /* set the solution value of the variable */
-      SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+      /* set the solution value of the variable, if not multiaggregated */
+      if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         retcode = SCIPsetSolVal(scip, sol, var, value);
+
+         if( retcode == SCIP_INVALIDDATA )
+         {
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+            else
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
    }
 
    if( !error )
