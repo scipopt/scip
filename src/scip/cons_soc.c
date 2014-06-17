@@ -94,7 +94,7 @@ struct SCIP_ConsData
    SCIP_Real             lhsval;             /**< value of left hand side in current point */
    SCIP_Real             violation;          /**< violation of constraint in current point */
 
-   VAREVENTDATA*         lhsbndchgeventdatas;/**< eventdata for bound change events on left  hand side variables */
+   VAREVENTDATA*         lhsbndchgeventdata; /**< eventdata for bound change events on left  hand side variables */
    VAREVENTDATA          rhsbndchgeventdata; /**< eventdata for bound change event  on right hand side variable  */
    SCIP_Bool             ispropagated;       /**< does the domains need to be propagated? */
    SCIP_Bool             isapproxadded;      /**< has a linear outer approximation be added? */
@@ -151,11 +151,11 @@ SCIP_RETCODE catchLhsVarEvents(
    assert(consdata  != NULL);
    assert(varidx >= 0);
    assert(varidx < consdata->nvars);
-   assert(consdata->lhsbndchgeventdatas != NULL);
+   assert(consdata->lhsbndchgeventdata != NULL);
 
-   consdata->lhsbndchgeventdatas[varidx].consdata = consdata;
-   consdata->lhsbndchgeventdatas[varidx].varidx   = varidx;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdatas[varidx], &consdata->lhsbndchgeventdatas[varidx].filterpos) );
+   consdata->lhsbndchgeventdata[varidx].consdata = consdata;
+   consdata->lhsbndchgeventdata[varidx].varidx   = varidx;
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], &consdata->lhsbndchgeventdata[varidx].filterpos) );
 
    consdata->ispropagated = FALSE;
 
@@ -205,9 +205,9 @@ SCIP_RETCODE catchVarEvents(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata  != NULL);
-   assert(consdata->lhsbndchgeventdatas == NULL);
+   assert(consdata->lhsbndchgeventdata == NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->lhsbndchgeventdatas, consdata->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->lhsbndchgeventdata, consdata->nvars) );
 
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -244,10 +244,10 @@ SCIP_RETCODE dropLhsVarEvents(
    assert(consdata  != NULL);
    assert(varidx >= 0);
    assert(varidx < consdata->nvars);
-   assert(consdata->lhsbndchgeventdatas != NULL);
-   assert(consdata->lhsbndchgeventdatas[varidx].varidx == varidx);
+   assert(consdata->lhsbndchgeventdata != NULL);
+   assert(consdata->lhsbndchgeventdata[varidx].varidx == varidx);
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdatas[varidx], consdata->lhsbndchgeventdatas[varidx].filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], consdata->lhsbndchgeventdata[varidx].filterpos) );
 
    return SCIP_OKAY;
 }
@@ -301,7 +301,7 @@ SCIP_RETCODE dropVarEvents(
       }
    }
 
-   SCIPfreeBlockMemoryArray(scip, &consdata->lhsbndchgeventdatas, consdata->nvars);
+   SCIPfreeBlockMemoryArray(scip, &consdata->lhsbndchgeventdata, consdata->nvars);
 
    if( consdata->rhsvar != NULL )
    {
@@ -3402,7 +3402,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars,    (*consdata)->nvars);
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->coefs,   (*consdata)->nvars);
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->offsets, (*consdata)->nvars);
-   assert((*consdata)->lhsbndchgeventdatas == NULL);
+   assert((*consdata)->lhsbndchgeventdata == NULL);
 
    if( (*consdata)->rhsvar != NULL )
    {
@@ -3466,7 +3466,7 @@ SCIP_DECL_CONSTRANS(consTransSOC)
    SCIP_CALL( SCIPcaptureVar(scip, consdata->rhsvar) );
 
    consdata->nlrow = NULL;
-   consdata->lhsbndchgeventdatas = NULL;
+   consdata->lhsbndchgeventdata = NULL;
    consdata->ispropagated  = FALSE;
    consdata->isapproxadded = FALSE;
 
@@ -4578,7 +4578,7 @@ SCIP_RETCODE SCIPcreateConsSOC(
 
    consdata->nlrow = NULL;
 
-   consdata->lhsbndchgeventdatas = NULL;
+   consdata->lhsbndchgeventdata = NULL;
    consdata->ispropagated        = FALSE;
    consdata->isapproxadded       = FALSE;
 

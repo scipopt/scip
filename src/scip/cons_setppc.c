@@ -6301,7 +6301,7 @@ SCIP_RETCODE fixAdditionalVars(
 
    *cutoff = FALSE;
 
-   /* get constraint datas */
+   /* get constraint data */
    consdata0 = SCIPconsGetData(cons0);
    consdata1 = SCIPconsGetData(cons1);
    assert(consdata0 != NULL);
@@ -6375,7 +6375,7 @@ SCIP_RETCODE processContainedCons(
 
    *cutoff = FALSE;
 
-   /* get constraint datas */
+   /* get constraint data */
    consdata0 = SCIPconsGetData(cons0);
    consdata1 = SCIPconsGetData(cons1);
    assert(consdata0 != NULL);

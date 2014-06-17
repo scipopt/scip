@@ -1056,7 +1056,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&major, &minor, &technical);
-   snprintf(grbname, 100, "Gurobi %d.%d.%d", major, minor, technical);
+   sprintf(grbname, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
 }
 
@@ -4083,7 +4083,8 @@ SCIP_RETCODE SCIPlpiWriteState(
       char name[SCIP_MAXSTRLEN];
 
       /* force extension to be ".bas" */
-      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+	  assert(strlen(fname) < SCIP_MAXSTRLEN-4);
+      sprintf(name, "%s.bas", fname);
       CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
    }
 
