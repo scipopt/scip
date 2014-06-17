@@ -227,7 +227,7 @@ do
       echo solve                              >> $TMPFILE
       echo quit                               >> $TMPFILE
 
-      # additional environment variables needed by runcluster.sh
+      # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
       export EXECNAME=$BINNAME
       export BASENAME=$FILENAME
@@ -237,9 +237,9 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=CBC$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=CBC$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
       else
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CBC$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CBC$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null run.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

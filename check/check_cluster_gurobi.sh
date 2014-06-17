@@ -248,7 +248,7 @@ do
 	  rm -f $SETFILE
       fi
 
-      # additional environment variables needed by runcluster.sh
+      # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
       export EXECNAME="$BINNAME $CLSETTINGSLIST $i"
       export BASENAME=$FILENAME
@@ -258,9 +258,9 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-         sbatch --job-name=GUROBI$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null runcluster_gurobi.sh
+         sbatch --job-name=GUROBI$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null run.sh
       else
-         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N GUROBI$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster_gurobi.sh
+         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N GUROBI$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null run.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

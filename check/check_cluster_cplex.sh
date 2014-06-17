@@ -86,7 +86,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE="  --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
+    EXCLUSIVE=" --exclusive"
 else
     EXCLUSIVE=""
 fi
@@ -135,35 +135,35 @@ else
     TMP=`expr $HARDTIMELIMIT / 60`
     if test "$TMP" != "0"
     then
-	MYMINUTES=`expr $TMP % 60`
-	TMP=`expr $TMP / 60`
-	if test "$TMP" != "0"
-	then
-	    MYHOURS=`expr $TMP % 24`
-	    MYDAYS=`expr $TMP / 24`
-	fi
-   fi
+        MYMINUTES=`expr $TMP % 60`
+        TMP=`expr $TMP / 60`
+    if test "$TMP" != "0"
+    then
+        MYHOURS=`expr $TMP % 24`
+        MYDAYS=`expr $TMP / 24`
+    fi
+    fi
     #format seconds to have two characters
     if test ${MYSECONDS} -lt 10
     then
-	MYSECONDS=0${MYSECONDS}
+        MYSECONDS=0${MYSECONDS}
     fi
     #format minutes to have two characters
     if test ${MYMINUTES} -lt 10
     then
-	MYMINUTES=0${MYMINUTES}
+        MYMINUTES=0${MYMINUTES}
     fi
     #format hours to have two characters
     if test ${MYHOURS} -lt 10
     then
-	MYHOURS=0${MYHOURS}
+        MYHOURS=0${MYHOURS}
     fi
     #format HARDTIMELIMT
     if test ${MYDAYS} = "0"
     then
-	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+        HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     else
-	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+        HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     fi
 fi
 
@@ -195,7 +195,7 @@ do
       # 1900 jobs) to submit the next job.
       if test "$NOWAITCLUSTER" != "1"
       then
-	  ./waitcluster.sh 1500 $QUEUE 200
+          ./waitcluster.sh 1500 $QUEUE 200
       fi
 
       SHORTFILENAME=`basename $i .gz`
@@ -214,16 +214,16 @@ do
       # in case we want to continue we check if the job was already performed
       if test "$CONTINUE" != "false"
       then
-	  if test -e results/$FILENAME.out
-	  then
+          if test -e results/$FILENAME.out
+          then
               echo skipping file $i due to existing output file $FILENAME.out
-	      continue
-	  fi
+          continue
+          fi
       fi
 
       if test -e $SETFILE
       then
-	       rm -f $SETFILE
+          rm -f $SETFILE
       fi
 
       echo > $TMPFILE
@@ -235,8 +235,8 @@ do
       fi
       if test $FEASTOL != "default"
       then
-	       echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
-	       echo set mip tolerances integrality $FEASTOL >> $TMPFILE
+          echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+          echo set mip tolerances integrality $FEASTOL >> $TMPFILE
       fi
       echo set timelimit $TIMELIMIT           >> $TMPFILE
       echo set clocktype 0                    >> $TMPFILE
@@ -254,7 +254,7 @@ do
       echo display solution quality           >> $TMPFILE
       echo quit                               >> $TMPFILE
 
-      # additional environment variables needed by runcluster.sh
+      # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
       export EXECNAME=$BINNAME
       export BASENAME=$FILENAME
@@ -264,9 +264,9 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-         sbatch --job-name=CPLEX$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+         sbatch --job-name=CPLEX$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null run.sh
       else
-         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null run.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

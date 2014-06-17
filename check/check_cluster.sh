@@ -153,7 +153,7 @@ do
             # check queue type
             if test  "$QUEUETYPE" = "srun"
             then
-            # additional environment variables needed by runcluster.sh
+            # additional environment variables needed by run.sh
                 export SOLVERPATH=$SCIPPATH
                 export EXECNAME=$SCIPPATH/../$BINNAME
                 export BASENAME=$FILENAME
