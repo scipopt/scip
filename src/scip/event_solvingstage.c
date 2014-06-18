@@ -50,6 +50,7 @@
 #define DEFAULT_NODEOFFSET 50        /**< default node offset */
 #define DEFAULT_FALLBACK FALSE       /**< should the phase transition fall back to suboptimal stage? */
 #define DEFAULT_INTERRUPTOPTIMAL FALSE /**< should solving process be interrupted if optimal solution was found? */
+#define DEFAULT_ADJUSTRELPSWEIGHTS FALSE
 
 /** enumerator to represent the event handler solving stage */
 enum SolvingStage
@@ -82,9 +83,10 @@ struct SCIP_EventhdlrData
    char                 transitionmethod;    /**< how to do the transition from phase2 -> phase3? (c)orrected estimate based,
                                                   (e)stimate beased, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
                                                   (r)ank1 node based */
-   SCIP_Longint         nodeoffset;          /**< node offset for triggering rank1 node based phased transition */
+   SCIP_Longint         nodeoffset;           /**< node offset for triggering rank1 node based phased transition */
    SCIP_Bool            fallback;             /**< should the phase transition fall back to suboptimal stage? */
    SCIP_Bool            interruptoptimal;     /**< interrupt after optimal solution was found */
+   SCIP_Bool            adjustrelpsweights;   /**< should the relpscost cutoff weights be adjusted? */
 };
 
 /*
@@ -214,7 +216,10 @@ SCIP_Bool transitionPhase3(
          referencevalue = eventhdlrdata->optimalvalue;
          primalbound = SCIPgetPrimalbound(scip);
          if(!SCIPisInfinity(scip, REALABS(primalbound)) && !SCIPisInfinity(scip, referencevalue) )
-            return SCIPisEQ(scip, primalbound, referencevalue);
+         {
+            SCIP_Real max = MAX3(1.0, REALABS(primalbound), REALABS(referencevalue));
+            return EPSZ((primalbound-referencevalue)/max, 1e-9);
+         }
          break;
       case 'c':
          return FALSE;
@@ -323,6 +328,38 @@ SCIP_RETCODE applySolvingStage(
       eventhdlrdata->enabled = TRUE;
       eventhdlrdata->transitionmethod = transitionmethod;
       eventhdlrdata->interruptoptimal = interruptoptimal;
+   }
+
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->adjustrelpsweights && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodesLeft(scip) > 0)
+   {
+      SCIP_Real pscostweight;
+      SCIP_Real cutoffweight;
+      SCIP_Real conflictweight;
+      SCIP_Longint cutoffleaves;
+      SCIP_Longint objleaves;
+      SCIP_Real quotient;
+      SCIP_Real newcutoffweight;
+      SCIP_Real newconflictweight;
+
+      objleaves = SCIPgetNObjLeaves(scip);
+      cutoffleaves = SCIPgetNInfeasLeaves(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/pscostweight", &pscostweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/conflictweight", &conflictweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/cutoffweight", &cutoffweight) );
+
+      objleaves = MAX(objleaves, 1);
+      cutoffleaves = MAX(cutoffleaves, 1);
+
+      quotient = cutoffleaves / (SCIP_Real)objleaves;
+
+      newcutoffweight = cutoffweight * quotient;
+      newconflictweight = conflictweight * quotient;
+      SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/conflictweight", newconflictweight) );
+      SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/cutoffweight", newcutoffweight) );
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+            "  Adjusting relpscost weights, (quot = %.3g): cutoffweight %.4g --> %.4g, confweight: %.4g --> %.4g \n", quotient,
+            cutoffweight, newcutoffweight, conflictweight, newconflictweight);
    }
 
    return SCIP_OKAY;
@@ -524,6 +561,10 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
          &eventhdlrdata->transitionmethod, FALSE, DEFAULT_TRANSITIONMETHOD, TRANSITIONMETHODS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/interruptoptimal", "should the event handler interrupt after optimal solution was found?",
                &eventhdlrdata->interruptoptimal, FALSE, DEFAULT_INTERRUPTOPTIMAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/adjustrelpsweights", "should the branching score weights for cutoffs and "
+               "conflicts be adjusted after optimal solution was found?", &eventhdlrdata->adjustrelpsweights, FALSE,
+               DEFAULT_ADJUSTRELPSWEIGHTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
