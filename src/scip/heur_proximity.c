@@ -632,7 +632,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
       nlpiters = MAX(nlpiters, heurdata->minlpiters);
 
       /* define and solve the proximity subproblem */
-      SCIP_CALL( SCIPapplyProximity(scip, heur, result, heurdata->minimprove, nnodes, nlpiters, &nusednodes, &nusedlpiters) );
+      SCIP_CALL( SCIPapplyProximity(scip, heur, result, heurdata->minimprove, nnodes, nlpiters, &nusednodes, &nusedlpiters, FALSE) );
 
       /* adjust node limit and LP iteration limit for future iterations */
       assert(nusednodes <= nnodes);
@@ -652,9 +652,15 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    if( foundsol )
       *result = SCIP_FOUNDSOL;
 
-   if( SCIPgetNActivePricers(scip) > 0 )
+   /* free the occupied memory */
+   if( heurdata->subscip != NULL )
    {
+/* just for testing the library method, in debug mode, we call the wrapper method for the actual delete method */
+#ifndef NDEBUG
+      SCIP_CALL( SCIPdeleteSubproblemProximity(scip) );
+#else
       SCIP_CALL( deleteSubproblem(scip, heurdata) );
+#endif
    }
    return SCIP_OKAY;
 }
@@ -664,8 +670,34 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
  * primal heuristic specific interface methods
  */
 
+/** frees the sub-MIP created by proximity */
+SCIP_RETCODE SCIPdeleteSubproblemProximity(
+   SCIP*                 scip                /** SCIP data structure */
+   )
+{
+   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
 
-/** main procedure of the proximity heuristic, creates and solves a sub-SCIP */
+   assert(scip != NULL);
+
+   heur = SCIPfindHeur(scip, HEUR_NAME);
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   if( heurdata != NULL )
+   {
+      SCIP_CALL( deleteSubproblem(scip, heurdata) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** main procedure of the proximity heuristic, creates and solves a sub-SCIP
+ *
+ *  @note the method can be applied in an iterative way, keeping the same subscip in between. If the @p freesubscip
+ *        parameter is set to FALSE, the heuristic will keep the subscip data structures. Always set this parameter
+ *        to TRUE, or call SCIPdeleteSubproblemProximity() afterwards
+ */
 SCIP_RETCODE SCIPapplyProximity(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -674,7 +706,8 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_Longint          nnodes,             /**< node limit for the subproblem                                       */
    SCIP_Longint          nlpiters,           /**< LP iteration limit for the subproblem                               */
    SCIP_Longint*         nusednodes,         /**< pointer to store number of used nodes in subscip                    */
-   SCIP_Longint*         nusedlpiters        /**< pointer to store number of used LP iterations in subscip            */
+   SCIP_Longint*         nusedlpiters,       /**< pointer to store number of used LP iterations in subscip            */
+   SCIP_Bool             freesubscip         /**< should the created sub-MIP be freed at the end of the method?       */
    )
 {
    SCIP*                 subscip;            /* the subproblem created by proximity              */
@@ -1030,6 +1063,12 @@ SCIP_RETCODE SCIPapplyProximity(
    heurdata->subvars = subvars;
    heurdata->objcons = objcons;
    heurdata->nsubvars = nvars;
+
+   /* delete the sub problem */
+   if( freesubscip )
+   {
+      SCIP_CALL( deleteSubproblem(scip, heurdata) );
+   }
 
    return SCIP_OKAY;
 }

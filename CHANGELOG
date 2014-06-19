@@ -30,6 +30,7 @@ fixed bugs:
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
+- improved memory management of proximity heuristic
 
 features:
 - added copy mechanism for conjunction constraints
@@ -40,6 +41,9 @@ interface:
 - forbid to call SCIPfixVar() in SCIP_STAGE_PRESOLVED stage, which is not allowed since it calls SCIPchgVarLb/Ub()
 - rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData(); SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
 - rename array arcdatas in digraph to arcdata
+- SCIPapplyProximity() has an additional argument freesubscip, which causes the method to free
+  the created subscip automatically at the end.
+- new method SCIPdeleteSubproblemProximity() to free proximity subproblem manually as external caller
 
 parameters:
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
