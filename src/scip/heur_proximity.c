@@ -229,7 +229,7 @@ SCIP_RETCODE createNewSol(
 
    *success = FALSE;
    /* solve an LP with all integer variables fixed to improve solution quality */
-   if( ncontvars > 0 && usefinallp && SCIPhasCurrentNodeLP(scip) )
+   if( ncontvars > 0 && usefinallp && SCIPisLPConstructed(scip) )
    {
       int v;
       int ncontobjvars; /* does the problem instance have continuous variables with nonzero objective coefficients? */

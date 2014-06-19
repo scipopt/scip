@@ -2,6 +2,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug in proximity heuristic which attempted to enter diving mode even at nodes without a constructed LP
 - fixed wrong pseudo cost updates during diving heuristic execution after backtracking
 - fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
   does nothing anymore
@@ -40,6 +41,9 @@ interface:
 - rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData(); SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
 - rename array arcdatas in digraph to arcdata
 
+parameters:
+- changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
+- changed default value of parameter heuristics/proximity/usefinallp to FALSE
 
 SCIP version 3.1.0
 ==================
