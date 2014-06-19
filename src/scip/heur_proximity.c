@@ -47,7 +47,7 @@
 /* default values for proximity-specific parameters */
 /* todo refine these values */
 #define DEFAULT_MAXNODES      10000LL    /* maximum number of nodes to regard in the subproblem                        */
-#define DEFAULT_MINIMPROVE    0.25       /* factor by which proximity should at least improve the incumbent            */
+#define DEFAULT_MINIMPROVE    0.02       /* factor by which proximity should at least improve the incumbent            */
 #define DEFAULT_MINGAP        0.01       /* minimum primal-dual gap for which the heuristic is executed                */
 #define DEFAULT_MINNODES      1LL        /* minimum number of nodes to regard in the subproblem                        */
 #define DEFAULT_MINLPITERS    200LL      /* minimum number of LP iterations to perform in one sub-mip                  */
@@ -58,7 +58,7 @@
 #define DEFAULT_USELPROWS     FALSE      /* should subproblem be constructed based on LP row information? */
 #define DEFAULT_BINVARQUOT    0.1        /* default threshold for percentage of binary variables required to start     */
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
-#define DEFAULT_USEFINALLP    TRUE       /* should the heuristic solve a final LP in case of continuous objective variables? */
+#define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
 
 /*
@@ -105,7 +105,7 @@ struct SCIP_HeurData
 static
 SCIP_RETCODE solveLp(
    SCIP*                 scip,               /* SCIP data structure */
-   SCIP_SOL*             sol,                /* current incumbent */
+   SCIP_SOL*             sol,                /* candidate solution for which continuous variables should be optimized */
    SCIP_Bool*            success             /* was the dive successful? */
 )
 {
@@ -180,6 +180,7 @@ SCIP_RETCODE solveLp(
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
+   /* terminate diving mode */
    SCIP_CALL( SCIPendDive(scip) );
 
    return SCIP_OKAY;
@@ -207,6 +208,7 @@ SCIP_RETCODE createNewSol(
    assert(subscip != NULL);
    assert(subvars != NULL);
    assert(subsol != NULL);
+   assert(success != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
@@ -225,8 +227,9 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
+   *success = FALSE;
    /* solve an LP with all integer variables fixed to improve solution quality */
-   if( ncontvars > 0 && usefinallp )
+   if( ncontvars > 0 && usefinallp && SCIPhasCurrentNodeLP(scip) )
    {
       int v;
       int ncontobjvars; /* does the problem instance have continuous variables with nonzero objective coefficients? */
@@ -251,20 +254,18 @@ SCIP_RETCODE createNewSol(
       }
 
       SCIPstatisticMessage(" Continuous Objective variables: %d, Euclidean OBJ: %g total, %g continuous\n", ncontobjvars, SCIPgetObjNorm(scip), sumofobjsquares);
-		/* solve a final LP to optimize solution values of continuous problem variables */
-      if( ncontobjvars > 0 )
+      /* solve a final LP to optimize solution values of continuous problem variables */
+      SCIPstatisticMessage("Solution Value before LP resolve: %g\n", SCIPgetSolOrigObj(scip, newsol));
+      SCIP_CALL( solveLp(scip, newsol, success) );
+
+      /* if the LP solve was not successful, reset the solution */
+      if( !*success )
       {
-         SCIPstatisticMessage("Solution Value before LP resolve: %g\n", SCIPgetSolOrigObj(scip, newsol));
-         SCIP_CALL( solveLp(scip, newsol, success) );
-
-         if( !*success )
+         for( v = nvars - 1; v >= nvars - ncontvars; --v )
          {
-            for( v = nvars - 1; v >= nvars - ncontvars; --v )
-            {
-               SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
-            }
-
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
          }
+
       }
    }
 
