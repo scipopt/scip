@@ -37983,90 +37983,16 @@ int SCIPgetNImplications(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
+ *
  */
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */
    )
 {
-   FILE* file;
-   SCIP_VAR** vars;
-   int nvars;
-   int v;
-
-   SCIP_CALL( checkStage(scip, "SCIPwriteImplicationConflictGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-
-   /* open file */
-   if( filename == NULL )
-      file = NULL;
-   else
-   {
-      file = fopen(filename, "w");
-      if( file == NULL )
-      {
-         SCIPerrorMessage("cannot create file <%s>\n", filename);
-         SCIPprintSysError(filename);
-         return SCIP_FILECREATEERROR;
-      }
-   }
-
-   vars = scip->transprob->vars;
-   nvars = scip->transprob->nbinvars;
-
-   /* write header */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "digraph implconfgraph {\n");
-
-   /* store nodes */
-   for( v = 0; v < nvars; ++v )
-   {
-      if( SCIPvarGetNImpls(vars[v], TRUE) > 0 )
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "pos%d [label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
-      if( SCIPvarGetNImpls(vars[v], FALSE) > 0 )
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "neg%d [style=filled,fillcolor=red,label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
-      if( SCIPvarGetNImpls(vars[v], TRUE) > 0 && SCIPvarGetNImpls(vars[v], FALSE) > 0 )
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "pos%d -> neg%d [dir=both];\n", v, v);
-   }
-
-#if 0
-   /* store edges */
-   for( v = 0; v < nvars; ++v )
-   {
-      SCIP_Bool fix;
-
-      fix = FALSE;
-      do
-      {
-         SCIP_VAR** implvars;
-         SCIP_BOUNDTYPE* impltypes;
-         int nimpls;
-         int i;
-
-         nimpls = SCIPvarGetNBinImpls(vars[v], fix);
-         implvars = SCIPvarGetImplVars(vars[v], fix);
-         impltypes = SCIPvarGetImplTypes(vars[v], fix);
-         for( i = 0; i < nimpls; ++i )
-         {
-            int implidx;
-
-            implidx = SCIPvarGetProbindex(implvars[i]);
-            if( implidx > v )
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "%s%d -> %s%d [dir=none];\n", fix == TRUE ? "pos" : "neg", v,
-                  impltypes[i] == SCIP_BOUNDTYPE_UPPER ? "pos" : "neg", implidx);
-         }
-         fix = !fix;
-      }
-      while( fix == TRUE );
-   }
-#endif
-   /* write footer */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "}\n");
-
-   /* close file */
-   if( filename != NULL )
-   {
-      assert(file != NULL);
-      fclose(file);
-   }
+   SCIPwarningMessage(scip, "SCIPwriteImplicationConflictGraph() is deprecated and does not do anything anymore. All binary to binary implications are now stored in the clique data structure, which can be written to a GML formatted file via SCIPwriteCliqueGraph().\n");
 
    return SCIP_OKAY;
 }

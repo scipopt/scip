@@ -59,10 +59,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeObjSense);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);
 
-/** dialog execution method for the conflictgraph command */
-EXTERN
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph);
-
 /** dialog execution method for the cliquegraph command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph);

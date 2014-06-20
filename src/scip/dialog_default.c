@@ -549,50 +549,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the conflictgraph command */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
-{  /*lint --e{715}*/
-   SCIP_RETCODE retcode;
-   SCIP_Bool endoffile;
-   char* filename;
-
-   assert(nextdialog != NULL);
-
-   *nextdialog = NULL;
-
-   if( !SCIPisTransformed(scip) )
-   {
-      SCIPdialogMessage(scip, NULL, "cannot call method before problem was transformed\n");
-      SCIPdialoghdlrClearBuffer(dialoghdlr);
-   }
-   else
-   {
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
-      if( endoffile )
-      {
-         *nextdialog = NULL;
-         return SCIP_OKAY;
-      }
-
-      if( filename[0] != '\0' )
-      {
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-
-         retcode = SCIPwriteImplicationConflictGraph(scip, filename);
-         if( retcode == SCIP_FILECREATEERROR )
-            SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
-         else
-         {
-            SCIP_CALL( retcode );
-         }
-      }
-   }
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-
 /** dialog execution method for the cliquegraph command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph)
 {  /*lint --e{715}*/
@@ -3489,19 +3445,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             SCIPdialogExecWriteGenTransproblem, NULL, NULL,
             "gentransproblem",
             "write current node transformed problem with generic names to file (format is given by file extension, e.g., trans.{lp,rlp,cip,mps})",
-            FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
-   /* write conflictgraph */
-   if( !SCIPdialogHasEntry(submenu, "conflictgraph") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL,
-            SCIPdialogExecConflictgraph, NULL, NULL,
-            "conflictgraph",
-            "write binary variable implications of transformed problem as conflict graph to file",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
