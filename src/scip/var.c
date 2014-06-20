@@ -12581,6 +12581,7 @@ SCIP_Real SCIPvarGetRedcost(
    return 0.0;
 }
 
+#define MAX_CLIQUELENGTH 50
 /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
  *  the binary variable is fixed to the given value
  */
@@ -12589,18 +12590,12 @@ SCIP_Real SCIPvarGetImplRedcost(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_Real implredcost;
-#if 0
-   SCIP_VAR** vars;
-   SCIP_VAR* implvar;
-   SCIP_BOUNDTYPE* boundtypes;
-   SCIP_Real redcost;
-   int nbinvars;
-   int v;
-#endif
+   int ncliques;
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -12608,34 +12603,116 @@ SCIP_Real SCIPvarGetImplRedcost(
    /* get reduced cost of given variable */
    implredcost = SCIPvarGetRedcost(var, set, varfixing, stat, lp);
 
-   // todo check cliques for implied redcosts
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("variable <%s> itself has reduced cost of %g\n", SCIPvarGetName(var), implredcost);
+#endif
 
-   /* collect binary implication information */
-#if 0
-   nbinvars = SCIPimplicsGetNBinImpls(var->implics, varfixing);
-   vars =  SCIPimplicsGetVars(var->implics, varfixing);
-   boundtypes = SCIPimplicsGetTypes(var->implics, varfixing);
+   /* the following algorithm is expensive */
+   ncliques = SCIPvarGetNCliques(var, varfixing);
 
-   for( v = 0; v < nbinvars; ++v )
+   if( ncliques > 0 )
    {
-      implvar = vars[v];
-      assert(implvar != NULL);
+      SCIP_CLIQUE** cliques;
+      SCIP_CLIQUE* clique;
+      SCIP_VAR** clqvars;
+      SCIP_VAR** probvars;
+      SCIP_VAR* clqvar;
+      SCIP_Bool* clqvalues;
+      int* entries;
+      int* ids;
+      SCIP_Real redcost;
+      int nclqvars;
+      int nentries;
+      int nids;
+      int id;
+      int c;
+      int v;
 
-      /* ignore binary variable which are fixed */
-      if( SCIPvarGetLbLocal(implvar) > 0.5 || SCIPvarGetUbLocal(implvar) < 0.5 )
-         continue;
+      assert(prob != NULL);
+      assert(SCIPprobIsTransformed(prob));
 
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+      nentries = SCIPprobGetNVars(prob) - SCIPprobGetNContVars(prob) + 1;
 
-      if( (SCIP_Bool)boundtypes[v] != varfixing )
-         redcost = SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
-      else
-         redcost = -SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &ids, 2*nentries) );
+      nids = 0;
+      /* @todo move this memory allocation to SCIP_SET and add a memory list there, to decrease the number of
+       *       allocations and clear ups
+       */
+      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &entries, nentries) );
+      BMSclearMemoryArray(entries, nentries);
 
-      if( !SCIPsetIsFeasZero(set, redcost) )
-         implredcost += redcost;
+      cliques = SCIPvarGetCliques(var, varfixing);
+      assert(cliques != NULL);
+
+      for( c = ncliques - 1; c >= 0; --c )
+      {
+         clique = cliques[c];
+         clqvars = SCIPcliqueGetVars(clique);
+         clqvalues = SCIPcliqueGetValues(clique);
+         nclqvars = SCIPcliqueGetNVars(clique);
+         assert(nclqvars > 0);
+         assert(clqvars != NULL);
+         assert(clqvalues != NULL);
+
+         if( nclqvars > MAX_CLIQUELENGTH )
+            continue;
+
+         for( v = nclqvars - 1; v >= 0; --v )
+         {
+            clqvar = clqvars[v];
+            assert(clqvar != NULL);
+
+            /* ignore binary variable which are fixed */
+            if( clqvar != var && SCIPvarIsActive(clqvar) &&
+               (SCIPvarGetLbLocal(clqvar) < 0.5 && SCIPvarGetUbLocal(clqvar) > 0.5) )
+            {
+               int probindex = SCIPvarGetProbindex(clqvar) + 1;
+               assert(0 < probindex && probindex < nentries);
+
+#if 0
+               /* check that the variable was not yet visited or does not appear with two contradicting implications, ->
+                * can appear since there is no guarantee that all these infeasible bounds were found
+                */
+               assert(!entries[probindex] || entries[probindex] == (clqvalues[v] ? probindex : -probindex));
+#endif
+               if( entries[probindex] == 0 )
+               {
+                  ids[nids] = probindex;
+                  ++nids;
+
+                  /* mark variable as visited */
+                  entries[probindex] = (clqvalues[v] ? probindex : -probindex);
+               }
+            }
+         }
+      }
+
+      probvars = SCIPprobGetVars(prob);
+      assert(probvars != NULL);
+
+      /* add all implied reduced cost */
+      for( v = nids - 1; v >= 0; --v )
+      {
+         id = ids[v];
+         assert(0 < id && id < nentries);
+         assert(entries[id] != 0);
+
+         if( (entries[id] > 0) != varfixing )
+            redcost = SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
+         else
+            redcost = -SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
+
+         if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
+            implredcost += redcost;
+      }
+
+      SCIPsetFreeBufferArray(set, &entries);
+      SCIPsetFreeBufferArray(set, &ids);
    }
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("variable <%s> incl. cliques (%d) has implied reduced cost of %g\n", SCIPvarGetName(var), ncliques,
+      implredcost);
 #endif
 
    return implredcost;
