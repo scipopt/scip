@@ -950,7 +950,7 @@ SCIP_RETCODE printIndicatorCons(
 
          appendLine(scip, file, linebuffer, &linecnt, consname);
 
-         /* write as s <= upperbound(s)*(1-z) */
+         /* write as s <= upperbound(s)*(1-z) or s <= upperbound(s) * negation(z) */
          coef = 1.0;
          SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, NULL, " =l= ", 1, &s, &coef, transformed) );
 
@@ -963,10 +963,18 @@ SCIP_RETCODE printIndicatorCons(
                SCIPvarGetName(s), rowname, coef);
          }
 
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g + ", coef);
+         if( SCIPvarIsNegated(z) )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, z, &z) );
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", 1, &z, &coef, transformed) );
+         }
+         else
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g + ", coef);
 
-         coef = -coef;
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, ";", 1, &z, &coef, transformed) );
+            coef = -coef;
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, ";", 1, &z, &coef, transformed) );
+         }
 
          break;
       }
@@ -994,7 +1002,15 @@ SCIP_RETCODE printIndicatorCons(
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(sosset).. %s_sos(sosset) =e= ", consname, consname);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
          SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, NULL, "$sameas(sosset,'slack')", 1, &s, &coef, transformed) );
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, " + ", "$sameas(sosset,'bin');", 1, &z, &coef, transformed) );
+         if( SCIPvarIsNegated(z) )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, z, &z) );
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, " + (1-(", "))$sameas(sosset,'bin');", 1, &z, &coef, transformed) );
+         }
+         else
+         {
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, " + ", "$sameas(sosset,'bin');", 1, &z, &coef, transformed) );
+         }
          endLine(scip, file, linebuffer, &linecnt);
 
          break;
