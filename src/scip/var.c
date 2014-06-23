@@ -12584,6 +12584,8 @@ SCIP_Real SCIPvarGetRedcost(
 #define MAX_CLIQUELENGTH 50
 /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
  *  the binary variable is fixed to the given value
+ *
+ *  @todo add non-binary implications
  */
 SCIP_Real SCIPvarGetImplRedcost(
    SCIP_VAR*             var,                /**< problem variable */
