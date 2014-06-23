@@ -1780,9 +1780,11 @@ SCIP_RETCODE mergeClique(
    )
 {
    SCIP_VAR* var = NULL;
-   SCIP_Bool onefixfound;
    int nlocalbdchgs = 0;
    int v;
+#ifndef NDEBUG
+   SCIP_Bool onefixfound = FALSE;
+#endif
 
    assert(nclqvars != NULL);
 
@@ -1802,8 +1804,6 @@ SCIP_RETCODE mergeClique(
    assert(eventqueue != NULL);
    assert(nbdchgs != NULL);
    assert(infeasible != NULL);
-
-   onefixfound = FALSE;
 
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
     * new clique, and therefore the sortation before removing them should be ok, otherwise we may need to remove these
@@ -1826,7 +1826,9 @@ SCIP_RETCODE mergeClique(
          {
             int w;
 
+#ifndef NDEBUG
             onefixfound = TRUE;
+#endif
 
             SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
 
