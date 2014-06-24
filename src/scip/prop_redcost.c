@@ -320,7 +320,7 @@ SCIP_RETCODE propagateRedcostVar(
          assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(col)));
          assert(SCIPisEQ(scip, oldub, SCIPcolGetUb(col)));
 
-        if( SCIPisFeasLT(scip, oldlb, oldub) )
+         if( SCIPisFeasLT(scip, oldlb, oldub) )
          {
             SCIP_Real newub;
             SCIP_Bool strengthen;
