@@ -1088,8 +1088,6 @@ SCIP_RETCODE getMinactObjchg(
  *  =
  *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{worstbound}(x)) \cdot \mbox{objval}(x)
  *  \f]
- *
- *  @todo add non-binary implications
  */
 static
 SCIP_RETCODE getMaxactImplicObjchg(
@@ -1101,6 +1099,7 @@ SCIP_RETCODE getMaxactImplicObjchg(
 {
    SCIP_Bool varfixing;
    int ncliques;
+   int nvars;
 
    assert(scip != NULL);
    assert(SCIPvarIsBinary(var));
@@ -1227,6 +1226,50 @@ SCIP_RETCODE getMaxactImplicObjchg(
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("objective contribution when variable <%s> fixed to %u using cliques is %g\n", SCIPvarGetName(var),
+      varfixing, *objchg);
+#endif
+
+   /* collect non-binary implication information */
+   nvars = SCIPvarGetNImpls(var, varfixing);
+
+   if( nvars > 0 )
+   {
+      SCIP_VAR** vars;
+      SCIP_VAR* implvar;
+      SCIP_Real* bounds;
+      SCIP_BOUNDTYPE* boundtypes;
+      SCIP_Real obj;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int v;
+
+      vars =  SCIPvarGetImplVars(var, varfixing);
+      boundtypes = SCIPvarGetImplTypes(var, varfixing);
+      bounds = SCIPvarGetImplBounds(var, varfixing);
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         implvar = vars[v];
+         assert(implvar != NULL);
+
+         lb = SCIPvarGetLbLocal(implvar);
+         ub = SCIPvarGetUbLocal(implvar);
+         obj = SCIPvarGetObj(implvar);
+
+         /* ignore binary variable which are fixed or not of column status */
+         if( SCIPisZero(scip, obj) )
+            continue;
+
+         /* add up objective change if applicable */
+         if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPvarGetWorstBoundType(implvar) == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGT(scip, bounds[v], lb) )
+            *objchg += (bounds[v] - lb)*obj;
+         else if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPvarGetWorstBoundType(implvar) == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLT(scip, bounds[v], ub) )
+            *objchg += (bounds[v] - ub)*obj;
+      }
+   }
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("objective contribution when variable <%s> fixed to %u using cliques and implications is %g\n", SCIPvarGetName(var),
       varfixing, *objchg);
 #endif
 

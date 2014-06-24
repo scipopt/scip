@@ -12584,8 +12584,6 @@ SCIP_Real SCIPvarGetRedcost(
 #define MAX_CLIQUELENGTH 50
 /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
  *  the binary variable is fixed to the given value
- *
- *  @todo add non-binary implications
  */
 SCIP_Real SCIPvarGetImplRedcost(
    SCIP_VAR*             var,                /**< problem variable */
@@ -12598,6 +12596,7 @@ SCIP_Real SCIPvarGetImplRedcost(
 {
    SCIP_Real implredcost;
    int ncliques;
+   int nvars;
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -12698,13 +12697,21 @@ SCIP_Real SCIPvarGetImplRedcost(
          id = ids[v];
          assert(0 < id && id < nentries);
          assert(entries[id] != 0);
+         assert(probvars[id - 1] != NULL);
+         assert(SCIPvarIsActive(probvars[id - 1]));
+         assert(SCIPvarIsBinary(probvars[id - 1]));
+         assert(SCIPvarGetLbLocal(probvars[id - 1]) < 0.5 && SCIPvarGetUbLocal(probvars[id - 1]) > 0.5);
 
          if( (entries[id] > 0) != varfixing )
             redcost = SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
          else
             redcost = -SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
 
+#if 0
          if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
+#else
+         if( !SCIPsetIsFeasZero(set, redcost) )
+#endif
             implredcost += redcost;
       }
 
@@ -12715,6 +12722,100 @@ SCIP_Real SCIPvarGetImplRedcost(
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("variable <%s> incl. cliques (%d) has implied reduced cost of %g\n", SCIPvarGetName(var), ncliques,
       implredcost);
+#endif
+
+   /* collect non-binary implication information */
+   nvars = SCIPimplicsGetNImpls(var->implics, varfixing);
+
+   if( nvars > 0 )
+   {
+      SCIP_VAR** vars;
+      SCIP_VAR* implvar;
+      SCIP_COL* col;
+      SCIP_Real* bounds;
+      SCIP_BOUNDTYPE* boundtypes;
+      SCIP_Real redcost;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Bool lpissolbasic;
+      int v;
+
+      vars =  SCIPimplicsGetVars(var->implics, varfixing);
+      boundtypes = SCIPimplicsGetTypes(var->implics, varfixing);
+      bounds = SCIPimplicsGetBounds(var->implics, varfixing);
+      lpissolbasic = SCIPlpIsSolBasic(lp);
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         implvar = vars[v];
+         assert(implvar != NULL);
+
+         lb = SCIPvarGetLbLocal(implvar);
+         ub = SCIPvarGetUbLocal(implvar);
+
+         /* ignore binary variable which are fixed or not of column status */
+         if( SCIPvarGetStatus(implvar) != SCIP_VARSTATUS_COLUMN || SCIPsetIsFeasEQ(set, lb, ub) )
+            continue;
+
+         col = SCIPvarGetCol(implvar);
+         assert(col != NULL);
+         redcost = 0.0;
+
+         /* solved lp with basis information or not? */
+         if( lpissolbasic )
+         {
+            SCIP_BASESTAT basestat = SCIPcolGetBasisStatus(col);
+
+            /* check if the implication is not not yet applied */
+            if( basestat == SCIP_BASESTAT_LOWER && boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, bounds[v], lb) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsFeasNegative(set, redcost));
+
+               redcost *= (bounds[v] - lb);
+            }
+            else if( basestat == SCIP_BASESTAT_UPPER && boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, bounds[v], ub) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsFeasPositive(set, redcost));
+
+               redcost *= (bounds[v] - ub);
+            }
+         }
+         else
+         {
+            SCIP_Real primsol = SCIPcolGetPrimsol(col);
+
+            /* check if the implication is not not yet applied */
+            if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasEQ(set, lb, primsol) && SCIPsetIsFeasGT(set, bounds[v], lb) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsFeasNegative(set, redcost));
+
+               redcost *= (bounds[v] - lb);
+            }
+            else if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasEQ(set, ub, primsol) && SCIPsetIsFeasLT(set, bounds[v], ub) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsFeasPositive(set, redcost));
+
+               redcost *= (bounds[v] - ub);
+            }
+         }
+
+         /* improve implied reduced cost */
+#if 0
+         if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
+#else
+         if( !SCIPsetIsFeasZero(set, redcost) )
+            implredcost += redcost;
+#endif
+      }
+   }
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("variable <%s> incl. cliques (%d) and implications (%d) has implied reduced cost of %g\n",
+      SCIPvarGetName(var), ncliques, nvars, implredcost);
 #endif
 
    return implredcost;
