@@ -51,6 +51,8 @@
 #define DEFAULT_FALLBACK FALSE       /**< should the phase transition fall back to suboptimal stage? */
 #define DEFAULT_INTERRUPTOPTIMAL FALSE /**< should solving process be interrupted if optimal solution was found? */
 #define DEFAULT_ADJUSTRELPSWEIGHTS FALSE
+#define DEFAULT_USEFILEWEIGHTS       FALSE
+#define DEFAULT_USEWEIGHTEDQUOTIENTS TRUE
 
 /** enumerator to represent the event handler solving stage */
 enum SolvingStage
@@ -87,6 +89,8 @@ struct SCIP_EventhdlrData
    SCIP_Bool            fallback;             /**< should the phase transition fall back to suboptimal stage? */
    SCIP_Bool            interruptoptimal;     /**< interrupt after optimal solution was found */
    SCIP_Bool            adjustrelpsweights;   /**< should the relpscost cutoff weights be adjusted? */
+   SCIP_Bool            usefileweights;
+   SCIP_Bool            useweightedquotients;
 };
 
 /*
@@ -105,6 +109,50 @@ SCIP_Real SCIPgetOptimalSolutionValue(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    return eventhdlrdata->optimalvalue;
+}
+
+static
+SCIP_RETCODE readLeaveFile(
+   SCIP*                scip,
+   SCIP_Real*           nobjleaves,
+   SCIP_Real*           ninfleaves
+   )
+{
+   SCIP_FILE* file;
+      char linebuf[MAXLINELEN];
+      const char* probname = SCIPgetProbName(scip);
+      file = NULL;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Trying to open leaves file\n");
+      file = SCIPfopen("/optimi/kombadon/projects/scip-git/check/testset/myMMM.leaves", "r");
+
+      if( file == NULL )
+      {
+         return SCIP_NOFILE;
+      }
+      while( SCIPfgets(linebuf, (int)sizeof(linebuf), file) != NULL )
+      {
+         char* name;
+         char* firstint;
+         char* secondint;
+         char* endofptr;
+
+         name = strtok(linebuf, " ");
+
+         if( strcasecmp(name, probname) != 0 )
+            continue;
+
+         firstint = strtok(NULL, " ");
+         secondint = strtok(NULL, " ");
+         *nobjleaves = strtod(firstint, &endofptr);
+         *ninfleaves = strtod(secondint, &endofptr);
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Leaf statistics for problem: %g obj, %g inf\n", *nobjleaves, *ninfleaves);
+         break;
+
+      }
+      SCIPfclose(file);
+
+      return SCIP_OKAY;
 }
 static
 SCIP_RETCODE searchSolufileForProbname(
@@ -332,28 +380,48 @@ SCIP_RETCODE applySolvingStage(
 
    if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->adjustrelpsweights && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodesLeft(scip) > 0)
    {
-      SCIP_Real pscostweight;
-      SCIP_Real cutoffweight;
-      SCIP_Real conflictweight;
-      SCIP_Longint cutoffleaves;
       SCIP_Longint objleaves;
       SCIP_Real quotient;
       SCIP_Real newcutoffweight;
       SCIP_Real newconflictweight;
+      SCIP_Real cutoffweight;
+      SCIP_Real conflictweight;
+      SCIP_Longint cutoffleaves;
 
-      objleaves = SCIPgetNObjLeaves(scip);
-      cutoffleaves = SCIPgetNInfeasLeaves(scip);
-      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/pscostweight", &pscostweight) );
-      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/conflictweight", &conflictweight) );
-      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/cutoffweight", &cutoffweight) );
+      if( eventhdlrdata->usefileweights )
+      {
+         SCIP_Real nobjleaves;
+         SCIP_Real ninfleaves;
 
-      objleaves = MAX(objleaves, 1);
-      cutoffleaves = MAX(cutoffleaves, 1);
+         ninfleaves = nobjleaves = 0.0;
+         SCIP_CALL( readLeaveFile(scip, &nobjleaves, &ninfleaves) );
+
+         objleaves = (SCIP_Longint)MAX(1, nobjleaves);
+         cutoffleaves = (SCIP_Longint)MAX(1, ninfleaves);
+      }
+      else
+      {
+         objleaves = SCIPgetNObjLeaves(scip);
+         cutoffleaves = SCIPgetNInfeasLeaves(scip);
+         objleaves = MAX(objleaves, 1);
+         cutoffleaves = MAX(cutoffleaves, 1);
+      }
 
       quotient = cutoffleaves / (SCIP_Real)objleaves;
 
-      newcutoffweight = cutoffweight * quotient;
-      newconflictweight = conflictweight * quotient;
+      newcutoffweight = quotient;
+      newconflictweight = quotient;
+
+      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/conflictweight", &conflictweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/cutoffweight", &cutoffweight) );
+
+      if( eventhdlrdata->useweightedquotients )
+      {
+
+         newcutoffweight *= cutoffweight;
+         newconflictweight *= conflictweight;
+      }
+
       SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/conflictweight", newconflictweight) );
       SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/cutoffweight", newcutoffweight) );
 
@@ -565,6 +633,11 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/adjustrelpsweights", "should the branching score weights for cutoffs and "
                "conflicts be adjusted after optimal solution was found?", &eventhdlrdata->adjustrelpsweights, FALSE,
                DEFAULT_ADJUSTRELPSWEIGHTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/usefileweights", "use file weights?", &eventhdlrdata->usefileweights,
+         FALSE, DEFAULT_USEFILEWEIGHTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/useweightedquotients", "use weighted quotients?", &eventhdlrdata->useweightedquotients,
+           FALSE, DEFAULT_USEWEIGHTEDQUOTIENTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
