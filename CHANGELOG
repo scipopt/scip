@@ -27,6 +27,8 @@ fixed bugs:
 - fixed bug in heur_oneopt: avoid bound violations if shift value is negative due to infeasibilities
 - fixed setting solution value of multi-aggregated var in xml-solution case
 - fixed wrong output of status when an objective limit was imposed but not reached yet
+- fixed the rare case that branching was performed even though strong branching found global bound changes leading to
+  an infeasible/objlimit LP
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
