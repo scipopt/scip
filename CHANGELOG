@@ -39,6 +39,7 @@ performance improvements:
 features:
 - added copy mechanism for conjunction constraints
 - added Makefile support for cygwin 64 Bit
+- added revised lpi_xprs for using XPRESS as LP solver
 
 interface:
 - added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance

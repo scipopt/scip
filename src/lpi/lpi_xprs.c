@@ -19,6 +19,12 @@
  * @author Tobias Achterberg
  * @author Michael Perregaard
  * @author Livio Bertacco
+ * @author Stefan Heinz
+ *
+ * This interface was revised for Xpress 26. Therefore, we removed all legacy code.
+ *
+ * Xpress requires that column and row names are unique. Since column and row names are not needed we ignore all column
+ * and row names to avoid the uniqueness issue.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -27,71 +33,33 @@
 #include <assert.h>
 
 #include "xprs.h"
+#include "scip/bitencode.h"
+#include "lpi/lpi.h"
 
-#if (XPVERSION < 21)
-#define OLDRAYCODE 1 /* New ray functions available and public since version 21 */
-#if (XPVERSION < 17) /* XPRSpostsolve public since v17 */
-int XPRS_CC XPRSpostsolve( XPRSprob prob );
-#endif
-#if (XPVERSION >= 18) /* XPRSstrongbranch available since version 18, public since v21 */
-int XPRS_CC XPRSstrongbranch( XPRSprob prob, const int _nbnd, const int *_mbndind, const char *_cbndtype,
-   const double *_dbndval, const int _itrlimit, double *_dsbobjval, int *_msbstatus );
-#endif
-#endif
 #ifndef XPRS_LPQUICKPRESOLVE
 #define XPRS_LPQUICKPRESOLVE 8207
 #endif
 
-/* For SCIP we need an extra LP status which is optimal with */
-/* scaled infeasibilities. */
+/* For SCIP we need an extra LP status which is optimal with scaled infeasibilities. */
 #define XPRS_LP_OPTIMAL_SCALEDINFEAS 16
 
-#include "lpi/lpi.h"
-#include "scip/bitencode.h"
-#include "scip/pub_message.h"
-
-
-/** output Xpress error */
-static
-void xprs_error(
-   XPRSprob              prob,               /**< Xpress problem instance */
-   int                   restat,             /**< return status */
-   const char**          msg,                /**< error message on output */
-   char*                 errmsg              /**< string to store last Xpress error */
-   )
-{
-   *errmsg='\0';
-   if (prob)
-      XPRSgetlasterror(prob, errmsg);
-   if (*errmsg)
-      *msg = "LP Error: Xpress returned %d - %s\n";
-   else
-      *msg = "LP Error: Xpress returned %d\n";
-}
-
-#define CHECK_ZEROE(p, x) {  int restat = (x);  \
-      if( restat != 0 ) {                       \
-         char errmsg[512];                      \
-         const char *msg;                       \
-         xprs_error((p), restat, &msg, errmsg); \
-         SCIPerrorMessage(msg, restat, errmsg); \
-         return SCIP_LPERROR;                   \
-      }                                         \
+#define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
+      if( (_restat_ = (x)) != 0 )                                       \
+      {                                                                 \
+         SCIPmessagePrintWarning((messagehdlr), "LP Error: Xpress returned %d\n", _restat_); \
+         return SCIP_LPERROR;                                           \
+      }                                                                 \
    }
 
-#define CHECK_ZEROW(p, messagehdlr, x) {  int restat = (x);      \
-      if( restat != 0 ) {                               \
-         char errmsg[512];                              \
-         const char *msg;                               \
-         xprs_error((p), restat, &msg, errmsg);         \
-         SCIPmessagePrintWarning((messagehdlr), msg, restat, errmsg);   \
-      }                                                 \
+/* this macro is only called in functions returning SCIP_Bool; thus, we return retval if there is an error in optimized mode */
+#define ABORT_ZERO(messagehdlr, retval, x) { int _restat_;              \
+      if( (_restat_ = (x)) != 0 )                                       \
+      {                                                                 \
+         SCIPmessagePrintWarning((messagehdlr), "LP Error: Xpress returned %d\n", _restat_); \
+         SCIPABORT();                                                   \
+         return retval;                                                 \
+      }                                                                 \
    }
-
-#define CHECK_ZEROLPIE(x) CHECK_ZEROE(lpi->xprslp, x)
-#define CHECK_ZEROLPIW(x) CHECK_ZEROW(lpi->xprslp, lpi->messagehdlr, x)
-#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, x)
-#define CHECK_ZERO CHECK_ZEROLPIE
 
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -103,11 +71,14 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 struct SCIP_LPi
 {
    XPRSprob              xprslp;             /**< Xpress LP pointer */
-   char                  name[64];           /**< problem name */
-   int                   objsense;           /**< direction of optimization: +1 minim, -1 maxim */
+   char                  name[200];          /**< problem name */
+
+   SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
+   int                   notfromscratch;     /**< do we not want to solve the lp from scratch */
    int                   solstat;            /**< solution status of last optimization call */
    int                   unbvec;             /**< primal or dual vector on which the problem is unbounded */
    char                  solmethod;          /**< method used to solve the LP */
+
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
    char*                 uarray;             /**< array with 'U' entries for changing upper bounds */
    char*                 senarray;           /**< array for storing row senses */
@@ -117,17 +88,22 @@ struct SCIP_LPi
    int*                  cstat;              /**< array for storing column basis status */
    int*                  rstat;              /**< array for storing row basis status */
    int*                  indarray;           /**< array for storing coefficient indices */
+
    int                   boundchgsize;       /**< size of larray and uarray */
    int                   sidechgsize;        /**< size of senarray and rngarray */
    int                   valsize;            /**< size of valarray and indarray */
    int                   cstatsize;          /**< size of cstat array */
    int                   rstatsize;          /**< size of rstat array */
+
    int                   iterations;         /**< number of iterations used in the last solving call */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             clearstate;         /**< should the current basis be ignored with the next LP solve */
+
    SCIP_Real             par_lobjlim;        /**< objective lower bound */
    SCIP_Real             par_uobjlim;        /**< objective upper bound */
    int                   par_fastlp;         /**< special meta parameter for making LP reoptimize go faster */
    int                   par_presolve;       /**< need to distinguish between the users setting and the optimizer setting of presolve */
+
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -140,14 +116,73 @@ struct SCIP_LPiState
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
-static int               numlp = 0;          /**< number of open LP objects */
-
-
-/*
- * dynamic memory arrays
+/**@name Debug check methods
+ *
+ * @{
  */
 
-/** resizes larray and uarray to have at least num entries */
+#ifndef NDEBUG
+
+/** check that the column range fits */
+static
+void debugCheckColrang(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to be deleted */
+   int                   lastcol             /**< last column to be deleted */
+   )
+{
+   int ncols;
+
+   (void)XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+}
+
+/** check that the row range fits */
+static
+void debugCheckRowrang(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to be deleted */
+   int                   lastrow             /**< last row to be deleted */
+   )
+{
+   int nrows;
+
+   (void)XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+}
+
+/** check that current objective sense equals the given one */
+static
+void debugCheckObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN           objsen              /**< objective sense to be present */
+   )
+{
+   int curobjsens;
+
+   SCIP_CALL_ABORT( SCIPlpiGetObjsen(lpi, &curobjsens) );
+   assert(curobjsens == objsen);
+}
+
+#else
+
+/* in optimized mode the checks are replaced with an empty command */
+#define debugCheckColrang(lpi, firstcol, lastcol) /* */
+#define debugCheckRowrang(lpi, firstrow, lastrow) /* */
+#define debugCheckObjsen(lpi, objsen) /* */
+#endif
+
+/**@} */
+
+
+/**@name Dynamic memory arrays
+ *
+ * @{
+ */
+
+/** resizes larray and uarray to have at least num entries and fill it with 'L' and 'U' for the lower and upper bound
+ *  markers
+ */
 static
 SCIP_RETCODE ensureBoundchgMem(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -176,7 +211,7 @@ SCIP_RETCODE ensureBoundchgMem(
    return SCIP_OKAY;
 }
 
-/** resizes senarray and rngarray to have at least num entries */
+/** resizes senarray, rngarray, and rhsarray to have at least num entries */
 static
 SCIP_RETCODE ensureSidechgMem(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -267,54 +302,12 @@ SCIP_RETCODE ensureRstatMem(
    return SCIP_OKAY;
 }
 
-/** stores current basis in internal arrays of LPI data structure */
-static
-SCIP_RETCODE getBase(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
-   )
-{
-   int ncols;
-   int nrows;
-
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-
-   SCIPdebugMessage("getBase()\n");
-
-   XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols);
-   XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows);
-
-   /* allocate enough memory for storing uncompressed basis information */
-   SCIP_CALL( ensureCstatMem(lpi, ncols) );
-   SCIP_CALL( ensureRstatMem(lpi, nrows) );
-
-   /* get unpacked basis information from Xpress */
-   CHECK_ZERO( XPRSgetbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
-
-   return SCIP_OKAY;
-}
-
-/** loads basis stored in internal arrays of LPI data structure into Xpress */
-static
-SCIP_RETCODE setBase(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
-   )
-{
-   assert(lpi != NULL);
-
-   SCIPdebugMessage("setBase()\n");
-
-   /* load basis information into Xpress */
-   CHECK_ZERO( XPRSloadbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
-
-   return SCIP_OKAY;
-}
+/**@} */
 
 
-
-
-/*
- * LPi state methods
+/**@name LPi state methods
+ *
+ * @{
  */
 
 /** returns the number of packets needed to store column packet information */
@@ -404,34 +397,30 @@ void lpistateFree(
    BMSfreeBlockMemory(blkmem, lpistate);
 }
 
+/**@} */
 
 
-/*
- * local methods
+/**@name Conversion methods
+ *
+ * @{
  */
 
-/** marks the current LP to be unsolved */
+/** converts SCIP's objective sense into CPLEX's objective sense */
 static
-void invalidateSolution(SCIP_LPI* lpi)
-{
-   assert(lpi != NULL);
-   lpi->solstat = -1;
-}
-
-/** converts SCIP's objective sense into Xpress' objective sense */
-static
-int xprsObjsen(SCIP_OBJSEN objsen)
+int xprsObjsen(
+   SCIP_OBJSEN const     objsen              /**< objective sense */
+   )
 {
    switch( objsen )
    {
    case SCIP_OBJSEN_MAXIMIZE:
-      return -1;
+      return XPRS_OBJ_MAXIMIZE;
    case SCIP_OBJSEN_MINIMIZE:
-      return +1;
+      return XPRS_OBJ_MINIMIZE;
    default:
       SCIPerrorMessage("invalid objective sense\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -440,49 +429,48 @@ static
 void convertSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
-   const SCIP_Real*      lhs,                /**< left hand side vector */
-   const SCIP_Real*      rhs                 /**< right hand side vector */
+   const SCIP_Real*      lhss,               /**< left hand side vector */
+   const SCIP_Real*      rhss                /**< right hand side vector */
    )
 {
    int i;
 
    assert(lpi != NULL);
    assert(nrows >= 0);
-   assert(lhs != NULL);
-   assert(rhs != NULL);
+   assert(lhss != NULL);
+   assert(rhss != NULL);
 
    /* convert lhs/rhs into sen/rhs/rng */
    for( i = 0; i < nrows; ++i )
    {
-      assert(lhs[i] <= rhs[i]);
-      if( lhs[i] == rhs[i] ) /*lint !e777*/
+      assert(lhss[i] <= rhss[i]);
+      if( lhss[i] == rhss[i] ) /*lint !e777*/
       {
-         assert(XPRS_MINUSINFINITY < rhs[i] && rhs[i] < XPRS_PLUSINFINITY);
+         assert(XPRS_MINUSINFINITY < rhss[i] && rhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'E';
-         lpi->rhsarray[i] = rhs[i];
+         lpi->rhsarray[i] = rhss[i];
          lpi->rngarray[i] = 0.0;
       }
-      else if( lhs[i] <= XPRS_MINUSINFINITY )
+      else if( lhss[i] <= XPRS_MINUSINFINITY )
       {
-         assert(XPRS_MINUSINFINITY < rhs[i] && rhs[i] < XPRS_PLUSINFINITY);
+         assert(XPRS_MINUSINFINITY < rhss[i] && rhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'L';
-         lpi->rhsarray[i] = rhs[i];
+         lpi->rhsarray[i] = rhss[i];
          lpi->rngarray[i] = 0.0;
       }
-      else if( rhs[i] >= XPRS_PLUSINFINITY )
+      else if( rhss[i] >= XPRS_PLUSINFINITY )
       {
-         assert(XPRS_MINUSINFINITY < lhs[i] && lhs[i] < XPRS_PLUSINFINITY);
+         assert(XPRS_MINUSINFINITY < lhss[i] && lhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'G';
-         lpi->rhsarray[i] = lhs[i];
+         lpi->rhsarray[i] = lhss[i];
          lpi->rngarray[i] = 0.0;
       }
       else
       {
-         /* Xpress defines a ranged row to be within rhs-rng and rhs.
-          */
+         /* Xpress defines a ranged row to be within rhs-rng and rhs. */
          lpi->senarray[i] = 'R';
-         lpi->rhsarray[i] = rhs[i];
-         lpi->rngarray[i] = rhs[i] - lhs[i];
+         lpi->rhsarray[i] = rhss[i];
+         lpi->rngarray[i] = rhss[i] - lhss[i];
       }
    }
 }
@@ -492,47 +480,47 @@ static
 void reconvertBothSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
-   SCIP_Real*            lhs,                /**< buffer to store the left hand side vector */
-   SCIP_Real*            rhs                 /**< buffer to store the right hand side vector */
+   SCIP_Real*            lhss,               /**< buffer to store the left hand side vector */
+   SCIP_Real*            rhss                /**< buffer to store the right hand side vector */
    )
 {
    int i;
 
    assert(lpi != NULL);
    assert(nrows >= 0);
-   assert(lhs != NULL);
-   assert(rhs != NULL);
+   assert(lhss != NULL);
+   assert(rhss != NULL);
 
    for( i = 0; i < nrows; ++i )
    {
       switch( lpi->senarray[i] )
       {
       case 'E':
-         lhs[i] = lpi->rhsarray[i];
-         rhs[i] = lpi->rhsarray[i];
+         lhss[i] = lpi->rhsarray[i];
+         rhss[i] = lpi->rhsarray[i];
          break;
 
       case 'L':
-         lhs[i] = XPRS_MINUSINFINITY;
-         rhs[i] = lpi->rhsarray[i];
+         lhss[i] = XPRS_MINUSINFINITY;
+         rhss[i] = lpi->rhsarray[i];
          break;
 
       case 'G':
-         lhs[i] = lpi->rhsarray[i];
-         rhs[i] = XPRS_PLUSINFINITY;
+         lhss[i] = lpi->rhsarray[i];
+         rhss[i] = XPRS_PLUSINFINITY;
          break;
 
       case 'R':
          assert(lpi->rngarray[i] >= 0.0);
-         rhs[i] = lpi->rhsarray[i];
-         lhs[i] = lpi->rhsarray[i] - lpi->rngarray[i];
+         rhss[i] = lpi->rhsarray[i];
+         lhss[i] = lpi->rhsarray[i] - lpi->rngarray[i];
          break;
 
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
       }
-      assert(lhs[i] <= rhs[i]);
+      assert(lhss[i] <= rhss[i]);
    }
 }
 
@@ -541,14 +529,14 @@ static
 void reconvertLhs(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
-   SCIP_Real*            lhs                 /**< buffer to store the left hand side vector */
+   SCIP_Real*            lhss                /**< buffer to store the left hand side vector */
    )
 {
    int i;
 
    assert(lpi != NULL);
    assert(nrows >= 0);
-   assert(lhs != NULL);
+   assert(lhss != NULL);
 
    for( i = 0; i < nrows; ++i )
    {
@@ -556,22 +544,22 @@ void reconvertLhs(
       {
       case 'E':
          assert(lpi->rngarray[i] == 0.0);
-         lhs[i] = lpi->rhsarray[i];
+         lhss[i] = lpi->rhsarray[i];
          break;
 
       case 'L':
          assert(lpi->rngarray[i] == 0.0);
-         lhs[i] = XPRS_MINUSINFINITY;
+         lhss[i] = XPRS_MINUSINFINITY;
          break;
 
       case 'G':
          assert(lpi->rngarray[i] == 0.0);
-         lhs[i] = lpi->rhsarray[i];
+         lhss[i] = lpi->rhsarray[i];
          break;
 
       case 'R':
          assert(lpi->rngarray[i] >= 0.0);
-         lhs[i] = lpi->rhsarray[i] - lpi->rngarray[i];
+         lhss[i] = lpi->rhsarray[i] - lpi->rngarray[i];
          break;
 
       default:
@@ -586,14 +574,14 @@ static
 void reconvertRhs(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows */
-   SCIP_Real*            rhs                 /**< buffer to store the right hand side vector */
+   SCIP_Real*            rhss                /**< buffer to store the right hand side vector */
    )
 {
    int i;
 
    assert(lpi != NULL);
    assert(nrows >= 0);
-   assert(rhs != NULL);
+   assert(rhss != NULL);
 
    for( i = 0; i < nrows; ++i )
    {
@@ -601,22 +589,22 @@ void reconvertRhs(
       {
       case 'E':
          assert(lpi->rngarray[i] == 0.0);
-         rhs[i] = lpi->rhsarray[i];
+         rhss[i] = lpi->rhsarray[i];
          break;
 
       case 'L':
          assert(lpi->rngarray[i] == 0.0);
-         rhs[i] = lpi->rhsarray[i];
+         rhss[i] = lpi->rhsarray[i];
          break;
 
       case 'G':
          assert(lpi->rngarray[i] == 0.0);
-         rhs[i] = XPRS_PLUSINFINITY;
+         rhss[i] = XPRS_PLUSINFINITY;
          break;
 
       case 'R':
          assert(lpi->rngarray[i] >= 0.0);
-         rhs[i] = lpi->rhsarray[i];
+         rhss[i] = lpi->rhsarray[i];
          break;
 
       default:
@@ -643,29 +631,42 @@ void reconvertSides(
       reconvertRhs(lpi, nrows, rhs);
 }
 
+/**@} */
 
 
+/** marks the current LP to be unsolved */
+static
+void invalidateSolution(
+   SCIP_LPI*             lpi
+   )
+{
+   assert(lpi != NULL);
+   lpi->solstat = -1;
+}
 
 /*
  * LP Interface Methods
  */
 
-
-/*
- * Miscellaneous Methods
+/**@name Miscellaneous Methods
+ *
+ * @{
  */
 
 static char xprsname[100];
-
-/**@name Miscellaneous Methods */
-/**@{ */
 
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(xprsname, "Xpress %d", XPVERSION);
+   char version[16];
+
+   /* get version of Xpress */
+   if( XPRSgetversion(version) == 0 )
+      sprintf(xprsname, "Xpress %s", version);
+   else
+      sprintf(xprsname, "Xpress %d", XPVERSION);
 
    return xprsname;
 }
@@ -688,17 +689,14 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->xprslp;
 }
+
 /**@} */
 
 
-
-
-/*
- * LPI Creation and Destruction Methods
+/**@name LPI Creation and Destruction Methods
+ *
+ * @{
  */
-
-/**@name LPI Creation and Destruction Methods */
-/**@{ */
 
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
@@ -708,34 +706,39 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   int izero = 0;
+   int zero;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* Xpress only works with doubles as floating points */
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* Xpress only works with ints as bools */
    assert(lpi != NULL);
-   assert(numlp >= 0);
 
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
-   /* Initialize the Xpress library (licensing). */
-   if( numlp == 0 )
+   /* the interface is revised for Xpress 26 or higher */
+   if( XPVERSION < 26 )
    {
-      CHECK_ZEROE( NULL, XPRSinit(NULL) );
+      SCIPmessagePrintWarning(messagehdlr, "Please use Xpress version 26 or higher, you are using %d\n", XPVERSION);
+      return SCIP_LPERROR;
    }
 
-   /* create LP */
+   /* initialize the Xpress library (licensing) */
+   CHECK_ZERO( messagehdlr, XPRSinit(NULL) );
+
+   /* create LPi data structure */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   assert(strlen(name) < 64);
-   strcpy((*lpi)->name, name);
+
+   /* copy the problem name */
+   strncpy((*lpi)->name, name, 200);
+
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
    (*lpi)->senarray = NULL;
    (*lpi)->rhsarray = NULL;
    (*lpi)->rngarray = NULL;
+   (*lpi)->indarray = NULL;
    (*lpi)->valarray = NULL;
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
-   (*lpi)->indarray = NULL;
    (*lpi)->boundchgsize = 0;
    (*lpi)->sidechgsize = 0;
    (*lpi)->valsize = 0;
@@ -743,36 +746,24 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->iterations = 0;
    (*lpi)->solisbasic = TRUE;
+   (*lpi)->clearstate = FALSE;
    (*lpi)->solmethod = ' ';
    (*lpi)->par_lobjlim = -1e+40;
    (*lpi)->par_uobjlim = +1e+40;
-   (*lpi)->par_fastlp = 1;
-   (*lpi)->par_presolve = 1;
+   (*lpi)->par_fastlp = 0;
+   (*lpi)->par_presolve = 0;
    (*lpi)->messagehdlr = messagehdlr;
 
-   CHECK_ZEROPLPIE( XPRScreateprob(&(*lpi)->xprslp) );
+   CHECK_ZERO( messagehdlr, XPRScreateprob(&(*lpi)->xprslp) );
    invalidateSolution(*lpi);
 
-   /* Turn logging off until the user explicitly turns it on. This should */
-   /* prevent any unwanted Xpress output from appearing in the SCIP log. */
-   CHECK_ZEROPLPIE( XPRSsetintcontrol((*lpi)->xprslp, XPRS_OUTPUTLOG, 0) );
+   /* turn logging off until the user explicitly turns it on; this should prevent any unwanted Xpress output from
+    * appearing in the SCIP log.
+    */
+   CHECK_ZERO( messagehdlr, XPRSsetintcontrol((*lpi)->xprslp, XPRS_OUTPUTLOG, 0) );
 
-   /* Reserve some extra space for names. */
-   CHECK_ZEROPLPIE( XPRSsetintcontrol((*lpi)->xprslp, XPRS_MPSNAMELENGTH, 16) );
-
-#ifdef XPRS_SOLUTIONFILE
-   /* Don't use solution files. */
-   CHECK_ZEROPLPIE( XPRSsetintcontrol((*lpi)->xprslp, XPRS_SOLUTIONFILE, 0) );
-#endif
-
-   /* We need to create an empty LP in this prob since SCIP might */
-   /* attempt to add rows or columns to it. */
-   CHECK_ZEROPLPIE( XPRSloadlp((*lpi)->xprslp, "temp", 0, 0, NULL, NULL, NULL, NULL, &izero, NULL, NULL, NULL, NULL, NULL) );
-
-   /* Tell Xpress to not declare a problem infeasible in presolve. */
-   CHECK_ZEROPLPIE( XPRSsetintcontrol((*lpi)->xprslp, XPRS_PRESOLVE, -1) );
-
-   numlp++;
+   /* we need to create an empty LP in this prob since SCIP might attempt to add rows or columns to it */
+   CHECK_ZERO( messagehdlr, XPRSloadlp((*lpi)->xprslp, (*lpi)->name, 0, 0, NULL, NULL, NULL, NULL, &zero, NULL, NULL, NULL, NULL, NULL) );
 
    /* set objective sense */
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
@@ -791,7 +782,10 @@ SCIP_RETCODE SCIPlpiFree(
    SCIPdebugMessage("SCIPlpiFree()\n");
 
    /* free LP */
-   CHECK_ZEROPLPIE( XPRSdestroyprob(((*lpi)->xprslp)) );
+   CHECK_ZERO( (*lpi)->messagehdlr, XPRSdestroyprob(((*lpi)->xprslp)) );
+
+   /* free environment */
+   CHECK_ZERO( (*lpi)->messagehdlr, XPRSfree() );
 
    /* free memory */
    BMSfreeMemoryArrayNull(&(*lpi)->larray);
@@ -799,16 +793,11 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->senarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rhsarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rngarray);
+   BMSfreeMemoryArrayNull(&(*lpi)->indarray);
+   BMSfreeMemoryArrayNull(&(*lpi)->valarray);
    BMSfreeMemoryArrayNull(&(*lpi)->cstat);
    BMSfreeMemoryArrayNull(&(*lpi)->rstat);
    BMSfreeMemory(lpi);
-
-   /* free environment */
-   numlp--;
-   if( numlp == 0 )
-   {
-      XPRSfree();
-   }
 
    return SCIP_OKAY;
 }
@@ -816,14 +805,10 @@ SCIP_RETCODE SCIPlpiFree(
 /**@} */
 
 
-
-
-/*
- * Modification Methods
+/**@name Modification Methods
+ *
+ * @{
  */
-
-/**@name Modification Methods */
-/**@{ */
 
 /** copies LP data with column matrix into LP solver */
 SCIP_RETCODE SCIPlpiLoadColLP(
@@ -844,13 +829,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
-   int* cnt = NULL;
-   int r, c;
-   int namelength;
-   int cnamesize;
-   int rnamesize;
-   char *cnamestore = NULL;
-   char *rnamestore = NULL;
+   int c;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -859,97 +838,30 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    invalidateSolution(lpi);
 
+   /* ensure that the temporary arrays for the side conversion are long enough */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
-   /* Save objective sense for when we have to solve the LP. */
-   lpi->objsense = objsen;
-
-   /* convert lhs/rhs into sen/rhs/range tuples */
+   /* convert lhs/rhs into sen/rhs/range tuples the sen/rhs/range are stored in the temporary arrays in lpi structure */
    convertSides(lpi, nrows, lhs, rhs);
 
-   /* get the longest name since we need to ask Xpress to make enough space before loading the LP. */
-   namelength = 0;
-   cnamesize = 16;
-   if (colnames)
-   {
-      for (c = 0; c < ncols; c++)
-      {
-         int isize = strlen(colnames[c]);
-         cnamesize += isize+1;
-         if (namelength < isize)
-            namelength = isize;
-      }
-   }
-   rnamesize = 16;
-   if (rownames)
-   {
-      for (r = 0; r < nrows; r++)
-      {
-         int isize = strlen(rownames[r]);
-         rnamesize += isize+1;
-         if (namelength < isize)
-            namelength = isize;
-      }
-   }
-   if (namelength)
-   {
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_MPSNAMELENGTH, namelength) );
-   }
+   /* ensure that the temporary arrays are large enough */
+   SCIP_CALL( ensureValMem(lpi, ncols) );
 
    /* calculate column lengths */
-   SCIP_ALLOC( BMSallocMemoryArray(&cnt, ncols) );
    for( c = 0; c < ncols-1; ++c )
    {
-      cnt[c] = beg[c+1] - beg[c];
-      assert(cnt[c] >= 0);
+      lpi->indarray[c] = beg[c+1] - beg[c];
+      assert(lpi->indarray[c] >= 0);
    }
-   cnt[ncols-1] = nnonz - beg[ncols-1];
-   assert(cnt[ncols-1] >= 0);
+   lpi->indarray[ncols-1] = nnonz - beg[ncols-1];
+   assert(lpi->indarray[ncols-1] >= 0);
 
    /* copy data into Xpress */
-   CHECK_ZERO( XPRSloadlp(lpi->xprslp, lpi->name, ncols, nrows, lpi->senarray, lpi->rhsarray,
-         lpi->rngarray, obj, beg, cnt, ind, val, lb, ub) );
-   if (colnames)
-   {
-      /* We need all names stored consecutively in a single array. */
-      int isize = 0;
-      SCIP_ALLOC( BMSallocMemoryArray(&cnamestore, cnamesize) );
-      for (c = 0; c < ncols; c++)
-      {
-         strcpy(cnamestore+isize, colnames[c]);
-         isize += strlen(colnames[c])+1;
-      }
-      CHECK_ZEROLPIW( XPRSaddnames(lpi->xprslp, 2, cnamestore, 0, ncols-1) );
-      BMSfreeMemoryArray(&cnamestore);
-   }
-   if (rownames)
-   {
-      /* We need all names stored consecutively in a single array. */
-      int isize = 0;
-      SCIP_ALLOC( BMSallocMemoryArray(&rnamestore, rnamesize) );
-      for (c = 0; c < nrows; c++)
-      {
-         strcpy(rnamestore+isize, rownames[c]);
-         isize += strlen(rownames[c])+1;
-      }
-      CHECK_ZEROLPIW( XPRSaddnames(lpi->xprslp, 1, rnamestore, 0, nrows-1) );
-      BMSfreeMemoryArray(&rnamestore);
-   }
+   CHECK_ZERO( lpi->messagehdlr, XPRSloadlp(lpi->xprslp, lpi->name, ncols, nrows, lpi->senarray, lpi->rhsarray,
+         lpi->rngarray, obj, beg, lpi->indarray, ind, val, lb, ub) );
 
-   /* free temporary memory */
-   BMSfreeMemoryArray(&cnt);
-
-   {
-      int chk_ncols;
-      int chk_nrows;
-      int chk_nnonz;
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &chk_ncols) );
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &chk_nrows) );
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ELEMS, &chk_nnonz) );
-      assert(chk_ncols == ncols);
-      assert(chk_nrows == nrows);
-      assert(chk_nnonz == nnonz);
-   }
+   /* set objective sense */
+   SCIP_CALL( SCIPlpiChgObjsen(lpi, objsen) );
 
    return SCIP_OKAY;
 }
@@ -969,8 +881,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    )
 {
    int c;
-   int imaxnamelength;
-   int *mstart = NULL;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -979,52 +889,15 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    invalidateSolution(lpi);
 
-   /* We need ncol+1 entries in the start array for Xpress. */
-   SCIP_ALLOC( BMSallocMemoryArray(&mstart, ncols+1) );
-   for (c = 0; c < ncols; c++)
-      mstart[c] = beg[c];
-   mstart[ncols] = nnonz;
-   CHECK_ZERO( XPRSaddcols(lpi->xprslp, ncols, nnonz, obj, mstart, ind, val, lb, ub) );
-   BMSfreeMemoryArray(&mstart);
+   /* ensure that the temporary arrays are large enough */
+   SCIP_CALL( ensureValMem(lpi, ncols+1) );
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_NAMELENGTH, &imaxnamelength) );
-   imaxnamelength *= 8;
-   if (colnames)
-   {
-      int lp_ncols;
-      char *cnamestore;
-      int cnamesize = 0;
-      int isize;
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &lp_ncols) );
-      for (c = 0; c < ncols; c++)
-      {
-         isize = strlen(colnames[c]);
-#if (XPVERSION < 19)
-         /* Xpress versions older than 19 does not allow names of arbitrary length. */
-         if (isize > imaxnamelength)
-            isize = imaxnamelength;
-#endif
-         cnamesize += isize+1;
-      }
-      SCIP_ALLOC( BMSallocMemoryArray(&cnamestore, cnamesize) );
-      isize = 0;
-      for (c = 0; c < ncols; c++)
-      {
-         int i;
-         for (i = 0; colnames[c][i]; i++)
-         {
-#if (XPVERSION < 19)
-            if (i >= imaxnamelength)
-               break;
-#endif
-            cnamestore[isize++] = colnames[c][i];
-         }
-         cnamestore[isize++] = '\0';
-      }
-      assert(isize == cnamesize);
-      CHECK_ZEROLPIW( XPRSaddnames(lpi->xprslp, 2, cnamestore, lp_ncols-ncols, lp_ncols-1) );
-      BMSfreeMemoryArray(&cnamestore);
-   }
+   /* we need ncol+1 entries in the start array for Xpress */
+   for( c = 0; c < ncols; c++ )
+      lpi->indarray[c] = beg[c];
+   lpi->indarray[ncols] = nnonz;
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSaddcols(lpi->xprslp, ncols, nnonz, obj, lpi->indarray, ind, val, lb, ub) );
 
    return SCIP_OKAY;
 }
@@ -1037,23 +910,24 @@ SCIP_RETCODE SCIPlpiDelCols(
    )
 {
    int c;
-   int ncols;
-   int *mind = NULL;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+
+   debugCheckColrang(lpi, firstcol, lastcol);
 
    SCIPdebugMessage("deleting %d columns from Xpress\n", lastcol - firstcol + 1);
 
    invalidateSolution(lpi);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&mind, lastcol-firstcol+1) );
-   for (c = firstcol; c <= lastcol; c++)
-      mind[c-firstcol] = c;
-   CHECK_ZERO( XPRSdelcols(lpi->xprslp, lastcol-firstcol+1, mind) );
-   BMSfreeMemoryArray(&mind);
+   /* ensure that the temporary arrays are large enough */
+   SCIP_CALL( ensureValMem(lpi, lastcol-firstcol+1) );
+
+   /* collect the columns indices to be deleted */
+   for( c = firstcol; c <= lastcol; c++ )
+      lpi->indarray[c-firstcol] = c;
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSdelcols(lpi->xprslp, lastcol-firstcol+1, lpi->indarray) );
 
    return SCIP_OKAY;
 }
@@ -1066,11 +940,10 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    )
 {
-   int c_new;
-   int c;
-   int ndel;
+   int nkeptcols;
+   int ndelcols;
    int ncols;
-   int *mind = NULL;
+   int c;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -1079,30 +952,31 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-   ndel = 0;
-   for (c = 0; c < ncols; c++)
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+
+   nkeptcols = 0;
+   ndelcols = 0;
+
+   /* ensure that the temporary arrays are large enough */
+   SCIP_CALL( ensureValMem(lpi, ncols) );
+
+   /* collect the column indecies which should be deleted and create a the new column ordering */
+   for( c = 0; c < ncols; c++ )
    {
-      if (dstat[c])
-         ndel++;
-   }
-   SCIP_ALLOC( BMSallocMemoryArray(&mind, ndel) );
-   c_new = 0;
-   ndel = 0;
-   for (c = 0; c < ncols; c++)
-   {
-      if (dstat[c])
+      if( dstat[c] == 1 )
       {
-         mind[ndel++] = c;
          dstat[c] = -1;
+         lpi->indarray[ndelcols] = c;
+         ndelcols++;
       }
       else
       {
-         dstat[c] = c_new++;
+         dstat[c] = nkeptcols;
+         nkeptcols++;
       }
    }
-   CHECK_ZERO( XPRSdelcols(lpi->xprslp, ndel, mind) );
-   BMSfreeMemoryArray(&mind);
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSdelcols(lpi->xprslp, ndelcols, lpi->indarray) );
 
    return SCIP_OKAY;
 }
@@ -1121,8 +995,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    int r;
-   int lp_nrows;
-   int *mstart = NULL;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -1131,56 +1003,18 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    invalidateSolution(lpi);
 
+   /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
+   SCIP_CALL( ensureValMem(lpi, nrows+1) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &lp_nrows) );
    convertSides(lpi, nrows, lhs, rhs);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&mstart, nrows+1) );
-   for (r = 0; r < nrows; r++)
-      mstart[r] = beg[r];
-   mstart[nrows] = nnonz;
-   CHECK_ZERO( XPRSaddrows(lpi->xprslp, nrows, nnonz, lpi->senarray, lpi->rhsarray, lpi->rngarray, mstart, ind, val) );
-   BMSfreeMemoryArray(&mstart);
+   for( r = 0; r < nrows; r++ )
+      lpi->indarray[r] = beg[r];
+   lpi->indarray[nrows] = nnonz;
 
-   if (rownames)
-   {
-      char *rnamestore;
-      int imaxnamelength;
-      int rnamesize = 0;
-      int isize;
-
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_NAMELENGTH, &imaxnamelength) );
-      imaxnamelength *= 8;
-      for (r = 0; r < nrows; r++)
-      {
-         isize = strlen(rownames[r]);
-#if (XPVERSION < 19)
-         if (isize > imaxnamelength)
-            isize = imaxnamelength;
-#endif
-         rnamesize += isize+1;
-      }
-      SCIP_ALLOC( BMSallocMemoryArray(&rnamestore, rnamesize) );
-      isize = 0;
-      for (r = 0; r < nrows; r++)
-      {
-         int i;
-         for (i = 0; rownames[r][i]; i++)
-         {
-#if (XPVERSION < 19)
-            if (i >= imaxnamelength)
-               break;
-#endif
-            rnamestore[isize++] = rownames[r][i];
-         }
-         rnamestore[isize++] = '\0';
-      }
-      assert(isize == rnamesize);
-      CHECK_ZEROLPIW( XPRSaddnames(lpi->xprslp, 1, rnamestore, lp_nrows, lp_nrows+nrows-1) );
-      BMSfreeMemoryArray(&rnamestore);
-   }
+   CHECK_ZERO( lpi->messagehdlr, XPRSaddrows(lpi->xprslp, nrows, nnonz, lpi->senarray, lpi->rhsarray, lpi->rngarray, lpi->indarray, ind, val) );
 
    return SCIP_OKAY;
 }
@@ -1193,23 +1027,23 @@ SCIP_RETCODE SCIPlpiDelRows(
    )
 {
    int r;
-   int nrows;
-   int *mind = NULL;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+
+   debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPdebugMessage("deleting %d rows from Xpress\n", lastrow - firstrow + 1);
 
    invalidateSolution(lpi);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&mind, lastrow-firstrow+1) );
-   for (r = firstrow; r <= lastrow; r++)
-      mind[r-firstrow] = r;
-   CHECK_ZERO( XPRSdelrows(lpi->xprslp, lastrow-firstrow+1, mind) );
-   BMSfreeMemoryArray(&mind);
+   /* ensure that the temporary arrays are large enough */
+   SCIP_CALL( ensureValMem(lpi, lastrow-firstrow+1) );
+
+   for( r = firstrow; r <= lastrow; r++ )
+      lpi->indarray[r-firstrow] = r;
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSdelrows(lpi->xprslp, lastrow-firstrow+1, lpi->indarray) );
 
    return SCIP_OKAY;
 }
@@ -1222,10 +1056,10 @@ SCIP_RETCODE SCIPlpiDelRowset(
                                               *   output: new position of row, -1 if row was deleted */
    )
 {
-   int r, r_new;
-   int ndel;
+   int nkeptrows;
+   int ndelrows;
    int nrows;
-   int *mind = NULL;
+   int r;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -1234,30 +1068,31 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   ndel = 0;
-   for (r = 0; r < nrows; r++)
+   nkeptrows = 0;
+   ndelrows = 0;
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+
+   /* ensure that the temporary arrays are large enough */
+   SCIP_CALL( ensureValMem(lpi, nrows) );
+
+   /* collect the row indecies which should be deleted and create a the new row ordering */
+   for( r = 0; r < nrows; r++ )
    {
-      if (dstat[r])
-         ndel++;
-   }
-   SCIP_ALLOC( BMSallocMemoryArray(&mind, ndel) );
-   r_new = 0;
-   ndel = 0;
-   for (r = 0; r < nrows; r++)
-   {
-      if (dstat[r])
+      if( dstat[r] == 1 )
       {
-         mind[ndel++] = r;
          dstat[r] = -1;
+         lpi->indarray[ndelrows] = r;
+         ndelrows++;
       }
       else
       {
-         dstat[r] = r_new++;
+         dstat[r] = nkeptrows;
+         nkeptrows++;
       }
    }
-   CHECK_ZERO( XPRSdelrows(lpi->xprslp, ndel, mind) );
-   BMSfreeMemoryArray(&mind);
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSdelrows(lpi->xprslp, ndelrows, lpi->indarray) );
 
    return SCIP_OKAY;
 }
@@ -1267,27 +1102,14 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   int ncols;
-   int nrows;
+   int zero;
 
    assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
 
    SCIPdebugMessage("clearing Xpress LP\n");
 
-   invalidateSolution(lpi);
-
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-
-   if( ncols >= 1 )
-   {
-      SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols-1) );
-   }
-   if( nrows >= 1 )
-   {
-      SCIP_CALL( SCIPlpiDelRows(lpi, 0, nrows-1) );
-   }
+   /* create an empty LP in this */
+   CHECK_ZERO( lpi->messagehdlr, XPRSloadlp(lpi->xprslp, lpi->name, 0, 0, NULL, NULL, NULL, NULL, &zero, NULL, NULL, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1305,20 +1127,14 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi->xprslp != NULL);
 
    SCIPdebugMessage("changing %d bounds in Xpress\n", ncols);
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      for( i = 0; i < ncols; ++i )
-         SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
-   }
-#endif
 
    invalidateSolution(lpi);
 
+   /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureBoundchgMem(lpi, ncols) );
 
-   CHECK_ZERO( XPRSchgbounds(lpi->xprslp, ncols, ind, lpi->larray, (SCIP_Real*)lb) );
-   CHECK_ZERO( XPRSchgbounds(lpi->xprslp, ncols, ind, lpi->uarray, (SCIP_Real*)ub) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgbounds(lpi->xprslp, ncols, ind, lpi->larray, (SCIP_Real*)lb) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgbounds(lpi->xprslp, ncols, ind, lpi->uarray, (SCIP_Real*)ub) );
 
    return SCIP_OKAY;
 }
@@ -1339,15 +1155,16 @@ SCIP_RETCODE SCIPlpiChgSides(
 
    invalidateSolution(lpi);
 
+   /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    convertSides(lpi, nrows, lhs, rhs);
 
    /* change row sides */
-   CHECK_ZERO( XPRSchgrowtype(lpi->xprslp, nrows, ind, lpi->senarray) );
-   CHECK_ZERO( XPRSchgrhs(lpi->xprslp, nrows, ind, lpi->rhsarray) );
-   CHECK_ZERO( XPRSchgrhsrange(lpi->xprslp, nrows, ind, lpi->rngarray) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgrowtype(lpi->xprslp, nrows, ind, lpi->senarray) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgrhs(lpi->xprslp, nrows, ind, lpi->rhsarray) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgrhsrange(lpi->xprslp, nrows, ind, lpi->rngarray) );
 
    return SCIP_OKAY;
 }
@@ -1367,7 +1184,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( XPRSchgcoef(lpi->xprslp, row, col, newval) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgcoef(lpi->xprslp, row, col, newval) );
 
    return SCIP_OKAY;
 }
@@ -1375,17 +1192,17 @@ SCIP_RETCODE SCIPlpiChgCoef(
 /** changes the objective sense */
 SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_OBJSEN           objsen              /**< new objective sense */
+   SCIP_OBJSEN           objsense            /**< new objective sense */
    )
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   SCIPdebugMessage("changing objective sense in Xpress to %d\n", objsen);
+   SCIPdebugMessage("changing objective sense in Xpress to %d\n", objsense);
 
    invalidateSolution(lpi);
 
-   lpi->objsense = xprsObjsen(objsen);
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgobjsense(lpi->xprslp, xprsObjsen(objsense)) );
 
    return SCIP_OKAY;
 }
@@ -1403,7 +1220,7 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    SCIPdebugMessage("changing %d objective values in Xpress\n", ncols);
 
-   CHECK_ZERO( XPRSchgobj(lpi->xprslp, ncols, ind, obj) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgobj(lpi->xprslp, ncols, ind, obj) );
 
    return SCIP_OKAY;
 }
@@ -1418,7 +1235,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nnonz;
-   int ncol;
+   int ncols;
    int beg;
    int i;
 
@@ -1430,8 +1247,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncol) );
-   SCIP_CALL( ensureValMem(lpi, ncol) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+   SCIP_CALL( ensureValMem(lpi, ncols) );
 
    /* get the row */
    SCIP_CALL( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, lpi->indarray, lpi->valarray) );
@@ -1451,6 +1268,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
       rhs *= scaleval;
    else if( scaleval < 0.0 )
       rhs = XPRS_MINUSINFINITY;
+
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
@@ -1476,7 +1294,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real ub;
    SCIP_Real obj;
    int nnonz;
-   int ncol;
+   int nrows;
    int beg;
    int i;
 
@@ -1488,8 +1306,8 @@ SCIP_RETCODE SCIPlpiScaleCol(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncol) );
-   SCIP_CALL( ensureValMem(lpi, ncol) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   SCIP_CALL( ensureValMem(lpi, nrows) );
 
    /* get the column */
    SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
@@ -1516,6 +1334,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
       ub /= scaleval;
    else if( scaleval < 0.0 )
       ub = XPRS_MINUSINFINITY;
+
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &col, &lb, &ub) );
@@ -1531,14 +1350,10 @@ SCIP_RETCODE SCIPlpiScaleCol(
 /**@} */
 
 
-
-
-/*
- * Data Accessing Methods
+/**@name Data Accessing Methods
+ *
+ * @{
  */
-
-/**@name Data Accessing Methods */
-/**@{ */
 
 /** gets the number of rows in the LP */
 SCIP_RETCODE SCIPlpiGetNRows(
@@ -1552,7 +1367,7 @@ SCIP_RETCODE SCIPlpiGetNRows(
 
    SCIPdebugMessage("getting number of rows\n");
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, nrows) );
 
    return SCIP_OKAY;
 }
@@ -1569,7 +1384,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
 
    SCIPdebugMessage("getting number of columns\n");
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, ncols) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, ncols) );
 
    return SCIP_OKAY;
 }
@@ -1586,7 +1401,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
 
    SCIPdebugMessage("getting number of non-zeros\n");
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ELEMS, nnonz) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ELEMS, nnonz) );
 
    return SCIP_OKAY;
 }
@@ -1607,12 +1422,11 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   int ncol;
-
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncol) );
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncol);
+   assert(lb == ub);
+
+   debugCheckColrang(lpi, firstcol, lastcol);
 
    SCIPdebugMessage("getting columns %d to %d\n", firstcol, lastcol);
 
@@ -1620,31 +1434,37 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
-      CHECK_ZERO( XPRSgetlb(lpi->xprslp, lb, firstcol, lastcol) );
-      CHECK_ZERO( XPRSgetub(lpi->xprslp, ub, firstcol, lastcol) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetlb(lpi->xprslp, lb, firstcol, lastcol) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, ub, firstcol, lastcol) );
    }
    else
       assert(ub == NULL);
 
    if( nnonz != NULL )
    {
+      int ntotalnonz;
       int c;
-      int ndim;
-      int *mstart = NULL;
 
       assert(beg != NULL);
       assert(ind != NULL);
       assert(val != NULL);
 
+      /* ensure that the temporary buffer array is large enough */
+      SCIP_CALL( ensureValMem(lpi, lastcol-firstcol+2) );
+
+      /* get number of nonzero in the whole problem; needed to pass a proper size to XPRSgetcols() function call
+       *
+       * @note We are assuming that the arrays given by SCIP are large enough. Otherwise we are getting invalid writes
+       */
+      SCIP_CALL( SCIPlpiGetNNonz(lpi, &ntotalnonz) );
+
       /* get matrix entries */
-      SCIP_ALLOC( BMSallocMemoryArray(&mstart, lastcol-firstcol+2) );
-      SCIPlpiGetNNonz(lpi, &ndim);
-      CHECK_ZERO( XPRSgetcols(lpi->xprslp, mstart, ind, val, ndim, nnonz, firstcol, lastcol) );
-      assert(*nnonz <= ndim);
-      assert(mstart[lastcol-firstcol+1] == *nnonz);
-      for (c = 0; c < lastcol-firstcol+1; c++)
-         beg[c] = mstart[c];
-      BMSfreeMemoryArray(&mstart);
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetcols(lpi->xprslp, lpi->indarray, ind, val, ntotalnonz, nnonz, firstcol, lastcol) );
+      assert(*nnonz <= ntotalnonz);
+      assert(lpi->indarray[lastcol-firstcol+1] == *nnonz);
+
+      for( c = 0; c < lastcol-firstcol+1; c++ )
+         beg[c] = lpi->indarray[c];
    }
    else
    {
@@ -1664,54 +1484,57 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
-   SCIP_Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
-   SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
+   SCIP_Real*            lhss,               /**< buffer to store left hand side vector, or NULL */
+   SCIP_Real*            rhss,               /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   int nrows;
-
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+   assert(lhss == rhss);
+
+   debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
-   if( lhs != NULL || rhs != NULL )
+   if( lhss != NULL )
    {
-      /* get row sense, rhs, and ranges */
-      SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
-      CHECK_ZERO( XPRSgetrowtype(lpi->xprslp, lpi->senarray, firstrow, lastrow) );
-      CHECK_ZERO( XPRSgetrhs(lpi->xprslp, lpi->rhsarray, firstrow, lastrow) );
-      CHECK_ZERO( XPRSgetrhsrange(lpi->xprslp, lpi->rngarray, firstrow, lastrow) );
+      assert(rhss != NULL);
 
-      /* convert sen/rhs/range into lhs/rhs tuples */
-      reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
+      /* get left and right sides */
+      SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhss, rhss) );
    }
+   else
+      assert(rhss == NULL);
 
    if( nnonz != NULL )
    {
+      int ntotalnonz;
       int r;
-      int ndim;
-      int *mstart = NULL;
 
       assert(beg != NULL);
       assert(ind != NULL);
       assert(val != NULL);
 
+      /* ensure that the temporary buffer array is large enough */
+      SCIP_CALL( ensureValMem(lpi, lastrow-firstrow+2) );
+
+      /* get number of nonzero in the whole problem; needed to pass a proper size to XPRSgetrows() function call
+       *
+       * @note We are assuming that the arrays given by SCIP are large enough. Otherwise we are getting invalid writes
+       */
+      SCIP_CALL( SCIPlpiGetNNonz(lpi, &ntotalnonz) );
+
       /* get matrix entries */
-      SCIP_ALLOC( BMSallocMemoryArray(&mstart, lastrow-firstrow+2) );
-      SCIPlpiGetNNonz(lpi, &ndim);
-      CHECK_ZERO( XPRSgetrows(lpi->xprslp, mstart, ind, val, ndim, nnonz, firstrow, lastrow) );
-      assert(*nnonz <= ndim);
-      assert(mstart[lastrow-firstrow+1] == *nnonz);
-      for (r = 0; r < lastrow-firstrow+1; r++)
-         beg[r] = mstart[r];
-      BMSfreeMemoryArray(&mstart);
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetrows(lpi->xprslp, lpi->indarray, ind, val, ntotalnonz, nnonz, firstrow, lastrow) );
+      assert(*nnonz <= ntotalnonz);
+      assert(lpi->indarray[lastrow-firstrow+1] == *nnonz);
+
+      for( r = 0; r < lastrow-firstrow+1; r++ )
+         beg[r] = lpi->indarray[r];
    }
    else
    {
@@ -1759,8 +1582,18 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+   double xprsobjsen;
+
+   /* check the objective sense attribute for the current objective sense set in  Xpress */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetdblattrib(lpi->xprslp, XPRS_OBJSENSE, &xprsobjsen) );
+
+   /* convert the Xpress objective sense attribute to a SCIP objective sense */
+   if( xprsobjsen < 0.0 )
+      (*objsen) = SCIP_OBJSEN_MAXIMIZE;
+   else
+      (*objsen) = SCIP_OBJSEN_MINIMIZE;
+
+   return SCIP_OKAY;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -1778,7 +1611,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
-   CHECK_ZERO( XPRSgetobj(lpi->xprslp, vals, firstcol, lastcol) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetobj(lpi->xprslp, vals, firstcol, lastcol) );
 
    return SCIP_OKAY;
 }
@@ -1800,12 +1633,12 @@ SCIP_RETCODE SCIPlpiGetBounds(
 
    if( lbs != NULL )
    {
-      CHECK_ZERO( XPRSgetlb(lpi->xprslp, lbs, firstcol, lastcol) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetlb(lpi->xprslp, lbs, firstcol, lastcol) );
    }
 
    if( ubs != NULL )
    {
-      CHECK_ZERO( XPRSgetub(lpi->xprslp, ubs, firstcol, lastcol) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, ubs, firstcol, lastcol) );
    }
 
    return SCIP_OKAY;
@@ -1826,11 +1659,13 @@ SCIP_RETCODE SCIPlpiGetSides(
 
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 
-   /* get row sense, rhs, and ranges */
+   /* ensure the array size of the temporary buffers */
    SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
-   CHECK_ZERO( XPRSgetrowtype(lpi->xprslp, lpi->senarray, firstrow, lastrow) );
-   CHECK_ZERO( XPRSgetrhs(lpi->xprslp, lpi->rhsarray, firstrow, lastrow) );
-   CHECK_ZERO( XPRSgetrhsrange(lpi->xprslp, lpi->rngarray, firstrow, lastrow) );
+
+   /* get row sense, rhs, and ranges */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetrowtype(lpi->xprslp, lpi->senarray, firstrow, lastrow) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetrhs(lpi->xprslp, lpi->rhsarray, firstrow, lastrow) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetrhsrange(lpi->xprslp, lpi->rngarray, firstrow, lastrow) );
 
    /* convert sen/rhs/range into lhs/rhs tuples */
    reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss);
@@ -1846,33 +1681,11 @@ SCIP_RETCODE SCIPlpiGetCoef(
    SCIP_Real*            val                 /**< pointer to store the value of the coefficient */
    )
 {
-   int i;
-   int nnonz;
-   int mstart[2];
-   int *mind = NULL;
-   double *dval = NULL;
-
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
-
-   /* To get a coefficient we need to extract the full row or column first. */
-   CHECK_ZERO( XPRSgetrows(lpi->xprslp, NULL, NULL, NULL, 0, &nnonz, row, row) );
-   SCIP_ALLOC( BMSallocMemoryArray(&mind, nnonz) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dval, nnonz) );
-   CHECK_ZERO( XPRSgetrows(lpi->xprslp, mstart, mind, dval, nnonz, &nnonz, row, row) );
-   *val = 0.0;
-   for (i = 0; i < nnonz; i++)
-   {
-      if (mind[i] == col)
-      {
-         *val = dval[i];
-         break;
-      }
-   }
-   BMSfreeMemoryArray(&dval);
-   BMSfreeMemoryArray(&mind);
+   /* get the coefficient of the column in the corresponding row */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetcoef(lpi->xprslp, row, col, val) );
 
    return SCIP_OKAY;
 }
@@ -1880,14 +1693,10 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /**@} */
 
 
-
-
-/*
- * Solving Methods
+/**@name Solving Methods
+ *
+ * @{
  */
-
-/**@name Solving Methods */
-/**@{ */
 
 /** solve LP */
 static SCIP_RETCODE lpiSolve(
@@ -1895,8 +1704,6 @@ static SCIP_RETCODE lpiSolve(
    const char*           method              /**< indicates the method to use ('p' - primal, 'd' - dual, 'b' - barrier) */
    )
 {
-   int ncols;
-   int nrows;
    int primalinfeasible;
    int dualinfeasible;
    int state;
@@ -1904,78 +1711,61 @@ static SCIP_RETCODE lpiSolve(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-   SCIPdebugMessage("calling Xpress lp solver type %s: %d cols, %d rows\n", method, ncols, nrows);
-
    invalidateSolution(lpi);
 
-   if (lpi->par_fastlp)
+   /* disable general presolving to ensure that we get dual or primal rays */
+   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
+
+   /* check if the current basis should be ignored */
+   if( lpi->clearstate )
    {
-      /* Set controls to try and speed up the lp solve. */
-      int keepbasis;
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, &keepbasis) );
-      if (keepbasis || !lpi->par_presolve)
-      {
-         /* If we are reoptimizing from a given basis then presolve might have */
-         /* quite a significant overhead. */
-         CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
-         CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, 0) );
-      }
-      else
-      {
-         /* No given basis so presolve might reduce the problem enough to speed */
-         /* up the LP solve. */
-         CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, -1) );
-         CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, 1) );
-      }
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, 0) );
+      lpi->clearstate = FALSE;
+   }
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, (lpi->par_presolve) ?  1 : 0) );
+
+   if( lpi->par_fastlp )
+   {
       /* Don't refactorize at the end of the solve. */
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_REFACTOR, 0) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_REFACTOR, 0) );
    }
    else
    {
       /* Use default settings for solving an lp (hopefully) robustly. */
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, (lpi->par_presolve) ?  -1 : 0) );
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_REFACTOR, 1) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_REFACTOR, 1) );
    }
 
-   if (lpi->objsense > 0)
-   {
-      CHECK_ZERO( XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, lpi->par_uobjlim) );
-      SCIPdebugMessage("calling XPRSminim()\n");
-      CHECK_ZERO( XPRSminim(lpi->xprslp, method) );
-   }
-   else
-   {
-      CHECK_ZERO( XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, lpi->par_lobjlim) );
-      SCIPdebugMessage("calling XPRSmaxim()\n");
-      CHECK_ZERO( XPRSmaxim(lpi->xprslp, method) );
-   }
+   /* solve the LP */
+   CHECK_ZERO( lpi->messagehdlr, XPRSlpoptimize(lpi->xprslp, method) );
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
-   if (lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS)
+   /* evaluate the result */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
+   if( lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS )
    {
-      CHECK_ZERO( XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
    }
    else
       lpi->unbvec = -1;
 
    /* Make sure the LP is postsolved in case it was interrupted. */
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_PRESOLVESTATE, &state) );
-   if (state & (2|4))
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRESOLVESTATE, &state) );
+
+   if( state & (2|4) )
    {
       /* Problem is in a presolve state - postsolve it. */
-      CHECK_ZERO( XPRSpostsolve(lpi->xprslp) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSpostsolve(lpi->xprslp) );
    }
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &lpi->iterations) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &lpi->iterations) );
    lpi->solisbasic = TRUE;
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &primalinfeasible) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &dualinfeasible) );
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &primalinfeasible) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &dualinfeasible) );
    SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
       lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
 
-   if ((lpi->solstat == XPRS_LP_OPTIMAL) && (primalinfeasible || dualinfeasible))
+   if( (lpi->solstat == XPRS_LP_OPTIMAL) && (primalinfeasible || dualinfeasible) )
       lpi->solstat = XPRS_LP_OPTIMAL_SCALEDINFEAS;
 
    return SCIP_OKAY;
@@ -2012,7 +1802,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    lpi->solmethod = 'b';
 
-   CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_CROSSOVER, crossover) );
+   /* enable or disable cross over */
+   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_CROSSOVER, crossover == TRUE ? -1 : 0) );
 
    retval = lpiSolve(lpi, "b");
    lpi->solisbasic = crossover;
@@ -2054,7 +1845,12 @@ SCIP_RETCODE lpiStrongbranch(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int objsen;
+   SCIP_OBJSEN  objsen;
+   double dbndval[2];
+   double dobjval[2];
+   char cbndtype[2];
+   int mbndind[2];
+   int mstatus[2];
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -2074,148 +1870,45 @@ SCIP_RETCODE lpiStrongbranch(
    if( iter != NULL )
       *iter = 0;
 
-   objsen = lpi->objsense;
+   /* get objective sense of the current LP */
+   SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
 
-#if (XPVERSION >= 18)
-   /* From version 17.01.01 we have the dedicated strong branching function */
-   /* XPRSstrongbranch(). Note: It does not work with version 17.01.00. */
+   /* Set the branching bounds (down first, up second). */
+   mbndind[0]  = col;
+   dbndval[0]  = EPSCEIL(psol-1.0, 1e-06);
+   cbndtype[0] = 'U';
+   mbndind[1]  = col;
+   dbndval[1]  = EPSFLOOR(psol+1.0, 1e-06);
+   cbndtype[1] = 'L';
+
+   /* Apply strong branching to the two branches. */
+   CHECK_ZERO( lpi->messagehdlr, XPRSstrongbranch(lpi->xprslp, 2, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
+
+   /* Get the objective of the down branch. */
+   if( (mstatus[0] == XPRS_LP_INFEAS) || (mstatus[0] == XPRS_LP_CUTOFF_IN_DUAL) )
+      *down = objsen == SCIP_OBJSEN_MINIMIZE  ? 1e+40 : -1e+40;
+   else if( (mstatus[0] == XPRS_LP_OPTIMAL) || (mstatus[0] == XPRS_LP_UNFINISHED) )
+      *down = dobjval[0];
+   else
    {
-      int    mbndind[2];
-      double dbndval[2];
-      char   cbndtype[2];
-      double dobjval[2];
-      int    mstatus[2];
-
-      /* Set the branching bounds (down first, up second). */
-      mbndind[0]  = col;
-      dbndval[0]  = EPSCEIL(psol-1.0, 1e-06);
-      cbndtype[0] = 'U';
-      mbndind[1]  = col;
-      dbndval[1]  = EPSFLOOR(psol+1.0, 1e-06);
-      cbndtype[1] = 'L';
-
-      /* Apply strong branching to the two branches. */
-      CHECK_ZERO( XPRSstrongbranch(lpi->xprslp, 2, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
-
-      /* Get the objective of the down branch. */
-      if ((mstatus[0] == XPRS_LP_INFEAS) || (mstatus[0] == XPRS_LP_CUTOFF_IN_DUAL))
-      {
-         *down = objsen == +1 ? 1e+40 : -1e+40;
-      }
-      else if ((mstatus[0] == XPRS_LP_OPTIMAL) || (mstatus[0] == XPRS_LP_UNFINISHED))
-      {
-         *down = dobjval[0];
-      }
-      else
-      {
-         /* Something weird happened. */
-         *downvalid = FALSE;
-      }
-
-      /* Get the objective of the up branch. */
-      if ((mstatus[1] == XPRS_LP_INFEAS) || (mstatus[1] == XPRS_LP_CUTOFF_IN_DUAL))
-      {
-         *up = objsen == +1 ? 1e+40 : -1e+40;
-      }
-      else if ((mstatus[1] == XPRS_LP_OPTIMAL) || (mstatus[1] == XPRS_LP_UNFINISHED))
-      {
-         *up = dobjval[1];
-      }
-      else
-      {
-         /* Something weird happened. */
-         *upvalid = FALSE;
-      }
-
-      /* When using the XPRSstrongbranch function we are unable to provide */
-      /* an iteration count. */
-      if (iter)
-         *iter = -1;
+      /* Something weird happened. */
+      *downvalid = FALSE;
    }
 
-#else
-
+   /* Get the objective of the up branch. */
+   if( (mstatus[1] == XPRS_LP_INFEAS) || (mstatus[1] == XPRS_LP_CUTOFF_IN_DUAL) )
+      *up = objsen == SCIP_OBJSEN_MINIMIZE ? 1e+40 : -1e+40;
+   else if( (mstatus[1] == XPRS_LP_OPTIMAL) || (mstatus[1] == XPRS_LP_UNFINISHED) )
+      *up = dobjval[1];
+   else
    {
-      const char lbound = 'L';
-      const char ubound = 'U';
-      SCIP_Real oldlb;
-      SCIP_Real oldub;
-      SCIP_Real newlb;
-      SCIP_Real newub;
-      int olditlim;
-      int it;
-
-      /* save current LP basis and bounds*/
-      SCIP_CALL( getBase(lpi) );
-      CHECK_ZERO( XPRSgetlb(lpi->xprslp, &oldlb, col, col) );
-      CHECK_ZERO( XPRSgetub(lpi->xprslp, &oldub, col, col) );
-
-      /* save old iteration limit and set iteration limit to strong */
-      /* branching limit */
-      if( itlim > XPRS_MAXINT ) itlim = XPRS_MAXINT;
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &olditlim) );
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, itlim) );
-
-      /* down branch */
-      newub = EPSCEIL(psol-1.0, 1e-06);
-      if( newub >= oldlb - 0.5 )
-      {
-         CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &newub) );
-         SCIP_CALL( SCIPlpiSolveDual(lpi) );
-         if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-            *down = objsen == +1 ? 1e+40 : -1e+40;
-         else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-         {
-            SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
-         }
-         else
-            *down = objsen == +1 ? 1e+40 : -1e+40;
-         if( iter != NULL )
-         {
-            SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-            *iter += it;
-         }
-         SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
-
-         CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &oldub) );
-         SCIP_CALL( setBase(lpi) );
-      }
-      else
-         *down = objsen == +1 ? 1e+40 : -1e+40;
-
-      /* up branch */
-      newlb = EPSFLOOR(psol+1.0, 1e-06);
-      if( newlb <= oldub + 0.5 )
-      {
-         CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &newlb) );
-         SCIP_CALL( SCIPlpiSolveDual(lpi) );
-         if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-            *up = objsen == +1 ? 1e+40 : -1e+40;
-         else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-         {
-            SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
-         }
-         else
-            *up = objsen == +1 ? 1e+40 : -1e+40;
-         if( iter != NULL )
-         {
-            SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-            *iter += it;
-         }
-         SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
-
-         CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &oldlb) );
-         SCIP_CALL( setBase(lpi) );
-      }
-      else
-         *up = objsen == +1 ? 1e+40 : -1e+40;
-
-      /* reset iteration limit */
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, olditlim) );
-
+      /* Something weird happened. */
+      *upvalid = FALSE;
    }
 
-#endif
+   /* When using the XPRSstrongbranch function we are unable to provide an iteration count */
+   if( iter != NULL )
+      *iter = -1;
 
    return SCIP_OKAY;
 }
@@ -2226,7 +1919,7 @@ SCIP_RETCODE lpiStrongbranches(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  cols,               /**< columns to apply strong branching on */
    int                   ncols,              /**< number of columns */
-   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   SCIP_Real*            psols,              /**< current primal solution values of columns (might be integral) */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
    SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
@@ -2237,7 +1930,12 @@ SCIP_RETCODE lpiStrongbranches(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int objsen;
+   double* dbndval;
+   double* dobjval;
+   char*   cbndtype;
+   int*    mbndind;
+   int*    mstatus;
+   SCIP_OBJSEN objsen;
    int j;
 
    assert( lpi != NULL );
@@ -2254,176 +1952,72 @@ SCIP_RETCODE lpiStrongbranches(
    if( iter != NULL )
       *iter = 0;
 
-   objsen = lpi->objsense;
+   /* get objective sense of the current LP */
+   SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
 
-#if (XPVERSION >= 18)
-   /* From version 17.01.01 we have the dedicated strong branching function */
-   /* XPRSstrongbranch(). Note: It does not work with version 17.01.00. */
+   /* Set the branching bounds (down first, up second). */
+   SCIP_ALLOC( BMSallocMemoryArray(&mbndind, 2*ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dbndval, 2*ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&cbndtype, 2*ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dobjval, 2*ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&mstatus, 2*ncols) );
+
+   /* construct the bounds for the strong branches */
+   for( j = 0; j < ncols; ++j )
    {
-      int*    mbndind;
-      double* dbndval;
-      char*   cbndtype;
-      double* dobjval;
-      int*    mstatus;
+      mbndind[2*j] = cols[j];
+      dbndval[2*j] = EPSCEIL(psols[j] - 1.0, 1e-06);
+      cbndtype[2*j] = 'U';
 
-      /* Set the branching bounds (down first, up second). */
-      SCIP_ALLOC( BMSallocMemoryArray(&mbndind, 2*ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray(&dbndval, 2*ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray(&cbndtype, 2*ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray(&dobjval, 2*ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray(&mstatus, 2*ncols) );
-
-      for (j = 0; j < ncols; ++j)
-      {
-         mbndind[2*j]  = cols[j];
-         dbndval[2*j]  = EPSCEIL(psols[j] - 1.0, 1e-06);
-         cbndtype[2*j] = 'U';
-
-         mbndind[2*j+1]  = cols[j];
-         dbndval[2*j+1]  = EPSFLOOR(psols[j] + 1.0, 1e-06);
-         cbndtype[2*j+1] = 'L';
-      }
-
-      /* Apply strong branching to the 2*ncols branches. */
-      CHECK_ZERO( XPRSstrongbranch(lpi->xprslp, 2*ncols, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
-
-      for (j = 0; j < ncols; ++j)
-      {
-         upvalid[j]   = TRUE;
-         downvalid[j] = TRUE;
-
-         /* Get the objective of the down branch. */
-         if ((mstatus[2*j] == XPRS_LP_INFEAS) || (mstatus[2*j] == XPRS_LP_CUTOFF_IN_DUAL))
-            down[j] = objsen == +1 ? 1e+40 : -1e+40;
-         else if ((mstatus[2*j] == XPRS_LP_OPTIMAL) || (mstatus[2*j] == XPRS_LP_UNFINISHED))
-            down[j] = dobjval[2*j];
-         else
-         {
-            /* Something weird happened. */
-            downvalid[j] = FALSE;
-         }
-
-         /* Get the objective of the up branch. */
-         if ((mstatus[2*j+1] == XPRS_LP_INFEAS) || (mstatus[2*j+1] == XPRS_LP_CUTOFF_IN_DUAL))
-            up[j] = objsen == +1 ? 1e+40 : -1e+40;
-         else if ((mstatus[2*j+1] == XPRS_LP_OPTIMAL) || (mstatus[2*j+1] == XPRS_LP_UNFINISHED))
-            up[j] = dobjval[2*j+1];
-         else
-         {
-            /* Something weird happened. */
-            upvalid[j] = FALSE;
-         }
-      }
-
-      /* When using the XPRSstrongbranch function we are unable to provide */
-      /* an iteration count. */
-      if (iter)
-         *iter = -1;
-
-      BMSfreeMemoryArray(&mstatus);
-      BMSfreeMemoryArray(&dobjval);
-      BMSfreeMemoryArray(&cbndtype);
-      BMSfreeMemoryArray(&dbndval);
-      BMSfreeMemoryArray(&mbndind)
+      mbndind[2*j+1] = cols[j];
+      dbndval[2*j+1] = EPSFLOOR(psols[j] + 1.0, 1e-06);
+      cbndtype[2*j+1] = 'L';
    }
-#else
+
+   /* apply strong branching to the 2*ncols branches. */
+   CHECK_ZERO( lpi->messagehdlr, XPRSstrongbranch(lpi->xprslp, 2*ncols, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
+
+   for( j = 0; j < ncols; ++j )
    {
-      int olditlim;
+      upvalid[j]   = TRUE;
+      downvalid[j] = TRUE;
 
-      /* save current LP basis */
-      SCIP_CALL( getBase(lpi) );
-
-      /* save old iteration limit and set iteration limit to strong */
-      /* branching limit */
-      if ( itlim > XPRS_MAXINT )
-         itlim = XPRS_MAXINT;
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &olditlim) );
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, itlim) );
-
-      for (j = 0; j < ncols; ++j)
+      /* Get the objective of the down branch. */
+      if( (mstatus[2*j] == XPRS_LP_INFEAS) || (mstatus[2*j] == XPRS_LP_CUTOFF_IN_DUAL) )
+         down[j] = objsen == SCIP_OBJSEN_MINIMIZE ? 1e+40 : -1e+40;
+      else if( (mstatus[2*j] == XPRS_LP_OPTIMAL) || (mstatus[2*j] == XPRS_LP_UNFINISHED) )
+         down[j] = dobjval[2*j];
+      else
       {
-         const char lbound = 'L';
-         const char ubound = 'U';
-         SCIP_Real oldlb;
-         SCIP_Real oldub;
-         SCIP_Real newlb;
-         SCIP_Real newub;
-         SCIP_Real psol;
-         int col;
-         int it;
-
-         upvalid[j]   = TRUE;
-         downvalid[j] = TRUE;
-
-         col = cols[j];
-         psol = psols[j];
-
-         /* save current LP bounds*/
-         CHECK_ZERO( XPRSgetlb(lpi->xprslp, &oldlb, col, col) );
-         CHECK_ZERO( XPRSgetub(lpi->xprslp, &oldub, col, col) );
-
-         /* down branch */
-         newub = EPSCEIL(psol-1.0, 1e-06);
-         if( newub >= oldlb - 0.5 )
-         {
-            CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &newub) );
-            SCIP_CALL( SCIPlpiSolveDual(lpi) );
-            if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-               down[j] = objsen == +1 ? 1e+40 : -1e+40;
-            else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-            {
-               SCIP_CALL( SCIPlpiGetObjval(lpi, &(down[j])) );
-            }
-            else
-               down[j] = objsen == +1 ? 1e+40 : -1e+40;
-
-            if( iter != NULL )
-            {
-               SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-               *iter += it;
-            }
-            SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, down[j]);
-
-            CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &oldub) );
-            SCIP_CALL( setBase(lpi) );
-         }
-         else
-            down[j] = objsen == +1 ? 1e+40 : -1e+40;
-
-         /* up branch */
-         newlb = EPSFLOOR(psol+1.0, 1e-06);
-         if( newlb <= oldub + 0.5 )
-         {
-            CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &newlb) );
-            SCIP_CALL( SCIPlpiSolveDual(lpi) );
-            if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-               up[j] = objsen == +1 ? 1e+40 : -1e+40;
-            else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-            {
-               SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
-            }
-            else
-               up[j] = objsen == +1 ? 1e+40 : -1e+40;
-            if( iter != NULL )
-            {
-               SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-               *iter += it;
-            }
-            SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, up[j]);
-
-            CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &oldlb) );
-            SCIP_CALL( setBase(lpi) );
-         }
-         else
-            up[j] = objsen == +1 ? 1e+40 : -1e+40;
+         /* Something weird happened. */
+         downvalid[j] = FALSE;
       }
 
-      /* reset iteration limit */
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, olditlim) );
+      /* Get the objective of the up branch. */
+      if( (mstatus[2*j+1] == XPRS_LP_INFEAS) || (mstatus[2*j+1] == XPRS_LP_CUTOFF_IN_DUAL) )
+         up[j] = objsen == SCIP_OBJSEN_MINIMIZE ? 1e+40 : -1e+40;
+      else if( (mstatus[2*j+1] == XPRS_LP_OPTIMAL) || (mstatus[2*j+1] == XPRS_LP_UNFINISHED) )
+         up[j] = dobjval[2*j+1];
+      else
+      {
+         /* Something weird happened. */
+         upvalid[j] = FALSE;
+      }
    }
-#endif
 
-   return SCIP_OKAY;
+   /* When using the XPRSstrongbranch function we are unable to provide
+    * an iteration count.
+    */
+   if( iter != NULL )
+      *iter = -1;
+
+   BMSfreeMemoryArray(&mstatus);
+   BMSfreeMemoryArray(&dobjval);
+   BMSfreeMemoryArray(&cbndtype);
+   BMSfreeMemoryArray(&dbndval);
+   BMSfreeMemoryArray(&mbndind)
+
+      return SCIP_OKAY;
 }
 
 /** performs strong branching iterations on one @b fractional candidate */
@@ -2511,17 +2105,14 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 
    return SCIP_OKAY;
 }
+
 /**@} */
 
 
-
-
-/*
- * Solution Information Methods
+/**@name Solution Information Methods
+ *
+ * @{
  */
-
-/**@name Solution Information Methods */
-/**@{ */
 
 /** returns whether a solve method was called after the last modification of the LP */
 SCIP_Bool SCIPlpiWasSolved(
@@ -2533,8 +2124,10 @@ SCIP_Bool SCIPlpiWasSolved(
    return (lpi->solstat != -1);
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
-/** here "true" should mean feasible, "false" should mean unknown                 */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  here "true" should mean feasible, "false" should mean unknown
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
@@ -2575,25 +2168,16 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int hasRay;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
+   assert(lpi->solstat == XPRS_LP_UNBOUNDED);
 
-#if OLDRAYCODE
-   if (lpi->solstat != XPRS_LP_UNBOUNDED)
-      return FALSE;
+   ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetprimalray(lpi->xprslp, NULL, &hasRay) );
 
-   if (lpi->unbvec < 0)
-      return FALSE;
-
-   return TRUE;
-#else
-   {
-      int hasRay;
-      CHECK_ZERO( XPRSgetprimalray(lpi->xprslp, NULL, &hasRay) );
-      return hasRay;
-   }
-#endif
+   return hasRay;
 }
 
 /** returns TRUE iff LP is proven to be primal feasible and unbounded */
@@ -2665,28 +2249,15 @@ SCIP_Bool SCIPlpiHasDualRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int hasRay;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-#if OLDRAYCODE
-   if (lpi->solmethod != 'p')
-   {
-      /* We can only get a dual ray from primal. */
-      SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
-   }
+   ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetdualray(lpi->xprslp, NULL, &hasRay) );
 
-   if (lpi->solstat != XPRS_LP_INFEAS)
-      return FALSE;
-
-   return TRUE;
-#else
-   {
-      int hasRay;
-      CHECK_ZERO( XPRSgetdualray(lpi->xprslp, NULL, &hasRay) );
-      return hasRay;
-   }
-#endif
+   return hasRay;
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */
@@ -2761,17 +2332,17 @@ SCIP_Bool SCIPlpiIsStable(
     */
    if( lpi->solstat == XPRS_LP_UNBOUNDED )
    {
+      int retcode;
       int pinfeas;
 
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &pinfeas) );
+      retcode = XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &pinfeas);
 
-      if( pinfeas )
+      if( retcode != 0 || pinfeas )
          return FALSE;
    }
-   else if ( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
+   else if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
    {
-      /* Presolved problem was solved to optimality but infeasibilities */
-      /* were introduced by postsolve. */
+      /* presolved problem was solved to optimality but infeasibilities were introduced by postsolve */
       return FALSE;
    }
 
@@ -2802,10 +2373,10 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &lpiter) );
-   CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &lpiterlimit) );
+   ABORT_ZERO( lpi->messagehdlr, TRUE, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &lpiter) );
+   ABORT_ZERO( lpi->messagehdlr, TRUE, XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &lpiterlimit) );
 
-   if ( (lpi->solstat == XPRS_LP_UNFINISHED) && (lpiter >= lpiterlimit) )
+   if( (lpi->solstat == XPRS_LP_UNFINISHED) && (lpiter >= lpiterlimit) )
       return TRUE;
    else
       return FALSE;
@@ -2823,10 +2394,10 @@ SCIP_Bool SCIPlpiIsTimelimExc(
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &lpiter) );
-   CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &lpiterlimit) );
+   ABORT_ZERO( lpi->messagehdlr, TRUE, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &lpiter) );
+   ABORT_ZERO( lpi->messagehdlr, TRUE, XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &lpiterlimit) );
 
-   if ( (lpi->solstat == XPRS_LP_UNFINISHED) && (lpiter < lpiterlimit) )
+   if( (lpi->solstat == XPRS_LP_UNFINISHED) && (lpiter < lpiterlimit) )
       return TRUE;
    else
       return FALSE;
@@ -2869,7 +2440,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( XPRSgetdblattrib(lpi->xprslp, XPRS_LPOBJVAL, objval) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetdblattrib(lpi->xprslp, XPRS_LPOBJVAL, objval) );
 
    return SCIP_OKAY;
 }
@@ -2890,22 +2461,26 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("getting solution\n");
 
-   CHECK_ZERO( XPRSgetsol(lpi->xprslp, primsol, activity, dualsol, redcost) );
-   if (objval)
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetsol(lpi->xprslp, primsol, activity, dualsol, redcost) );
+
+   if( objval != NULL )
    {
-      CHECK_ZERO( XPRSgetdblattrib(lpi->xprslp, XPRS_LPOBJVAL, objval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblattrib(lpi->xprslp, XPRS_LPOBJVAL, objval) );
    }
 
    if( activity != NULL )
    {
       /* Convert the slack values into activity values. */
-      int r;
       int nrows;
+      int r;
 
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+
       SCIP_CALL( ensureSidechgMem(lpi, nrows) );
-      CHECK_ZERO( XPRSgetrhs(lpi->xprslp, lpi->rhsarray, 0, nrows-1) );
-      for (r = 0; r < nrows; r++)
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetrhs(lpi->xprslp, lpi->rhsarray, 0, nrows-1) );
+
+      for( r = 0; r < nrows; r++ )
          activity[r] = lpi->rhsarray[r] - activity[r];
    }
 
@@ -2918,102 +2493,17 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIP_Real*            ray                 /**< primal ray */
    )
 {
-#if OLDRAYCODE
-   int i;
-   int irow;
-   int nrows;
-   int ncols;
-   int cfirst;
-   double dmult;
-
-   int    *bind = NULL;
-   double *bvec = NULL;
-#endif
+   int hasRay;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(ray != NULL);
    assert(lpi->solstat >= 0);
 
-#if OLDRAYCODE
-   /* Check if it is possible for us to extract a primal ray. */
-   if ((lpi->solstat != XPRS_LP_UNBOUNDED) || (lpi->unbvec < 0))
-   {
-      /* Not unbounded or the optimizer didn't return a ray index. */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetprimalray(lpi->xprslp, ray, &hasRay) );
+
+   if( !hasRay )
       return SCIP_LPERROR;
-   }
-
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &ncols) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_SPAREROWS, &cfirst) );
-   cfirst += nrows;
-   SCIP_CALL( getBase(lpi) );
-   if (lpi->solmethod == 'd')
-      return SCIP_LPERROR; /* Unboundedness found by dual - nothing we can do about it. */
-
-   /* At this point we should be fairly confident that unboundedness */
-   /* is caused by primal trying to pivot a non-basic variable into */
-   /* the basis. */
-   memset(ray, 0, ncols*sizeof(*ray));
-
-   /* Get the simplex tableau column of the pivot variable. */
-   SCIP_ALLOC( BMSallocMemoryArray(&bind, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&bvec, nrows) );
-   memset(bvec, 0, nrows*sizeof(*bvec));
-   if (lpi->unbvec >= cfirst)
-   {
-      /* We have a non-basic column - extract it... */
-      int icol = lpi->unbvec-cfirst;
-      int ifirst = 0;
-      int nnonz = nrows;
-      int    *mcolind = NULL;
-      double *dcolval = NULL;
-
-      assert(lpi->cstat[icol] != 1);
-
-      dmult = lpi->cstat[icol] ? -1.0 : +1.0;
-      SCIP_ALLOC( BMSallocMemoryArray(&dcolval, nrows) );
-      SCIP_ALLOC( BMSallocMemoryArray(&mcolind, nrows) );
-      SCIP_CALL( SCIPlpiGetCols(lpi, icol, icol, NULL, NULL, &nnonz, &ifirst, mcolind, dcolval) );
-
-      /* ... and unpack it. */
-      assert(nnonz > 0);
-      for (i = 0; i < nnonz; i++)
-         bvec[mcolind[i]] = dmult*dcolval[i];
-      ray[icol] = dmult;
-      BMSfreeMemoryArray(&dcolval);
-      BMSfreeMemoryArray(&mcolind);
-   }
-   else
-   {
-      /* We have a non-basic row. */
-      irow = lpi->unbvec;
-      assert(lpi->rstat[irow] != 1);
-      dmult = lpi->rstat[irow] ? -1.0 : +1.0;
-      bvec[irow] = dmult;
-   }
-
-   /* Get the simplex tableau column and the variable basic in each row. */
-   CHECK_ZERO( XPRSftran(lpi->xprslp, bvec) );
-   CHECK_ZERO( XPRSgetpivotorder(lpi->xprslp, bind) );
-
-   /* Save the ray. */
-   for (irow = 0; irow < nrows; irow++)
-   {
-      if (bind[irow] >= cfirst)
-         ray[bind[irow]-cfirst] = bvec[irow];
-   }
-
-   BMSfreeMemoryArray(&bind);
-   BMSfreeMemoryArray(&bvec);
-#else
-   {
-      int hasRay;
-      CHECK_ZERO( XPRSgetprimalray(lpi->xprslp, ray, &hasRay) );
-      if (!hasRay)
-         return SCIP_LPERROR;
-   }
-#endif
 
    return SCIP_OKAY;
 }
@@ -3024,32 +2514,17 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {
+   int hasRay;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
    assert(dualfarkas != NULL);
 
-#if OLDRAYCODE
-   /* Check if it is possible for us to extract a dual ray. */
-   if (lpi->solstat != XPRS_LP_INFEAS)
-   {
-      /* Not infeasible. */
-      return SCIP_LPERROR;
-   }
-   if (lpi->solmethod != 'p')
-      return SCIP_LPERROR;
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetdualray(lpi->xprslp, dualfarkas, &hasRay) );
 
-   /* The required Farkas multipliers should be the duals set up by */
-   /* phase I primal. */
-   CHECK_ZERO( XPRSgetsol(lpi->xprslp, NULL, NULL, dualfarkas, NULL) );
-#else
-   {
-      int hasRay;
-      CHECK_ZERO( XPRSgetdualray(lpi->xprslp, dualfarkas, &hasRay) );
-      if (!hasRay)
-         return SCIP_LPERROR;
-   }
-#endif
+   if( !hasRay )
+      return SCIP_LPERROR;
 
    return SCIP_OKAY;
 }
@@ -3092,14 +2567,10 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 /**@} */
 
 
-
-
-/*
- * LP Basis Methods
+/**@name LP Basis Methods
+ *
+ * @{
  */
-
-/**@name LP Basis Methods */
-/**@{ */
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpiGetBase(
@@ -3113,31 +2584,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    SCIPdebugMessage("saving Xpress basis into %p/%p\n", (void*)rstat, (void*)cstat);
 
-   CHECK_ZERO( XPRSgetbasis(lpi->xprslp, rstat, cstat) );
-
-   /* Convert Xpress basis status into the SCIP format. */
-#if (XPVERSION < 17)
-   if (cstat)
-   {
-      int c;
-      int ncols;
-
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-
-      /* Before version 17.00.00 of Xpress, there was no superbasic status in xprs */
-      for (c = 0; c < ncols; c++)
-      {
-         assert(cstat[c] >=0 && cstat[c] <= 2);
-         if (cstat[c] == 0)
-         {  /* Check if it might be super-basic. */
-            double dlb;
-            CHECK_ZERO( XPRSgetlb(lpi->xprslp, &dlb, c, c) );
-            if (dlb <= XPRS_MINUSINFINITY)
-               cstat[c] = SCIP_BASESTAT_ZERO;
-         }
-      }
-   }
-#endif
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetbasis(lpi->xprslp, rstat, cstat) );
 
    return SCIP_OKAY;
 }
@@ -3158,38 +2605,22 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    invalidateSolution(lpi);
 
-#if (XPVERSION < 17)
-   {
-      int c;
-      int ncols;
-      int *cstat_xprs = NULL;
+   CHECK_ZERO( lpi->messagehdlr, XPRSloadbasis(lpi->xprslp, rstat, cstat) );
 
-      /* Set any super-basic variables to be at lower bound. */
-      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray(&cstat_xprs, ncols) );
-      /* We can't set a super-basic status so set it at lower bound instead. */
-      for (c = 0; c < ncols; c++)
-         cstat_xprs[c] = (cstat[c] == 3) ? 0 : cstat[c];
-      CHECK_ZERO( XPRSloadbasis(lpi->xprslp, rstat, cstat_xprs) );
-      BMSfreeMemoryArray(&cstat_xprs);
-   }
-#else
-   CHECK_ZERO( XPRSloadbasis(lpi->xprslp, rstat, cstat) );
-#endif
+   lpi->clearstate = FALSE;
 
    return SCIP_OKAY;
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
-   int r;
-   int nrows;
    int irspace;
+   int nrows;
+   int r;
 
    /* In the basis methods we assume that xprs basis flags coincide with scip, so assert it */
    assert((0 == SCIP_BASESTAT_LOWER) && (1 == SCIP_BASESTAT_BASIC) && (2 == SCIP_BASESTAT_UPPER) && (3 == SCIP_BASESTAT_ZERO));
@@ -3200,16 +2631,16 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    SCIPdebugMessage("getting basis information\n");
 
-   CHECK_ZERO( XPRSgetpivotorder(lpi->xprslp, bind) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetpivotorder(lpi->xprslp, bind) );
 
    /* Reindex variables to match those of SCIP. */
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_SPAREROWS, &irspace) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SPAREROWS, &irspace) );
    irspace += nrows;
 
-   for (r = 0; r < nrows; r++)
+   for( r = 0; r < nrows; r++ )
    {
-      if (bind[r] < nrows)
+      if( bind[r] < nrows )
          bind[r] = -bind[r]-1;
       else
       {
@@ -3235,10 +2666,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    SCIPdebugMessage("getting binv-row %d\n", row);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
    memset(coef, 0, nrows*sizeof(*coef));
    coef[row] = 1.0;
-   CHECK_ZERO( XPRSbtran(lpi->xprslp, coef) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSbtran(lpi->xprslp, coef) );
 
    return SCIP_OKAY;
 }
@@ -3261,10 +2692,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
    memset(coef, 0, nrows*sizeof(*coef));
    coef[c] = 1.0;
-   CHECK_ZERO( XPRSftran(lpi->xprslp, coef) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSftran(lpi->xprslp, coef) );
 
    return SCIP_OKAY;
 }
@@ -3273,51 +2704,59 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   const SCIP_Real*      binvrow_in,         /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            val                 /**< vector to return coefficients */
+   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
+   SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {
-   int c;
-   int nrows, ncols;
+   SCIP_Real* binv;
+   SCIP_Real* buffer;
+   int ncols;
+   int nrows;
    int nnonz;
-
-   SCIP_Real *binvrow = NULL;
+   int c;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(binvrow != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
 
-   /* Get the row of the basis inverse. */
-   if (binvrow_in)
-      binvrow = (double *) binvrow_in;
-   else
+   buffer = NULL;
+
+   /* get (or calculate) the row in B^-1 */
+   if( binvrow == NULL )
+   {
       SCIP_ALLOC( BMSallocMemoryArray(&binvrow, nrows) );
+
+      SCIP_ALLOC( BMSallocMemoryArray(&buffer, nrows) );
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buffer) );
+      binv = buffer;
+   }
+   else
+      binv = (double*) binvrow;
 
    /* We need space to extract a single column. */
    SCIP_CALL( ensureValMem(lpi, nrows) );
 
-   for (c = 0; c < ncols; c++)
+   for( c = 0; c < ncols; c++ )
    {
       int i;
-      double dsum = 0.0;
+
+      coef[c] = 0;
 
       /* Extract the column. */
-      CHECK_ZERO( XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, c, c) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, c, c) );
+      assert(nnonz <= nrows);
 
       /* Price out the column. */
-      for (i = 0; i < nnonz; i++)
-         dsum += binvrow[lpi->indarray[i]]*lpi->valarray[i];
-      val[c] = dsum;
+      for( i = 0; i < nnonz; i++ )
+         coef[c] += binv[lpi->indarray[i]] * lpi->valarray[i];
    }
 
    /* Free allocated memory. */
-   if (binvrow_in == NULL)
-      BMSfreeMemoryArray(&binvrow);
+   BMSfreeMemoryArrayNull(&buffer);
 
    return SCIP_OKAY;
 }
@@ -3329,28 +2768,32 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {
-   int i;
    int nrows;
    int nnonz;
+   int i;
+
+   /* Ftran */
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
 
    /* We need space to extract the column. */
    SCIP_CALL( ensureValMem(lpi, nrows) );
 
    /* Get the column to transform. */
-   CHECK_ZERO( XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, c, c) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, c, c) );
+   assert(nnonz <= nrows);
 
    /* Transform the column. */
    memset(coef, 0, nrows*sizeof(*coef));
-   for (i = 0; i < nnonz; i++)
+   for( i = 0; i < nnonz; i++ )
       coef[lpi->indarray[i]] = lpi->valarray[i];
-   CHECK_ZERO( XPRSbtran(lpi->xprslp, coef) );
+
+   CHECK_ZERO( lpi->messagehdlr, XPRSftran(lpi->xprslp, coef) );
 
    return SCIP_OKAY;
 }
@@ -3358,14 +2801,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 /**@} */
 
 
-
-
-/*
- * LP State Methods
+/**@name LP State Methods
+ *
+ * @{
  */
-
-/**@name LP State Methods */
-/**@{ */
 
 /** stores LPi state (like basis information) into lpistate object */
 SCIP_RETCODE SCIPlpiGetState(
@@ -3382,15 +2821,17 @@ SCIP_RETCODE SCIPlpiGetState(
    assert(lpi->xprslp != NULL);
    assert(lpistate != NULL);
 
-   /* if there is no basis information available (e.g. after barrier without crossover), no state can be saved */
-   if( !lpi->solisbasic )
+   /* if there is no basis information available (e.g. after barrier without crossover), or no state can be saved; if
+    * SCIPlpiClearState() has been called, do not return the state
+    */
+   if( !lpi->solisbasic || lpi->clearstate )
    {
       *lpistate = NULL;
       return SCIP_OKAY;
    }
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
    assert(ncols >= 0);
    assert(nrows >= 0);
 
@@ -3399,8 +2840,12 @@ SCIP_RETCODE SCIPlpiGetState(
 
    SCIPdebugMessage("storing Xpress LPI state in %p (%d cols, %d rows)\n", (void*)*lpistate, ncols, nrows);
 
+   /* allocate enough memory for storing uncompressed basis information */
+   SCIP_CALL( ensureCstatMem(lpi, ncols) );
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
+
    /* get unpacked basis information from Xpress */
-   SCIP_CALL( getBase(lpi) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
 
    /* pack LPi state data */
    (*lpistate)->ncols = ncols;
@@ -3427,38 +2872,44 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
-
-   assert(lpistate == NULL || lpistate->ncols == ncols);
-   assert(lpistate == NULL || lpistate->nrows == nrows);
-
    /* if there was no basis information available, the LPI state was not stored */
    if( lpistate == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Xpress\n", (void*)lpistate, lpistate->ncols, lpistate->nrows);
-
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
       return SCIP_OKAY;
 
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+
+   /* the dimension of the lpi state should not be larger than the current problem; it might be that columns and rows
+    * are added since the saving of the lpi state
+    */
+   assert(lpistate == NULL || lpistate->ncols <= ncols);
+   assert(lpistate == NULL || lpistate->nrows <= nrows);
+
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Xpress\n", (void*)lpistate, lpistate->ncols, lpistate->nrows);
+
    /* allocate enough memory for storing uncompressed basis information */
-   SCIP_CALL( ensureCstatMem(lpi, lpistate->ncols) );
-   SCIP_CALL( ensureRstatMem(lpi, lpistate->nrows) );
+   SCIP_CALL( ensureCstatMem(lpi, ncols) );
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
    /* extend the basis to the current LP beyond the previously existing columns */
-   for (i = lpistate->ncols; i < ncols; ++i)
+   for( i = lpistate->ncols; i < ncols; ++i )
    {
       SCIP_Real bnd;
-      CHECK_ZERO( XPRSgetlb(lpi->xprslp, &bnd, i, i) );
-      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetlb(lpi->xprslp, &bnd, i, i) );
+
+      if( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
       {
          /* if lower bound is +/- infinity -> try upper bound */
-         CHECK_ZERO( XPRSgetub(lpi->xprslp, &bnd, i, i) );
-         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, &bnd, i, i) );
+
+         if( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
             lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
          else
             lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
@@ -3466,11 +2917,13 @@ SCIP_RETCODE SCIPlpiSetState(
       else
          lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
-   for (i = lpistate->nrows; i < nrows; ++i)
+   for( i = lpistate->nrows; i < nrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information into Xpress */
-   SCIP_CALL( setBase(lpi) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSloadbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
+
+   lpi->clearstate = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3482,8 +2935,8 @@ SCIP_RETCODE SCIPlpiClearState(
 {
    assert(lpi != NULL);
 
-   /**@todo implement SCIPlpiClearState() for Xpress */
-   SCIPmessagePrintWarning(lpi->messagehdlr, "Xpress interface does not implement SCIPlpiClearState()\n");
+   /* set KEEPBASIS to 0 for the next solve */
+   lpi->clearstate = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3527,7 +2980,7 @@ SCIP_RETCODE SCIPlpiReadState(
 
    SCIPdebugMessage("reading LP state from file <%s>\n", fname);
 
-   CHECK_ZERO( XPRSreadbasis(lpi->xprslp, fname, "") );
+   CHECK_ZERO( lpi->messagehdlr, XPRSreadbasis(lpi->xprslp, fname, "") );
 
    return SCIP_OKAY;
 }
@@ -3543,7 +2996,7 @@ SCIP_RETCODE SCIPlpiWriteState(
 
    SCIPdebugMessage("writing LP state to file <%s>\n", fname);
 
-   CHECK_ZERO( XPRSwritebasis(lpi->xprslp, fname, "") );
+   CHECK_ZERO( lpi->messagehdlr, XPRSwritebasis(lpi->xprslp, fname, "") );
 
    return SCIP_OKAY;
 }
@@ -3551,14 +3004,10 @@ SCIP_RETCODE SCIPlpiWriteState(
 /**@} */
 
 
-
-
-/*
- * LP Pricing Norms Methods
+/**@name LP Pricing Norms Methods
+ *
+ * @{
  */
-
-/**@name LP Pricing Norms Methods */
-/**@{ */
 
 /** stores LPi pricing norms information
  *  @todo should we store norm information?
@@ -3607,14 +3056,10 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 /**@} */
 
 
-
-
-/*
- * Parameter Methods
+/**@name Parameter Methods
+ *
+ * @{
  */
-
-/**@name Parameter Methods */
-/**@{ */
 
 /** gets integer parameter of LP */
 SCIP_RETCODE SCIPlpiGetIntpar(
@@ -3633,31 +3078,37 @@ SCIP_RETCODE SCIPlpiGetIntpar(
 
    switch( type )
    {
+   case SCIP_LPPAR_PRICING:
+      *ival = (int)lpi->pricing;
+      break;
    case SCIP_LPPAR_FROMSCRATCH:
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, &ictrlval) );
+#if  1
+      *ival = (lpi->notfromscratch == 0);
+#else
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, &ictrlval) );
       *ival = (ictrlval == 0);
+#endif
       break;
    case SCIP_LPPAR_SCALING:
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_SCALING, &ictrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_SCALING, &ictrlval) );
       *ival = (ictrlval != 0);
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->par_presolve;
       break;
    case SCIP_LPPAR_LPINFO:
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, &ictrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, &ictrlval) );
       *ival = (ictrlval != 0);
       break;
    case SCIP_LPPAR_LPITLIM:
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &ictrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &ictrlval) );
       *ival = ictrlval;
       if( *ival >= XPRS_MAXINT )
          *ival = XPRS_MAXINT;
       break;
-   case SCIP_LPPAR_FASTMIP:
-      /* We treat this as a meta parameter to enable settings that make */
-      /* reoptimization go faster. */
-      *ival = lpi->par_fastlp;
+   case SCIP_LPPAR_THREADS:
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_THREADS, &ictrlval) );
+      *ival = ictrlval;
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3680,13 +3131,31 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 
    switch( type )
    {
+   case SCIP_LPPAR_PRICING:
+      lpi->pricing = (SCIP_PRICING)ival; /* store pricing method in LPI struct */
+      switch( lpi->pricing )
+      {
+      case SCIP_PRICING_PARTIAL:
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRICINGALG, XPRS_PRICING_PARTIAL) );
+         break;
+      case SCIP_PRICING_DEVEX:
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRICINGALG, XPRS_PRICING_DEVEX) );
+         break;
+      case SCIP_PRICING_AUTO:
+      case SCIP_PRICING_LPIDEFAULT:
+      default:
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRICINGALG, XPRS_PRICING_DEFAULT) );
+         break;
+      }
+      break;
    case SCIP_LPPAR_FROMSCRATCH:
       assert(ival == TRUE || ival == FALSE);
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, (ival == FALSE) ? 1 : 0) );
+      lpi->notfromscratch = (int)(!ival);
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, (ival == FALSE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, (ival == TRUE) ? 35 : 0) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, (ival == TRUE) ? 35 : 0) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
@@ -3694,17 +3163,14 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
       ival = MIN(ival, XPRS_MAXINT);
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
-   case SCIP_LPPAR_FASTMIP:
-      /* We treat this as a meta parameter to enable settings that make */
-      /* reoptimization go faster. Nothing is set in Xpress until we solve */
-      /* the problem. */
-      lpi->par_fastlp = ival;
+   case SCIP_LPPAR_THREADS:
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_THREADS, ival) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3732,30 +3198,34 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      CHECK_ZERO( XPRSgetdblcontrol(lpi->xprslp, XPRS_FEASTOL, &dctrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_FEASTOL, &dctrlval) );
       *dval = dctrlval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      CHECK_ZERO( XPRSgetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, &dctrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, &dctrlval) );
       *dval = dctrlval;
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      CHECK_ZERO( XPRSgetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, &dctrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, &dctrlval) );
       *dval = dctrlval;
       break;
    case SCIP_LPPAR_LPTILIM:
-      CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
       *dval = (double) ictrlval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
-      CHECK_ZERO( XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
       *dval = dctrlval;
       break;
    case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->par_lobjlim;
+      debugCheckObjsen(lpi, SCIP_OBJSEN_MAXIMIZE);
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, &dctrlval) );
+      *dval = dctrlval;
       break;
    case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->par_uobjlim;
+      debugCheckObjsen(lpi, SCIP_OBJSEN_MINIMIZE);
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, &dctrlval) );
+      *dval = dctrlval;
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3779,28 +3249,30 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      CHECK_ZERO( XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      CHECK_ZERO( XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      CHECK_ZERO( XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
       int ival = (int) dval;
-      CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
       break;
    }
    case SCIP_LPPAR_MARKOWITZ:
-      CHECK_ZERO( XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_LOBJLIM:
-      lpi->par_lobjlim = dval;
+      debugCheckObjsen(lpi, SCIP_OBJSEN_MAXIMIZE);
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    case SCIP_LPPAR_UOBJLIM:
-      lpi->par_uobjlim = dval;
+      debugCheckObjsen(lpi, SCIP_OBJSEN_MINIMIZE);
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3812,14 +3284,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 /**@} */
 
 
-
-
-/*
- * Numerical Methods
+/**@name Numerical Methods
+ *
+ * @{
  */
-
-/**@name Numerical Methods */
-/**@{ */
 
 /** returns value treated as infinity in the LP solver */
 SCIP_Real SCIPlpiInfinity(
@@ -3843,14 +3311,10 @@ SCIP_Bool SCIPlpiIsInfinity(
 /**@} */
 
 
-
-
-/*
- * File Interface Methods
+/**@name File Interface Methods
+ *
+ * @{
  */
-
-/**@name File Interface Methods */
-/**@{ */
 
 /** reads LP from a file */
 SCIP_RETCODE SCIPlpiReadLP(
@@ -3863,7 +3327,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( XPRSreadprob(lpi->xprslp, fname, "") );
+   CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, fname, "") );
 
    return SCIP_OKAY;
 }
@@ -3879,7 +3343,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( XPRSwriteprob(lpi->xprslp, fname, "p") );
+   CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, fname, "p") );
 
    return SCIP_OKAY;
 }
