@@ -969,13 +969,15 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
    SCIPdebugMessage("free original problem data\n");
 
-   if ( (*probdata)->mode == MODE_CUT )
-      graph_mincut_exit((*probdata)->graph);
-
-   graph_path_exit((*probdata)->graph);
-
    if( (*probdata)->graph != NULL )
+   {
+      if ( (*probdata)->mode == MODE_CUT )
+         graph_mincut_exit((*probdata)->graph);
+
+      graph_path_exit((*probdata)->graph);
+
       graph_free((*probdata)->graph);
+   }
 
    /* free the (original) probdata */
    SCIP_CALL( probdataFree(scip, probdata) );
