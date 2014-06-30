@@ -34,6 +34,12 @@
 extern "C" {
 #endif
 
+  typedef struct Graph_Node
+{
+   int number;
+   SCIP_Real dist;
+}GNODE;
+
 
    /* a  weighted-quick-union-path-compression union find structure */
    typedef struct UnionFind_Structure
@@ -43,10 +49,33 @@ extern "C" {
       int count;      /* number of components */
    }UF;
 
+
+   typedef struct Vnoi_List_Node
+{
+   double       dist;         /* Distance to the end of the path             */
+   signed int   edge;         /* First edge to go                            */
+   signed int   base;         /* Voronoi base                            */
+   struct Vnoi_List_Node *next;
+} VLIST;
+
+   /*** returns the component identifier ***/
    extern int UF_find(
       UF* uf,
       int element
       );
+
+    /*** ***/
+    extern int CmpByDist(
+     void *arg1,
+     void *arg2
+   );
+
+   /***  ***/
+   extern int GNODECmpByDist(
+     void *first_arg,
+     void *second_arg
+   );
+
 
    /** creates the TM primal heuristic and includes it in SCIP */
    extern

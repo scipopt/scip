@@ -31,6 +31,8 @@
 
 #include "probdata_stp.h"
 #include "reader_stp.h"
+#include "grph.h"
+
 
 /**@name Reader properties
  *
@@ -41,10 +43,12 @@
 #define READER_DESC             "file reader for steiner tree data format"
 #define READER_EXTENSION        "stp"
 
-
+#define   DEFAULT_TMHEURISTIC  0
 #define   DEFAULT_COMPCENTRAL  1
 #define   DEFAULT_EMITGRAPH    FALSE
 #define   DEFAULT_REDUCTION    4
+
+#define STP_MODES "cfp" /* valid values for user parameter 'stp/mode' */
 
 /**@} */
 
@@ -54,7 +58,7 @@
  * @{
  */
 
-/** problem reading method of reader */
+/** problem reading method of the reader */
 static
 SCIP_DECL_READERREAD(readerReadStp)
 {
@@ -87,7 +91,26 @@ SCIP_DECL_READERREAD(readerReadStp)
    }
 
    *result = SCIP_SUCCESS;
+   return SCIP_OKAY;
+}
 
+/** problem writing method of the reader */
+static
+SCIP_DECL_READERWRITE(readerWriteStp)
+{
+   const GRAPH* graph;
+   SCIP_Real offset;
+
+   /* get the graph of the problem */
+   graph = SCIPprobdataGetGraph(probdata);
+
+   /* get the offset of the problem */
+   offset = SCIPprobdataGetOffset(scip);
+
+   /* save the graph in a .stp file */
+   SCIPwriteStp(scip, graph, file, offset);
+
+   *result = SCIP_SUCCESS;
    return SCIP_OKAY;
 }
 
@@ -107,9 +130,6 @@ SCIP_RETCODE SCIPincludeReaderStp(
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* valid values for user parameter 'stp/mode' */
-   char vals [3] = {'c', 'f', 'p'};
-
    /* create reader data */
    readerdata = NULL;
 
@@ -118,8 +138,14 @@ SCIP_RETCODE SCIPincludeReaderStp(
    assert(reader != NULL);
 
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteStp) );
 
    /* include user parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/tmheuristic",
+         "Heuristic: 0 automatic, 1 TM, 2 TMPOLZIN",
+         NULL, FALSE, DEFAULT_TMHEURISTIC, 0, 2, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/compcentral",
          "Comp. Central Term: 0 disable, 1 max. degree, 2 min. dist. sum to all terminals, 3 min. max. dist., 4 min. dist to all nodes",
@@ -146,7 +172,7 @@ SCIP_RETCODE SCIPincludeReaderStp(
    SCIP_CALL( SCIPaddCharParam( scip,
 	 "stp/mode",
          "Solving mode: 'c'ut, 'f'low ,'p'rice",
-         NULL, FALSE, 'c', vals, NULL, NULL) );
+         NULL, FALSE, 'c', STP_MODES, NULL, NULL) );
 
 
    return SCIP_OKAY;

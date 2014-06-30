@@ -19,6 +19,7 @@
 #define GRAPH_IS_GRIDGRAPH        2
 #define GRAPH_IS_DIRECTED         4
 #include "heur_tm.h"
+#include "scip/scip.h"
 typedef struct
 {
    /* Knots
@@ -100,6 +101,17 @@ typedef struct shortest_path
    signed int   edge;         /* First edge to go                            */
 } PATH;
 
+/* ONE segment of a voronoi path
+ */
+typedef struct voronoi_path
+{
+   double       dist;         /* Distance to the end of the path             */
+   signed int   edge;         /* First edge to go                            */
+   signed int   base;         /* Voronoi base                            */
+} VNOI;
+
+#define flipedge(edge) (((edge % 2) == 0) ? edge + 1 : edge - 1)
+
 #define PATH_NIL    ((PATH*)0)
 
 #define CONNECT      0
@@ -146,9 +158,16 @@ extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, const double*, PATH*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
-extern void   voronoi(const GRAPH*, const double*, char*, int*, PATH*);
+extern void   voronoi(const GRAPH*, const double*, const double*, char*, int*, PATH*);
 extern void   heap_add(int*, int*, int*, int, PATH*);
 extern void   voronoi_repair(SCIP*, const GRAPH*, const double*, int*, int*, PATH*, int*, int, UF*);
+extern void   voronoi_repair_mult(SCIP*, const GRAPH*, const double*, int*, int*, int*, int*, char*, UF*, PATH*);
+extern SCIP_RETCODE  voronoi_extend(SCIP*, const GRAPH*, const double*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
+extern SCIP_RETCODE  voronoi_extend2(SCIP*, const GRAPH*, const double*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
+extern SCIP_RETCODE  voronoi_extend3(SCIP*, const GRAPH*, const double*, PATH*, GNODE***, int**, int**, char*, int*, int*, int*, int, int, int);
+
+
+
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c
@@ -164,6 +183,7 @@ extern GRAPH* graph_load(const char*, PRESOL*);
 /* grphsave.c
  */
 extern void graph_save(const GRAPH*, const char*, FILETYPE);
+extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
 
 /* grph2fig.c
  */

@@ -65,6 +65,8 @@ struct SCIP_ProbData
    SCIP_CONS**           pathcons;           /**< array of constraints */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
    SCIP_VAR**            flowvars;           /**< array of edge variables (needed only in the Flow mode) */
+   SCIP_Real             offset;             /**< offset of the problem, computed during the presolving */
+   SCIP_Real*            xval;               /**< values of the edge variables */
    int* 	         realterms;          /**< array of all terminals except the root */
    SCIP_Bool             emitgraph;          /**< emitgraph */
    int                   nedges;             /**< number of edges */
@@ -72,8 +74,6 @@ struct SCIP_ProbData
    int                   realnterms;         /**< number of terminals except the root */
    int                   nlayers;            /**< number of layers */
    int                   nnodes;             /**< number of nodes */
-
-   double*               xval;               /**< values of the edge variables */
    int                   nvars;              /**< number of variables */
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
@@ -534,7 +534,7 @@ SCIP_RETCODE createVariables(
    SCIP_VAR* offsetvar;
    char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
-   double* edgecost;
+   SCIP_Real* edgecost;
    int tail;
    int k2;
    int e;
@@ -1171,11 +1171,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* presolving */
    offset = reduce(graph, reduction);
+   /* offset = 0; */
    graph_path_exit(graph);
 
    probdata->graph = graph_pack(graph);
+   /*probdata->graph = graph;*/
    graph = probdata->graph;
-
 
    /* if graph reduction solved the whole problem, NULL is returned */
    if( graph != NULL )
@@ -1248,8 +1249,11 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->xval = NULL;
    }
 
+   /* add the new offset (offset) and the offset that had already been part of the problem before it was read in (presolinfo.fixed) */
+   probdata->offset = presolinfo.fixed + offset;
+
    /* create and add initial variables */
-   SCIP_CALL( createVariables(scip, probdata, presolinfo.fixed + offset) );
+   SCIP_CALL( createVariables(scip, probdata, probdata->offset ) );
 
    /* set user problem data */
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
@@ -1376,6 +1380,22 @@ int SCIPprobdataGetRoot(
 }
 
 
+/** returns offset of the problem */
+SCIP_Real SCIPprobdataGetOffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->offset;
+}
+
+
 /** returns the variable for a given index */
 SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1392,8 +1412,9 @@ SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
    return probdata->edgevars[idx];
 }
 
+
 /** returns the LP solution values */
-double* SCIPprobdataGetXval(
+SCIP_Real* SCIPprobdataGetXval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol
    )
@@ -1408,7 +1429,6 @@ double* SCIPprobdataGetXval(
    /*if( probdata->lastlpiters < SCIPgetNLPIterations(scip) )*/
    {
       SCIP_CALL_ABORT( SCIPgetSolVals(scip, sol, probdata->nvars, probdata->edgevars, probdata->xval) );
-
       /*probdata->lastlpiters = SCIPgetNLPIterations(scip);*/
    }
 
@@ -1506,7 +1526,6 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
    int e;
 
    assert(scip != NULL);
-
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
@@ -1682,7 +1701,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       /* try to add new solution to scip and free it immediately */
       SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, success) );
 
-      /*assert( *success );*/
+      /* assert(*success ); */
    }
 
    return SCIP_OKAY;

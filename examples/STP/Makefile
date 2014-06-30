@@ -43,6 +43,7 @@ CMAINOBJ	=	cmain.o \
 			grphload.o \
 			grphmcut.o \
 			grphpath.o \
+                        grphsave.o \
 			heur_tm.o \
 			heur_rs.o \
 			probdata_stp.o \

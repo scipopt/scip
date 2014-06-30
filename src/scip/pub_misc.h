@@ -1392,6 +1392,15 @@ void SCIPsortRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   int*                  intarray1,          /**< int array to be permuted in the same way */
+   int*                  intarray2,          /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortRealBoolPtr(

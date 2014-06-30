@@ -33,11 +33,11 @@
 extern "C" {
 #endif
 
-/** includes the binpacking file reader into SCIP */
-extern
-SCIP_RETCODE SCIPincludeReaderStp(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+   /** includes the binpacking file reader into SCIP */
+   extern
+   SCIP_RETCODE SCIPincludeReaderStp(
+      SCIP*                 scip                /**< SCIP data structure */
+      );
 
 #ifdef __cplusplus
 }

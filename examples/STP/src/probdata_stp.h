@@ -100,6 +100,12 @@ extern "C" {
       SCIP*                 scip                /**< SCIP data structure */
       );
 
+   /** returns the offset */
+   extern
+   SCIP_Real SCIPprobdataGetOffset(
+      SCIP*                 scip                /**< SCIP data structure */
+      );
+
    /** returns the edge variable for a given index */
    extern
    SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
@@ -109,7 +115,7 @@ extern "C" {
 
    /** returns the LP solution values */
    extern
-   double* SCIPprobdataGetXval(
+   SCIP_Real* SCIPprobdataGetXval(
       SCIP*                 scip,               /**< SCIP data structure */
       SCIP_SOL*             sol
       );
