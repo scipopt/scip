@@ -3878,11 +3878,6 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
                assert(conflictFirstCand(conflict) == NULL); /* the starting UIP was not resolved */
          }
 
-         /* check conflict graph frontier on debugging solution */
-         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
-               conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
-
          /* get next conflicting bound from the conflict candidate queue (this does not need to be nextbdchginfo, because
           * due to resolving the bound changes, a variable could be added to the queue which must be
           * resolved before nextbdchginfo)
@@ -3900,6 +3895,11 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          SCIP_Bool success;
 
          assert(SCIPbdchginfoGetDepth(nextuip) == SCIPbdchginfoGetDepth(uip));
+
+         /* check conflict graph frontier on debugging solution */
+         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
+               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds,
+               conflict->conflictset->nbdchginfos, conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
          SCIPdebugMessage("creating reconvergence constraint from UIP <%s> to UIP <%s> in depth %d with %d literals after %d resolutions\n",
             SCIPvarGetName(SCIPbdchginfoGetVar(uip)), SCIPvarGetName(SCIPbdchginfoGetVar(nextuip)),
