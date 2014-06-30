@@ -6849,26 +6849,32 @@ void SCIPnodeGetPseudoBranchings(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
+      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+            && boundchgs[i].data.inferencedata.reason.cons == NULL)
+       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+             && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
          (*npseudobranchvars)++;
-      else
+      else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
    }
-
-#ifndef NDEBUG
-   /* check that the remaining bound change are only branching decisions */
-   for( i = nboundchgs - (*npseudobranchvars) - 1; i >= 0; i--)
-      assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING); /*lint !e641*/
-#endif
 
    /* if the arrays have enough space store the branching decisions */
    if( pseudobranchvarssize >= *npseudobranchvars )
    {
-      for( i = nboundchgs-(*npseudobranchvars); i < nboundchgs; i++)
+      int j;
+      j = 0;
+      for( i = i+1; i < nboundchgs; i++)
       {
          assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
-         pseudobranchvars[i-nboundchgs+(*npseudobranchvars)] = boundchgs[i].var;
-         pseudobranchbounds[i-nboundchgs+(*npseudobranchvars)] = boundchgs[i].newbound;
+         if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+               && boundchgs[i].data.inferencedata.reason.cons == NULL)
+          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+                && boundchgs[i].data.inferencedata.reason.prop == NULL) )
+         {
+            pseudobranchvars[j] = boundchgs[i].var;
+            pseudobranchbounds[j] = boundchgs[i].newbound;
+            j++;
+         }
       }
    }
 }
