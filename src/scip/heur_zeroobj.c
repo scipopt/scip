@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real inf;
-      
+
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
 

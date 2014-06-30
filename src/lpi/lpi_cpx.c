@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,7 +49,6 @@
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPmessagePrintWarning((messagehdlr), "LP Error: CPLEX returned %d\n", _restat_); \
-         assert(0);\
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
@@ -158,6 +157,8 @@ struct SCIP_LPi
    SCIP_Bool             fromscratch;        /**< shall solves be performed with CPX_PARAM_ADVIND turned off? */
    SCIP_Bool             clearstate;         /**< shall next solve be performed with CPX_PARAM_ADVIND turned off? */
    SCIP_Real             feastol;            /**< feasibility tolerance for integrality */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
 #if (CPX_VERSION <= 1100)
    SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug
                                               *   in the scaling algorithm for ranged rows in CPLEX up to version 11.0 */
@@ -963,8 +964,12 @@ SCIP_RETCODE restoreLPData(
     * after refactorization, it might be necessary to do a few extra pivot steps.
     */
    CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-   assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
-   assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+#ifndef NDEBUG
+   if ( CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) > CPX_REFACTORMAXITERS )
+      SCIPmessagePrintWarning(lpi->messagehdlr, "CPLEX needed %d phase 1 iterations to restore optimal basis.\n", CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp));
+   if ( CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) > CPX_REFACTORMAXITERS )
+      SCIPmessagePrintWarning(lpi->messagehdlr, "CPLEX needed %d iterations to restore optimal basis.\n", CPXgetitcnt(lpi->cpxenv, lpi->cpxlp));
+#endif
 
    return SCIP_OKAY;
 }
@@ -1087,6 +1092,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
    (*lpi)->feastol = 1e-06;
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
 #if (CPX_VERSION <= 1100)
    (*lpi)->rngfound = FALSE;
 #endif
@@ -2724,6 +2731,11 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
       SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
       return SCIP_LPERROR;
    }
+   else if( retval == CPXERR_SINGULAR )
+   {
+      SCIPdebugMessage(" -> numerical troubles (basis singular)\n");
+      return SCIP_LPERROR;
+   }
    CHECK_ZERO( lpi->messagehdlr, retval );
    SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
 
@@ -3137,6 +3149,20 @@ SCIP_Bool SCIPlpiIsStable(
          return FALSE;
    }
 
+   /* If the condition number of the basis should be checked, everything above the specified threshold is counted
+    * as instable.
+    */
+   if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_Real kappa;
+
+      SCIP_CALL_ABORT( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa) );
+
+      /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
+      if( kappa != SCIP_INVALID || kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+
    return (lpi->solstat != CPX_STAT_NUM_BEST && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS);
 }
 
@@ -3215,13 +3241,25 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
+   int retcode;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval) );
+   retcode = CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval);
+
+   /* if CPLEX has no solution, e.g., because of a reached time limit, we return -infinity */
+   if( retcode == CPXERR_NO_SOLN )
+   {
+      *objval = -SCIPlpiInfinity(lpi);
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, retcode );
+   }
 
    return SCIP_OKAY;
 }
@@ -3312,7 +3350,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 /** gets information about the quality of an LP solution
  *
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
- *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ *  The LPI should return SCIP_INVALID for @p quality, if the requested quantity is not available.
  */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3325,6 +3363,8 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    assert(lpi != NULL);
    assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
 
    SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
 
@@ -3345,11 +3385,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
-   if( solntype == CPX_NO_SOLN )
-   {
-      *quality = SCIP_INVALID;
-   }
-   else
+   if( solntype == CPX_BASIC_SOLN )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
    }
@@ -4166,6 +4202,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_MARKOWITZ:
       *dval = getDblParam(lpi, CPX_PARAM_EPMRK);
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4208,6 +4247,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_MARKOWITZ:
       setDblParam(lpi, CPX_PARAM_EPMRK, dval);
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

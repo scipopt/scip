@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -331,7 +331,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
 {
    assert(sparsesol != NULL);
    assert(vars != NULL);
-   assert(nvars > 0);
+   assert(nvars >= 0);
 
    SCIP_ALLOC( BMSallocMemory(sparsesol) );
 
@@ -367,7 +367,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
    return SCIP_OKAY;
 }
 
-/** frees priority queue, but not the data elements themselves */
+/** frees sparse solution */
 void SCIPsparseSolFree(
    SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
    )
@@ -710,7 +710,9 @@ int SCIPqueueNElems(
    assert(queue->firstfree >= 0 && queue->firstused < queue->size);
    assert(queue->firstused > -1 || queue->firstfree == 0);
 
-   if( queue->firstused < queue->firstfree )
+   if( queue->firstused == -1 )
+      return 0;
+   else if( queue->firstused < queue->firstfree )
       return queue->firstfree - queue->firstused;
    else if( queue->firstused == queue->firstfree )
       return queue->size;
@@ -736,7 +738,7 @@ SCIP_RETCODE pqueueResize(
    )
 {
    assert(pqueue != NULL);
-   
+
    if( minsize <= pqueue->size )
       return SCIP_OKAY;
 
@@ -832,7 +834,7 @@ void* SCIPpqueueRemove(
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
-   
+
    if( pqueue->len == 0 )
       return NULL;
 
@@ -1576,7 +1578,7 @@ void SCIPhashtableRemoveAll(
 }
 
 /** returns number of hash table elements */
-SCIP_Longint SCIPhashtableGetNElemenets(
+SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
 {
@@ -1735,7 +1737,7 @@ void hashmaplistFree(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   
+
    list = *hashmaplist;
    while( list != NULL )
    {
@@ -1865,19 +1867,13 @@ SCIP_RETCODE SCIPhashmapCreate(
    int                   mapsize             /**< size of the hash map */
    )
 {
-   int i;
-
    assert(hashmap != NULL);
    assert(mapsize > 0);
 
    SCIP_ALLOC( BMSallocMemory(hashmap) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*hashmap)->lists, mapsize) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*hashmap)->lists, mapsize) );
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nlists = mapsize;
-
-   /* initialize hash lists */
-   for( i = 0; i < mapsize; ++i )
-      (*hashmap)->lists[i] = NULL;
 
    return SCIP_OKAY;
 }
@@ -1919,7 +1915,7 @@ SCIP_RETCODE SCIPhashmapInsert(
 
    /* append origin->image pair to the list at the hash position */
    SCIP_CALL( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1962,7 +1958,7 @@ SCIP_RETCODE SCIPhashmapSetImage(
 
    /* set image for origin in hash list */
    SCIP_CALL( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2001,7 +1997,7 @@ SCIP_RETCODE SCIPhashmapRemove(
 
    /* remove element from the list at the hash position */
    SCIP_CALL( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2055,11 +2051,11 @@ SCIP_Bool SCIPhashmapIsEmpty(
 {
    int i;
    assert(hashmap != NULL);
-   
+
    for( i = 0; i < hashmap->nlists; ++i )
       if( hashmap->lists[i] )
          return FALSE;
-   
+
    return TRUE;
 }
 
@@ -2071,7 +2067,7 @@ int SCIPhashmapGetNEntries(
    int count = 0;
    int i;
    assert(hashmap != NULL);
-   
+
    for( i = 0; i < hashmap->nlists; ++i )
       count += SCIPhashmapListGetNEntries(hashmap->lists[i]);
 
@@ -2084,7 +2080,7 @@ int SCIPhashmapGetNLists(
 )
 {
    assert(hashmap != NULL);
-   
+
    return hashmap->nlists;
 }
 
@@ -2097,7 +2093,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
    assert(hashmap != NULL);
    assert(listindex >= 0);
    assert(listindex < hashmap->nlists);
-   
+
    return hashmap->lists[listindex];
 }
 
@@ -2107,10 +2103,10 @@ int SCIPhashmapListGetNEntries(
 )
 {
    int count = 0;
-   
+
    for( ; hashmaplist; hashmaplist = hashmaplist->next )
       ++count;
-   
+
    return count;
 }
 
@@ -2120,7 +2116,7 @@ void* SCIPhashmapListGetOrigin(
 )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->origin;
 }
 
@@ -2130,7 +2126,7 @@ void* SCIPhashmapListGetImage(
 )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->image;
 }
 
@@ -2140,7 +2136,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
 )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->next;
 }
 
@@ -2152,9 +2148,9 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
    int listidx;
 
    assert(hashmap != NULL);
-   
+
    /* free hash lists */
-   for( listidx = 0; listidx < hashmap->nlists; ++listidx )
+   for( listidx = hashmap->nlists - 1; listidx >= 0; --listidx )
       hashmaplistFree(&hashmap->lists[listidx], hashmap->blkmem);
 
    return SCIP_OKAY;
@@ -2319,7 +2315,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -2616,7 +2612,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(intarray->maxusedidx == INT_MIN || intarray->maxusedidx < intarray->firstidx + intarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, intarray->minusedidx);
    maxidx = MAX(maxidx, intarray->maxusedidx);
    assert(0 <= minidx);
@@ -2690,7 +2686,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
-      
+
       if( intarray->minusedidx <= intarray->maxusedidx )
       {
          int shift;
@@ -2721,7 +2717,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
-      
+
       if( intarray->minusedidx <= intarray->maxusedidx )
       {
          int shift;
@@ -2789,7 +2785,7 @@ int SCIPintarrayGetVal(
 {
    assert(intarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < intarray->minusedidx || idx > intarray->maxusedidx )
       return 0;
    else
@@ -2823,7 +2819,7 @@ SCIP_RETCODE SCIPintarraySetVal(
       SCIP_CALL( SCIPintarrayExtend(intarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= intarray->firstidx);
       assert(idx < intarray->firstidx + intarray->valssize);
-      
+
       /* set the array value of the index */
       intarray->vals[idx - intarray->firstidx] = val;
 
@@ -2835,7 +2831,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    {
       /* set the array value of the index to zero */
       intarray->vals[idx - intarray->firstidx] = 0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == intarray->minusedidx )
       {
@@ -2982,7 +2978,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(boolarray->maxusedidx == INT_MIN || boolarray->maxusedidx < boolarray->firstidx + boolarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, boolarray->minusedidx);
    maxidx = MAX(maxidx, boolarray->maxusedidx);
    assert(0 <= minidx);
@@ -3056,7 +3052,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
-      
+
       if( boolarray->minusedidx <= boolarray->maxusedidx )
       {
          int shift;
@@ -3087,7 +3083,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
-      
+
       if( boolarray->minusedidx <= boolarray->maxusedidx )
       {
          int shift;
@@ -3157,7 +3153,7 @@ SCIP_Bool SCIPboolarrayGetVal(
 {
    assert(boolarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < boolarray->minusedidx || idx > boolarray->maxusedidx )
       return FALSE;
    else
@@ -3191,7 +3187,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
       SCIP_CALL( SCIPboolarrayExtend(boolarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= boolarray->firstidx);
       assert(idx < boolarray->firstidx + boolarray->valssize);
-      
+
       /* set the array value of the index */
       boolarray->vals[idx - boolarray->firstidx] = val;
 
@@ -3203,7 +3199,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    {
       /* set the array value of the index to zero */
       boolarray->vals[idx - boolarray->firstidx] = FALSE;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == boolarray->minusedidx )
       {
@@ -3337,7 +3333,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(ptrarray->maxusedidx == INT_MIN || ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, ptrarray->minusedidx);
    maxidx = MAX(maxidx, ptrarray->maxusedidx);
    assert(0 <= minidx);
@@ -3382,7 +3378,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
          for( i = 0; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
-      
+
       /* free old memory storage, and set the new array parameters */
       BMSfreeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
@@ -3411,7 +3407,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + ptrarray->valssize);
-      
+
       if( ptrarray->minusedidx <= ptrarray->maxusedidx )
       {
          int shift;
@@ -3442,7 +3438,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + ptrarray->valssize);
-      
+
       if( ptrarray->minusedidx <= ptrarray->maxusedidx )
       {
          int shift;
@@ -3510,7 +3506,7 @@ void* SCIPptrarrayGetVal(
 {
    assert(ptrarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < ptrarray->minusedidx || idx > ptrarray->maxusedidx )
       return NULL;
    else
@@ -3544,7 +3540,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
       SCIP_CALL( SCIPptrarrayExtend(ptrarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= ptrarray->firstidx);
       assert(idx < ptrarray->firstidx + ptrarray->valssize);
-      
+
       /* set the array value of the index */
       ptrarray->vals[idx - ptrarray->firstidx] = val;
 
@@ -3556,7 +3552,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    {
       /* set the array value of the index to zero */
       ptrarray->vals[idx - ptrarray->firstidx] = NULL;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == ptrarray->minusedidx )
       {
@@ -4119,7 +4115,7 @@ void SCIPsortDown(
    /* create identity permutation */
    for( pos = 0; pos < len; ++pos )
       perm[pos] = pos;
-   
+
    SCIPsortDownInd(perm, indcomp, dataptr, len);
 }
 
@@ -5343,12 +5339,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    assert(digraph != NULL);
    assert(nnodes > 0);
 
-   /* allocate memory for the graph and the arrays storing arcs and datas */
+   /* allocate memory for the graph and the arrays storing arcs and data */
    SCIP_ALLOC( BMSallocMemory(digraph) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdata, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
@@ -5374,16 +5371,17 @@ SCIP_RETCODE SCIPdigraphResize(
    if( nnodes <= digraph->nnodes )
       return SCIP_OKAY;
 
-   /* reallocate memory for increasing the arrays storing arcs and datas */
+   /* reallocate memory for increasing the arrays storing arcs and data */
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
    {
-      digraph->nodedatas[n] = NULL;
+      digraph->nodedata[n] = NULL;
       digraph->successorssize[n] = 0;
       digraph->nsuccessors[n] = 0;
    }
@@ -5394,7 +5392,10 @@ SCIP_RETCODE SCIPdigraphResize(
    return SCIP_OKAY;
 }
 
-/** copies directed graph structure */
+/** copies directed graph structure
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
@@ -5411,22 +5412,25 @@ SCIP_RETCODE SCIPdigraphCopy(
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
 
-   /* copy arcs and datas */
+   /* copy arcs and data */
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
 
-   /* copy lists of successors and arc datas */
+   /* copy lists of successors and arc data */
    for( i = 0; i < nnodes; ++i )
    {
       if( sourcedigraph->nsuccessors[i] > 0 )
       {
          assert(sourcedigraph->successors[i] != NULL);
-         assert(sourcedigraph->arcdatas[i] != NULL);
+         assert(sourcedigraph->arcdata[i] != NULL);
          SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]),
-               sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]),
+               sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
+      /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
+      (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
@@ -5464,7 +5468,7 @@ SCIP_RETCODE SCIPdigraphSetSizes(
    for( i = 0; i < digraph->nnodes; ++i )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -5482,11 +5486,11 @@ void SCIPdigraphFree(
    assert(digraph != NULL);
    assert(*digraph != NULL);
 
-   /* free arrays storing the successor nodes and arc datas */
+   /* free arrays storing the successor nodes and arc data */
    for( i = (*digraph)->nnodes - 1; i >= 0; --i )
    {
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
-      BMSfreeMemoryArrayNull(&(*digraph)->arcdatas[i]);
+      BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
    }
 
    /* free components structure */
@@ -5497,10 +5501,11 @@ void SCIPdigraphFree(
    assert((*digraph)->componentstarts == NULL);
 
    /* free directed graph data structure */
+   BMSfreeMemoryArray(&(*digraph)->nodedata);
    BMSfreeMemoryArray(&(*digraph)->successorssize);
    BMSfreeMemoryArray(&(*digraph)->nsuccessors);
    BMSfreeMemoryArray(&(*digraph)->successors);
-   BMSfreeMemoryArray(&(*digraph)->arcdatas);
+   BMSfreeMemoryArray(&(*digraph)->arcdata);
 
    BMSfreeMemory(digraph);
 }
@@ -5527,13 +5532,13 @@ SCIP_RETCODE ensureSuccessorsSize(
       {
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
          digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
    }
 
@@ -5561,7 +5566,7 @@ SCIP_RETCODE SCIPdigraphAddArc(
 
    /* add arc */
    digraph->successors[startnode][digraph->nsuccessors[startnode]] = endnode;
-   digraph->arcdatas[startnode][digraph->nsuccessors[startnode]] = data;
+   digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
    return SCIP_OKAY;
@@ -5599,7 +5604,7 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 
    /* add arc */
    digraph->successors[startnode][nsuccessors] = endnode;
-   digraph->arcdatas[startnode][nsuccessors] = data;
+   digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
 
    return SCIP_OKAY;
@@ -5616,7 +5621,7 @@ int SCIPdigraphGetNNodes(
 }
 
 /** returns the node data, or NULL if no data exist */
-void* SCIPdigraphGetNodeDatas(
+void* SCIPdigraphGetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the node data is returned */
    )
@@ -5625,14 +5630,14 @@ void* SCIPdigraphGetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   return digraph->nodedatas[node];
+   return digraph->nodedata[node];
 }
 
 /** sets the node data
  *
  *  @note The old user pointer is not freed. This has to be done by the user
  */
-void SCIPdigraphSetNodeDatas(
+void SCIPdigraphSetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    void*                 dataptr,            /**< user node data pointer, or NULL */
    int                   node                /**< node for which the node data is returned */
@@ -5642,7 +5647,7 @@ void SCIPdigraphSetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   digraph->nodedatas[node] = dataptr;
+   digraph->nodedata[node] = dataptr;
 }
 
 /** returns the total number of arcs in the given digraph */
@@ -5694,7 +5699,7 @@ int* SCIPdigraphGetSuccessors(
    return digraph->successors[node];
 }
 
-/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+/** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
 void** SCIPdigraphGetSuccessorsDatas(
@@ -5707,9 +5712,9 @@ void** SCIPdigraphGetSuccessorsDatas(
    assert(node < digraph->nnodes);
    assert(digraph->nsuccessors[node] >= 0);
    assert(digraph->nsuccessors[node] <= digraph->successorssize[node]);
-   assert(digraph->arcdatas != NULL);
+   assert(digraph->arcdata != NULL);
 
-   return digraph->arcdatas[node];
+   return digraph->arcdata[node];
 }
 
 /** performs depth-first-search in the given directed graph from the given start node */
@@ -6801,7 +6806,7 @@ SCIP_Bool SCIPrealToRational(
    h1 = 0.0;
    delta0 = val - g0/h0;
    delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
-  
+
    while( (delta0 < mindelta || delta0 > maxdelta) && (delta1 < mindelta || delta1 > maxdelta) )
    {
       assert(EPSGT(b, a, epsilon));
@@ -6820,10 +6825,10 @@ SCIP_Bool SCIPrealToRational(
 
       g1 = gx;
       h1 = hx;
-      
+
       if( h0 > maxdnom )
          return FALSE;
-      
+
       delta0 = val - g0/h0;
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
@@ -7146,7 +7151,7 @@ SCIP_Real SCIPselectSimpleValue(
       SCIP_Longint nominator;
       SCIP_Longint denominator;
       SCIP_Bool success;
-      
+
       /* try to find a "simple" rational number inside the interval */
       SCIPdebugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
       success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
@@ -7166,7 +7171,7 @@ SCIP_Real SCIPselectSimpleValue(
          SCIPdebugPrintf(" failed\n");
       }
    }
-   
+
    return val;
 }
 
@@ -7218,7 +7223,16 @@ int SCIPgetRandomInt(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   return minrandval + (int) ((maxrandval - minrandval + 1)*(SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0));
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0);
+   assert(randnumber >= 0.0);
+   assert(randnumber < 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
+    * apart
+    */
+   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
 }
 
 /** returns a random real between minrandval and maxrandval */
@@ -7228,7 +7242,16 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+   assert(randnumber >= 0.0);
+   assert(randnumber <= 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
+    * SCIP_REAL_MAX apart
+    */
+   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
 }
 
 
@@ -7614,7 +7637,7 @@ SCIP_Bool SCIPstrToIntValue(
    /* init errno to detect possible errors */
    errno = 0;
 
-   *value = strtol(str, endptr, 10);
+   *value = (int) strtol(str, endptr, 10);
 
    if( *endptr != str && *endptr != NULL )
    {
@@ -7854,6 +7877,6 @@ SCIP_Real SCIPrelDiff(
    absval1 = REALABS(val1);
    absval2 = REALABS(val2);
    quot = MAX3(1.0, absval1, absval2);
-   
+
    return (val1-val2)/quot;
 }

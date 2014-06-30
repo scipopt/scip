@@ -3,7 +3,7 @@
 /*                  This1 file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -183,7 +183,7 @@ void messagePrintDialog(
          /* file output cannot be buffered because the output file may change */
          if ( *msg != '\0' )
          {
-            handleMessage(messagehdlr, messagehdlr->messagedialog, file, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != stdout), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }
@@ -209,7 +209,7 @@ void messagePrintInfo(
          /* file output cannot be buffered because the output file may change or the message is to long */
          if ( *msg != '\0' )
          {
-            handleMessage(messagehdlr, messagehdlr->messagedialog, file, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != stdout), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }

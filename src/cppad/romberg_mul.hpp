@@ -1,13 +1,13 @@
-/* $Id: romberg_mul.hpp 1370 2009-05-31 05:31:50Z bradbell $ */
+/* $Id: romberg_mul.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ROMBERG_MUL_INCLUDED
 # define CPPAD_ROMBERG_MUL_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-06 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -33,10 +33,10 @@ $head Syntax$$
 $code # include <cppad/romberg_mul.hpp>$$
 $pre
 $$
-$syntax%RombergMul<%Fun%, %SizeVector%, %FloatVector%, %m%> %R%$$
+$codei%RombergMul<%Fun%, %SizeVector%, %FloatVector%, %m%> %R%$$
 $pre
 $$
-$syntax%%r% = %R%(%F%, %a%, %b%, %n%, %p%, %e%)%$$
+$icode%r% = %R%(%F%, %a%, %b%, %n%, %p%, %e%)%$$
 
 
 $head Description$$
@@ -58,96 +58,96 @@ but it can also be included separately with out the rest of
 the $code CppAD$$ routines.
 
 $head m$$
-The template parameter $italic m$$ must be convertible to a $code size_t$$ 
+The template parameter $icode m$$ must be convertible to a $code size_t$$ 
 object with a value that can be determined at compile time; for example
 $code 2$$.
 It determines the dimension of the domain space for the integration.
 
 $head r$$
-The return value $italic r$$ has prototype
-$syntax%
+The return value $icode r$$ has prototype
+$codei%
 	%Float% %r%
 %$$ 
 It is the estimate computed by $code RombergMul$$ for the integral above
-(see description of $xref/RombergMul/Float/Float/$$ below). 
+(see description of $cref/Float/RombergMul/Float/$$ below). 
 
 $head F$$
-The object $italic F$$ has the prototype
-$syntax%
+The object $icode F$$ has the prototype
+$codei%
 	%Fun% &%F%
 %$$
 It must support the operation
-$syntax%
+$codei%
 	%F%(%x%)
 %$$
-The argument $italic x$$ to $italic F$$ has prototype
-$syntax%
+The argument $icode x$$ to $icode F$$ has prototype
+$codei%
 	const %Float% &%x%
 %$$
-The return value of $italic F$$ is a $italic Float$$ object
+The return value of $icode F$$ is a $icode Float$$ object
 
 $head a$$
-The argument $italic a$$ has prototype
-$syntax%
+The argument $icode a$$ has prototype
+$codei%
 	const %FloatVector% &%a%
 %$$ 
 It specifies the lower limit for the integration
-(see description of $xref/RombergMul/FloatVector/FloatVector/$$ below). 
+(see description of $cref/FloatVector/RombergMul/FloatVector/$$ below). 
 
 $head b$$
-The argument $italic b$$ has prototype
-$syntax%
+The argument $icode b$$ has prototype
+$codei%
 	const %FloatVector% &%b%
 %$$ 
 It specifies the upper limit for the integration.
 
 $head n$$
-The argument $italic n$$ has prototype
-$syntax%
+The argument $icode n$$ has prototype
+$codei%
 	const %SizeVector% &%n%
 %$$ 
 A total number of $latex 2^{n[i]-1} + 1$$ 
-evaluations of $syntax%%F%(%x%)%$$ are used to estimate the integral
+evaluations of $icode%F%(%x%)%$$ are used to estimate the integral
 with respect to $latex {\bf d} x_i$$.
 
 $head p$$
-The argument $italic p$$ has prototype
-$syntax%
+The argument $icode p$$ has prototype
+$codei%
 	const %SizeVector% &%p%
 %$$ 
 For $latex i = 0 , \ldots , m-1$$,
 $latex n[i]$$ determines the accuracy order in the 
 approximation for the integral 
 that is returned by $code RombergMul$$.
-The values in $italic p$$ must be less than or equal $italic n$$; i.e.,
-$syntax%%p%[%i%] <= %n%[%i%]%$$.
+The values in $icode p$$ must be less than or equal $icode n$$; i.e.,
+$icode%p%[%i%] <= %n%[%i%]%$$.
 
 $head e$$
-The argument $italic e$$ has prototype
-$syntax%
+The argument $icode e$$ has prototype
+$codei%
 	%Float% &%e%
 %$$ 
-The input value of $italic e$$ does not matter
+The input value of $icode e$$ does not matter
 and its output value is an approximation for the absolute error in 
 the integral estimate.
 
 $head Float$$
-The type $italic Float$$ is defined as the type of the elements of
-$xref/RombergMul/FloatVector/FloatVector/$$.
-The type $italic Float$$ must satisfy the conditions
-for a $xref/NumericType/$$ type.
-The routine $xref/CheckNumericType/$$ will generate an error message
+The type $icode Float$$ is defined as the type of the elements of
+$cref/FloatVector/RombergMul/FloatVector/$$.
+The type $icode Float$$ must satisfy the conditions
+for a $cref NumericType$$ type.
+The routine $cref CheckNumericType$$ will generate an error message
 if this is not the case.
-In addition, if $italic x$$ and $italic y$$ are $italic Float$$ objects,
-$syntax%
+In addition, if $icode x$$ and $icode y$$ are $icode Float$$ objects,
+$codei%
 	%x% < %y%
 %$$     
-returns the $code bool$$ value true if $italic x$$ is less than 
-$italic y$$ and false otherwise.
+returns the $code bool$$ value true if $icode x$$ is less than 
+$icode y$$ and false otherwise.
 
 $head FloatVector$$
-The type $italic FloatVector$$ must be a $xref/SimpleVector/$$ class.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode FloatVector$$ must be a $cref SimpleVector$$ class.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 
@@ -159,7 +159,7 @@ $comment%
 	example/romberg_mul.cpp
 %$$
 The file
-$xref/RombergMul.cpp/$$
+$cref Rombergmul.cpp$$
 contains an example and test a test of using this routine.
 It returns true if it succeeds and false otherwise.
 

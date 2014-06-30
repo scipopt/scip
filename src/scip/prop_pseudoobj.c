@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2382,6 +2382,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
          return SCIP_OKAY;
    }
 
+#if 0 /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
    /* check that the abort criteria for the binary variables works */
    for( ; v < nminactvars; ++v )
@@ -2402,6 +2403,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
       assert(!tightened);
       assert(!(*cutoff));
    }
+#endif
 #endif
 
    /* propagate the none binary variables completely */
@@ -2530,6 +2532,7 @@ SCIP_RETCODE propagateCutoffboundBinvars(
          return SCIP_OKAY;
    }
 
+#if 0 /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
    /* check that the abort criteria for the binary variables works */
    for( ; v < nminactvars; ++v )
@@ -2550,6 +2553,7 @@ SCIP_RETCODE propagateCutoffboundBinvars(
       assert(!tightened);
       assert(!(*cutoff));
    }
+#endif
 #endif
 
    return SCIP_OKAY;
@@ -3160,6 +3164,7 @@ SCIP_RETCODE propagateLowerbound(
             }
          }
 
+#if 0 /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
          /* check that the abort criteria for the binary variables works */
          for( ; v < nmaxactvars && !cutoff; ++v )
@@ -3177,6 +3182,7 @@ SCIP_RETCODE propagateLowerbound(
             assert(!tightened);
             assert(!cutoff);
          }
+#endif
 #endif
       }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,7 @@
 #define HEUR_FREQ             30
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
@@ -200,10 +200,10 @@ static void sortArray(
       j = i-1;
       while( j >= 0 && a[j] > tmp )
       {
-         a[j+1] = a[j];
+         a[j+1] = a[j]; /*lint !e679*/
          j = j-1;
       }
-      a[j+1] = tmp;
+      a[j+1] = tmp; /*lint !e679*/
    }
 }
 
@@ -888,13 +888,14 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPallocBufferArray(scip, &selection, nusedsols) );
 
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
    success = FALSE;
 
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    /* create a new problem, which fixes variables with same value in a certain set of solutions */
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
 
@@ -918,7 +919,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
 #ifdef SCIP_DEBUG
    /* for debugging DINS, enable MIP output */

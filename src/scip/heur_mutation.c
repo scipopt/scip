@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -149,14 +149,14 @@ SCIP_RETCODE createSubproblem(
          lb = SCIPvarGetLbGlobal(subvars[i]);
          ub = SCIPvarGetUbGlobal(subvars[i]);
          assert(SCIPisLE(scip, lb, ub));
-         
+
          /* due to dual reductions, it may happen that the solution value is not in
             the variable's domain anymore */
          if( SCIPisLT(scip, solval, lb) )
             solval = lb;
          else if( SCIPisGT(scip, solval, ub) )
             solval = ub;
-         
+
          /* perform the bound change */
          if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
          {

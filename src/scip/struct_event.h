@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -170,7 +170,7 @@ struct SCIP_EventFilter
 {
    SCIP_EVENTTYPE*       eventtypes;         /**< array with types of event to process; 0 marks a deleted event catch entry */
    SCIP_EVENTHDLR**      eventhdlrs;         /**< array with event handlers to process the event */
-   SCIP_EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
+   SCIP_EVENTDATA**      eventdata;          /**< array with user data for the issued event */
    int*                  nextpos;            /**< linked lists for free, delayed added and delayed deleted slot positions */
    int                   size;               /**< size of filter arrays (available slots in arrays) */
    int                   len;                /**< number entries in filter arrays (used and deleted) */

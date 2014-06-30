@@ -26,7 +26,7 @@ $(OBJDIR)/cons_optcumulative.o: src/cons_optcumulative.c src/cons_optcumulative.
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -67,11 +67,11 @@ $(OBJDIR)/cons_optcumulative.o: src/cons_optcumulative.c src/cons_optcumulative.
  ../../src/scip/cons_xor.h ../../src/scip/disp_default.h \
  ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_clique.h \
  ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
- ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_zeroobj.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dins.h ../../src/scip/heur_dualval.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_zeroobj.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \
@@ -141,7 +141,7 @@ $(OBJDIR)/heur_listscheduling.o: src/heur_listscheduling.c \
  ../../src/scip/struct_history.h ../../src/scip/pub_implics.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
- ../../src/scip/type_stat.h ../../src/scip/type_lpi.h \
+ ../../src/scip/type_stat.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
  ../../src/scip/pub_misc.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -191,7 +191,7 @@ $(OBJDIR)/heur_optcumulative.o: src/heur_optcumulative.c \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -240,7 +240,7 @@ $(OBJDIR)/reader_cmin.o: src/reader_cmin.c ../../src/scip/cons_linear.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -291,7 +291,7 @@ $(OBJDIR)/reader_sch.o: src/reader_sch.c src/reader_sch.h ../../src/scip/scip.h 
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -341,7 +341,7 @@ $(OBJDIR)/reader_sm.o: src/reader_sm.c src/heur_listscheduling.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -392,7 +392,7 @@ $(OBJDIR)/reader_rcp.o: src/reader_rcp.c src/reader_rcp.h ../../src/scip/scip.h 
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -440,7 +440,7 @@ $(OBJDIR)/main.o: src/main.cpp ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/struct_history.h ../../src/scip/pub_implics.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
- ../../src/scip/type_stat.h ../../src/scip/type_lpi.h \
+ ../../src/scip/type_stat.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
  ../../src/scip/pub_misc.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -482,10 +482,11 @@ $(OBJDIR)/main.o: src/main.cpp ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/disp_default.h ../../src/scip/heur_actconsdiving.h \
  ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
  ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
- ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
- ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_zeroobj.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
+ ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_zeroobj.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \

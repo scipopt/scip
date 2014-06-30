@@ -1,13 +1,13 @@
-/* $Id: unary_minus.hpp 1369 2009-05-31 01:31:48Z bradbell $ */
+/* $Id: unary_minus.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_UNARY_MINUS_INCLUDED
 # define CPPAD_UNARY_MINUS_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-06 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -30,40 +30,40 @@ $section AD Unary Minus Operator$$
 
 $head Syntax$$
 
-$syntax%%y% = - %x%$$
+$icode%y% = - %x%$$
 
 
 $head Purpose$$
-Computes the negative of $italic x$$.
+Computes the negative of $icode x$$.
 
 $head Base$$
 The operation in the syntax above must be supported for the case where
-the operand is a $code const$$ $italic Base$$ object.
+the operand is a $code const$$ $icode Base$$ object.
 
 $head x$$
-The operand $italic x$$ has one of the following prototypes
-$syntax%
+The operand $icode x$$ has one of the following prototypes
+$codei%
 	const AD<%Base%>               &%x%
 	const VecAD<%Base%>::reference &%x%
 %$$
 
 $head y$$
-The result $italic y$$ has type
-$syntax%
+The result $icode y$$ has type
+$codei%
 	AD<%Base%> %y%
 %$$
-It is equal to the negative of the operand $italic x$$.
+It is equal to the negative of the operand $icode x$$.
 
 $head Operation Sequence$$
-This is an AD of $italic Base$$
-$xref/glossary/Operation/Atomic/atomic operation/1/$$
+This is an AD of $icode Base$$
+$cref/atomic operation/glossary/Operation/Atomic/$$
 and hence is part of the current
-AD of $italic Base$$
-$xref/glossary/Operation/Sequence/operation sequence/1/$$.
+AD of $icode Base$$
+$cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $head Derivative$$
 If $latex f$$ is a 
-$xref/glossary/Base Function/Base function/$$,
+$cref/Base function/glossary/Base Function/$$,
 $latex \[
 	\D{[ - f(x) ]}{x} = - \D{f(x)}{x}
 \] $$
@@ -73,7 +73,7 @@ $children%
 	example/unary_minus.cpp
 %$$
 The file
-$xref/UnaryMinus.cpp/$$
+$cref unary_minus.cpp$$
 contains an example and test of this operation.
 
 $end

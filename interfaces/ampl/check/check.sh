@@ -144,6 +144,7 @@ echo "limits/memory = $MEMLIMIT"      >> $SETFILE
 echo "lp/threads = $THREADS"          >> $SETFILE
 echo "timing/clocktype = 1"           >> $SETFILE
 echo "display/freq = $DISPFREQ"       >> $SETFILE
+echo "display/statistics = TRUE"      >> $SETFILE
 echo "memory/savefac = 1.0"           >> $SETFILE
 if test "$LPS" = "none"
 then

@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -60,7 +60,7 @@ just pressing return.
 The most common compiling issue is that some libraries are missing on
 your system or that they are outdated. SCIP per default requires zlib,
 gmp and readline.  Try compiling with:
-make ZLIB=false READLINE=false ZIMPL=false
+make ZLIB=false READLINE=false GMP=false
 or, better, install them. Note that under Linux-based systems, you
 need to install the developer-versions of gmp/zlib/readline, in order
 to also have the header-files available.
@@ -123,8 +123,8 @@ Here is what you have to do to get SCIP running:
    - "OPT=prf"         to use performance analysis compilation mode
    - "OPT=opt-gccold"  to use optimized compilation mode and gnu gcc compiler version less than 4.2
 
-   - "LPS=spx"         to use SOPLEX Version >= 1.4.0 as LP solver (default)
-   - "LPS=spx132"      to use SOPLEX Version 1.3.2 as LP solver
+   - "LPS=spx"         to use SoPlex as LP solver (based on the old interface for versions >= 1.4, default)
+   - "LPS=spx2"        to use SoPlex as LP solver (based on the new interface available since version 2.0)
    - "LPS=cpx"         to use CPLEX as LP solver
    - "LPS=xprs"        to use XPRESS as LP solver
    - "LPS=msk"         to use MOSEK as LP solver
@@ -142,19 +142,22 @@ Here is what you have to do to get SCIP running:
    - "READLINE=true"   to enable readline library for interactive shell (default)
    - "READLINE=false"  to disable readline library
 
-   - "ZIMPL=true"      to enable ZIMPL file reader (default; needs ZIMPL, ZLIB, and GMP to be installed, see 2. (g))
-   - "ZIMPL=false"     to disable ZIMPL file reader
+   - "GMP=true"        to use the GMP library for exact counting and Zimpl support (default)
+   - "GMP=false"       to disable GMP usage; note that GMP=false is not compatible with ZIMPL=true since ZIMPL needs the GMP library
 
-   - "GMP=true"        to use GMP library for exact counting
-   - "GMP=false"       disable GMP usage; Note that GMP=false is not compatible with ZIMP=true since ZIMPL needs the GMP library 
-   - "GMP=auto"        to automaticaly link the GMP library in case ZIMPL is enabled (default)
-   
+   - "ZIMPL=true"      to enable ZIMPL file reader (needs ZIMPL and GMP to be installed, see 2. (g))
+   - "ZIMPL=false"     to disable ZIMPL file reader
+   - "ZIMPL=auto"      to automatically enable ZIMPL support if and only if the GMP library is available (default)
+
    - "IPOPT=true"      to enable IPOPT interface (needs IPOPT)
    - "IPOPT=false"     to disable IPOPT interface (default)
-   
+
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
- 
+
+   - "GAMS=true"       to enable reading of GAMS model files (needs GAMS; only for models that do one solve)
+   - "GAMS=false"      to disable GAMS interface (default)
+
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
 
@@ -169,15 +172,19 @@ Here is what you have to do to get SCIP running:
      (b) the library file(s) "lib*.a" or/and "lib*.so"
    You will need either the .a or the .so files and can skip the others by just pressing return.
 
+   On MAC systems, GMP is often not installed in the library and include paths, e.g. in /sw/include 
+   and /sw/lib. In this case, you have to add the paths explicitly. In the above example add the settings
+   USRFLAGS=-I/sw/include USRCPPFLAGS=-I/sw/include USRCFLAGS=-I/sw/include USRLDFLAGS=-L/sw/lib.
+
 2. Installing SCIP
    After compiling you can install the headers, the libraries, and the binay. Therefore you use the command:
 
    make install INSATLLDIR=<dirctory>
 
-   - "INSTALLDIR="     directory as install directory (dafault) 
-   - "INSTALLDIR=/usr/local" 
+   - "INSTALLDIR="     directory as install directory (default)
+   - "INSTALLDIR=/usr/local"
                        to install the headers (/usr/local/include/), the libraries (/usr/local/lib/),
-                        and binary (/usr/loacl/bin/) in the directory /usr/local
+                       and binary (/usr/loacl/bin/) in the directory /usr/local
 
    For un-installing SCIP there exist the target "uninstall" which can be used in the same way as "install".
 
@@ -252,11 +259,11 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 3 (CLP, IPOPT, CppAD, no ZIMPL):
+   Example 3 (CLP, IPOPT, no ZIMPL):
    ========================================
 
-   Typing "make LPS=clp ZIMPL=false IPOPT=true EXPRINT=cppad" uses CLP as LP solver, and activates
-   the interfaces to IPOPT and CppAD. You will be asked the following questions on
+   Typing "make LPS=clp ZIMPL=false IPOPT=true" uses CLP as LP solver, and activates
+   the interface to IPOPT. You will be asked the following questions on
    the first call to "make" (example answers are already given):
 
 ---
@@ -359,6 +366,10 @@ make[1]: Leaving directory `/sw/scip'
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
    fix the corresponding machine dependent makefile in the make subdirectory.
 
+   If you encounter problems including rational.h from spxinc/ you should
+   recompile with "make SPX_LEGACY=true ..." to use the compatibility mode
+   of SoPlex. In this case you should also have compiled SoPlex with LEGACY=true.
+
 
 3. Instructions for manually creating the soft-links, if the query script fails:
 
@@ -409,8 +420,7 @@ make[1]: Leaving directory `/sw/scip'
        - mkdir <path to SCIP>/lib/zimplinc
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
        - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
-       Note that ZIMPL needs the GNU multiprecision library (GMP) and the Z compression library (ZLIB) to be
-       installed on your system.
+       Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on your system.
 
    (h) to use IPOPT as NLP solver
        - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
@@ -419,9 +429,8 @@ make[1]: Leaving directory `/sw/scip'
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
          and the directory share/coin/doc/Ipopt (Ipopt >= 3.9.0) or share/doc/coin/Ipopt (Ipopt < 3.9.0) with the ipopt_addlibs_cpp.txt file.
 
-   (i) to use CppAD as expressions interpreter
-       - ln -s <path to CppAD's header files> <path to SCIP>/lib/cppad
-         (e.g. "cd scip; ln -s /CppAD/cppad lib/cppad")
+   (i) to use GAMS
+       - ln -s <path to GAMS system directory> <path to SCIP>/lib/gams.$(OSTYPE).$(ARCH).$(COMP)
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version
@@ -444,7 +453,7 @@ To build your own Windows binaries under Windows, we recommend using the MinGW-C
 
 First install MSYS, then MinGW to the mingw folder inside the msys folder.
 Now you need to install the following packages to the mingw folder:
-- zlib (or use ZLIB=false ZIMPL=false since zlib is needed for ZIMPL and ZIMPL-support in SCIP)
+- zlib (or use ZLIB=false)
 - pcre (or use ZIMPL=false since pcre is needed for ZIMPL and ZIMPL-support in SCIP)
 - gmplib (or use ZIMPL=false since gmplib is needed for ZIMPL and ZIMPL-support in SCIP)
 

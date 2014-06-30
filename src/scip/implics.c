@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,7 +89,7 @@ SCIP_RETCODE vboundsEnsureSize(
    )
 {
    assert(vbounds != NULL);
-   
+
    /* create variable bounds data structure, if not yet existing */
    if( *vbounds == NULL )
    {
@@ -547,7 +547,7 @@ SCIP_RETCODE implicsEnsureSize(
    )
 {
    assert(implics != NULL);
-   
+
    /* create implications data structure, if not yet existing */
    if( *implics == NULL )
    {
@@ -929,7 +929,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          stat->nimplications++;
       }
    }
-    
+
    checkImplics(*implics, set);
 
    return SCIP_OKAY;
@@ -1401,7 +1401,7 @@ int cliquesSearchClique(
    assert(cliques != NULL || ncliques == 0);
    assert(clique != NULL);
 
-   cliqueid = clique->id;
+   cliqueid = clique->id; /*lint !e732*/
    left = -1;
    right = ncliques;
    while( left < right-1 )
@@ -1411,7 +1411,7 @@ int cliquesSearchClique(
 
       assert(cliques != NULL);
       middle = (left+right)/2;
-      id = cliques[middle]->id;
+      id = cliques[middle]->id; /*lint !e732*/
       if( cliqueid < id )
          right = middle;
       else if( cliqueid > id )
@@ -1542,10 +1542,10 @@ SCIP_RETCODE SCIPcliquelistAdd(
 
    SCIPdebugMessage("adding clique %u to cliquelist %p value %u (length: %d)\n", 
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
-   
+
    /* insert clique into list, sorted by clique id */
-   id = clique->id;
-   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i )
+   id = clique->id; /*lint !e732*/
+   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i ) /*lint !e574*/
       (*cliquelist)->cliques[value][i] = (*cliquelist)->cliques[value][i-1];
    (*cliquelist)->cliques[value][i] = clique;
    (*cliquelist)->ncliques[value]++;
@@ -2399,7 +2399,7 @@ int SCIPcliqueGetId(
 
    return (int) clique->id;
 }
-   
+
 /** returns the number of cliques stored in the clique list */
 int SCIPcliquelistGetNCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
@@ -2424,6 +2424,9 @@ void SCIPcliquelistCheck(
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
+   /* @todo might need to change ifndef NDEBUG to ifdef SCIP_MOREDEBUG because it can take at lot of time to check for
+    *       correctness
+    */
 #ifndef NDEBUG
    int value;
 

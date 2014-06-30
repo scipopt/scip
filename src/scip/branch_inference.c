@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -306,13 +306,14 @@ static
 SCIP_RETCODE performBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
-   SCIP_Real *           candsols,           /**< array of candidate solution values, or NULL */
+   SCIP_Real*            candsols,           /**< array of candidate solution values, or NULL */
    int                   ncands,             /**< number of candidates */
    SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
    SCIP_Real             inferenceweight,    /**< weight in score calculations for inference score */
    SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
    SCIP_Real             reliablescore,      /**< score which is seen to be reliable for a branching decision */
-   SCIP_Bool             useweightedsum      /**< should a weighted sum of inference, conflict and cutoff weights be used? */
+   SCIP_Bool             useweightedsum,     /**< should a weighted sum of inference, conflict and cutoff weights be used? */
+   SCIP_RESULT*          result              /**< buffer to store result (branched, reduced domain, ...) */
    )
 {
    SCIP_VAR* bestaggrcand;
@@ -322,6 +323,9 @@ SCIP_RETCODE performBranching(
    SCIP_Real bestvaluescore;
    SCIP_Real bestbranchpoint;
    SCIP_BRANCHDIR bestbranchdir;
+   SCIP_NODE* downchild;
+   SCIP_NODE* eqchild;
+   SCIP_NODE* upchild;
 
    bestbranchpoint = SCIP_UNKNOWN;
    bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
@@ -329,6 +333,9 @@ SCIP_RETCODE performBranching(
    bestvaluecand = NULL;
 
    assert(ncands > 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTFIND;
 
    /* check if the weighted sum between the average inferences and conflict score should be used */
    if( useweightedsum )
@@ -451,15 +458,14 @@ SCIP_RETCODE performBranching(
    /* perform the branching */
    if( candsols != NULL )
    {
-      SCIP_CALL( SCIPbranchVarVal(scip, bestaggrcand, SCIPgetBranchingPoint(scip, bestaggrcand, bestval), NULL, NULL, NULL) );
+      SCIP_CALL( SCIPbranchVarVal(scip, bestaggrcand, SCIPgetBranchingPoint(scip, bestaggrcand, bestval), &downchild, &eqchild, &upchild) );
    }
    else if( bestbranchpoint == SCIP_UNKNOWN ) /*lint !e777*/
    {
-      SCIP_CALL( SCIPbranchVar(scip, bestaggrcand, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPbranchVar(scip, bestaggrcand, &downchild, &eqchild, &upchild) );
    }
    else
    {
-      SCIP_NODE* child;
       SCIP_Real estimate;
       SCIP_Real downprio;
       SCIP_Real upprio;
@@ -488,21 +494,34 @@ SCIP_RETCODE performBranching(
       estimate = SCIPcalcChildEstimate(scip, bestvaluecand, downub);
 
       /* create down child */
-      SCIP_CALL( SCIPcreateChild(scip, &child, downprio, estimate) );
+      SCIP_CALL( SCIPcreateChild(scip, &downchild, downprio, estimate) );
 
       /* change upper bound in down child */
-      SCIP_CALL( SCIPchgVarUbNode(scip, child, bestvaluecand, downub) );
+      SCIP_CALL( SCIPchgVarUbNode(scip, downchild, bestvaluecand, downub) );
 
       /* calculate the child estimate */
       estimate = SCIPcalcChildEstimate(scip, bestvaluecand, uplb);
 
       /* create up child */
-      SCIP_CALL( SCIPcreateChild(scip, &child, upprio, estimate) );
+      SCIP_CALL( SCIPcreateChild(scip, &upchild, upprio, estimate) );
 
       /* change lower bound in up child */
-      SCIP_CALL( SCIPchgVarLbNode(scip, child, bestvaluecand, uplb) );
+      SCIP_CALL( SCIPchgVarLbNode(scip, upchild, bestvaluecand, uplb) );
 
       SCIPdebugMessage("branch on variable <%s> and value <%g>\n", SCIPvarGetName(bestvaluecand), bestbranchpoint);
+
+      eqchild = NULL;
+   }
+
+   if( downchild != NULL || eqchild != NULL || upchild != NULL )
+   {
+      *result = SCIP_BRANCHED;
+   }
+   else
+   {
+      /* if there are no children, then variable should have been fixed by SCIPbranchVar(Val) */
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(bestaggrcand), SCIPvarGetUbLocal(bestaggrcand)));
+      *result = SCIP_REDUCEDDOM;
    }
 
    return SCIP_OKAY;
@@ -568,9 +587,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    /* perform the branching */
    SCIP_CALL( performBranching(scip, cands, NULL, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->reliablescore,
-         branchruledata->useweightedsum) );
-
-   *result = SCIP_BRANCHED;
+         branchruledata->useweightedsum, result) );
 
    return SCIP_OKAY;
 }
@@ -598,9 +615,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
    /* perform the branching */
    SCIP_CALL( performBranching(scip, cands, candsols, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->reliablescore,
-         branchruledata->useweightedsum) );
-
-   *result = SCIP_BRANCHED;
+         branchruledata->useweightedsum, result) );
 
    return SCIP_OKAY;
 }
@@ -625,9 +640,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    /* perform the branching */
    SCIP_CALL( performBranching(scip, cands, NULL, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->reliablescore,
-         branchruledata->useweightedsum) );
-
-   *result = SCIP_BRANCHED;
+         branchruledata->useweightedsum, result) );
 
    return SCIP_OKAY;
 }

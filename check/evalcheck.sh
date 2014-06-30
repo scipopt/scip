@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -35,6 +35,7 @@ do
     NAME=`basename $i .out`
     DIR=`dirname $i`
     OUTFILE=$DIR/$NAME.out
+    ERRFILE=$DIR/$NAME.err
     RESFILE=$DIR/$NAME.res
     TEXFILE=$DIR/$NAME.tex
     PAVFILE=$DIR/$NAME.pav
@@ -59,5 +60,5 @@ do
     fi
     fi
 
-    awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done

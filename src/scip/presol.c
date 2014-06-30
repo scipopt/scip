@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->ncalls = 0;
       presol->wasdelayed = FALSE;
    }
-   
+
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {
@@ -586,7 +586,7 @@ void SCIPpresolSetPriority(
 {
    assert(presol != NULL);
    assert(set != NULL);
-   
+
    presol->priority = priority;
    set->presolssorted = FALSE;
 }

@@ -1,13 +1,13 @@
-/* $Id: base_std_math.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: base_std_math.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_BASE_STD_MATH_INCLUDED
 # define CPPAD_BASE_STD_MATH_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -16,6 +16,10 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 /* 
 $begin base_std_math$$
 $spell
+	inline
+	fabs
+	isnan
+	alloc
 	std
 	acos
 	asin
@@ -53,6 +57,7 @@ $icode%y% = atan(%x%)%$$ $cnext inverse tangent    $rnext
 $icode%y% = cos(%x%)%$$  $cnext cosine             $rnext
 $icode%y% = cosh(%x%)%$$ $cnext hyperbolic cosine  $rnext
 $icode%y% = exp(%x%)%$$  $cnext exponential        $rnext
+$icode%y% = fabs(%x%)%$$ $cnext absolute value     $rnext
 $icode%y% = log(%x%)%$$  $cnext natural logarithm  $rnext
 $icode%y% = sin(%x%)%$$  $cnext sine               $rnext
 $icode%y% = sinh(%x%)%$$ $cnext hyperbolic sine    $rnext
@@ -64,6 +69,8 @@ $codei%
 	const %Base%& %x%
 	%Base%        %y%
 %$$
+For example,
+$cref/base_alloc/base_alloc.hpp/Unary Standard Math/$$,
 
 
 $head CPPAD_STANDARD_MATH_UNARY$$
@@ -79,9 +86,7 @@ $codei%
 This macro uses the functions $codei%std::%Fun%$$ which
 must be defined and have the same prototype as $codei%CppAD::%Fun%$$.
 For example, 
-$cref/float/base_float.hpp/Unary Standard Math/$$,
-$cref/double/base_double.hpp/Unary Standard Math/$$, and
-$cref/complex valid unary math/base_complex.hpp/Valid Unary Math/$$.
+$cref/float/base_float.hpp/Unary Standard Math/$$.
 
 $head sign$$
 $index sign, base require$$
@@ -108,8 +113,7 @@ $codei%
 	%Base% %z%
 %$$
 For example, see
-$cref/float/base_float.hpp/sign/$$,
-$cref/double/base_double.hpp/sign/$$.
+$cref/base_alloc/base_alloc.hpp/sign/$$.
 Note that, if ordered comparisons are not defined for the type $icode Base$$,
 the $code code sign$$ function should generate an assert if it is used; see
 $cref/complex invalid unary math/base_complex.hpp/Invalid Unary Math/$$.
@@ -123,7 +127,7 @@ $codei%
 	%z% = CppAD::pow(%x%, %y%)
 %$$
 which computes $latex z = x^y$$.
-The arguments $icode x$$ and $italic y$$ have prototypes
+The arguments $icode x$$ and $icode y$$ have prototypes
 $codei%
 	const %Base%& %x%
 	const %Base%& %y%
@@ -133,9 +137,42 @@ $codei%
 	%Base% %z%
 %$$
 For example, see
-$cref/float/base_float.hpp/pow/$$,
-$cref/double/base_double.hpp/pow/$$, and
-$cref/complex/base_complex.hpp/pow/$$.
+$cref/base_alloc/base_alloc.hpp/pow/$$.
+
+
+$head isnan$$
+$index isnan, base type$$
+$index base, isnan$$ 
+If $icode Base$$ defines the $code isnan$$ function,
+you may also have to provide a definition in the CppAD namespace
+(to avoid a function ambiguity).
+For example, see
+$cref/base_complex/base_complex.hpp/isnan/$$.
+
+
+$head limits$$
+$index numeric, limits Base$$
+$index limits, numeric Base$$
+$index Base, numeric_limits$$
+The $cref/numeric_limits/limits/$$ functions
+$codei%
+	%Base% CppAD::numeric_limits<%Base%>::epsilon()
+	%Base% CppAD::numeric_limits<%Base%>::min()
+	%Base% CppAD::numeric_limits<%Base%>::max()
+%$$
+must return machine epsilon,
+minimum positive normalize value,
+and maximum finite value for the type $icode Base$$.
+
+$subhead epsilon$$
+The deprecated function $cref epsilon$$ function
+must also be included. It can be implemented using
+$codei%
+namespace CppAD {
+	template <> inline %Base% epsilon<%Base%>(void)
+	{	return numeric_limits<%Base%>::epsilon(); }
+}
+%$$
 
 $end
 -------------------------------------------------------------------------------
@@ -143,9 +180,11 @@ $end
 
 # include <cmath>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 
 /*!
+\defgroup base_std_math_hpp base_std_math.hpp
+\{
 \file base_std_math.hpp
 Defintions that aid meeting Base type requirements for standard math functions.
 */
@@ -163,6 +202,7 @@ using the corresponding function <code>std::Fun</code>.
 	inline Type Fun(const Type& x)           \
 	{	return std::Fun(x); }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 
 # endif

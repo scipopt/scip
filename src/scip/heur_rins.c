@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,8 +32,8 @@
 #define HEUR_DESC             "relaxation induced neighborhood search by Danna, Rothberg, and Le Pape"
 #define HEUR_DISPCHAR         'N'
 #define HEUR_PRIORITY         -1101000
-#define HEUR_FREQ             -1
-#define HEUR_FREQOFS          5
+#define HEUR_FREQ             25
+#define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 #define HEUR_USESSUBSCIP      TRUE      /**< does the heuristic use a secondary SCIP instance? */
@@ -370,11 +370,15 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    assert( result != NULL );
    assert( SCIPhasCurrentNodeLP(scip) );
 
+   *result = SCIP_DELAYED;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
-
-   *result = SCIP_DELAYED;
 
    /* only call heuristic, if an optimal LP solution and a feasible solution are at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )

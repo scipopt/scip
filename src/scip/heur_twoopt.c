@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -508,7 +508,7 @@ SCIP_Real determineBound(
          if( rowpos >= 0 && !SCIPisFeasZero(scip, effect) )
          {
             /* effect does not equal zero, the bound is determined as minimum positive integer such that
-             * feasibility is remained in all constraints.
+             * feasibility of this constraint is maintained.
              * if constraint is an equality constraint, activity and lhs/rhs should be feasibly equal, which
              * will cause the method to return zero.
              */
@@ -517,6 +517,10 @@ SCIP_Real determineBound(
             activity = activities[rowpos];
             rhs = SCIProwGetRhs(row);
             lhs = SCIProwGetLhs(row);
+
+            /* if the row is an equation, abort because of effect being nonzero */
+            if( SCIPisFeasEQ(scip, lhs, rhs) )
+               return 0.0;
 
             assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
 
@@ -943,7 +947,7 @@ SCIP_RETCODE optimize(
          DIRECTION bestmasterdir;
          DIRECTION bestslavedir;
 
-         master = vars[blockstart[b] + m];
+         master = vars[blockstart[b] + m]; /*lint !e679*/
          masterobj = SCIPvarGetObj(master);
          mastersolval = SCIPgetSolVal(scip, worksol, master);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ SCIP_RETCODE addHistory(
    )
 {
    add_history(s);
-   
+
    return SCIP_OKAY;
 }
 
@@ -106,7 +106,7 @@ SCIP_RETCODE removeHistory(
 {
 #ifndef NO_REMOVE_HISTORY
    HIST_ENTRY* entry;
-   
+
    entry = remove_history(pos);
 
    /* Free readline/history storage: there seem to be differences in the versions (and the amount of
@@ -314,7 +314,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
 #endif
 
    assert(dialoghdlr != NULL);
-   
+
    SCIP_ALLOC( BMSallocMemory(dialoghdlr) );
    (*dialoghdlr)->rootdialog = NULL;
    (*dialoghdlr)->inputlist = NULL;
@@ -340,7 +340,7 @@ SCIP_RETCODE SCIPdialoghdlrFree(
    )
 {
    assert(dialoghdlr != NULL);
-   
+
    SCIP_CALL( SCIPdialoghdlrSetRoot(scip, *dialoghdlr, NULL) );
    linelistFreeAll(&(*dialoghdlr)->inputlist);
    BMSfreeMemoryArray(&(*dialoghdlr)->buffer);
@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPdialoghdlrExec(
    while( dialog != NULL )
    {
       SCIP_CALL( SCIPdialogExec(dialog, set, dialoghdlr, &dialog) );
-      
+
       /* reset buffer, it is was consumed completely */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0' )
          SCIPdialoghdlrClearBuffer(dialoghdlr);
@@ -603,7 +603,7 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    linelist->nextline = NULL;
    *dialoghdlr->inputlistptr = linelist;
    dialoghdlr->inputlistptr = &linelist->nextline;
-   
+
    return SCIP_OKAY;
 }
 
@@ -808,7 +808,7 @@ SCIP_RETCODE SCIPdialogRelease(
    {
       SCIP_CALL( dialogFree(scip, dialog) );
    }
-   
+
    return SCIP_OKAY;
 }
 

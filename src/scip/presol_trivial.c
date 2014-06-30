@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -91,7 +91,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
       {
          SCIP_Real newlb;
          SCIP_Real newub;
-         
+
          /* round fractional bounds on integer variables */
          newlb = SCIPfeasCeil(scip, lb);
          newub = SCIPfeasFloor(scip, ub);

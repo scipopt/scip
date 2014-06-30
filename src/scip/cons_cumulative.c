@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4606,6 +4606,7 @@ SCIP_RETCODE propagateUbTTEF(
    int nests;
    int est;
    int lct;
+   int start;
    int end;
    int v;
 
@@ -4615,8 +4616,11 @@ SCIP_RETCODE propagateUbTTEF(
    /* compute earliest start and latest completion time of all jobs */
    for( v = 0; v < nvars; ++v )
    {
-      est = MIN(est, convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v])));
-      lct = MAX(lct, convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v]);
+      start = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      end = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
+
+      est = MIN(est, start);
+      lct = MAX(lct, end);
    }
 
    /* adjust the effective time horizon */
@@ -4954,6 +4958,8 @@ SCIP_RETCODE propagateLbTTEF(
    int begin;
    int minest;
    int maxlct;
+   int start;
+   int end;
    int v;
 
    if( *cutoff )
@@ -4968,8 +4974,11 @@ SCIP_RETCODE propagateLbTTEF(
    /* compute earliest start and latest completion time of all jobs */
    for( v = 0; v < nvars; ++v )
    {
-      minest = MIN(minest, convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v])));
-      maxlct = MAX(maxlct, convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v]);
+      start = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      end = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
+
+      minest = MIN(minest, start);
+      maxlct = MAX(maxlct, end);
    }
 
    /* adjust the effective time horizon */
@@ -5038,7 +5047,6 @@ SCIP_RETCODE propagateLbTTEF(
          int freeenergy;
          int duration;
          int demand;
-         int end;
          int idx;
          int lct;
          int ect;
@@ -5888,8 +5896,8 @@ SCIP_RETCODE insertThetanode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BT*              tree,               /**< binary tree */
    SCIP_BTNODE*          node,               /**< node to insert */
-   SCIP_NODEDATA**       nodedatas,          /**< array of node datas */
-   int*                  nnodedatas          /**< pointer to number of node datas */
+   SCIP_NODEDATA**       nodedatas,          /**< array of node data */
+   int*                  nnodedatas          /**< pointer to number of node data */
    )
 {
    /* if the tree is empty the node will be the root node */
@@ -6331,7 +6339,7 @@ int computeEnergyContribution(
    return nodedata->demand * duration;
 }
 
-/** comparison method for two node datas w.r.t. the earliest start time */
+/** comparison method for two node data w.r.t. the earliest start time */
 static
 SCIP_DECL_SORTPTRCOMP(compNodeEst)
 {
@@ -6344,7 +6352,7 @@ SCIP_DECL_SORTPTRCOMP(compNodeEst)
    return (est1 - est2);
 }
 
-/** comparison method for two node datas w.r.t. the latest completion time */
+/** comparison method for two node data w.r.t. the latest completion time */
 static
 SCIP_DECL_SORTPTRCOMP(compNodedataLct)
 {
@@ -6572,7 +6580,7 @@ SCIP_RETCODE inferboundsEdgeFinding(
          {
             SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
 
-            /* the root might changed therefore we need to collect the new root node datas */
+            /* the root might changed therefore we need to collect the new root node data */
             rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
             assert(rootdata != NULL);
 
@@ -6696,7 +6704,7 @@ SCIP_RETCODE inferboundsEdgeFinding(
          /* delete responsible leaf from lambda */
          SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
 
-         /* the root might changed therefore we need to collect the new root node datas */
+         /* the root might changed therefore we need to collect the new root node data */
          rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
          assert(rootdata != NULL);
       }
@@ -7437,9 +7445,6 @@ SCIP_RETCODE applyProbingVar(
    SCIP_Real*            rightproplbs,       /**< lower bounds after applying domain propagation in right branch */
    SCIP_Real*            rightpropubs,       /**< upper bounds after applying domain propagation in right branch */
    int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    SCIP_Bool*            success,            /**< buffer to store whether a probing succeed to dual fix the variable */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
@@ -7454,6 +7459,10 @@ SCIP_RETCODE applyProbingVar(
 
    var = vars[probingpos];
    assert(var != NULL);
+   assert(SCIPisGE(scip, leftub, SCIPvarGetLbLocal(var)));
+   assert(SCIPisLE(scip, leftub, SCIPvarGetUbLocal(var)));
+   assert(SCIPisGE(scip, rightlb, SCIPvarGetLbLocal(var)));
+   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbLocal(var)));
 
    (*success) = FALSE;
 
@@ -7466,12 +7475,29 @@ SCIP_RETCODE applyProbingVar(
 
    if( (*cutoff) )
    {
+      /* note that cutoff may occur if presolving has not been executed fully */
       SCIP_CALL( SCIPtightenVarLb(scip, var, rightlb, TRUE, cutoff, &tightened) );
-      assert(!(*cutoff));
 
       if( tightened )
       {
          (*success) =TRUE;
+         (*nfixedvars)++;
+      }
+
+      return SCIP_OKAY;
+   }
+
+   /* note that probing can change the upper bound and thus the right branch may have been detected infeasible if
+    * presolving has not been executed fully
+    */
+   if( SCIPisGT(scip, rightlb, SCIPvarGetUbLocal(var)) )
+   {
+      /* note that cutoff may occur if presolving has not been executed fully */
+      SCIP_CALL( SCIPtightenVarUb(scip, var, leftub, TRUE, cutoff, &tightened) );
+
+      if( tightened )
+      {
+         (*success) = TRUE;
          (*nfixedvars)++;
       }
 
@@ -7484,8 +7510,8 @@ SCIP_RETCODE applyProbingVar(
 
    if( (*cutoff) )
    {
+      /* note that cutoff may occur if presolving has not been executed fully */
       SCIP_CALL( SCIPtightenVarUb(scip, var, leftub, TRUE, cutoff, &tightened) );
-      assert(!(*cutoff));
 
       if( tightened )
       {
@@ -7501,17 +7527,22 @@ SCIP_RETCODE applyProbingVar(
 
 /** is it possible, to round variable down w.r.t. objective function */
 static
-SCIP_Bool varMayRoundDown(
+SCIP_RETCODE varMayRoundDown(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            roundable           /**< pointer to store if the variable can be rounded down */
    )
 {
    SCIP_Real objval;
    int scalar;
 
+   assert(roundable != NULL);
+
+   *roundable = TRUE;
+
    /* a fixed variable can be definition always be safely rounded */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-      return TRUE;
+      return SCIP_OKAY;
 
    /* in case the variable is not active we need to check the object coefficient of the active variable */
    if( !SCIPvarIsActive(var) )
@@ -7528,7 +7559,7 @@ SCIP_Bool varMayRoundDown(
    }
    else
    {
-      scalar = 1.0;
+      scalar = 1;
       objval = SCIPvarGetObj(var);
    }
 
@@ -7537,28 +7568,30 @@ SCIP_Bool varMayRoundDown(
     *
     * @note that we need to check this condition w.r.t. active variable space
     */
-   if( scalar > 0 && SCIPisNegative(scip, objval) )
-      return FALSE;
+   if( (scalar > 0 && SCIPisNegative(scip, objval)) || (scalar < 0 && SCIPisPositive(scip, objval)) )
+      *roundable = FALSE;
 
-   if( scalar < 0 && SCIPisPositive(scip, objval) )
-      return FALSE;
-
-   return TRUE;
+   return SCIP_OKAY;
 }
 
 /** is it possible, to round variable up w.r.t. objective function */
 static
-SCIP_Bool varMayRoundUp(
+SCIP_RETCODE varMayRoundUp(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            roundable           /**< pointer to store if the variable can be rounded down */
    )
 {
    SCIP_Real objval;
    int scalar;
 
+   assert(roundable != NULL);
+
+   *roundable = TRUE;
+
    /* a fixed variable can be definition always be safely rounded */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-      return TRUE;
+      return SCIP_OKAY;
 
    /* in case the variable is not active we need to check the object coefficient of the active variable */
    if( !SCIPvarIsActive(var) )
@@ -7575,7 +7608,7 @@ SCIP_Bool varMayRoundUp(
    }
    else
    {
-      scalar = 1.0;
+      scalar = 1;
       objval = SCIPvarGetObj(var);
    }
 
@@ -7584,13 +7617,10 @@ SCIP_Bool varMayRoundUp(
     *
     * @note that we need to check this condition w.r.t. active variable space
     */
-   if( scalar > 0 && SCIPisPositive(scip, objval) )
-      return FALSE;
+   if( (scalar > 0 && SCIPisPositive(scip, objval)) || (scalar < 0 && SCIPisNegative(scip, objval)) )
+      *roundable = FALSE;
 
-   if( scalar < 0 && SCIPisNegative(scip, objval) )
-      return FALSE;
-
-   return TRUE;
+   return SCIP_OKAY;
 }
 
 /** For each variable we compute an alternative lower and upper bounds. That is, if the variable is not fixed to its
@@ -7739,9 +7769,6 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
    int*                  downlocks,          /**< number of constraints with down lock participating by the computation */
    int*                  uplocks,            /**< number of constraints with up lock participating by the computation */
    int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
 {
@@ -7770,6 +7797,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       SCIP_VAR* var;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+      SCIP_Bool roundable;
       int ub;
       int lb;
 
@@ -7783,38 +7811,44 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && varMayRoundDown(scip, var) )
+
+      if( SCIPvarGetNLocksDown(var) == downlocks[v] )
       {
-         if( alternativelbs[v] > ub )
+         SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
+
+         if( roundable )
          {
-            SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &fixed) );
-            assert(!infeasible);
-            assert(fixed);
-
-           (*nfixedvars)++;
-
-            /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
-             * constraints
-             */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
-         }
-         else
-         {
-            SCIP_Bool success;
-
-            /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
-             * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
-             * infeasible we can apply the dual reduction; otherwise we do nothing
-             */
-            SCIP_CALL( applyProbingVar(scip, vars, nvars, v, lb, alternativelbs[v],
-                  downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                  nfixedvars, naggrvars, nimplications, nchgbds, &success, cutoff) );
-
-            if( success )
+            if( alternativelbs[v] > ub )
             {
+               SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &fixed) );
+               assert(!infeasible);
+               assert(fixed);
+
+               (*nfixedvars)++;
+
+               /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+                * constraints
+                */
                SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
             }
+            else
+            {
+               SCIP_Bool success;
 
+               /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
+                * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
+                * infeasible we can apply the dual reduction; otherwise we do nothing
+                */
+               SCIP_CALL( applyProbingVar(scip, vars, nvars, v, (SCIP_Real) lb, (SCIP_Real) alternativelbs[v],
+                     downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                     nfixedvars, &success, cutoff) );
+
+               if( success )
+               {
+                  SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
+               }
+
+            }
          }
       }
 
@@ -7825,36 +7859,41 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && varMayRoundUp(scip, var) )
+      if( SCIPvarGetNLocksUp(var) == uplocks[v] )
       {
-         if( alternativeubs[v] < lb )
+         SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
+
+         if( roundable )
          {
-            SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetUbLocal(var), &infeasible, &fixed) );
-            assert(!infeasible);
-            assert(fixed);
-
-            (*nfixedvars)++;
-
-            /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
-             * constraints
-             */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
-         }
-         else
-         {
-            SCIP_Bool success;
-
-            /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
-             * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
-             * infeasible we can apply the dual reduction; otherwise we do nothing
-             */
-            SCIP_CALL( applyProbingVar(scip, vars, nvars, v, alternativeubs[v], ub,
-                  downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                  nfixedvars, naggrvars, nimplications, nchgbds, &success, cutoff) );
-
-            if( success )
+            if( alternativeubs[v] < lb )
             {
+               SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetUbLocal(var), &infeasible, &fixed) );
+               assert(!infeasible);
+               assert(fixed);
+
+               (*nfixedvars)++;
+
+               /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+                * constraints
+                */
                SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
+            }
+            else
+            {
+               SCIP_Bool success;
+
+               /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
+                * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
+                * infeasible we can apply the dual reduction; otherwise we do nothing
+                */
+               SCIP_CALL( applyProbingVar(scip, vars, nvars, v, (SCIP_Real) alternativeubs[v], (SCIP_Real) ub,
+                     downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                     nfixedvars, &success, cutoff) );
+
+               if( success )
+               {
+                  SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
+               }
             }
          }
       }
@@ -7882,9 +7921,6 @@ SCIP_RETCODE propagateAllConss(
    int                   nconss,             /**< number of cumulative constraints */
    SCIP_Bool             local,              /**< use local bounds effective horizon? */
    int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    SCIP_Bool*            cutoff,             /**< buffer to store whether a cutoff is detected */
    SCIP_Bool*            branched            /**< pointer to store if a branching was applied, or NULL to avoid branching */
    )
@@ -7924,7 +7960,7 @@ SCIP_RETCODE propagateAllConss(
 
    /* apply fixing which result of the alternative bounds directly */
    SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks,
-         nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+         nfixedvars, cutoff) );
 
    if( !(*cutoff) && oldnfixedvars == *nfixedvars && branched != NULL )
    {
@@ -9313,6 +9349,7 @@ SCIP_RETCODE fixIntegerVariableUb(
 {
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
+   SCIP_Bool roundable;
 
    /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
     * would/could end in an implication which can lead to cutoff of the/all optimal solution
@@ -9330,10 +9367,12 @@ SCIP_RETCODE fixIntegerVariableUb(
    if( SCIPvarGetNLocksUp(var) > (int)(uplock) )
       return SCIP_OKAY;
 
+   SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
+
    /* rounding the integer variable up is only a valid dual reduction if the object coefficient is zero or negative
     * (the transformed problem is always a minimization problem)
     */
-   if( !varMayRoundUp(scip, var) )
+   if( !roundable )
       return SCIP_OKAY;
 
    SCIPdebugMessage("try fixing variable <%s>[%g,%g] to upper bound %g\n", SCIPvarGetName(var),
@@ -9362,6 +9401,7 @@ SCIP_RETCODE fixIntegerVariableLb(
 {
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
+   SCIP_Bool roundable;
 
    /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
     * would/could end in an implication which can lead to cutoff of the/all optimal solution
@@ -9379,8 +9419,10 @@ SCIP_RETCODE fixIntegerVariableLb(
    if( SCIPvarGetNLocksDown(var) > (int)(downlock) )
       return SCIP_OKAY;
 
+   SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
+
    /* is it possible, to round variable down w.r.t. objective function? */
-   if( !varMayRoundDown(scip, var) )
+   if( !roundable )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &tightened) );
@@ -9759,8 +9801,6 @@ SCIP_RETCODE presolveConsEst(
    SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
    SCIP_Bool*            irrelevants,        /**< array mark those variables which are irrelevant for the cumulative condition */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
@@ -9774,7 +9814,6 @@ SCIP_RETCODE presolveConsEst(
    SCIP_Real* upproplbs;
    SCIP_Real* uppropubs;
 
-   int nimplications;
    int firstminect;
    int secondminect;
    int v;
@@ -9946,39 +9985,46 @@ SCIP_RETCODE presolveConsEst(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksDown(var) == (int)(downlocks[v]) && varMayRoundDown(scip, var) )
+         if( SCIPvarGetNLocksDown(var) == (int)(downlocks[v]) )
          {
-            if( alternativelb > lst )
+            SCIP_Bool roundable;
+
+            SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
+
+            if( roundable )
             {
-               SCIP_Bool infeasible;
-               SCIP_Bool fixed;
-
-               SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &fixed) );
-               assert(!infeasible);
-               assert(fixed);
-
-               (*nfixedvars)++;
-
-               /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
-                * constraints
-                */
-               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
-            }
-            else
-            {
-               SCIP_Bool success;
-
-               /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
-                * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
-                * infeasible we can apply the dual reduction; otherwise we do nothing
-                */
-               SCIP_CALL( applyProbingVar(scip, vars, nvars, v, est, alternativelb,
-                     downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                     nfixedvars, naggrvars, &nimplications, nchgbds, &success, cutoff) );
-
-               if( success )
+               if( alternativelb > lst )
                {
+                  SCIP_Bool infeasible;
+                  SCIP_Bool fixed;
+
+                  SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &fixed) );
+                  assert(!infeasible);
+                  assert(fixed);
+
+                  (*nfixedvars)++;
+
+                  /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+                   * constraints
+                   */
                   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
+               }
+               else
+               {
+                  SCIP_Bool success;
+
+                  /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
+                   * representable. To retrieve a potential dual reduction we using probing to check both branches. If one in
+                   * infeasible we can apply the dual reduction; otherwise we do nothing
+                   */
+                  SCIP_CALL( applyProbingVar(scip, vars, nvars, v, (SCIP_Real) est, (SCIP_Real) alternativelb,
+                        downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                        nfixedvars, &success, cutoff) );
+
+                  if( success )
+                  {
+                     SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
+                  }
                }
             }
          }
@@ -10040,8 +10086,6 @@ SCIP_RETCODE presolveConsLct(
    SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
    SCIP_Bool*            irrelevants,        /**< array mark those variables which are irrelevant for the cumulative condition */
    int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
@@ -10055,7 +10099,6 @@ SCIP_RETCODE presolveConsLct(
    SCIP_Real* upproplbs;
    SCIP_Real* uppropubs;
 
-   int nimplications;
    int firstmaxlst;
    int secondmaxlst;
    int v;
@@ -10222,39 +10265,46 @@ SCIP_RETCODE presolveConsLct(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksUp(var) == (int)(uplocks[v]) && varMayRoundUp(scip, var) )
+         if( SCIPvarGetNLocksUp(var) == (int)(uplocks[v]) )
          {
-            if( alternativeub < est )
+            SCIP_Bool roundable;
+
+            SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
+
+            if( roundable )
             {
-               SCIP_Bool infeasible;
-               SCIP_Bool fixed;
-
-               SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetUbLocal(var), &infeasible, &fixed) );
-               assert(!infeasible);
-               assert(fixed);
-
-               (*nfixedvars)++;
-
-               /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
-                * constraints
-                */
-               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
-            }
-            else
-            {
-               SCIP_Bool success;
-
-               /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
-                * representable. To retrieve a potential dual reduction we using probing to check both branches. If one
-                * in infeasible we can apply the dual reduction; otherwise we do nothing
-                */
-               SCIP_CALL( applyProbingVar(scip, vars, nvars, v, alternativeub, lst,
-                     downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
-                     nfixedvars, naggrvars, &nimplications, nchgbds, &success, cutoff) );
-
-               if( success )
+               if( alternativeub < est )
                {
+                  SCIP_Bool infeasible;
+                  SCIP_Bool fixed;
+
+                  SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetUbLocal(var), &infeasible, &fixed) );
+                  assert(!infeasible);
+                  assert(fixed);
+
+                  (*nfixedvars)++;
+
+                  /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+                   * constraints
+                   */
                   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
+               }
+               else
+               {
+                  SCIP_Bool success;
+
+                  /* In the current version SCIP, variable domains are single intervals. Meaning that domain holes or not
+                   * representable. To retrieve a potential dual reduction we using probing to check both branches. If one
+                   * in infeasible we can apply the dual reduction; otherwise we do nothing
+                   */
+                  SCIP_CALL( applyProbingVar(scip, vars, nvars, v, (SCIP_Real) alternativeub, (SCIP_Real) lst,
+                        downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                        nfixedvars, &success, cutoff) );
+
+                  if( success )
+                  {
+                     SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualbranchs++ );
+                  }
                }
             }
          }
@@ -10280,8 +10330,6 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< cumulative constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
@@ -10310,12 +10358,12 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
    /* presolve constraint form the earlier start time point of view */
    SCIP_CALL( presolveConsEst(scip, nvars, consdata->vars, consdata->durations,
          consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
-         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
+         irrelevants, nfixedvars, nchgsides, cutoff) );
 
    /* presolve constraint form the latest completion time point of view */
    SCIP_CALL( presolveConsLct(scip, nvars, consdata->vars, consdata->durations,
          consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
-         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
+         irrelevants, nfixedvars, nchgsides, cutoff) );
 
    /* remove variables from the cumulative constraint which are marked to be deleted; we need to that in the reverse
     * order to ensure a correct behaviour
@@ -10914,7 +10962,9 @@ SCIP_RETCODE presolveCons(
    SCIP_CONS*            cons,               /**< cumulative constraint */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+#if 0
    int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+#endif
    int*                  nchgbds,            /**< pointer to store the number of changed bounds */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    int*                  naddconss,          /**< pointer to store the number of added constraints */
@@ -10943,7 +10993,7 @@ SCIP_RETCODE presolveCons(
       if( *cutoff || *unbounded )
          return SCIP_OKAY;
 
-      SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, naggrvars, nchgbds, nchgcoefs, nchgsides, cutoff) );
+      SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
@@ -11234,8 +11284,8 @@ SCIP_RETCODE getNodeIdx(
 
             for( v = 0; v < tcliquegraph->nnodes; ++v )
             {
-               SCIP_CALL( SCIPreallocBufferArray(scip, &tcliquegraph->precedencematrix[v], size) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &tcliquegraph->demandmatrix[v], size) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &tcliquegraph->precedencematrix[v], size) ); /*lint !e866*/
+               SCIP_CALL( SCIPreallocBufferArray(scip, &tcliquegraph->demandmatrix[v], size) ); /*lint !e866*/
             }
          }
          assert(tcliquegraph->nnodes < tcliquegraph->size);
@@ -11246,11 +11296,11 @@ SCIP_RETCODE getNodeIdx(
          tcliquegraph->weights[pos] = 0;
          tcliquegraph->vars[pos] = var;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->precedencematrix[pos], tcliquegraph->size) );
-         BMSclearMemoryArray(tcliquegraph->precedencematrix[pos], tcliquegraph->nnodes);
+         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->precedencematrix[pos], tcliquegraph->size) ); /*lint !e866*/
+         BMSclearMemoryArray(tcliquegraph->precedencematrix[pos], tcliquegraph->nnodes); /*lint !e866*/
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->demandmatrix[pos], tcliquegraph->size) );
-         BMSclearMemoryArray(tcliquegraph->demandmatrix[pos], tcliquegraph->nnodes);
+         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->demandmatrix[pos], tcliquegraph->size) ); /*lint !e866*/
+         BMSclearMemoryArray(tcliquegraph->demandmatrix[pos], tcliquegraph->nnodes); /*lint !e866*/
 
          SCIP_CALL( SCIPhashmapInsert(tcliquegraph->varmap, (void*)var, (void*)(size_t)(pos)) );
 
@@ -11382,10 +11432,10 @@ SCIP_RETCODE projectVbd(
 /** compute the transitive closer of the given graph and the number of in and out arcs */
 static
 void transitiveClosure(
-   SCIP_Bool**           adjmatrix,         /**< adjacent matrix */
-   int*                  ninarcs,           /**< array to store the number of in arcs */
-   int*                  noutarcs,          /**< array to store the number of out arcs */
-   int                   nnodes             /**< number if nodes */
+   SCIP_Bool**           adjmatrix,          /**< adjacent matrix */
+   int*                  ninarcs,            /**< array to store the number of in arcs */
+   int*                  noutarcs,           /**< array to store the number of out arcs */
+   int                   nnodes              /**< number if nodes */
    )
 {
    int i;
@@ -12000,11 +12050,11 @@ SCIP_RETCODE createTcliqueGraph(
       var = vars[v];
       assert(var != NULL);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &precedencematrix[v], nvars) );
-      BMSclearMemoryArray(precedencematrix[v], nvars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &precedencematrix[v], nvars) ); /*lint !e866*/
+      BMSclearMemoryArray(precedencematrix[v], nvars); /*lint !e866*/
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &demandmatrix[v], nvars) );
-      BMSclearMemoryArray(demandmatrix[v], nvars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &demandmatrix[v], nvars) ); /*lint !e866*/
+      BMSclearMemoryArray(demandmatrix[v], nvars); /*lint !e866*/
 
       /* insert all active variables into the garph */
       assert(SCIPvarGetProbindex(var) == v);
@@ -12888,10 +12938,12 @@ SCIP_DECL_CONSPROP(consPropCumulative)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
-   int naggrvars;
    int nchgbds;
    int ndelconss;
    int c;
+#if 0
+   int naggrvars = 0;
+#endif
 
    SCIPdebugMessage("propagate %d of %d useful cumulative constraints\n", nusefulconss, nconss);
 
@@ -12903,7 +12955,6 @@ SCIP_DECL_CONSPROP(consPropCumulative)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   naggrvars = 0;
    nchgbds = 0;
    ndelconss = 0;
    cutoff = FALSE;
@@ -12919,9 +12970,13 @@ SCIP_DECL_CONSPROP(consPropCumulative)
 
       if( SCIPgetDepth(scip) == 0 )
       {
+#if 0
          SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
                &nchgbds, &naggrvars, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
-
+#else
+         SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
+               &nchgbds, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
+#endif
          if( cutoff )
             break;
 
@@ -12944,7 +12999,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
 #if 0
    if( !cutoff && conshdlrdata->dualpresolve && nconss > 1 )
    {
-      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, NULL) );
+      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, &cutoff, NULL) );
    }
 #endif
 
@@ -13013,8 +13068,13 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
        */
       SCIP_CALL( removeIrrelevantJobs(scip, conss[c]) );
 
+#if 0
       SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
             nfixedvars, naggrvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
+#else
+      SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
+            nfixedvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
+#endif
 
       if( cutoff || unbounded )
          break;
@@ -13038,12 +13098,8 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
 
    if( !cutoff && !unbounded && conshdlrdata->dualpresolve && nconss > 1 )
    {
-      int nimplications;
-
-      nimplications = 0;
-
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE,
-            nfixedvars, naggrvars, &nimplications, nchgbds, &cutoff, NULL) );
+            nfixedvars, &cutoff, NULL) );
    }
 
    /* only perform the detection of variable bounds and disjunctive constraint once */
@@ -13459,7 +13515,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          &conshdlrdata->efcheck, FALSE, DEFAULT_EFCHECK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/efinfer",
-         "should edge-finding be used to infer bounds? ",
+         "should edge-finding be used to infer bounds?",
          &conshdlrdata->efinfer, FALSE, DEFAULT_EFINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
@@ -13669,6 +13725,7 @@ int SCIPgetHminCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return 0;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13712,6 +13769,7 @@ int SCIPgetHmaxCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return 0;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13732,6 +13790,7 @@ SCIP_VAR** SCIPgetVarsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13752,6 +13811,7 @@ int SCIPgetNVarsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13772,6 +13832,7 @@ int SCIPgetCapacityCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13792,6 +13853,7 @@ int* SCIPgetDurationsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13812,6 +13874,7 @@ int* SCIPgetDemandsCumulative(
    {
       SCIPerrorMessage("constraint is not a cumulative constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13897,8 +13960,6 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            irrelevants,        /**< array mark those variables which are irrelevant for the cumulative condition */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
@@ -13908,11 +13969,11 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
 
    /* presolve constraint form the earlier start time point of view */
    SCIP_CALL( presolveConsEst(scip, nvars, vars, durations, hmin, hmax, downlocks, uplocks, cons,
-         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
+         irrelevants, nfixedvars, nchgsides, cutoff) );
 
    /* presolve constraint form the latest completion time point of view */
    SCIP_CALL( presolveConsLct(scip, nvars, vars, durations, hmin, hmax, downlocks, uplocks, cons,
-         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
+         irrelevants, nfixedvars, nchgsides, cutoff) );
 
    return SCIP_OKAY;
 }

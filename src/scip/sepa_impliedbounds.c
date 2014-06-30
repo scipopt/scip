@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -155,7 +155,7 @@ SCIP_RETCODE separateCuts(
       implvars = SCIPvarGetImplVars(fracvars[i], TRUE);
       impltypes = SCIPvarGetImplTypes(fracvars[i], TRUE);
       implbounds = SCIPvarGetImplBounds(fracvars[i], TRUE);
-      
+
       /*debugMessage("%d implications for <%s>[%g] == 1\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
 
       /* try to add cuts for implications of x == 1
@@ -179,10 +179,10 @@ SCIP_RETCODE separateCuts(
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
             SCIP_Real ub;
-         
+
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
-            
+
             /* consider only nonredundant and numerical harmless implications */
             if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
@@ -218,7 +218,7 @@ SCIP_RETCODE separateCuts(
       implvars = SCIPvarGetImplVars(fracvars[i], FALSE);
       impltypes = SCIPvarGetImplTypes(fracvars[i], FALSE);
       implbounds = SCIPvarGetImplBounds(fracvars[i], FALSE);
-      
+
       /*debugMessage("%d implications for <%s>[%g] == 0\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
 
       /* try to add cuts for implications of x == 0
@@ -291,7 +291,7 @@ SCIP_DECL_SEPACOPY(sepaCopyImpliedbounds)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -312,7 +312,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
 
    assert(sepa != NULL);
    assert(scip != NULL);
- 
+
    *result = SCIP_DIDNOTRUN;
 
    /* gets active problem variables */
@@ -365,7 +365,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
 
    assert(sepa != NULL);
    assert(scip != NULL);
- 
+
    *result = SCIP_DIDNOTRUN;
 
    /* gets active problem variables */

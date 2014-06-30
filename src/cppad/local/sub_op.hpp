@@ -1,20 +1,22 @@
-/* $Id: sub_op.hpp 1986 2011-06-18 20:33:17Z bradbell $ */
+/* $Id: sub_op.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_SUB_OP_INCLUDED
 # define CPPAD_SUB_OP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup sub_op_hpp sub_op.hpp
+\{
 \file sub_op.hpp
 Forward and reverse mode calculations for z = x - y.
 */
@@ -36,7 +38,8 @@ and the argument \a parameter is not used.
 
 template <class Base>
 inline void forward_subvv_op(
-	size_t        d           , 
+	size_t        q           , 
+	size_t        p           , 
 	size_t        i_z         ,
 	const addr_t* arg         ,
 	const Base*   parameter   ,
@@ -48,14 +51,16 @@ inline void forward_subvv_op(
 	CPPAD_ASSERT_UNKNOWN( NumRes(SubvvOp) == 1 );
 	CPPAD_ASSERT_UNKNOWN( size_t(arg[0]) < i_z );
 	CPPAD_ASSERT_UNKNOWN( size_t(arg[1]) < i_z );
-	CPPAD_ASSERT_UNKNOWN( d < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( p < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( q <= p );
 
 	// Taylor coefficients corresponding to arguments and result
 	Base* x = taylor + arg[0] * nc_taylor;
 	Base* y = taylor + arg[1] * nc_taylor;
 	Base* z = taylor + i_z    * nc_taylor;
 
-	z[d] = x[d] - y[d];
+	for(size_t d = q; d <= p; d++)
+		z[d] = x[d] - y[d];
 }
 
 /*!
@@ -157,7 +162,8 @@ this operations is for the case where x is a parameter and y is a variable.
 
 template <class Base>
 inline void forward_subpv_op(
-	size_t        d           , 
+	size_t        q           , 
+	size_t        p           , 
 	size_t        i_z         ,
 	const addr_t* arg         ,
 	const Base*   parameter   ,
@@ -168,22 +174,21 @@ inline void forward_subpv_op(
 	CPPAD_ASSERT_UNKNOWN( NumArg(SubpvOp) == 2 );
 	CPPAD_ASSERT_UNKNOWN( NumRes(SubpvOp) == 1 );
 	CPPAD_ASSERT_UNKNOWN( size_t(arg[1]) < i_z );
-	CPPAD_ASSERT_UNKNOWN( d < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( p < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( q <= p );
 
 	// Taylor coefficients corresponding to arguments and result
 	Base* y = taylor + arg[1] * nc_taylor;
 	Base* z = taylor + i_z    * nc_taylor;
 
-# if CPPAD_USE_FORWARD0SWEEP
-	CPPAD_ASSERT_UNKNOWN( d > 0 );
-	z[d] = - y[d];
-# else
 	// Paraemter value
 	Base x = parameter[ arg[0] ];
-	if( d == 0 )
-		z[d] = x - y[d];
-	else	z[d] = - y[d];
-# endif
+	if( q == 0 )
+	{	z[0] = x - y[0];
+		q++;
+	}
+	for(size_t d = q; d <= p; d++)
+		z[d] = - y[d];
 }
 /*!
 Compute zero order forward mode Taylor coefficient for result of op = SubpvOp.
@@ -280,7 +285,8 @@ this operations is for the case where x is a variable and y is a parameter.
 
 template <class Base>
 inline void forward_subvp_op(
-	size_t        d           , 
+	size_t        q           , 
+	size_t        p           , 
 	size_t        i_z         ,
 	const addr_t* arg         ,
 	const Base*   parameter   ,
@@ -291,23 +297,21 @@ inline void forward_subvp_op(
 	CPPAD_ASSERT_UNKNOWN( NumArg(SubvpOp) == 2 );
 	CPPAD_ASSERT_UNKNOWN( NumRes(SubvpOp) == 1 );
 	CPPAD_ASSERT_UNKNOWN( size_t(arg[0]) < i_z );
-	CPPAD_ASSERT_UNKNOWN( d < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( p < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( q <= p );
 
 	// Taylor coefficients corresponding to arguments and result
 	Base* x = taylor + arg[0] * nc_taylor;
 	Base* z = taylor + i_z    * nc_taylor;
 
-# if CPPAD_FORWARD0SWEEP
-	CPPAD_ASSERT_UNKNOWN( d > 0 );
-	z[d] = x[d];
-# else
 	// Parameter value
 	Base y = parameter[ arg[1] ];
-	if( d == 0 )
-		z[d] = x[d] - y;
-	else	z[d] = x[d];
-# endif
-
+	if( q == 0 )
+	{	z[0] = x[0] - y;
+		q++;
+	}
+	for(size_t d = q; d <= p; d++)
+		z[d] = x[d];
 }
 
 /*!
@@ -389,5 +393,6 @@ inline void reverse_subvp_op(
 	}
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

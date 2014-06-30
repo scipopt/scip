@@ -1,12 +1,12 @@
-/* $Id: base_float.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: base_float.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_BASE_FLOAT_INCLUDED
 # define CPPAD_BASE_FLOAT_INCLUDED
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -104,15 +104,6 @@ namespace CppAD {
 	inline int Integer(const float& x)
 	{	return static_cast<int>(x); }
 }
-/*$$
-
-$head epsilon$$
-$codep */
-namespace CppAD {
-	template <>
-	inline float epsilon<float>(void)
-	{	return std::numeric_limits<float>::epsilon(); }
-}
 /* $$
 
 $head Ordered$$
@@ -144,6 +135,7 @@ namespace CppAD {
 	CPPAD_STANDARD_MATH_UNARY(float, cos)
 	CPPAD_STANDARD_MATH_UNARY(float, cosh)
 	CPPAD_STANDARD_MATH_UNARY(float, exp)
+	CPPAD_STANDARD_MATH_UNARY(float, fabs)
 	CPPAD_STANDARD_MATH_UNARY(float, log)
 	CPPAD_STANDARD_MATH_UNARY(float, log10)
 	CPPAD_STANDARD_MATH_UNARY(float, sin)
@@ -184,6 +176,32 @@ $codep */
 namespace CppAD {
 	inline float pow(const float& x, const float& y)
 	{ return std::pow(x, y); }
+}
+/*$$
+
+$head limits$$
+The following defines the numeric limits functions
+$code epsilon$$, $code min$$, and $code max$$ for the type
+$code float$$:
+$codep */
+namespace CppAD {
+	template <>
+	class numeric_limits<float> {
+	public:
+		// machine epsilon
+		static float epsilon(void)
+		{	return std::numeric_limits<float>::epsilon(); }
+		// minimum positive normalized value
+		static float min(void)
+		{	return std::numeric_limits<float>::min(); }
+		// maximum finite value
+		static float max(void)
+		{	return std::numeric_limits<float>::max(); }
+	};
+	// deprecated machine epsilon
+	template <> 
+	inline float epsilon<float>(void)
+	{	return numeric_limits<float>::epsilon(); }
 }
 /* $$
 $end

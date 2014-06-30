@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2013 Konrad-Zuse-Zentrum                            */
+/*                  2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,6 +67,8 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
+ * - \ref TEST     "How to run automated tests with SCIP"
+ * - \ref COUNTER  "How to use SCIP to count feasible solutions"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -96,15 +98,13 @@
  *   - \ref CONF    "Conflict analysis"
  *   - \ref PARAM   "additional user parameters"
  *
- * - \ref TEST     "How to run automated tests with SCIP"
- * - \ref COUNTER  "How to use SCIP to count feasible solutions"
- *
  *
  * @section FURTHERINFO Further information
  *
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
  * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
  * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
@@ -113,11 +113,9 @@
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
  * @subsection AUTHORS SCIP Authors
- * - <a class="el" href="AUTHORS.shtml#main">Current main developers</a>
- * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
- * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
+ * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.0.2.1
+ * @version  3.1.0.1
  *
  * \image html scippy.png
  *
@@ -133,7 +131,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
@@ -142,7 +140,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
  *  </td>
  *  <td>
  *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
@@ -150,7 +148,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
  *  </td>
  *  <td>
  *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
@@ -164,7 +162,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>
  *  </td>
  *  <td>
  *  An example for implementing a constraint handler.
@@ -172,7 +170,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>
  *  </td>
  *  <td>
  *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
@@ -186,7 +184,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/CallableLibrary/index.shtml"><b>CallableLibrary</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/CallableLibrary"><b>CallableLibrary</b></a>
  *  </td>
  *  <td>
  *  An example showing how to setup constraints (esp. nonlinear ones) when using SCIP as callable library.
@@ -194,7 +192,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/MIPSolver/index.shtml"><b>MIPSolver</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/MIPSolver"><b>MIPSolver</b></a>
  *  </td>
  *  <td>
  *  A minimal implementation for using SCIP included into another source code
@@ -202,7 +200,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <b>Queen</b>
+ *  <a href="http://scip.zib.de/doc/examples/Queen/scip_intro.pdf"><b>Queen</b></a>
  *  </td>
  *  <td>
  *  An example showing the use of SCIP as callable library.
@@ -216,7 +214,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.shtml"><b>Eventhdlr</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Eventhdlr"><b>Eventhdlr</b></a>
  *  </td>
  *  <td>
  *  A small example illustrating the use of an event handler.
@@ -224,10 +222,18 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Scheduler"><b>Scheduler</b></a>
  *  </td>
  *  <td>
  *  An example containing three readers and one primal heuristic for scheduling problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/GMI"><b>GMI</b></a>
+ *  </td>
+ *  <td>
+ *  An example about Gomory mixed-integer cuts.
  *  </td>
  *  </tr>
  *  </table>
@@ -568,9 +574,11 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable/disable(default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
  *
- * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter or no expressions interpreter (default)
+ * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
+ *
+ * - <code>GAMS=\<true|false\></code>   to enable or disable (default) reading functionality in GAMS reader (needs GAMS)
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
@@ -678,7 +686,7 @@
   -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
   -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
 
- * \endverbatim
+   \endverbatim
  *
  * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
  *
@@ -723,7 +731,7 @@
   -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
   -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
 
- * \endverbatim
+   \endverbatim
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
@@ -835,21 +843,21 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *
  *    We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
- *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
+ *        and the <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>-example
- *         is a <b>branch-and-cut</b>-code in <b>C</b>.
-
+ *     - The <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>-example
+ *       is a <b>branch-and-cut</b>-code in <b>C</b>.
+ *
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
  *   \verbatim
  > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
- *   \endverbatim
+     \endverbatim
  *
  *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
@@ -885,12 +893,12 @@
  * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/download.shtml">SCIP download section</a>, download the latest release (version 3.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 3.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
@@ -899,7 +907,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -1126,7 +1134,7 @@
  * \endcode
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings (also see <a href="FAQ.shtml#Section2">the FAQ</a>), to apply primal heuristics
+ * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
  * more aggressively. SCIP shows us, which single parameters it changed therefor. Now, the optimal solution is already
  * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
  * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
@@ -1150,7 +1158,7 @@
  * \endcode
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.shtml#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using SCIP as a standalone MIP/MINLP-Solver</a>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1188,7 +1196,7 @@
  *
  * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
- * <a href="http://scip.zib.de/doc/examples/TSP/index.shtml">TSP </a> example project.
+ * <a href="http://scip.zib.de/doc/examples/TSP">TSP </a> example project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
@@ -1203,6 +1211,8 @@
  *    and "cons_subtour.h".
  *     \n
  *    Make sure to <b>adjust your Makefile</b> such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeConsSubtour() in order to include the constraint handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -1386,7 +1396,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \verbatim
+ *  \code
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1397,7 +1407,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endverbatim
+ *  \endcode
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -2124,6 +2134,8 @@
  *    and "pricer_mypricer.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2403,6 +2415,8 @@
  *    and "presol_mypresolver.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2608,6 +2622,8 @@
  *    and "sepa_myseparator.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2874,6 +2890,8 @@
  *    and "prop_mypropagator.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -3177,6 +3195,8 @@
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3476,6 +3496,8 @@
  *    and "nodesel_mynodeselector.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3717,6 +3739,8 @@
  *    and "heur_myheuristic.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -3999,6 +4023,8 @@
  *    and "relax_myrelaxator.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
+ *    e.g, in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -4235,6 +4261,8 @@
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -4451,6 +4479,8 @@
  *    and "dialog_mydialog.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -4673,6 +4703,8 @@
  *    and "disp_mydisplaycolumn.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -4860,6 +4892,8 @@
  *    and "event_bestsol.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeEventBestsol() in order to include the event handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Eventhdlr example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
@@ -5105,6 +5139,8 @@
  *    and "nlpi_mynlpi.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPcreateNlpSolverMynlpi() in order to include the NLPI into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynlpi".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
@@ -5493,7 +5529,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>linear ordering example</b></a>
+ * <a href="http://scip.zib.de/doc/examples/LOP"><b>linear ordering example</b></a>
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
@@ -5583,26 +5619,25 @@
 /**@page DEBUG Debugging
  *
  *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
-
+ *
  *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
  *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
  *    following example, taken from the file src/scip/cons_linear.c:
- * \verbatim
-SCIP_RETCODE consdataCatchEvent(
-   SCIP*                 scip,               /**< SCIP data structure *\/
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
-   int                   pos                 /**< array position of variable to catch bound change events for *\/
-   )
-   {
-      assert(scip != NULL);
-      assert(consdata != NULL);
-      assert(eventhdlr != NULL);
-      assert(0 <= pos && pos < consdata->nvars);
-   ...
-   }
- * \endverbatim
- *    @n
+ *    \code
+ *    SCIP_RETCODE consdataCatchEvent(
+ *       SCIP*                 scip,               /**< SCIP data structure *\/
+ *       SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
+ *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
+ *       int                   pos                 /**< array position of variable to catch bound change events for *\/
+ *       )
+ *       {
+ *          assert(scip != NULL);
+ *          assert(consdata != NULL);
+ *          assert(eventhdlr != NULL);
+ *          assert(0 <= pos && pos < consdata->nvars);
+ *          ...
+ *       }
+ *    \endcode
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
@@ -5645,7 +5680,7 @@ SCIP_RETCODE consdataCatchEvent(
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -6125,7 +6160,7 @@ SCIP_RETCODE consdataCatchEvent(
  * - A significant change for <b>C++ users</b> is that all include files of SCIP
  *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
  *
- * For further release notes we refer the \ref RELEASENOTES "Release notes".
+ * For further release notes we refer to the \ref RELEASENOTES "Release notes".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6263,7 +6298,7 @@ SCIP_RETCODE consdataCatchEvent(
  *
  *
  * <br>
- * For further release notes we refer the \ref RELEASENOTES "Release notes".
+ * For further release notes we refer to the \ref RELEASENOTES "Release notes".
  */
 
 /* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
@@ -6399,7 +6434,7 @@ SCIP_RETCODE consdataCatchEvent(
   *    which can be set using SCIPsetEmphasis().
   *
   * <br>
-  * For further release notes we refer the \ref RELEASENOTES "Release notes".
+  * For further release notes we refer to the \ref RELEASENOTES "Release notes".
   */
 
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6553,6 +6588,150 @@ SCIP_RETCODE consdataCatchEvent(
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG7 Interface changes between SCIP 3.0 and SCIP 3.1
+  *
+  *
+  * @section CHGCALLBACKS7 New and changed callbacks
+  *
+  * - <b>Branching Rules</b>:
+  *     <br>
+  *     <br>
+  *   - new possible return value "SCIP_DIDNOTFIND" for SCIP_DECL_BRANCHEXECLP(), SCIP_DECL_BRANCHEXECPS(), and
+  *     SCIP_DECL_BRANCHEXECEXT() callbacks to state that the branching rule searched, but did not find a branching.
+  *
+  * - <b>Domain Propagation</b>:
+  *     <br>
+  *     <br>
+  *   - added parameter "nmarkedconss" to SCIP_DECL_CONSPROP() callback which gives the number of constraints marked
+  *     for propagation (these constraints are listed first in the conss array given as parameter).
+  *
+  * - <b>Message Handler</b>:
+  *      <br>
+  *      <br>
+  *   - New generic messagehandler output callback method SCIP_DECL_MESSAGEOUTPUTFUNC().
+  *   - Removed parameter "msglength" from callback method SCIP_DECL_ERRORPRINTING().
+  *
+  * - <b>Variable Pricers</b>:
+  *      <br>
+  *      <br>
+  *   - Added parameter "stopearly" to callback method SCIP_DECL_PRICERREDCOST(). This boolean pointer should be used
+  *     by the pricer to state whether early branching should be performed, even if new variables were added in the
+  *     current pricing round.
+  *
+  * - <b>Primal Heuristics</b>:
+  *     <br>
+  *     <br>
+  *   - Added parameter "nodeinfeasible" to SCIP_DECL_HEUREXEC() callback which states whether the current subproblem
+  *     was already detected to be infeasible. In this case, the current LP solution might not respect local bounds,
+  *     and the heuristic must not assume that it does.
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC7 Changed interface methods
+  *
+  * - <b>Branching Rules</b>:
+  *      <br>
+  *      <br>
+  *   - Added parameter "nfracimplvars" to SCIPgetLPBranchCands()
+  *
+  * - <b>Constraint Handlers</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPconshdlrGetStrongBranchPropTime() which returns the time used for domain propagation methods
+  *     of the constraint handler during strong branching.
+  *   - New method SCIPconsIsMarkedPropagate() which returns whether a constraint is marked for propagation.
+  *   - New methods SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to increase or get the number of upgrade
+  *     locks of a constraint.
+  *
+  * - <b>Domain Propagation</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPpropGetStrongBranchPropTime() which returns the time spent by a domain propagator during strong
+  *     branching.
+  *   - New methods SCIPmarkConsPropagate() and SCIPunmarkConsPropagate to (un)mark a constraint for propagation.
+  *
+  * - <b>LP and Cutting Planes</b>:
+  *      <br>
+  *      <br>
+  *   - New methods SCIProwChgRank() and SCIProwGetRank() to change and get the rank of a cutting plane, respectively.
+  *   - Added parameter "sidetypes" to SCIPcalcMIR() to specify the specify row side type to be used.
+  *   - Added parameter "cutrank" to SCIPcalcMIR() and SCIPcalcStrongCG() which stores the rank of the returned cut.
+  *   - New method SCIPisCutApplicable() which returns whether a cut is good enough to be applied.
+  *   - Added parameter "infeasible" to SCIPaddCut() which is a pointer to store whether the cut is infeasible for the
+  *     local bounds.
+  *   - delayed cutpool
+  *   - New methods SCIPchgRowLhsDive() and SCIPchgRowRhsDive() to change left and right hand side of a row during diving.
+  *   - Added parameter "cutoff" to SCIPsolveDiveLP(), SCIPsolveProbingLP(), and SCIPsolveProbingLPWithPricing()
+  *     which is a pointer to store whether the diving/probing LP was infeasible or the objective limit was reached.
+  *
+  * - <b>Message Handler</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPmessageVPrintError() to print an error message.
+  *   - Removed method SCIPmessagePrintWarningHeader().
+  *
+  * - <b>Parameters</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPparamGetCharAllowedValues() to get the allowed values for a char parameter.
+  *
+  * - <b>Variables</b>:
+  *      <br>
+  *      <br>
+  *   - New structure to store value-based branching and inference history (see pub_history.h).
+  *   - New method SCIPvarGetValuehistory() to get the value-based history of a variable.
+  *
+  * - <b>Data structures</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPgmlWriteNodeWeight() to write a node section including weight to a .gml graph file.
+  *   - New methods SCIPsparseSolGetFirstSol() and SCIPsparseSolGetNextSol() to get the first sparse solution
+  *     or iterate over the sparse solutions, respectively.
+  *   - New methods in pub_misc.h to handle a (circular) queue, e.g., SCIPqueueCreate(), SCIPqueueFree(),
+  *     SCIPqueueInsert(), ...
+  *   - New methods for hash tables: SCIPhashtableRemoveAll(), SCIPhashtableGetNElements(), SCIPhashtableGetLoad()
+  *   - New methods in pub_misc.h to handle a resource activity, e.g., SCIPactivityCreate(), SCIPactivityFree(),
+  *     SCIPactivityGetVar(), SCIPactivityGetDemand() ...
+  *   - New methods for digraphs: SCIPdigraphResize() to resize the graph and SCIPdigraphSetNodeDatas() and
+  *     SCIPdigraphGetNodeDatas() to set and get the data attached to the nodes.
+  *
+  * - <b>Misc</b>:
+  *      <br>
+  *      <br>
+  *   - New method SCIPcopyOrig() to copy the original problem. Analoguosly, use SCIPcopyOrigProb(), SCIPcopyOrigVars(),
+  *     and SCIPcopyOrigConss() to copy original problem data, variables, or constraints, respectively.
+  *   - New method SCIPcopyImplicationsCliques() to copy implications and cliques to a copied SCIP instance.
+  *   - New method SCIPgetParam() to get the parameter with a given name.
+  *   - New method SCIPaddOrigObjoffset() to add an offset to the objective function.
+  *   - New method SCIPgetNCheckConss() which returns the number of checked constraints.
+  *   - Added parameter "endptr" to SCIPparseVar() which stores the final string position after parsing.
+  *   - Added parameter "enablepropagation" to SCIPstartStrongbranch(), which can be used to enable strong branching
+  *     with domain propagation.
+  *   - New method SCIPgetVarStrongbranchWithPropagation() which performs strong branching with propagation on a variable.
+  *   - New method SCIPwriteCliqueGraph() to write the clique graph.
+  *   - New method SCIPdoNotMultaggr() which returns whether multi-aggregation was disabled.
+  *   - Added parameter "lazyconss" to SCIPwriteMIP() to swith writing removable rows as lazy constraints.
+  *   - New method SCIPcreateFiniteSolCopy() to create a copy of a solution with infinite fixings removed.
+  *   - New method SCIPadjustImplicitSolVals() which sets implicit integer variables to an integer value in the given
+  *     solution without deteriorating its objective value.
+  *   - New method SCIPprintDualSol() which prints the dual solution for a pure LP (works only with preprocessing disabled).
+  *   - New method SCIPgetOpenNodesData() which returns all unprocessed nodes.
+  *   - New method SCIPgetFirstLPTime() and SCIPgetNRootFirstLPIterations() to return time and iterations for the first
+  *     LP solve and SCIPgetFirstLPDualboundRoot() and SCIPgetFirstLPLowerboundRoot() to return the first root LP dual and
+  *     lower bound.
+  *   - New method SCIPgetNLimSolsFound() returning the number of feasible primal solution respecting the objective limit.
+  *   - Added parameter "endline" to SCIPprintDisplayLine() to switch printing a newline symbol at the end of the line.
+  *
+  * <br>
+  * @section MISCELLANEOUS7 Miscellaneous
+  *
+  *   - Moved LP solver interfaces to subdirectory src/lpi.
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -6667,7 +6846,6 @@ SCIP_RETCODE consdataCatchEvent(
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
- * \htmlinclude faqcss.inc
  * \htmlinclude faq.inc
  */
 
@@ -6681,6 +6859,8 @@ SCIP_RETCODE consdataCatchEvent(
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.1
  *
  * \verbinclude SCIP-release-notes-3.0.2
  *
@@ -6712,8 +6892,8 @@ SCIP_RETCODE consdataCatchEvent(
 /**@defgroup PUBLICMETHODS Public Methods
  *
  * This page lists headers containing methods provided by the core of SCIP that can be used via the
- * callable library. If you are in the <a href="../html/index.shtml">User's Manual</a> you only find methods that are
- * public and, therefore, allowed to be used. The <a href="../html_devel/index.shtml">Developer's Manual</a> includes
+ * callable library. If you are in the <a href="../html">User's Manual</a> you only find methods that are
+ * public and, therefore, allowed to be used. The <a href="../html_devel">Developer's Manual</a> includes
  * all methods.
  *
  * All of the headers listed below include functions that are allowed to be called by external users. Besides those
@@ -6811,8 +6991,8 @@ SCIP_RETCODE consdataCatchEvent(
  * <table>
  * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
- * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc.</td></tr>
- * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [write only]</td></tr>
+ * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
+ * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>

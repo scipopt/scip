@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -339,10 +339,10 @@ SCIP_RETCODE consdataPrint(
 
    /* print variable list */
    SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
-   
+
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");
-   
+
    if( endline )
       SCIPinfoMessage(scip, file, "\n");
 
@@ -360,7 +360,7 @@ SCIP_RETCODE switchWatchedvars(
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(watchedvar1 == -1 || watchedvar1 != watchedvar2);
@@ -372,7 +372,7 @@ SCIP_RETCODE switchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -416,7 +416,7 @@ SCIP_RETCODE switchWatchedvars(
    /* set the new watched variables */
    consdata->watchedvar1 = watchedvar1;
    consdata->watchedvar2 = watchedvar2;
-   
+
    return SCIP_OKAY;
 }
 
@@ -837,6 +837,7 @@ SCIP_RETCODE applyFixings(
 
    /* all multi-aggregations should be resolved */
    consdata->existmultaggr = FALSE;
+   consdata->presolved = TRUE;
 
    /* remove zeros and mark constraint redundant when found one variable fixed to one */
    while( v < consdata->nvars )
@@ -1048,6 +1049,8 @@ SCIP_RETCODE applyFixings(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &negarray);
    SCIPfreeBufferArray(scip, &vars);
+
+   consdata->presolved = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1356,13 +1359,13 @@ SCIP_RETCODE processWatchedVars(
          /* check, if the variable is fixed */
          if( SCIPvarGetUbLocal(vars[v]) < 0.5 )
             continue;
-         
+
          /* check, if the literal is satisfied */
          if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
          {
             assert(v != consdata->watchedvar1);
             assert(v != consdata->watchedvar2);
-            
+
             /* the variable is fixed to one, making the constraint redundant;
              * make sure, the feasible variable is watched and disable the constraint
              */
@@ -1379,7 +1382,7 @@ SCIP_RETCODE processWatchedVars(
             SCIP_CALL( disableCons(scip, cons) );
             return SCIP_OKAY;
          }
-         
+
          /* the variable is unfixed and can be used as watched variable */
          nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], SCIP_BRANCHDIR_DOWNWARDS);
          assert(nbranchings >= 0);
@@ -1614,7 +1617,7 @@ SCIP_RETCODE separateCons(
       SCIP_CONSDATA* consdata;
 
       assert(!addcut);
-      
+
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
@@ -1627,7 +1630,7 @@ SCIP_RETCODE separateCons(
          else
          {
             SCIP_Real feasibility;
-            
+
             assert(!SCIProwIsInLP(consdata->row));
             feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
             addcut = SCIPisFeasNegative(scip, feasibility);
@@ -1853,7 +1856,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLogicorcons)
    int minidx;
    int mididx;
    int maxidx;
-   
+
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->sorted);
@@ -1914,7 +1917,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
       /* get constraint from current hash table with same variables as cons0 */
       cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
- 
+
       if( cons1 != NULL )
       {
 #ifndef NDEBUG
@@ -1923,13 +1926,13 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
+
 #ifndef NDEBUG
          consdata1 = SCIPconsGetData(cons1);
 #endif
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
@@ -3784,7 +3787,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLogicor)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -3874,7 +3877,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
       {
          /* we are not allowed to detect infeasibility in the exitpre stage */
          SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &redundant, &nchgcoefs, NULL, NULL) );
-         consdata->presolved = TRUE;
       }
    }
 
@@ -4173,7 +4175,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
       *result = SCIP_SOLVELP;
    else if( infeasible )
       *result = SCIP_INFEASIBLE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -4344,8 +4346,6 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
       if( SCIPconsIsDeleted(cons) )
          continue;
-
-      consdata->presolved = TRUE;
 
       /* find pairs of negated variables in constraint: constraint is redundant */
       /* find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
@@ -4645,7 +4645,7 @@ SCIP_DECL_CONSPRINT(consPrintLogicor)
    assert( cons != NULL );
 
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, FALSE) );
-    
+
    return SCIP_OKAY;
 }
 
@@ -4660,7 +4660,7 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
    /* get variables and coefficients of the source constraint */
    sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
    nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
-   
+
    if( name != NULL )
       consname = name;
    else
@@ -4671,7 +4671,7 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
          1.0, SCIPinfinity(scip), varmap, consmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL);
-   
+
    return SCIP_OKAY;
 }
 
@@ -4680,60 +4680,93 @@ static
 SCIP_DECL_CONSPARSE(consParseLogicor)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-
    char* strcopy;
-   char* token;
-   char* saveptr;
    char* endptr;
+   char* startptr;
    int requiredsize;
    int varssize;
    int nvars;
-   
+
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
-   /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+   *success = FALSE;
 
-   /* cutoff "logicor" form the constraint string */
-   (void) SCIPstrtok(strcopy, "(", &saveptr ); 
+   /* cutoff "logicor" from the constraint string */
+   startptr = strchr(str, '('); /*lint !e158*/
 
-   /* cutoff ")" form the constraint string */
-   token = SCIPstrtok(NULL, ")", &saveptr ); 
-   
-   varssize = 100;
-   nvars = 0;
-
-   /* allocate buffer array for variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-
-   /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-   
-   if( *success )
+   if( startptr == NULL )
    {
-      /* check if the size of the variable array was great enough */
-      if( varssize < requiredsize )
-      {
-         /* reallocate memory */
-         varssize = requiredsize;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-         
-         /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-      }
-      
-      assert(*success);
-      assert(varssize >= requiredsize);
-
-      /* create logicor constraint */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,  
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      SCIPerrorMessage("missing starting character '(' parsing logicor\n");
+      return SCIP_OKAY;
    }
 
-   /* free buffers */
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &strcopy);
-   
+   /* skip '(' */
+   ++startptr;
+
+   /* find end character ')' */
+   endptr = strrchr(startptr, ')');
+
+   if( endptr == NULL )
+   {
+      SCIPerrorMessage("missing ending character ')' parsing logicor\n");
+      return SCIP_OKAY;
+   }
+   assert(endptr >= startptr);
+
+   if( endptr > startptr )
+   {
+      /* copy string for parsing */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
+
+      varssize = 100;
+      nvars = 0;
+
+      /* allocate buffer array for variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+      /* parse string */
+      SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+
+      if( *success )
+      {
+         /* check if the size of the variable array was great enough */
+         if( varssize < requiredsize )
+         {
+            /* reallocate memory */
+            varssize = requiredsize;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+
+            /* parse string again with the correct size of the variable array */
+            SCIP_CALL( SCIPparseVarsList(scip, strcopy, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+         }
+
+         assert(*success);
+         assert(varssize >= requiredsize);
+
+         /* create logicor constraint */
+         SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
+      /* free buffers */
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &strcopy);
+   }
+   else
+   {
+      if( !modifiable )
+      {
+         SCIPerrorMessage("cannot create empty logicor constraint\n");
+         return SCIP_OKAY;
+      }
+
+      /* create empty logicor constraint */
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, 0, NULL,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+      *success = TRUE;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4887,14 +4920,14 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    {
       SCIP_CONS* cons;
       char consname[SCIP_MAXSTRLEN];
-      
+
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
+
       *result = SCIP_CONSADDED;
    }
 
@@ -5129,8 +5162,9 @@ int SCIPgetNVarsLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5149,8 +5183,9 @@ SCIP_VAR** SCIPgetVarsLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5169,8 +5204,9 @@ SCIP_Real SCIPgetDualsolLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5192,8 +5228,9 @@ SCIP_Real SCIPgetDualfarkasLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5217,6 +5254,7 @@ SCIP_ROW* SCIPgetRowLogicor(
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

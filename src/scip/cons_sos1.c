@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -458,9 +458,9 @@ SCIP_RETCODE deleteVarSOS1(
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
    {
-      consdata->vars[j] = consdata->vars[j+1];
+      consdata->vars[j] = consdata->vars[j+1]; /*lint !e679*/
       if ( consdata->weights != NULL )
-         consdata->weights[j] = consdata->weights[j+1];
+         consdata->weights[j] = consdata->weights[j+1]; /*lint !e679*/
    }
    --consdata->nvars;
 
@@ -2376,6 +2376,7 @@ int SCIPgetNVarsSOS1(
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2400,6 +2401,7 @@ SCIP_VAR** SCIPgetVarsSOS1(
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2424,6 +2426,7 @@ SCIP_Real* SCIPgetWeightsSOS1(
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

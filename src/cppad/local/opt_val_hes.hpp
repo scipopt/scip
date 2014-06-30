@@ -1,13 +1,13 @@
-/* $Id: opt_val_hes.hpp 1643 2010-02-04 05:45:21Z bradbell $ */
+/* $Id: opt_val_hes.hpp 2936 2013-10-13 11:44:13Z bradbell $ */
 # ifndef CPPAD_OPT_VAL_HES_INCLUDED
 # define CPPAD_OPT_VAL_HES_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-10 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -39,7 +39,7 @@ $head Syntax$$
 $icode%signdet% = opt_val_hes(%x%, %y%, %fun%, %jac%, %hes%)%$$  
 
 $head See Also$$
-$cref/BenderQuad/$$
+$cref BenderQuad$$
 
 $head Reference$$
 Algorithmic differentiation of implicit functions and optimal values,
@@ -48,9 +48,9 @@ Bradley M. Bell and James V. Burke, Advances in Automatic Differentiation,
 
 $head Purpose$$
 We are given a function 
-$latex S : \R^n \times \R^m \rightarrow \R^\ell$$
-and we define $latex F : \R^n \times \R^m \rightarrow \R$$
-and $latex V : \R^n \rightarrow \R $$ by
+$latex S : \B{R}^n \times \B{R}^m \rightarrow \B{R}^\ell$$
+and we define $latex F : \B{R}^n \times \B{R}^m \rightarrow \B{R}$$
+and $latex V : \B{R}^n \rightarrow \B{R} $$ by
 $latex \[
 \begin{array}{rcl}
 	F(x, y) & = & \sum_{k=0}^{\ell-1} S_k ( x , y) 
@@ -65,7 +65,7 @@ and possibly also the Hessian, of $latex V (x)$$.
 
 $head BaseVector$$
 The type $icode BaseVector$$ must be a 
-$xref/SimpleVector/$$ class. 
+$cref SimpleVector$$ class. 
 We use $icode Base$$ to refer to the type of the elements of 
 $icode BaseVector$$; i.e.,
 $codei%
@@ -98,14 +98,14 @@ $latex \[
 $head Fun$$
 The argument $icode fun$$ is an object of type $icode Fun$$ 
 which must support the member functions listed below.
-CppAD will may be recording operations of the type $code%AD<%Base%>%$$
+CppAD will may be recording operations of the type $codei%AD<%Base%>%$$
 when these member functions are called.
 These member functions must not stop such a recording; e.g.,
 they must not call $cref/AD<Base>::abort_recording/abort_recording/$$.
 
 $subhead Fun::ad_vector$$
 The type $icode%Fun%::ad_vector%$$ must be a 
-$cref/SimpleVector/$$ class with elements of type $codei%AD<%Base%>%$$; i.e.
+$cref SimpleVector$$ class with elements of type $codei%AD<%Base%>%$$; i.e.
 $codei%
 	%Fun%::ad_vector::value_type
 %$$
@@ -230,7 +230,7 @@ $children%
 	example/opt_val_hes.cpp
 %$$
 The file
-$xref/opt_val_hes.cpp/$$
+$cref opt_val_hes.cpp$$
 contains an example and test of this operation.   
 It returns true if it succeeds and false otherwise.
 
@@ -238,8 +238,10 @@ $end
 -----------------------------------------------------------------------------
 */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup opt_val_hes_hpp opt_val_hes.hpp
+\{
 \file opt_val_hes.hpp
 \brief Computing Jabobians and Hessians of Optimal Values
 */
@@ -385,19 +387,19 @@ int opt_val_hes(
 	CheckSimpleVector< AD<Base> , ad_vector >();
 
 	// size of the x and y spaces
-	size_t n = x.size();
-	size_t m = y.size();
+	size_t n = size_t(x.size());
+	size_t m = size_t(y.size());
 
 	// number of terms in the summation
 	size_t ell = fun.ell();
 
 	// check size of return values
 	CPPAD_ASSERT_KNOWN(
-		jac.size() == n || jac.size() == 0,
+		size_t(jac.size()) == n || jac.size() == 0,
 		"opt_val_hes: size of the vector jac is not equal to n or zero"
 	);
 	CPPAD_ASSERT_KNOWN(
-		hes.size() == n * n || hes.size() == 0,
+		size_t(hes.size()) == n * n || hes.size() == 0,
 		"opt_val_hes: size of the vector hes is not equal to n * n or zero"
 	);
 
@@ -524,6 +526,7 @@ int opt_val_hes(
 	return signdet;
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 
 # endif

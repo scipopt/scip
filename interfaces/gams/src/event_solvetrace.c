@@ -99,7 +99,7 @@ SCIP_DECL_EVENTINIT(eventInitSolveTrace)
    if( eventhdlrdata->filename[0] == '\0' )
       return SCIP_OKAY;
 
-   rc = GAMSsolvetraceCreate(&eventhdlrdata->solvetrace, eventhdlrdata->filename, "SCIP", gmoOptFile(eventhdlrdata->gmo), SCIPgetProbName(scip), SCIPinfinity(scip), eventhdlrdata->nodefreq, eventhdlrdata->timefreq);
+   rc = GAMSsolvetraceCreate(&eventhdlrdata->solvetrace, eventhdlrdata->filename, "SCIP", gmoOptFile(eventhdlrdata->gmo), NULL, SCIPinfinity(scip), eventhdlrdata->nodefreq, eventhdlrdata->timefreq);
    if( rc != 0 )
    {
       SCIPerrorMessage("GAMSsolvetraceCreate returned with error %d, trace file name = %s\n", rc, eventhdlrdata->filename);

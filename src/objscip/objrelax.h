@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,10 +49,10 @@ public:
 
    /** name of the relaxator */
    char* scip_name_;
-   
+
    /** description of the relaxator */
    char* scip_desc_;
-   
+
    /** default priority of the relaxator (negative: call after LP, non-negative: call before LP) */
    const int scip_priority_;
 
@@ -95,7 +95,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** initialization method of relaxator (called after problem was transformed)
     *
     *  @see SCIP_DECL_RELAXINIT(x) in @ref type_relax.h
@@ -104,7 +104,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** deinitialization method of relaxator (called before transformed problem is freed)
     *
     *  @see SCIP_DECL_RELAXEXIT(x) in @ref type_relax.h
@@ -113,7 +113,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process initialization method of relaxator (called when branch and bound process is about to begin)
     *
     *  @see SCIP_DECL_RELAXINITSOL(x) in @ref type_relax.h
@@ -122,7 +122,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process deinitialization method of relaxator (called before branch and bound process data is freed)
     *
     *  @see SCIP_DECL_RELAXEXITSOL(x) in @ref type_relax.h
@@ -131,7 +131,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** execution method of relaxator
     *
     *  @see SCIP_DECL_RELAXEXEC(x) in @ref type_relax.h
@@ -142,7 +142,7 @@ public:
 } /* namespace scip */
 
 
-   
+
 /** creates the relaxator for the given relaxator object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

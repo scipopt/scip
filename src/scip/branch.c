@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,7 +58,7 @@ SCIP_RETCODE ensureLpcandsSize(
    )
 {
    assert(branchcand->nlpcands <= branchcand->lpcandssize);
-   
+
    if( num > branchcand->lpcandssize )
    {
       int newsize;
@@ -83,7 +83,7 @@ SCIP_RETCODE ensurePseudocandsSize(
    )
 {
    assert(branchcand->npseudocands <= branchcand->pseudocandssize);
-   
+
    if( num > branchcand->pseudocandssize )
    {
       int newsize;
@@ -106,7 +106,7 @@ SCIP_RETCODE ensureExterncandsSize(
    )
 {
    assert(branchcand->nexterncands <= branchcand->externcandssize);
-   
+
    if( num > branchcand->externcandssize )
    {
       int newsize;
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->npriopseudoints = 0;
    (*branchcand)->pseudomaxpriority = INT_MIN;
    (*branchcand)->validlpcandslp = -1;
-   
+
    return SCIP_OKAY;
 }
 
@@ -261,7 +261,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(var != NULL);
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetCol(var) == col);
-         
+
          /* LP branching candidates are fractional binary and integer variables; implicit variables are kept at the end
           * of the candidates array for some rounding heuristics
           */
@@ -612,7 +612,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
             }
             branchcand->nprioexternints++;
             branchcand->nprioexternimpls--;
-         
+
 
             if( vartype == SCIP_VARTYPE_BINARY )
             {
@@ -688,7 +688,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    if( branchpriority == branchcand->externmaxpriority )
    {
       SCIP_VARTYPE vartype;
-      
+
       vartype = SCIPvarGetType(var);
 
       /* variable has equal priority as the current maximum:
@@ -754,9 +754,9 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
       SCIP_VAR* var;
       int npcs;
       int v;
-      
+
       assert(prob != NULL);
-      
+
       /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
       npcs = 0;
       for( v = 0; v < prob->nbinvars + prob->nintvars + prob->nimplvars; ++v )
@@ -957,7 +957,7 @@ void branchcandSortPseudoCands(
    SCIPdebugMessage("resorting pseudo candidates\n");
 
    branchcand->pseudomaxpriority = INT_MIN;
-   
+
    for( i = 0; i < branchcand->npseudocands; ++i )
    {
       var = branchcand->pseudocands[i];
@@ -1085,13 +1085,12 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
 {
    assert(branchcand != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsFeasLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-   
+
    if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)
       && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
       && SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
-      /* variable is neither continuous nor fixed: make sure it is member of the pseudo branching candidate list */
+      /* variable is neither continuous nor fixed and has non-empty domain: make sure it is member of the pseudo branching candidate list */
       if( var->pseudocandindex == -1 )
       {
          SCIP_CALL( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
@@ -1108,9 +1107,9 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
          || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-         || SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         || SCIPsetIsGE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
+      /* variable is continuous or fixed or has empty domain: make sure it is not member of the pseudo branching candidate list */
       SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
    }
 
@@ -1205,7 +1204,7 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
       SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), (void*)set->scip);
       SCIP_CALL( branchrule->branchcopy(set->scip, branchrule) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1481,13 +1480,13 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
-   
+
          /* call external method */
          SCIP_CALL( branchrule->branchexeclp(set->scip, branchrule, allowaddcons, result) );
 
          /* stop timing */
          SCIPclockStop(branchrule->branchclock, set);
-      
+
          /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
@@ -1577,13 +1576,13 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
-   
+
          /* call external method */
          SCIP_CALL( branchrule->branchexecext(set->scip, branchrule, allowaddcons, result) );
 
          /* stop timing */
          SCIPclockStop(branchrule->branchclock, set);
-      
+
          /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
@@ -1668,13 +1667,13 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
-   
+
          /* call external method */
          SCIP_CALL( branchrule->branchexecps(set->scip, branchrule, allowaddcons, result) );
 
          /* stop timing */
          SCIPclockStop(branchrule->branchclock, set);
-      
+
          /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
@@ -1879,7 +1878,7 @@ void SCIPbranchruleSetPriority(
 {
    assert(branchrule != NULL);
    assert(set != NULL);
-   
+
    branchrule->priority = priority;
    set->branchrulessorted = FALSE;
 }
@@ -2078,7 +2077,12 @@ SCIP_Real SCIPbranchGetScore(
    case 'p':  /* product score function */
       score = downgain * upgain;
       break;
-
+   case 'q': /* quotient score function */
+      if( downgain > upgain )
+         score = upgain * upgain / downgain;
+      else
+         score = downgain * downgain / upgain;
+      break;
    default:
       SCIPerrorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
       score = 0.0;
@@ -2157,7 +2161,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
       /* first, project it onto the current domain */
       branchpoint = MAX(lb, MIN(suggestion, ub));
-      
+
       if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       {
          /* if it is a discrete variable, then round it down and up and accept this choice */
@@ -2208,7 +2212,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    { 
       /* if value is at -infty, then the lower bound should be at -infinity */
       assert(SCIPsetIsInfinity(set, -lb));
-      
+
       /* choose 0.0 or something below upper bound if upper bound < 0 */
       if( SCIPsetIsNegative(set, ub) )
          branchpoint = ub - 1000.0;
@@ -2221,14 +2225,21 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {
          /* if branching point is too close to the bounds, move more into the middle of the interval */
          if( SCIPrelDiff(ub, lb) <= 2.02 * SCIPsetEpsilon(set) )
          {
             /* for very tiny intervals we set it exactly into the middle
-             * very tiny means here an interval where we could not create two branches with reldiff > eps */
-            branchpoint = (lb+ub)/2.0;
+             *   very tiny means here an interval where we could not create two branches with reldiff > eps
+             * however, if variable is almost fixed at -/+ infinity, suggest the non-finite value as branching point and let SCIPtreeBranchVar fix the variable there
+             */
+            if( SCIPsetIsInfinity(set, -lb) )
+               branchpoint = ub;
+            else if( SCIPsetIsInfinity(set, ub) )
+               branchpoint = lb;
+            else
+               branchpoint = (lb+ub)/2.0;
          }
          else
          {
@@ -2238,6 +2249,16 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             SCIP_Real scale;
             SCIP_Real lbabs;
             SCIP_Real ubabs;
+
+            /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
+            if( SCIPsetIsInfinity(set, ub) )
+            {
+               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb));
+            }
+            else if( SCIPsetIsInfinity(set, -lb) )
+            {
+               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub));
+            }
 
             lbabs = REALABS(lb);
             ubabs = REALABS(ub);
@@ -2260,49 +2281,15 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
             /* project branchpoint into [minbrpoint, maxbrpoint] */
             branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
-            
+
             /* if selected branching point is close to 0.0 and bounds are away from 0.0, it often makes sense to branch exactly on 0.0 */
             if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
                branchpoint = 0.0;
 
-            assert(SCIPsetIsRelLT(set, lb, branchpoint));
-            assert(SCIPsetIsRelLT(set, branchpoint, ub));
+            assert(SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), branchpoint));
+            assert(SCIPsetIsRelLT(set, branchpoint, SCIPvarGetUbLocal(var)));
          }
       }
-      else if( SCIPsetIsRelEQ(set, lb, ub) )
-      {
-         /* variable is almost fixed at -/+ infinity, so suggest this infinity as branching point, what else could we do? */
-         branchpoint = lb < 0.0 ? -SCIPsetInfinity(set) : SCIPsetInfinity(set);
-      }
-      else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
-      {
-         SCIP_Real lbabs;
-         SCIP_Real delta1;
-         SCIP_Real delta2;
-
-         /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound, but not above infinity */
-         assert(!SCIPsetIsInfinity(set, -lb));
-         assert( SCIPsetIsInfinity(set,  ub));
-         lbabs = REALABS(lb);
-         delta1 = MAX(0.5 * lbabs, 1000);
-         delta2 = 0.9*(SCIPsetInfinity(set)-lb);
-         branchpoint = lb + MIN(delta1, delta2);
-      }
-      else if( !SCIPsetIsGT(set, ub, branchpoint) )
-      { 
-         SCIP_Real ubabs;
-         SCIP_Real delta1;
-         SCIP_Real delta2;
-
-         /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound, but not below infinity */
-         assert( SCIPsetIsInfinity(set, -lb));
-         assert(!SCIPsetIsInfinity(set,  ub));
-         ubabs = REALABS(ub);
-         delta1 = MAX(0.5 * ubabs, 1000);
-         delta2 = 0.9*(ub+SCIPsetInfinity(set));
-         branchpoint = ub - MIN(delta1, delta2);
-      }
-
       return branchpoint;
    }
    else
@@ -2321,8 +2308,8 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       else if( SCIPsetIsIntegral(set, branchpoint) )
       {
          /* if branchpoint is integral but not on bounds, then it should be one of the value {lb+1, ..., ub-1} */
-         assert(SCIPsetIsGE(set, branchpoint, lb + 1.0));
-         assert(SCIPsetIsLE(set, branchpoint, ub - 1.0));
+         assert(SCIPsetIsGE(set, SCIPsetRound(set, branchpoint), lb + 1.0));
+         assert(SCIPsetIsLE(set, SCIPsetRound(set, branchpoint), ub - 1.0));
          /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
           * @todo could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better? */
          return branchpoint - 0.5;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,10 +49,10 @@ public:
 
    /** name of the file reader */
    char* scip_name_;
-   
+
    /** description of the file reader */
    char* scip_desc_;
-   
+
    /** file extension that reader processes */
    char* scip_extension_;
 
@@ -92,7 +92,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** problem reading method of reader
     *
     *  @see SCIP_DECL_READERREAD(x) in @ref type_reader.h
@@ -123,11 +123,11 @@ public:
       return SCIP_OKAY;
    }
 };
-   
+
 } /* namespace scip */
 
 
-   
+
 /** creates the file reader for the given file reader object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

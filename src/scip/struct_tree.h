@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,12 +25,12 @@
 
 
 #include "scip/def.h"
-#include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_tree.h"
 #include "scip/type_cons.h"
 #include "scip/type_nodesel.h"
+#include "lpi/type_lpi.h"
 
 
 #ifdef __cplusplus
@@ -47,6 +47,8 @@ struct SCIP_Probingnode
    int                   ninitialrows;       /**< number of LP rows before the node was processed */
    int                   ncols;              /**< total number of columns of this node's LP */
    int                   nrows;              /**< total number of rows of this node's LP */
+   SCIP_Bool             lpwasprimfeas;      /**< primal feasibility of saved LP state information */
+   SCIP_Bool             lpwasdualfeas;      /**< dual feasibility of saved LP state information */
 };
 
 /** sibling information (should not exceed the size of a pointer) */
@@ -92,8 +94,10 @@ struct SCIP_Fork
    SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
-   int                   nchildren;          /**< number of children of this parent node */
-   int                   nlpistateref;       /**< number of times, the LP state is needed */   
+   int                   nlpistateref;       /**< number of times, the LP state is needed */
+   unsigned int          nchildren:30;       /**< number of children of this parent node */
+   unsigned int          lpwasprimfeas:1;    /**< primal feasibility of saved LP state information */
+   unsigned int          lpwasdualfeas:1;    /**< dual feasibility of saved LP state information */
 };
 
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were removed and added */
@@ -105,8 +109,10 @@ struct SCIP_Subroot
    SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   ncols;              /**< number of columns in the LP */
    int                   nrows;              /**< number of rows in the LP */
-   int                   nchildren;          /**< number of children of this parent node */
-   int                   nlpistateref;       /**< number of times, the LP state is needed */   
+   int                   nlpistateref;       /**< number of times, the LP state is needed */
+   unsigned int          nchildren:30;       /**< number of children of this parent node */
+   unsigned int          lpwasprimfeas:1;    /**< primal feasibility of saved LP state information */
+   unsigned int          lpwasdualfeas:1;    /**< dual feasibility of saved LP state information */
 };
 
 /** node data structure */
@@ -203,6 +209,8 @@ struct SCIP_Tree
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
    SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
    SCIP_Bool             sbprobing;          /**< is the probing mode used for strong branching? */
+   SCIP_Bool             probinglpwasprimfeas;/**< primal feasibility when probing started */
+   SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
 };
 
 #ifdef __cplusplus

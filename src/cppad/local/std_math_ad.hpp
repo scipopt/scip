@@ -1,13 +1,13 @@
-/* $Id: std_math_ad.hpp 2057 2011-08-11 14:07:11Z bradbell $ */
+/* $Id: std_math_ad.hpp 2625 2012-12-23 14:34:12Z bradbell $ */
 # ifndef CPPAD_STD_MATH_AD_INCLUDED
 # define CPPAD_STD_MATH_AD_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -25,6 +25,7 @@ $spell
 	atan
 	cos
 	exp
+	fabs
 	sqrt
 	CppAD
 	namespace
@@ -41,6 +42,7 @@ $index atan, AD$$
 $index cos, AD$$
 $index cosh, AD$$
 $index exp, AD$$
+$index fabs, AD$$
 $index log, AD$$
 $index log10, AD$$
 $index sin, AD$$
@@ -52,39 +54,39 @@ $index tanh, AD$$
 $section AD Standard Math Unary Functions$$
 
 $head Syntax$$
-$syntax%%y% = %fun%(%x%)%$$
+$icode%y% = %fun%(%x%)%$$
 
 
 $head Purpose$$
 Evaluates the one argument standard math function 
-$italic fun$$ where its argument is an 
-$xref/glossary/AD of Base/AD of/$$ $italic Base$$ object.
+$icode fun$$ where its argument is an 
+$cref/AD of/glossary/AD of Base/$$ $icode Base$$ object.
 
 $head x$$
-The argument $italic x$$ has one of the following prototypes
-$syntax%
+The argument $icode x$$ has one of the following prototypes
+$codei%
 	const AD<%Base%>               &%x%
 	const VecAD<%Base%>::reference &%x%
 %$$
 
 $head y$$
-The result $italic y$$ has prototype
-$syntax%
+The result $icode y$$ has prototype
+$codei%
 	AD<%Base%> %y%
 %$$
 
 
 $head Operation Sequence$$
-Most of these functions are AD of $italic Base$$
-$xref/glossary/Operation/Atomic/atomic operations/1/$$.
+Most of these functions are AD of $icode Base$$
+$cref/atomic operations/glossary/Operation/Atomic/$$.
 In all cases,
-The AD of $italic Base$$
-operation sequence used to calculate $italic y$$ is 
-$xref/glossary/Operation/Independent/independent/1/$$
-of $italic x$$.
+The AD of $icode Base$$
+operation sequence used to calculate $icode y$$ is 
+$cref/independent/glossary/Operation/Independent/$$
+of $icode x$$.
 
 $head fun$$ 
-A definition of $italic fun$$ is included 
+A definition of $icode fun$$ is included 
 for each of the following functions:
 $code acos$$,
 $code asin$$,
@@ -92,6 +94,7 @@ $code atan$$,
 $code cos$$,
 $code cosh$$,
 $code exp$$,
+$code fabs$$,
 $code log$$,
 $code log10$$,
 $code sin$$,
@@ -113,7 +116,7 @@ $children%
 	example/cosh.cpp%
 	example/exp.cpp%
 	example/log.cpp%
-	example/log_10.cpp%
+	example/log10.cpp%
 	example/sin.cpp%
 	example/sinh.cpp%
 	example/sqrt.cpp%
@@ -121,19 +124,20 @@ $children%
 	example/tanh.cpp
 %$$
 $table
+$rref abs.cpp$$
 $rref Acos.cpp$$
 $rref Asin.cpp$$
-$rref Atan.cpp$$
-$rref Cos.cpp$$
-$rref Cosh.cpp$$
-$rref Exp.cpp$$
-$rref Log.cpp$$
-$rref Log10.cpp$$
-$rref Sin.cpp$$
-$rref Sinh.cpp$$
-$rref Sqrt.cpp$$
-$rref Tan.cpp$$
-$rref Tanh.cpp$$
+$rref atan.cpp$$
+$rref cos.cpp$$
+$rref cosh.cpp$$
+$rref exp.cpp$$
+$rref log.cpp$$
+$rref log10.cpp$$
+$rref sin.cpp$$
+$rref sinh.cpp$$
+$rref sqrt.cpp$$
+$rref tan.cpp$$
+$rref tanh.cpp$$
 $tend
 
 
@@ -141,8 +145,8 @@ $head Derivatives$$
 Each of these functions satisfy a standard math function differential equation.
 Calculating derivatives using this differential equation 
 is discussed for 
-both $xref/ForwardTheory/Standard Math Functions/forward/$$
-and $xref/ReverseTheory/Standard Math Functions/reverse/$$ mode.
+both $cref/forward/ForwardTheory/Standard Math Functions/$$
+and $cref/reverse/ReverseTheory/Standard Math Functions/$$ mode.
 The exact form of the differential equation
 for each of these functions is listed below:
 
@@ -247,6 +251,30 @@ $end
 -------------------------------------------------------------------------------
 */
 
+/*!
+\defgroup std_math_ad_hpp std_math_ad.hpp
+\{
+\file std_math_ad.hpp
+Define AD<Base> standard math functions (using their Base versions)
+*/
+
+/*!
+\def CPPAD_STANDARD_MATH_UNARY_AD(Name, Op)
+Defines function Name with argument type AD<Base> and tape operation Op
+
+The macro defines the function x.Name() where x has type AD<Base>.
+It then uses this funciton to define Name(x) where x has type
+AD<Base> or VecAD_reference<Base>. 
+	
+If x is a variable, the tape unary operator Op is used
+to record the operation and the result is identified as correspoding
+to this operation; i.e., Name(x).taddr_ idendifies the operation and 
+Name(x).tape_id_ identifies the tape.
+
+This macro is used to define AD<Base> versions of 
+acos, asin, atan, cos, cosh, exp, fabs, log, sin, sinh, sqrt, tan, tanh.
+*/
+
 # define CPPAD_STANDARD_MATH_UNARY_AD(Name, Op)                   \
     template <class Base>                                         \
     inline AD<Base> Name(const AD<Base> &x)                       \
@@ -264,7 +292,7 @@ $end
             ADTape<Base> *tape = tape_this();                     \
             tape->Rec_.PutArg(taddr_);                            \
             result.taddr_ = tape->Rec_.PutOp(Op);                 \
-            result.id_    = tape->id_;                            \
+            result.tape_id_    = tape->id_;                            \
         }                                                         \
         return result;                                            \
     }                                                             \
@@ -281,6 +309,7 @@ namespace CppAD {
      CPPAD_STANDARD_MATH_UNARY_AD(cos, CosOp)
      CPPAD_STANDARD_MATH_UNARY_AD(cosh, CoshOp)
      CPPAD_STANDARD_MATH_UNARY_AD(exp, ExpOp)
+     CPPAD_STANDARD_MATH_UNARY_AD(fabs, AbsOp)
      CPPAD_STANDARD_MATH_UNARY_AD(log, LogOp)
      CPPAD_STANDARD_MATH_UNARY_AD(sin, SinOp)
      CPPAD_STANDARD_MATH_UNARY_AD(sinh, SinhOp)
@@ -288,7 +317,19 @@ namespace CppAD {
      CPPAD_STANDARD_MATH_UNARY_AD(tan, TanOp)
      CPPAD_STANDARD_MATH_UNARY_AD(tanh, TanhOp)
 
-     // log10
+     /*!
+	Compute the log of base 10 of x where  has type AD<Base>
+
+	\tparam Base
+	is the base type (different from base for log) 
+	for this AD type, see base_require.
+
+	\param x
+	is the argument for the log10 function.
+
+	\result
+	if the result is y, then \f$ x = 10^y \f$.
+	*/
      template <class Base>
      inline AD<Base> log10(const AD<Base> &x)
      {    return CppAD::log(x) / CppAD::log( Base(10) ); }
@@ -299,4 +340,5 @@ namespace CppAD {
 
 # undef CPPAD_STANDARD_MATH_UNARY_AD
 
+/*! \} */
 # endif 

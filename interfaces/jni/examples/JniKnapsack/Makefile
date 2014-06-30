@@ -55,7 +55,7 @@ all:            $(JNICLASSES)
 
 .PHONY: run
 run:
-		run.sh
+		./run.sh
 
 .PHONY: clean
 clean:

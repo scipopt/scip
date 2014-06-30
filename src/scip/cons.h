@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -185,7 +185,11 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+                                              *   but were not activated there? Should be FALSE for repeated calls at
+                                              *   one node or if the current focusnode is a child of the former one */
    );
 
 /** calls separator method of constraint handler to separate LP solution */
@@ -345,7 +349,7 @@ void SCIPconshdlrSetFree(
 extern
 void SCIPconshdlrSetInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    );
 
 /** sets deinitialization method of constraint handler */
@@ -366,7 +370,7 @@ void SCIPconshdlrSetInitsol(
 extern
 void SCIPconshdlrSetExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))    /**< solving process deinitialization method of constraint handler */
    );
 
 /** sets preprocessing initialization method of constraint handler */
@@ -396,7 +400,7 @@ void SCIPconshdlrSetPresol(
 extern
 void SCIPconshdlrSetDelete(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSDELETE  ((*consdelete))    /**< free specific constraint data */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    );
 
 /** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
@@ -908,6 +912,7 @@ extern
 SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             initial             /**< new value */
    );
 

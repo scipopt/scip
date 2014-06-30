@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -88,7 +88,7 @@ SCIP_RETCODE updateBestCandidate(
 
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
-   
+
    char strategy;
 
    assert(scip != NULL);
@@ -101,7 +101,7 @@ SCIP_RETCODE updateBestCandidate(
    /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cand)) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR);
-   
+
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
       /* for a multi-aggregated variable, we call updateBestCandidate function recursively with all variables in the multi-aggregation */
@@ -220,19 +220,19 @@ SCIP_RETCODE updateBestCandidate(
          }
 
       assert(*bestvar != NULL); /* if all variables were fixed, something is strange */
-      
+
       return SCIP_OKAY;
    }
-   
+
    /* select branching point for this variable */
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
    assert(candbrpoint >= SCIPvarGetLbLocal(cand));
    assert(candbrpoint <= SCIPvarGetUbLocal(cand));
 
-   /* we cannot branch on a huge value, because we simply cannot enumerate such huge integer values in floating point
+   /* we cannot branch on a huge value for a discrete variable, because we simply cannot enumerate such huge integer values in floating point
     * arithmetics
     */
-   if( SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint) )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS && (SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint)) )
       return SCIP_OKAY;
 
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
@@ -266,7 +266,7 @@ SCIP_RETCODE updateBestCandidate(
       else
          deltaplus = SCIPvarGetUbLocal(cand) - SCIPadjustedVarLb(scip, cand, candbrpoint);
       break;
-      
+
    case 's':
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) )
          deltaplus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
@@ -307,7 +307,7 @@ SCIP_RETCODE updateBestCandidate(
 
    if( SCIPisInfinity(scip, branchscore) )
       branchscore = 0.9*SCIPinfinity(scip);
-   
+
    if( SCIPisSumGT(scip, branchscore, *bestscore) )
    {
       (*bestscore)   = branchscore;
@@ -331,8 +331,8 @@ SCIP_RETCODE updateBestCandidate(
       }
       else if( SCIPvarGetType(*bestvar) == SCIPvarGetType(cand) )
       { 
-         /* if both have the same type, take the one with larger diameter */
-         if( SCIPvarGetUbLocal(*bestvar) - SCIPvarGetLbLocal(*bestvar) < SCIPvarGetUbLocal(cand) - SCIPvarGetLbLocal(cand) )
+         /* if both have the same type, take the one with larger relative diameter */
+         if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) < SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
          {
             (*bestscore)   = branchscore;
             (*bestvar)     = cand;
@@ -377,13 +377,13 @@ SCIP_RETCODE selectBranchVar(
 
    SCIP_VAR** candssorted;
    int* candsorigidx;
-   
+
    int i;
    int j;
-   
+
    assert(brvar   != NULL);
    assert(brpoint != NULL);
-   
+
    (*brvar)   = NULL;
    (*brpoint) = SCIP_INVALID;
 
@@ -392,13 +392,13 @@ SCIP_RETCODE selectBranchVar(
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-   
+
    /* sort branching candidates (in a copy), such that same variables are on consecutive positions */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &candssorted, cands, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candsorigidx, ncands) );
    for( i = 0; i < ncands; ++i )
       candsorigidx[i] = i;
-   
+
    SCIPsortPtrInt((void**)candssorted, candsorigidx, SCIPvarComp, ncands);
 
    bestbranchscore = -1.0;
@@ -432,7 +432,7 @@ SCIP_RETCODE selectBranchVar(
       /* set i to last occurrence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
       i = j-1;
       assert(candssorted[i] == cand);
-      
+
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol) );
    }
@@ -445,7 +445,7 @@ SCIP_RETCODE selectBranchVar(
    {
       SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
       SCIPABORT();
-      return SCIP_BRANCHERROR;
+      return SCIP_BRANCHERROR; /*lint !e527*/
    }
 
    /* free buffer arrays */
@@ -562,16 +562,16 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   
+
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
    SCIPdebugMessage("Execext method of pscost branching\n");
-   
+
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nprioexterncands, NULL, NULL, NULL) );
    assert(nprioexterncands > 0);
-   
+
    /* get current update strategy for pseudo costs, if our multiplier rule is 'u' */
    if( branchruledata->strategy == 'u' )
    {
@@ -580,14 +580,14 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    /* select branching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, externcands, externcandssol, externcandsscore, nprioexterncands, &brvar, &brpoint) );
-   
+
    if( brvar == NULL )
    {
       SCIPerrorMessage("branchExecextPscost failed to select a branching variable from %d candidates\n", nprioexterncands);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-  
+
    assert(SCIPvarIsActive(SCIPvarGetProbvar(brvar)));
 
    SCIPdebugMessage("branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
@@ -639,7 +639,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
 
    /* create pscost branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   
+
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
@@ -700,13 +700,13 @@ SCIP_RETCODE SCIPselectBranchVarPscost(
    )
 {
    SCIP_BRANCHRULE* branchrule;
-   
+
    assert(scip != NULL);
-   
+
    /* find branching rule */
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
    assert(branchrule != NULL);
-   
+
    /* select branching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, branchcands, branchcandssol, branchcandsscore, nbranchcands, var, brpoint) );
 

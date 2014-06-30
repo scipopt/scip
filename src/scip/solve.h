@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -75,6 +75,25 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
+/** puts all constraints with initial flag TRUE into the LP */
+extern
+SCIP_RETCODE SCIPinitConssLP(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_Bool             root,               /**< is this the initial root LP? */
+   SCIP_Bool             firstsubtreeinit,   /**< is this the first call in the current subtree after jumping through the tree? */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
 /** constructs the LP of the current node, but does not load the LP state and warmstart information  */
 extern
 SCIP_RETCODE SCIPconstructCurrentLP(
@@ -90,6 +109,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
@@ -105,6 +125,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    );
 

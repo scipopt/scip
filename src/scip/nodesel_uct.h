@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,10 +28,10 @@
  * The authors adapted a game-tree exploration scheme called UCB to MIP trees. Starting from the root node as current node,
  * the algorithm selects the current node's child \f$N_i\f$ which maximizes the UCT score
  *
- * \f$ \text{score}(N_i) := -\text{estimate}_{N_i} + \text{weight} \cdot \frac{\text{visits}(\text{parent}(N_i))}{\text{visits}(N_i)}
+ * \f$ \mbox{score}(N_i) := -\mbox{estimate}_{N_i} + \mbox{weight} \cdot \frac{\mbox{visits}(\mbox{parent}(N_i))}{\mbox{visits}(N_i)}
  * \f$
  *
- * where \f$\text{estimate}\f$ is the node's lower bound normalized by the root lower bound, and \f$\text{visits}\f$
+ * where \f$\mbox{estimate}\f$ is the node's lower bound normalized by the root lower bound, and \f$\mbox{visits}\f$
  * denotes the number of times a leaf in the subtree rooted at this node has been explored so far.
  *
  * The selected node in the sense of the SCIP node selection is the leaf reached by the above criterion.

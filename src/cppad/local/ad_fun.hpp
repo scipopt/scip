@@ -1,13 +1,13 @@
-/* $Id: ad_fun.hpp 2178 2011-10-30 06:52:58Z bradbell $ */
+/* $Id: ad_fun.hpp 2994 2013-10-23 15:47:20Z bradbell $ */
 # ifndef CPPAD_AD_FUN_INCLUDED
 # define CPPAD_AD_FUN_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -35,9 +35,9 @@ $index ADFun, object$$
 $index object, ADFun$$
 
 $head Purpose$$
-An AD of $italic Base$$
-$xref/glossary/Operation/Sequence/operation sequence/1/$$
-is stored in an $code ADFun$$ object by its $xref/FunConstruct/$$.
+An AD of $icode Base$$
+$cref/operation sequence/glossary/Operation/Sequence/$$
+is stored in an $code ADFun$$ object by its $cref FunConstruct$$.
 The $code ADFun$$ object can then be used to calculate function values,
 derivative values, and other values related to the corresponding function.
 
@@ -50,14 +50,17 @@ $childtable%
 	cppad/local/fun_eval.hpp%
 	cppad/local/drivers.hpp%
 	cppad/local/fun_check.hpp%
-	cppad/local/optimize.hpp
+	cppad/local/optimize.hpp%
+	omh/check_for_nan.omh
 %$$
 
 $end
 */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup ad_fun_hpp ad_fun.hpp
+\{
 \file ad_fun.hpp
 File used to define the ADFun<Base> class.
 */
@@ -75,6 +78,9 @@ class ADFun {
 // ------------------------------------------------------------
 // Private member variables
 private:
+	/// Check for nan's and report message to user (default value is true).
+	bool check_for_nan_;
+
 	/// debug checking number of comparision operations that changed
 	size_t compare_change_;
 
@@ -102,15 +108,18 @@ private:
 	/// results of the forward mode calculations
 	pod_vector<Base> taylor_;
 
-	/// packed results of the forward mode Jacobian sparsity calculations
-	/// (\c for_jac_sparse_pack_.n_set() != 0  implies
-	/// for_jac_sparse_set_.n_set() == 0)
+	/// which operations can be conditionally skipped
+	/// Set during forward pass of order zero
+	CppAD::vector<bool> cskip_op_;
+
+	/// Packed results of the forward mode Jacobian sparsity calculations.
+	/// for_jac_sparse_pack_.n_set() != 0  implies other sparsity results
+	/// are empty
 	sparse_pack      for_jac_sparse_pack_;
 
-	/// set results of the forward mode Jacobian sparsity calculations
-	/// (\c for_jac_sparse_set_.n_set() != 0  implies
-	/// for_jac_sparse_pack_.n_set() == 0)
-	sparse_set       for_jac_sparse_set_;
+	/// Set results of the forward mode Jacobian sparsity calculations
+	/// for_jac_sparse_set_.n_set() != 0  implies for_sparse_pack_ is empty.
+	CPPAD_INTERNAL_SPARSE_SET  for_jac_sparse_set_;
 
 // ------------------------------------------------------------
 // Private member functions
@@ -125,6 +134,7 @@ private:
 	template <class VectorSet>
 	void ForSparseJacCase(
 		bool               set_type  ,
+		bool               transpose ,
 		size_t             q         ,
 		const VectorSet&   r         ,  
 		VectorSet&         s
@@ -134,6 +144,7 @@ private:
 	template <class VectorSet>
 	void ForSparseJacCase(
 		const std::set<size_t>&  set_type  ,
+		bool                     transpose ,
 		size_t                   q         ,
 		const VectorSet&         r         ,  
 		VectorSet&               s
@@ -144,6 +155,8 @@ private:
 	template <class VectorSet>
 	void RevSparseJacCase(
 		bool               set_type  ,
+		bool               transpose ,
+		bool               nz_compare,
 		size_t             p         ,
 		const VectorSet&   s         ,  
 		VectorSet&         r
@@ -153,6 +166,8 @@ private:
 	template <class VectorSet>
 	void RevSparseJacCase(
 		const std::set<size_t>&  set_type  ,
+		bool                     transpose ,
+		bool                     nz_compare,
 		size_t                   p         ,
 		const VectorSet&         s         ,  
 		VectorSet&               r
@@ -163,6 +178,7 @@ private:
 	template <class VectorSet>
 	void RevSparseHesCase(
 		bool               set_type  ,
+		bool               transpose ,
 		size_t             q         ,
 		const VectorSet&   s         ,  
 		VectorSet&         h
@@ -172,11 +188,51 @@ private:
 	template <class VectorSet>
 	void RevSparseHesCase(
 		const std::set<size_t>&  set_type  ,
+		bool                     transpose ,
 		size_t                   q         ,
 		const VectorSet&         s         ,  
 		VectorSet&               h
 	);
 	// ------------------------------------------------------------
+	// Forward mode version of SparseJacobian
+	// (see doxygen in sparse_jacobian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseJacobianFor(
+		const VectorBase&     x               ,
+		VectorSet&            p_transpose     ,
+		VectorBase&           jac             ,
+		sparse_jacobian_work& work
+	);
+	// Reverse mode version of SparseJacobian
+	// (see doxygen in sparse_jacobian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseJacobianRev(
+		const VectorBase&     x               ,
+		VectorSet&            p               ,
+		VectorBase&           jac             ,
+		sparse_jacobian_work& work
+	);
+	// ------------------------------------------------------------
+	// vector of bool version of SparseJacobian
+	// (see doxygen in sparse_jacobian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseJacobianCase(
+		bool                     set_type    ,
+		const VectorBase&        x           ,
+		const VectorSet&         p           ,
+		VectorBase&              jac         ,
+		sparse_jacobian_work&    work
+	);
+	// vector of std::set<size_t> version of SparseJacobian
+	// (see doxygen in sparse_jacobian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseJacobianCase(
+		const std::set<size_t>&  set_type    ,
+		const VectorBase&        x           ,
+		const VectorSet&         p           ,
+		VectorBase&              jac         ,
+		sparse_jacobian_work&    work
+	);
 	// vector of bool version of SparseJacobian
 	// (see doxygen in sparse_jacobian.hpp)
 	template <class VectorBase, class VectorSet>
@@ -196,6 +252,38 @@ private:
 		VectorBase&              jac
 	);
 	// ------------------------------------------------------------
+	// combined sparse_set, sparse_list and sparse_pack version of 
+	// SparseHessian (see doxygen in sparse_hessian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseHessianCompute(
+		const VectorBase&        x           ,
+		const VectorBase&        w           ,
+		VectorSet&               sparsity    ,
+		VectorBase&              hes         ,
+		sparse_hessian_work&     work
+	);
+	// vector of bool version of SparseHessian
+	// (see doxygen in sparse_hessian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseHessianCase(
+		bool                     set_type    ,
+		const VectorBase&        x           ,
+		const VectorBase&        w           ,
+		const VectorSet&         p           ,
+		VectorBase&              hes         ,
+		sparse_hessian_work&     work
+	);
+	// vector of std::set<size_t> version of SparseHessian
+	// (see doxygen in sparse_hessian.hpp)
+	template <class VectorBase, class VectorSet>
+	size_t SparseHessianCase(
+		const std::set<size_t>&  set_type    ,
+		const VectorBase&        x           ,
+		const VectorBase&        w           ,
+		const VectorSet&         p           ,
+		VectorBase&              hes         ,
+		sparse_hessian_work&     work
+	);
 	// vector of bool version of SparseHessian
 	// (see doxygen in sparse_hessian.hpp)
 	template <class VectorBase, class VectorSet>
@@ -247,9 +335,11 @@ public:
 	~ADFun(void)
 	{ }
 
-	/// deprecated: assign a new operation sequence
-	template <typename ADvector>
-	void Dependent(const ADvector &y);
+	/// set value of check_for_nan_
+	void check_for_nan(bool value)
+	{	check_for_nan_ = value; }
+	bool check_for_nan(void) const
+	{	return check_for_nan_; }
 
 	/// assign a new operation sequence
 	template <typename ADvector>
@@ -268,19 +358,20 @@ public:
 	// (see doxygen documentation in for_sparse_jac.hpp)
 	template <typename VectorSet>
 	VectorSet ForSparseJac(
-		size_t q, const VectorSet &r
+		size_t q, const VectorSet &r, bool transpose = false
 	);
 	// reverse mode Jacobian sparsity 
 	// (see doxygen documentation in rev_sparse_jac.hpp)
 	template <typename VectorSet>
 	VectorSet RevSparseJac(
-		size_t q, const VectorSet &s
+		size_t q, const VectorSet &s, bool transpose = false,
+		bool nz_compare = false
 	);
 	// reverse mode Hessian sparsity 
 	// (see doxygen documentation in rev_sparse_hes.hpp)
 	template <typename VectorSet>
 	VectorSet RevSparseHes(
-		size_t q, const VectorSet &s
+		size_t q, const VectorSet &s, bool transpose = false
 	);
 
 	/// amount of memeory used for Jacobain sparsity pattern
@@ -344,6 +435,9 @@ public:
 	/// set number of coefficients currently allocated (per variable)
 	void capacity_taylor(size_t per_var);   
 
+	/// number of variables in conditional expressions that can be skipped
+	size_t number_skip(void);   
+
 	/// number of independent variables
 	size_t Domain(void) const
 	{	return ind_taddr_.size(); }
@@ -405,26 +499,64 @@ public:
 
 	/// calculate sparse Jacobians 
 	template <typename VectorBase>
-	VectorBase SparseJacobian(const VectorBase &x); 
-
-	/// calculate sparse Jacobians 
+	VectorBase SparseJacobian(
+		const VectorBase &x
+	); 
 	template <typename VectorBase, typename VectorSet>
-	VectorBase SparseJacobian(const VectorBase &x, const VectorSet &p); 
+	VectorBase SparseJacobian(
+		const VectorBase &x , 
+		const VectorSet  &p
+	); 
+	template <class VectorBase, class VectorSet, class VectorSize>
+	size_t SparseJacobianForward(
+		const VectorBase&     x     ,
+		const VectorSet&      p     ,
+		const VectorSize&     r     ,
+		const VectorSize&     c     ,
+		VectorBase&           jac   ,
+		sparse_jacobian_work& work
+	);
+	template <class VectorBase, class VectorSet, class VectorSize>
+	size_t SparseJacobianReverse(
+		const VectorBase&     x    ,
+		const VectorSet&      p    ,
+		const VectorSize&     r    ,
+		const VectorSize&     c    ,
+		VectorBase&           jac  ,
+		sparse_jacobian_work& work
+	);
 
 	/// calculate sparse Hessians 
 	template <typename VectorBase>
-	VectorBase SparseHessian(const VectorBase &x, const VectorBase &w); 
-
-	/// calculate sparse Hessians 
+	VectorBase SparseHessian(
+		const VectorBase&    x  , 
+		const VectorBase&    w
+	); 
 	template <typename VectorBase, typename VectorBool>
 	VectorBase SparseHessian(
-		const VectorBase &x, const VectorBase &w, const VectorBool &p
+		const VectorBase&    x  ,
+		const VectorBase&    w  ,
+		const VectorBool&    p
+	); 
+	template <class VectorBase, class VectorSet, class VectorSize>
+	size_t SparseHessian(
+		const VectorBase&    x   ,
+		const VectorBase&    w   ,
+		const VectorSet&     p   ,
+		const VectorSize&    r   ,
+		const VectorSize&    c   ,
+		VectorBase&          hes ,
+		sparse_hessian_work& work
 	); 
 
 	// Optimize the tape
 	// (see doxygen documentation in optimize.hpp)
 	void optimize(void);
 	// ------------------- Deprecated -----------------------------
+
+	/// deprecated: assign a new operation sequence
+	template <typename ADvector>
+	void Dependent(const ADvector &y);
 
 	/// deprecated: number of variables in opertion sequence
 	size_t Size(void) const
@@ -455,7 +587,8 @@ public:
 };
 // ---------------------------------------------------------------------------
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 
 // non-user interfaces
 # include <cppad/local/forward0sweep.hpp>

@@ -1,21 +1,23 @@
-/* $Id: atan_op.hpp 1641 2010-02-01 16:39:45Z bradbell $ */
+/* $Id: atan_op.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_ATAN_OP_INCLUDED
 # define CPPAD_ATAN_OP_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-10 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup atan_op_hpp atan_op.hpp
+\{
 \file atan_op.hpp
 Forward and reverse mode calculations for z = atan(x).
 */
@@ -39,7 +41,8 @@ and derivatives of z.
 */
 template <class Base>
 inline void forward_atan_op(
-	size_t j           ,
+	size_t q           ,
+	size_t p           ,
 	size_t i_z         ,
 	size_t i_x         ,
 	size_t nc_taylor   , 
@@ -49,7 +52,8 @@ inline void forward_atan_op(
 	CPPAD_ASSERT_UNKNOWN( NumArg(AtanOp) == 1 );
 	CPPAD_ASSERT_UNKNOWN( NumRes(AtanOp) == 2 );
 	CPPAD_ASSERT_UNKNOWN( i_x + 1 < i_z );
-	CPPAD_ASSERT_UNKNOWN( j < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( p < nc_taylor );
+	CPPAD_ASSERT_UNKNOWN( q <= p );
 
 	// Taylor coefficients corresponding to argument and result
 	Base* x = taylor + i_x * nc_taylor;
@@ -57,11 +61,12 @@ inline void forward_atan_op(
 	Base* b = z      -       nc_taylor;  // called y in documentation
 
 	size_t k;
-	if( j == 0 )
-	{	z[j] = atan( x[0] );
-		b[j] = Base(1) + x[0] * x[0];
+	if( q == 0 )
+	{	z[0] = atan( x[0] );
+		b[0] = Base(1) + x[0] * x[0];
+		q++;
 	}
-	else
+	for(size_t j = q; j <= p; j++)
 	{
 		b[j] = Base(2) * x[0] * x[j];
 		z[j] = Base(0);
@@ -181,5 +186,6 @@ inline void reverse_atan_op(
 	px[0] += pz[0] / b[0] + pb[0] * Base(2) * x[0];
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -465,9 +465,9 @@ SCIP_RETCODE deleteVarSOS2(
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
    {
-      consdata->vars[j] = consdata->vars[j+1];
+      consdata->vars[j] = consdata->vars[j+1]; /*lint !e679*/
       if ( consdata->weights != NULL )
-         consdata->weights[j] = consdata->weights[j+1];
+         consdata->weights[j] = consdata->weights[j+1]; /*lint !e679*/
    }
    --consdata->nvars;
 
@@ -736,12 +736,12 @@ SCIP_RETCODE presolRoundSOS2(
    /* if there are exactly two fixed nonzero variables */
    else if ( nfixednonzeros == 2 )
    {
-      assert(0 <= lastFixedNonzero && lastFixedNonzero < consdata->nvars);
+      assert(0 < lastFixedNonzero && lastFixedNonzero < consdata->nvars);
       assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero])) ||
          SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero])));
-      /* the next variable need also to be nonzero */
-      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero + 1])) ||
-         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero + 1])));
+      /* the previous variable need also to be nonzero, otherwise the infeasibility should have been detected earlier */
+      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero - 1])) ||
+         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero - 1])));
 
       /* fix all variables before lastFixedNonzero to zero */
       for( j = 0; j < lastFixedNonzero - 1; ++j )
@@ -899,8 +899,7 @@ SCIP_RETCODE propSOS2(
       }
       assert( 0 <= firstFixedNonzero && firstFixedNonzero < nvars-1 );
 
-      SCIPdebugMessage("variables <%s> and <%s> are fixed nonzero, fixing other variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]),
-         SCIPvarGetName(vars[firstFixedNonzero+1]));
+      SCIPdebugMessage("variable <%s> is fixed to be nonzero, fixing variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
 
       /* fix variables before firstFixedNonzero to 0 */
       allVarFixed = TRUE;
@@ -2429,6 +2428,7 @@ int SCIPgetNVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2453,6 +2453,7 @@ SCIP_VAR** SCIPgetVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2477,6 +2478,7 @@ SCIP_Real* SCIPgetWeightsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

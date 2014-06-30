@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,7 +84,7 @@ SCIP_RETCODE SCIPbufferAllocMem(
    assert(buffer->firstfree <= buffer->ndata);
    assert(ptr != NULL);
    assert(size >= 0);
-   
+
    /* allocate minimal 1 byte */
    if( size == 0 )
       size = 1;
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPbufferDuplicateMem(
 
    /* copy the source memory into the buffer */
    BMScopyMemorySize(*ptr, source, size);
-   
+
    return SCIP_OKAY;
 }
 

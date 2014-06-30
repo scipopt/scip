@@ -1,13 +1,13 @@
-/* $Id: independent.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: independent.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_INDEPENDENT_INCLUDED
 # define CPPAD_INDEPENDENT_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -62,7 +62,7 @@ $codei%
 	%f%.Dependent( %x%, %y%)
 %$$
 The only other way to stop a recording is using
-$cref/abort_recording/$$.
+$cref abort_recording$$.
 Between when the recording is started and when it stopped,
 we refer to the elements of $icode x$$, 
 and the values that depend on the elements of $icode x$$,
@@ -79,10 +79,10 @@ and is the number of independent variables for this
 AD operation sequence.
 
 $head VectorAD$$
-The type $icode VectorAD$$ must be a $cref/SimpleVector/$$ class with
+The type $icode VectorAD$$ must be a $cref SimpleVector$$ class with
 $cref/elements of type/SimpleVector/Elements of Specified Type/$$
 $codei%AD<%Base%>%$$.
-The routine $cref/CheckSimpleVector/$$ will generate an error message
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Parallel Mode$$
@@ -106,7 +106,7 @@ $children%
 	example/independent.cpp
 %$$
 The file
-$cref/Independent.cpp/$$
+$cref independent.cpp$$
 contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 
@@ -135,8 +135,9 @@ void ADTape<Base>::Independent(VectorAD &x)
 
 	// mark the beginning of the tape and skip the first variable index 
 	// (zero) because parameters use taddr zero
-	CPPAD_ASSERT_NARG_NRES(BeginOp, 0, 1);
+	CPPAD_ASSERT_NARG_NRES(BeginOp, 1, 1);
 	Rec_.PutOp(BeginOp);
+	Rec_.PutArg(0);
 
 	// place each of the independent variables in the tape
 	CPPAD_ASSERT_NARG_NRES(InvOp, 0, 1);
@@ -144,7 +145,7 @@ void ADTape<Base>::Independent(VectorAD &x)
 	for(j = 0; j < n; j++)
 	{	// tape address for this independent variable
 		x[j].taddr_ = Rec_.PutOp(InvOp);
-		x[j].id_    = id_;
+		x[j].tape_id_    = id_;
 		CPPAD_ASSERT_UNKNOWN( size_t(x[j].taddr_) == j+1 );
 		CPPAD_ASSERT_UNKNOWN( Variable(x[j] ) );
 	}
@@ -163,9 +164,8 @@ inline void Independent(VectorAD &x)
 		"a previous tape is still active (for this thread).\n"
 		"AD<Base>::abort_recording() would abort this previous recording."
 	);
-	size_t id = ADBase::tape_new();
-
-	ADBase::tape_ptr(id)->Independent(x); 
+	ADTape<Base>* tape = ADBase::tape_manage(tape_manage_new);
+	tape->Independent(x); 
 }
 
 

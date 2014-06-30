@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,7 +18,7 @@
  * @author Marc Pfetsch
  *
  * Write a weighted column/variable graph, i.e., the nodes correspond to the columns (variables) of
- * the constraint matrix. Two nodes are adjacent if the corresponding columns/variables have appear
+ * the constraint matrix. Two nodes are adjacent if the corresponding columns/variables appear
  * in a common row/constraint (with nonzero coefficient).  The weight is obtained by summing for
  * each row that produces an edge the absolute values of coefficients in the row; hence, we avoid
  * parallel edges.
@@ -173,7 +173,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -252,7 +252,7 @@ SCIP_RETCODE createEdgesFromRow(
             G->A[s][k] = t;
             G->W[s][k] = w;
 
-            G->A[s][k+1] = -1;
+            G->A[s][k+1] = -1; /*lint !e679*/
             ++G->deg[s];
 
             /* backward edge */
@@ -263,7 +263,7 @@ SCIP_RETCODE createEdgesFromRow(
             G->A[t][k] = s;
             G->W[t][k] = w;
 
-            G->A[t][k+1] = -1;
+            G->A[t][k+1] = -1; /*lint !e679*/
             ++G->deg[t];
 
             /* increase number of edges */
@@ -337,7 +337,7 @@ SCIP_DECL_READERCOPY(readerCopyCcg)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -383,7 +383,7 @@ SCIP_RETCODE SCIPwriteCcg(
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPwriteCcg(
          consvars = SCIPgetVarsLinear(scip, cons);
          nconsvars = SCIPgetNVarsLinear(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
-         
+
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
@@ -452,7 +452,7 @@ SCIP_RETCODE SCIPwriteCcg(
          consvars = SCIPgetVarsLogicor(scip, cons);
          nconsvars = SCIPgetNVarsLogicor(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
-         
+
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), transformed, &G) );

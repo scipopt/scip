@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1057,9 +1057,15 @@ SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns primal feasibility tolerance of LP solver */
+/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and tolerance specified by separation storage */
 extern
 SCIP_Real SCIPsetLpfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
+extern
+SCIP_Real SCIPsetSepaprimfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1389,14 +1395,14 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value + feasibility tolerance down to the next integer in feasibility tolerance */
+/** rounds value + feasibility tolerance down to the next integer */
 extern
 SCIP_Real SCIPsetFeasFloor(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
+/** rounds value - feasibility tolerance up to the next integer */
 extern
 SCIP_Real SCIPsetFeasCeil(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1413,6 +1419,109 @@ SCIP_Real SCIPsetFeasRound(
 /** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */
 extern
 SCIP_Real SCIPsetFeasFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to return fractional part for */
+   );
+
+/** checks, if relative difference of values is in range of dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is lower than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is greater than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if value is in range dual feasibility tolerance of 0.0 */
+extern
+SCIP_Bool SCIPsetIsDualfeasZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is greater than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is lower than -dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is integral within the dual feasibility bounds */
+extern
+SCIP_Bool SCIPsetIsDualfeasIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if given fractional part is smaller than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasFracIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value + dual feasibility tolerance down to the next integer */
+extern
+SCIP_Real SCIPsetDualfeasFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value - dual feasibility tolerance up to the next integer */
+extern
+SCIP_Real SCIPsetDualfeasCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value to the nearest integer in dual feasibility tolerance */
+extern
+SCIP_Real SCIPsetDualfeasRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** returns fractional part of value, i.e. x - floor(x) in dual feasibility tolerance */
+extern
+SCIP_Real SCIPsetDualfeasFrac(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to return fractional part for */
    );
@@ -1535,7 +1644,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
-#define SCIPsetLpfeastol(set)              ( (set)->num_lpfeastol )
+#define SCIPsetLpfeastol(set)              ( (set)->sepa_primfeastol == SCIP_INVALID ? (set)->num_lpfeastol : MIN((set)->num_lpfeastol, (set)->sepa_primfeastol) )
+#define SCIPsetSepaprimfeastol(set)        ( (set)->sepa_primfeastol )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
@@ -1588,6 +1698,21 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFeasCeil(set, val)          ( EPSCEIL(val, (set)->num_feastol) )
 #define SCIPsetFeasRound(set, val)         ( EPSROUND(val, (set)->num_feastol) )
 #define SCIPsetFeasFrac(set, val)          ( EPSFRAC(val, (set)->num_feastol) )
+
+#define SCIPsetIsDualfeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasLT(set, val1, val2)   ( EPSN(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasLE(set, val1, val2)   ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasGT(set, val1, val2)   ( EPSP(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasGE(set, val1, val2)   ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasZero(set, val)        ( EPSZ(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasPositive(set, val)    ( EPSP(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasNegative(set, val)    ( EPSN(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasIntegral(set, val)    ( EPSISINT(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasFracIntegral(set, val) ( !EPSP(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasFloor(set, val)         ( EPSFLOOR(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasCeil(set, val)          ( EPSCEIL(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasRound(set, val)         ( EPSROUND(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasFrac(set, val)          ( EPSFRAC(val, (set)->num_dualfeastol) )
 
 #define SCIPsetIsLbBetter(set, newlb, oldlb, oldub) ( EPSGT(newlb, oldlb, \
          set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldlb)), 1e-3)) )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -64,10 +64,13 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   SCIP_Real             cutoffbound,        /**< new cutoff bound */
+   SCIP_Bool             useforobjlimit      /**< should the cutoff bound be used to update the objective limit, if
+                                              *   better? */
    );
 
 /** sets upper bound in primal data and in LP solver */

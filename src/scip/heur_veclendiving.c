@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -179,6 +179,8 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
+   SCIP_Bool backtrack;
+   SCIP_Bool roundup;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nlpiterations;
@@ -197,6 +199,10 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DELAYED;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -308,6 +314,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
+   roundup = FALSE;
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
@@ -339,7 +346,6 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
          SCIP_Real frac;
          SCIP_Real objdelta;
          SCIP_Real score;
-         SCIP_Bool roundup;
          int colveclen;
 
          var = lpcands[c];
@@ -404,6 +410,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
       backtracked = FALSE;
       do
       {
+         backtrack = FALSE;
          /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
           * occured or variable was fixed by propagation while backtracking => Abort diving!
           */
@@ -430,7 +437,9 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
                SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
                SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
+
             SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+            roundup = TRUE;
          }
          else
          {
@@ -439,7 +448,9 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
                SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
                SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+
             SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+            roundup = FALSE;
          }
 
          /* apply domain propagation */
@@ -482,11 +493,12 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
             SCIP_CALL( SCIPnewProbingNode(scip) );
             backtracked = TRUE;
+            backtrack = TRUE;
          }
          else
-            backtracked = FALSE;
+            backtrack = FALSE;
       }
-      while( backtracked );
+      while( backtrack );
 
       if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -499,13 +511,15 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
          /* update pseudo cost values */
          if( SCIPisGT(scip, objval, oldobjval) )
          {
-            if( bestcandroundup )
+            if( roundup )
             {
+               assert(bestcandroundup || backtracked);
                SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand],
                      objval - oldobjval, 1.0) );
             }
             else
             {
+               assert(!bestcandroundup || backtracked);
                SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand],
                      objval - oldobjval, 1.0) );
             }
