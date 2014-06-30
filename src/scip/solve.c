@@ -3619,8 +3619,17 @@ SCIP_RETCODE solveNode(
    SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, FALSE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
+   /* check if primal heuristics found a solution and we therefore reached a solution limit */
    if( SCIPsolveIsStopped(set, stat, FALSE) )
    {
+      SCIP_NODE* node;
+
+      /* we reached a solution limit and do not want to continue the processing of the current node, but in order to
+       * allow restarting the optimization process later, we need to create a "branching" with only one child node that
+       * is a copy of the focusnode
+       */
+      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 1.0, focusnode->estimate) );
+      assert(tree->nchildren >= 1);
       *stopped = TRUE;
       return SCIP_OKAY;
    }

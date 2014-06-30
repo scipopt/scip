@@ -13346,7 +13346,8 @@ SCIP_RETCODE displayRelevantStats(
    {
       SCIP_Bool objlimitreached = FALSE;
 
-      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
+         && !SCIPisInfinity(scip, getPrimalbound(scip)) )
          objlimitreached = TRUE;
 
       SCIPmessagePrintInfo(scip->messagehdlr, "\n");
@@ -37609,7 +37610,8 @@ void printSolutionStatistics(
    gap = SCIPgetGap(scip);
 
    objlimitreached = FALSE;
-   if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
+      && !SCIPisInfinity(scip, getPrimalbound(scip))  )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )

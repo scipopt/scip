@@ -422,6 +422,10 @@ BEGIN {
       pb = +infty;
       feasible = 0;
    }
+   else if( $5 == "(user" && $6 == "objective" && $7 == "limit)" ) {
+      pb = $4;
+      feasible = 0;
+   }
    else {
       pb = $4;
       feasible = 1;
@@ -720,13 +724,13 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) ) ) {
+         if( feasible && (( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) )) ) {
             status = "fail";
             failtime += tottime;
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) 
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached )
 	    {
                if( timeout )
                   status = "timeout";
@@ -919,6 +923,7 @@ BEGIN {
                 namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
+
          printf("%s\n", status);
       }
 

@@ -865,35 +865,44 @@ SCIP_RETCODE execRelpscost(
          }
 
          SCIP_CALL( SCIPendStrongbranch(scip) );
+
+         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
+         {
+            assert(SCIPhasCurrentNodeLP(scip));
+            *result = SCIP_CUTOFF;
+         }
       }
 
-      /* get the score of the best uninitialized strong branching candidate */
-      if( i < ninitcands )
-         bestuninitsbscore = initcandscores[i];
-      else
-         bestuninitsbscore = -SCIPinfinity(scip);
+      if( *result != SCIP_CUTOFF )
+      {
+         /* get the score of the best uninitialized strong branching candidate */
+         if( i < ninitcands )
+            bestuninitsbscore = initcandscores[i];
+         else
+            bestuninitsbscore = -SCIPinfinity(scip);
 
-      /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
-       * compare it to the best initialized strong branching candidate
-       */
-      if( bestpsscore > bestuninitsbscore && SCIPisSumGT(scip, bestpsscore, bestsbscore) )
-      {
-         bestcand = bestpscand;
-         bestisstrongbranch = FALSE;
-      }
-      else if( bestsbcand >= 0 )
-      {
-         bestcand = bestsbcand;
-         bestisstrongbranch = TRUE;
-      }
-      else
-      {
-         /* no candidate was initialized, and the best score is the one of the first candidate in the initialization
-          * queue
+         /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
+          * compare it to the best initialized strong branching candidate
           */
-         assert(ninitcands >= 1);
-         bestcand = initcands[0];
-         bestisstrongbranch = FALSE;
+         if( bestpsscore > bestuninitsbscore && SCIPisSumGT(scip, bestpsscore, bestsbscore) )
+         {
+            bestcand = bestpscand;
+            bestisstrongbranch = FALSE;
+         }
+         else if( bestsbcand >= 0 )
+         {
+            bestcand = bestsbcand;
+            bestisstrongbranch = TRUE;
+         }
+         else
+         {
+            /* no candidate was initialized, and the best score is the one of the first candidate in the initialization
+             * queue
+             */
+            assert(ninitcands >= 1);
+            bestcand = initcands[0];
+            bestisstrongbranch = FALSE;
+         }
       }
 
       /* apply domain reductions */
@@ -962,6 +971,8 @@ SCIP_RETCODE execRelpscost(
       }
       SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
       SCIPdebugMessage(" -> up child's lowerbound  : %g\n", SCIPnodeGetLowerbound(upchild));
+
+      assert(SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_INFEASIBLE && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT);
 
       *result = SCIP_BRANCHED;
    }

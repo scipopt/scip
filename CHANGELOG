@@ -46,6 +46,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug in proximity heuristic which attempted to enter diving mode even at nodes without a constructed LP
 - fixed wrong pseudo cost updates during diving heuristic execution after backtracking
 - fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
   does nothing anymore
@@ -69,20 +70,33 @@ fixed bugs:
 - allow to read numbers like "42856." in lp-format
 - fixed bug in heur_oneopt: avoid bound violations if shift value is negative due to infeasibilities
 - fixed setting solution value of multi-aggregated var in xml-solution case
+- fixed wrong output of status when an objective limit was imposed but not reached yet
+- fixed the rare case that branching was performed even though strong branching found global bound changes leading to
+  an infeasible/objlimit LP
+- fixed bug that reaching a solution limit by beforenode heuristics lead to disregarding the current node if the
+  optimization process was restarted later
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
+- improved memory management of proximity heuristic
 
 features:
 - added copy mechanism for conjunction constraints
 - added Makefile support for cygwin 64 Bit
+- added revised lpi_xprs for using XPRESS as LP solver
 
 interface:
 - added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance
 - forbid to call SCIPfixVar() in SCIP_STAGE_PRESOLVED stage, which is not allowed since it calls SCIPchgVarLb/Ub()
 - rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData(); SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
 - rename array arcdatas in digraph to arcdata
+- SCIPapplyProximity() has an additional argument freesubscip, which causes the method to free
+  the created subscip automatically at the end.
+- new method SCIPdeleteSubproblemProximity() to free proximity subproblem manually as external caller
 
+parameters:
+- changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
+- changed default value of parameter heuristics/proximity/usefinallp to FALSE
 
 SCIP version 3.1.0
 ==================
