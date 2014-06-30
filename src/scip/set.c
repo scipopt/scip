@@ -275,7 +275,7 @@
 #define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
 #define SCIP_DEFAULT_REOPT_SAVEGLBCONS    FALSE /**< save global constraints to separate solutions found so far */
 #define SCIP_DEFAULT_REOPT_SAVELOCCONS    FALSE /**< save local constraints to separate solutions found so far */
-#define SCIP_DEFAULT_REOPT_SOLVELP            4 /**< strategy for solving the LP at nodes from reoptimization */
+#define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */

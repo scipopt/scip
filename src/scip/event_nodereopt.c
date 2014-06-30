@@ -276,7 +276,7 @@ checkCutoffReason(
             }
 
             /* increase number of infeasible nodes, add a global cut (if enabled) */
-            SCIP_CALL(SCIPbranchruleNodereoptInfNode(scip, eventnode, event));
+            SCIP_CALL(SCIPbranchruleNodereoptInfNode(scip, eventnode));
          }
       }
       else

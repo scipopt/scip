@@ -41,8 +41,7 @@ SCIP_RETCODE SCIPincludeBranchruleNodereopt(
 extern
 SCIP_RETCODE SCIPbranchruleNodereoptInfNode(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_NODE*              cnode,            /**< current node */
-   SCIP_EVENT*             event             /**< current event */
+   SCIP_NODE*              cnode            /**< current node */
    );
 
 /*

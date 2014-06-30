@@ -13346,16 +13346,14 @@ SCIP_RETCODE SCIPsolve(
       if( scip->set->reopt_savesols != 0 )
       {
          int nsols;
-         int naddedsols;
          int s;
 
          nsols = MIN(scip->primal->nsols, scip->set->reopt_savesols);
-         naddedsols = 0;
 
          /* allocate memory */
          SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, nsols) );
 
-         for( s = 0; s < scip->primal->nsols && naddedsols < nsols; ++s )
+         for( s = 0; s < nsols; ++s )
          {
             SCIP_SOL* sol;
             SCIP_Bool added;
@@ -13370,9 +13368,6 @@ SCIP_RETCODE SCIPsolve(
             }
 
             SCIP_CALL( SCIPreoptAddSol(scip, scip->reopt, scip->set, scip->stat, sol, &added, scip->stat->reopt_nruns) );
-
-            if( added )
-               naddedsols++;
          }
       }
 

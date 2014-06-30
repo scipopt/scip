@@ -19,7 +19,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
 #include <assert.h>
 
 #include "scip/def.h"
@@ -28,6 +27,7 @@
 #include "scip/sol.h"
 #include "scip/misc.h"
 #include "scip/reopt.h"
+#include "scip/primal.h"
 #include "scip/prob.h"
 
 
@@ -419,6 +419,7 @@ SCIP_RETCODE soltreeAddNode(
    SCIP_ALLOC( BMSallocMemory(&newnode) );
    newnode->sol = NULL;
    newnode->updated = FALSE;
+   newnode->used = FALSE;
    newnode->father = father;
    newnode->rchild = NULL;
    newnode->lchild = NULL;
@@ -448,9 +449,7 @@ SCIP_RETCODE soltreeAddSol(
 {
    SCIP_SOLNODE* cursolnode;
    SCIP_Real hamdist;
-   int* varidlist;
    int varid;
-   int orderid;
 
    assert(reopt != NULL);
    assert(sol != NULL);
@@ -474,13 +473,9 @@ SCIP_RETCODE soltreeAddSol(
    /* add the solution iff the solution differs in at least one variable
     * to all saved solution and the avarage Hamming-Distance is greater or
     * equal to reopt_minavghamdist */
-   for(orderid = 0; orderid < nvars && hamdist >= set->reopt_minavghamdist; orderid++)
+   for(varid = 0; varid < nvars && hamdist >= set->reopt_minavghamdist; varid++)
    {
-      const char* varname;
       SCIP_Real objval;
-
-      varid = orderid;
-      varname = SCIPvarGetName(vars[varid]);
 
       assert(SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY);
 
@@ -561,6 +556,7 @@ void soltreeResetMarks(
    else
    {
       /* the node is a leaf */
+      assert(node->father != NULL);
       assert(node->sol != NULL);
       node->updated = FALSE;
    }
@@ -634,7 +630,6 @@ SCIP_RETCODE SCIPreoptFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   int s;
    int p;
 
    assert(reopt != NULL);
@@ -678,7 +673,6 @@ SCIP_RETCODE SCIPreoptAddSol(
 )
 {
    SCIP_SOLNODE* solnode;
-   int num;
    int insertpos;
 
    assert(reopt != NULL);
@@ -688,13 +682,8 @@ SCIP_RETCODE SCIPreoptAddSol(
 
    assert(reopt->sols[run] != NULL);
 
-   if( set->reopt_savesols == INT_MAX )
-      num = reopt->nsols[run]+1;
-   else
-      num = set->reopt_savesols;
-
    /* check memory */
-   SCIP_CALL( ensureSolsSize(reopt, set, num, run) );
+   SCIP_CALL( ensureSolsSize(reopt, set, reopt->nsols[run], run) );
 
    /** ad solution to solution tree */
    SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetOrigVars(scip), sol, &solnode, SCIPgetNOrigVars(scip), added) );
@@ -818,7 +807,8 @@ SCIP_RETCODE SCIPreoptUpdateSols(
    }
 
    /* reset the marks for added solutions */
-   soltreeResetMarks(reopt->soltree->root);
+   if(  reopt->soltree->nsols > 0 )
+      soltreeResetMarks(reopt->soltree->root);
 
    return SCIP_OKAY;
 }
@@ -829,13 +819,14 @@ int SCIPreoptNSavedSols(
 )
 {
    int nsavedsols;
-   int r;
 
    assert(reopt != NULL);
+   assert(reopt->soltree->root != NULL);
 
    nsavedsols = 0;
 
-   if( reopt->soltree->root != NULL )
+   if( reopt->soltree->root->lchild != NULL
+    && reopt->soltree->root->rchild != NULL)
       nsavedsols = soltreeNInducedtSols(reopt->soltree->root);
 
    return nsavedsols;
@@ -847,7 +838,6 @@ int SCIPreoptNUsedSols(
 )
 {
    int nsolsused;
-   int r;
 
    assert(reopt != NULL);
 

@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
             /** number of pseudo-branched variables could be much bigger than the depth,
              * thats way use #variable-depth as default value */
             SCIP_CALL( initCons(scip, branchruledata, branchruledata->nodeID) );
-            branchruledata->consdata[branchruledata->nodeID]->allocmem = SCIPgetNVars(scip);
+            branchruledata->consdata[branchruledata->nodeID]->allocmem = SCIPgetNBinVars(scip);
             SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->consdata[branchruledata->nodeID]->vars), branchruledata->consdata[branchruledata->nodeID]->allocmem) );
             SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->consdata[branchruledata->nodeID]->vals), branchruledata->consdata[branchruledata->nodeID]->allocmem) );
          }
@@ -548,7 +548,7 @@ SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
     */
    if( SCIPnodeGetDepth(node) != SCIPgetEffectiveRootDepth(scip) )
    {
-      npseudobranchvars = SCIPgetNVars(scip);
+      npseudobranchvars = SCIPgetNBinVars(scip);
       assert( npseudobranchvars > 0 );
 
       if( branchruledata->consdata[branchruledata->nodeID] == NULL )
@@ -903,7 +903,7 @@ SCIP_DECL_BRANCHINIT(branchInitPseudo)
    if( !branchruledata->init )
    {
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &branchruledata->reopt) );
-      if( branchruledata->reopt && SCIPgetNVars(scip) - SCIPgetNBinVars(scip) > 0 )
+      if( branchruledata->reopt && SCIPgetNOrigImplVars(scip) + SCIPgetNOrigIntVars(scip) > 0 )
       {
          branchruledata->reopt = FALSE;
       }

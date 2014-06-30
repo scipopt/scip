@@ -21,6 +21,7 @@
  * @author Stefan Vigerske
  * @author Michael Winkler
  * @author Lars Schewe
+ * @author Jakob Witzig
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
