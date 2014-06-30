@@ -12622,6 +12622,7 @@ SCIP_Real SCIPvarGetImplRedcost(
       int* entries;
       int* ids;
       SCIP_Real redcost;
+      SCIP_Bool cleanedup;
       int nclqvars;
       int nentries;
       int nids;
@@ -12648,15 +12649,19 @@ SCIP_Real SCIPvarGetImplRedcost(
       for( c = ncliques - 1; c >= 0; --c )
       {
          clique = cliques[c];
-         clqvars = SCIPcliqueGetVars(clique);
-         clqvalues = SCIPcliqueGetValues(clique);
+         assert(clique != NULL);
          nclqvars = SCIPcliqueGetNVars(clique);
          assert(nclqvars > 0);
-         assert(clqvars != NULL);
-         assert(clqvalues != NULL);
 
          if( nclqvars > MAX_CLIQUELENGTH )
             continue;
+
+         clqvars = SCIPcliqueGetVars(clique);
+         clqvalues = SCIPcliqueGetValues(clique);
+         assert(clqvars != NULL);
+         assert(clqvalues != NULL);
+
+         cleanedup = SCIPcliqueIsCleanedUp(clique);
 
          for( v = nclqvars - 1; v >= 0; --v )
          {
@@ -12664,7 +12669,7 @@ SCIP_Real SCIPvarGetImplRedcost(
             assert(clqvar != NULL);
 
             /* ignore binary variable which are fixed */
-            if( clqvar != var && SCIPvarIsActive(clqvar) &&
+            if( clqvar != var && (cleanedup || SCIPvarIsActive(clqvar)) &&
                (SCIPvarGetLbLocal(clqvar) < 0.5 && SCIPvarGetUbLocal(clqvar) > 0.5) )
             {
                int probindex = SCIPvarGetProbindex(clqvar) + 1;
@@ -12707,11 +12712,7 @@ SCIP_Real SCIPvarGetImplRedcost(
          else
             redcost = -SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
 
-#if 0
          if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
-#else
-         if( !SCIPsetIsFeasZero(set, redcost) )
-#endif
             implredcost += redcost;
       }
 
@@ -12772,14 +12773,20 @@ SCIP_Real SCIPvarGetImplRedcost(
                redcost = SCIPcolGetRedcost(col, stat, lp);
                assert(!SCIPsetIsFeasNegative(set, redcost));
 
-               redcost *= (bounds[v] - lb);
+               if( !varfixing )
+                  redcost *= (lb - bounds[v]);
+               else
+                  redcost *= (bounds[v] - lb);
             }
             else if( basestat == SCIP_BASESTAT_UPPER && boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, bounds[v], ub) )
             {
                redcost = SCIPcolGetRedcost(col, stat, lp);
                assert(!SCIPsetIsFeasPositive(set, redcost));
 
-               redcost *= (bounds[v] - ub);
+               if( varfixing )
+                  redcost *= (bounds[v] - ub);
+               else
+                  redcost *= (ub - bounds[v]);
             }
          }
          else
@@ -12792,24 +12799,26 @@ SCIP_Real SCIPvarGetImplRedcost(
                redcost = SCIPcolGetRedcost(col, stat, lp);
                assert(!SCIPsetIsFeasNegative(set, redcost));
 
-               redcost *= (bounds[v] - lb);
+               if( varfixing )
+                  redcost *= (lb - bounds[v]);
+               else
+                  redcost *= (bounds[v] - lb);
             }
             else if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasEQ(set, ub, primsol) && SCIPsetIsFeasLT(set, bounds[v], ub) )
             {
                redcost = SCIPcolGetRedcost(col, stat, lp);
                assert(!SCIPsetIsFeasPositive(set, redcost));
 
-               redcost *= (bounds[v] - ub);
+               if( varfixing )
+                  redcost *= (bounds[v] - ub);
+               else
+                  redcost *= (ub - bounds[v]);
             }
          }
 
          /* improve implied reduced cost */
-#if 0
          if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
-#else
-         if( !SCIPsetIsFeasZero(set, redcost) )
             implredcost += redcost;
-#endif
       }
    }
 
