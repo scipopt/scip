@@ -498,131 +498,6 @@ SCIP_RETCODE saveAncestorBranchings(
 }
 
 /*
- * checks if the last added logic-or constraints dominates
- * a previous added constraint.
- */
-static
-SCIP_RETCODE findMinimalConss(
-   SCIP*                 scip,
-   int                   nodeID
-)
-{
-   SCIP_BRANCHRULE* branchrule;
-   SCIP_BRANCHRULEDATA* branchruledata;
-   LOGICORDATA** consdatas;
-   int nconss;
-   int cons1;
-   int cons2;
-   int varnr1;
-   int varnr2;
-
-   assert(scip != NULL );
-
-   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
-
-   assert(branchrule != NULL );
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
-
-   assert(branchruledata != NULL );
-   assert(branchruledata->reopt);
-   assert(nodeID > 0);
-   assert(branchruledata->nodedata[nodeID] != NULL );
-   assert(branchruledata->nodedata[nodeID]->conss != NULL );
-   assert(!SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss));
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &consdatas, SCIPqueueNElems(branchruledata->nodedata[nodeID]->conss)) );
-   nconss = 0;
-
-   while(!SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss))
-   {
-      consdatas[nconss] = (LOGICORDATA*) SCIPqueueRemove(branchruledata->nodedata[nodeID]->conss);
-      nconss++;
-   }
-
-   /** if the variables of cons2 are a subset the variables of cons1, then cons2 dominates cons1 */
-   cons2 = nconss - 1;
-   for(cons1 = 0; cons1 < cons2; cons1++)
-   {
-      if(consdatas[cons1]->nvars > consdatas[cons2]->nvars)
-      {
-         SCIP_Bool subset;
-         int nsubsetvars;
-         subset = FALSE;
-         nsubsetvars = 0;
-
-#ifdef DEBUG_MODE
-         {
-            printf("... comparing constraint %d with %d:\n", cons1, cons2);
-         }
-#endif
-
-         for(varnr2 = 0; varnr2 < (int) consdatas[cons2]->nvars; varnr2++)
-         {
-            for(varnr1 = 0; varnr1 < (int) consdatas[cons1]->nvars; varnr1++)
-            {
-               if(strcmp(SCIPvarGetName(consdatas[cons1]->vars[varnr1]), SCIPvarGetName(consdatas[cons2]->vars[varnr2])) == 0)
-               {
-                  if(consdatas[cons1]->vals[cons1] != consdatas[cons2]->vals[cons2])
-                  {
-#ifdef DEBUG_MODE
-                     {
-                        printf("... variable %s %s %f is not equal %s %s %f\n",
-                              SCIPvarGetName(consdatas[cons1]->vars[varnr1]),
-                              consdatas[cons1]->vals[cons1] == 1 ? ">=" : "<=",
-                              consdatas[cons1]->vals[cons1],
-                              SCIPvarGetName(consdatas[cons2]->vars[varnr2]),
-                              consdatas[cons1]->vals[cons2] == 1 ? ">=" : "<=",
-                              consdatas[cons1]->vals[cons2]);
-                     }
-#endif
-                     goto NOTDOMINATED;
-                  }
-                  else
-                  {
-                     nsubsetvars++;
-                  }
-               }
-            }
-         }
-
-         NOTDOMINATED:
-
-         if (nsubsetvars == (int) consdatas[cons2]->nvars)
-            subset = TRUE;
-
-         if (!subset)
-         {
-            SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[nodeID]->conss, (void* ) (size_t ) consdatas[cons1]) );
-         }
-         else
-         {
-            /** free data of dominated constraint */
-            SCIPfreeMemoryArray(scip, &consdatas[cons1]->vars);
-            SCIPfreeMemoryArray(scip, &consdatas[cons1]->vals);
-            SCIPfreeMemory(scip, &consdatas[cons1]);
-         }
-
-#ifdef DEBUG_MODE
-         {
-            if(subset)
-               printf("... constraint %d is dominated by %d:\n", cons1, cons2);
-         }
-#endif
-      }
-      else
-      {
-         SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[nodeID]->conss, (void* ) (size_t ) consdatas[cons1]) );
-      }
-   }
-   SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[nodeID]->conss, (void* ) (size_t ) consdatas[cons2]) );
-
-   SCIPfreeMemoryArray(scip, &consdatas);
-
-   return SCIP_OKAY;
-}
-
-/*
  * delete the LPI state and all LPI states below in the tree
  */
 static
@@ -1867,6 +1742,8 @@ SCIP_RETCODE Exec(
 
    /** iterate over all children */
    nChilds = SCIPqueueNElems(branchruledata->nodedata[nodeID]->nodechilds);
+   assert(nChilds > 0);
+
    curChild = 1;
    while (curChild <= nChilds)
    {
@@ -2550,6 +2427,33 @@ SCIP_RETCODE SCIPbranchruleNodereoptRemoveNode(
          assert(childID != firstID);
       }
       while (childID != nodeID);
+   }
+
+
+   printf(">> DELTE NODE %llu, father %llu, reopttype %d.\n", SCIPnodeGetNumber(node), SCIPnodeGetNumber(parent), SCIPnodeGetReopttype(node));
+
+   /* if the current node was the only child node of the next saved node above,
+    * then this node is infeasible, too.  */
+   if( SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds)
+    && branchruledata->nodedata[parentID]->reopttype != SCIP_REOPTTYPE_STRBRANCHED)
+   {
+      /* if the parent node is the root node, we have to add a global constraint
+       * which implies infeasibility */
+      if( parent == SCIPgetRootNode(scip) )
+      {
+         //TODO: Add global infeasibility constraint
+         printf(">> PROBLEM IS INFEASIBLE\n");
+      }
+      else
+      {
+         SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, parent, FALSE, TRUE) );
+      }
+   }
+   else
+   {
+      /* this current node is the highest infeasible node in this subtree, we can add
+       * a global constraint */
+//      SCIPbranchruleNodereoptInfNode(scip, node);
    }
 
    /** delete all children below if the node is infeasible */
