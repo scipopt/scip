@@ -29,6 +29,8 @@ fixed bugs:
 - fixed wrong output of status when an objective limit was imposed but not reached yet
 - fixed the rare case that branching was performed even though strong branching found global bound changes leading to
   an infeasible/objlimit LP
+- fixed bug that reaching a solution limit by beforenode heuristics lead to disregarding the current node if the
+  optimization process was restarted later
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
