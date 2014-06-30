@@ -15,7 +15,7 @@
 
 /**@file   lpi_xprs.c
  * @ingroup LPIS
- * @brief  LP interface for Xpress-MP 16-21
+ * @brief  LP interface for Xpress-MP
  * @author Tobias Achterberg
  * @author Michael Perregaard
  * @author Livio Bertacco
@@ -2674,7 +2674,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       *ninds = -1;
 
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   memset(coef, 0, nrows*sizeof(*coef));
+   BMSclearMemoryArray(coef, nrows);
    coef[row] = 1.0;
    CHECK_ZERO( lpi->messagehdlr, XPRSbtran(lpi->xprslp, coef) );
 
@@ -2707,7 +2707,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       *ninds = -1;
 
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-   memset(coef, 0, nrows*sizeof(*coef));
+   BMSclearMemoryArray(coef, nrows);
    coef[c] = 1.0;
    CHECK_ZERO( lpi->messagehdlr, XPRSftran(lpi->xprslp, coef) );
 
@@ -2817,7 +2817,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(nnonz <= nrows);
 
    /* Transform the column. */
-   memset(coef, 0, nrows*sizeof(*coef));
+   BMSclearMemoryArray(coef, nrows);
    for( i = 0; i < nnonz; i++ )
       coef[lpi->indarray[i]] = lpi->valarray[i];
 
