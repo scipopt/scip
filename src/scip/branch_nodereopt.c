@@ -67,9 +67,7 @@ struct NodeData
    SCIP_LPISTATE*        lpistate;
    SCIP_QUEUE*           conss;
    int                   nvars;
-   SCIP_Longint          oldnumber;
    SCIP_REOPTTYPE        reopttype;
-   int                   redies;
    int                   allocmem;
 };
 typedef struct NodeData NODEDATA;
@@ -336,9 +334,7 @@ SCIP_RETCODE initNode(
       branchruledata->nodedata[nodeID]->lpistate = NULL;
       branchruledata->nodedata[nodeID]->nodechilds = NULL;
       branchruledata->nodedata[nodeID]->nvars = 0;
-      branchruledata->nodedata[nodeID]->oldnumber = 0;
       branchruledata->nodedata[nodeID]->pseudobranched = FALSE;
-      branchruledata->nodedata[nodeID]->redies = 0;
       branchruledata->nodedata[nodeID]->reopttype = SCIP_REOPTTYPE_NONE;
       branchruledata->nodedata[nodeID]->allocmem = 0;
       branchruledata->nodedata[nodeID]->vars = NULL;
@@ -856,6 +852,43 @@ SCIP_RETCODE saveLocalConsData(
    return SCIP_OKAY;
 }
 
+static
+int lengthBranchPath(
+   SCIP_NODE*            node,
+   SCIP_BRANCHRULEDATA*  branchruledata
+)
+{
+   int length;
+
+   assert(node != 0);
+   assert(branchruledata != NULL);
+   assert(branchruledata->nodedata != NULL);
+   assert(SCIPnodeGetReoptID(node) >= 0);
+   assert(branchruledata->nodedata[SCIPnodeGetReoptID(node)] != NULL);
+
+   if( SCIPnodeGetDepth(node) == 0 )
+      return 0;
+   else
+   {
+      SCIP_NODE* parent;
+      int parentID;
+
+      parent = SCIPnodeGetParent(node);
+      length = branchruledata->nodedata[SCIPnodeGetReoptID(node)]->nvars;
+      while(SCIPnodeGetDepth(parent) != 0)
+      {
+         if( SCIPnodeGetReopttype(parent) >= SCIP_REOPTTYPE_TRANSIT )
+         {
+            assert(branchruledata->nodedata[SCIPnodeGetReoptID(parent)] != NULL);
+            length += branchruledata->nodedata[SCIPnodeGetReoptID(parent)]->nvars;
+         }
+         parent = SCIPnodeGetParent(parent);
+      }
+   }
+
+   return length;
+}
+
 SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
    SCIP*                 scip
 )
@@ -1163,8 +1196,6 @@ SCIP_RETCODE getLastSavedNode(
       }
    }
 
-   assert(branchruledata->nodedata[(*parentID)]->oldnumber == SCIPnodeGetNumber((*parent)));
-
    return SCIP_OKAY;
 }
 
@@ -1245,9 +1276,7 @@ SCIP_RETCODE deleteNodeData(
       }
 
       branchruledata->nodedata[nodeID]->nvars = 0;
-      branchruledata->nodedata[nodeID]->oldnumber = nodeID == 0 ? 1 : 0;
       branchruledata->nodedata[nodeID]->pseudobranched = FALSE;
-      branchruledata->nodedata[nodeID]->redies = 0;
       branchruledata->nodedata[nodeID]->reopttype = SCIP_REOPTTYPE_NONE;
    }
 
@@ -1663,8 +1692,6 @@ SCIP_RETCODE Exec(
       /* tag node as LEAF */
       SCIP_CALL( SCIPnodeSetReopttype(child1, SCIP_REOPTTYPE_LEAF) );
 
-      branchruledata->nodedata[child1_ID]->oldnumber = SCIPnodeGetNumber(child1);
-
       /** move all child nodes (w/o the current) of the pseudo-branched root node to child1 with child1_ID */
       assert(branchruledata->nodedata[child1_ID]->nodechilds == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[child1_ID]->nodechilds));
 
@@ -1817,9 +1844,6 @@ SCIP_RETCODE Exec(
                if (consdata->nvars == 1)
                   branchruledata->nodedata[childID]->pseudobranched = FALSE;
 
-               /** update node number at position childID */
-               branchruledata->nodedata[childID]->oldnumber = SCIPnodeGetNumber(child1);
-
                break;
 
             case REOPT_CONSTYPE_SEPASOLUTION:
@@ -1854,9 +1878,6 @@ SCIP_RETCODE Exec(
                   savedconsdata = TRUE;
                }
 
-               /** update node number at position childID */
-               branchruledata->nodedata[childID]->oldnumber = SCIPnodeGetNumber(child1);
-
                if( consdata->constype == REOPT_CONSTYPE_INFSUBTREE )
                   branchruledata->ninfsubtrees++;
 
@@ -1890,9 +1911,6 @@ SCIP_RETCODE Exec(
 
          /** Chance bounds due to all ancestors */
          SCIP_CALL( changeAncestorBranchings(scip, branchruledata, childID, child1, NULL) );
-
-         /** update node number at position childID */
-         branchruledata->nodedata[childID]->oldnumber = SCIPnodeGetNumber(child1);
 
 #ifdef DEBUG_MODE
          {
@@ -2052,9 +2070,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
          }
       }
 #endif
-      /** update the saved node number */
-      assert(nodeID < branchruledata->allocmemsizenodedata);
-      branchruledata->nodedata[nodeID]->oldnumber = SCIPnodeGetNumber(node);
 
       /** update LPI state if node is pseudobranched or feasible */
       switch (reopttype) {
@@ -2071,7 +2086,8 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
                assert(branchruledata->nodedata[parentID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds));
 
                /* check if we can move all children to the next saved node above */
-               if( nbndchgdiff <= branchruledata->maxdiffofnodes )
+               if( (!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
+                 ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= round(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) )
                {
                   SCIP_CALL( moveChildrenUp(branchruledata, nodeID, parentID) );
 
@@ -2185,13 +2201,15 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       SCIP_CALL( getLastSavedNode(scip, branchruledata, node, &parent, &parentID, &nbndchgdiff) );
 
       if( reopttype < SCIP_REOPTTYPE_STRBRANCHED
-        && nbndchgdiff <= branchruledata->maxdiffofnodes )
+        && ((!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
+            ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= round(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) ) )
       {
          /** stop clock */
          SCIP_CALL(SCIPstopSaveTime(scip));
 
          return SCIP_OKAY;
       }
+
 
       /** get an empty slot (to ensure that ID != NULL, the queue should contains only IDs >= 1);
        * the 0 is always reserved for the root */
@@ -2202,7 +2220,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       /** get memory for nodedata */
       assert(branchruledata->nodedata[nodeID] == NULL || branchruledata->nodedata[nodeID]->nvars == 0);
       SCIP_CALL(initNode(scip, branchruledata, nodeID));
-      branchruledata->nodedata[nodeID]->oldnumber = SCIPnodeGetNumber(node);
 
       assert(parent != NULL );
       assert((parent == SCIPgetRootNode(scip) && parentID == 0) || (parent != SCIPgetRootNode(scip) && parentID > 0));
@@ -2429,9 +2446,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptRemoveNode(
       while (childID != nodeID);
    }
 
-
-   printf(">> DELTE NODE %llu, father %llu, reopttype %d.\n", SCIPnodeGetNumber(node), SCIPnodeGetNumber(parent), SCIPnodeGetReopttype(node));
-
    /* if the current node was the only child node of the next saved node above,
     * then this node is infeasible, too.  */
    if( SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds)
@@ -2446,7 +2460,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptRemoveNode(
       }
       else
       {
-         SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, parent, FALSE, TRUE) );
+         SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, parent, branched, infeasible) );
       }
    }
    else
@@ -2470,6 +2484,10 @@ SCIP_RETCODE SCIPbranchruleNodereoptRemoveNode(
    SCIP_CALL(deleteNodeData(scip, branchruledata, nodeID, TRUE));
    SCIP_CALL(SCIPnodeSetReoptID(node, -1));
    SCIPnodeSetReopttype(node, SCIP_REOPTTYPE_NONE);
+
+   /** increase number of infeasible nodes*/
+   if( infeasible )
+      branchruledata->ninfeasnodesround++;
 
    /* insert the empty slot the queue of empty slots */
    SCIP_CALL(SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t ) nodeID));
@@ -2754,15 +2772,8 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       /** parameter stuff */
       branchruledata->restart = FALSE;
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &branchruledata->maxsavednodes));
+      SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxdiffofnodes", &branchruledata->maxdiffofnodes));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/dynamicdiffofnodes", &branchruledata->dynamicdiffofnodes));
-
-      if( !branchruledata->dynamicdiffofnodes )
-      {
-         SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxdiffofnodes", &branchruledata->maxdiffofnodes));
-      }
-      else
-         branchruledata->maxdiffofnodes = MAX(0, floor(log10(SCIPgetNBinVars(scip))/log10(2))-2);
-
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/savelpbasis", &branchruledata->savelpbasis));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/saveglbcons", &branchruledata->saveglbcons));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/saveloccons", &branchruledata->saveloccons));
@@ -2819,9 +2830,7 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       branchruledata->nodedata[0]->lpistate = NULL;
       branchruledata->nodedata[0]->nodechilds = NULL;
       branchruledata->nodedata[0]->nvars = 0;
-      branchruledata->nodedata[0]->oldnumber = 1;
       branchruledata->nodedata[0]->pseudobranched = FALSE;
-      branchruledata->nodedata[0]->redies = 0;
       branchruledata->nodedata[0]->allocmem = 0;
       branchruledata->nodedata[0]->vars = NULL;
       branchruledata->nodedata[0]->varbounds = NULL;

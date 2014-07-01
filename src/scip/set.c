@@ -268,7 +268,7 @@
 
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_MAXSAVEDNODES INT_MAX/**< maximum number of saved nodes */
-#define SCIP_DEFAULT_REOPT_DYNAMIXDIFF     TRUE /**< should the maximal number of bound changes in two ancestor
+#define SCIP_DEFAULT_REOPT_DYNAMIXDIFF    FALSE /**< should the maximal number of bound changes in two ancestor
                                                      nodes calculated automaticaly, depending on the number of variables? */
 #define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
                                                      such that the path get not shrunk */

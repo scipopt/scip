@@ -59,6 +59,18 @@ void SCIPnodeGetParentBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
+/** specially for reoptimization, returns the set of variable branchings that were performed in the parent node to create this node */
+EXTERN
+void SCIPnodeGetParentBranchingsReopt(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
+   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
+   );
+
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
 EXTERN
 void SCIPnodeGetAncestorBranchings(
