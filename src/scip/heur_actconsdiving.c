@@ -46,14 +46,12 @@
 #define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
+                                         *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
-#define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
-#define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+                                         *   where diving is performed (0.0: no limit) */
+#define DEFAULT_MAXDIVEUBQUOTNOSOL  1.0 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+#define DEFAULT_MAXDIVEAVGQUOTNOSOL 1.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-
-#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
 
 /* locally defined heuristic data */
@@ -345,7 +343,7 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
    heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
          DEFAULT_BACKTRACK, divesetGetScoreActconsdiving) );
 
    return SCIP_OKAY;

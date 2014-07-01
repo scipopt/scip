@@ -202,25 +202,25 @@ SCIP_Longint SCIPdivesetGetNLPIterations(
 
 /** get the maximum upper bound quotient parameter of the diving settings if no solution is available */
 EXTERN
-SCIP_Real SCIPdivesetGetMaxUbQuotNoSol(
+SCIP_Real SCIPdivesetGetUbQuotNoSol(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the average quotient parameter of the diving settings if no solution is available */
 EXTERN
-SCIP_Real SCIPdivesetGetMaxAvgQuotNoSol(
+SCIP_Real SCIPdivesetGetAvgQuotNoSol(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum upper bound quotient parameter of the diving settings if an incumbent solution exists */
 EXTERN
-SCIP_Real SCIPdivesetGetMaxUbQuot(
+SCIP_Real SCIPdivesetGetUbQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the average upper bound quotient parameter of the diving settings if an incumbent solution exists */
 EXTERN
-SCIP_Real SCIPdivesetGetMaxAvgQuot(
+SCIP_Real SCIPdivesetGetAvgQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 

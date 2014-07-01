@@ -53,9 +53,6 @@
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 
-#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
-
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
@@ -250,7 +247,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
          DEFAULT_BACKTRACK, divesetGetScorePscostdiving) );
 
    return SCIP_OKAY;

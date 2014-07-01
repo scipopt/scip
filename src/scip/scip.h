@@ -14351,14 +14351,14 @@ void SCIPresetDiveset(
 
 /** performs a diving within the limits of the diveset parameters
  *
- *  this method performs a diving according to the settings defined by the diving settings \p diveset; Contrary to the
+ *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
  *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
  *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the
- *  score defined by the \p diveset.
- *  If more than one candidate should be selected, the candidates are sorted in nondecreasing order
+ *  score defined by the @p diveset.
+ *  If more than one candidate should be selected, the candidates are sorted in non-decreasing order
  *  of their score.
  *
  *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
@@ -14370,12 +14370,20 @@ void SCIPresetDiveset(
  *
  *  @see heur_guideddiving.c for an example implementation of a dive set controlling the diving algorithm.
  *
- *  @see the parameter heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
- *        beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
+ *  @see the parameter @p heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
+ *       beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
  *
  *  @note the fraction of candidate variables is subject to change during solving. It is decreased by a factor of
  *        2 every time the algorithm could not dive half as deep as desired. However, if it succeeded, the fraction
  *        is multiplied by a factor of 1.1.
+ *
+ *  @note the node from where the algorithm is called is checked for a basic LP solution. If the solution
+ *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
+ *
+ *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
+ *        call will be executed, @see SCIPgetLastDiveNode()
+ *
+ *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
  */
 EXTERN
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
