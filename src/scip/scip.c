@@ -7160,6 +7160,17 @@ SCIP_RETCODE SCIPsetHeurPriority(
    return SCIP_OKAY;
 }
 
+/** should LNS heuristics use UCT node selection at the top of their tree? */
+SCIP_Bool SCIPuseUctLns(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->heur_useuctlns;
+}
+
 /** creates an event handler and includes it in SCIP
  *
  *  @note method has all event handler callbacks as arguments and is thus changed every time a new

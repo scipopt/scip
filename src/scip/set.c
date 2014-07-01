@@ -139,6 +139,9 @@
 
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 
+/* heuristic settings */
+#define SCIP_DEFAULT_HEUR_USEUCTLNS       FALSE /**< should lns heuristics use uct node selection at the top of the tree? */
+
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -1049,6 +1052,13 @@ SCIP_RETCODE SCIPsetCreate(
          "should statistics be collected for variable domain value pairs?",
          &(*set)->history_valuebased, FALSE, SCIP_DEFAULT_HISTORY_VALUEBASED,
          NULL, NULL) );
+
+   /* heuristic settings */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "heuristics/useuctlns",
+            "should lns heuristics use uct node selection at the top of the tree?",
+            &(*set)->heur_useuctlns, FALSE, SCIP_DEFAULT_HEUR_USEUCTLNS,
+            NULL, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

@@ -283,6 +283,7 @@ SCIP_RETCODE createNewSol(
 /** sets solving parameters for the subproblem created by the heuristic */
 static
 SCIP_RETCODE setupSubproblem(
+   SCIP*                 scip,               /**< main SCIP data structure */
    SCIP*                 subscip             /**< copied SCIP data structure */
    )
 {
@@ -297,10 +298,16 @@ SCIP_RETCODE setupSubproblem(
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   /* use restart dfs node selection */
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( SCIPuseUctLns(scip) && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* disable expensive presolving
@@ -319,9 +326,9 @@ SCIP_RETCODE setupSubproblem(
 
 
    /* todo: check branching rule in sub-SCIP */
-   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
-	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
+	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable feasibility pump and fractional diving */
@@ -849,7 +856,7 @@ SCIP_RETCODE SCIPapplyProximity(
       }
 
       /* set up parameters for the copied instance */
-      SCIP_CALL( setupSubproblem(subscip) );
+      SCIP_CALL( setupSubproblem(scip, subscip) );
 
       /* create the objective constraint in the sub scip, first without variables and values which will be added later */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );

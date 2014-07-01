@@ -426,15 +426,21 @@ SCIP_RETCODE SCIPapplyZeroobj(
    }
 
    /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( SCIPuseUctLns(scip) && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* use inference branching */
    if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that

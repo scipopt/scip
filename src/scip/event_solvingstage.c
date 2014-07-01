@@ -123,7 +123,7 @@ SCIP_RETCODE readLeaveFile(
       const char* probname = SCIPgetProbName(scip);
       file = NULL;
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Trying to open leaves file\n");
-      file = SCIPfopen("/optimi/kombadon/projects/scip-git/check/testset/myMMM.leaves", "r");
+      file = SCIPfopen("/optimi/kombadon/bzfhende/projects/scip-git/check/testset/myMMM.leaves", "r");
 
       if( file == NULL )
       {
@@ -378,7 +378,7 @@ SCIP_RETCODE applySolvingStage(
       eventhdlrdata->interruptoptimal = interruptoptimal;
    }
 
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->adjustrelpsweights && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodesLeft(scip) > 0)
+   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->adjustrelpsweights && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
       SCIP_Longint objleaves;
       SCIP_Real quotient;
@@ -417,7 +417,6 @@ SCIP_RETCODE applySolvingStage(
 
       if( eventhdlrdata->useweightedquotients )
       {
-
          newcutoffweight *= cutoffweight;
          newconflictweight *= conflictweight;
       }
