@@ -20596,6 +20596,16 @@ SCIP_RETCODE SCIPchgVarType(
    assert(var != NULL);
    assert(var->scip == scip);
 
+   if( SCIPvarIsNegated(var) )
+   {
+      SCIPdebugMessage("upgrading type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+      var = SCIPvarGetNegationVar(var);
+   }
+   else
+   {
+      SCIPdebugMessage("upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+   }
+
    /* change variable type */
    switch( scip->set->stage )
    {
