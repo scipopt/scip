@@ -76,6 +76,7 @@ fixed bugs:
   an infeasible/objlimit LP
 - fixed bug that reaching a solution limit by beforenode heuristics lead to disregarding the current node if the
   optimization process was restarted later
+- fixed bug with reading '>=1' indicator constraints in LP-files
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints

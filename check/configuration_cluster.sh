@@ -72,6 +72,9 @@ elif test $CLUSTERQUEUE = "opt-low"
 then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
+elif test $CLUSTERQUEUE = "M620x"
+then
+    CLUSTERQUEUE="M620,M620v2"
 fi
 
 # check if the slurm blades should be used exclusively

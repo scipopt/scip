@@ -1436,7 +1436,7 @@ SCIP_RETCODE createIndicatorConstraint(
    switch( linsense )
    {
    case LP_SENSE_GE:
-      linrhs = linsidevalue;
+      linrhs = -linsidevalue;
       for( j = 0; j < nlincoefs; ++j )
          lincoefs[j] *= -1;
       break;
