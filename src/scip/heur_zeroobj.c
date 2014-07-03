@@ -432,9 +432,9 @@ SCIP_RETCODE SCIPapplyZeroobj(
    }
 
    /* use least infeasible branching */
-   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/inference/leastinf") )
+   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/leastinf", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
    }
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
