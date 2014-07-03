@@ -1306,7 +1306,8 @@ SCIP_RETCODE readBounds(
          || !strcmp(mpsinputField1(mpsi), "FX")  /* fixed value given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "LI")  /* CPLEX extension: lower bound of integer variable given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "UI")  /* CPLEX extension: upper bound of integer variable given in field 4 */
-         || !strcmp(mpsinputField1(mpsi), "SC") )/* CPLEX extension: semi continuous variable, upper bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "SC")  /* CPLEX extension: semi-continuous variable, upper bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "SI") )/* CPLEX extension: semi-integer variable, upper bound given in field 4 */
       {
          if( mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL )
          {
@@ -1476,8 +1477,8 @@ SCIP_RETCODE readBounds(
             }
             break;
          case 'S':
-            assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
-            /* remember that variable is semi-continuous */
+            assert(mpsinputField1(mpsi)[1] == 'C' || mpsinputField1(mpsi)[1] == 'I'); /* semi-continuous or semi-integer (CPLEX extension) */
+            /* remember that variable is semi-continuous/-integer */
             if( semicontsize <= nsemicont )
             {
                semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
@@ -1494,12 +1495,22 @@ SCIP_RETCODE readBounds(
             semicont[nsemicont] = var;
             ++nsemicont;
 
-            if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* variable is semi-integer, hence change its type to integer (the "semi" part will be handled below) */
             {
-               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect an infeasibility */
             }
 
-            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            /* if both bounds are infinite anyway, we do not need to print a warning or change the bound */
+            if( !SCIPisInfinity(scip, val) || !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+            {
+               if( SCIPisGT(scip, val, SCIPvarGetUbGlobal(var)) )
+               {
+                  SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), val);
+               }
+
+               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            }
             break;
          case 'F':
             if( mpsinputField1(mpsi)[1] == 'X' )
@@ -1566,12 +1577,15 @@ SCIP_RETCODE readBounds(
 
       assert(semicont != NULL);
 
-      /* add bound disjunction constraints for semi-continuous variables */
+      /* add bound disjunction constraints for semi-continuous and semi-integer variables */
       for( i = 0; i < nsemicont; ++i )
       {
          var = semicont[i];
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
          oldlb = SCIPvarGetLbGlobal(var);
+         assert(oldlb >= 0.0);
+
          /* if no bound was specified (which we assume if we see lower bound 0.0),
           * then the default lower bound for a semi-continuous variable is 1.0 */
          if( oldlb == 0.0 )
@@ -1594,7 +1608,7 @@ SCIP_RETCODE readBounds(
                !mpsi->dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, mpsi->dynamicconss, mpsi->dynamiccols, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
-         SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
+         SCIPdebugMessage("add bound disjunction constraint for semi-continuity/-integrality of <%s>:\n\t", SCIPvarGetName(var));
          SCIPdebugPrintCons(scip, cons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );

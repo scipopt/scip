@@ -8,6 +8,7 @@ features:
 - can now output information for BAK: Branch-and-bound Analysis Kit
 - added scripts check_xpress.awk, check_xpress.sh, evalcheck_xpress.sh and check_cluster_xpress.sh and target
   "testclusterxpress" and "testxpress" in Makefile
+- the MPS reader can now read semi-integer variables, they are handled by creating bound disjunction constraints
 
 parameters:
 - rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
