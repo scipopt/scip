@@ -1552,8 +1552,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/maxdiffofnodes",
-         "maximal number of bound changes between two ancestor nodes such that the path get not shrunk.",
-         &(*set)->reopt_maxdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_MAXDIFFOFNODES, 0, INT_MAX,
+         "maximal number of bound changes between two ancestor nodes such that the path get not shrunk. (-1: frequency = floor(log2(#origbinvars))-1)",
+         &(*set)->reopt_maxdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_MAXDIFFOFNODES, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/savelpbasis",

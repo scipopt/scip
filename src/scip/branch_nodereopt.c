@@ -2773,6 +2773,12 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       branchruledata->restart = FALSE;
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &branchruledata->maxsavednodes));
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxdiffofnodes", &branchruledata->maxdiffofnodes));
+
+      if( branchruledata->maxdiffofnodes == -1 )
+      {
+         branchruledata->maxdiffofnodes = floor(log10(SCIPgetNOrigBinVars(scip))/log10(2))-1;
+      }
+
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/dynamicdiffofnodes", &branchruledata->dynamicdiffofnodes));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/savelpbasis", &branchruledata->savelpbasis));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/saveglbcons", &branchruledata->saveglbcons));

@@ -12885,7 +12885,7 @@ SCIP_RETCODE freeTransform(
       stored = TRUE;
 
       /* copy best primal solution to original solution candidate list */
-      for( s = 0; s < nsols; ++s )
+      for( s = 0; s < nsols & stored; ++s )
       {
          SCIP_SOL* sol;
 
