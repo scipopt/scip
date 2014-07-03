@@ -288,8 +288,8 @@ SCIP_RETCODE soltreeUpdateSols(
 /* returns similariry of two objective functions */
 static
 SCIP_Real reoptSimilarity(
-   SCIP*                 scip,
    SCIP_REOPT*           reopt,
+   int                   nvars,
    int                   obj1_id,
    int                   obj2_id
 )
@@ -303,7 +303,7 @@ SCIP_Real reoptSimilarity(
    norm_n1 = 0.0;
    norm_n2 = 0.0;
    scalarproduct = 0.0;
-   for(id = 0; id < SCIPgetNVars(scip); id++)
+   for(id = 0; id < nvars; id++)
    {
       SCIP_Real c1;
       SCIP_Real c2;
@@ -787,7 +787,7 @@ SCIP_RETCODE SCIPreoptUpdateSols(
       if( set->reopt_objsim == 0 )
          sim = 1;
       else
-         sim = reoptSimilarity(scip, reopt, run, reopt->run+1);
+         sim = reoptSimilarity(reopt, origprob->nvars,run, reopt->run+1);
 
       if( sim >= simparam )
       {
@@ -865,20 +865,20 @@ SCIP_RETCODE SCIPreoptSaveObj(
    /* at this moment we need the objective only
     * to decide if we want to add solution or not,
     * so we can skip this if objsim == 0 */
-   if( set->reopt_objsim == 0 )
+   if( set->reopt_objsim == 0 && set->reopt_delay == 0.0 )
       return SCIP_OKAY;
 
    /* check memory */
    SCIP_CALL( ensureRunSize(reopt, set, run) );
 
-   vars = SCIPgetVars(scip);
+   vars = SCIPgetOrigVars(scip);
 
    /* get memory */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &reopt->objs[run], SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &reopt->objs[run], SCIPgetNOrigVars(scip)) );
 
    /* save coefficients */
    vars = SCIPgetVars(scip);
-   for(id = 0; id < SCIPgetNVars(scip); id++)
+   for(id = 0; id < SCIPgetNOrigVars(scip); id++)
    {
       reopt->objs[run][id] = SCIPvarGetObj(vars[id]);
    }
@@ -890,5 +890,30 @@ SCIP_RETCODE SCIPreoptSaveObj(
 #endif
 
    return SCIP_OKAY;
+}
+
+/* check if the current and the previous objective are similar enough
+ * returns TRUE if we want to restart, otherwise FALSE */
+SCIP_Bool SCIPreoptCheckRestart(
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   int                   nvars,
+   SCIP_Real*            sim
+)
+{
+   assert(reopt != NULL);
+   assert(set != NULL);
+
+   (*sim) = 0.0;
+
+   if( reopt->run > 0 && set->reopt_delay > 0.0 )
+   {
+      (*sim) = reoptSimilarity(reopt, nvars, reopt->run, reopt->run-1);
+   }
+
+   if( (*sim) >= set->reopt_delay )
+      return FALSE;
+   else
+      return TRUE;
 }
 

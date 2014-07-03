@@ -12885,7 +12885,7 @@ SCIP_RETCODE freeTransform(
       stored = TRUE;
 
       /* copy best primal solution to original solution candidate list */
-      for( s = 0; s < nsols & stored; ++s )
+      for( s = 0; s < nsols && stored; ++s )
       {
          SCIP_SOL* sol;
 
@@ -13585,6 +13585,19 @@ SCIP_RETCODE SCIPrestartSolve(
    scip->stat->userrestart = TRUE;
 
    return SCIP_OKAY;
+}
+
+/**
+ * check if reoptimization can restart
+ */
+SCIP_Bool SCIPcheckRestartReopt(
+   SCIP*                 scip,
+   SCIP_Real*            sim
+)
+{
+   assert(scip != NULL);
+
+   return SCIPreoptCheckRestart(scip->reopt, scip->set, scip->origprob->nvars, sim);
 }
 
 /** returns whether we are in the restarting phase

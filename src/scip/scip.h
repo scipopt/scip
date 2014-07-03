@@ -5889,6 +5889,15 @@ SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/**
+ * check if reoptimization can restart
+ */
+EXTERN
+SCIP_Bool SCIPcheckRestartReopt(
+   SCIP*                 scip,
+   SCIP_Real*            sim
+   );
+
 /** returns whether we are in the restarting phase
  *
  *  @return TRUE, if we are in the restarting phase; FALSE, otherwise

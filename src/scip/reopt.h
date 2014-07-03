@@ -117,6 +117,16 @@ SCIP_RETCODE SCIPreoptSaveObj(
    int                   run
    );
 
+/* check if the current and the previous objective are similar enough
+ * returns TRUE if we want to restart, otherwise FALSE */
+extern
+SCIP_Bool SCIPreoptCheckRestart(
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   int                   nvars,
+   SCIP_Real*            sim
+   );
+
 /* returns an array of indices with similar objective functions
  * to obj_idx */
 extern

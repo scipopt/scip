@@ -733,6 +733,7 @@ SCIP_RETCODE saveGlobalCons(
 
          assert(constype == REOPT_CONSTYPE_INFSUBTREE);
 
+         SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vars, nbinvars) );
          SCIP_CALL( SCIPallocMemoryArray(scip, &boundtypes, nbinvars) );
          SCIPnodeGetAncestorBranchings(node,
                branchruledata->globalcons[branchruledata->nconsglobal]->vars,
@@ -1973,13 +1974,28 @@ void restartCheck(
    SCIP_BRANCHRULEDATA*  branchruledata
 )
 {
+   SCIP_Real sim;
+
    assert(scip != NULL );
    assert(branchruledata != NULL );
    assert(branchruledata->reopt);
 
    /* check if maximal number if saved nodes is reached */
    if (branchruledata->nsavednodes > branchruledata->maxsavednodes)
+   {
       branchruledata->restart = TRUE;
+   }
+   /* the current and the previous objective are not similar enough */
+   else if( SCIPcheckRestartReopt(scip, &sim) )
+   {
+      branchruledata->restart = TRUE;
+
+//#ifdef SCIP_DEBUG
+//   {
+      printf(">> reset search tree because the new objective is not similar enough (%.4f).\n", sim);
+//   }
+//#endif
+   }
 
    return;
 }
@@ -2087,7 +2103,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
 
                /* check if we can move all children to the next saved node above */
                if( (!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
-                 ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= round(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) )
+                 ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) )
                {
                   SCIP_CALL( moveChildrenUp(branchruledata, nodeID, parentID) );
 
@@ -2202,7 +2218,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
 
       if( reopttype < SCIP_REOPTTYPE_STRBRANCHED
         && ((!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
-            ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= round(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) ) )
+            ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) ) )
       {
          /** stop clock */
          SCIP_CALL(SCIPstopSaveTime(scip));
@@ -2315,13 +2331,13 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
           * solution in a following round (but only if all variablea are binary)
           * TODO: Verbesserungswürdig
           */
-         if( branchruledata->saveloccons && nodeID > 0 )
-         {
-            SCIP_CALL( saveLocalConsData(scip, branchruledata, node, nodeID, REOPT_CONSTYPE_SEPASOLUTION) );
-         }
-         else if( branchruledata->saveglbcons && nodeID == 0 )
+         if( branchruledata->saveglbcons && nodeID == 0 )
          {
             SCIP_CALL( saveGlobalCons(scip, branchruledata, node, REOPT_CONSTYPE_SEPASOLUTION) );
+         }
+         else if( branchruledata->saveloccons && nodeID > 0 )
+         {
+            SCIP_CALL( saveLocalConsData(scip, branchruledata, node, nodeID, REOPT_CONSTYPE_SEPASOLUTION) );
          }
 
          break;
@@ -2608,8 +2624,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptRestartCheck(
 
          /* set the number of saved nodes to 0 */
          branchruledata->nsavednodes = 0;
-
-         printf(">> restart reoptimization ...\n");
       }
    }
 

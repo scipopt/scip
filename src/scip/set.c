@@ -281,6 +281,8 @@
 #define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
 #define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
+#define SCIP_DEFAULT_REOPT_DELAY           0.51 /**< start reoptimzing the search if the new objective function has similarity of
+                                                     at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
 
 /* Propagating */
 
@@ -1594,6 +1596,11 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/objsim",
          "similarity of two objective function to reuse stored solutions.",
          &(*set)->reopt_objsim, TRUE, SCIP_DEFAULT_REOPT_OBJSIM, 0, 1,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "reoptimization/delay",
+         "start reoptimizing the search tree if the current and previous objective have this similarity.",
+         &(*set)->reopt_delay, TRUE, SCIP_DEFAULT_REOPT_DELAY, 0, 1,
          NULL, NULL) );
 
    /* separation parameters */

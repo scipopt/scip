@@ -369,6 +369,7 @@ struct SCIP_Set
    int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
    SCIP_Real             reopt_minavghamdist;/**< minimal average Hamming-Distance between a solution and the solution pool. */
    SCIP_Real             reopt_objsim;       /**< similarity of two objective functions to reuse stored solutions. */
+   SCIP_Real             reopt_delay;        /**< similarity from which reoptimizing the search tree starts. */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
