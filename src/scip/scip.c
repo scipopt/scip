@@ -20655,6 +20655,16 @@ SCIP_RETCODE SCIPchgVarType(
 
    SCIP_CALL( checkStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   if( SCIPvarIsNegated(var) )
+   {
+      SCIPdebugMessage("upgrading type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+      var = SCIPvarGetNegationVar(var);
+   }
+   else
+   {
+      SCIPdebugMessage("upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+   }
+
    /* change variable type */
    switch( scip->set->stage )
    {
