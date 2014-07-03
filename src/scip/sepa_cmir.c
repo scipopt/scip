@@ -664,6 +664,7 @@ SCIP_Real getBounddist(
    SCIP_Real bounddist;
 
    assert(varIsContinuous(var));
+   assert(SCIPvarGetProbindex(var) >= nintvars);
 
    primsol = varsolvals[SCIPvarGetProbindex(var)];
    lb = bestcontlbs[SCIPvarGetProbindex(var) - nintvars];
