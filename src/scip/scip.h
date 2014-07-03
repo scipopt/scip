@@ -17769,6 +17769,21 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** gets the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @return the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetPseudocostCount(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
+   );
+
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5
  *
  *  @return the average pseudo cost score value over all variables, assuming a fractionality of 0.5
@@ -17780,6 +17795,21 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
 EXTERN
 SCIP_Real SCIPgetAvgPseudocostScore(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @return the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetPseudocostVariance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir,          /**< the branching direction, up or down */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
    );
 
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,

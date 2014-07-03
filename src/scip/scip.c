@@ -35496,6 +35496,8 @@ SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    return SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, solvaldelta);
 }
 
+
+
 /** gets the average number of pseudo cost updates for the given direction over all variables
  *
  *  @return the average number of pseudo cost updates for the given direction over all variables
@@ -35557,6 +35559,55 @@ SCIP_Real SCIPgetAvgPseudocostScore(
    pscostup = SCIPhistoryGetPseudocost(scip->stat->glbhistory, +0.5);
 
    return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
+}
+
+/** returns the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @return the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetPseudocostVariance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir,          /**< the branching direction, up or down */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
+   )
+{
+   SCIP_HISTORY* history;
+
+   assert(scip != NULL);
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPseudocostVariance", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   history = (onlycurrentrun ? scip->stat->glbhistorycrun : scip->stat->glbhistory);
+   assert(history != NULL);
+
+   return SCIPhistoryGetPseudocostVariance(history, branchdir);
+}
+
+/** gets the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @return the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetPseudocostCount(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
+   )
+{
+   SCIP_HISTORY* history;
+
+   assert(scip != NULL);
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   history = (onlycurrentrun ? scip->stat->glbhistorycrun : scip->stat->glbhistory);
+
+   return SCIPhistoryGetPseudocostCount(history, dir);
 }
 
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
