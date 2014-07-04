@@ -145,8 +145,10 @@ SCIP_RETCODE LiftedWeightSpaceSolver::loadNextWeight()
 /** find the optimal solution for the current weight */
 SCIP_RETCODE LiftedWeightSpaceSolver::solveWeighted()
 {
+   Objectives* objectives = SCIPgetProbData(scip_)->objectives;
+
    /* load weight into solver */
-   SCIP_CALL( SCIPgetProbData(scip_)->objectives->setWeightedObjective(scip_, weight_) );
+   SCIP_CALL( objectives->setWeightedObjective(scip_, weight_) );
 
    /* reset solve statistics */ 
    found_new_optimum_ = false;
@@ -155,10 +157,33 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveWeighted()
 
    /* optimize with weight */
    SCIP_CALL( doSCIPrun() );
-   if( mip_status_ == SCIP_STATUS_OPTIMAL )
+
+   /* do reopt with fixed weighted objective function if necessary */
+   if( mip_status_ == SCIP_STATUS_OPTIMAL && hasInfiniteComponent(cost_vector_) )
    {
-      /* do reopt with fixed weighted objective function if necessary*/
-      SCIP_CALL( ensureNonInfinity() );
+      SCIP_CONS* cons = NULL;      
+
+      SCIP_CALL( objectives->setWeightedObjective(
+          scip_, 
+          feasible_weight_
+          ) );
+
+      SCIP_CALL( objectives->createObjectiveConstraint(
+          scip_,
+          &cons,
+          weight_,
+          scalar_product(*weight_, *cost_vector_)
+          ) );
+
+      SCIP_CALL( SCIPaddCons(scip_, cons) );
+
+      SCIP_CALL( doSCIPrun() );
+
+      assert( mip_status_ == SCIP_STATUS_OPTIMAL );
+      assert( !hasInfiniteComponent(cost_vector_) );
+
+      SCIP_CALL( SCIPdelCons(scip_, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip_, &cons) );
    }
 
    return SCIP_OKAY;
@@ -211,7 +236,14 @@ SCIP_Real LiftedWeightSpaceSolver::getTotalDuration() const
 /** reoptimize in case of infinite objective function value in any objective*/
 SCIP_RETCODE LiftedWeightSpaceSolver::ensureNonInfinity()
 {
-   Objectives* objectives = SCIPgetProbData(scip_)->objectives;
+
+   return SCIP_OKAY;
+}
+
+/** return true if the given vector has an entry close to infinity */
+bool LiftedWeightSpaceSolver::hasInfiniteComponent(std::vector<SCIP_Real>* cost_vector)
+{
+   bool result = false; 
 
    for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
         it != cost_vector_->end();
@@ -219,35 +251,12 @@ SCIP_RETCODE LiftedWeightSpaceSolver::ensureNonInfinity()
    {
       if( *it >= SCIPinfinity(scip_) / 1000. )
       {
-         SCIP_CONS* cons;
-
-         SCIP_CALL( objectives->createObjectiveConstraint(
-               scip_,
-               &cons,
-               weight_,
-               scalar_product(*weight_, *cost_vector_)
-               ) );
-
-         SCIP_CALL( SCIPaddCons(scip_, cons) );
-
-         SCIP_CALL( objectives->setWeightedObjective(
-             scip_, 
-             feasible_weight_
-             ) );
-
-         SCIP_CALL( doSCIPrun() );
-
-         assert( mip_status_ == SCIP_STATUS_OPTIMAL );
-
-         SCIP_CALL( SCIPfreeTransform(scip_) );
-         SCIP_CALL( SCIPdelCons(scip_, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip_, &cons) );
-
+         result = true;
          break;
       }
    }
 
-   return SCIP_OKAY;
+   return result;
 }
 
 /** get the MIP solution and check wheather it is a new optimum*/

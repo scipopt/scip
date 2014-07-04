@@ -141,11 +141,6 @@ SCIP_RETCODE Objectives::createObjectiveConstraint(
 
    int i = 0;
 
-   if( SCIPisTransformed(scip) )
-   {
-      SCIP_CALL( SCIPfreeTransform(scip) );
-   }
-    
    /* translate objective constraint coefficients to individual variable coefficients */
    for( std::map< SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator jt = cost_columns_.begin();
         jt != cost_columns_.end();
