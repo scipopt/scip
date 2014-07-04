@@ -22,11 +22,13 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "WeightSpaceVertex.h"
 #include <stdio.h>
-#include "scip/def.h"
 #include <iostream>
+
+#include "scip/def.h"
+
 #include "main.h"
+#include "WeightSpaceVertex.h"
 
 /** creates inital vertex */
 WeightSpaceVertex::WeightSpaceVertex(
@@ -38,6 +40,9 @@ WeightSpaceVertex::WeightSpaceVertex(
       weight_(weight),
       weighted_objective_value_(weighted_objval)
 {   
+   sort(incident_facets_.begin(), incident_facets_.end());
+
+   assert( nobjs_ > 0 );
 }
 
 /** creates a new point between obsolete and adjacent non obsolete point */
@@ -49,6 +54,8 @@ WeightSpaceVertex::WeightSpaceVertex(
 {
    joinFacets(obsolete, adjacent, new_facet);
    calculate_weight(obsolete, adjacent, new_facet);
+
+   assert( weight_->size() == nobjs_ );
 }
 
 /** default constructor */
@@ -68,7 +75,7 @@ WeightSpaceVertex::~WeightSpaceVertex()
 }
 
 /** whether this and point are neighbours in the 1-skeleton*/
-bool WeightSpaceVertex::isNeighbour(const WeightSpaceVertex* point)
+bool WeightSpaceVertex::isNeighbour(const WeightSpaceVertex* point) const
 {
    std::vector<const std::vector<SCIP_Real> * > common_facets;
    std::vector<const std::vector<SCIP_Real> * >::iterator cit;
@@ -80,8 +87,8 @@ bool WeightSpaceVertex::isNeighbour(const WeightSpaceVertex* point)
       incident_facets_.begin(), 
       incident_facets_.end(),
       common_facets.begin());
-   
-   return cit - common_facets.begin() > nobjs_ - 1;
+      
+   return cit - common_facets.begin() >= nobjs_ - 1;
 }
 
 /** returns the weighted objective value */
@@ -158,17 +165,25 @@ void  WeightSpaceVertex::calculate_weight(
    SCIP_Real wov_obs = obsolete->getWeightedObjectiveValue();
    SCIP_Real wov_adj = adjacent->getWeightedObjectiveValue();
 
-   SCIP_Real excess_obs = wov_obs * (*new_facet)[nobjs_];
-   SCIP_Real excess_adj = wov_adj * (*new_facet)[nobjs_];
+   assert( weight_obs != NULL );
+   assert( weight_adj != NULL );
+   assert( new_facet != NULL );
+   assert( weight_obs->size() == nobjs_ );
+   assert( weight_adj->size() == nobjs_ );
+   assert( new_facet->size()  == nobjs_ + 1 );
+
+   SCIP_Real lhs_obs = wov_obs * (*new_facet)[nobjs_];
+   SCIP_Real lhs_adj = wov_adj * (*new_facet)[nobjs_];
 
    for( unsigned int i = 0; i < nobjs_; ++i )
    {
-     excess_obs -= (*weight_obs)[i] * (*new_facet)[i];
-     excess_adj -= (*weight_adj)[i] * (*new_facet)[i];
+     lhs_obs += (*weight_obs)[i] * (*new_facet)[i];
+     lhs_adj += (*weight_adj)[i] * (*new_facet)[i];
    }
 
-   SCIP_Real factor_obs = excess_adj / (excess_adj - excess_obs);
-   SCIP_Real factor_adj = 1. - factor_obs;
+   SCIP_Real factor_adj = lhs_obs / (lhs_obs - lhs_adj);
+   SCIP_Real factor_obs = 1. - factor_adj;
+
 
    weight_ = new std::vector<SCIP_Real>(nobjs_);
    weighted_objective_value_ = factor_obs * wov_obs + factor_adj * wov_adj;
@@ -177,12 +192,13 @@ void  WeightSpaceVertex::calculate_weight(
    {
      (*weight_)[i] += factor_obs * (*weight_obs)[i] + factor_adj * (*weight_adj)[i];
    }
+
 }
 
-bool WeightSpaceVertex::isCorner()
+bool WeightSpaceVertex::isCorner() const
 {
   int n_point_facets = 0;
-  for( std::vector< const std::vector<SCIP_Real>* >::iterator it = incident_facets_.begin();
+  for( std::vector< const std::vector<SCIP_Real>* >::const_iterator it = incident_facets_.begin();
        it < incident_facets_.end();
        ++it )
   {
@@ -197,12 +213,47 @@ bool WeightSpaceVertex::isCorner()
 
 void WeightSpaceVertex::updateFacet(const std::vector<SCIP_Real>* facet)
 {
+   assert( isCorner() );
+
    for( unsigned int i = 0; i < nobjs_; ++i )
    {
       if( (*incident_facets_[i])[nobjs_] == -1. )
       {
          incident_facets_[i] = facet;
+         weighted_objective_value_ = 0.;
+         for( unsigned int i = 0; i < nobjs_; ++i )
+         {
+            weighted_objective_value_ += (*weight_)[i] * (*facet)[i];
+         }
          return;
       }
    }
+
+   assert( weight_->size() == nobjs_ );
+}
+
+/** writes weight space vertex to an output stream */
+void WeightSpaceVertex::print(
+   std::ostream&                   os        /** stream the vector should be written to*/
+   ) const
+{
+   os << "facets" << std::endl;
+   for( std::vector< const std::vector<SCIP_Real>* >::const_iterator it = incident_facets_.begin();
+        it != incident_facets_.end();
+        ++it )
+   {
+      os << **it << std::endl;
+   }
+   os << "coords" << std::endl;
+   os << *weight_ << ", " << weighted_objective_value_;
+}
+
+/** writes weight space vertex to an output stream */
+std::ostream& operator<<(
+   std::ostream&                   os,       /** stream the vector should be written to*/
+   const WeightSpaceVertex         v         /** vertex that should be written */
+   )
+{
+   v.print(os);
+   return os;
 }

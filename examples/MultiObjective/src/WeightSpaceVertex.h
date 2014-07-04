@@ -29,6 +29,8 @@
 #include <set>
 
 #include "scip/def.h"
+
+#undef GCC_VERSION
 #include "lemon/list_graph.h"
 
 /** data structure for a vertex of the weight space polyhedron */
@@ -58,7 +60,7 @@ class WeightSpaceVertex
    /** whether this vertex and argument vertex are neighbours in the 1-skeleton*/
    bool isNeighbour(
       const WeightSpaceVertex*          vertex              /**< another weight space vertex */
-      );
+      ) const;
 
    /** returns the weighted objective value */
    SCIP_Real getWeightedObjectiveValue() const;
@@ -77,8 +79,13 @@ class WeightSpaceVertex
       lemon::ListGraph::Node  node /**< corresponding node in skeleton graph */
       );
 
-   bool isCorner();
+   bool isCorner() const;
    void updateFacet(const std::vector<SCIP_Real>* facet);
+
+/** writes weight space vertex to an output stream */
+   void print(
+      std::ostream&                   os        /** stream the vector should be written to*/
+      ) const;
 
  private:
    unsigned int                                   nobjs_;                       /**< number of objectives */
@@ -103,5 +110,11 @@ class WeightSpaceVertex
    );
 
 };
+
+/** writes weight space vertex to an output stream */
+std::ostream& operator<<(
+   std::ostream&                   os,       /** stream the vector should be written to*/
+   const WeightSpaceVertex         v         /** vertex that should be written */
+   );
 
 #endif
