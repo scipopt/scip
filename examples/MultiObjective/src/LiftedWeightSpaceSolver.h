@@ -28,6 +28,8 @@
 #include <vector>
 #include <string>
 
+#include "lpi/lpi.h"
+
 #include "WeightedSolver.h"
 
 class Skeleton;
@@ -37,13 +39,6 @@ class Skeleton;
 class LiftedWeightSpaceSolver : public WeightedSolver
 {
  public:
-   /** standard constructor */
-   LiftedWeightSpaceSolver(
-      bool               verbose,            /**< true if scip output should be displayed */
-      SCIP_Real          timelimit,          /**< maximum allowed time in seconds */
-      int                solstore            /**< number of solutions stored in SCIP */
-      );
-
    /** SCIP style constructor */
    LiftedWeightSpaceSolver(
       const char*        paramfilename       /**< name of file with SCIP parameters */ 
@@ -55,11 +50,8 @@ class LiftedWeightSpaceSolver : public WeightedSolver
    /** returns true if there is a weight left to check */
    bool hasNext() const;
 
-   /** load next weight into solver */
-   SCIP_RETCODE next();
-
    /** solve instance with next weight */
-   SCIP_RETCODE solve();
+   SCIP_RETCODE solveNext();
 
    /** get total time for algorithm */
    SCIP_Real getTotalDuration() const;
@@ -75,13 +67,52 @@ class LiftedWeightSpaceSolver : public WeightedSolver
    SCIP_CLOCK*           clock_iteration_;      /**< clock measuring the time needed for every iteration */
    SCIP_CLOCK*           clock_total_;          /**< clock measuring the time needed for the entire program */
 
-   const std::vector<SCIP_Real>* first_weight_; /**< first weight used before skeleton is properly initialized */
+   /** phase of the weighted solving process */
+   enum Multiopt_Stage {
+      MULTIOPT_UNSOLVED,                        /**< solving process has not yet started */
+      MULTIOPT_INIT_WEIGHTSPACE,                /**< finding first valid solution candidates */
+      MULTIOPT_SOLVING,                         /**< finding more solution candidates */
+      MULTIOPT_SOLVED                           /**< found all solution candidates */
+   }                     solving_stage_;        /**< phase the algorithm is currently in */
+
+   std::vector< const std::vector<SCIP_Real>* > initial_rays_;   /**< cost vectors of primal rays found during weight initialization */
+
+   SCIP_LPI*             feasible_weight_lpi_;  /**< LP instance for finding feasible weight */
+   SCIP_Real*            feasible_weight_sol_;  /**< solution of feasible weight LP */
+
+   const std::vector<SCIP_Real>*                feasible_weight_; /**< first weight found with bounded solutions */
+
+   SCIP_Status           mip_status_;           /**< status of weighted problem */
+
+   /** prepare to start solving */
+   SCIP_RETCODE init();
+
+   /** calculate weight for next weighted optimization run */
+   SCIP_RETCODE loadNextWeight();
+
+   /** find the optimal solution for the current weight */
+   SCIP_RETCODE solveWeighted();
+
+   /** call the mip solver */
+   SCIP_RETCODE doSCIPrun();
 
    /** get the MIP solution and check wheather it is a new optimum*/
-   void evaluateSolution();
+   SCIP_RETCODE evaluateSolution();
    
    /** reoptimize in case of infinite objective function value in any objective*/
    SCIP_RETCODE ensureNonInfinity();
+
+   /** initialize lp for feasible weight generation */
+   SCIP_RETCODE createFeasibleWeightLPI();
+
+   /** solve feasible weight lp to get next feasible weight candidate */
+   SCIP_RETCODE solveFeasibleWeightLPI();
+
+   /** copy feasible weight lp solution to vector */
+   const std::vector<SCIP_Real>* getFeasibleWeight(SCIP_Real* sol);
+
+   /** add new cost ray constraint to feasible weight lp */
+   SCIP_RETCODE updateFeasibleWeightLPI(const std::vector<SCIP_Real>* cost_ray);
 };
 
 #endif

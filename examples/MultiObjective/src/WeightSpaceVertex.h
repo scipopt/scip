@@ -29,24 +29,26 @@
 #include <set>
 
 #include "scip/def.h"
+
+#undef GCC_VERSION
 #include "lemon/list_graph.h"
 
 /** data structure for a vertex of the weight space polyhedron */
 class WeightSpaceVertex
 {
  public:
-   /** creates initial corner point */
+   /** creates inital vertex */
    WeightSpaceVertex(
-      unsigned int                      dimension,          /**< dimension of the weight space */
-      const std::vector<SCIP_Real>*     first_sol,          /**< first solution defining the initial facette */
-      unsigned int                      nonzeroDimension    /**< axis where the vertex is not zero */
+      std::vector< const std::vector<SCIP_Real>* >     incident_facets,  /**< incident nondominated points */
+      std::vector<SCIP_Real>*                          weight,           /**< weight vector */
+      SCIP_Real                                        weighted_objval   /**< weighted objective value */
       );
 
    /** creates a new point between obsolete and adjacent non obsolete point */
    WeightSpaceVertex(
       const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
       const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */
-      const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
+      const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
       );
 
    /** creates dummy point */
@@ -55,30 +57,19 @@ class WeightSpaceVertex
    /** destructor */
    ~WeightSpaceVertex();
 
-   /** whether this represents a corner of the weight space */
-   bool isCorner() const;
-
-   /** whether this and point are neighbours in the 1-skeleton*/
+   /** whether this vertex and argument vertex are neighbours in the 1-skeleton*/
    bool isNeighbour(
-      const WeightSpaceVertex*          point               /**< another weight space vertex */
-      );
-
-   /** changes the adjacent nondominated cost vector of a corner vertex */
-   void updateNondomPoint(
-      const std::vector<SCIP_Real>*     new_nondom_point    /**< nondom point replacing the old one */
-      );
+      const WeightSpaceVertex*          vertex              /**< another weight space vertex */
+      ) const;
 
    /** returns the weighted objective value */
-   SCIP_Real getWeightedObjectiveValue() const ;
+   SCIP_Real getWeightedObjectiveValue() const;
 
    /** returns the weight */
-   const std::vector<SCIP_Real>* getWeight() const ;
+   const std::vector<SCIP_Real>* getWeight() const;
    
-   /** returns the set of axes where the weight is greater than 0 */
-   const std::vector<unsigned int> * getNonZeroDimensions() const ;
-   
-   /** returns the set of nondominated points that define the vertex */
-   const std::vector< const std::vector<SCIP_Real>* >* getIncidentSolutions() const ;
+   /** returns the set of facets defining the vertex */
+   const std::vector< const std::vector<SCIP_Real>* >* getFacets() const;
    
    /** returns the graph node associated with the vertex */
    lemon::ListGraph::Node getNode() const ;
@@ -88,35 +79,42 @@ class WeightSpaceVertex
       lemon::ListGraph::Node  node /**< corresponding node in skeleton graph */
       );
 
+   bool isCorner() const;
+   void updateFacet(const std::vector<SCIP_Real>* facet);
+
+/** writes weight space vertex to an output stream */
+   void print(
+      std::ostream&                   os        /** stream the vector should be written to*/
+      ) const;
+
  private:
    unsigned int                                   nobjs_;                       /**< number of objectives */
-   std::vector< const std::vector<SCIP_Real>* >   incident_solutions_;          /**< incident nondominated points */
-   std::vector<unsigned int>                      nonzero_dimensions_;          /**< axes where weight is > 0 */
+   std::vector< const std::vector<SCIP_Real>* >   incident_facets_;             /**< defining facets of form (w,a)*coeffs >= 0 */
    std::vector<SCIP_Real>*                        weight_;                      /**< weight vector */
    SCIP_Real                                      weighted_objective_value_;    /**< weighted objective value */
    lemon::ListGraph::Node                         node_;                        /**< associated graph node */
 
-   /** sets incident solutions to intersection of given points' incident solutions */
-   void joinIncidentSolutions(
+   /** determines the set of facets based on other vertices' facets */
+   void joinFacets(
       const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
       const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */
-      const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
+      const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
       );
 
-   /** sets nonzero dimensions to union of given points nonzero dimensions */
-   void joinNonzeroDimensions(
-      const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
-      const WeightSpaceVertex*          adjacent            /**< adjacent non obsolete vertex */
-      );
-
-/** calculates the weight w and the weighted objective value a 
- *  based on w and a for the obsolete and the adjacent vertex */
+   /** calculates the weight w and the weighted objective value a 
+    *  based on w and a for the obsolete and the adjacent vertex */
    void calculate_weight(
       const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
       const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */      
-      const std::vector<SCIP_Real>*     new_sol             /**< new solution cutting off the obsolete vertex */
+      const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
    );
 
 };
+
+/** writes weight space vertex to an output stream */
+std::ostream& operator<<(
+   std::ostream&                   os,       /** stream the vector should be written to*/
+   const WeightSpaceVertex         v         /** vertex that should be written */
+   );
 
 #endif

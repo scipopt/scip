@@ -25,6 +25,7 @@
 
 #include "WeightedSolver.h"
 #include "LiftedWeightSpaceSolver.h"
+
 #include "main.h"
 
 /** writes a vector to an output stream */
@@ -135,8 +136,7 @@ SCIP_RETCODE Main::run(
    /* main loop iterating over all weights */
    while( solver_->hasNext() )
    {
-      SCIP_CALL( solver_->next() );
-      SCIP_CALL( solver_->solve() );
+      SCIP_CALL( solver_->solveNext() );
 
       if( solver_->foundNewOptimum() )
       {
@@ -200,14 +200,14 @@ SCIP_RETCODE Main::readProblem(const char* filename)
 void Main::printHeadline()
 {
    std::cout << std::setw(width_vec_)        << "Weight"
-        << std::setw(width_vec_)        << "Cost"
-        << std::setw(WIDTH_DEFAULT)     << "Time/s"
-        << std::setw(WIDTH_DEFAULT)     << "Nodes"
-        << std::setw(WIDTH_DEFAULT)     << "LP Iter"
-        << std::setw(WIDTH_DEFAULT)     << "V_new"
-        << std::setw(WIDTH_DEFAULT)     << "V_proc"
-        << "   Solution File"
-        << std::endl;
+             << std::setw(width_vec_)        << "Cost"
+             << std::setw(WIDTH_DEFAULT)     << "Time/s"
+             << std::setw(WIDTH_DEFAULT)     << "Nodes"
+             << std::setw(WIDTH_DEFAULT)     << "LP Iter"
+             << std::setw(WIDTH_DEFAULT)     << "V_new"
+             << std::setw(WIDTH_DEFAULT)     << "V_proc"
+             << "   Solution File"
+             << std::endl;
 }
 
 /** prints statistics for last run in table row format */
@@ -268,10 +268,6 @@ void Main::evaluateStatus()
    {
       std::cout << " ABORTED: problem is infeasible" << std::endl;
    }
-   else if( solver_status == SCIP_STATUS_UNBOUNDED )
-   {
-      std::cout << " ABORTED: problem has at least one unbounded objective" << std::endl;
-   }
    else if( solver_status == SCIP_STATUS_INFORUNBD )
    {
       std::cout << " ABORTED: problem is infeasible or unbounded" << std::endl;
@@ -280,7 +276,8 @@ void Main::evaluateStatus()
    {
       std::cout << " ABORTED: user interrupt" << std::endl;
    }
-   else if( solver_status != SCIP_STATUS_OPTIMAL )
+   else if( solver_status != SCIP_STATUS_OPTIMAL 
+            && solver_status != SCIP_STATUS_UNBOUNDED )
    {
       std::cout << " ABORTED: SCIP_STATUS = " << (int)solver_status << std::endl;
    }

@@ -75,6 +75,12 @@ class Objectives
       SCIP_Sol*          sol                 /**< SCIP solution */
       );
 
+   /** calculate the vector containing the objective value of the SCIP primal ray 
+       for every objective */
+   std::vector<SCIP_Real>* calculateCostRay(
+      SCIP*              scip                /**< SCIP solver */
+      );
+
    /** returns the number of objectives */
    int getNObjs() const;
 

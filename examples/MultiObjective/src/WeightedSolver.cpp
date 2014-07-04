@@ -39,29 +39,6 @@
 #include "Objectives.h"
 #include "main.h"
 
-/** standard constructor */
-WeightedSolver::WeightedSolver(
-   bool                  verbose,            /**< true if scip output should be displayed */
-   SCIP_Real             timelimit,          /**< maximum allowed time in seconds */
-   int                   solstore            /**< number of solutions stored in SCIP */
-   )
-   : scip_(NULL),
-     timelimit_(timelimit),
-     found_new_optimum_(false),
-     duration_last_run_(0),
-     status_(SCIP_STATUS_UNKNOWN),
-     nruns_(0),
-     weight_(NULL),
-     cost_vector_(NULL)
-{
-   SCIPcreate(&scip_);
-   assert(scip_ != NULL);
-   SCIPsetMessagehdlrQuiet(scip_, !verbose);
-   SCIPincludeDefaultPlugins(scip_);
-   SCIPincludeReaderMop(scip_);
-   SCIPsetIntParam(scip_, "limits/maxorigsol", solstore);
-}
-
 /** SCIP style constructor */
 WeightedSolver::WeightedSolver(
    const char*           paramfilename       /**< name of file with SCIP parameters */     
@@ -69,7 +46,7 @@ WeightedSolver::WeightedSolver(
    : scip_(NULL),
      found_new_optimum_(false),
      duration_last_run_(0),
-     status_(SCIP_STATUS_UNKNOWN),
+     multiopt_status_(SCIP_STATUS_UNKNOWN),
      nruns_(0),
      weight_(NULL),
      cost_vector_(NULL)
@@ -135,7 +112,7 @@ SCIP_RETCODE WeightedSolver::readProblem(
 /** returns the SCIP problem status */
 SCIP_Status WeightedSolver::getStatus() const
 {
-   return status_;
+   return multiopt_status_;
 }
 
 /** returns true if the last run lead to a new pareto optimal solution */

@@ -35,13 +35,6 @@
 class WeightedSolver
 {
  public:
-   /** standard constructor */
-   WeightedSolver(
-      bool               verbose,            /**< true if scip output should be displayed */
-      SCIP_Real          timelimit,          /**< maximum allowed time in seconds */
-      int                solstore            /**< number of solutions stored in SCIP */
-      );
-
    /** SCIP style constructor */
    WeightedSolver(
       const char*        paramfilename       /**< name of file with SCIP parameters */
@@ -58,11 +51,8 @@ class WeightedSolver
    /** returns true if there is a weight left to check */
    virtual bool hasNext() const = 0;
 
-   /** loads next weight into solver */
-   virtual SCIP_RETCODE next() = 0;
-
-   /** solves the current weighted problem */
-   virtual SCIP_RETCODE solve() = 0;
+   /** solves the next weighted problem */
+   virtual SCIP_RETCODE solveNext() = 0;
 
    /** returns true if the last weighted run found a new pareto optimum */
    virtual bool foundNewOptimum() const;
@@ -128,7 +118,8 @@ class WeightedSolver
    SCIP_Longint          nnodes_last_run_;        /**< number of branch and bound nodes used in last run */
    SCIP_Longint          niterations_last_run_;   /**< number of lp iterations in last run */
    SCIP_Real             duration_last_run_;      /**< duration of last run in seconds */
-   SCIP_Status           status_;                 /**< SCIP solver status */
+
+   SCIP_Status           multiopt_status_;        /**< multiobjective problem status */
    int                   nruns_;                  /**< number of weighted runs */
 
    const std::vector<SCIP_Real>*                  weight_;            /**< weight used in last run */

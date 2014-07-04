@@ -102,6 +102,11 @@ SCIP_RETCODE Objectives::setWeightedObjective(
 
    assert((*weight).size() == (size_t)nobjs);
 
+   if( SCIPisTransformed(scip) )
+   {
+      SCIP_CALL( SCIPfreeTransform(scip) );
+   }
+    
    for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator it = cost_columns_.begin(); 
         it != cost_columns_.end(); 
         ++it )
@@ -136,6 +141,11 @@ SCIP_RETCODE Objectives::createObjectiveConstraint(
 
    int i = 0;
 
+   if( SCIPisTransformed(scip) )
+   {
+      SCIP_CALL( SCIPfreeTransform(scip) );
+   }
+    
    /* translate objective constraint coefficients to individual variable coefficients */
    for( std::map< SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator jt = cost_columns_.begin();
         jt != cost_columns_.end();
@@ -188,6 +198,52 @@ std::vector<SCIP_Real>* Objectives::calculateCost(
       for( int j = 0; j < nobjs; ++j )
       {
          (*result)[j] += SCIPgetSolVal(scip, sol, it->first) * it->second->at(j);
+      }
+   }
+
+   return result;
+}
+
+/** calculate the vector containing the objective value of the SCIP primal ray 
+    for every objective */
+std::vector<SCIP_Real>* Objectives::calculateCostRay(
+   SCIP*                 scip                /**< SCIP solver */
+   )
+{
+   int                      nobjs  = getNObjs();
+   std::vector<SCIP_Real> * result = new std::vector<SCIP_Real>(nobjs, 0.);
+
+   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator 
+           it = cost_columns_.begin();
+        it != cost_columns_.end(); ++it )
+   {
+      if( SCIPhasPrimalRay(scip) )
+      {
+         /* primal ray is given explicitly */
+         for( int j = 0; j < nobjs; ++j )
+         {
+            (*result)[j] += SCIPgetPrimalRayVal(scip, it->first) * it->second->at(j);
+         }
+      }
+      else
+      {
+         SCIP_VAR* var = it->first;
+         /* find implicit primal ray */
+         if( 
+            ( SCIPvarGetObj(var) < 0 && 
+              SCIPvarGetNLocksUp(var) == 0 && 
+              SCIPvarGetUbGlobal(var) == SCIPinfinity(scip) ) ||
+            ( SCIPvarGetObj(var) > 0 && 
+              SCIPvarGetNLocksDown(var) == 0 && 
+              SCIPvarGetLbGlobal(var) == - SCIPinfinity(scip) )
+            )
+         {
+            for( int j = 0; j < nobjs; ++j )
+            {
+               (*result)[j] += it->second->at(j);
+            }
+            break;
+         }
       }
    }
 
