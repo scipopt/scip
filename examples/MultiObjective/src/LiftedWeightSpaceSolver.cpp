@@ -220,13 +220,16 @@ SCIP_RETCODE LiftedWeightSpaceSolver::ensureNonInfinity()
       if( *it >= SCIPinfinity(scip_) / 1000. )
       {
          SCIP_CONS* cons;
+
          SCIP_CALL( objectives->createObjectiveConstraint(
                scip_,
                &cons,
                weight_,
                scalar_product(*weight_, *cost_vector_)
                ) );
+
          SCIP_CALL( SCIPaddCons(scip_, cons) );
+
          SCIP_CALL( objectives->setWeightedObjective(
              scip_, 
              feasible_weight_

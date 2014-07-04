@@ -54,8 +54,8 @@ MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ) $(SECOBJS) )
 
-TESTSETDIR	=	testset
-TESTFILES       =       testset/*.mop
+TESTSETDIR	=	data
+TESTFILES       =       data/*.mop
 #INCLUDE 	= 	-Ilib/lemon-src
 
 VERBOSE 	= 	false
@@ -74,7 +74,7 @@ MAKE		+= -s
 endif
 
 .PHONY: all
-all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
+all:            $(LEMONLINKS) $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -137,7 +137,7 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR) $(MAINOBJFILES)
 		@$(MAKE) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES) $(OBJS) $(EXTOBS) $(SOLDIR)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(OBJS) $(EXTOBJS) \
@@ -152,7 +152,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
-$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LEMONLINKS)
+$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -Wno-shadow -c $< $(CXX_o)$@
 
