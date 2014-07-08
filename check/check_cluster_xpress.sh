@@ -279,6 +279,8 @@ do
 
       echo readprob $SCIPPATH/$i              >> $TMPFILE
       echo time mipoptimize                   >> $TMPFILE
+      echo echo simplexiter:                  >> $TMPFILE
+      echo simplexiter                        >> $TMPFILE
       echo quit                               >> $TMPFILE
 
       # additional environment variables needed by run.sh
