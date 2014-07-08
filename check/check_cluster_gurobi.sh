@@ -248,6 +248,10 @@ do
 	  rm -f $SETFILE
       fi
 
+      # we need to create a tmp file for run.sh - even if it's empty!
+      TMPFILE=$BASENAME.tmp
+      touch $TMPFILE
+
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
       export EXECNAME="$BINNAME $CLSETTINGSLIST $i"
