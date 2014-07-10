@@ -25,7 +25,6 @@
 
 #include <assert.h>
 #include <string.h>
-
 #include "heur_tm.h"
 #include "probdata_stp.h"
 #include "grph.h"
@@ -2230,7 +2229,6 @@ SCIP_RETCODE do_tm_polzin(
    int                   start,
    int*                  result,
    int*                  vcount,
-   int*                  nodesid,
    int*                  nodenterms,
    int**                 basearr,
    int**                 edgearr,
@@ -2273,6 +2271,7 @@ SCIP_RETCODE do_tm_polzin(
 
    SCIPdebugMessage("TM_Polzin Heuristic: Start=%5d ", start);
 
+   /* if the heuristic is called for the first time several data structures have to be set up */
    if( firstrun )
    {
       /* PHASE I: */
@@ -2294,7 +2293,6 @@ SCIP_RETCODE do_tm_polzin(
       j = 0;
       for( i = 0; i < nnodes; i++ )
       {
-	 nodesid[i] = i;
          visited[i] = FALSE;
          if( g->term[i] != -1 )
          {
@@ -2418,7 +2416,6 @@ SCIP_RETCODE do_tm_polzin(
          for( j = 0; j < nreachednodes; j++ )
          {
             //	 printf( "reachdnode: : %d, vnoibase: %d \n", reachednodes[j], vbase[reachednodes[j]]);
-
             vnoi[reachednodes[j]].dist = FARAWAY;
             state[reachednodes[j]] = UNKNOWN;
             visited[reachednodes[j]] = FALSE;
@@ -2469,7 +2466,6 @@ SCIP_RETCODE do_tm_polzin(
       if( !connected[term] )
       {
          /* connect the terminal */
-         //k = g->tail[nodeterms[best][ncheckedterms[best]]->edge];
          k = g->tail[edgearr[best][vcount[best]]];
          while( k != term )
          {
@@ -2496,7 +2492,6 @@ SCIP_RETCODE do_tm_polzin(
 	       {
 		  gnodearr[k]->dist = distarr[k][vcount[k]];
 		  SCIP_CALL( SCIPpqueueInsert(pqueue, gnodearr[k]) );
-                  //SCIP_CALL( SCIPpqueueInsert(pqueue, &(nodesid[k])) );
                   //SCIP_CALL( SCIPpqueueInsert(pqueue, nodeterms[k][vcount[k]]) );
 	       }
 	    }
@@ -2566,7 +2561,7 @@ SCIP_RETCODE do_local(
    const SCIP_Real* cost,
    const SCIP_Real* costrev,
    int*          best_result
-	     )
+   )
 {
    NODE* nodes;
    SCIP_Real obj;
@@ -2873,7 +2868,7 @@ SCIP_RETCODE do_local(
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
       }
       if( debg )
-      printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
+         printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
       graphmark = graph->mark;
       //  SCIP_CALL( printGraph(scip, graph, "abef.gml", best_result) );
 
@@ -3420,7 +3415,7 @@ SCIP_RETCODE do_local(
 
                   localmoves++;
                   if( debg )
-                  printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
+                     printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
                   /* unmark the original edges spanning the supergraph */
                   for( e = 0; e < nkpedges; e++ )
@@ -3976,7 +3971,7 @@ SCIP_RETCODE do_local(
 
                        SCIP_CALL( printGraph(scip, graph, filenam, best_result) ); */
 		  if( debg )
-                  printf( "ADDING NEW KEY PATH (%f )\n", bestdiff );
+                     printf( "ADDING NEW KEY PATH (%f )\n", bestdiff );
                   localmoves++;
 
                   /* remove old keypath */
@@ -4028,7 +4023,7 @@ SCIP_RETCODE do_local(
 		  if( node == crucnode )
 		  {
 		     if( debg )
-		     printf("whoaa \n \n");
+                        printf("whoaa \n \n");
 		     newedge = flipedge(newedge);
 		  }
 		  if( debg )
@@ -4346,8 +4341,8 @@ SCIP_RETCODE do_local(
    obj = 0.0;
    for( e = 0; e < nedges; e++)
       obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-if( 0 )
-   printf(" ObjAfterLocal=%.12e\n", obj);
+   if( 0 )
+      printf(" ObjAfterLocal=%.12e\n", obj);
 
    SCIPfreeBufferArray(scip, &nodes);
    SCIPfreeBufferArray(scip, &steinertree);
@@ -4382,7 +4377,6 @@ SCIP_RETCODE do_layer(
 
    GNODE** gnodearr;
    int* nodenterms;
-   int* nodesid;
    int nterms;
    int** basearr;
    SCIP_Real** distarr;
@@ -4407,8 +4401,8 @@ SCIP_RETCODE do_layer(
 
    /* get user parameter */
    SCIP_CALL( SCIPgetIntParam(scip, "stp/tmheuristic", &mode) );
-   if( 0 )
-   printf(" tmmode: %d ->", mode);
+   if( 1 )
+      printf(" tmmode: %d ->", mode);
    assert(mode == AUTO || mode == TM || mode == TMPOLZIN);
 
    if( mode == AUTO )
@@ -4419,8 +4413,8 @@ SCIP_RETCODE do_layer(
       else
          mode = TM;
    }
-   if( 0 )
-   printf(" %d \n", mode);
+   if( 1 )
+      printf(" %d \n", mode);
    /* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     * Patch um die heuristic nach einem restruct starten zu koennen
     * XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -4516,7 +4510,6 @@ SCIP_RETCODE do_layer(
          }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &vcount, nnodes) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
          SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2, GNODECmpByDist) );
       }
       /*graph_path_exit(graph);
@@ -4531,16 +4524,17 @@ SCIP_RETCODE do_layer(
             result[e] = -1;
 
          /* SCIP_CALL( do_heuristic(scip, graph, layer, result, start[r], connected, cost, costrev, path, nodeterms, nodenterms, ncheckedterms, pqueue, (r == 0) ,
-               (r == runs - 1)) );
-         SCIP_CALL( do_heuristic(scip, graph, pqueue, path, gnodearr, distarr, cost, costrev, layer, start[r], result,
-           vcount, nodesid, nodenterms, basearr, edgearr, (r == 0), (r == runs - 1), connected) );*/
+            (r == runs - 1)) );
+            SCIP_CALL( do_heuristic(scip, graph, pqueue, path, gnodearr, distarr, cost, costrev, layer, start[r], result,
+            vcount, nodesid, nodenterms, basearr, edgearr, (r == 0), (r == runs - 1), connected) );*/
+
+
 	 if( mode == TM )
             SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
 	 else
-	 {
-            SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, distarr, start[r], result, vcount, nodesid,
+            SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, distarr, start[r], result, vcount,
                   nodenterms, basearr, edgearr, (r == 0), connected) );
-	 }
+
 
          obj = 0.0;
          objt = 0.0;
@@ -4556,7 +4550,7 @@ SCIP_RETCODE do_layer(
             min = obj;
 
             SCIPdebugMessage(" Objt=%.12e    ", objt);
-            //printf(" Obj(run: %d)=%.12e\n", r, obj);
+            printf(" Obj(run: %d)=%.12e\n", r, obj);
 
             for( e = 0; e < nedges; e++ )
                best_result[e] = result[e];
@@ -4591,11 +4585,11 @@ SCIP_RETCODE do_layer(
       SCIPfreeBufferArray(scip, &basearr);
       SCIPfreeBufferArray(scip, &gnodearr);
       SCIPfreeBufferArray(scip, &vcount);
-      SCIPfreeBufferArray(scip, &nodesid);
       SCIPfreeBufferArray(scip, &nodenterms);
    }
 
-   SCIP_CALL( do_local(scip, graph, cost, costrev, best_result) );
+   /* NOW IN EXTRA FILE
+    *SCIP_CALL( do_local(scip, graph, cost, costrev, best_result) ); */
    SCIPfreeBufferArray(scip, &result);
    SCIPfreeBufferArray(scip, &start);
    SCIPfreeBufferArray(scip, &connected);

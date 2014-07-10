@@ -45,6 +45,7 @@ CMAINOBJ	=	cmain.o \
 			grphpath.o \
                         grphsave.o \
 			heur_tm.o \
+			heur_local.o \
 			heur_rs.o \
 			probdata_stp.o \
 			reader_stp.o \
@@ -125,13 +126,17 @@ endif
 .PHONY: test
 test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 
 
 OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
@@ -141,16 +146,21 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
 .PHONY: testcluster
 testcluster:	$(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check_cluster.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/runcluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) \
+		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(OPTCOMMAND);
 
 .PHONY: tags
 tags:

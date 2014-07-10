@@ -31,6 +31,7 @@
 #include "reader_stp.h"
 #include "cons_stp.h"
 #include "heur_tm.h"
+#include "heur_local.h"
 #include "heur_rs.h"
 #include "pricer_stp.h"
 
@@ -74,6 +75,8 @@ SCIP_RETCODE runShell(
     SCIP_CALL( SCIPincludeHeurRS(scip) );
 #endif
 
+   /* include local heuristics */
+   SCIP_CALL( SCIPincludeHeurLocal(scip) );
 
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );

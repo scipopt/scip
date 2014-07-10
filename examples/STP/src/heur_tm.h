@@ -34,11 +34,11 @@
 extern "C" {
 #endif
 
-  typedef struct Graph_Node
-{
-   int number;
-   SCIP_Real dist;
-}GNODE;
+   typedef struct Graph_Node
+   {
+      int number;
+      SCIP_Real dist;
+   }GNODE;
 
 
    /* a  weighted-quick-union-path-compression union find structure */
@@ -51,12 +51,12 @@ extern "C" {
 
 
    typedef struct Vnoi_List_Node
-{
-   double       dist;         /* Distance to the end of the path             */
-   signed int   edge;         /* First edge to go                            */
-   signed int   base;         /* Voronoi base                            */
-   struct Vnoi_List_Node *next;
-} VLIST;
+   {
+      double       dist;         /* Distance to the end of the path             */
+      signed int   edge;         /* First edge to go                            */
+      signed int   base;         /* Voronoi base                            */
+      struct Vnoi_List_Node *next;
+   } VLIST;
 
    /*** returns the component identifier ***/
    extern int UF_find(
@@ -64,17 +64,17 @@ extern "C" {
       int element
       );
 
-    /*** ***/
-    extern int CmpByDist(
-     void *arg1,
-     void *arg2
-   );
+   /*** ***/
+   extern int CmpByDist(
+      void *arg1,
+      void *arg2
+      );
 
    /***  ***/
    extern int GNODECmpByDist(
-     void *first_arg,
-     void *second_arg
-   );
+      void *first_arg,
+      void *second_arg
+      );
 
 
    /** creates the TM primal heuristic and includes it in SCIP */

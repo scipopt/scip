@@ -2439,6 +2439,19 @@ void SCIPsortedvecInsertPtrPtrLongIntInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   int*                  intarray1,          /**< first int array where an element is to be inserted */
+   int*                  intarray2,          /**< second int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into three joint arrays of Reals/Bools/pointers, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecInsertRealBoolPtr(
