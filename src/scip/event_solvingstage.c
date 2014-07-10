@@ -273,6 +273,12 @@ SCIP_Bool transitionPhase3(
          return FALSE;
          break;
       case 'e':
+         if( SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNNodesBelowIncumbent(scip) == 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering an estimate transition: nodes: %lld, estimate: %d bound: %9.5g\n",
+                  SCIPgetNNodes(scip), SCIPgetNNodesBelowIncumbent(scip), SCIPgetPrimalbound(scip));
+            return TRUE;
+         }
          return FALSE;
          break;
       case 'l':
