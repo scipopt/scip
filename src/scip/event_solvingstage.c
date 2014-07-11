@@ -333,7 +333,7 @@ SCIP_RETCODE applySolvingStage(
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
-   if( stagebefore != SOLVINGSTAGE_NOSOLUTION && stagebefore == eventhdlrdata->solvingstage )
+   if( stagebefore == eventhdlrdata->solvingstage )
       return SCIP_OKAY;
 
 
