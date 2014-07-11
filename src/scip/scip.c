@@ -35154,6 +35154,14 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
       return SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->firstlpdualbound);
 }
 
+/** the primal bound of the very first solution */
+SCIP_Real SCIPgetFirstPrimalBound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return scip->stat->firstprimalbound;
+}
+
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
  *
  *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem

@@ -29,11 +29,19 @@
 extern "C" {
 #endif
 
+
 /** creates event handler for solving stage event */
 extern
 SCIP_RETCODE SCIPincludeEventHdlrLogregression(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** get axis intercept of current tangent to logarithmic regression curve */
+extern
+SCIP_Real SCIPgetCurrentTangentAxisIntercept(
+  SCIP*                 scip,
+  SCIP_EVENTHDLR*       eventhdlr
+);
 
 #ifdef __cplusplus
 }

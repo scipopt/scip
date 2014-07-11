@@ -17513,6 +17513,12 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
    );
 
 
+/** the primal bound of the very first solution */
+EXTERN
+SCIP_Real SCIPgetFirstPrimalBound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
  *
  *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem

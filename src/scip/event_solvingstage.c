@@ -26,6 +26,7 @@
 #include "scip/event_solvingstage.h"
 #include "string.h"
 #include "scip/event_treeinfos.h"
+#include "scip/event_logregression.h"
 
 #define EVENTHDLR_NAME         "solvingstage"
 #define EVENTHDLR_DESC         "event handler for events which influence the solving stage"
@@ -91,6 +92,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool            adjustrelpsweights;   /**< should the relpscost cutoff weights be adjusted? */
    SCIP_Bool            usefileweights;
    SCIP_Bool            useweightedquotients;
+   SCIP_EVENTHDLR*      linregeventhdlr;
 };
 
 /*
@@ -282,7 +284,23 @@ SCIP_Bool transitionPhase3(
          return FALSE;
          break;
       case 'l':
-         return FALSE;
+      {
+         SCIP_Real axisintercept = SCIPgetCurrentTangentAxisIntercept(scip, eventhdlrdata->linregeventhdlr);
+
+         if( !SCIPisInfinity(scip, axisintercept) )
+         {
+            SCIP_Real firstprimalbound = SCIPgetFirstPrimalBound(scip);
+            SCIP_Real lambda;
+            primalbound = SCIPgetPrimalbound(scip);
+            lambda = (axisintercept - primalbound) / (firstprimalbound - primalbound);
+            if( SCIPisNegative(scip, lambda) )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a log regression phase transition: nodes: lambda = %.2f \n",lambda);
+               return TRUE;
+            }
+         }
+      }
+
          break;
       default:
          return FALSE;
@@ -533,6 +551,8 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
       SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
       SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
    }
+
+   eventhdlrdata->linregeventhdlr = SCIPfindEventhdlr(scip, "logregression");
    return SCIP_OKAY;
 }
 
@@ -587,6 +607,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    eventhdlrdata->suboptsetname= NULL;
    eventhdlrdata->optsetname= NULL;
    eventhdlrdata->infeasiblesetname= NULL;
+   eventhdlrdata->linregeventhdlr = NULL;
 
    eventhdlr = NULL;
 

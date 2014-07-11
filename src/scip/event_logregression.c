@@ -58,6 +58,59 @@ struct SCIP_EventhdlrData
 /*
  * Local methods
  */
+static
+SCIP_Real getX(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+
+   switch( eventhdlrdata->xtype )
+   {
+   case 'l':
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
+         return (SCIP_Real)SCIPgetNLPIterations(scip);
+      else
+         return 1;
+      break;
+   case 'n':
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
+         return (SCIP_Real)SCIPgetNTotalNodes(scip);
+      else
+         return 1;
+      break;
+   case 't':
+      return SCIPgetSolvingTime(scip);
+      break;
+   default:
+      return 1;
+      break;
+   }
+   return 1.0;
+}
+
+/** get axis intercept of current tangent to logarithmic regression curve */
+SCIP_Real SCIPgetCurrentTangentAxisIntercept(
+   SCIP*                 scip,
+   SCIP_EVENTHDLR*       eventhdlr
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_Real currentx;
+
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   if( eventhdlrdata->n <= 2 )
+      return SCIPinfinity(scip);
+
+   currentx = getX(scip, eventhdlrdata);
+   currentx = MAX(currentx, .1);
+   currentx = log(currentx);
+
+   return eventhdlrdata->c1 * currentx + eventhdlrdata->c0 - eventhdlrdata->c1;
+}
 
 static
 SCIP_RETCODE updateRegression(
@@ -72,29 +125,8 @@ SCIP_RETCODE updateRegression(
 
    assert(!SCIPisInfinity(scip, y) && !SCIPisInfinity(scip, -y));
 
-   switch( eventhdlrdata->xtype )
-   {
-      case 'l':
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
-            x = (SCIP_Real)SCIPgetNLPIterations(scip);
-         else
-            x = 1;
-         break;
-      case 'n':
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
-            x = (SCIP_Real)SCIPgetNTotalNodes(scip);
-         else
-            x = 1;
-         break;
-      case 't':
-         x = SCIPgetSolvingTime(scip);
-         break;
-      default:
-         return SCIP_INVALIDDATA;
-         break;
-   }
-
    /* prevent the calculation of logarithm too close to zero */
+   x = getX(scip, eventhdlrdata);
    x = MAX(x, .1);
    x = log(x);
 
@@ -241,8 +273,8 @@ SCIP_DECL_EVENTEXEC(eventExecLogregression)
          nleavesbelowincumbent, nleavesbelowinccorrected, nnodesleft);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, " N rank1 nodes: %d (%d)", SCIPgetNRank1Nodes(scip), nnodesleft);
    SCIPverbMessage(scip ,SCIP_VERBLEVEL_NORMAL, NULL, " Time, nodes, LP iters: %.2f %"SCIP_LONGINT_FORMAT" %"SCIP_LONGINT_FORMAT"\n",
-         SCIPgetSolvingTime(scip), SCIPgetNNodes(scip), SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNLPIterations(scip): 0l)
-   ;
+         SCIPgetSolvingTime(scip), SCIPgetNNodes(scip), SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNLPIterations(scip): 0l);
+
    if( eventhdlrdata->n >= 3 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "   regression updated: y = %.2f log(x) + %.2f, corr=%.2f\n", eventhdlrdata->c1, eventhdlrdata->c0,eventhdlrdata->corrcoef);
 
