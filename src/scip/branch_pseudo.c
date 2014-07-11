@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
       if( var != NULL )
       {
          assert( newbound > -1 );
-         assert( SCIPnodeGetDepth(node) == SCIPgetEffectiveRootDepth(scip) );
+         assert( SCIPnodeGetDepth(node) <= SCIPgetEffectiveRootDepth(scip) );
 
          if( branchruledata->consdata[branchruledata->nodeID] == NULL )
          {

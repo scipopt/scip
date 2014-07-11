@@ -105,7 +105,9 @@ int soltreeNInducedtSols(
 {
    assert(node != NULL);
 
-   if( node->rchild == NULL && node->lchild == NULL )
+   if( node->father == NULL && node->rchild == NULL && node->lchild == NULL )
+      return 0;
+   else if( node->rchild == NULL && node->lchild == NULL )
       return 1;
    else
    {
@@ -254,6 +256,7 @@ SCIP_RETCODE soltreeUpdateSols(
       if( !reopt->sols[run][s]->updated )
       {
          sol = reopt->sols[run][s]->sol;
+         SCIPsolSetNodenum(sol, 0);
          SCIPsolRecomputeObj(sol, set, stat, origprob);
          solobj = SCIPsolGetObj(sol, set, transprob);
 
@@ -271,14 +274,14 @@ SCIP_RETCODE soltreeUpdateSols(
             {
                if( bestsol != SCIPgetBestSol(set->scip) )
                   SCIPstoreSolutionGap(set->scip);
+
+               /* mark the solution as already added and used */
+               reopt->sols[run][s]->updated = TRUE;
+               reopt->sols[run][s]->used = TRUE;
+
+               (*naddedsols)++;
             }
          }
-
-         /* mark the solution as already added and used */
-         reopt->sols[run][s]->updated = TRUE;
-         reopt->sols[run][s]->used = TRUE;
-
-         (*naddedsols)++;
       }
    }
 
@@ -475,31 +478,34 @@ SCIP_RETCODE soltreeAddSol(
     * equal to reopt_minavghamdist */
    for(varid = 0; varid < nvars && hamdist >= set->reopt_minavghamdist; varid++)
    {
-      SCIP_Real objval;
-
-      assert(SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY);
-
-      objval = SCIPsolGetVal(sol, set, stat, vars[varid]);
-      if( SCIPsetIsFeasEQ(set, objval, 0) )
+      if( SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY
+       || SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_INTEGER
+       || SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_IMPLINT )
       {
-         if( cursolnode->rchild == NULL )
+         SCIP_Real objval;
+
+         objval = SCIPsolGetVal(sol, set, stat, vars[varid]);
+         if( SCIPsetIsFeasEQ(set, objval, 0) )
          {
-            SCIP_CALL( soltreeAddNode(reopt, cursolnode, TRUE, FALSE, objval) );
-            assert(cursolnode->rchild != NULL);
-            (*added) = TRUE;
+            if( cursolnode->rchild == NULL )
+            {
+               SCIP_CALL( soltreeAddNode(reopt, cursolnode, TRUE, FALSE, objval) );
+               assert(cursolnode->rchild != NULL);
+               (*added) = TRUE;
+            }
+            cursolnode = cursolnode->rchild;
          }
-         cursolnode = cursolnode->rchild;
-      }
-      else
-      {
-         assert(SCIPsetIsFeasEQ(set, objval, 1));
-         if( cursolnode->lchild == NULL )
+         else
          {
-            SCIP_CALL( soltreeAddNode(reopt, cursolnode, FALSE, TRUE, objval) );
-            assert(cursolnode->lchild != NULL);
-            (*added) = TRUE;
+            assert(SCIPsetIsFeasEQ(set, objval, 1));
+            if( cursolnode->lchild == NULL )
+            {
+               SCIP_CALL( soltreeAddNode(reopt, cursolnode, FALSE, TRUE, objval) );
+               assert(cursolnode->lchild != NULL);
+               (*added) = TRUE;
+            }
+            cursolnode = cursolnode->lchild;
          }
-         cursolnode = cursolnode->lchild;
       }
    }
 
@@ -511,7 +517,10 @@ SCIP_RETCODE soltreeAddSol(
       if( (*added) )
       {
          SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
+         SCIPsolSetHeur(sol, NULL);
+         SCIPsolSetNodenum(sol, 0);
          cursolnode->sol = copysol;
+         reopt->soltree->nsols++;
       }
       else
          /* this is a pseudo add; we do not want to save this solution
@@ -759,6 +768,8 @@ SCIP_RETCODE SCIPreoptUpdateSols(
 )
 {
    int naddedsols;
+   int naddedsolsrun;
+   int nsols;
    int run;
 
    assert(reopt != NULL);
@@ -779,10 +790,14 @@ SCIP_RETCODE SCIPreoptUpdateSols(
       return SCIP_OKAY;
 
    naddedsols = 0;
+   naddedsolsrun = -1;
+   nsols = reopt->soltree->nsols;
 
-   for(run = reopt->run; run >= 0; run--)
+   for(run = reopt->run; run >= 0 && (naddedsolsrun != 0 || set->reopt_saveglbcons); run--)
    {
       SCIP_Real sim;
+
+      naddedsolsrun = 0;
 
       if( set->reopt_objsim == 0 )
          sim = 1;
@@ -793,34 +808,38 @@ SCIP_RETCODE SCIPreoptUpdateSols(
       {
          SCIP_CALL( soltreeUpdateSols(reopt, primal, probmem, set, messagehdlr,
                stat, origprob, transprob, tree, lp, eventqueue, eventfilter,
-               run, &naddedsols) );
+               run, &naddedsolsrun) );
+
+         naddedsols += naddedsolsrun;
 
 #ifdef SCIP_DEBUG
          {
             if( set->reopt_objsim == 0  )
-               printf(">> add %d solutions from run %d (lambda --).\n", naddedsols, run);
+               printf(">> add %d solutions from run %d (lambda --).\n", naddedsolsrun, run);
             else
-               printf(">> add %d solutions from run %d (lambda %.4f).\n", naddedsols, run, sim);
+               printf(">> add %d solutions from run %d (lambda %.4f).\n", naddedsolsrun, run, sim);
          }
 #endif
       }
    }
 
+   printf("reuse %u/%u soultions.\n", naddedsols, nsols);
+
    /* reset the marks for added solutions */
-   if(  reopt->soltree->nsols > 0 )
-      soltreeResetMarks(reopt->soltree->root);
+   if(  reopt->soltree ->nsols > 0 )
+       soltreeResetMarks(reopt->soltree->root);
 
-   return SCIP_OKAY;
-}
+    return SCIP_OKAY;
+ }
 
-/* returns the number of saved solutions overall runs */
-int SCIPreoptNSavedSols(
-   SCIP_REOPT*           reopt
-)
-{
-   int nsavedsols;
+ /* returns the number of saved solutions overall runs */
+ int SCIPreoptNSavedSols(
+    SCIP_REOPT*           reopt
+ )
+ {
+    int nsavedsols;
 
-   assert(reopt != NULL);
+    assert(reopt != NULL);
    assert(reopt->soltree->root != NULL);
 
    nsavedsols = 0;

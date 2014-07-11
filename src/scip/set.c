@@ -275,13 +275,14 @@
 #define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
 #define SCIP_DEFAULT_REOPT_SAVEGLBCONS    FALSE /**< save global constraints to separate solutions found so far */
 #define SCIP_DEFAULT_REOPT_SAVELOCCONS    FALSE /**< save local constraints to separate solutions found so far */
+#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate only the best solution, i.e., for constraint shortest path problems */
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
 #define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
-#define SCIP_DEFAULT_REOPT_DELAY           0.51 /**< start reoptimzing the search if the new objective function has similarity of
+#define SCIP_DEFAULT_REOPT_DELAY            0.0 /**< start reoptimzing the search if the new objective function has similarity of
                                                      at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
 
 /* Propagating */
@@ -1545,7 +1546,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/maxsavednodes",
          "maximal number of saved nodes",
-         &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, 0, INT_MAX,
+         &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/dynamicdiffofnodes",
@@ -1571,6 +1572,11 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/saveloccons",
          "save local constraints to separate solutions found so far.",
          &(*set)->reopt_saveloccons, TRUE, SCIP_DEFAULT_REOPT_SAVELOCCONS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/sepabestsol",
+         "separate only the best solution, i.e, for constraint shortest path.",
+         &(*set)->reopt_sepabestsol, TRUE, SCIP_DEFAULT_REOPT_SEPABESTSOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelp",

@@ -6872,7 +6872,7 @@ void SCIPnodeGetPseudoBranchings(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-                && boundchgs[i].data.inferencedata.reason.prop == NULL) )
+               && boundchgs[i].data.inferencedata.reason.prop == NULL) )
          {
             pseudobranchvars[j] = boundchgs[i].var;
             pseudobranchbounds[j] = boundchgs[i].newbound;
@@ -7007,8 +7007,16 @@ void SCIPnodeGetParentBranchingsReopt(
    {
       if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-        && boundchgs[i].data.inferencedata.reason.cons != NULL) ) /*lint !e641*/
+        && boundchgs[i].data.inferencedata.reason.cons != NULL)
+       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+        && boundchgs[i].data.inferencedata.reason.prop != NULL) ) /*lint !e641*/
+      {
          (*nbranchvars)++;
+//         else
+//         {
+//            printf("variable %s%s%f is of type %d.\n", boundchgs[i].var->name, boundchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", boundchgs[i].newbound, boundchgs[i].var->vartype);
+//         }
+      }
    }
 
    /* if the arrays have enough space store the branching decisions */
@@ -7019,13 +7027,18 @@ void SCIPnodeGetParentBranchingsReopt(
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-           && boundchgs[i].data.inferencedata.reason.cons != NULL) ) /*lint !e641*/
+           && boundchgs[i].data.inferencedata.reason.cons != NULL)
+          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+           && boundchgs[i].data.inferencedata.reason.prop != NULL) ) /*lint !e641*/
          {
-            assert(pos < *nbranchvars);
-            branchvars[pos] = boundchgs[i].var;
-            boundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-            branchbounds[pos] = boundchgs[i].newbound;
-            pos++;
+//            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+//            {
+               assert(pos < *nbranchvars);
+               branchvars[pos] = boundchgs[i].var;
+               boundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+               branchbounds[pos] = boundchgs[i].newbound;
+               pos++;
+//            }
          }
       }
    }

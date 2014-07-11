@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "scip/branch_pseudo.h"
 #include "scip/branch_nodereopt.h"
@@ -469,7 +470,7 @@ SCIP_RETCODE saveAncestorBranchings(
       assert(branchruledata->nodedata[nodeID]->varboundtypes == NULL );
 
       /** Allocate memory for node information */
-      branchruledata->nodedata[nodeID]->allocmem = SCIPgetNOrigBinVars(scip);
+      branchruledata->nodedata[nodeID]->allocmem = SCIPgetNOrigVars(scip);
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->vars), branchruledata->nodedata[nodeID]->allocmem) );
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->varbounds), branchruledata->nodedata[nodeID]->allocmem) );
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->varboundtypes), branchruledata->nodedata[nodeID]->allocmem) );
@@ -688,44 +689,58 @@ SCIP_RETCODE saveGlobalCons(
       SCIP_CALL( resizeGlobalsConsData(scip, branchruledata) );
    }
 
-   nbinvars = SCIPgetNOrigVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
 
    /** ensure that all variables are binary */
-   if(nbinvars == SCIPgetNOrigVars(scip))
+   if( nbinvars > 0 )
    {
       /** allocate memory at position nconsglobal and increase the counter */
       SCIP_CALL( SCIPallocMemory(scip, &branchruledata->globalcons[branchruledata->nconsglobal]) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vals, nbinvars) );
       branchruledata->globalcons[branchruledata->nconsglobal]->constype = constype;
       branchruledata->globalcons[branchruledata->nconsglobal]->nvars = 0;
 
       if( constype == REOPT_CONSTYPE_SEPASOLUTION )
       {
-         SCIP_CALL( SCIPduplicateMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vars, SCIPgetOrigVars(scip), nbinvars) );
+         SCIP_VAR** vars;
 
-         for(varnr = 0; varnr < nbinvars; varnr++)
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &vars, SCIPgetOrigVars(scip), SCIPgetNOrigVars(scip)) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vars, nbinvars) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vals, nbinvars) );
+
+         for(varnr = 0; varnr < SCIPgetNOrigVars(scip); varnr++)
          {
-            scalar = 1;
-            constant = 0;
-
-            if(!SCIPvarIsOriginal(branchruledata->globalcons[branchruledata->nconsglobal]->vars[varnr]) )
+            if( SCIPvarGetType(vars[varnr]) == SCIP_VARTYPE_BINARY )
             {
-               SCIP_CALL( SCIPvarGetOrigvarSum( &branchruledata->globalcons[branchruledata->nconsglobal]->vars[varnr], &scalar, &constant) );
-            }
-            assert(SCIPvarGetStatus(branchruledata->globalcons[branchruledata->nconsglobal]->vars[varnr]) == SCIP_VARSTATUS_ORIGINAL);
+               scalar = 1;
+               constant = 0;
+               int pos;
 
-            if(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(branchruledata->globalcons[branchruledata->nconsglobal]->vars[varnr], TRUE)), 1))
-            {
-               branchruledata->globalcons[branchruledata->nconsglobal]->vals[varnr] = 1;
-            }
-            else
-            {
-               assert(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(branchruledata->globalcons[branchruledata->nconsglobal]->vars[varnr], TRUE)), 0));
-               branchruledata->globalcons[branchruledata->nconsglobal]->vals[varnr] = 0;
-            }
+               pos = branchruledata->globalcons[branchruledata->nconsglobal]->nvars;
+               branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos] = vars[varnr];
 
-            branchruledata->globalcons[branchruledata->nconsglobal]->nvars++;
+               if(!SCIPvarIsOriginal(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]) )
+               {
+                  SCIP_CALL( SCIPvarGetOrigvarSum( &branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos], &scalar, &constant) );
+               }
+               assert(SCIPvarGetStatus(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]) == SCIP_VARSTATUS_ORIGINAL);
+
+               if(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos], TRUE)), 1))
+               {
+                  branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 1;
+               }
+               else
+               {
+                  assert(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos], TRUE)), 0));
+                  branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 0;
+               }
+
+               branchruledata->globalcons[branchruledata->nconsglobal]->nvars++;
+            }
          }
+
+         printf(">> save sepacons\n");
+
+         SCIPfreeMemoryArray(scip, &vars);
       }
       else
       {
@@ -797,46 +812,47 @@ SCIP_RETCODE saveLocalConsData(
    assert(SCIPgetCurrentNode(scip) == node);
    assert(SCIPnodeGetReoptID(node) > 0);
 
-   nbinvars = SCIPgetNOrigVars(scip);
-
    /** ensure that all variables are binary */
-   if(nbinvars == SCIPgetNOrigVars(scip))
+   if( SCIPgetNOrigIntVars(scip) + SCIPgetNOrigImplVars(scip) == 0 )
    {
       SCIP_VAR** vars;
       LOGICORDATA* consdata;
 
       /* allocate memory */
       SCIP_CALL( SCIPallocMemory(scip, &consdata) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->vars, SCIPgetNOrigVars(scip)) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->vals, SCIPgetNOrigVars(scip)) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->vars, SCIPgetNOrigBinVars(scip)) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->vals, SCIPgetNOrigBinVars(scip)) );
       consdata->nvars = 0;
       consdata->constype = constype;
 
       vars = SCIPgetOrigVars(scip);
 
-      for(varnr = 0; varnr < nbinvars; varnr++)
+      for(varnr = 0; varnr < SCIPgetNOrigVars(scip); varnr++)
       {
          scalar = 1;
          constant = 0;
 
-         consdata->vars[consdata->nvars] = vars[varnr];
-
-         if(!SCIPvarIsOriginal(consdata->vars[consdata->nvars]) )
+         if( SCIPvarGetType(vars[varnr]) == SCIP_VARTYPE_BINARY )
          {
-            SCIP_CALL( SCIPvarGetOrigvarSum( &consdata->vars[consdata->nvars], &scalar, &constant) );
-         }
+            consdata->vars[consdata->nvars] = vars[varnr];
 
-         if(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(consdata->vars[consdata->nvars], TRUE)), 1))
-         {
-            consdata->vals[consdata->nvars] = 1;
-         }
-         else
-         {
-            assert(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(consdata->vars[consdata->nvars], TRUE)), 0));
-            consdata->vals[consdata->nvars] = 0;
-         }
+            if(!SCIPvarIsOriginal(consdata->vars[consdata->nvars]) )
+            {
+               SCIP_CALL( SCIPvarGetOrigvarSum( &consdata->vars[consdata->nvars], &scalar, &constant) );
+            }
 
-         consdata->nvars++;
+            if(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(consdata->vars[consdata->nvars], TRUE)), 1))
+            {
+               consdata->vals[consdata->nvars] = 1;
+            }
+            else
+            {
+               assert(SCIPisFeasEQ(scip, abs(SCIPvarGetSol(consdata->vars[consdata->nvars], TRUE)), 0));
+               consdata->vals[consdata->nvars] = 0;
+            }
+
+            consdata->nvars++;
+         }
       }
 
       if( consdata->nvars > 0 )
@@ -864,8 +880,6 @@ int lengthBranchPath(
    assert(node != 0);
    assert(branchruledata != NULL);
    assert(branchruledata->nodedata != NULL);
-   assert(SCIPnodeGetReoptID(node) >= 0);
-   assert(branchruledata->nodedata[SCIPnodeGetReoptID(node)] != NULL);
 
    if( SCIPnodeGetDepth(node) == 0 )
       return 0;
@@ -873,6 +887,9 @@ int lengthBranchPath(
    {
       SCIP_NODE* parent;
       int parentID;
+
+      assert(SCIPnodeGetReoptID(node) >= 0);
+      assert(branchruledata->nodedata[SCIPnodeGetReoptID(node)] != NULL);
 
       parent = SCIPnodeGetParent(node);
       length = branchruledata->nodedata[SCIPnodeGetReoptID(node)]->nvars;
@@ -898,7 +915,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
    SCIP_BRANCHRULEDATA* branchruledata;
    int consnr;
    int varnr;
-   int nbinvars;
 
    assert(scip != NULL );
 
@@ -916,8 +932,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
    assert(branchruledata->init);
    assert(branchruledata->reopt);
 
-   nbinvars = SCIPgetNBinVars(scip);
-
    /** add global constraints if same exists */
    for(consnr = 0; consnr < branchruledata->nconsglobal; consnr++)
    {
@@ -925,7 +939,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
       const char* consname;
       assert(branchruledata->globalcons[consnr]->vars != NULL );
 
-      for(varnr = 0; varnr < nbinvars; varnr++)
+      for(varnr = 0; varnr < branchruledata->globalcons[consnr]->nvars; varnr++)
       {
          if(branchruledata->globalcons[consnr]->vals[varnr] == 1)
          {
@@ -946,7 +960,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
       }
 
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname,
-            nbinvars, branchruledata->globalcons[consnr]->vars,
+            branchruledata->globalcons[consnr]->nvars, branchruledata->globalcons[consnr]->vars,
             TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE));
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -956,6 +970,8 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
       SCIPfreeMemory(scip, &branchruledata->globalcons[consnr]);
       branchruledata->nconsglobaladded++;
    }
+
+   printf(">> added %d global cons.\n", branchruledata->nconsglobaladded);
 
    branchruledata->nconsglobal = 0;
 
@@ -998,7 +1014,7 @@ SCIP_RETCODE fixVarsInNode(
       assert(branchruledata->nodedata[nodeID]->varbounds == NULL );
       assert(branchruledata->nodedata[nodeID]->varboundtypes == NULL );
 
-      branchruledata->nodedata[nodeID]->allocmem = SCIPgetNOrigBinVars(scip);
+      branchruledata->nodedata[nodeID]->allocmem = SCIPgetNOrigVars(scip);
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->vars, branchruledata->nodedata[nodeID]->allocmem) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->varbounds, branchruledata->nodedata[nodeID]->allocmem) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->varboundtypes, branchruledata->nodedata[nodeID]->allocmem) );
@@ -1319,7 +1335,7 @@ SCIP_RETCODE clearNodes(
       {
          SCIP_CALL( deleteNodeData(scip, branchruledata, nodeID, FALSE) );
          assert(branchruledata->nodedata[nodeID]->nvars == 0);
-         assert(branchruledata->nodedata[nodeID]->allocmem <= SCIPgetNOrigBinVars(scip));
+         assert(branchruledata->nodedata[nodeID]->allocmem <= SCIPgetNOrigVars(scip));
       }
 
       if(nodeID > 0)
@@ -1984,17 +2000,13 @@ void restartCheck(
    if (branchruledata->nsavednodes > branchruledata->maxsavednodes)
    {
       branchruledata->restart = TRUE;
+      printf(">> reset search tree: nodelimit exceeded %d / %d\n", branchruledata->nsavednodes, branchruledata->maxsavednodes);
    }
    /* the current and the previous objective are not similar enough */
    else if( SCIPcheckRestartReopt(scip, &sim) )
    {
       branchruledata->restart = TRUE;
-
-//#ifdef SCIP_DEBUG
-//   {
-      printf(">> reset search tree because the new objective is not similar enough (%.4f).\n", sim);
-//   }
-//#endif
+      printf(">> reset search tree: new objective is not similar enough (%.4f).\n", sim);
    }
 
    return;
@@ -2076,7 +2088,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
          printf(
                "UPDATE NODE #%lld AT ID %u WITH %u BRANCHINGS AND %u ADDED CONS, REOPTTYPE %d\n",
                SCIPnodeGetNumber(node), nodeID, branchruledata->nodedata[nodeID]->nvars,
-               SCIPnodeGetNAddedcons(scip, node), reopttype);
+               branchruledata->nodedata[nodeID]->conss != NULL ? SCIPqueueNElems(branchruledata->nodedata[nodeID]->conss) : 0, reopttype);
 
          for (varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
          {
@@ -2103,7 +2115,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
 
                /* check if we can move all children to the next saved node above */
                if( (!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
-                 ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) )
+                 ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10((SCIP_Real) (SCIPgetNOrigBinVars(scip) - MIN(SCIPgetNOrigBinVars(scip)-1, lengthBranchPath(parent, branchruledata))))/log10(2.0))) )
                {
                   SCIP_CALL( moveChildrenUp(branchruledata, nodeID, parentID) );
 
@@ -2216,9 +2228,11 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       /* get the ID of the last saved node or 0 for the root */
       SCIP_CALL( getLastSavedNode(scip, branchruledata, node, &parent, &parentID, &nbndchgdiff) );
 
+
+//      printf(">> %d <= %f \n", nbndchgdiff, ceil(((SCIP_Real)(SCIPgetNOrigBinVars(scip) - MIN(SCIPgetNOrigBinVars(scip)-1, lengthBranchPath(parent, branchruledata))))/log10(2.0)));
       if( reopttype < SCIP_REOPTTYPE_STRBRANCHED
         && ((!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
-            ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10(SCIPgetNOrigBinVars(scip) - lengthBranchPath(parent, branchruledata))/log10(2))) ) )
+            ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10((SCIP_Real)(SCIPgetNOrigBinVars(scip) - MIN(SCIPgetNOrigBinVars(scip)-1,lengthBranchPath(parent, branchruledata))))/log10(2.0))) ) )
       {
          /** stop clock */
          SCIP_CALL(SCIPstopSaveTime(scip));
@@ -2331,9 +2345,9 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
           * solution in a following round (but only if all variablea are binary)
           * TODO: Verbesserungswürdig
           */
-         if( branchruledata->saveglbcons && nodeID == 0 )
+         if( branchruledata->saveglbcons )
          {
-            SCIP_CALL( saveGlobalCons(scip, branchruledata, node, REOPT_CONSTYPE_SEPASOLUTION) );
+//            SCIP_CALL( saveGlobalCons(scip, branchruledata, node, REOPT_CONSTYPE_SEPASOLUTION) );
          }
          else if( branchruledata->saveloccons && nodeID > 0 )
          {
@@ -2392,6 +2406,101 @@ int SCIPbranchruleNodereoptGetNAddedConss(
       return MAX( SCIPnodeGetNAddedcons(scip, node), SCIPqueueNElems(branchruledata->nodedata[nodeID]->conss));
    else
       return SCIPnodeGetNAddedcons(scip, node);
+}
+
+/*
+ * Save global constraint to separate solution
+ */
+SCIP_RETCODE SCIPbranchruleNodereoptSaveGlobaleCons(
+   SCIP*                 scip,
+   SCIP_SOL*             sol,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat
+)
+{
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
+   int nbinvars;
+   int varnr;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+
+   assert(branchrule != NULL );
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+
+   assert(branchruledata != NULL );
+   assert(branchruledata->reopt);
+   assert(branchruledata->init);
+
+   /** realloc memory if necessary */
+   if(branchruledata->nconsglobal == branchruledata->allocmemglobalcons)
+   {
+      SCIP_CALL( resizeGlobalsConsData(scip, branchruledata) );
+   }
+
+   nbinvars = SCIPgetNOrigBinVars(scip);
+
+   /** ensure that there exists binary variables */
+   if( nbinvars > 0 )
+   {
+      SCIP_VAR** vars;
+
+      /** allocate memory at position nconsglobal and increase the counter */
+      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->globalcons[branchruledata->nconsglobal]) );
+      branchruledata->globalcons[branchruledata->nconsglobal]->constype = REOPT_CONSTYPE_SEPASOLUTION;
+      branchruledata->globalcons[branchruledata->nconsglobal]->nvars = 0;
+
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &vars, SCIPgetOrigVars(scip), SCIPgetNOrigVars(scip)) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vars, nbinvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->globalcons[branchruledata->nconsglobal]->vals, nbinvars) );
+
+      for(varnr = 0; varnr < SCIPgetNOrigVars(scip); varnr++)
+      {
+         if( SCIPvarGetType(vars[varnr]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_Real scalar;
+            SCIP_Real constant;
+            SCIP_Real solval;
+            int pos;
+
+            scalar = 1;
+            constant = 0;
+
+            pos = branchruledata->globalcons[branchruledata->nconsglobal]->nvars;
+            branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos] = vars[varnr];
+
+            solval = SCIPgetSolVal(scip, sol, branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]);
+
+            if(!SCIPvarIsOriginal(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]) )
+            {
+               SCIP_CALL( SCIPvarGetOrigvarSum( &branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos], &scalar, &constant) );
+            }
+            assert(SCIPvarGetStatus(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]) == SCIP_VARSTATUS_ORIGINAL);
+
+            if( SCIPisFeasEQ(scip, abs(solval), 1) )
+            {
+               branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 1;
+            }
+            else
+            {
+               assert(SCIPisFeasEQ(scip, abs(solval), 0));
+               branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 0;
+            }
+
+            branchruledata->globalcons[branchruledata->nconsglobal]->nvars++;
+         }
+      }
+
+      SCIPfreeMemoryArray(scip, &vars);
+   }
+   branchruledata->nconsglobal++;
+   printf(">> saved sepa cons from sol.\n");
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -2759,6 +2868,7 @@ static
 SCIP_DECL_BRANCHINIT(branchInitnodereopt)
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   int var;
 
    assert(scip != NULL );
    assert(branchrule != NULL );
@@ -2786,6 +2896,12 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       /** parameter stuff */
       branchruledata->restart = FALSE;
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &branchruledata->maxsavednodes));
+
+      if( branchruledata->maxsavednodes == -1 )
+      {
+	 branchruledata->maxsavednodes = floor(0.5319 * SCIPgetNBinVars(scip));
+      }
+
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/maxdiffofnodes", &branchruledata->maxdiffofnodes));
 
       if( branchruledata->maxdiffofnodes == -1 )
@@ -2802,7 +2918,7 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/solvelpdiff", &branchruledata->solvelpdiff));
 
       /** Savings for reoptimization */
-      branchruledata->allocmemsizenodedata = MIN(500, branchruledata->maxsavednodes) + 1;
+      branchruledata->allocmemsizenodedata = MIN(SCIPgetNOrigBinVars(scip), branchruledata->maxsavednodes) + 1;
       branchruledata->nsavednodes = 0;
 
       branchruledata->nfeasnodes = 0;
@@ -2871,22 +2987,92 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       /** data for global logic-or constraints to separate binary solutions */
       SCIP_CALL(SCIPallocClearMemoryArray(scip, &(branchruledata->globalcons), branchruledata->allocmemglobalcons));
 
-      /** change parameters */
-      SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxrounds", 0));
-      SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxroundsroot", 0));
-
-//      if (branchruledata->savelpbasis)
-//      {
-//         SCIP_CALL(SCIPsetIntParam(scip, "separating/maxrounds", 0));
-//         SCIP_CALL(SCIPsetIntParam(scip, "separating/maxroundsroot", 0));
-//      }
-
-      SCIP_CALL(SCIPsetBoolParam(scip, "conflict/enable", FALSE));
-      SCIP_CALL(SCIPsetBoolParam(scip, "lp/disablecutoff", FALSE));
-      SCIP_CALL(SCIPsetBoolParam(scip, "misc/calcintegral", FALSE));
-
       /** mark data structure initialized */
       branchruledata->init = TRUE;
+   }
+
+   /** change parameters */
+   /* propagator */
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/dualfix/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/genvbounds/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/genvbounds/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/obbt/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/obbt/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/probing/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/pseudoobj/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/pseudoobj/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/redcost/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/redcost/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/rootredcost/freq", -1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/rootredcost/maxprerounds", 0));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/vbounds/freq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "propagating/vbounds/maxprerounds", -1));
+
+   /* constraont handler */
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/SOS1/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/SOS2/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/abspower/propfreq", 1));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/and/propfreq", 1));
+   SCIP_CALL(SCIPsetBoolParam(scip, "constraints/and/dualpresolving", FALSE));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/bivariate/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/bounddisjunction/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/conjunction/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/countsols/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/cumulative/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/disjunction/propfreq", 1));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/indicator/propfreq", 1));
+   SCIP_CALL(SCIPsetBoolParam(scip, "constraints/indicator/dualreductions", FALSE));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/integral/propfreq", 1));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", 1));
+   SCIP_CALL(SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/linear/propfreq", 1));
+   SCIP_CALL(SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/linking/propfreq", 1));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/propfreq", 1));
+   SCIP_CALL(SCIPsetBoolParam(scip, "constraints/logicor/dualpresolving", FALSE));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/nonlinear/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/or/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/orbitope/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/pseudoboolean/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/quadratic/propfreq", 1));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/setppc/propfreq", 1));
+   SCIP_CALL(SCIPsetBoolParam(scip, "constraints/setppc/dualpresolving", FALSE));
+
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/soc/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/superindicator/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/varbound/propfreq", 1));
+   SCIP_CALL(SCIPsetIntParam(scip, "constraints/xor/propfreq", 1));
+
+   SCIP_CALL(SCIPsetBoolParam(scip, "conflict/enable", FALSE));
+   SCIP_CALL(SCIPsetBoolParam(scip, "lp/disablecutoff", FALSE));
+   SCIP_CALL(SCIPsetBoolParam(scip, "misc/calcintegral", FALSE));
+
+   /* capture and lock all variables */
+   for(var = 0; var < SCIPgetNOrigVars(scip); var++)
+   {
+      SCIP_VAR* transvar;
+      transvar =  SCIPvarGetTransVar(SCIPgetOrigVars(scip)[var]);
+      SCIP_CALL( SCIPcaptureVar(scip, transvar) );
+      SCIP_CALL( SCIPaddVarLocks(scip, transvar, 1, 1) );
    }
 
    return SCIP_OKAY;
@@ -2896,6 +3082,7 @@ static
 SCIP_DECL_BRANCHEXITSOL(branchExitsolnodereopt)
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   int var;
 
    assert(scip != NULL );
    assert(branchrule != NULL );
@@ -2944,6 +3131,15 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolnodereopt)
          SCIP_CALL( checkConsistency(scip) );
       }
 #endif
+   }
+
+   /* release and unlock all variables */
+   for(var = 0; var < SCIPgetNOrigVars(scip); var++)
+   {
+      SCIP_VAR* transvar;
+      transvar =  SCIPvarGetTransVar(SCIPgetOrigVars(scip)[var]);
+      SCIP_CALL( SCIPaddVarLocks(scip, transvar, -1, -1) );
+      SCIP_CALL( SCIPreleaseVar(scip, &transvar) );
    }
 
    return SCIP_OKAY;

@@ -230,38 +230,41 @@ checkCutoffReason(
           */
          if (solstat != SCIP_LPSOLSTAT_INFEASIBLE || strongbranched)
          {
-            if (eventnode != SCIPgetRootNode(scip))
+//            if (eventnode != SCIPgetRootNode(scip))
+//            {
+            /* the node is strong branched and is infeasible, we can cutoff this subtree */
+            if( solstat == SCIP_LPSOLSTAT_INFEASIBLE && strongbranched )
             {
-               /* the node is strong branched and is infeasible, we can cutoff this subtree */
-               if( solstat == SCIP_LPSOLSTAT_INFEASIBLE && strongbranched )
+               /* add a dummy variable, because the bound changes were not global in the
+                * sense of effective root depth */
+               if( SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
                {
-                  /* add a dummy variable, because the bound changes were not global in the
-                   * sense of effective root depth */
-                  if( SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
-                  {
-                     SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
-                  }
-                  printf(">> infeasible subtree in node %d.\n", SCIPnodeGetNumber(eventnode));
-                  SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
-                  SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_INFSUBTREE) );
+                  SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
                }
-               /* the two remaining cases are:
-                * 1) the node is strong branched, but the LP is not infeasible, we have to
-                *    save this nodes and can delete strong branch information
-                * 2) the node is neither strong branched nor is the LP infeasible, we have to
-                *    add the node */
-               else
+               printf(">> infeasible subtree in node %d.\n", SCIPnodeGetNumber(eventnode));
+               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+               SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_INFSUBTREE) );
+            }
+            /* the two remaining cases are:
+             * 1) the node is strong branched, but the LP is not infeasible, we have to
+             *    save this nodes and can delete strong branch information
+             * 2) the node is neither strong branched nor is the LP infeasible, we have to
+             *    add the node */
+            else
+            {
+               assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE);
+	       
+	       if( eventnode != SCIPgetRootNode(scip) )
+	       {
+		  SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+	       }
+
+               if( SCIPgetEffectiveRootDepth(scip) >= SCIPnodeGetDepth(eventnode) && strongbranched )
                {
-                  assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE);
-
-                  SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
-
-                  if( SCIPgetEffectiveRootDepth(scip) == SCIPnodeGetDepth(eventnode) && strongbranched )
-                  {
-                     SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
-                  }
+                  SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
                }
             }
+//            }
 
          }
          else
@@ -340,7 +343,7 @@ SCIP_DECL_EVENTINIT(eventInitNodereopt)
    if( !eventhdlrdata->init )
    {
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &eventhdlrdata->reopt) );
-      if( eventhdlrdata->reopt && SCIPgetNVars(scip) - SCIPgetNBinVars(scip) > 0 )
+      if( eventhdlrdata->reopt && SCIPgetNImplVars(scip) + SCIPgetNIntVars(scip) > 0 )
          eventhdlrdata->reopt = FALSE;
    }
 

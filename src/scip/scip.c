@@ -12614,7 +12614,7 @@ SCIP_RETCODE transformSols(
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, ntransvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvalset, ntransvars) );
 
-   for( s = nsols - 1; s >= 0; --s )
+   for( s = nsols - 1; s >= 0 && scip->set->misc_reusesols; --s )
    {
       sol = sols[s];
 
@@ -13190,6 +13190,7 @@ SCIP_RETCODE SCIPsolve(
 {
    SCIP_Bool statsprinted = FALSE;
    SCIP_Bool restart;
+   int var;
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -13268,7 +13269,7 @@ SCIP_RETCODE SCIPsolve(
          {
             SCIP_CALL( SCIPbranchruleNodereoptRestartCheck(scip) );
 
-            if( scip->set->reopt_saveglbcons )
+            if( scip->set->reopt_saveglbcons || scip->set->reopt_sepabestsol )
             {
                SCIP_CALL( SCIPbranchruleNodereoptAddGlobalCons(scip) );
             }
@@ -13343,31 +13344,43 @@ SCIP_RETCODE SCIPsolve(
       SCIP_CALL( SCIPstartSaveTime(scip) );
 
       /* save found solutions */
-      if( scip->set->reopt_savesols != 0 )
+      int nsols;
+      int s;
+
+      nsols = MIN(scip->primal->nsols, scip->set->reopt_savesols);
+
+      /* allocate memory */
+      SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, nsols) );
+
+      for( s = 0; s < nsols; ++s )
       {
-         int nsols;
-         int s;
+         SCIP_SOL* sol;
+         SCIP_Bool added;
 
-         nsols = MIN(scip->primal->nsols, scip->set->reopt_savesols);
+         sol = scip->primal->sols[s];
+         assert(sol != NULL);
 
-         /* allocate memory */
-         SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, nsols) );
-
-         for( s = 0; s < nsols; ++s )
+         if( !SCIPsolIsOriginal(sol) )
          {
-            SCIP_SOL* sol;
-            SCIP_Bool added;
+            /* retransform solution into the original problem space */
+            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+         }
 
-            sol = scip->primal->sols[s];
-            assert(sol != NULL);
-
-            if( !SCIPsolIsOriginal(sol) )
+         if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL )
+         {
+            if( s != 0 || !scip->set->reopt_sepabestsol )
             {
-               /* retransform solution into the original problem space */
-               SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+               SCIP_CALL( SCIPreoptAddSol(scip, scip->reopt, scip->set, scip->stat, sol, &added, scip->stat->reopt_nruns) );
             }
 
-            SCIP_CALL( SCIPreoptAddSol(scip, scip->reopt, scip->set, scip->stat, sol, &added, scip->stat->reopt_nruns) );
+            if( (scip->set->reopt_saveglbcons && added)
+             || (scip->set->reopt_sepabestsol && s == 0) )
+            {
+	       if( SCIPsolGetNodenum(sol) == 0 && SCIPsolGetHeur(sol) == NULL)
+	       {
+		  SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
+	       }
+	    }
          }
       }
 
@@ -13376,6 +13389,7 @@ SCIP_RETCODE SCIPsolve(
          printf(">> saved %d solution.\n", nsols);
       }
 #endif
+
       /* stop clock */
       SCIP_CALL( SCIPstopSaveTime(scip) );
    }

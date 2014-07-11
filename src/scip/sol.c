@@ -2004,6 +2004,17 @@ int SCIPsolGetRunnum(
 }
 
 /** gets node number, where this solution was found */
+void SCIPsolSetNodenum(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Longint          nodenum
+   )
+{
+   assert(sol != NULL);
+
+   sol->nodenum = nodenum;
+}
+
+/** gets node number, where this solution was found */
 SCIP_Longint SCIPsolGetNodenum(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )

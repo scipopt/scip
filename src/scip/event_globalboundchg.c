@@ -131,7 +131,7 @@ SCIP_DECL_EVENTINIT(eventInitGlobalboundchg)
    if( !eventhdlrdata->init )
    {
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &eventhdlrdata->reopt) );
-      if( eventhdlrdata->reopt && SCIPgetNVars(scip) - SCIPgetNBinVars(scip) > 0 )
+      if( eventhdlrdata->reopt && SCIPgetNImplVars(scip) + SCIPgetNIntVars(scip) > 0 )
          eventhdlrdata->reopt = FALSE;
       eventhdlrdata->init = TRUE;
    }

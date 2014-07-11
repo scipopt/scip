@@ -2591,8 +2591,15 @@ SCIP_RETCODE solveNodeLP(
 #endif
          if( stored )
          {
+            SCIP_EVENT event;
+
             if( bestsol != SCIPgetBestSol(set->scip) )
                SCIPstoreSolutionGap(set->scip);
+
+            /* issue NODEFEASIBLE event */
+            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
+            SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
+            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          }
 
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
