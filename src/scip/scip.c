@@ -13376,11 +13376,11 @@ SCIP_RETCODE SCIPsolve(
             if( (scip->set->reopt_saveglbcons && added)
              || (scip->set->reopt_sepabestsol && s == 0) )
             {
-	       if( SCIPsolGetNodenum(sol) == 0 && SCIPsolGetHeur(sol) == NULL)
-	       {
-		  SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
-	       }
-	    }
+              if( SCIPsolGetNodenum(sol) == 0 && SCIPsolGetHeur(sol) == NULL)
+              {
+                                  SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
+              }
+           }
          }
       }
 
@@ -13397,6 +13397,17 @@ SCIP_RETCODE SCIPsolve(
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
    SCIPclockStop(scip->stat->solvingtimeoverall, scip->set);
+
+   /* decrease time limit */
+   if( scip->set->reopt_commontimelimit )
+   {
+      SCIP_Real remainingtime;
+      SCIP_Real clocktime;
+
+      SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &remainingtime));
+      clocktime = SCIPgetSolvingTime(scip);
+      SCIP_CALL(SCIPsetRealParam(scip, "limits/time", remainingtime - clocktime));
+   }
 
    if( !statsprinted )
    {

@@ -284,6 +284,7 @@
                                                      function is greater or equal than this value */
 #define SCIP_DEFAULT_REOPT_DELAY            0.0 /**< start reoptimzing the search if the new objective function has similarity of
                                                      at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
+#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
 
 /* Propagating */
 
@@ -1607,6 +1608,11 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/delay",
          "start reoptimizing the search tree if the current and previous objective have this similarity.",
          &(*set)->reopt_delay, TRUE, SCIP_DEFAULT_REOPT_DELAY, 0, 1,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/commontimelimit",
+         "time limit over all reoptimization rounds?.",
+         &(*set)->reopt_commontimelimit, TRUE, SCIP_DEFAULT_REOPT_COMMONTIMELIMIT,
          NULL, NULL) );
 
    /* separation parameters */
