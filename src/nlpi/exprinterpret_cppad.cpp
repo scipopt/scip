@@ -108,6 +108,7 @@ bool in_parallel(void)
 }
 
 /** CppAD callback function that returns the number of the current thread
+ *
  * assigns a new number to the thread if new
  */
 static
@@ -149,7 +150,8 @@ size_t thread_num(void)
 }
 
 /** sets up CppAD's datastructures for running in multithreading mode
- * it must be called once before multithreading is started
+ *
+ *  It must be called once before multithreading is started.
  */
 static
 char init_parallel(void)
@@ -164,7 +166,8 @@ char init_parallel(void)
 }
 
 /** a dummy variable that can is initialized to the result of init_parallel
- * the purpose is to make sure that init_parallel() is called before any multithreading is started
+ *
+ *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
 static char init_parallel_return = init_parallel();
 
@@ -359,8 +362,9 @@ public:
 #ifndef NO_CPPAD_USER_ATOMIC
 
 /** computes sparsity of jacobian for a univariate function during a forward sweep
- * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
- * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
+ *
+ *  For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
+ *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
  */
 static
 bool univariate_for_sparse_jac(
@@ -377,9 +381,10 @@ bool univariate_for_sparse_jac(
    return true;
 }
 
-/** computes sparsity of jacobian during a reverse sweep
- * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
- * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+/** Computes sparsity of jacobian during a reverse sweep
+ *
+ *  For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
+ *  Since f'(x) is dense, the sparsity of R will be the sparsity of S.
  */
 static
 bool univariate_rev_sparse_jac(
@@ -397,8 +402,9 @@ bool univariate_rev_sparse_jac(
 }
 
 /** computes sparsity of hessian during a reverse sweep
- * Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
- * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+ *
+ *  Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
+ *  we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
  */
 static
 bool univariate_rev_sparse_hes(
@@ -433,10 +439,10 @@ bool univariate_rev_sparse_hes(
 
 /** Automatic differentiation of x -> x^p, p>=2 integer, as CppAD user-atomic function.
  *
- * This class implements forward and reverse operations for the function x -> x^p for use within CppAD.
- * While CppAD would implement integer powers as a recursion of multiplications, we still use pow functions as they allow us to avoid overestimation in interval arithmetics.
+ *  This class implements forward and reverse operations for the function x -> x^p for use within CppAD.
+ *  While CppAD would implement integer powers as a recursion of multiplications, we still use pow functions as they allow us to avoid overestimation in interval arithmetics.
  *
- * @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
+ *  @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
  */
 template<class Type>
 class atomic_posintpower : public CppAD::atomic_base<Type>
@@ -464,6 +470,7 @@ private:
    }
 
    /** forward sweep of positive integer power
+    *
     * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
     * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
     * in the taylor expansion of f(x) = x^p.
@@ -481,7 +488,7 @@ private:
       CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
       const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
       CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
-   )
+      )
    {
       assert(exponent > 1);
       assert(tx.size() >= p+1);
@@ -535,6 +542,7 @@ private:
    }
 
    /** reverse sweep of positive integer power
+    *
     * Assume y(x) is a function of the taylor coefficients of f(x) = x^p for x, i.e.,
     *   y(x) = [ x^p, p * x^(p-1) * x', p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x'', ... ].
     * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
@@ -569,7 +577,7 @@ private:
       const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
       CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
       const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
-   )
+      )
    {
       assert(exponent > 1);
       assert(px.size() >= p+1);
@@ -605,6 +613,7 @@ private:
    using CppAD::atomic_base<Type>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
+    *
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
@@ -612,7 +621,7 @@ private:
       size_t                     q,  /**< number of columns in R */
       const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
       CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
-   )
+      )
    {
       return univariate_for_sparse_jac(q, r, s);
    }
@@ -620,6 +629,7 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
+    *
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
@@ -627,7 +637,7 @@ private:
       size_t                     q,  /**< number of rows in R */
       CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
       const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
-   )
+      )
    {
       return univariate_rev_sparse_jac(q, r, s);
    }
@@ -717,6 +727,7 @@ private:
    }
 
    /** forward sweep of signpower
+    *
     * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
     * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
     * in the taylor expansion of f(x) = sign(x)abs(x)^p.
@@ -734,7 +745,7 @@ private:
       CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
       const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
       CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
-   )
+      )
    {
       assert(exponent > 0.0);
       assert(tx.size() >= p+1);
@@ -787,6 +798,7 @@ private:
    }
 
    /** reverse sweep of signpower
+    *
     * Assume y(x) is a function of the taylor coefficients of f(x) = sign(x)|x|^p for x, i.e.,
     *   y(x) = [ f(x), f'(x), f''(x), ... ].
     * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
@@ -870,6 +882,7 @@ private:
    using CppAD::atomic_base<Type>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
+    *
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
@@ -885,6 +898,7 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
+    *
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
@@ -900,6 +914,7 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
+    *
     * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
@@ -911,7 +926,7 @@ private:
       const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
       const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
       CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-   )
+      )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
@@ -955,7 +970,7 @@ private:
       CppAD::vector<bool>&               vy, /**< vector to store which function values depend on variables, or empty vector */
       const CppAD::vector<SCIPInterval>& tx, /**< values for taylor coefficients of x */
       CppAD::vector<SCIPInterval>&       ty  /**< vector to store taylor coefficients of y */
-   )
+      )
    {
       assert(exponent > 0.0);
       assert(tx.size() >= p+1);
@@ -1009,7 +1024,7 @@ private:
 
    /** specialization of atomic_signpower::reverse template for SCIPinterval
     *
-    * @todo try to compute tighter resultants
+    *  @todo try to compute tighter resultants
     */
    bool reverse(
       size_t                             p,  /**< highest order Taylor coefficient that we are evaluating */
@@ -1066,6 +1081,7 @@ private:
    using CppAD::atomic_base<SCIPInterval>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
+    *
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
@@ -1081,6 +1097,7 @@ private:
    using CppAD::atomic_base<SCIPInterval>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
+    *
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
@@ -1096,6 +1113,7 @@ private:
    using CppAD::atomic_base<SCIPInterval>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
+    *
     * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
@@ -1134,7 +1152,8 @@ void evalSignPower(
 #else
 
 /** template for evaluation for signpower operator
- * only implemented for real numbers, thus gives error by default
+ *
+ *  Only implemented for real numbers, thus gives error by default.
  */
 template<class Type>
 static
@@ -1150,8 +1169,7 @@ void evalSignPower(
       );
 }
 
-/** specialization of signpower evaluation for real numbers
- */
+/** specialization of signpower evaluation for real numbers */
 template<>
 void evalSignPower(
    CppAD::AD<double>&    resultant,          /**< resultant */
@@ -1174,8 +1192,9 @@ void evalSignPower(
 #endif
 
 /** template for evaluation for minimum operator
- * only implemented for real numbers, thus gives error by default
- * @todo implement own userad function
+ *
+ *  Only implemented for real numbers, thus gives error by default.
+ *  @todo implement own userad function
  */
 template<class Type>
 static
@@ -1191,8 +1210,7 @@ void evalMin(
       );
 }
 
-/** specialization of minimum evaluation for real numbers
- */
+/** specialization of minimum evaluation for real numbers */
 template<>
 void evalMin(
    CppAD::AD<double>&    resultant,          /**< resultant */
@@ -1204,8 +1222,9 @@ void evalMin(
 }
 
 /** template for evaluation for maximum operator
- * only implemented for real numbers, thus gives error by default
- * @todo implement own userad function
+ *
+ *  Only implemented for real numbers, thus gives error by default.
+ *  @todo implement own userad function
  */
 template<class Type>
 static
@@ -1221,8 +1240,7 @@ void evalMax(
       );
 }
 
-/** specialization of maximum evaluation for real numbers
- */
+/** specialization of maximum evaluation for real numbers */
 template<>
 void evalMax(
    CppAD::AD<double>&    resultant,          /**< resultant */
@@ -1234,7 +1252,8 @@ void evalMax(
 }
 
 /** template for evaluation for square-root operator
- * default is to use the standard sqrt-function
+ *
+ *  Default is to use the standard sqrt-function.
  */
 template<class Type>
 static
@@ -1247,7 +1266,8 @@ void evalSqrt(
 }
 
 /** specialization of square-root operator for numbers
- * we perturb the function a little bit so that it's derivatives are defined in 0.0
+ *
+ *  We perturb the function a little bit so that it's derivatives are defined in 0.0.
  */
 template<>
 void evalSqrt(
@@ -1258,8 +1278,7 @@ void evalSqrt(
    resultant = sqrt(arg + 1e-20) - 1e-10;
 }
 
-/** template for evaluation for absolute value operator
- */
+/** template for evaluation for absolute value operator */
 template<class Type>
 static
 void evalAbs(
@@ -1271,7 +1290,8 @@ void evalAbs(
 }
 
 /** specialization of absolute value evaluation for intervals
- * use sqrt(x^2) for now @todo implement own userad function
+ *
+ *  Use sqrt(x^2) for now @todo implement own userad function.
  */
 template<>
 void evalAbs(
@@ -1615,7 +1635,8 @@ SCIP_RETCODE eval(
 }
 
 /** analysis an expression tree whether it requires retaping on every evaluation
- * this may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...)
+ *
+ *  This may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...).
  */
 static
 bool needAlwaysRetape(SCIP_EXPR* expr)
@@ -1646,10 +1667,11 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 }
 
 /** replacement for CppAD's default error handler
- * in debug mode, CppAD gives an error when an evaluation contains a nan
- * we do not want to stop execution in such a case, since the calling routine should check for nan's and decide what to do
- * since we cannot ignore this particular error, we ignore all
- * @todo find a way to check whether the error corresponds to a nan and communicate this back
+ *
+ *  In debug mode, CppAD gives an error when an evaluation contains a nan.
+ *  We do not want to stop execution in such a case, since the calling routine should check for nan's and decide what to do.
+ *  Since we cannot ignore this particular error, we ignore all.
+ *  @todo find a way to check whether the error corresponds to a nan and communicate this back
  */
 static
 void cppaderrorcallback(
@@ -1784,7 +1806,8 @@ SCIP_RETCODE SCIPexprintFreeData(
 }
 
 /** notify expression interpreter that a new parameterization is used
- * this probably causes retaping by AD algorithms
+ *
+ *  This probably causes retaping by AD algorithms.
  */
 SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -2015,8 +2038,9 @@ SCIP_RETCODE SCIPexprintGradInt(
 }
 
 /** gives sparsity pattern of hessian
- * NOTE: this function might be replaced later by something nicer 
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ *
+ *  NOTE: this function might be replaced later by something nicer.
+ *  Since the AD code might need to do a forward sweep, you should pass variable values in here.
  */
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -2085,7 +2109,8 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
 }
 
 /** computes value and dense hessian of an expression tree
- * the full hessian is computed (lower left and upper right triangle)
+ *
+ *  The full hessian is computed (lower left and upper right triangle).
  */
 SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
