@@ -207,14 +207,15 @@ SCIP_RETCODE readSolfile(
    }
 #endif
 
-   assert(debugsol == NULL);
+   if( debugsol == NULL )
+   {
+      /* create SCIP solution */
+      SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
+      debugsolstage = SCIPgetStage(set->scip);
 
-   /* create SCIP solution */
-   SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
-   debugsolstage = SCIPgetStage(set->scip);
-
-   /* set SCIP solution values */
-   SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
+      /* set SCIP solution values */
+      SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
+   }
 
    BMSfreeMemoryArray(&vars);
    BMSfreeMemoryArray(&solvalues);
