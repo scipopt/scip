@@ -63,11 +63,11 @@ class WeightedSolver
    /** gets cost vector of last found pareto optimum */
    virtual const std::vector<SCIP_Real>* getCost() const;
 
+   /** true if the last solved weighted problem is unbounded */
+   virtual bool isWeightedUnbounded() const = 0;
+
    /** returns the last found pareto optimal solution */
    virtual SCIP_SOL* getSolution() const;
-
-   /** writes the last solution to a file */
-   SCIP_RETCODE writeSolution();
 
    /** returns the name of the file containing the last written solution */
    std::string getSolutionFileName() const;
@@ -84,7 +84,7 @@ class WeightedSolver
    /** returns the number of objective functions */
    int getNObjs() const;
 
-   /** returns the SCIP problem status */
+   /** returns the SCIP problem status of the multiobjective problem */
    virtual SCIP_Status getStatus() const;
 
    /** returns the number of weighted runs so far */
@@ -105,34 +105,50 @@ class WeightedSolver
    /** delete non extremal solutions */
    SCIP_RETCODE enforceExtremality();
 
+   /** print every unbounded cost ray */
+   void printUnboundedRays();
+
    /** return verblevel parameter set in SCIP */
    int getVerbosity() const;
 
  protected:
    SCIP*                 scip_;                   /**< SCIP solver */
-   SCIP_Real             timelimit_;              /**< maximal time for entire solve in seconds */
+   SCIP_Real             timelimit_;              /**< remaining time in seconds */
    int                   verbosity_;
-
-   bool                  found_new_optimum_;      /**< true if the last SCIP run found a new optimum */
-   SCIP_SOL*             solution_;               /**< last found solution */
-   SCIP_Longint          nnodes_last_run_;        /**< number of branch and bound nodes used in last run */
-   SCIP_Longint          niterations_last_run_;   /**< number of lp iterations in last run */
-   SCIP_Real             duration_last_run_;      /**< duration of last run in seconds */
-
    SCIP_Status           multiopt_status_;        /**< multiobjective problem status */
-   int                   nruns_;                  /**< number of weighted runs */
+   int                   nruns_;                  /**< number of solveNext() calls */
 
-   const std::vector<SCIP_Real>*                  weight_;            /**< weight used in last run */
-   const std::vector<SCIP_Real>*                  cost_vector_;       /**< cost vector of last found solution */
+   bool                  found_new_optimum_;      /**< true if last call of solveNext() found a new optimum */
+   SCIP_Longint          nnodes_last_run_;        /**< number of branch and bound nodes in last call of solveNext() */
+   SCIP_Longint          niterations_last_run_;   /**< number of lp iterations in last call of solveNext() */
+   SCIP_Real             duration_last_run_;      /**< duration of last call of solveNext() in seconds */
+   SCIP_SOL*             solution_;               /**< last solution found by solveNext() */
+
+   const std::vector<SCIP_Real>*                  weight_;            /**< weight used in last solveNext() call */
+   const std::vector<SCIP_Real>*                  cost_vector_;       /**< cost vector of last solution found by solveNext() */
+
+   std::vector< SCIP_SOL* >                       solutions_;         /**< list of all pareto optimal SCIP solutions */
    std::vector< const std::vector< SCIP_Real>* >  nondom_points_;     /**< list of found non dominated points*/
+   std::vector< const std::vector<SCIP_Real>* >   cost_rays_;         /**< cost vectors of unbounded primal rays*/
+
+   std::map< const std::vector<SCIP_Real>*, SCIP_SOL* > nondom_point_to_sol_; /**< maps each found nondom point to corresponding solution */
 
  private:
    std::string           filename_;               /**< name of problem file */
    std::string           outfilestump_;           /**< beginning of outfile names */
    std::string           solution_file_name_;     /**< name of last written solution file */
+   SCIP_LPI*             extremality_lpi_;        /**< lp interfaced for determining extremality */
+   bool                  candidate_is_extremal_;  /**< true if nondom point checked by lp is extremal */
+   int                   n_written_sols_;         /**< number of solutions written to files */										    
 
-   std::map<const std::vector<SCIP_Real>*, std::string> filename_by_point_;     /**< map linking cost vectors to
-										    corresponding solution file names */
+   /** prepare the LP for the extremality check */
+   SCIP_RETCODE createExtremalityLP();
+   
+   /** solve the extremality lp for one particular nondom point */
+   SCIP_RETCODE solveExtremalityLP(const std::vector<SCIP_Real>* nondom_point, int point_index);
+
+   /** writes a solution to a file in folder solutions/ with name <instance name>-<solution number>.sol*/
+   SCIP_RETCODE writeSolution(SCIP_SOL* sol);
 };
 
 #endif

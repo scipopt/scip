@@ -39,7 +39,6 @@ Skeleton::Skeleton(
      graph_(),
      vertex_map_(graph_)
 {
-
 }
 
 /** destructor */
@@ -64,68 +63,59 @@ const std::vector<SCIP_Real>* Skeleton::nextWeight()
 {
    assert( !untested_nodes_.empty() );
 
-   last_node_ = *(untested_nodes_.begin());
-   untested_nodes_.erase(last_node_);
+   last_returned_node_ = *(untested_nodes_.begin());
+   untested_nodes_.erase(last_returned_node_);
 
-   assert(vertex_map_[last_node_] != NULL);
+   assert(vertex_map_[last_returned_node_] != NULL);
 
-   return (vertex_map_[last_node_]->getWeight());
+   return (vertex_map_[last_returned_node_]->getWeight());
 }
 
 /** returns true and updates the polyhedron if the solution is a new pareto optimum */
-bool Skeleton::checkSolution(
+bool Skeleton::isExtremal(
    const std::vector<SCIP_Real>*        cost_vector    /**< cost vector that is a candidate to be a nondominated point */
    )
 {
-   bool                  result;
-   std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_vector);
-   facet->push_back(-1.);
+   /* graph must be initialized */
+   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
 
-   if( lemon::ListGraph::NodeIt(graph_) == lemon::INVALID )
+   bool result = false;
+   const std::vector<SCIP_Real>* facet = costToFacet(cost_vector);
+
+   /* cost_vector is a nondominated point if and only if it has a better weighted objective value
+    * than all previous nondominated points with respect to the weight it optimizes */
+   if( last_returned_node_ == lemon::INVALID )
    {
-      /* cost_vector is the first nondom_point */
-      n_new_nodes_ = 0;
-      init(facet);
-      result = true;
-      n_proc_nodes_ = 0;
+      result = false;
    }
    else
    {
-      /* cost_vector is a nondominated point if and only if it has a better weighted objective value
-       * than all previous nondominated points with respect to the weight it optimizes */
-      if( last_node_ == lemon::INVALID )
-      {
-         result = false;
-      }
-      else
-      {
-         result = makesObsolete(facet, vertex_map_[last_node_], false);
-      }
-      if(result)
-      {
-         addFacet(facet);
-      }
-      else
-      {
-         n_new_nodes_ = 0;
-         n_proc_nodes_ = 1;
-         delete facet;
-      }
+      result = makesObsolete(facet, vertex_map_[last_returned_node_], false);
+   }
+
+   if(result)
+   {
+      addFacet(facet);
+   }
+   else
+   {
+      n_new_nodes_ = 0;
+      n_proc_nodes_ = 1;
+      delete facet;
    }
 
    return result;
 }
 
-/** like checkSolution but check all vertices for obsolecity (not just the last returned one)*/
-bool Skeleton::checkSolutionThorough(
+/** like isExtremal but check all vertices for obsolecity (not just the last returned one)*/
+bool Skeleton::isExtremalThorough(
    const std::vector<SCIP_Real>*     cost_vector         /**< cost vector that is a candidate to be a nondominated point */
    )
 {
-   std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_vector);
-   facet->push_back(-1.);
-   last_node_ = findObsoleteNode(facet);
+   const std::vector<SCIP_Real>* facet = costToFacet(cost_vector);
+   last_returned_node_ = findObsoleteNode(facet);
    delete facet;
-   return checkSolution(cost_vector); /* TODO: reuse facet */
+   return isExtremal(cost_vector); /* TODO: reuse facet */
 }
 
 /** adds a weight space constraint after finding a primal ray with unbounded weighted objective */
@@ -147,7 +137,7 @@ void Skeleton::addPrimalRayThorough(
    assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID ); /* graph must be initialized */
    std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_ray);
    facet->push_back(0.);
-   last_node_ = findObsoleteNode(facet);
+   last_returned_node_ = findObsoleteNode(facet);
    addFacet(facet);
 }
 
@@ -170,9 +160,13 @@ lemon::ListGraph::Node Skeleton::findObsoleteNode(
 
 /** initialize the polyhedron with the first solution */
 void Skeleton::init(
-  const std::vector<SCIP_Real>*     first_nondom_facet  /**< facet defined by first nondom point */ 
-  )
+   const std::vector<SCIP_Real>*     cost_vector,                /**< cost vector of first solution */ 
+   std::vector< const std::vector<SCIP_Real>* >*   cost_rays     /**< list of known unbounded cost rays */
+   )
 {
+   std::vector<SCIP_Real>*    first_nondom_facet = new std::vector<SCIP_Real>(*cost_vector);
+   first_nondom_facet->push_back(-1.);
+
    int                        nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
    WeightSpaceVertex*         vertex;
    lemon::ListGraph::Node     node;
@@ -215,9 +209,31 @@ void Skeleton::init(
       vertices_.push_back(vertex);
    }
 
-   assert(graphIsValid());
-
    delete new_vertices_;
+
+   /* if we have unbounded rays to add */
+   if( cost_rays != NULL )
+   {
+      /* variables for caching update statistics */
+      int n_new_nodes_tmp = n_new_nodes_;
+      int n_proc_nodes_tmp = n_proc_nodes_; 
+
+      /* add the infinite rays */
+      for( std::vector< const std::vector<SCIP_Real>* >::iterator 
+              it = cost_rays->begin();
+           it != cost_rays->end();
+           ++it )
+      {
+         addPrimalRayThorough(*it);
+         n_new_nodes_tmp += n_new_nodes_;
+         n_proc_nodes_tmp += n_proc_nodes_;
+      }
+
+      n_new_nodes_ = n_new_nodes_tmp;
+      n_proc_nodes_ = n_proc_nodes_tmp;
+   }
+
+   assert(graphIsValid());
 }
 
 /** wether the new facet makes a given point obsolete */
@@ -277,9 +293,9 @@ void Skeleton::addFacet(
    n_proc_nodes_ = 0;
    n_new_nodes_  = 0;
 
-   obsolete_nodes_->insert(last_node_);
-   unscanned_nodes_->push(last_node_);
-   untested_nodes_.erase(last_node_);
+   obsolete_nodes_->insert(last_returned_node_);
+   unscanned_nodes_->push(last_returned_node_);
+   untested_nodes_.erase(last_returned_node_);
 
    /* scan all obsolete nodes */
    while( !unscanned_nodes_->empty() )
@@ -431,7 +447,7 @@ void Skeleton::updateCorner(
 {
    lemon::ListGraph::Node new_node;
 
-   bool untested = (obsolete_vertex->getNode() != last_node_);
+   bool untested = (obsolete_vertex->getNode() != last_returned_node_);
    new_node = addNode(obsolete_vertex, untested);
 
    obsolete_vertex->updateFacet(new_facet_);
@@ -481,14 +497,34 @@ bool Skeleton::graphIsValid() const
    return true;
 }
 
-/** get number of vertices added in last checkSolution call*/
+/** get number of vertices added in last isExtremal call*/
 int Skeleton::getNNewVertices() const
 {
    return n_new_nodes_;
 }
 
-/** get number of vertices processed in last checkSolution call*/
+/** get number of vertices processed in last isExtremal call*/
 int Skeleton::getNProcessedVertices() const
 {
    return n_proc_nodes_;
+}
+
+/** returns facet vector corresponding to cost vector */
+const std::vector<SCIP_Real>* Skeleton::costToFacet(
+   const std::vector<SCIP_Real>*        cost_vector    /**< cost vector of a solution */
+   ) const
+{
+   std::vector<SCIP_Real>* result = new std::vector<SCIP_Real>(*cost_vector);
+   result->push_back(-1.);
+   return result;
+}
+
+/** returns facet vector corresponding to an unbounded cost ray */
+const std::vector<SCIP_Real>* Skeleton::rayToFacet(
+   const std::vector<SCIP_Real>*        cost_ray      /**< cost vector of a primal ray */
+   ) const
+{
+   std::vector<SCIP_Real>* result = new std::vector<SCIP_Real>(*cost_ray);
+   result->push_back(0.);
+   return result;
 }

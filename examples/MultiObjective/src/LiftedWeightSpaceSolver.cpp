@@ -42,7 +42,9 @@ LiftedWeightSpaceSolver::LiftedWeightSpaceSolver(
    const char*           paramfilename       /**< name of file with SCIP parameters */ 
       )
    : WeightedSolver(paramfilename),
+     solving_stage_(MULTIOPT_UNSOLVED),
      feasible_weight_lpi_(NULL),
+     feasible_weight_sol_(NULL),
      mip_status_(SCIP_STATUS_UNKNOWN)
 {
    SCIPcreateClock(scip_, &clock_iteration_);
@@ -63,8 +65,8 @@ LiftedWeightSpaceSolver::~LiftedWeightSpaceSolver()
       SCIPlpiFree(&feasible_weight_lpi_);
    }
 
-   for( std::vector< const std::vector<SCIP_Real>* >::iterator it = initial_rays_.begin();
-        it != initial_rays_.end();
+   for( std::vector< const std::vector<SCIP_Real>* >::iterator it = cost_rays_.begin();
+        it != cost_rays_.end();
         ++it )
    {
       delete *it;
@@ -83,14 +85,21 @@ bool LiftedWeightSpaceSolver::hasNext() const
 /** solve instance with next weight */
 SCIP_RETCODE LiftedWeightSpaceSolver::solveNext()
 {
+   SCIPresetClock(scip_, clock_iteration_);
+   SCIPstartClock(scip_, clock_iteration_);
+
+   found_new_optimum_ = false;
+   nnodes_last_run_ = 0;
+   niterations_last_run_ = 0; 
+   duration_last_run_ = 0;
+   cost_vector_ = NULL;
+   solution_ = NULL;
+
    /* if this is the first iteration, start solving process */
    if( solving_stage_ == MULTIOPT_UNSOLVED )
    {
       SCIP_CALL( init() );
    }
-
-   SCIPresetClock(scip_, clock_iteration_);
-   SCIPstartClock(scip_, clock_iteration_);
 
    SCIP_CALL( loadNextWeight() );
 
@@ -105,7 +114,6 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveNext()
       ++nruns_;
    }
 
-   /* stop the clock */
    SCIPstopClock(scip_, clock_iteration_);
    duration_last_run_ = SCIPgetClockTime(scip_, clock_iteration_);
 
@@ -150,11 +158,6 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveWeighted()
    /* load weight into solver */
    SCIP_CALL( objectives->setWeightedObjective(scip_, weight_) );
 
-   /* reset solve statistics */ 
-   found_new_optimum_ = false;
-   nnodes_last_run_ = 0;
-   niterations_last_run_ = 0;
-
    /* optimize with weight */
    SCIP_CALL( doSCIPrun() );
 
@@ -177,6 +180,13 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveWeighted()
 
       SCIP_CALL( SCIPaddCons(scip_, cons) );
 
+      /* remove results from first doSCIPrun() */
+      SCIP_CALL( SCIPfreeSol(scip_, &solution_) );
+      solution_ = NULL;
+      delete cost_vector_;
+      cost_vector_ = NULL;
+
+      /* second doSCIPRun() */
       SCIP_CALL( doSCIPrun() );
 
       assert( mip_status_ == SCIP_STATUS_OPTIMAL );
@@ -192,13 +202,17 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveWeighted()
 /** call the mip solver */
 SCIP_RETCODE LiftedWeightSpaceSolver::doSCIPrun()
 {
+   /* as the solution data is overwritten, it must be cleared beforehand */
+   assert(cost_vector_ == NULL);
+   assert(solution_ == NULL);
+
    Objectives* objectives = SCIPgetProbData(scip_)->objectives;
 
    /* set SCIP timelimit so that total algorithm timelimit is met*/
    SCIPsetRealParam(scip_, "limits/time", timelimit_ - SCIPgetClockTime(scip_, clock_total_));
 
    /* actual SCIP solver call */
-   SCIP_CALL( SCIPsolve( scip_ ) );
+   SCIP_CALL( SCIPsolve(scip_) );
 
    /* update SCIP run information */
    nnodes_last_run_ += SCIPgetNNodes(scip_);
@@ -217,11 +231,14 @@ SCIP_RETCODE LiftedWeightSpaceSolver::doSCIPrun()
 
    if( mip_status_ == SCIP_STATUS_OPTIMAL )
    {
-      solution_ = SCIPgetBestSol(scip_);
+      SCIP_CALL( copyBestOriginalSolution() );
+
       cost_vector_ = objectives->calculateCost(scip_, solution_);
-      
-      assert(solution_ != NULL);
-      assert(solution_->vals != NULL);
+   }
+   else if( mip_status_ == SCIP_STATUS_UNBOUNDED )
+   {
+      cost_vector_ = SCIPgetProbData(scip_)->objectives->calculateCostRay(scip_);
+      cost_rays_.push_back(cost_vector_);
    }
 
    return SCIP_OKAY;
@@ -233,15 +250,8 @@ SCIP_Real LiftedWeightSpaceSolver::getTotalDuration() const
    return SCIPgetClockTime(scip_, clock_total_);
 }
 
-/** reoptimize in case of infinite objective function value in any objective*/
-SCIP_RETCODE LiftedWeightSpaceSolver::ensureNonInfinity()
-{
-
-   return SCIP_OKAY;
-}
-
 /** return true if the given vector has an entry close to infinity */
-bool LiftedWeightSpaceSolver::hasInfiniteComponent(std::vector<SCIP_Real>* cost_vector)
+bool LiftedWeightSpaceSolver::hasInfiniteComponent(const std::vector<SCIP_Real>* cost_vector)
 {
    bool result = false; 
 
@@ -264,40 +274,40 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evaluateSolution()
 {
    if( mip_status_ == SCIP_STATUS_OPTIMAL )
    {
-      found_new_optimum_ = skeleton_->checkSolution(cost_vector_);
-
+      if( solving_stage_ == MULTIOPT_INIT_WEIGHTSPACE )
+      {
+         found_new_optimum_ = true;
+         skeleton_->init(cost_vector_, &cost_rays_);
+         solving_stage_ = MULTIOPT_SOLVING;
+      }
+      else
+      {
+         found_new_optimum_ = skeleton_->isExtremal(cost_vector_);
+      }         
       if( found_new_optimum_ )
       {
          nondom_points_.push_back(cost_vector_);
+         solutions_.push_back(solution_);
+         nondom_point_to_sol_[cost_vector_] = solution_;
       }
       else
       {
          delete cost_vector_;
-      }
-      if( solving_stage_ == MULTIOPT_INIT_WEIGHTSPACE )
-      {
-         for( std::vector< const std::vector<SCIP_Real>* >::iterator it = initial_rays_.begin();
-              it != initial_rays_.end();
-              ++it )
-         {
-           skeleton_->addPrimalRay(*it);
-         }
-         solving_stage_ = MULTIOPT_SOLVING;
+         cost_vector_ = NULL;
+         SCIP_CALL( SCIPfreeSol(scip_, &solution_) );
+         solution_ = NULL;
       }
    }
    else if( mip_status_ == SCIP_STATUS_UNBOUNDED )
    {
-      std::vector<SCIP_Real>* cost_ray = SCIPgetProbData(scip_)->objectives->calculateCostRay(scip_);
       if( solving_stage_ == MULTIOPT_INIT_WEIGHTSPACE )
       {
-         initial_rays_.push_back(cost_ray);
-         SCIP_CALL( updateFeasibleWeightLPI(cost_ray) );
+         SCIP_CALL( updateFeasibleWeightLPI(cost_vector_) );
          SCIP_CALL( solveFeasibleWeightLPI() );
       }
       else
       {
-         skeleton_->addPrimalRay(cost_ray);
-         delete cost_ray;
+         skeleton_->addPrimalRay(cost_vector_);
       }
    }
 
@@ -431,7 +441,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::createFeasibleWeightLPI()
 SCIP_RETCODE LiftedWeightSpaceSolver::solveFeasibleWeightLPI()
 {
    assert( feasible_weight_lpi_ != NULL );
- 
+
    SCIP_CALL( SCIPlpiSolvePrimal(feasible_weight_lpi_) );
 
    if( SCIPlpiIsPrimalFeasible(feasible_weight_lpi_) )
@@ -514,4 +524,36 @@ SCIP_RETCODE LiftedWeightSpaceSolver::updateFeasibleWeightLPI(const std::vector<
    delete val;
 
    return SCIP_OKAY;
+}
+
+/** copies best scip solution into sol */
+SCIP_RETCODE LiftedWeightSpaceSolver::copyBestOriginalSolution()
+{
+   assert( solution_ == NULL );
+
+   if( SCIPisTransformed(scip_) )
+   {
+      SCIP_CALL( SCIPfreeTransform(scip_) );
+   }
+
+   SCIP_SOL* sol = SCIPgetBestSol(scip_);
+
+   SCIPcreateOrigSol(scip_, &solution_, NULL);
+
+   SCIP_VAR* var = NULL;
+   SCIP_Real val = 0.;
+   for( int i = 0; i < SCIPgetNVars(scip_); ++i )
+   {
+      var = SCIPgetVars(scip_)[i];
+      val = SCIPgetSolVal(scip_, sol, var);
+      SCIP_CALL( SCIPsetSolVal(scip_, solution_, var, val) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** true if the last solved weighted problem is unbounded */
+bool LiftedWeightSpaceSolver::isWeightedUnbounded() const
+{
+   return mip_status_ == SCIP_STATUS_UNBOUNDED;
 }

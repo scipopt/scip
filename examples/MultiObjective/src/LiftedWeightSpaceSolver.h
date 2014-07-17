@@ -53,6 +53,9 @@ class LiftedWeightSpaceSolver : public WeightedSolver
    /** solve instance with next weight */
    SCIP_RETCODE solveNext();
 
+   /** true if the last solved weighted problem is unbounded */
+   bool isWeightedUnbounded() const;
+
    /** get total time for algorithm */
    SCIP_Real getTotalDuration() const;
 
@@ -74,8 +77,6 @@ class LiftedWeightSpaceSolver : public WeightedSolver
       MULTIOPT_SOLVING,                         /**< finding more solution candidates */
       MULTIOPT_SOLVED                           /**< found all solution candidates */
    }                     solving_stage_;        /**< phase the algorithm is currently in */
-
-   std::vector< const std::vector<SCIP_Real>* > initial_rays_;   /**< cost vectors of primal rays found during weight initialization */
 
    SCIP_LPI*             feasible_weight_lpi_;  /**< LP instance for finding feasible weight */
    SCIP_Real*            feasible_weight_sol_;  /**< solution of feasible weight LP */
@@ -99,9 +100,6 @@ class LiftedWeightSpaceSolver : public WeightedSolver
    /** get the MIP solution and check wheather it is a new optimum*/
    SCIP_RETCODE evaluateSolution();
    
-   /** reoptimize in case of infinite objective function value in any objective*/
-   SCIP_RETCODE ensureNonInfinity();
-
    /** initialize lp for feasible weight generation */
    SCIP_RETCODE createFeasibleWeightLPI();
 
@@ -113,6 +111,12 @@ class LiftedWeightSpaceSolver : public WeightedSolver
 
    /** add new cost ray constraint to feasible weight lp */
    SCIP_RETCODE updateFeasibleWeightLPI(const std::vector<SCIP_Real>* cost_ray);
+   
+   /** return true if the given vector has an entry close to infinity */
+   bool hasInfiniteComponent(const std::vector<SCIP_Real>* cost_vector);
+
+   /** copies best scip solution into sol */
+   SCIP_RETCODE copyBestOriginalSolution();
 };
 
 #endif

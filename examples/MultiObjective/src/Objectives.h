@@ -84,6 +84,9 @@ class Objectives
    /** returns the number of objectives */
    int getNObjs() const;
 
+   /** returns the list of objective identifiers from mps file */
+   const std::vector<std::string>* getObjNames() const;
+
  private:
    std::map< SCIP_VAR*, std::vector<SCIP_Real>* > cost_columns_; /**< map from SCIP variables to cost vectors */
    std::vector<std::string>                       objnames_;     /**< list of objective identifiers from mps file */

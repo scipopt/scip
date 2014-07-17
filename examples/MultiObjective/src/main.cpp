@@ -110,26 +110,21 @@ SCIP_RETCODE Main::run(
    char**             argv           /**< array of command line arguments */
    )
 {
-   const char* paramfilename;
    if(argc <= 1)
    {
-      std::cout << "usage: multiopt <problem file>.mop [<parameter file>.set]" << std::endl;
+      std::cout << "usage: multiopt <problem file>.mop [<parameter file>.set]" 
+                << std::endl;
+
       return SCIP_READERROR;
    }
-   else if(argc >= 3)
-   {
-      paramfilename = argv[2];
-   }
-   else
-   {
-      paramfilename = NULL;
-   }
+
+   const char* paramfilename = readParamfilename(argc, argv);
+
    solver_ = new LiftedWeightSpaceSolver(paramfilename);
 
    SCIP_CALL( readProblem(argv[1]) );
 
-   /* make enough space to write vectors */
-   width_vec_ = WIDTH_VEC_ENTRY * solver_->getNObjs() + WIDTH_VEC_PADDING;
+   std::cout << "solving" << std::endl;
 
    printHeadline();
 
@@ -137,11 +132,6 @@ SCIP_RETCODE Main::run(
    while( solver_->hasNext() )
    {
       SCIP_CALL( solver_->solveNext() );
-
-      if( solver_->foundNewOptimum() )
-      {
-         SCIP_CALL( solver_->writeSolution() );
-      }
 
       nnodes_total_ += solver_->getNNodesLastRun();
       niterations_total_ += solver_->getNLPIterationsLastRun();
@@ -153,11 +143,49 @@ SCIP_RETCODE Main::run(
 
    evaluateStatus();
 
+   std::cout << "extremal solutions" << std::endl;
    SCIP_CALL( solver_->enforceExtremality() );
+
+   solver_->printUnboundedRays();
 
    printBottomLine();
 
    return SCIP_OKAY;
+}
+
+/** determine name of SCIP parameter file from arguments */
+const char* Main::readParamfilename(   
+   int                argc,          /**< number of command line arguments */
+   char**             argv           /**< array of command line arguments */
+   )
+{
+   const char* result = NULL;
+
+   if(argc >= 3)
+   {
+      result = argv[2];
+   }
+   else
+   {
+      result = "scipmip.set";
+   }
+
+   if( SCIPfileExists(result) )
+   {
+      std::cout << "reading parameter file <" 
+                << result << ">" 
+                << std::endl;
+   }
+   else
+   {
+      std::cout << "parameter file "
+                << "<" << result << ">" 
+                << " not found - using default parameters" 
+                << std::endl;
+      result = NULL;
+   }
+
+   return result;
 }
 
 /** prints comments about the result of file reading */
@@ -185,13 +213,22 @@ SCIP_RETCODE Main::readProblem(const char* filename)
       }
       else if( result == SCIP_PLUGINNOTFOUND)
       {
-        std::cout << "file extension needs to be .momps" << std::endl;
+        std::cout << "file extension needs to be .mop" << std::endl;
       }
       else if( result != SCIP_OKAY)
       {
-        std::cout << "usage: exa_can <instance>.momps" << std::endl;
+        std::cout << "usage: exa_can <instance>.mop" << std::endl;
+      }
+      else
+      {
+         std::cout << "reading problem file "
+                   << "<" << filename << ">"
+                   << std::endl;
       }
    }
+
+   /* make enough space to write vectors */
+   width_vec_ = WIDTH_VEC_ENTRY * solver_->getNObjs() + WIDTH_VEC_PADDING;
 
    return result;
 }
@@ -206,7 +243,6 @@ void Main::printHeadline()
              << std::setw(WIDTH_DEFAULT)     << "LP Iter"
              << std::setw(WIDTH_DEFAULT)     << "V_new"
              << std::setw(WIDTH_DEFAULT)     << "V_proc"
-             << "   Solution File"
              << std::endl;
 }
 
@@ -227,6 +263,10 @@ void Main::printRun()
    {
       std::cout << std::setw(width_vec_) << *(solver_->getCost());
    }
+   else if( solver_->isWeightedUnbounded() )
+   {
+      std::cout << std::setw(width_vec_) << "unbounded";
+   }
    else
    {
       std::cout << std::setw(width_vec_) << "-";
@@ -239,12 +279,6 @@ void Main::printRun()
          << std::setw(WIDTH_DEFAULT) << solver_->getNLPIterationsLastRun()
          << std::setw(WIDTH_DEFAULT) << solver_->getNNewVertices()
          << std::setw(WIDTH_DEFAULT) << solver_->getNProcessedVertices();
-
-   /* print name of solution if optimum was found */
-   if( solver_->foundNewOptimum() )
-   {
-      std::cout << "   " << solver_->getSolutionFileName();
-   }
 
    std::cout << std::endl;
 

@@ -252,6 +252,11 @@ int Objectives::getNObjs() const
    return objnames_.size();
 }
 
+/** returns the list of objective identifiers from mps file */
+const std::vector<std::string>* Objectives::getObjNames() const
+{
+   return &objnames_;
+}
 /** find the objective index corresponding to the given name */
 int Objectives::objIndex(
    const char*           objname             /**< identifier of objective in mps file */

@@ -80,6 +80,12 @@ class Main
    int                   n_v_new_total_;     /**< sum of 1-skeleton vertices generated so far */
    int                   n_v_proc_total_;    /**< sum of 1-skeleton vertices processed so far */
 
+   /** determine name of SCIP parameter file from arguments */
+   const char* readParamfilename(   
+      int                argc,          /**< number of command line arguments */
+      char**             argv           /**< array of command line arguments */
+      );
+
    /** prints comments about the result of file reading */
    SCIP_RETCODE readProblem(const char* filename);
 

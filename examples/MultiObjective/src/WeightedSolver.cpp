@@ -44,12 +44,13 @@ WeightedSolver::WeightedSolver(
    const char*           paramfilename       /**< name of file with SCIP parameters */     
    )
    : scip_(NULL),
-     found_new_optimum_(false),
-     duration_last_run_(0),
      multiopt_status_(SCIP_STATUS_UNKNOWN),
      nruns_(0),
+     found_new_optimum_(false),
+     solution_(NULL),
      weight_(NULL),
-     cost_vector_(NULL)
+     cost_vector_(NULL),
+     n_written_sols_(0)
 {
    SCIPcreate(&scip_);
    assert(scip_ != NULL);
@@ -58,18 +59,7 @@ WeightedSolver::WeightedSolver(
 
    if( paramfilename != NULL )
    {
-      if( SCIPfileExists(paramfilename) )
-      {
-         std::cout << "reading parameter file <" << paramfilename << ">" << std::endl;
-         SCIPreadParams(scip_, paramfilename);
-      }
-      else
-         std::cout << "parameter file <" << paramfilename << "> not found - using default parameters" << std::endl;
-   }
-   else if( SCIPfileExists("scipmip.set") )
-   {
-      std::cout << "reading parameter file <scipmip.set>" << std::endl;
-      SCIPreadParams(scip_, "scipmip.set");
+      SCIPreadParams(scip_, paramfilename);
    }
 
    SCIPgetRealParam(scip_, "limits/time", &timelimit_);
@@ -78,13 +68,27 @@ WeightedSolver::WeightedSolver(
 /** destructor */
 WeightedSolver::~WeightedSolver()
 {
+   if( SCIPisTransformed(scip_) )
+   {
+      SCIPfreeTransform(scip_);
+   }
+
+   for( std::vector< SCIP_SOL* >::iterator it = solutions_.begin();
+        it != solutions_.end();
+        ++it )
+   {
+      SCIPfreeSol( scip_, &*it);
+   }
+
    for( std::vector< const std::vector< SCIP_Real>* >::iterator it = nondom_points_.begin();
         it != nondom_points_.end();
         ++it )
    {
       delete *it;
    }
+
    delete SCIPgetProbData(scip_)->objectives;
+
    SCIPfree(&scip_);
 }
 
@@ -109,7 +113,7 @@ SCIP_RETCODE WeightedSolver::readProblem(
    return SCIP_OKAY;
 }
 
-/** returns the SCIP problem status */
+/** returns the SCIP problem status of the multiobjective problem */
 SCIP_Status WeightedSolver::getStatus() const
 {
    return multiopt_status_;
@@ -181,8 +185,8 @@ int WeightedSolver::getNRuns() const
    return nruns_;
 }
 
-/** writes the last solution to a file in folder solutions/ with name <instance name>-<solution number>.sol*/
-SCIP_RETCODE WeightedSolver::writeSolution()
+/** writes a solution to a file in folder solutions/ with name <instance name>-<solution number>.sol*/
+SCIP_RETCODE WeightedSolver::writeSolution(SCIP_SOL* sol)
 {
    std::stringstream     s_outfile;
    FILE*                 fsol;
@@ -190,20 +194,112 @@ SCIP_RETCODE WeightedSolver::writeSolution()
    /* build and save file name */
    s_outfile << outfilestump_
              << "-"
-             << filename_by_point_.size() + 1
+             << ++n_written_sols_
              << ".sol";
    solution_file_name_ = s_outfile.str();
-   filename_by_point_[cost_vector_] = solution_file_name_;
 
    /* write file */
    fsol = fopen(solution_file_name_.c_str(), "w");
-   SCIP_CALL( SCIPprintSol(scip_, solution_, fsol, FALSE) );
+   SCIP_CALL( SCIPprintSol(scip_, sol, fsol, FALSE) );
 
    return SCIP_OKAY;
 }
 
-/** delete non extremal solutions */
+/** delete non extremal solutions 
+ *  for each nondominated point p we try to find a point 
+ *  q <= p which is a convex combination of the other nondominated points */
 SCIP_RETCODE WeightedSolver::enforceExtremality()
+{
+   SCIP_CALL( createExtremalityLP() );
+
+   Objectives* objectives = SCIPgetProbData(scip_)->objectives;
+   const std::vector<std::string>* objnames = objectives->getObjNames();
+
+   for( std::vector<std::string>::const_iterator it = objnames->begin();
+        it != objnames->end();
+        ++it )
+   {
+      std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+   }
+
+   std::cout << "   solution file" << std::endl;
+
+   std::vector< const std::vector<SCIP_Real>* >::iterator it = nondom_points_.begin();
+
+   int npoints = nondom_points_.size();
+   for( int point_index = 0; point_index < npoints; ++point_index )
+   {
+      cost_vector_ = *it;
+      SCIP_CALL( solveExtremalityLP(cost_vector_, point_index) );
+
+      if( candidate_is_extremal_ )
+      {
+         writeSolution(nondom_point_to_sol_[cost_vector_]);
+
+         for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
+              it != cost_vector_->end();
+              ++it )
+         {
+            std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+         }
+      
+         std::cout << "   " << getSolutionFileName() << std::endl;
+         ++it;
+      }
+      else
+      {
+         it = nondom_points_.erase(it);
+         /* the iterator now points to the next candidate */
+      }
+   }
+
+   SCIP_CALL( SCIPlpiFree(&extremality_lpi_) );
+
+   return SCIP_OKAY;
+}
+
+/** print every unbounded cost ray */
+void WeightedSolver::printUnboundedRays()
+{
+   if( !cost_rays_.empty() )
+   {
+      std::cout << "unbounded rays" << std::endl;
+      Objectives* objectives = SCIPgetProbData(scip_)->objectives;
+      const std::vector<std::string>* objnames = objectives->getObjNames();
+
+      for( std::vector<std::string>::const_iterator it = objnames->begin();
+           it != objnames->end();
+           ++it )
+      {
+         std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+      }
+
+      std::cout << std::endl;
+
+      for( std::vector< const std::vector<SCIP_Real>* >::iterator 
+              it = cost_rays_.begin();
+           it != cost_rays_.end();
+           ++it
+         )
+      {
+         cost_vector_ = *it;
+         for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
+              it != cost_vector_->end();
+              ++it )
+         {
+            std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+         }
+      
+         std::cout << std::endl;
+      }
+   }
+}
+/** prepare the LP for the extremality check
+ *  For a given point p* it has the form 
+ *  x_1 * p_1 + ... + x_n * p_n <= p* 
+ *  x_1 + ... + x_n = 1
+ *  x_i >= 0 for all i = 1,...,n */
+SCIP_RETCODE WeightedSolver::createExtremalityLP()
 {
    int ncols = nondom_points_.size();
    int nrows = getNObjs() + 1; 
@@ -220,7 +316,14 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
    int*       ind = new int[nnonz];
    SCIP_Real* val = new SCIP_Real[nnonz];
 
-   std::vector< const std::vector<SCIP_Real>* >::iterator it = nondom_points_.begin();
+   for( int i = 0; i < nrows - 1; ++i )
+   {
+      lhs[i] = - SCIPinfinity(scip_);
+      rhs[i] = 0.;
+   } 
+
+   lhs[nrows - 1] = 1.;
+   rhs[nrows - 1] = 1.;
 
    for( int j = 0; j < ncols; ++j )
    {
@@ -232,29 +335,17 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
       for( int i = 0; i < nrows - 1; ++i )
       {
          ind[nrows * j + i] = i;
-         val[nrows * j + i] = (**it)[i];
+         val[nrows * j + i] = nondom_points_[j]->at(i);
       }
 
       ind[nrows * (j + 1) - 1] = nrows - 1;
       val[nrows * (j + 1) - 1] = 1.;
-
-      ++it;
    }
 
-   for( int i = 0; i < nrows - 1; ++i )
-   {
-      lhs[i] = - SCIPinfinity(scip_);
-      rhs[i] = 0.;
-   } 
-
-   lhs[nrows - 1] = 1.;
-   rhs[nrows - 1] = 1.;
-
-   SCIP_LPI* lpi;
-   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
+   SCIP_CALL( SCIPlpiCreate(&extremality_lpi_, NULL, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
 
    SCIP_CALL( SCIPlpiLoadColLP(
-      lpi,
+      extremality_lpi_,
       SCIP_OBJSEN_MINIMIZE,
       ncols,
       obj,
@@ -271,41 +362,6 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
       val 
     ) );		
 
-   SCIP_Real objval;
-   SCIP_Real one = 1.;
-   SCIP_Real zero = 0.;
-   it = nondom_points_.begin();
-
-   for( int j = 0; j < ncols; ++j )
-   {
-      SCIP_CALL( SCIPlpiChgObj(lpi, 1, &j, &one) );		
-
-      for( int i = 0; i < nrows - 1; ++i )
-      {
-         rhs[i] = (**it)[i];
-      }
-
-      SCIP_CALL( SCIPlpiChgSides(lpi, nrows, ind, lhs, rhs) );
-
-      SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
-
-      assert( SCIPlpiIsOptimal(lpi) );
-
-      SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-
-      if( SCIPisEQ(scip_, objval, 0.) )
-      {
-         std::cout << "nonextremal point: " << **it << std::endl;
-         it = nondom_points_.erase(it);
-      }
-      else
-      {
-         ++it;         
-      }
-
-      SCIP_CALL( SCIPlpiChgObj(lpi, 1, &j, &zero) );		
-   }
-
    delete obj;
    delete lb;
    delete ub;
@@ -315,10 +371,50 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
    delete ind;
    delete val;
 
-   SCIP_CALL( SCIPlpiFree(&lpi) );
-
    return SCIP_OKAY;
 }
+
+/** solve the extremality lp for one particular nondom point */
+SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* nondom_point, int point_index)
+{
+   int nrows = getNObjs() + 1; 
+
+   SCIP_Real obj_one = 1.;
+   SCIP_Real obj_zero = 0.;
+   SCIP_Real objval;
+
+   /* change lp according to nondom point */
+   int*       ind = new int[nrows];
+   SCIP_Real* lhs = new SCIP_Real[nrows];
+   SCIP_Real* rhs = new SCIP_Real[nrows];
+
+   for( int i = 0; i < nrows - 1; ++i )
+   {
+      lhs[i] = - SCIPinfinity(scip_);
+      rhs[i] = nondom_point->at(i);
+      ind[i] = i;
+   }
+
+   SCIP_CALL( SCIPlpiChgObj(extremality_lpi_, 1, &point_index, &obj_one) );
+   SCIP_CALL( SCIPlpiChgSides(extremality_lpi_, nrows - 1, ind, lhs, rhs) );
+
+   /* solve the lp */
+   SCIP_CALL( SCIPlpiSolvePrimal(extremality_lpi_) );
+   assert( SCIPlpiIsOptimal(extremality_lpi_) );
+
+   /* evaluate the solution */
+   SCIP_CALL( SCIPlpiGetObjval(extremality_lpi_, &objval) );
+   candidate_is_extremal_ = SCIPisGT(scip_, objval, 0.);
+
+   /* clean up */
+   SCIP_CALL( SCIPlpiChgObj(extremality_lpi_, 1, &point_index, &obj_zero) );		
+   delete ind;
+   delete lhs;
+   delete rhs;
+   
+   return SCIP_OKAY;
+}
+
 
 /** return verblevel parameter set in SCIP */
 int WeightedSolver::getVerbosity() const

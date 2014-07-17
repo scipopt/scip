@@ -50,6 +50,12 @@ class Skeleton
    /** destructor */
    ~Skeleton();
 
+   /** initialize the polyhedron with the first solution */
+   void init(
+      const std::vector<SCIP_Real>*     cost_vector,                       /**< cost vector of first solution */ 
+      std::vector< const std::vector<SCIP_Real>* >*   cost_rays = NULL     /**< list of known unbounded cost rays */
+      );
+
    /** whether there is an untested weight left */
    bool hasNextWeight();
 
@@ -57,12 +63,12 @@ class Skeleton
    const std::vector<SCIP_Real> * nextWeight();
 
    /** determines whether the solution is a new pareto optimum, if so, adds it to the polyhedron */
-   bool checkSolution(
+   bool isExtremal(
       const std::vector<SCIP_Real>*     cost_vector         /**< cost vector that is a candidate to be a nondominated point */
       );
 
-   /** like checkSolution but check all vertices for obsolecity (not just the last returned one)*/
-   bool checkSolutionThorough(
+   /** like isExtremal but check all vertices for obsolecity (not just the last returned one)*/
+   bool isExtremalThorough(
       const std::vector<SCIP_Real>*     cost_vector         /**< cost vector that is a candidate to be a nondominated point */
       );
 
@@ -76,10 +82,10 @@ class Skeleton
       const std::vector<SCIP_Real>*     cost_ray            /**< cost vector of the unbounded primal ray */
       );
 
-   /** get number of vertices added in last checkSolution call*/
+   /** get number of vertices added in last isExtremal call*/
    int getNNewVertices() const;
 
-   /** get number of vertices processed in last checkSolution call*/
+   /** get number of vertices processed in last isExtremal call*/
    int getNProcessedVertices() const;
 
  private:
@@ -88,12 +94,12 @@ class Skeleton
 								        * performed yet */
    lemon::ListGraph                               graph_;             /**< the graph structure */
    lemon::ListGraph::NodeMap<WeightSpaceVertex*>  vertex_map_;        /**< map from graph nodes to polygon vertex data */
-   lemon::ListGraph::Node                         last_node_;         /**< last tested node */
+   lemon::ListGraph::Node                         last_returned_node_;         /**< last tested node */
    std::vector<WeightSpaceVertex*>                vertices_;          /**< list of all generated vertices */
    int                                            n_new_nodes_;       /**< number of vertices added in last 
-								       *   checkSolution call*/
+								       *   isExtremal call*/
    int                                            n_proc_nodes_;      /**< number of vertices processed in last 
-								       *   checkSolution call*/
+								       *   isExtremal call*/
    std::vector< const std::vector<SCIP_Real>* >   facets_;
 
    /* data structures for temporary use in update step*/
@@ -102,11 +108,6 @@ class Skeleton
    std::queue<lemon::ListGraph::Node>*            unscanned_nodes_;   /**< nodes left to scan for obsolecity */
    std::set<lemon::ListGraph::Node>*              obsolete_nodes_;    /**< nodes identified as obsolete */
    std::vector<lemon::ListGraph::Edge>*           cut_edges_;         /**< edges from obsolete to nonobsolete nodes */
-
-   /** initialize the polyhedron with the first solution */
-   void init(
-      const std::vector<SCIP_Real>*     first_nondom_facet  /**< facet defined by first nondom point */ 
-      );
 
    /** wether the new solution makes a given weight space vertex obsolete */
    bool makesObsolete(
@@ -157,6 +158,18 @@ class Skeleton
 
    /** returns true if data is combinatorically consistent */
    bool graphIsValid() const;
+
+   /** returns facet vector corresponding to point */
+   const std::vector<SCIP_Real>* costToFacet(
+       const std::vector<SCIP_Real>*    cost_vector    /**< cost vector of a solution */
+       ) const;
+
+   /** returns facet vector corresponding to an unbounded cost ray */
+   const std::vector<SCIP_Real>* rayToFacet(
+      const std::vector<SCIP_Real>*        cost_ray      /**< cost vector of a primal ray */
+      ) const;
+
+
 };
 
 #endif
