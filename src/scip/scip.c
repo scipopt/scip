@@ -20596,6 +20596,16 @@ SCIP_RETCODE SCIPchgVarType(
    assert(var != NULL);
    assert(var->scip == scip);
 
+   if( SCIPvarIsNegated(var) )
+   {
+      SCIPdebugMessage("upgrading type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+      var = SCIPvarGetNegationVar(var);
+   }
+   else
+   {
+      SCIPdebugMessage("upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+   }
+
    /* change variable type */
    switch( scip->set->stage )
    {
@@ -30598,8 +30608,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             {
                ++nextcand;
                if( nextcand == ndivecands || (SCIPvarGetLbLocal(divecands[nextcand]) >= SCIPvarGetUbLocal(divecands[nextcand]) - 0.5)
-                  || SCIPisFeasLT(scip, divecandssol[nextcand], SCIPvarGetLbLocal(divecands[nextcand]))
-                  || SCIPisFeasGT(scip, divecandssol[nextcand], SCIPvarGetUbLocal(divecands[nextcand])) )
+                  || SCIPisLT(scip, divecandssol[nextcand], SCIPvarGetLbLocal(divecands[nextcand]))
+                  || SCIPisGT(scip, divecandssol[nextcand], SCIPvarGetUbLocal(divecands[nextcand])) )
                {
                   SCIPdebugMessage(" <%s> solution value is fixed/outside the domain [%g,%g] (solval: %.9f), variable is skipped\n",
                      SCIPvarGetName(divecands[nextcand]), SCIPvarGetLbLocal(divecands[nextcand]), SCIPvarGetUbLocal(divecands[nextcand]), divecandssol[nextcand]);

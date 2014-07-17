@@ -79,10 +79,9 @@
 #define SOPLEX_SUBVERSION 0
 #endif
 
-/**@todo update this check to version 2.0 */
 /* check version */
-#if (SOPLEX_VERSION < 172 || (SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION < 8))
-#error "This interface is not compatible with SoPlex versions prior to 1.7.2.8"
+#if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 210))
+#error "This interface is not compatible with SoPlex versions prior to 2.0.0.2"
 #endif
 
 #include "spxgithash.h"
@@ -694,7 +693,6 @@ struct SCIP_LPi
    int                   rstatsize;          /**< size of rstat array */
    SCIP_PRICING          pricing;            /**< current pricing strategy */
    SCIP_Bool             solved;             /**< was the current LP solved? */
-   SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
    SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
    SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
@@ -950,12 +948,15 @@ SCIP_RETCODE SCIPlpiCreate(
    /* we use this construction to allocate the memory for the SoPlex class also via the blockmemshell */
    (*lpi)->spx = static_cast<SPxSCIP*>(BMSallocMemoryCPP(sizeof(SPxSCIP)));
    SOPLEX_TRY( messagehdlr, (*lpi)->spx = new ((*lpi)->spx) SPxSCIP(messagehdlr, name) );
+   (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
+   (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
+   (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
-   (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
    (*lpi)->conditionlimit = -1.0;
    (*lpi)->checkcondition = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
@@ -2023,15 +2024,11 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /** solves LP -- used for both, primal and dual simplex, because SoPlex doesn't distinct the two cases */
 static
 SCIP_RETCODE spxSolve(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   SPxSolver::Representation rep,            /**< basis representation */
-   SPxSolver::Type       type                /**< algorithm type */
+   SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
-   assert( rep == SPxSolver::ROW || rep == SPxSolver::COLUMN );
-   assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
 
    int verbosity;
    /* store and set verbosity */
@@ -2043,16 +2040,6 @@ SCIP_RETCODE spxSolve(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
-
-   /* set basis representation and algorithm type */
-   if( rep == SPxSolver::COLUMN )
-      lpi->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_COLUMN);
-   else
-      lpi->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_ROW);
-   if( type == SPxSolver::LEAVE )
-      lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_LEAVE);
-   else
-      lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_ENTER);
 
 #ifdef WITH_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
@@ -2108,41 +2095,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 {
    SCIPdebugMessage("calling SCIPlpiSolvePrimal()\n");
 
-   SCIP_RETCODE retcode;
-   SCIP_Bool rowrep;
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
-      factor 1.1 for switching back to column representation */
-   if( lpi->rowrepswitch >= 0 )
-   {
-      rowrep = lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW;
-
-      if( !rowrep )
-         rowrep = lpi->spx->numRowsReal() > lpi->spx->numColsReal() * (lpi->rowrepswitch);
-      else
-         rowrep = lpi->spx->numRowsReal() * 1.1 > lpi->spx->numColsReal() * (lpi->rowrepswitch);
-   }
-   else
-      rowrep = FALSE;
-
-   /* SoPlex doesn't distinct between the primal and dual simplex; however
-    * we can force SoPlex to start with the desired method:
-    * If the representation is COLUMN:
-    * - ENTER = PRIMAL
-    * - LEAVE = DUAL
-    *
-    * If the representation is ROW:
-    * - ENTER = DUAL
-    * - LEAVE = PRIMAL
-    */
-   retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::LEAVE) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::ENTER);
-   assert(!rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW);
-   assert(rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN);
-
-   return retcode;
+   lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_PRIMAL);
+   return spxSolve(lpi);
 }
 
 /** calls dual simplex to solve the LP */
@@ -2152,41 +2109,11 @@ SCIP_RETCODE SCIPlpiSolveDual(
 {
    SCIPdebugMessage("calling SCIPlpiSolveDual()\n");
 
-   SCIP_RETCODE retcode;
-   SCIP_Bool rowrep;
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
-      factor 1.1 for switching back to column representation */
-   if( lpi->rowrepswitch >= 0 )
-   {
-      rowrep = lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW;
-
-      if( !rowrep )
-         rowrep = lpi->spx->numRowsReal() > lpi->spx->numColsReal() * (lpi->rowrepswitch);
-      else
-         rowrep = lpi->spx->numRowsReal() * 1.1 > lpi->spx->numColsReal() * (lpi->rowrepswitch);
-   }
-   else
-      rowrep = FALSE;
-
-   /* SoPlex doesn't distinct between the primal and dual simplex; however
-    * we can force SoPlex to start with the desired method:
-    * If the representation is COLUMN:
-    * - ENTER = PRIMAL
-    * - LEAVE = DUAL
-    *
-    * If the representation is ROW:
-    * - ENTER = DUAL
-    * - LEAVE = PRIMAL
-    */
-   retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::ENTER) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::LEAVE);
-   assert(!rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW);
-   assert(rowrep || lpi->spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN);
-
-   return retcode;
+   lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_PRIMAL);
+   return spxSolve(lpi);
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -2281,8 +2208,7 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-   spx->setIntParam(SoPlex::ALGORITHM, spx->intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW
-      ? SoPlex::ALGORITHM_ENTER : SoPlex::ALGORITHM_LEAVE);
+   spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -3864,7 +3790,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->spx->realParam(SoPlex::TIMELIMIT);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      *dval = lpi->rowrepswitch;
+      *dval = lpi->spx->realParam(SoPlex::REPRESENTATION_SWITCH);
+      if( *dval >= SCIPlpiInfinity(lpi) )
+         *dval = -1.0;
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
@@ -3906,7 +3834,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
-      lpi->rowrepswitch = dval;
+      if( dval < 0.0 )
+         lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
+      else
+         lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;

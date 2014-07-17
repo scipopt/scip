@@ -159,6 +159,8 @@ BEGIN {
    aborted = 0;
 }
 /^Solved in/ {
+   iters = $3;
+   tottime = $6;
    aborted = 0;
 }
 /^Optimal objective/ {

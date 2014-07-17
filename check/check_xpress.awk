@@ -44,6 +44,7 @@ BEGIN {
    infty = +1e+20;
    headerprinted = 0;
    namelength = 18;             # maximal length of instance names (can be increased)
+   simplexiterline = 0;
 
    nprobs   = 0;
    sbab     = 0;
@@ -174,12 +175,23 @@ BEGIN {
    pb = -infty;
    feasible = 0;
 }
+# this is not "per simplex iteration" but "per Xpress iteration"
 / microseconds per iteration/ {
    tottime   = $1 / 1000000;
 }
 /^ \*\*\* Search completed \*\*\*     Time:/ {
    bbnodes   = $8;
    aborted   = 0;
+}
+/^simplexiter/{
+   simplexiterline = 1;
+   next;
+}
+// {if( simplexiterline )
+{
+   iters = $1;
+   simplexiterline = 0;
+}
 }
 
 #

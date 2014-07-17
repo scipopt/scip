@@ -566,7 +566,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
 
    /* check for necessary information to apply this heuristic */
-   if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
+   if( SCIPgetNCliques(scip) == 0 )
    {
       heurdata->nnodefornextrun = INT_MAX;
       return SCIP_OKAY;
