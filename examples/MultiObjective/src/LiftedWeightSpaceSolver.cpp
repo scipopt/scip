@@ -95,24 +95,18 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveNext()
    cost_vector_ = NULL;
    solution_ = NULL;
 
-   /* if this is the first iteration, start solving process */
+   /* if this is the first iteration, run initialization code */
    if( solving_stage_ == MULTIOPT_UNSOLVED )
    {
       SCIP_CALL( init() );
    }
 
+   /* solve with next weight and process the result */
    SCIP_CALL( loadNextWeight() );
-
-   /* if remaining weight was found, solve */
-   if( multiopt_status_ != SCIP_STATUS_UNBOUNDED )
-   {
-      SCIP_CALL( solveWeighted() );
-
-      /* process the result of the SCIP run */
-      SCIP_CALL( evaluateSolution() ); 
-
-      ++nruns_;
-   }
+   SCIP_CALL( solveWeighted() );
+   SCIP_CALL( evaluateSolution() ); 
+   
+   ++nruns_;
 
    SCIPstopClock(scip_, clock_iteration_);
    duration_last_run_ = SCIPgetClockTime(scip_, clock_iteration_);
