@@ -288,7 +288,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evaluateSolution()
       {
          nondom_points_.push_back(cost_vector_);
          solutions_.push_back(solution_);
-         nondom_point_to_sol_[cost_vector_] = solution_;
+         cost_to_sol_[cost_vector_] = solution_;
       }
       else
       {

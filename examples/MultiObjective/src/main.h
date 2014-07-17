@@ -98,6 +98,12 @@ class Main
    /** prints message according to solver status code */
    void evaluateStatus();
 
+   /** print all solutions written so files by solver */
+   void printSolutions();
+
+   /** print every unbounded cost ray */
+   void printUnboundedRays();
+
    /** prints overall statistics */
    void printBottomLine();
 };

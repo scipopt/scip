@@ -143,10 +143,10 @@ SCIP_RETCODE Main::run(
 
    evaluateStatus();
 
-   std::cout << "extremal solutions" << std::endl;
-   SCIP_CALL( solver_->enforceExtremality() );
+   SCIP_CALL( solver_->checkAndWriteSolutions() );
+   printSolutions();
 
-   solver_->printUnboundedRays();
+   printUnboundedRays();
 
    printBottomLine();
 
@@ -314,6 +314,83 @@ void Main::evaluateStatus()
             && solver_status != SCIP_STATUS_UNBOUNDED )
    {
       std::cout << " ABORTED: SCIP_STATUS = " << (int)solver_status << std::endl;
+   }
+}
+
+/** print all solutions written so files by solver */
+void Main::printSolutions()
+{
+   const std::vector<std::string>* objnames         = solver_->getObjNames();
+   const std::map< const std::vector<SCIP_Real>*, 
+                   const char* >*  cost_to_filename = solver_->getCostToFilename();
+   const std::vector<SCIP_Real>*   cost_vector;
+
+   std::cout << "extremal solutions" << std::endl;
+
+   for( std::vector<std::string>::const_iterator it = objnames->begin();
+        it != objnames->end();
+        ++it )
+   {
+      std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+   }
+
+   std::cout << "   solution file" << std::endl;
+
+   for( std::map< const std::vector<SCIP_Real>*, 
+           const char* >::const_iterator it = cost_to_filename->begin();
+        it != cost_to_filename->end();
+        ++it )
+   {
+      cost_vector = it->first;
+
+      for( std::vector<SCIP_Real>::const_iterator jt = cost_vector->begin();
+           jt != cost_vector->end();
+           ++jt )
+      {
+         std::cout << std::setw(WIDTH_VEC_ENTRY) << *jt;
+      }
+      
+      std::cout << "   " << it->second << std::endl;
+   }
+}
+
+/** print every unbounded cost ray */
+void Main::printUnboundedRays()
+{
+   const std::vector< const std::vector<SCIP_Real>* >* 
+                                   cost_rays = solver_->getCostRays();
+   const std::vector<std::string>* objnames  = solver_->getObjNames();
+   const std::vector<SCIP_Real>*   cost_vector;
+
+   if( !cost_rays->empty() )
+   {
+      std::cout << "unbounded rays" << std::endl;
+
+      for( std::vector<std::string>::const_iterator it = objnames->begin();
+           it != objnames->end();
+           ++it )
+      {
+         std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+      }
+
+      std::cout << std::endl;
+
+      for( std::vector< const std::vector<SCIP_Real>* >::const_iterator 
+              it = cost_rays->begin();
+           it != cost_rays->end();
+           ++it
+         )
+      {
+         cost_vector = *it;
+         for( std::vector<SCIP_Real>::const_iterator it = cost_vector->begin();
+              it != cost_vector->end();
+              ++it )
+         {
+            std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
+         }
+      
+         std::cout << std::endl;
+      }
    }
 }
 

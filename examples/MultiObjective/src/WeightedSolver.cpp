@@ -161,12 +161,6 @@ int WeightedSolver::getNSolutions() const
    return nondom_points_.size();
 }
 
-/** returns the name of the file containing the last written solution */
-std::string WeightedSolver::getSolutionFileName() const
-{
-   return std::string(solution_file_name_, 10);
-}
-
 /** returns the time needed for the last iteration in seconds */
 SCIP_Real WeightedSolver::getDurationLastRun() const
 {
@@ -186,20 +180,26 @@ int WeightedSolver::getNRuns() const
 }
 
 /** writes a solution to a file in folder solutions/ with name <instance name>-<solution number>.sol*/
-SCIP_RETCODE WeightedSolver::writeSolution(SCIP_SOL* sol)
+SCIP_RETCODE WeightedSolver::writeSolution(
+   const std::vector<SCIP_Real>*        cost_vector         /**< cost vector of solution */
+   )
 {
    std::stringstream     s_outfile;
    FILE*                 fsol;
+   SCIP_SOL*             sol = cost_to_sol_[cost_vector];
 
-   /* build and save file name */
+   /* build and store file name */
    s_outfile << outfilestump_
              << "-"
              << ++n_written_sols_
              << ".sol";
-   solution_file_name_ = s_outfile.str();
+   std::string s_filename = s_outfile.str();
+   char* filename = new char[s_filename.size()];
+   strcpy(filename, s_filename.c_str());
+   cost_to_filename_[cost_vector] = filename;
 
    /* write file */
-   fsol = fopen(solution_file_name_.c_str(), "w");
+   fsol = fopen(filename, "w");
    SCIP_CALL( SCIPprintSol(scip_, sol, fsol, FALSE) );
 
    return SCIP_OKAY;
@@ -208,21 +208,9 @@ SCIP_RETCODE WeightedSolver::writeSolution(SCIP_SOL* sol)
 /** delete non extremal solutions 
  *  for each nondominated point p we try to find a point 
  *  q <= p which is a convex combination of the other nondominated points */
-SCIP_RETCODE WeightedSolver::enforceExtremality()
+SCIP_RETCODE WeightedSolver::checkAndWriteSolutions()
 {
    SCIP_CALL( createExtremalityLP() );
-
-   Objectives* objectives = SCIPgetProbData(scip_)->objectives;
-   const std::vector<std::string>* objnames = objectives->getObjNames();
-
-   for( std::vector<std::string>::const_iterator it = objnames->begin();
-        it != objnames->end();
-        ++it )
-   {
-      std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
-   }
-
-   std::cout << "   solution file" << std::endl;
 
    std::vector< const std::vector<SCIP_Real>* >::iterator it = nondom_points_.begin();
 
@@ -234,22 +222,13 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
 
       if( candidate_is_extremal_ )
       {
-         writeSolution(nondom_point_to_sol_[cost_vector_]);
-
-         for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
-              it != cost_vector_->end();
-              ++it )
-         {
-            std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
-         }
-      
-         std::cout << "   " << getSolutionFileName() << std::endl;
+         writeSolution(cost_vector_);
          ++it;
       }
       else
       {
          it = nondom_points_.erase(it);
-         /* the iterator now points to the next candidate */
+         /* the iterator automatically points to the next candidate */
       }
    }
 
@@ -258,42 +237,6 @@ SCIP_RETCODE WeightedSolver::enforceExtremality()
    return SCIP_OKAY;
 }
 
-/** print every unbounded cost ray */
-void WeightedSolver::printUnboundedRays()
-{
-   if( !cost_rays_.empty() )
-   {
-      std::cout << "unbounded rays" << std::endl;
-      Objectives* objectives = SCIPgetProbData(scip_)->objectives;
-      const std::vector<std::string>* objnames = objectives->getObjNames();
-
-      for( std::vector<std::string>::const_iterator it = objnames->begin();
-           it != objnames->end();
-           ++it )
-      {
-         std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
-      }
-
-      std::cout << std::endl;
-
-      for( std::vector< const std::vector<SCIP_Real>* >::iterator 
-              it = cost_rays_.begin();
-           it != cost_rays_.end();
-           ++it
-         )
-      {
-         cost_vector_ = *it;
-         for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
-              it != cost_vector_->end();
-              ++it )
-         {
-            std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
-         }
-      
-         std::cout << std::endl;
-      }
-   }
-}
 /** prepare the LP for the extremality check
  *  For a given point p* it has the form 
  *  x_1 * p_1 + ... + x_n * p_n <= p* 
@@ -305,6 +248,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
    int nrows = getNObjs() + 1; 
    int nnonz = ncols * nrows;
 
+   /* prepare data structures for lp*/
    SCIP_Real* obj = new SCIP_Real[ncols];
    SCIP_Real* lb  = new SCIP_Real[ncols];
    SCIP_Real* ub  = new SCIP_Real[ncols];
@@ -316,6 +260,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
    int*       ind = new int[nnonz];
    SCIP_Real* val = new SCIP_Real[nnonz];
 
+   /* copy data into lp data structures */
    for( int i = 0; i < nrows - 1; ++i )
    {
       lhs[i] = - SCIPinfinity(scip_);
@@ -342,6 +287,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
       val[nrows * (j + 1) - 1] = 1.;
    }
 
+   /* create lp */
    SCIP_CALL( SCIPlpiCreate(&extremality_lpi_, NULL, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
 
    SCIP_CALL( SCIPlpiLoadColLP(
@@ -362,6 +308,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
       val 
     ) );		
 
+   /* delete data structures */
    delete obj;
    delete lb;
    delete ub;
@@ -415,9 +362,26 @@ SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* no
    return SCIP_OKAY;
 }
 
-
 /** return verblevel parameter set in SCIP */
 int WeightedSolver::getVerbosity() const
 {
    return verbosity_;
+}
+
+/** return a list of names for objective functions */
+const std::vector<std::string>* WeightedSolver::getObjNames() const
+{
+   return SCIPgetProbData(scip_)->objectives->getObjNames();
+}
+
+/** return a map from cost vectors to solution file names */
+const std::map< const std::vector<SCIP_Real>*, const char* >* WeightedSolver::getCostToFilename() const
+{
+   return &cost_to_filename_;
+}
+
+/** return all cost vectors of unbounded primal rays */
+const std::vector< const std::vector<SCIP_Real>* >* WeightedSolver::getCostRays() const
+{
+   return &cost_rays_;
 }
