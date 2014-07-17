@@ -52,6 +52,86 @@ Skeleton::~Skeleton()
    }
 }
 
+/** initialize the polyhedron with the first solution
+ * by creating a node and vertex for every corner of the weight space and a complete graph between them */
+void Skeleton::init(
+   const std::vector<SCIP_Real>*                   cost_vector,  /**< cost vector of first solution */ 
+   std::vector< const std::vector<SCIP_Real>* >*   cost_rays     /**< list of known unbounded cost rays */
+   )
+{
+   int                        nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
+   WeightSpaceVertex*         vertex;
+   lemon::ListGraph::Node     node;
+
+   createInitialFacets(cost_vector);
+
+   new_vertices_ = new std::vector<WeightSpaceVertex*>();
+
+   for( int i = 0; i < nobjs; i++ )
+   {
+      vertex = createCorner(i);
+      node = addNode(vertex);
+
+      for( std::vector<WeightSpaceVertex*>::iterator it = new_vertices_->begin();
+           it != new_vertices_->end();
+           ++it )
+      {
+         graph_.addEdge(node, (**it).getNode());
+      }
+
+      new_vertices_->push_back(vertex);
+      vertices_.push_back(vertex);
+   }
+
+   delete new_vertices_;
+
+   if( cost_rays != NULL )
+   {
+      addPrimalRays(cost_rays);
+   }
+
+   assert(graphIsValid());
+}
+
+/** create all facets defining the inital weight space polyhedron */
+void Skeleton::createInitialFacets(
+   const std::vector<SCIP_Real>*                   cost_vector   /**< cost vector of first solution */ 
+   )
+{
+   int nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
+
+   /* create weight space boundary facets */
+   std::vector<SCIP_Real>*    facet;
+   for( int i = 0; i < nobjs; ++i )
+   {
+      facet = new std::vector<SCIP_Real>(nobjs + 1, 0.);
+      (*facet)[i] = 1.;
+      facets_.push_back(facet);
+   }
+
+   /* create first nondom point based facet */
+   facets_.push_back(costToFacet(cost_vector));
+}
+
+/** create corner vertex of initial weight space polyhedron */
+WeightSpaceVertex* Skeleton::createCorner(
+   int                                  index               /**< index where weight is 1 */
+   )
+{
+   int nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
+
+   /* corner is defined by one nondom point and p-1 weight space boundaries*/
+   std::vector< const std::vector<SCIP_Real>* > defining_facets(facets_.begin(), facets_.begin() + nobjs);
+   const std::vector<SCIP_Real>*                first_nondom_facet = facets_[nobjs];
+   defining_facets[index] = first_nondom_facet;
+
+   /* corner has weight (0,..,0,1,0,...,0) */
+   std::vector<SCIP_Real>*                      weight             = new std::vector<SCIP_Real>(nobjs, 0.);
+   (*weight)[index] = 1.;
+
+   return new WeightSpaceVertex(defining_facets, weight, (*first_nondom_facet)[index]);
+}
+
 /** whether there is an untested weight left */
 bool Skeleton::hasNextWeight()
 {
@@ -71,28 +151,20 @@ const std::vector<SCIP_Real>* Skeleton::nextWeight()
    return (vertex_map_[last_returned_node_]->getWeight());
 }
 
-/** returns true and updates the polyhedron if the solution is a new pareto optimum */
+/** returns true and updates the polyhedron if cost vector is a new nondominated point.
+ * It is a nondominated point if and only if it has a better weighted objective value
+ * than all previous nondominated points with respect to the weight it optimizes */
 bool Skeleton::isExtremal(
-   const std::vector<SCIP_Real>*        cost_vector    /**< cost vector that is a candidate to be a nondominated point */
+   const std::vector<SCIP_Real>*        cost_vector    /**< potential new nondominated point */
    )
 {
    /* graph must be initialized */
    assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
 
-   bool result = false;
    const std::vector<SCIP_Real>* facet = costToFacet(cost_vector);
 
-   /* cost_vector is a nondominated point if and only if it has a better weighted objective value
-    * than all previous nondominated points with respect to the weight it optimizes */
-   if( last_returned_node_ == lemon::INVALID )
-   {
-      result = false;
-   }
-   else
-   {
-      result = makesObsolete(facet, vertex_map_[last_returned_node_], false);
-   }
-
+   bool result = isMakingObsolete(facet, vertex_map_[last_returned_node_], false);
+   
    if(result)
    {
       addFacet(facet);
@@ -112,36 +184,86 @@ bool Skeleton::isExtremalThorough(
    const std::vector<SCIP_Real>*     cost_vector         /**< cost vector that is a candidate to be a nondominated point */
    )
 {
+   /* graph must be initialized */
+   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
+
+   bool result = false;
    const std::vector<SCIP_Real>* facet = costToFacet(cost_vector);
+
    last_returned_node_ = findObsoleteNode(facet);
-   delete facet;
-   return isExtremal(cost_vector); /* TODO: reuse facet */
+
+   if( last_returned_node_ != lemon::INVALID )
+   {
+      result = isMakingObsolete(facet, vertex_map_[last_returned_node_], false);
+   }
+
+   if(result)
+   {
+      addFacet(facet);
+   }
+   else
+   {
+      n_new_nodes_ = 0;
+      n_proc_nodes_ = 1;
+      delete facet;
+   }
+
+   return result;
 }
 
 /** adds a weight space constraint after finding a primal ray with unbounded weighted objective */
 void Skeleton::addPrimalRay(
-   const std::vector<SCIP_Real>*     cost_ray       /**< cost vector of the unbounded primal ray */
+   const std::vector<SCIP_Real>*        cost_ray            /**< cost vector of the unbounded primal ray */
    )
 {
-   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID ); /* graph must be initialized */
-   std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_ray);
-   facet->push_back(0.);
+   /* graph must be initialized */
+   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
+
+   const std::vector<SCIP_Real>* facet = rayToFacet(cost_ray);
    addFacet(facet);
 }
 
 /** like addPrimalRay but check all vertices for obsolecity (not just the last returned one)*/
 void Skeleton::addPrimalRayThorough(
-   const std::vector<SCIP_Real>*     cost_ray            /**< cost vector of the unbounded primal ray */
+   const std::vector<SCIP_Real>*        cost_ray            /**< cost vector of the unbounded primal ray */
    )
 {
-   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID ); /* graph must be initialized */
-   std::vector<SCIP_Real>* facet = new std::vector<SCIP_Real>(*cost_ray);
-   facet->push_back(0.);
+   /* graph must be initialized */
+   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
+
+   const std::vector<SCIP_Real>* facet = rayToFacet(cost_ray);
    last_returned_node_ = findObsoleteNode(facet);
-   addFacet(facet);
+
+   if( last_returned_node_ != lemon::INVALID )
+   {
+      addFacet(facet);
+   }
 }
 
-/** returns node made obsolete by facet or INVALID */
+/** add multiple rays with unbounded weighted objective */
+void Skeleton::addPrimalRays(
+   const std::vector< const std::vector<SCIP_Real>* >* cost_rays /**< rays to add */
+   )
+{
+   /* variables for caching update statistics */
+   int n_new_nodes_tmp = n_new_nodes_;
+   int n_proc_nodes_tmp = n_proc_nodes_; 
+
+   for( std::vector< const std::vector<SCIP_Real>* >::const_iterator 
+           it = cost_rays->begin();
+        it != cost_rays->end();
+        ++it )
+   {
+      addPrimalRayThorough(*it);
+      n_new_nodes_tmp += n_new_nodes_;
+      n_proc_nodes_tmp += n_proc_nodes_;
+   }
+
+   n_new_nodes_ = n_new_nodes_tmp;
+   n_proc_nodes_ = n_proc_nodes_tmp;
+}
+
+/** returns a node corresponding to a vertex made obsolete by facet or INVALID */
 lemon::ListGraph::Node Skeleton::findObsoleteNode(
    const std::vector<SCIP_Real>* facet
   )
@@ -149,95 +271,18 @@ lemon::ListGraph::Node Skeleton::findObsoleteNode(
    lemon::ListGraph::Node result = lemon::INVALID;
    for( lemon::ListGraph::NodeIt it(graph_); it != lemon::INVALID; ++it )
    {
-      if( makesObsolete(facet, vertex_map_[it]) )
+      if( isMakingObsolete(facet, vertex_map_[it]) )
       {
          result = it;
          break;
       }
    }
+
    return result;
 }
 
-/** initialize the polyhedron with the first solution */
-void Skeleton::init(
-   const std::vector<SCIP_Real>*     cost_vector,                /**< cost vector of first solution */ 
-   std::vector< const std::vector<SCIP_Real>* >*   cost_rays     /**< list of known unbounded cost rays */
-   )
-{
-   std::vector<SCIP_Real>*    first_nondom_facet = new std::vector<SCIP_Real>(*cost_vector);
-   first_nondom_facet->push_back(-1.);
-
-   int                        nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
-   WeightSpaceVertex*         vertex;
-   lemon::ListGraph::Node     node;
-
-   std::vector<SCIP_Real>*    facet;
-   std::vector<SCIP_Real>*    weight;
-
-   /* create initial facets */
-   for( int i = 0; i < nobjs; ++i )
-   {
-      facet = new std::vector<SCIP_Real>(nobjs + 1, 0.);
-      (*facet)[i] = 1.;
-      facets_.push_back(facet);
-   }
-
-   std::vector< const std::vector<SCIP_Real>* > defining_facets(facets_);
-
-   facets_.push_back(first_nondom_facet);
-
-   new_vertices_ = new std::vector<WeightSpaceVertex*>();
-
-   /* create a node and vertex for every corner of the weight space and a complete graph between them */
-   for( int i = 0; i < nobjs; i++ )
-   {
-      weight = new std::vector<SCIP_Real>(nobjs, 0.);
-      (*weight)[i] = 1.;
-      defining_facets[i] = first_nondom_facet;
-      vertex = new WeightSpaceVertex(defining_facets, weight, (*first_nondom_facet)[i]);
-      defining_facets[i] = facets_[i];
-      node = addNode(vertex);
-
-      for( std::vector<WeightSpaceVertex*>::iterator it = new_vertices_->begin();
-           it != new_vertices_->end();
-           ++it )
-      {
-         graph_.addEdge(node, (**it).getNode());
-      }
-
-      new_vertices_->push_back(vertex);
-      vertices_.push_back(vertex);
-   }
-
-   delete new_vertices_;
-
-   /* if we have unbounded rays to add */
-   if( cost_rays != NULL )
-   {
-      /* variables for caching update statistics */
-      int n_new_nodes_tmp = n_new_nodes_;
-      int n_proc_nodes_tmp = n_proc_nodes_; 
-
-      /* add the infinite rays */
-      for( std::vector< const std::vector<SCIP_Real>* >::iterator 
-              it = cost_rays->begin();
-           it != cost_rays->end();
-           ++it )
-      {
-         addPrimalRayThorough(*it);
-         n_new_nodes_tmp += n_new_nodes_;
-         n_proc_nodes_tmp += n_proc_nodes_;
-      }
-
-      n_new_nodes_ = n_new_nodes_tmp;
-      n_proc_nodes_ = n_proc_nodes_tmp;
-   }
-
-   assert(graphIsValid());
-}
-
 /** wether the new facet makes a given point obsolete */
-bool Skeleton::makesObsolete(
+bool Skeleton::isMakingObsolete(
    const std::vector<SCIP_Real>*        facet,              /**< facet coefficient vector */
    const WeightSpaceVertex*             vertex,             /**< vertex that might be obsolete */ 
    bool                                 strict              /**< no tolerance for slight obsolecity */
@@ -273,29 +318,28 @@ void Skeleton::addFacet(
    const std::vector<SCIP_Real>*        facet        /**< new nondominated cost vector */
    )
 {
+   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
+
    lemon::ListGraph::Node     obs_node;
 
-   if( lemon::ListGraph::NodeIt(graph_) == lemon::INVALID )
-   {
-      /* skeleton is not yet initialized */
-      n_new_nodes_ = 0;
-      init(facet);
-      n_proc_nodes_ = 0;
-   }
-
-   new_facet_        = facet;
+   new_facet_ = facet;
    facets_.push_back(facet);
 
-   unscanned_nodes_  = new std::queue<lemon::ListGraph::Node>();
-   obsolete_nodes_   = new std::set<lemon::ListGraph::Node>();
-   cut_edges_        = new std::vector<lemon::ListGraph::Edge>();
-
+   /* update some stats */
    n_proc_nodes_ = 0;
    n_new_nodes_  = 0;
-
-   obsolete_nodes_->insert(last_returned_node_);
-   unscanned_nodes_->push(last_returned_node_);
    untested_nodes_.erase(last_returned_node_);
+
+   /* nodes made obsolete by new facet */
+   obsolete_nodes_   = new std::set<lemon::ListGraph::Node>();
+   obsolete_nodes_->insert(last_returned_node_);
+
+   /* obsolete nodes whose incident edges have not yet been scanned */
+   unscanned_nodes_  = new std::queue<lemon::ListGraph::Node>();
+   unscanned_nodes_->push(last_returned_node_);
+
+   /* edges connecting obsolete and non-obsolete nodes */
+   cut_edges_        = new std::vector<lemon::ListGraph::Edge>();
 
    /* scan all obsolete nodes */
    while( !unscanned_nodes_->empty() )
@@ -306,21 +350,13 @@ void Skeleton::addFacet(
       ++n_proc_nodes_;
    }
 
-   createNewVertices();
-   createNewEdges();
+   /* apply changes */
+   updateGraph(); 
 
-   /* delete obsolete vertices */
-   for( std::set<lemon::ListGraph::Node>::iterator it = obsolete_nodes_->begin();
-        it != obsolete_nodes_->end();
-        ++it )
-   {
-      graph_.erase(*it);
-   }
-
-   delete new_vertices_;
    delete cut_edges_;
-   delete obsolete_nodes_;
    delete unscanned_nodes_;
+   delete obsolete_nodes_;
+
 
    assert(graphIsValid());
 }
@@ -342,7 +378,7 @@ void Skeleton::scanNode(
       if( obsolete_nodes_->find(neighbour) == obsolete_nodes_->end() )
       {
          /* neighbour is not yet marked as obsolete */
-         if( makesObsolete(new_facet_, adjacent_vertex, true) )
+         if( isMakingObsolete(new_facet_, adjacent_vertex, true) )
          {
             /* neighbour is obsolete, add it to the queue */
             obsolete_nodes_->insert(neighbour);
@@ -358,18 +394,35 @@ void Skeleton::scanNode(
    }
 }
 
+/** apply changes calculated by add facet */
+void Skeleton::updateGraph()
+{
+   new_vertices_     = new std::vector<WeightSpaceVertex*>();
+
+   createNewVertices();
+
+   createNewEdges();
+
+   for( std::set<lemon::ListGraph::Node>::iterator it = obsolete_nodes_->begin();
+        it != obsolete_nodes_->end();
+        ++it )
+   {
+      graph_.erase(*it);
+   }
+
+   delete new_vertices_;
+}
+
 /** calculate new vertices from obsolete vertices and add them to the graph */
 void Skeleton::createNewVertices()
 {
    WeightSpaceVertex*    obsolete_vertex;
 
-   new_vertices_     = new std::vector<WeightSpaceVertex*>();
-
    for( std::vector<lemon::ListGraph::Edge>::iterator it = cut_edges_->begin();
         it != cut_edges_->end();
         ++it )
    {
-      makeIntermediaryPoint(*it);
+      makeIntermediateVertex(*it);
    }
 
    for( std::set<lemon::ListGraph::Node>::iterator it = obsolete_nodes_->begin();
@@ -402,7 +455,7 @@ void Skeleton::createNewEdges()
 }
 
 /** creates a new node between an obsolete and a non obsolete node */
-void Skeleton::makeIntermediaryPoint( 
+void Skeleton::makeIntermediateVertex( 
    lemon::ListGraph::Edge               cut_edge            /**< an edge between an obsolete and a non-obsolete node */
    )
 {
@@ -428,16 +481,17 @@ void Skeleton::makeIntermediaryPoint(
    obsolete_vertex = vertex_map_[obsolete_node];
    adjacent_vertex = vertex_map_[adjacent_node];
 
+   /* create vertex */
    new_vertex = new WeightSpaceVertex(
       obsolete_vertex,
       adjacent_vertex,
       new_facet_);
    vertices_.push_back(new_vertex);
-   new_node = addNode(new_vertex);
-   graph_.addEdge(new_node, adjacent_node);
    new_vertices_->push_back(new_vertex);
 
-   assert( !makesObsolete(new_facet_, new_vertex, false) );
+   /* update graph */
+   new_node = addNode(new_vertex);
+   graph_.addEdge(new_node, adjacent_node);
 }
 
 /** special method dealing with obsolete nodes that are also corners of the weight space */
@@ -462,9 +516,8 @@ lemon::ListGraph::Node Skeleton::addNode(
    bool                  mark_untested       /**< set true if weight should be tested at some point */
    )
 {
-   lemon::ListGraph::Node result;
+   lemon::ListGraph::Node result = graph_.addNode();
 
-   result = graph_.addNode();
    /* marry node and vertex */
    new_vertex->setNode(result);
    vertex_map_[result] = new_vertex;

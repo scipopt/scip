@@ -62,14 +62,14 @@ class Skeleton
    /** get the next untested weight */
    const std::vector<SCIP_Real> * nextWeight();
 
-   /** determines whether the solution is a new pareto optimum, if so, adds it to the polyhedron */
+   /** returns true and updates the polyhedron if cost vector is a new nondominated point */
    bool isExtremal(
-      const std::vector<SCIP_Real>*     cost_vector         /**< cost vector that is a candidate to be a nondominated point */
+      const std::vector<SCIP_Real>*     cost_vector         /**< potential new nondominated point */
       );
 
    /** like isExtremal but check all vertices for obsolecity (not just the last returned one)*/
    bool isExtremalThorough(
-      const std::vector<SCIP_Real>*     cost_vector         /**< cost vector that is a candidate to be a nondominated point */
+      const std::vector<SCIP_Real>*     cost_vector         /**< potential new nondominated point */
       );
 
    /** adds a weight space constraint after finding a primal ray with unbounded weighted objective */
@@ -82,6 +82,11 @@ class Skeleton
       const std::vector<SCIP_Real>*     cost_ray            /**< cost vector of the unbounded primal ray */
       );
 
+   /** add multiple rays with unbounded weighted objective */
+   void addPrimalRays(
+      const std::vector< const std::vector<SCIP_Real>* >*   cost_rays /**< rays to add */
+      );
+
    /** get number of vertices added in last isExtremal call*/
    int getNNewVertices() const;
 
@@ -89,18 +94,16 @@ class Skeleton
    int getNProcessedVertices() const;
 
  private:
-   SCIP*                                          scip_;              /**< SCIP solver */
-   std::set<lemon::ListGraph::Node>               untested_nodes_;    /**< nodes for which no weighted run has been
-								        * performed yet */
-   lemon::ListGraph                               graph_;             /**< the graph structure */
-   lemon::ListGraph::NodeMap<WeightSpaceVertex*>  vertex_map_;        /**< map from graph nodes to polygon vertex data */
-   lemon::ListGraph::Node                         last_returned_node_;         /**< last tested node */
-   std::vector<WeightSpaceVertex*>                vertices_;          /**< list of all generated vertices */
-   int                                            n_new_nodes_;       /**< number of vertices added in last 
-								       *   isExtremal call*/
-   int                                            n_proc_nodes_;      /**< number of vertices processed in last 
-								       *   isExtremal call*/
-   std::vector< const std::vector<SCIP_Real>* >   facets_;
+   SCIP*                                          scip_;                   /**< SCIP solver */
+   std::set<lemon::ListGraph::Node>               untested_nodes_;         /**< nodes not passed to solver yet */
+   lemon::ListGraph                               graph_;                  /**< the graph structure */
+   lemon::ListGraph::NodeMap<WeightSpaceVertex*>  vertex_map_;             /**< map from nodes to vertices */
+   lemon::ListGraph::Node                         last_returned_node_;     /**< last tested node */
+   std::vector<WeightSpaceVertex*>                vertices_;               /**< list of all generated vertices */
+   int                                            n_new_nodes_;            /**< number of vertices added in last call*/
+   int                                            n_proc_nodes_;           /**< number of vertices processed in 
+									    * last call to isExtremal() */
+   std::vector< const std::vector<SCIP_Real>* >   facets_;                 /**< all facets of the polyhedron */
 
    /* data structures for temporary use in update step*/
    const std::vector<SCIP_Real>*                  new_facet_;         /**< new facet of weight space polyhedron */
@@ -109,8 +112,18 @@ class Skeleton
    std::set<lemon::ListGraph::Node>*              obsolete_nodes_;    /**< nodes identified as obsolete */
    std::vector<lemon::ListGraph::Edge>*           cut_edges_;         /**< edges from obsolete to nonobsolete nodes */
 
+   /** create all facets defining the inital weight space polyhedron */
+   void createInitialFacets(
+      const std::vector<SCIP_Real>*     cost_vector         /**< cost vector of first solution */ 
+      );
+
+   /** create corner vertex of initial weight space polyhedron */
+   WeightSpaceVertex* createCorner(
+      int                               index               /**< index where weight is 1 */
+      );
+
    /** wether the new solution makes a given weight space vertex obsolete */
-   bool makesObsolete(
+   bool isMakingObsolete(
       const std::vector<SCIP_Real>*     cost_vector,        /**< cost vector of a solution */
       const WeightSpaceVertex*          vertex,             /**< vertex that might be obsolete */ 
       bool                              strict=false        /**< no tolerance for slight obsolecity */
@@ -118,7 +131,7 @@ class Skeleton
 
    /** returns node made obsolete by facet or INVALID */
    lemon::ListGraph::Node findObsoleteNode(
-       const std::vector<SCIP_Real>* facet
+      const std::vector<SCIP_Real>* facet
       );
 
    /** updates the polyhedron with the new facet */
@@ -141,7 +154,7 @@ class Skeleton
    void createNewEdges();
 
    /** creates a new node between an obsolete and a non obsolete node */
-   void makeIntermediaryPoint( 
+   void makeIntermediateVertex( 
       lemon::ListGraph::Edge            cut_edge            /**< an edge between an obsolete and a non-obsolete node */
       );
 
