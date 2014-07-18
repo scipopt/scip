@@ -4724,9 +4724,57 @@ SCIP_RETCODE addConflictFixedVars(
       /* check for fixed variables */
       if( SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, FALSE), SCIPvarGetUbAtIndex(vars[v], bdchgidx, FALSE)) )
       {
-	 /* add all bounds of fixed variables which lead to the boundchange of the given inference variable*/
+	 /* add all bounds of fixed variables which lead to the boundchange of the given inference variable */
          SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx) );
          SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** add reasoning variables to conflict candidate queue which led to the conflict */
+static
+SCIP_RETCODE addConflictReasonVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables reasoning the infeasibility */
+   int                   nvars,              /**< number of variables reasoning the infeasibility */
+   SCIP_VAR*             var,                /**< variable which was tried to fix/tighten, or NULL */
+   SCIP_Real             bound               /**< bound of variable which was tried to apply, or SCIP_INVALID */
+   )
+{
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(nvars > 0);
+
+   /* collect all variables for which the local bounds differ from their global bounds */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      /* check for local bound changes variables */
+      if( !SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetLbGlobal(vars[v])) )
+      {
+	 /* add conflict bound */
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], 0) );
+      }
+
+      if( !SCIPisEQ(scip, SCIPvarGetUbLocal(vars[v]), SCIPvarGetUbGlobal(vars[v])) )
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], 0) );
+      }
+   }
+
+   if( var != NULL )
+   {
+      if( bound < SCIPvarGetLbLocal(var) )
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, var, 0) );
+      }
+
+      if( bound > SCIPvarGetUbLocal(var) )
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, var, 0) );
       }
    }
 
@@ -5284,7 +5332,11 @@ SCIP_RETCODE tightenVarBoundsEasy(
 static
 SCIP_RETCODE analyzeConflictRangedRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< conflict detecting constraint */
+   SCIP_CONS*            cons,               /**< conflict detecting constraint */
+   SCIP_VAR**            vars,               /**< variables reasoning the infeasibility */
+   int                   nvars,              /**< number of variables reasoning the infeasibility */
+   SCIP_VAR*             var,                /**< variable which was tried to fix/tighten, or NULL */
+   SCIP_Real             bound               /**< bound of variable which was tried to apply, or SCIP_INVALID */
    )
 {
 #ifndef NDEBUG
@@ -5297,6 +5349,8 @@ SCIP_RETCODE analyzeConflictRangedRow(
    assert(consdata != NULL);
    assert(!SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs));
 #endif
+   assert(vars != NULL);
+   assert(nvars > 0);
 
    /* conflict analysis can only be applied in solving stage and if it is turned on */
    if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
@@ -5308,13 +5362,14 @@ SCIP_RETCODE analyzeConflictRangedRow(
    /* add the conflicting fixed variables of this ranged row constraint to conflict candidate queue */
    SCIP_CALL( addConflictFixedVars(scip, cons, NULL, NULL, -1) );
 
+   /* add reasoning variables to conflict candidate queue which led to the conflict */
+   SCIP_CALL( addConflictReasonVars(scip, vars, nvars, var, bound) );
+
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
 }
-
-#define PSEUDOINFINITY 1e15
 
 /* checks ranged rows for possible solutions, it may detect infeasibility, fixings due to having only one possible
  * solution, boundtightening if having only two possible solutions or adds constraints which propagate a subset of
@@ -5361,6 +5416,7 @@ SCIP_RETCODE rangedRowPropagation(
    SCIP_Bool maxactinfvarsinvalid;
    SCIP_Bool contvarexist;
    SCIP_Bool possiblegcd;
+   SCIP_Bool gcdisone;
    int ninfcheckvars;
    int nunfixedvars;
    int nfixedconsvars;
@@ -5391,15 +5447,13 @@ SCIP_RETCODE rangedRowPropagation(
    if( consdata->nvars < 3 )
       return SCIP_OKAY;
 
+   /* if we have to much continuoues variables stop here */
+   if( (consdata->sorted || consdata->binvarssorted) && SCIPvarGetType(consdata->vars[1]) == SCIP_VARTYPE_CONTINUOUS )
+      return SCIP_OKAY;
+
    /* do nothing on normal inequalities */
    if( SCIPisInfinity(scip, -consdata->lhs) ||  SCIPisInfinity(scip, consdata->rhs) )
       return SCIP_OKAY;
-
-   /* if we have two much continuoues variables stop here */
-   if( (consdata->sorted || consdata->binvarssorted) && SCIPvarGetType(consdata->vars[1]) == SCIP_VARTYPE_CONTINUOUS )
-   {
-      return SCIP_OKAY;
-   }
 
    /* get constraint handler data */
    conshdlr = SCIPconsGetHdlr(cons);
@@ -5422,6 +5476,10 @@ SCIP_RETCODE rangedRowPropagation(
       }
    }
 
+   /* do not work with huge fixed activities */
+   if( SCIPisHugeValue(scip, REALABS(fixedact)) )
+      return SCIP_OKAY;
+
    assert(!SCIPisInfinity(scip, -fixedact) && !SCIPisInfinity(scip, fixedact));
    lhs = consdata->lhs - fixedact;
    rhs = consdata->rhs - fixedact;
@@ -5432,6 +5490,7 @@ SCIP_RETCODE rangedRowPropagation(
    SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvals, nunfixedvars ));
 
    contvarexist = FALSE;
+   gcdisone = TRUE;
    possiblegcd = TRUE;
 
    /* we now partition all unfixed variables in two groups:
@@ -5444,7 +5503,9 @@ SCIP_RETCODE rangedRowPropagation(
     * coefficients as infcheckvals, the order of these variables should be the same as in the consdata object
     */
 
-   /* find first integral variables with integral coefficient greater than 1, thereby collecting all other unfixed variables */
+   /* find first integral variables with integral coefficient greater than 1, thereby collecting all other unfixed
+    * variables
+    */
    ninfcheckvars = 0;
    v = -1;
    pos = -1;
@@ -5453,12 +5514,13 @@ SCIP_RETCODE rangedRowPropagation(
       ++v;
 
       /* partition the variables, do not change the order of collection, because it might be used later on */
-      while( v < consdata->nvars && (!SCIPisIntegral(scip, consdata->vals[v]) || SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0)) )
+      while( v < consdata->nvars && (SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, consdata->vals[v]) || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0)) )
       {
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
          {
             contvarexist = contvarexist || (SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS);
-            possiblegcd = possiblegcd && (REALABS(consdata->vals[v]) > 1.5 && SCIPisIntegral(scip, consdata->vals[v]));
+            gcdisone = gcdisone && SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0);
+            possiblegcd = FALSE;
             infcheckvars[ninfcheckvars] = consdata->vars[v];
             infcheckvals[ninfcheckvars] = consdata->vals[v];
             ++ninfcheckvars;
@@ -5470,12 +5532,16 @@ SCIP_RETCODE rangedRowPropagation(
       }
    } while( v < consdata->nvars && SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) );
 
-   /* if all variables are not integral or their coefficient was not integral or was 1 or was already fixed either, we cannot do anything */
+   /* if the first group of variables is empty, we stop */
+   /* @todo try to propagate/split up a constraint of the form:
+    *       x_1 + ... + x_m + a_1*y_1 + ... + a_n*y_n = k + c,
+    *       with k \in Z, c \in (d,d + 1], d \in Z, (a_1*y_1 + ... + a_n*y_n) \in (c-1 + d,d + 1]
+    */
    if( v == consdata->nvars )
       goto TERMINATE;
 
    assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])));
-   assert(SCIPisIntegral(scip, consdata->vals[v]) && SCIPvarGetType(consdata->vars[v]) < SCIP_VARTYPE_CONTINUOUS && REALABS(consdata->vals[v]) > 1.5);
+   assert(SCIPisIntegral(scip, consdata->vals[v]) && SCIPvarGetType(consdata->vars[v]) != SCIP_VARTYPE_CONTINUOUS && REALABS(consdata->vals[v]) > 1.5);
 
    feastol = SCIPfeastol(scip);
 
@@ -5487,13 +5553,13 @@ SCIP_RETCODE rangedRowPropagation(
    for( ; v < consdata->nvars; ++v )
    {
       if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
-      {
          continue;
-      }
+
       if( !SCIPisIntegral(scip, consdata->vals[v]) || SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
       {
          contvarexist = contvarexist || (SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS);
-         possiblegcd = possiblegcd && (REALABS(consdata->vals[v]) > 1.5 && SCIPisIntegral(scip, consdata->vals[v]));
+         gcdisone = gcdisone && SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0);
+         possiblegcd = FALSE;
          infcheckvars[ninfcheckvars] = consdata->vars[v];
          infcheckvals[ninfcheckvars] = consdata->vals[v];
 
@@ -5504,7 +5570,11 @@ SCIP_RETCODE rangedRowPropagation(
       }
       else
       {
+         assert(REALABS(consdata->vals[v]) > 1.5);
+
          gcdtmp = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(consdata->vals[v]) + feastol));
+         assert(gcdtmp >= 1);
+
          if( gcdtmp == 1 )
          {
             infcheckvars[ninfcheckvars] = consdata->vars[v];
@@ -5571,33 +5641,37 @@ SCIP_RETCODE rangedRowPropagation(
       }
 
       /* better abort on to big values */
-      if( minactinfvars < -PSEUDOINFINITY )
+      if( SCIPisHugeValue(scip, -minactinfvars) )
 	 minactinfvarsinvalid = TRUE;
-      if( maxactinfvars > PSEUDOINFINITY )
+      if( SCIPisHugeValue(scip, maxactinfvars) )
 	 maxactinfvarsinvalid = TRUE;
 
       if( minactinfvarsinvalid || maxactinfvarsinvalid )
          goto TERMINATE;
    }
 
-   /* @todo maybe we took the wrong variables as infcheckvars we could try to switch all integer variables */
-   /* @todo if minactinfvarsinvalid or maxactinfvarsinvalid are true, try to exchange both partitions to maybe get valid activities */
+   /* @todo maybe we took the wrong variables as infcheckvars we could try to exchange integer variables */
+   /* @todo if minactinfvarsinvalid or maxactinfvarsinvalid are true, try to exchange both partitions to maybe get valid
+    *       activities */
    /* @todo calculate minactivity and maxactivity for all non-intcheckvars, and use this for better bounding,
     *       !!!note!!!
     *       that therefore the conflict variables in addConflictFixedVars() need to be extended by all variables which
     *       are not at their global bound
     */
 
-   /* check if between left hand side and right hand side exist a feasible point, if not the constraint lead to infeasibility */
+   /* check if between left hand side and right hand side exist a feasible point, if not the constraint leads to
+    * infeasibility */
    if( !maxactinfvarsinvalid && !minactinfvarsinvalid && !SCIPisIntegral(scip, (lhs - maxactinfvars) / gcd) &&
       SCIPisGT(scip, SCIPceil(scip, (lhs - maxactinfvars) / gcd) * gcd, rhs - minactinfvars) )
    {
-      /*SCIPdebugMessage("minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %lld, ninfcheckvars = %d\n", minactinfvarsinvalid, minactinfvars, maxactinfvarsinvalid, maxactinfvars, gcd, ninfcheckvars);*/
+      printf/*SCIPdebugMessage*/("minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %lld, ninfcheckvars = %d\n", minactinfvarsinvalid, minactinfvars, maxactinfvarsinvalid, maxactinfvars, gcd, ninfcheckvars);
       printf/*SCIPdebugMessage*/("1: constraint <%s> lead to infeasibility", SCIPconsGetName(cons));
       /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, cons, NULL) );// );
+      SCIPinfoMessage(scip, NULL, ";\n");
 
       /* start conflict analysis */
-      SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+      /* @todo improve conflict analysis by adding relaxed bounds */
+      SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, NULL, SCIP_INVALID) );
 
       *cutoff = TRUE;
    }
@@ -5612,36 +5686,21 @@ SCIP_RETCODE rangedRowPropagation(
       {
          v = ninfcheckvars - 1;
          gcdinfvars = (SCIP_Longint)(REALABS(infcheckvals[v]) + feastol);
-         assert(gcd >= 2);
+         assert(gcdinfvars >= 2);
 
          for( ; v >= 0 && gcdinfvars >= 2; --v )
          {
             gcdinfvars = SCIPcalcGreComDiv(gcdinfvars, (SCIP_Longint)(REALABS(infcheckvals[v]) + feastol));
          }
       }
-      else
-      {
-	 SCIP_Bool gcdisone;
-
-	 gcdisone = TRUE;
-
-         v = ninfcheckvars - 1;
-         for( ; v >= 0; --v )
-	    if( !SCIPisIntegral(scip, infcheckvals[v]) )
-	    {
-	       gcdisone = FALSE;
-	       break;
-	    }
-
-	 if( gcdisone )
-	    gcdinfvars = 1;
-      }
+      else if( gcdisone )
+         gcdinfvars = 1;
 
 #if 0
       printf("gcdinfvars =%lld, possiblegcd = %u, ninfcheckvars = %d\n", gcdinfvars, possiblegcd, ninfcheckvars);
 #endif
 
-      /* try to calculate all solutions for this ranged row, if all variables are of integral type with integral coefficients */
+      /* compute solutions for this ranged row, if all variables are of integral type with integral coefficients */
       if( gcdinfvars >= 1 )
       {
          SCIP_Real value;
@@ -5703,18 +5762,21 @@ SCIP_RETCODE rangedRowPropagation(
 	 if( nsols < 2 || ninfcheckvars == 1 || ninfcheckvars == nunfixedvars - 1 )
 	 {
 	    /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, cons, NULL) );// );
+            SCIPinfoMessage(scip, NULL, ";\n");
 	 }
 #endif
 
          /* no possible solution found */
          if( nsols == 0 )
          {
-	    printf("gcdinfvars = %lld, gcd = %lld, ninfcheckvars = %d, correctedlhs = %g, correctedrhs = %g\n", gcdinfvars, gcd, ninfcheckvars, lhs, rhs);
+	    printf/*SCIPdebugMessage*/("gcdinfvars = %lld, gcd = %lld, ninfcheckvars = %d, correctedlhs = %g, correctedrhs = %g\n", gcdinfvars, gcd, ninfcheckvars, lhs, rhs);
             printf/*SCIPdebugMessage*/("2: constraint <%s> lead to infeasibility\n", SCIPconsGetName(cons));
             /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, cons, NULL) );// );
+            SCIPinfoMessage(scip, NULL, ";\n");
 
 	    /* start conflict analysis */
-	    SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+            /* @todo improve conflict analysis by adding relaxed bounds */
+	    SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, NULL, SCIP_INVALID) );
 
             *cutoff = TRUE;
          }
@@ -5741,7 +5803,8 @@ SCIP_RETCODE rangedRowPropagation(
 	       if( *cutoff )
 	       {
 		  /* start conflict analysis */
-		  SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                  /* @todo improve conflict analysis by adding relaxed bounds */
+		  SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, NULL, SCIP_INVALID) );
 	       }
 
                if( fixed )
@@ -5749,7 +5812,7 @@ SCIP_RETCODE rangedRowPropagation(
             }
             else
             {
-               /* check if we have only one not infcheckvars, if so we will fix this variable */
+               /* check for exactly one unfixed variable which is not part of the infcheckvars */
                if( ninfcheckvars == nunfixedvars - 1 )
                {
                   SCIP_Real bound;
@@ -5769,6 +5832,22 @@ SCIP_RETCODE rangedRowPropagation(
 		     {
 			if( consdata->vars[v] != infcheckvars[w] )
 			{
+#ifndef NDEBUG
+                           int v2 = v + 1;
+                           int w2 = w;
+
+                           assert((nfixedconsvars == 0) ? (consdata->nvars - v - 1 == ninfcheckvars - w) : TRUE);
+
+                           for( ; v2 < consdata->nvars; ++v2 )
+                           {
+                              if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v2]), SCIPvarGetUbLocal(consdata->vars[v2])) )
+                                 continue;
+
+                              assert(consdata->vars[v2] == infcheckvars[w2]);
+                              ++w2;
+                           }
+                           assert(w2 == ninfcheckvars);
+#endif
 			   assert(SCIPisEQ(scip, (SCIP_Real)gcd, REALABS(consdata->vals[v])));
 
 			   foundvar = TRUE;
@@ -5794,7 +5873,8 @@ SCIP_RETCODE rangedRowPropagation(
 			   if( *cutoff )
 			   {
 			      /* start conflict analysis */
-			      SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                              /* @todo improve conflict analysis by adding relaxed bounds */
+			      SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], bound) );
 			   }
 
 			   if( fixed )
@@ -5834,7 +5914,8 @@ SCIP_RETCODE rangedRowPropagation(
 		     if( *cutoff )
 		     {
 			/* start conflict analysis */
-			SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                        /* @todo improve conflict analysis by adding relaxed bounds */
+                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], bound) );
 		     }
 
                      if( fixed )
@@ -5843,6 +5924,10 @@ SCIP_RETCODE rangedRowPropagation(
                }
                else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
                {
+                  /* @todo add bool flag to constraint data, that a constraint was created and update it when it will be
+                   *       changed
+                   */
+
                   /* aggregation possible if we have two variables, but this will be done later on */
                   SCIP_CONS* newcons;
                   char name[SCIP_MAXSTRLEN];
@@ -5857,8 +5942,10 @@ SCIP_RETCODE rangedRowPropagation(
 			TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE) );
                   SCIP_CALL( SCIPaddConsLocal(scip, newcons, NULL) );
 		  /*******************************/
-		     SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-		     SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+                  SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+                  SCIPinfoMessage(scip, NULL, ";\n");
+                  SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+                  SCIPinfoMessage(scip, NULL, ";\n");
 
                   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
                   SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -5908,7 +5995,8 @@ SCIP_RETCODE rangedRowPropagation(
 		  if( *cutoff )
 		  {
 		     /* start conflict analysis */
-		     SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                     /* @todo improve conflict analysis by adding relaxed bounds */
+		     SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, NULL, SCIP_INVALID) );
 		  }
 
 		  if( tightened )
@@ -5930,7 +6018,8 @@ SCIP_RETCODE rangedRowPropagation(
 		  if( *cutoff )
 		  {
 		     /* start conflict analysis */
-		     SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                     /* @todo improve conflict analysis by adding relaxed bounds */
+		     SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, NULL, SCIP_INVALID) );
 		  }
 
 		  if( tightened )
@@ -5959,6 +6048,23 @@ SCIP_RETCODE rangedRowPropagation(
 		  {
 		     if( consdata->vars[v] != infcheckvars[w] )
 		     {
+#ifndef NDEBUG
+                        int v2 = v + 1;
+                        int w2 = w;
+
+                        assert((nfixedconsvars == 0) ? (consdata->nvars - v - 1 == ninfcheckvars - w) : TRUE);
+
+                        for( ; v2 < consdata->nvars; ++v2 )
+                        {
+                           if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v2]), SCIPvarGetUbLocal(consdata->vars[v2])) )
+                              continue;
+
+                           assert(consdata->vars[v2] == infcheckvars[w2]);
+                           ++w2;
+                        }
+                        assert(w2 == ninfcheckvars);
+#endif
+
 			assert(SCIPisEQ(scip, (SCIP_Real)gcd, REALABS(consdata->vals[v])));
 			foundvar = TRUE;
 
@@ -5988,11 +6094,9 @@ SCIP_RETCODE rangedRowPropagation(
 #endif
 			   if( *cutoff )
 			   {
-			      if( strcmp(SCIPvarGetName(consdata->vars[v]), "t_x5235") == 0 )
-				 assert(0);
-
 			      /* start conflict analysis */
-			      SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                              /* @todo improve conflict analysis by adding relaxed bounds */
+			      SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], newlb) );
 			   }
 
 			   if( tightened )
@@ -6014,7 +6118,8 @@ SCIP_RETCODE rangedRowPropagation(
 			   if( *cutoff )
 			   {
 			      /* start conflict analysis */
-			      SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                              /* @todo improve conflict analysis by adding relaxed bounds */
+			      SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], newub) );
 			   }
 
 			   if( tightened )
@@ -6061,7 +6166,8 @@ SCIP_RETCODE rangedRowPropagation(
 		     if( *cutoff )
 		     {
 			/* start conflict analysis */
-			SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                        /* @todo improve conflict analysis by adding relaxed bounds */
+                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], newlb) );
 		     }
 
 		     if( tightened )
@@ -6083,7 +6189,8 @@ SCIP_RETCODE rangedRowPropagation(
 		     if( *cutoff )
 		     {
 			/* start conflict analysis */
-			SCIP_CALL( analyzeConflictRangedRow(scip, cons) );
+                        /* @todo improve conflict analysis by adding relaxed bounds */
+                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], newub) );
 		     }
 
 		     if( tightened )
@@ -6124,8 +6231,10 @@ SCIP_RETCODE rangedRowPropagation(
 			TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE) );
 		  SCIP_CALL( SCIPaddConsLocal(scip, newcons, NULL) );
 		  /*******************************/
-		     SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-		     SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+                  SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+                  SCIPinfoMessage(scip, NULL, ";\n");
+                  SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+                  SCIPinfoMessage(scip, NULL, ";\n");
 
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
 		  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
