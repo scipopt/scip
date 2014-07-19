@@ -12485,11 +12485,11 @@ void SCIPvarUpdateBestRootSol(
    assert(var->scip == set->scip);
 
    /* if reduced cost are zero nothing to update */
-   if( SCIPsetIsFeasZero(set, rootredcost) )
+   if( SCIPsetIsDualfeasZero(set, rootredcost) )
       return;
 
    /* check if we have already a best combination stored */
-   if( !SCIPsetIsFeasZero(set, var->bestrootredcost) )
+   if( !SCIPsetIsDualfeasZero(set, var->bestrootredcost) )
    {
       SCIP_Real currcutoffbound;
       SCIP_Real cutoffbound;
@@ -12633,10 +12633,10 @@ SCIP_Real SCIPvarGetRedcost(
          SCIP_Real redcost = SCIPcolGetRedcost(col, stat, lp);
 
          assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
-               (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsFeasNegative(set, redcost) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsDualfeasNegative(set, redcost) ||
                   SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
          assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
-               (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsFeasPositive(set, redcost) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsDualfeasPositive(set, redcost) ||
                   SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
 
          if( (varfixing && ((lpissolbasic && basestat == SCIP_BASESTAT_LOWER) ||
@@ -12701,7 +12701,7 @@ SCIP_Real SCIPvarGetImplRedcost(
       else
          redcost = -SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
 
-      if( !SCIPsetIsFeasZero(set, redcost) )
+      if( !SCIPsetIsDualfeasZero(set, redcost) )
          implredcost += redcost;
    }
 

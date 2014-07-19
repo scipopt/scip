@@ -5336,8 +5336,8 @@ SCIP_RETCODE undoBdchgsDualsol(
          varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
          /* check dual feasibility */
-         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsFeasPositive(set, varredcosts[v]))
-            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsFeasNegative(set, varredcosts[v])) )
+         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
+            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
          {
             SCIPdebugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
                varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);

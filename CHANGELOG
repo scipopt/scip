@@ -33,6 +33,7 @@ fixed bugs:
   optimization process was restarted later
 - fixed bug with reading '>=1' indicator constraints in LP-files
 - fixed bug changing the variable type of an negated variable
+- use dual feasibility tolerance for comparisons regarding reduced costs
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
