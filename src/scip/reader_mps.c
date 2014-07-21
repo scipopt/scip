@@ -518,7 +518,7 @@ SCIP_Bool mpsinputReadLine(
              * should be ?
              */
             SCIP_Bool number;
-            
+
             number = isdigit((unsigned char)mpsi->buf[24]) || isdigit((unsigned char)mpsi->buf[25])
                || isdigit((unsigned char)mpsi->buf[26]) || isdigit((unsigned char)mpsi->buf[27])
                || isdigit((unsigned char)mpsi->buf[28]) || isdigit((unsigned char)mpsi->buf[29])
@@ -763,7 +763,7 @@ SCIP_RETCODE readObjname(
    assert(mpsi != NULL);
 
    SCIPdebugMessage("read objective name\n");
-   
+
    /* This has to be the Line with the name. */
    if( !mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL )
    {
@@ -2014,9 +2014,9 @@ SCIP_RETCODE readQCMatrix(
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   
+
    SCIPdebugMessage("read QCMATRIX section for row <%s>\n", mpsinputField1(mpsi));
-   
+
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
    {
@@ -2037,7 +2037,7 @@ SCIP_RETCODE readQCMatrix(
       SCIP_VAR* var1;
       SCIP_VAR* var2;
       SCIP_Real coef;
-      
+
       /* check if next section is found */
       if( mpsinputField0(mpsi) != NULL )
       {
@@ -2179,7 +2179,7 @@ SCIP_RETCODE readIndicators(
    char name[MPS_MAX_NAMELEN] = { '\0' };
 
    SCIPdebugMessage("read INDICATORS constraints\n");
-   
+
    /* standard settings for indicator constraints: */
    initial = mpsi->initialconss;
    separate = TRUE;
@@ -2715,7 +2715,7 @@ void freeMatrix(
    SCIPfreeBufferArray(scip, &matrix->rows);
    SCIPfreeBufferArray(scip, &matrix->columns);
    SCIPfreeBufferArray(scip, &matrix->values);
-   
+
    SCIPfreeBuffer(scip, &matrix);
 }
 
@@ -2745,7 +2745,7 @@ SCIP_RETCODE getLinearCoeffs(
    assert( nvars == 0 || vars != NULL );
    assert( !SCIPisInfinity(scip, *rhs) );
    assert( matrix != NULL );
-   
+
    /* if the variables array contains no variables, then return without
     * doing any thing; The MPS format and LP format do not forbid this
     * situation */
@@ -2755,7 +2755,7 @@ SCIP_RETCODE getLinearCoeffs(
    /* duplicate variable and value array */
    nactivevars = nvars;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   
+
    if( vals != NULL )
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
@@ -2772,12 +2772,12 @@ SCIP_RETCODE getLinearCoeffs(
    if( transformed )
    {
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize, TRUE) );
-         
+
       if( requiredsize > nactivevars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevals, requiredsize) );
-            
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize, TRUE) );
          assert( requiredsize <= nactivevars );
       }
@@ -2793,7 +2793,7 @@ SCIP_RETCODE getLinearCoeffs(
    /* copy the (matrix) row into the sparse matrix */
    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, nactivevars) );
    assert( matrix->nentries + nactivevars < matrix->sentries );
-   
+
    for( v = 0; v < nactivevars; ++v )
    {
       matrix->values[matrix->nentries] = activevals[v];
@@ -2801,7 +2801,7 @@ SCIP_RETCODE getLinearCoeffs(
       matrix->rows[matrix->nentries] = consname;
       matrix->nentries++;
    }
-   
+
    /* adjust right hand side */
    (*rhs) -= activeconstant;
 
@@ -2921,7 +2921,7 @@ SCIP_RETCODE checkVarnames(
 
       /* insert variable with variable name into hash map */
       assert( !SCIPhashmapExists(*varnameHashmap, var) );
-      SCIP_CALL( SCIPhashmapInsert(*varnameHashmap, var, (void*) (size_t) varname) );
+      SCIP_CALL( SCIPhashmapInsert(*varnameHashmap, var, (void*) varname) );
 
       (*varnames)[v] = varname;
    }
@@ -3076,7 +3076,7 @@ void printColumnSection(
 
       /* get variable name */
       assert ( SCIPhashmapExists(varnameHashmap, var) );
-      varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
+      varname = (const char*) SCIPhashmapGetImage(varnameHashmap, var);
 
       /* output all entries of the same variable */
       do
@@ -3525,7 +3525,7 @@ SCIP_DECL_READERREAD(readerReadMps)
       return retcode;
 
    SCIP_CALL( retcode );
-      
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
@@ -4262,7 +4262,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* insert variable with variable name into hash map */
          varnames[nvars + c] = namestr;
          assert( !SCIPhashmapExists(varnameHashmap, var) );
-         SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
+         SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) namestr) );
 
          /* output row type (it is an equation) */
          SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) ); /* note that namestr above is freed via varnames */
@@ -4322,7 +4322,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
 	    /* insert variable with variable name into hash map */
 	    assert(!SCIPhashmapExists(varnameHashmap, var));
-	    SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
+	    SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) namestr) );
 
 	    /* add the fixed variables to the sparse matrix, needed for columns section */
 	    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
@@ -4379,7 +4379,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          {
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             printStart(scip, file, "", varname, (int) maxnamelen);
 
@@ -4408,7 +4408,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          {
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             printStart(scip, file, "", varname, (int) maxnamelen);
 
@@ -4456,7 +4456,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, quadvarterms[v].var) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, quadvarterms[v].var);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, quadvarterms[v].var);
 
             /* get coefficient as string */
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", quadvarterms[v].sqrcoef);
@@ -4476,11 +4476,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             /* get name of first variable */
             assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var1) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var1);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var1);
 
             /* get name of second variable */
             assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var2) );
-            varname2 = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var2);
+            varname2 = (const char*) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var2);
 
             /* get coefficient as string */
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.5*bilinterms[v].coef);
@@ -4527,7 +4527,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             /* get coefficient^2 as string */
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", coefs[v]*coefs[v]);
@@ -4543,7 +4543,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* get variable name */
          var = SCIPgetRhsVarSOC(scip, cons);
          assert ( SCIPhashmapExists(varnameHashmap, var) );
-         varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
+         varname = (const char*) SCIPhashmapGetImage(varnameHashmap, var);
 
          /* get -coefficient^2 as string */
          (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", -SCIPgetRhsCoefSOC(scip, cons)*SCIPgetRhsCoefSOC(scip, cons));
@@ -4583,13 +4583,13 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 0);
             assert( SCIPvarGetNegatedVar(binvar) != NULL );
             assert( SCIPhashmapExists(varnameHashmap, SCIPvarGetNegatedVar(binvar)) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, SCIPvarGetNegatedVar(binvar));
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, SCIPvarGetNegatedVar(binvar));
          }
          else
          {
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 1);
             assert ( SCIPhashmapExists(varnameHashmap, binvar) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, binvar);
+            varname = (const char*) SCIPhashmapGetImage(varnameHashmap, binvar);
          }
 
          /* write records */

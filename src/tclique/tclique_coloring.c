@@ -51,11 +51,11 @@ int getMaxSatdegIndex(
    int maxsatdeg;
    int maxsatdegindex;
    int i;
-	
+
    maxweight = -1;
    maxsatdeg = -1;
    maxsatdegindex = -1;
-   
+
    assert(gsd != NULL);
    assert(iscolored != NULL);
 
@@ -97,7 +97,7 @@ int getMaxWeightIndex(
    TCLIQUE_WEIGHT maxweight;
    int maxweightindex;
    int i;
-   
+
    assert(getnnodes != NULL);
    assert(getweights != NULL);
    assert(tcliquegraph != NULL);
@@ -144,7 +144,7 @@ void updateNeighbor(
    head.next = pgsd->lcitv;
    apciv = &head;
    pciv = apciv->next;
-   
+
    /* construct the union of the two intervals */
    while( (pnc != NULL) && (pciv != NULL) )
    {
@@ -155,7 +155,7 @@ void updateNeighbor(
          nciv->next = pciv;
          apciv->next = nciv;
          apciv = nciv;
-         
+
          pnc = pnc->next;	
       }
       else if( pnc->itv.inf <= pciv->itv.sup )
@@ -176,10 +176,10 @@ void updateNeighbor(
       ALLOC_ABORT( BMSallocChunkMemory(mem, &nciv) );
       nciv->itv = pnc->itv;
       nciv->next = NULL;
-      
+
       apciv->next = nciv;
       apciv = nciv;
-      
+
       pnc = pnc->next;
    }
 
@@ -200,7 +200,7 @@ void updateNeighbor(
          if( apciv->itv.sup < pciv->itv.sup )
             apciv->itv.sup = pciv->itv.sup;
          apciv->next = pciv->next;
-       
+
          /* free data structure for created colorinterval */
          tmp = pciv->next; 
          BMSfreeChunkMemory(mem, &pciv); 
@@ -208,7 +208,7 @@ void updateNeighbor(
       }
    }
    pgsd->satdeg += apciv->itv.sup - apciv->itv.inf + 1;
-   
+
    /* updates the pointer to the first element of the list */		
    pgsd->lcitv = head.next;
 }
@@ -319,16 +319,16 @@ TCLIQUE_WEIGHT tcliqueColoring(
 
          debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
             i, V[i], weights[V[i]], gsd[i].satdeg); 
-               
+
          /* sets satdeg for adjacent node */
          gsd[i].satdeg = range;
-               
+
          /* creates new color interval [1,range] */
          ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
          colorinterval->next = NULL;
          colorinterval->itv.inf = 1;
          colorinterval->itv.sup = range;
-               
+
          /* colorinterval is the first added element of the list of neighborcolors of the adjacent node  */ 
          gsd[i].lcitv = colorinterval;
 
@@ -347,7 +347,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
    currentclique[0] = node; 
    ncurrentclique = 1; 
    weightcurrentclique = range; 
-      
+
    /* color all other nodes of V */
    for( i = 0 ; i < nV-1; i++ )
    {
@@ -374,7 +374,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
       /* update maximum saturation degree: maxsatdeg = max { satdeg(v_i) + weight(v_i) | v_i in V } */
       if( maxsatdegree < apbound[nodeVindex] )
          maxsatdegree = apbound[nodeVindex];
-      
+
       /* update clique */
       if( gsd[nodeVindex].satdeg == 0 )
       {
@@ -438,7 +438,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
          colorinterval->next = NULL;
          colorinterval->itv.inf = 1;
          colorinterval->itv.sup = range;
-         
+
          /* add the new colorinterval [1, range] to the list of chosen colorintervals for node */
          pnc->next = colorinterval;
          pnc = colorinterval;
@@ -447,11 +447,11 @@ TCLIQUE_WEIGHT tcliqueColoring(
       {
          int tocolor;
          int dif;
-         
+
          /* current node has colored neighbors */
          tocolor = range;
          lcitv = gsd[nodeVindex].lcitv;
-         
+
          /* check, if first neighbor color interval [inf, sup] has inf > 1 */
          if( lcitv->itv.inf != 1 )
          {
@@ -459,7 +459,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
             dif =  lcitv->itv.inf - 1 ;
             if( dif > tocolor )
                dif = tocolor;
-            
+
             ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
             colorinterval->next = NULL;
             colorinterval->itv.inf = 1;
@@ -476,7 +476,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
          while( tocolor > 0 )
          {	
             dif = tocolor;	
-            
+
             ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
             colorinterval->next = NULL;
             colorinterval->itv.inf = lcitv->itv.sup+1;			
@@ -485,19 +485,19 @@ TCLIQUE_WEIGHT tcliqueColoring(
                int min;
 
                min = lcitv->next->itv.inf - lcitv->itv.sup - 1;
-          
+
                if( dif > min )  
                   dif = min;	
                lcitv = lcitv->next;
             }
             colorinterval->itv.sup = colorinterval->itv.inf + dif - 1;
-            
+
             tocolor -= dif;
             pnc->next = colorinterval;
             pnc = colorinterval;
          }	
       }
-      
+
       debugMessage("-> updated neighbors:\n"); 
 
       /* update saturation degree and neighbor colorintervals of all neighbors of node */
@@ -545,7 +545,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
    if( weightcurrentclique > *weightclique )
    {
       int* tmp;
-    
+
       tmp = workclique;
       *weightclique = weightcurrentclique;
       *nclique = ncurrentclique;

@@ -492,7 +492,7 @@ SCIP_RETCODE execRelpscost(
          /* combine the four score values */
          score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
             inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
-         
+
          if( usesb )
          {
             int j;
@@ -714,7 +714,7 @@ SCIP_RETCODE execRelpscost(
          if( allcolsinlp && !exactsolve && downvalid && upvalid )
          {
             SCIP_Real minbound;
-            
+
             minbound = MIN(down, up);
             provedbound = MAX(provedbound, minbound);
             assert((downinf && upinf) || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
@@ -757,7 +757,7 @@ SCIP_RETCODE execRelpscost(
          {
             assert(allcolsinlp || propagate);
             assert(!exactsolve);
-            
+
             /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by hand,
              * but better wait for the next propagation round to fix them as an inference, and potentially produce a
              * cutoff that can be analyzed
@@ -865,35 +865,44 @@ SCIP_RETCODE execRelpscost(
          }
 
          SCIP_CALL( SCIPendStrongbranch(scip) );
+
+         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
+         {
+            assert(SCIPhasCurrentNodeLP(scip));
+            *result = SCIP_CUTOFF;
+         }
       }
 
-      /* get the score of the best uninitialized strong branching candidate */
-      if( i < ninitcands )
-         bestuninitsbscore = initcandscores[i];
-      else
-         bestuninitsbscore = -SCIPinfinity(scip);
+      if( *result != SCIP_CUTOFF )
+      {
+         /* get the score of the best uninitialized strong branching candidate */
+         if( i < ninitcands )
+            bestuninitsbscore = initcandscores[i];
+         else
+            bestuninitsbscore = -SCIPinfinity(scip);
 
-      /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
-       * compare it to the best initialized strong branching candidate
-       */
-      if( bestpsscore > bestuninitsbscore && SCIPisSumGT(scip, bestpsscore, bestsbscore) )
-      {
-         bestcand = bestpscand;
-         bestisstrongbranch = FALSE;
-      }
-      else if( bestsbcand >= 0 )
-      {
-         bestcand = bestsbcand;
-         bestisstrongbranch = TRUE;
-      }
-      else
-      {
-         /* no candidate was initialized, and the best score is the one of the first candidate in the initialization
-          * queue
+         /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
+          * compare it to the best initialized strong branching candidate
           */
-         assert(ninitcands >= 1);
-         bestcand = initcands[0];
-         bestisstrongbranch = FALSE;
+         if( bestpsscore > bestuninitsbscore && SCIPisSumGT(scip, bestpsscore, bestsbscore) )
+         {
+            bestcand = bestpscand;
+            bestisstrongbranch = FALSE;
+         }
+         else if( bestsbcand >= 0 )
+         {
+            bestcand = bestsbcand;
+            bestisstrongbranch = TRUE;
+         }
+         else
+         {
+            /* no candidate was initialized, and the best score is the one of the first candidate in the initialization
+             * queue
+             */
+            assert(ninitcands >= 1);
+            bestcand = initcands[0];
+            bestisstrongbranch = FALSE;
+         }
       }
 
       /* apply domain reductions */
@@ -951,7 +960,7 @@ SCIP_RETCODE execRelpscost(
          if( bestsbupvalid )
             provedup = MAX(provedbound, bestsbup);
       }
-      
+
       /* update the lower bounds in the children */
       if( allcolsinlp && !exactsolve )
       {
@@ -963,11 +972,13 @@ SCIP_RETCODE execRelpscost(
       SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
       SCIPdebugMessage(" -> up child's lowerbound  : %g\n", SCIPnodeGetLowerbound(upchild));
 
+      assert(SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_INFEASIBLE && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT);
+
       *result = SCIP_BRANCHED;
    }
    return SCIP_OKAY;
 }
-   
+
 
 /*
  * Callback methods
@@ -1013,14 +1024,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIP_Real* tmplpcandsfrac;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
-   
+
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
    SCIPdebugMessage("Execlp method of relpscost branching\n");
-   
+
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
@@ -1057,7 +1068,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 
    /* create relpscost branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   
+
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
@@ -1151,13 +1162,13 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
 
    assert(scip != NULL);
    assert(result != NULL);
-   
+
    /* find branching rule */
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
    assert(branchrule != NULL);
-   
+
    /* execute branching rule */
    SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, branchcands, branchcandssol, branchcandsfrac, nbranchcands, result) );
-   
+
    return SCIP_OKAY;
 }

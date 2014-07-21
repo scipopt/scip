@@ -480,7 +480,7 @@ SCIP_RETCODE createNewSols(
 
    assert(scip != NULL);
    assert(subscip != NULL);
-   
+
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -493,13 +493,13 @@ SCIP_RETCODE createNewSols(
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for( i = 0; i < nvars; i++ )
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-   
+
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-   
+
    nsubsols = SCIPgetNSols(subscip);
    subsols = SCIPgetSols(subscip);
    *success = FALSE;
-   
+
    for( i = 0; i < nsubsols && !(*success); ++i )
    {
       /* copy the solution */
@@ -512,7 +512,7 @@ SCIP_RETCODE createNewSols(
       /* try to add new solution to scip and free it immediately */
       SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
    }
-   
+
    SCIPfreeBufferArray(scip, &subvars);
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -845,7 +845,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
       }
    }
-   
+
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvars, maxflips) );
    SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvals, maxflips) );
@@ -863,7 +863,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    {
       SCIP_CALL( SCIPcreateSol(scip, &closestsol, heur) );
    }
-   
+
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
@@ -1038,7 +1038,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
 
       }
-      
+
       if( heurdata->usefp20 )
       {
          SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
@@ -1115,7 +1115,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       {
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       }
-      
+
       retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror, NULL);
       lpsolstat = SCIPgetLPSolstat(scip);
 
@@ -1342,7 +1342,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       primalBound = SCIPgetPrimalbound(scip);
       SCIPstatisticMessage("feasibility pump found: 0, objval: +inf, iterations: %d, primal bound: %f\n", nloops, primalBound);
    }
-   
+
 #endif /* SCIP_STATISTIC */
    return SCIP_OKAY;
 }

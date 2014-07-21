@@ -81,7 +81,7 @@ int SCIPvarCompareActiveAndNegated(
    SCIP_VAR*             var1,               /**< first problem variable */
    SCIP_VAR*             var2                /**< second problem variable */
    );
-   
+
 /** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
  *  variables are handled as the same variables
  */

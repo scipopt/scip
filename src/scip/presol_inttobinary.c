@@ -47,7 +47,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyInttobinary)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
- 
+
    return SCIP_OKAY;
 }
 

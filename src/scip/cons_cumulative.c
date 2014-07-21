@@ -5896,8 +5896,8 @@ SCIP_RETCODE insertThetanode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BT*              tree,               /**< binary tree */
    SCIP_BTNODE*          node,               /**< node to insert */
-   SCIP_NODEDATA**       nodedatas,          /**< array of node datas */
-   int*                  nnodedatas          /**< pointer to number of node datas */
+   SCIP_NODEDATA**       nodedatas,          /**< array of node data */
+   int*                  nnodedatas          /**< pointer to number of node data */
    )
 {
    /* if the tree is empty the node will be the root node */
@@ -6339,7 +6339,7 @@ int computeEnergyContribution(
    return nodedata->demand * duration;
 }
 
-/** comparison method for two node datas w.r.t. the earliest start time */
+/** comparison method for two node data w.r.t. the earliest start time */
 static
 SCIP_DECL_SORTPTRCOMP(compNodeEst)
 {
@@ -6352,7 +6352,7 @@ SCIP_DECL_SORTPTRCOMP(compNodeEst)
    return (est1 - est2);
 }
 
-/** comparison method for two node datas w.r.t. the latest completion time */
+/** comparison method for two node data w.r.t. the latest completion time */
 static
 SCIP_DECL_SORTPTRCOMP(compNodedataLct)
 {
@@ -6580,7 +6580,7 @@ SCIP_RETCODE inferboundsEdgeFinding(
          {
             SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
 
-            /* the root might changed therefore we need to collect the new root node datas */
+            /* the root might changed therefore we need to collect the new root node data */
             rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
             assert(rootdata != NULL);
 
@@ -6704,7 +6704,7 @@ SCIP_RETCODE inferboundsEdgeFinding(
          /* delete responsible leaf from lambda */
          SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
 
-         /* the root might changed therefore we need to collect the new root node datas */
+         /* the root might changed therefore we need to collect the new root node data */
          rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
          assert(rootdata != NULL);
       }

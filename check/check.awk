@@ -109,6 +109,7 @@ BEGIN {
 #
 /^@01/ { 
    filename = $2;
+   grepresult = ""
 
    n  = split ($2, a, "/");
    m = split(a[n], b, ".");
@@ -383,7 +384,21 @@ BEGIN {
 # solution
 #
 /^Original Problem   : no problem exists./ { readerror = 1; }
-/^SCIP Status        :/ { aborted = 0; }
+/^SCIP Status        :/ {
+   # replace / by \/ in filename
+   fname = filename
+   gsub(/\//, "\\/",fname);
+
+   #grep between filename and next @01 for an error
+   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+   command | getline grepresult;
+
+   # set aborted flag correctly
+   if( grepresult == "" ) {
+      aborted = 0;
+   }
+}
+
 /solving was interrupted/ { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
@@ -405,6 +420,10 @@ BEGIN {
    }
    else if( $4 == "-"  || $4 == "-\r") {
       pb = +infty;
+      feasible = 0;
+   }
+   else if( $5 == "(user" && $6 == "objective" && $7 == "limit)" ) {
+      pb = $4;
       feasible = 0;
    }
    else {
@@ -636,7 +655,11 @@ BEGIN {
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
+      {
          timeout = 0;
+         if( memlimitreached )
+            tottime = max(endtime - starttime, timelimit);
+      }
 
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
@@ -699,13 +722,13 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) ) ) {
+         if( feasible && (( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) )) ) {
             status = "fail";
             failtime += tottime;
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) 
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached )
 	    {
                if( timeout )
                   status = "timeout";
@@ -898,6 +921,7 @@ BEGIN {
                 namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
+
          printf("%s\n", status);
       }
 

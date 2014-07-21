@@ -845,7 +845,8 @@ SCIP_RETCODE propagateCons(
 
       /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to 0 */
       infrontier = FALSE;
-      if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 )
+      assert( lastoneprevrow + 1 >= 0 );
+      if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 ) /*lint !e679*/
          lastoneinrow = lastoneprevrow;
       else
       {
@@ -1026,7 +1027,8 @@ SCIP_RETCODE propagateCons(
             int beta;
             beta = -2;
 
-            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
+            assert( betaprev + 1 >= 0 );
+            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 ) /*lint !e679*/
                beta = betaprev;
             else
                beta = betaprev + 1;
@@ -1378,7 +1380,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitope)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -2117,19 +2119,19 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
          assert(!(*valid) || vars[i][j] != NULL);
       }
    }
-   
+
    /* only create the target constraint, if all variables could be copied */
    if ( *valid )
    {
       /* create copied constraint */
       if ( name == NULL )
          name = SCIPconsGetName(sourcecons);
-      
+
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
             vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
-   
+
    for (i = 0; i < nspcons; ++i)
       SCIPfreeBufferArray(scip, &vars[i]);
    SCIPfreeBufferArray(scip, &vars);

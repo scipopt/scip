@@ -667,7 +667,7 @@ SCIP_RETCODE SCIPpropExec(
    }
    else
       *result = SCIP_DIDNOTRUN;
-   
+
    return SCIP_OKAY;
 }
 
@@ -705,13 +705,13 @@ SCIP_RETCODE SCIPpropResolvePropagation(
 
       SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx,
             relaxedbd, result) );
-      
+
       /* stop timing */
       SCIPclockStop(prop->resproptime, set);
 
       /* update statistic */
       prop->nrespropcalls++;
-      
+
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
       {
@@ -917,7 +917,7 @@ void SCIPpropSetPriority(
 {
    assert(prop != NULL);
    assert(set != NULL);
-   
+
    prop->priority = priority;
    set->propssorted = FALSE;
 }
@@ -931,7 +931,7 @@ void SCIPpropSetPresolPriority(
 {
    assert(prop != NULL);
    assert(set != NULL);
-   
+
    prop->presolpriority = presolpriority;
    set->propspresolsorted = FALSE;
 }

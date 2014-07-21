@@ -458,9 +458,9 @@ SCIP_RETCODE deleteVarSOS1(
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
    {
-      consdata->vars[j] = consdata->vars[j+1];
+      consdata->vars[j] = consdata->vars[j+1]; /*lint !e679*/
       if ( consdata->weights != NULL )
-         consdata->weights[j] = consdata->weights[j+1];
+         consdata->weights[j] = consdata->weights[j+1]; /*lint !e679*/
    }
    --consdata->nvars;
 

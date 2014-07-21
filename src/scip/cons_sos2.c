@@ -465,9 +465,9 @@ SCIP_RETCODE deleteVarSOS2(
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
    {
-      consdata->vars[j] = consdata->vars[j+1];
+      consdata->vars[j] = consdata->vars[j+1]; /*lint !e679*/
       if ( consdata->weights != NULL )
-         consdata->weights[j] = consdata->weights[j+1];
+         consdata->weights[j] = consdata->weights[j+1]; /*lint !e679*/
    }
    --consdata->nvars;
 
@@ -899,8 +899,7 @@ SCIP_RETCODE propSOS2(
       }
       assert( 0 <= firstFixedNonzero && firstFixedNonzero < nvars-1 );
 
-      SCIPdebugMessage("variables <%s> and <%s> are fixed nonzero, fixing other variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]),
-         SCIPvarGetName(vars[firstFixedNonzero+1]));
+      SCIPdebugMessage("variable <%s> is fixed to be nonzero, fixing variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
 
       /* fix variables before firstFixedNonzero to 0 */
       allVarFixed = TRUE;

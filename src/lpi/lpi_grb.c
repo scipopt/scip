@@ -1056,7 +1056,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&major, &minor, &technical);
-   snprintf(grbname, 100, "Gurobi %d.%d.%d", major, minor, technical);
+   sprintf(grbname, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
 }
 
@@ -2808,7 +2808,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    }
 
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* @todo: check whether this code is needed anymore (this was the first version) */
    SCIP_Real viol;
    SCIP_Real tol;
@@ -3509,7 +3509,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    }
    BMSfreeMemoryArray(&bhead);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* old implementation */
    cnt = 0;
    for( i = 0; i < nrows; ++i )
@@ -4003,7 +4003,8 @@ SCIP_RETCODE SCIPlpiWriteState(
       char name[SCIP_MAXSTRLEN];
 
       /* force extension to be ".bas" */
-      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+	  assert(strlen(fname) < SCIP_MAXSTRLEN-4);
+      sprintf(name, "%s.bas", fname);
       CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
    }
 

@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPreaderFree(
 
    /* free clock */
    SCIPclockFree(&(*reader)->readingtime);
-   
+
    BMSfreeMemoryArray(&(*reader)->name);
    BMSfreeMemoryArray(&(*reader)->desc);
    BMSfreeMemoryArray(&(*reader)->extension);
@@ -162,10 +162,10 @@ SCIP_RETCODE SCIPreaderRead(
 
       /* create a temporary clock for measuring the reading time */
       SCIP_CALL( SCIPclockCreate(&readingtime, SCIP_CLOCKTYPE_DEFAULT) );
-      
+
       /* start timing */
       SCIPclockStart(readingtime, set);
-      
+
       /* call reader to read problem */
       retcode = reader->readerread(set->scip, reader, filename, result);
 
@@ -174,7 +174,7 @@ SCIP_RETCODE SCIPreaderRead(
 
       /* add time to reader reading clock */
       SCIPclockSetTime(reader->readingtime, SCIPclockGetTime(reader->readingtime) + SCIPclockGetTime(readingtime));
-      
+
       /* free the temporary clock */
       SCIPclockFree(&readingtime);
    }
@@ -208,11 +208,11 @@ void resetVarname(
 
    assert( var != NULL );
    assert( name != NULL );
-   
+
    /* get pointer to temporary generic name and free the memory */
    oldname = SCIPvarGetName(var);
    BMSfreeMemory(&oldname);
-   
+
    /* reset name */
    SCIPvarSetNamePointer(var, name);
 }
@@ -230,12 +230,12 @@ SCIP_RETCODE SCIPreaderWrite(
    )
 {
    SCIP_RETCODE retcode;
-   
+
    assert(reader != NULL);
    assert(set != NULL);
    assert(extension != NULL);
    assert(result != NULL);
-   
+
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {
@@ -248,17 +248,17 @@ SCIP_RETCODE SCIPreaderWrite(
       int i;
 
       SCIP_CONS* cons;
-      
+
       char* name;
       const char* consname;
       const char** varnames;
       const char** fixedvarnames;
       const char** consnames;
-      
+
       varnames = NULL;
       fixedvarnames = NULL; 
       consnames = NULL;
-      
+
       vars = prob->vars;
       nvars = prob->nvars;
       fixedvars = prob->fixedvars;
@@ -349,7 +349,7 @@ SCIP_RETCODE SCIPreaderWrite(
          {
             var = vars[i];
             varnames[i] = SCIPvarGetName(var);
-            
+
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
             (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
@@ -362,7 +362,7 @@ SCIP_RETCODE SCIPreaderWrite(
          {
             var = fixedvars[i];
             fixedvarnames[i] = SCIPvarGetName(var);
-            
+
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
             (void) SCIPsnprintf(name, size, "y%d", i);
             SCIPvarSetNamePointer(var, name);
@@ -388,7 +388,7 @@ SCIP_RETCODE SCIPreaderWrite(
          vars, nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
          fixedvars, nfixedvars, prob->startnvars, 
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
-         
+
       /* reset variable and constraint names to original names */
       if( genericnames )
       {  
@@ -398,7 +398,7 @@ SCIP_RETCODE SCIPreaderWrite(
 
          for( i = 0; i < nvars; ++i )
             resetVarname(vars[i], varnames[i]);
-               
+
          for( i = 0; i < nfixedvars; ++i )
             resetVarname(fixedvars[i], fixedvarnames[i]);
 
@@ -409,17 +409,17 @@ SCIP_RETCODE SCIPreaderWrite(
             /* get pointer to temporary generic name and free the memory */
             consname = SCIPconsGetName(cons);
             BMSfreeMemory(&consname);
-            
+
             /* reset name */
             SCIPconsSetNamePointer(cons, consnames[i]);
          }
-         
+
          /* free memory */
          BMSfreeMemoryArray(&varnames);
          BMSfreeMemoryArray(&fixedvarnames);
          BMSfreeMemoryArray(&consnames);
       }
-      
+
       if( prob->transformed )
       {
          /* free memory */
@@ -431,11 +431,11 @@ SCIP_RETCODE SCIPreaderWrite(
       *result = SCIP_DIDNOTRUN;
       retcode = SCIP_OKAY;
    }
-   
+
    /* check for reader errors */
    if( retcode == SCIP_WRITEERROR )
       return retcode;
-   
+
    SCIP_CALL( retcode );
 
    return SCIP_OKAY;
@@ -542,7 +542,7 @@ SCIP_Bool SCIPreaderCanRead(
    )
 {
    assert(reader != NULL);
-   
+
    return (reader->readerread != NULL);
 }
 
@@ -572,7 +572,7 @@ SCIP_RETCODE SCIPreaderResetReadingTime(
    )
 {
    assert(reader != NULL);
-   
+
    /* reset reading time/clock */
    SCIPclockReset(reader->readingtime);
 

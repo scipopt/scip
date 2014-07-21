@@ -218,7 +218,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       assert(tree != NULL); /* for lint */
       depth = SCIPtreeGetFocusDepth(tree);
       lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
-      
+
       SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
    }
 
@@ -321,7 +321,7 @@ SCIP_RETCODE propagationRound(
     * anyway
     */
    abortoncutoff = set->prop_abortoncutoff || (set->stage != SCIP_STAGE_SOLVING);
- 
+
    /* call additional propagators with nonnegative priority */
    for( i = 0; i < set->nprops && (!(*cutoff) || !abortoncutoff); ++i )
    {
@@ -993,7 +993,7 @@ SCIP_RETCODE SCIPinitConssLP(
    assert(set != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
-   
+
    /* inform separation storage, that LP is now filled with initial data */
    SCIPsepastoreStartInitialLP(sepastore);
 
@@ -3610,8 +3610,17 @@ SCIP_RETCODE solveNode(
    SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, FALSE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
+   /* check if primal heuristics found a solution and we therefore reached a solution limit */
    if( SCIPsolveIsStopped(set, stat, FALSE) )
    {
+      SCIP_NODE* node;
+
+      /* we reached a solution limit and do not want to continue the processing of the current node, but in order to
+       * allow restarting the optimization process later, we need to create a "branching" with only one child node that
+       * is a copy of the focusnode
+       */
+      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 1.0, focusnode->estimate) );
+      assert(tree->nchildren >= 1);
       *stopped = TRUE;
       return SCIP_OKAY;
    }

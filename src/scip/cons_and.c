@@ -210,17 +210,6 @@ SCIP_RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** gets number of LP rows needed for the LP relaxation of the constraint */
-static
-int consdataGetNRows(
-   SCIP_CONSDATA*        consdata            /**< constraint data */
-   )
-{
-   assert(consdata != NULL);
-
-   return consdata->nvars + 1;
-}
-
 /** catches events for the watched variable at given position */
 static
 SCIP_RETCODE consdataCatchWatchedEvents(
@@ -390,7 +379,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
 {
    assert(consdata != NULL);
    assert(consdata->nvars <= consdata->varssize);
-   
+
    if( num > consdata->varssize )
    {
       int newsize;
@@ -492,7 +481,7 @@ SCIP_RETCODE consdataFreeRows(
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
       SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->nrows);
-      
+
       consdata->nrows = 0;
    }
 
@@ -546,7 +535,7 @@ SCIP_RETCODE consdataFree(
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
- 
+
    return SCIP_OKAY;
 }
 
@@ -898,7 +887,7 @@ SCIP_RETCODE createRelaxation(
    nvars = consdata->nvars;
 
    /* get memory for rows */
-   consdata->nrows = consdataGetNRows(consdata);
+   consdata->nrows = nvars + 1;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->nrows) );
 
    /* creates LP rows corresponding to and constraint:
@@ -3268,7 +3257,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    int minidx;
    int mididx;
    int maxidx;
-   
+
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->sorted);
@@ -4588,13 +4577,13 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSPRINT(consPrintAnd)
 {  /*lint --e{715}*/
-   
+
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
-      
+
    return SCIP_OKAY;
 }
 
@@ -4612,7 +4601,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
 
    assert(valid != NULL);
    (*valid) = TRUE;
-   
+
    sourceresvar = SCIPgetResultantAnd(sourcescip, sourcecons);
 
    /* map resultant to active variable of the target SCIP  */
@@ -4629,7 +4618,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global, valid) );
@@ -4639,12 +4628,12 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
       if( !(*valid) )
          goto TERMINATE;
    }
-   
+
    if( name != NULL )
       consname = name;
    else
       consname = SCIPconsGetName(sourcecons);
- 
+
    /* creates and captures a and constraint */
    SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
@@ -4652,7 +4641,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
  TERMINATE:   
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
-   
+
    return SCIP_OKAY;
 }
 

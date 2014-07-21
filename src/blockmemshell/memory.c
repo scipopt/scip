@@ -810,7 +810,7 @@ void unlinkChunk(
    assert(chkmem->elemsize == chunk->elemsize);
    assert(0 <= chunk->arraypos && chunk->arraypos < chkmem->nchunks);
    assert(chkmem->chunks[chunk->arraypos] == chunk);
-   
+
    debugMessage("unlinking chunk %p from chunk block %p [elemsize:%d, %d chunks]\n", 
       (void*)chunk, (void*)chkmem, chkmem->elemsize, chkmem->nchunks);
 
@@ -1401,7 +1401,7 @@ void BMSfreeChunkMemory_call(
 {
    assert(chkmem != NULL);
    assert((int)size == chkmem->elemsize);
-   
+
    debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, ptr, filename, line);
 
    if( ptr == NULL )
@@ -1413,7 +1413,7 @@ void BMSfreeChunkMemory_call(
 
    /* free memory in chunk block */
    freeChkmemElement(chkmem, ptr, filename, line);
-   
+
    checkChkmem(chkmem);
 }
 
@@ -1440,7 +1440,7 @@ long long BMSgetChunkMemoryUsed_call(
    chkmemused = 0;
    for( i = 0; i < chkmem->nchunks; ++i )
       chkmemused += (long long)(chkmem->chunks[i]->elemsize) * (long long)(chkmem->chunks[i]->storesize);
-   
+
    return chkmemused;
 }
 
@@ -1764,7 +1764,7 @@ void BMSfreeBlockMemory_call(
 
       /* free memory in chunk block */
       freeChkmemElement(chkmem, ptr, filename, line);
-      
+
       blkmem->memused -= size;
       assert(blkmem->memused >= 0);
    }

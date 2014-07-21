@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPheurInit(
    {
       SCIPclockReset(heur->setuptime);
       SCIPclockReset(heur->heurclock);
-      
+
       heur->delaypos = -1;
       heur->ncalls = 0;
       heur->nsolsfound = 0;
@@ -441,7 +441,7 @@ SCIP_RETCODE SCIPheurExec(
    {
       SCIP_Longint oldnsolsfound;
       SCIP_Longint oldnbestsolsfound;
-         
+
       SCIPdebugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
       oldnsolsfound = primal->nsolsfound;
@@ -667,7 +667,7 @@ void SCIPheurSetPriority(
 {
    assert(heur != NULL);
    assert(set != NULL);
-   
+
    heur->priority = priority;
    set->heurssorted = FALSE;
 }
@@ -689,7 +689,7 @@ void SCIPheurSetFreq(
    )
 {
    assert(heur != NULL);
-   
+
    heur->freq = freq;
 }
 

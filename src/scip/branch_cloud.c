@@ -17,6 +17,12 @@
  * @brief  cloud branching rule
  * @author Timo Berthold
  * @author Domenico Salvagnin
+ *
+ * Branching rule based on muliple optimal solutions to the current LP relaxation. See@n
+ * Cloud Branching@n
+ * Time Berthold and Domenico Salvagnin@n
+ * Integration of AI and OR Techniques in Constraint Programming for Combinatorial Optimization Problems, CPAIOR 2013, LNCS 7874@n
+ * Preliminary version available as <a href="http://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/1730">ZIB-Report 13-01</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,8 +52,6 @@
 /*
  * Data structures
  */
-
-/* TODO: fill in the necessary branching rule data */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -142,7 +146,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    SCIP_VAR** lpcands;
    SCIP_VAR** lpcandscopy;
 
-   SCIP_VAR** vars;                          /* SCIP variables                */
+   SCIP_VAR** vars;
    SCIP_ROW** lprows;
    SCIP_Real* lpcandsfrac;
    SCIP_Real* lpcandssol;
@@ -642,7 +646,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 /** creates the cloud branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;
@@ -658,7 +662,6 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    branchrule = NULL;
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
-
    assert(branchrule != NULL);
 
    /* set non-fundamental callbacks via setter functions */
@@ -667,7 +670,6 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpCloud) );
 
    /* add cloud branching rule parameters */
-
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/"BRANCHRULE_NAME"/usecloud",
          "should a cloud of points be used?",

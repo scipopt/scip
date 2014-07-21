@@ -73,7 +73,7 @@ TCLIQUE_GETNNODES(tcliqueGetNNodes)
 TCLIQUE_GETWEIGHTS(tcliqueGetWeights)
 {
    assert(tcliquegraph != NULL);
-   
+
    return tcliquegraph->weights;
 }
 
@@ -98,7 +98,7 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
 
    currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, node1);
    lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, node1);
-   
+
    if( currentadjedge > lastadjedge || *lastadjedge < node2 )
       return FALSE;
 
@@ -160,7 +160,7 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes)
          } 
       }
    }
-   
+
    return nadjnodes;
 }
 
@@ -231,7 +231,7 @@ TCLIQUE_Bool tcliqueEnsureSizeEdges(
    )
 {
    assert(tcliquegraph != NULL);
-   
+
    if( num > tcliquegraph->sizeedges )
    {
       int newsize;
@@ -257,7 +257,7 @@ TCLIQUE_Bool tcliqueEnsureSizeCachedEdges(
    )
 {
    assert(tcliquegraph != NULL);
-   
+
    if( num > tcliquegraph->sizecachededges )
    {
       int newsize;
@@ -284,11 +284,11 @@ TCLIQUE_Bool tcliqueEnsureSizeNodes(
    )
 {
    assert(tcliquegraph != NULL);
-   
+
    if( !tcliqueEnsureSizeEdges(tcliquegraph, 1) )
       return FALSE;
    assert(tcliquegraph->adjnodes != NULL);
-   
+
    if( num > tcliquegraph->sizenodes )
    {
       int newsize;
@@ -339,7 +339,7 @@ TCLIQUE_Bool tcliqueAddNode(
       return FALSE;
 
    tcliquegraph->weights[node] = weight;
-   
+
    assert(tcliquegraph->degrees[node] == 0);
    assert(tcliquegraph->adjedges[node].first <= tcliquegraph->nedges);
    assert(tcliquegraph->adjedges[node].last == tcliquegraph->adjedges[node].first);
@@ -555,7 +555,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    int result;
    char* charresult;
    char* tmp;
-   
+
    assert(tcliquegraph != NULL);
    assert(scaleval > 0.0);
 
@@ -568,13 +568,13 @@ TCLIQUE_Bool tcliqueLoadFile(
          return FALSE;
       }
    }
- 
+
    if( !tcliqueCreate(tcliquegraph) )
    {
       fclose(file);
       return FALSE;
    }
- 
+
    /* set name of problem, copies 'sizeofprobname' characters into probname */
    charresult = fgets(probname, sizeofprobname, file);
    if( charresult == NULL )
@@ -583,7 +583,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       fclose(file);
       return FALSE;
    }
-   
+
    /* allocate temporary memory for skipping rest of problem name */
    BMSallocMemoryArray(&tmp, sizeofprobname +1 );
    BMScopyMemoryArray(tmp, probname, sizeofprobname);
@@ -594,7 +594,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    while( (int) strlen(tmp) == sizeofprobname && tmp[strlen(tmp)-1] != '\n' )
    {
       charresult = fgets(tmp, sizeofprobname, file);
-      
+
       if( charresult == NULL )
       {
          infoMessage("Error while reading probname in file %s", filename);
@@ -614,7 +614,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       fclose(file);
       return FALSE;
    }
-   
+
    result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
    if( result == EOF )
    {
@@ -695,7 +695,7 @@ TCLIQUE_Bool tcliqueLoadFile(
          fclose(file);
          return FALSE;
       } 
-      
+
       /* (node1, node2) is the first adjacent edge of node1 */
       if( node1 != currentnode )
       {
@@ -711,7 +711,7 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    /* close file */
    fclose(file);
-   
+
    return TRUE;
 }
 
@@ -736,12 +736,12 @@ TCLIQUE_Bool tcliqueSaveFile(
       infoMessage("\nCan't create file: %s", filename);
       return FALSE;
    }
- 
+
    /* write name of problem, number of nodes and number of edges in graph */
    fprintf(file, "%s\n", probname);
    fprintf(file, "%d\n", tcliquegraph->nnodes);
    fprintf(file, "%d\n", tcliquegraph->nedges);
-   
+
    /* write weights of all nodes (scaled!) */
    for( i = 0; i < tcliquegraph->nnodes; i++ )
       fprintf(file, "%f\n", (double)tcliquegraph->weights[i]/scaleval);
@@ -755,7 +755,7 @@ TCLIQUE_Bool tcliqueSaveFile(
 
    /* close file */
    fclose(file);
-   
+
    return TRUE;
 }
 
@@ -765,7 +765,7 @@ int tcliqueGetNEdges(
    )
 {
    assert(tcliquegraph != NULL);
-   
+
    return tcliquegraph->nedges + tcliquegraph->ncachededges;
 }
 
@@ -776,7 +776,7 @@ int* tcliqueGetDegrees(
 {
    assert(tcliquegraph != NULL);
    assert(tcliquegraph->ncachededges == 0);
-   
+
    return tcliquegraph->degrees;
 }
 
@@ -787,7 +787,7 @@ int* tcliqueGetAdjnodes(
 {
    assert(tcliquegraph != NULL);
    assert(tcliquegraph->ncachededges == 0);
-   
+
    return tcliquegraph->adjnodes;
 }
 

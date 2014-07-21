@@ -1641,8 +1641,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    *result = SCIP_DIDNOTFIND;
 
-#if 0 /* def SCIP_DEBUG */
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) );
+#ifdef SCIP_DEBUG
+   /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
 #endif
 
    /* set iteration limit */
@@ -2329,7 +2329,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
             {
-               SCIPwarningMessage(scip, "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+               if( termstat >= SCIP_NLPTERMSTAT_LICERR )
+               {
+                  SCIPwarningMessage(scip, "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+               }
                nlperror = TRUE;
                break;
             }

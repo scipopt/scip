@@ -691,9 +691,9 @@ SCIP_RETCODE presolveFindDuplicates(
                   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons1) );
                   SCIP_CALL( SCIPlockVarCons(scip, consdata1->x, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
                   if( consdata1->zcoef > 0.0 )
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
+                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
                   else
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
+                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
                }
                else
                {
@@ -2277,9 +2277,6 @@ SCIP_RETCODE registerBranchingCandidates(
 
          SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
 
-         /* domain propagation should have removed constraints with fixed x */
-         assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
-
          /* skip variables which sign is already fixed, if we are only interested in variables with unfixed sign here */
          if( onlynonfixedsign &&
             (  !SCIPisLT(scip, SCIPvarGetLbLocal(consdata->x), -consdata->xoffset) ||
@@ -2290,6 +2287,9 @@ SCIP_RETCODE registerBranchingCandidates(
          if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
             ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
          {
+            /* domain propagation should have removed constraints with fixed x, at least for violated constraints */
+            assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
+
             SCIPdebugMessage("register var <%s> in cons <%s> with violation %g %g\n", SCIPvarGetName(consdata->x), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
             ++*nnotify;
@@ -2593,6 +2593,18 @@ SCIP_RETCODE propagateCons(
                }
             }
 
+            if( SCIPisInfinity(scip, newlb) )
+            {
+               /* we cannot fix a variable to +infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->x), xlb, xub, newlb, xub);
+
+               *cutoff = TRUE;
+
+               /* analyze infeasibility */
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->x, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
+               break;
+            }
+
             if( !SCIPisInfinity(scip, -newlb) )
             {
                if( SCIPisLbBetter(scip, newlb, xlb, xub) )
@@ -2667,6 +2679,19 @@ SCIP_RETCODE propagateCons(
             if( consdata->zcoef > 0.0 )
             {
                newlb = newbd;
+
+               if( SCIPisInfinity(scip, newlb) )
+               {
+                  /* we cannot fix a variable to +infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, newlb, zub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_2, SCIP_BOUNDTYPE_LOWER) );
+                  break;
+               }
+
                if( SCIPisLbBetter(scip, newlb, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2693,6 +2718,19 @@ SCIP_RETCODE propagateCons(
             else
             {
                newub = newbd;
+
+               if( SCIPisInfinity(scip, -newub) )
+               {
+                  /* we cannot fix a variable to -infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, zlb, newub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_2, SCIP_BOUNDTYPE_UPPER) );
+                  break;
+               }
+
                if( SCIPisUbBetter(scip, newub, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2792,6 +2830,18 @@ SCIP_RETCODE propagateCons(
                }
             }
 
+            if( SCIPisInfinity(scip, -newub) )
+            {
+               /* we cannot fix a variable to -infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->x), xlb, xub, xlb, newub);
+
+               *cutoff = TRUE;
+
+               /* analyze infeasibility */
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->x, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
+               break;
+            }
+
             if( !SCIPisInfinity(scip, newub) )
             {
                if( SCIPisUbBetter(scip, newub, xlb, xub) )
@@ -2866,6 +2916,19 @@ SCIP_RETCODE propagateCons(
             if( consdata->zcoef > 0.0 )
             {
                newub = newbd;
+
+               if( SCIPisInfinity(scip, -newub) )
+               {
+                  /* we cannot fix a variable to -infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, zlb, newub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_4, SCIP_BOUNDTYPE_UPPER) );
+                  break;
+               }
+
                if( SCIPisUbBetter(scip, newub, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2892,6 +2955,19 @@ SCIP_RETCODE propagateCons(
             else
             {
                newlb = newbd;
+
+               if( SCIPisInfinity(scip, newlb) )
+               {
+                  /* we cannot fix a variable to +infinity, so let's report cutoff (there is no solution within SCIPs limitations to infinity) */
+                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g] -> cutoff\n", SCIPvarGetName(consdata->z), zlb, zub, newlb, zub);
+
+                  *cutoff = TRUE;
+
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->z, PROPRULE_4, SCIP_BOUNDTYPE_LOWER) );
+                  break;
+               }
+
                if( SCIPisLbBetter(scip, newlb, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",

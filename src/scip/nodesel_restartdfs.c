@@ -119,7 +119,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
    {
       SCIP_NODESELDATA* nodeseldata;
       SCIP_Longint nnodes;
-      
+
       /* get node selector user data */
       nodeseldata = SCIPnodeselGetData(nodesel);
       assert(nodeseldata != NULL);
@@ -146,7 +146,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
             *selnode = SCIPgetBestLeaf(scip);
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -193,13 +193,13 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
          "nodeselection/restartdfs/selectbestfreq",
          "frequency for selecting the best node instead of the deepest one",
          &nodeseldata->selectbestfreq, FALSE, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );
-   
+
    /* add node selector parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "nodeselection/restartdfs/countonlyleaves",
          "count only leaf nodes (otherwise all nodes)?",
          &nodeseldata->countonlyleaves, FALSE, COUNTONLYLEAVES, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
 

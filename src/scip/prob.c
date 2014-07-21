@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPprobCopy(
 
    /* create problem and initialize callbacks with NULL */
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
-   
+
    /* call user copy callback method */
    if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
@@ -557,7 +557,7 @@ SCIP_RETCODE SCIPprobTransform(
          SCIP_CALL( SCIPconshdlrLockVars(set->conshdlrs[h], set) );
       }
    }
-   
+
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
@@ -1050,7 +1050,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          {
             SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
-         
+
          /* update branching candidates and pseudo and loose objective value in the LP */
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
          {
@@ -1160,7 +1160,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
 
       /* remove variable from problem */
       SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
-      
+
       /* insert variable in fixedvars array */
       SCIP_CALL( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );
       prob->fixedvars[prob->nfixedvars] = var;
@@ -1406,7 +1406,7 @@ void SCIPprobSetObjIntegral(
    )
 {
    assert(prob != NULL);
-   
+
    prob->objisintegral = TRUE;
 }
 
@@ -1606,7 +1606,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                for( v = 0; v < nints; ++v )
                {
                   SCIP_Real newobj;
-                  
+
                   /* check if new obj is really integral */
                   newobj = intscalar * SCIPvarGetObj(transprob->vars[v]);
                   if( !SCIPsetIsFeasIntegral(set, newobj) )
@@ -1733,12 +1733,12 @@ void SCIPprobUpdateBestRootSol(
 
             /* get reduced cost if the variable gets fixed to zero */
             lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, lp);
-            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
+            assert( !SCIPsetIsDualfeasPositive(set, lbrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             /* get reduced cost if the variable gets fixed to one */
             ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, lp);
-            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
+            assert( !SCIPsetIsDualfeasNegative(set, ubrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             if( -lbrootredcost > ubrootredcost )

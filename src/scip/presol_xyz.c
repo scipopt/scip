@@ -65,7 +65,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else

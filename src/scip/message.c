@@ -183,7 +183,7 @@ void messagePrintDialog(
          /* file output cannot be buffered because the output file may change */
          if ( *msg != '\0' )
          {
-            handleMessage(messagehdlr, messagehdlr->messagedialog, file, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != stdout), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }
@@ -209,7 +209,7 @@ void messagePrintInfo(
          /* file output cannot be buffered because the output file may change or the message is to long */
          if ( *msg != '\0' )
          {
-            handleMessage(messagehdlr, messagehdlr->messagedialog, file, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != stdout), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }

@@ -157,7 +157,7 @@
 static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
 static SCIP_BDCHGINFO*   confgraphcurrentbdchginfo = NULL;  /**< currently resolved bound change */
 static int               confgraphnconflictsets = 0;        /**< number of conflict sets marked in the graph */
- 
+
 /** writes a node section to the conflict graph file */
 static
 void confgraphWriteNode(
@@ -255,7 +255,7 @@ void confgraphAddBdchg(
    char depth[SCIP_MAXSTRLEN];
    int col;
 
-   
+
    switch( SCIPbdchginfoGetChgtype(bdchginfo) )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -1408,7 +1408,7 @@ SCIP_RETCODE conflictsetCalcInsertDepth(
    for( i = 0; i < conflictset->nbdchginfos; ++i )
    {
       int depth;
-         
+
       depth = SCIPbdchginfoGetDepth(conflictset->bdchginfos[i]);
       depth = MIN(depth, currentdepth+1); /* put diving/probing/strong branching changes in this depth level */
       branchingincluded[depth] = TRUE;
@@ -3878,11 +3878,6 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
                assert(conflictFirstCand(conflict) == NULL); /* the starting UIP was not resolved */
          }
 
-         /* check conflict graph frontier on debugging solution */
-         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
-               conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
-
          /* get next conflicting bound from the conflict candidate queue (this does not need to be nextbdchginfo, because
           * due to resolving the bound changes, a variable could be added to the queue which must be
           * resolved before nextbdchginfo)
@@ -3900,6 +3895,11 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          SCIP_Bool success;
 
          assert(SCIPbdchginfoGetDepth(nextuip) == SCIPbdchginfoGetDepth(uip));
+
+         /* check conflict graph frontier on debugging solution */
+         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
+               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds,
+               conflict->conflictset->nbdchginfos, conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
          SCIPdebugMessage("creating reconvergence constraint from UIP <%s> to UIP <%s> in depth %d with %d literals after %d resolutions\n",
             SCIPvarGetName(SCIPbdchginfoGetVar(uip)), SCIPvarGetName(SCIPbdchginfoGetVar(nextuip)),
@@ -5336,8 +5336,8 @@ SCIP_RETCODE undoBdchgsDualsol(
          varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
          /* check dual feasibility */
-         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsFeasPositive(set, varredcosts[v]))
-            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsFeasNegative(set, varredcosts[v])) )
+         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
+            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
          {
             SCIPdebugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
                varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
@@ -5582,7 +5582,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( !SCIPlpiIsPrimalInfeasible(lpi) )
    {
       SCIP_Real objval;
-         
+
       assert(!SCIPlpDivingObjChanged(lp));
 
       /* make sure, a dual feasible solution exists, that exceeds the objective limit;
@@ -5656,7 +5656,7 @@ SCIP_RETCODE conflictAnalyzeLP(
          SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
-   
+
    SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
       SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 #ifdef SCIP_DEBUG

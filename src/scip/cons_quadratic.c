@@ -1341,7 +1341,7 @@ void consdataSortLinearVars(
    consdata->linvarssorted = TRUE;
 }
 
-#if 0 /* no-one needs this routine currently */
+#ifdef SCIP_DISABLED_CODE /* no-one needs this routine currently */
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
 int consdataFindLinearVar(
@@ -4569,6 +4569,7 @@ SCIP_RETCODE checkFactorable(
    SCIP_Real* eigvals;
    SCIP_Real sigma1;
    SCIP_Real sigma2;
+   SCIP_Bool success;
    int n;
    int i;
    int idx1;
@@ -4688,12 +4689,14 @@ SCIP_RETCODE checkFactorable(
    {
       consdata->factorleft[i]  = sigma1 * a[posidx * n + i] - sigma2 * a[negidx * n + i];
       consdata->factorright[i] = sigma1 * a[posidx * n + i] + sigma2 * a[negidx * n + i];
+      /* set almost-zero elements to zero */
       if( SCIPisZero(scip, consdata->factorleft[i]) )
          consdata->factorleft[i] = 0.0;
       if( SCIPisZero(scip, consdata->factorright[i]) )
          consdata->factorright[i] = 0.0;
    }
 
+#ifdef SCIP_DEBUG
    SCIPdebugMessage("constraint <%s> has factorable quadratic form: (%g", SCIPconsGetName(cons), consdata->factorleft[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
    {
@@ -4707,45 +4710,50 @@ SCIP_RETCODE checkFactorable(
          SCIPdebugPrintf(" %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
    }
    SCIPdebugPrintf(")\n");
+#endif
 
-#ifndef NDEBUG
-   /* check whether factorleft * factorright^T is matrix of augmented quadratic form */
-   BMSclearMemoryArray(a, n*n);
+   /* check whether factorleft * factorright^T is matrix of augmented quadratic form
+    * we check here only the nonzero entries from the quadratic form
+    */
+   success = TRUE;
 
-   /* set lower triangular entries of A corresponding to bilinear terms */
+   /* check bilinear terms */
    for( i = 0; i < consdata->nbilinterms; ++i )
    {
       bilinterm = &consdata->bilinterms[i];
 
       SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, bilinterm->var1, &idx1) );
       SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, bilinterm->var2, &idx2) );
-      assert(idx1 >= 0);
-      assert(idx2 >= 0);
-      assert(idx1 != idx2);
 
-      a[MIN(idx1,idx2) * n + MAX(idx1,idx2)] = bilinterm->coef / 2.0;
+      if( !SCIPisRelEQ(scip, consdata->factorleft[idx1] * consdata->factorright[idx2] + consdata->factorleft[idx2] * consdata->factorright[idx1], bilinterm->coef) )
+      {
+         success = FALSE;
+         break;
+      }
    }
 
    /* set lower triangular entries of A corresponding to square and linear terms */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
-      a[i*n + i]   = consdata->quadvarterms[i].sqrcoef;
-      a[i*n + n-1] = consdata->quadvarterms[i].lincoef / 2.0;
+      if( !SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], consdata->quadvarterms[i].sqrcoef) )
+      {
+         success = FALSE;
+         break;
+      }
+
+      if( !SCIPisRelEQ(scip, consdata->factorleft[n-1] * consdata->factorright[i] + consdata->factorleft[i] * consdata->factorright[n-1], consdata->quadvarterms[i].lincoef) )
+      {
+         success = FALSE;
+         break;
+      }
    }
 
-   /* compare matrix entries */
-   for( i = 0; i < n; ++i )
+   if( !success )
    {
-      int j;
-
-      /* on off-diagonal elements, only the sum of corresponding entries need to coincide */
-      for( j = 0; j < i; ++j )
-         assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[j] + consdata->factorleft[j] * consdata->factorright[i], 2*a[j*n+i]));
-
-      /* check diagonal elements */
-      assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
+      SCIPdebugMessage("Factorization not accurate enough. Dropping it.\n");
+      SCIPfreeBlockMemoryArray(scip, &consdata->factorleft,  consdata->nquadvars + 1);
+      SCIPfreeBlockMemoryArray(scip, &consdata->factorright, consdata->nquadvars + 1);
    }
-#endif
 
  CLEANUP:
    SCIPfreeBufferArray(scip, &a);
@@ -4857,10 +4865,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -4884,10 +4892,10 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
          assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
          assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+         */
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -6073,6 +6081,11 @@ SCIP_RETCODE generateCutLTI(
       }
       rightrefactivity += consdata->factorright[i] * ref[i];
    }
+
+   /* if activities exceed "opposite" infinity, huge bounds seem to be involved, for which the below method is not prepared */
+   if( SCIPisInfinity(scip, leftminactivity)  || SCIPisInfinity(scip, -leftmaxactivity) ||
+       SCIPisInfinity(scip, rightminactivity) || SCIPisInfinity(scip, -rightmaxactivity) )
+      return SCIP_OKAY;
 
    /* if any of the factors is essentially fixed, give up and do usual method (numerically less sensitive, I hope) */
    if( SCIPisRelEQ(scip, leftminactivity, leftmaxactivity) || SCIPisRelEQ(scip, rightminactivity, rightmaxactivity) )
@@ -7730,7 +7743,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                   gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
             }
 
-            assert(!SCIPisNegative(scip, gap / MAX3(REALABS(xval), REALABS(yval), 1.0)));  /*lint !e666*/
+            assert(!SCIPisNegative(scip, gap / MAX3(MAX(REALABS(xlb), REALABS(xub)), MAX(REALABS(ylb), REALABS(yub)), 1.0)));  /*lint !e666*/
             if( gap < 0.0 )
                gap = 0.0;
          }
@@ -8924,17 +8937,12 @@ SCIP_RETCODE propagateBoundsCons(
                {
                   if( quadminactinf == 0 || (quadminactinf == 1 && SCIPintervalGetInf(quadactcontr[i]) <= -intervalinfty) )
                   {
-                     /* the residual quad min activity w.r.t. quad var term i is finite */
-                     assert(!SCIPisInfinity(scip, -minquadactivity));  /*lint !e644*/
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeUpwards();
                      rhs2.sup = rhs.sup - minquadactivity;
+                     /* if the residual quad min activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadminactinf == 0 && SCIPintervalGetInf(quadactcontr[i]) != 0.0 )
-                     {
-                        /* the residual quad min activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
-                        assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(quadactcontr[i])));
                         rhs2.sup += SCIPintervalGetInf(quadactcontr[i]);
-                     }
                      SCIPintervalSetRoundingMode(roundmode);
                   }
                   else
@@ -8948,22 +8956,17 @@ SCIP_RETCODE propagateBoundsCons(
                   rhs2.sup = intervalinfty;
                }
 
-               /* setup rhs.inf = rhs.inf - (quadactivity.sup - quadactcontr[i].sup), see also above */
+               /* setup rhs2.inf = rhs.inf - (quadactivity.sup - quadactcontr[i].sup), see also above */
                if( SCIPintervalGetInf(rhs) > -intervalinfty )
                {
                   if( quadmaxactinf == 0 || (quadmaxactinf == 1 && SCIPintervalGetSup(quadactcontr[i]) >= intervalinfty) )
                   {
-                     /* the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
-                     assert(!SCIPisInfinity(scip, maxquadactivity));  /*lint !e644*/
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeDownwards();
                      rhs2.inf = rhs.inf - maxquadactivity;
-                     /* the residual quad max activity w.r.t. quad var term i is finite */
+                     /* if the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadmaxactinf == 0 && SCIPintervalGetSup(quadactcontr[i]) != 0.0 )
-                     {
-                        assert(!SCIPisInfinity(scip, SCIPintervalGetSup(quadactcontr[i])));
                         rhs2.inf += SCIPintervalGetSup(quadactcontr[i]);
-                     }
                      SCIPintervalSetRoundingMode(roundmode);
                   }
                   else
@@ -9718,7 +9721,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
+ *
+ * NOTE: also called from SCIPcreateConsQuadratic(2) during solving stage
+ */
 static
 SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 {
@@ -10061,14 +10067,13 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          unbounded = FALSE; /* whether there are unbounded variables */
          possquare = FALSE; /* whether there is a positive square term */
          negsquare = FALSE; /* whether there is a negative square term */
-         lambda = 0.6; /* weight of preferred bound */
          for( k = 0; k < 2; ++k )
          {
             /* set reference point to 0 projected on bounds for unbounded variables or in between lower and upper bound for bounded variables
-             * in the first round, we set it closer to the best bound, in the second closer to the worst bound
-             * the reason is, that for a bilinear term with bounded variables, there are always two linear underestimators
-             * if the reference point is set to the middle, then rounding and luck decides which underestimator is chosen
-             * we thus choose the reference point not to be the middle, so both McCormick terms are definitely chosen one time
+             * in the first round, we set it closer to the best bound for one part of the variables, in the second closer to the best bound for the other part of the variables
+             * additionally, we use slightly different weights for each variable
+             * the reason for the latter is, that for a bilinear term with bounded variables, there are always two linear underestimators
+             * if the same weight is used for both variables of a product, then rounding and luck decides which underestimator is chosen
              * of course, the possible number of cuts is something in the order of 2^nquadvars, and we choose two of them here
              */
             for( i = 0; i < consdata->nquadvars; ++i )
@@ -10093,7 +10098,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                      unbounded = TRUE;
                   }
                   else
+                  {
+                     lambda = 0.4 + 0.2 * ((i+k)%2) + 0.01 * i / (double)consdata->nquadvars;
                      x[i] = lambda * SCIPvarGetBestBoundLocal(var) + (1.0-lambda) * SCIPvarGetWorstBoundLocal(var);
+                  }
                }
 
                possquare |= consdata->quadvarterms[i].sqrcoef > 0.0;  /*lint !e514 */
@@ -10139,9 +10147,6 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                (consdata->nbilinterms == 0 && (!possquare || SCIPisInfinity(scip,  consdata->rhs))) ||
                (consdata->nbilinterms == 0 && (!negsquare || SCIPisInfinity(scip, -consdata->lhs))) )
                break;
-
-            /* invert lambda for second round */
-            lambda = 1.0 - lambda;
          }
       }
 
@@ -11919,6 +11924,11 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIPdebugMessage("created quadratic constraint ");
    SCIPdebugPrintCons(scip, *cons, NULL);
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, cons, 1) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -12020,6 +12030,11 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
       assert(conshdlrdata->eventhdlr != NULL);
 
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
+   }
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( consInitsolQuadratic(scip, conshdlr, cons, 1) );
    }
 
    return SCIP_OKAY;

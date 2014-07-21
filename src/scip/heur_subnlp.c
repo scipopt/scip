@@ -2289,7 +2289,7 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
       violation, SCIPgetSolTransObj(scip, solcand), SCIPsolGetHeur(solcand) ? SCIPheurGetName(SCIPsolGetHeur(solcand)) : "tree");
 
    /* if we have no point yet, or the new point has a lower constraint violation, or it has a better objective function value, then take the new point */
-   if( heurdata->startcand == NULL || SCIPisGT(scip, heurdata->startcandviol, violation) ||
+   if( heurdata->startcand == NULL || violation < heurdata->startcandviol ||
       SCIPisRelGT(scip, SCIPgetSolTransObj(scip, heurdata->startcand), SCIPgetSolTransObj(scip, solcand)) )
    {
       if( heurdata->startcand != NULL )

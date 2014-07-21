@@ -1072,6 +1072,14 @@ SCIP_Real SCIPexprgraphGetNodePolynomialConstant(
    SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
    );
 
+/** gives the curvature of a single monomial belonging to a SCIP_EXPR_POLYNOMIAL expression */
+EXTERN
+SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   int                   monomialidx,        /**< index of monomial */
+   SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
+   );
+
 /** gets bounds of a node in an expression graph */
 EXTERN
 SCIP_INTERVAL SCIPexprgraphGetNodeBounds(

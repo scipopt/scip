@@ -177,7 +177,7 @@ public:
 } /* namespace scip */
 
 
-   
+
 /** creates empty problem, initializes all solving data structures, and sets the user problem data to point to the
  *  given user data object
  *

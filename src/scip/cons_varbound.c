@@ -2052,13 +2052,13 @@ SCIP_RETCODE preprocessConstraintPairs(
                if ( SCIPisPositive(scip, consdata1->vbdcoef) )
                {
                   if ( ! SCIPisInfinity(scip, lhs) )
-                     bnd = (consdata1->lhs - consdata1->vbdcoef * lhs)/scalar;
+                     bnd = (consdata1->rhs - consdata1->vbdcoef * lhs)/scalar;
                }
                else
                {
                   assert( SCIPisNegative(scip, consdata1->vbdcoef) );
                   if ( ! SCIPisInfinity(scip, rhs) )
-                     bnd = (consdata1->lhs - consdata1->vbdcoef * rhs)/scalar;
+                     bnd = (consdata1->rhs - consdata1->vbdcoef * rhs)/scalar;
                }
 
                if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/
@@ -3629,7 +3629,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyVarbound)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -4173,7 +4173,7 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4192,7 +4192,7 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
-   
+
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);

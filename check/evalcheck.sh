@@ -35,6 +35,7 @@ do
     NAME=`basename $i .out`
     DIR=`dirname $i`
     OUTFILE=$DIR/$NAME.out
+    ERRFILE=$DIR/$NAME.err
     RESFILE=$DIR/$NAME.res
     TEXFILE=$DIR/$NAME.tex
     PAVFILE=$DIR/$NAME.pav
@@ -59,5 +60,5 @@ do
     fi
     fi
 
-    awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done

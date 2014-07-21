@@ -109,7 +109,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
       lb = SCIPvarGetLbLocal(vars[i]);
       ub = SCIPvarGetUbLocal(vars[i]);
-      
+
       /* if problem is obviously infeasible due to empty domain, stop */
       if( SCIPisGT(scip, lb, ub) )
          goto TERMINATE;
