@@ -5029,7 +5029,13 @@ SCIP_RETCODE SCIPnlpCreate(
       if( set->nlp_solver[0] == '\0' )
       { /* take solver with highest priority */
          assert(set->nlpis != NULL);
-         (*nlp)->solver = set->nlpis[set->nnlpis-1];
+
+         /* sort the NLPIs if necessary */
+         if( !set->nlpissorted )
+            SCIPsetSortNlpis(set);
+
+         (*nlp)->solver = set->nlpis[0];
+         assert(FALSE);
       }
       else
       { /* find user specified NLP solver */
