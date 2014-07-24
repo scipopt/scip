@@ -3264,7 +3264,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 
    /* estimate the maximal number of variables in a logicor constraint */
    size = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-   assert(size > 0);
+   if( size <= 0 )
+      return SCIP_OKAY;
 
    /* temporary memory for active/negation of active variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &repvars, size) );
