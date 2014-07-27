@@ -13291,6 +13291,9 @@ SCIP_RETCODE freeTransform(
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
+   /* reset objective limit */
+   SCIP_CALL( SCIPsetObjlimit(scip, SCIPinfinity(scip)) );
+
    /* reset original variable's local and global bounds to their original values */
    SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
 
