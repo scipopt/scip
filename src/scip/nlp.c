@@ -5035,7 +5035,6 @@ SCIP_RETCODE SCIPnlpCreate(
             SCIPsetSortNlpis(set);
 
          (*nlp)->solver = set->nlpis[0];
-         assert(FALSE);
       }
       else
       { /* find user specified NLP solver */
