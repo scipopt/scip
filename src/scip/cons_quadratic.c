@@ -1699,7 +1699,7 @@ SCIP_RETCODE addLinearCoef(
    ++consdata->nlinvars;
 
    /* catch variable events */
-   if( consdata->lineventdata != NULL )
+   if( SCIPconsIsEnabled(cons) )
    {
       SCIP_CONSHDLR* conshdlr;
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1710,6 +1710,7 @@ SCIP_RETCODE addLinearCoef(
       assert(conshdlrdata != NULL);
       assert(conshdlrdata->eventhdlr != NULL);
 
+      assert(consdata->lineventdata != NULL);
       consdata->lineventdata[consdata->nlinvars-1] = NULL;
 
       /* catch bound change events of variable */
@@ -1900,6 +1901,8 @@ SCIP_RETCODE chgLinearCoefPos(
 
       if( conshdlrdata != NULL )
       {
+         assert(SCIPconsIsEnabled(cons));
+
          /* catch bound change events of variable */
          SCIP_CALL( catchLinearVarEvents(scip, conshdlrdata->eventhdlr, cons, pos) );
       }
@@ -1918,8 +1921,7 @@ SCIP_RETCODE addQuadVarTerm(
    SCIP_CONS*            cons,               /**< quadratic constraint */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_Real             lincoef,            /**< linear coefficient of variable */
-   SCIP_Real             sqrcoef,            /**< square coefficient of variable */
-   SCIP_Bool             catchevents         /**< whether we should catch variable events */
+   SCIP_Real             sqrcoef             /**< square coefficient of variable */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1961,7 +1963,7 @@ SCIP_RETCODE addQuadVarTerm(
    SCIP_CALL( SCIPcaptureVar(scip, var) );
 
    /* catch variable events, if we do so */
-   if( catchevents )
+   if( SCIPconsIsEnabled(cons) )
    {
       SCIP_CONSHDLR* conshdlr;
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -2210,6 +2212,8 @@ SCIP_RETCODE replaceQuadVarTermPos(
    /* catch variable events, if we do so */
    if( eventhdlr != NULL )
    {
+      assert(SCIPconsIsEnabled(cons));
+      
       /* catch bound change events of variable */
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, pos) );
    }
@@ -2882,8 +2886,7 @@ SCIP_RETCODE removeFixedVariables(
          {
             SCIP_CALL( addQuadVarTerm(scip, cons, aggrvars[j],
                   coef * aggrscalars[j] * (lcoef + 2.0 * scoef * (coef * aggrconstant + offset)),
-                  coef * coef * aggrscalars[j] * aggrscalars[j] * scoef,
-                  TRUE) );
+                  coef * coef * aggrscalars[j] * aggrscalars[j] * scoef) );
          }
 
          /* ensure space for bilinear terms */
@@ -11895,7 +11898,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
       /* add quadvars1[i], if not in there already */
       if( !SCIPhashmapExists(quadvaridxs, quadvars1[i]) )
       {
-         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars1[i], 0.0, sqrcoef, FALSE) );
+         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars1[i], 0.0, sqrcoef) );
          assert(consdata->nquadvars >= 0);
          assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars1[i]);
 
@@ -11916,7 +11919,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
       if( !SCIPhashmapExists(quadvaridxs, quadvars2[i]) )
       {
          assert(sqrcoef == 0.0);
-         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars2[i], 0.0, 0.0, FALSE) );
+         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars2[i], 0.0, 0.0) );
          assert(consdata->nquadvars >= 0);
          assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars2[i]);
 
@@ -12189,7 +12192,7 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( addQuadVarTerm(scip, cons, var, lincoef, sqrcoef, SCIPconsIsTransformed(cons)) );
+   SCIP_CALL( addQuadVarTerm(scip, cons, var, lincoef, sqrcoef) );
 
    return SCIP_OKAY;
 }
@@ -12229,7 +12232,7 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var, &pos) );
    if( pos < 0 )
    {
-      SCIP_CALL( addQuadVarTerm(scip, cons, var, coef, 0.0, SCIPconsIsTransformed(cons)) );
+      SCIP_CALL( addQuadVarTerm(scip, cons, var, coef, 0.0) );
       return SCIP_OKAY;
    }
    assert(pos < consdata->nquadvars);
@@ -12282,7 +12285,7 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var, &pos) );
    if( pos < 0 )
    {
-      SCIP_CALL( addQuadVarTerm(scip, cons, var, 0.0, coef, SCIPconsIsTransformed(cons)) );
+      SCIP_CALL( addQuadVarTerm(scip, cons, var, 0.0, coef) );
       return SCIP_OKAY;
    }
    assert(pos < consdata->nquadvars);
@@ -12345,7 +12348,7 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var1, &var1pos) );
    if( var1pos < 0 )
    {
-      SCIP_CALL( addQuadVarTerm(scip, cons, var1, 0.0, 0.0, SCIPconsIsTransformed(cons)) );
+      SCIP_CALL( addQuadVarTerm(scip, cons, var1, 0.0, 0.0) );
       var1pos = consdata->nquadvars-1;
    }
 
@@ -12361,7 +12364,7 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var2, &var2pos) );
    if( var2pos < 0 )
    {
-      SCIP_CALL( addQuadVarTerm(scip, cons, var2, 0.0, 0.0, SCIPconsIsTransformed(cons)) );
+      SCIP_CALL( addQuadVarTerm(scip, cons, var2, 0.0, 0.0) );
       var2pos = consdata->nquadvars-1;
    }
 
