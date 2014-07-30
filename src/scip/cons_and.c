@@ -4960,19 +4960,47 @@ SCIP_RETCODE SCIPcreateConsAnd(
    assert(conshdlrdata != NULL);
 
    /* upgrade binary resultant variable to an implicit binary variable */
+   /* @todo add implicit upgrade in presolving, improve decision making for upgrade by creating an implication graph */
    if( conshdlrdata->upgrresultant && SCIPvarGetType(resvar) == SCIP_VARTYPE_BINARY
-#if 1 /* todo delete following hack, because upgraded variables might have implications, which still only work with
-       *      SCIP_VARTYPE_BINARY variables and removing branching candidates also asserts to have only such variables
-       *      the following avoids upgrading not artificial variables, for example and-resultants which are genarated
-       *      from the gate presolver
+#if 1 /* todo delete following hack,
+       *      the following avoids upgrading not artificial variables, for example and-resultants which are generated
+       *      from the gate presolver, it seems better to not upgrade these variables
        */
       && strlen(SCIPvarGetName(resvar)) > strlen(ARTIFICIALVARNAMEPREFIX) && strncmp(SCIPvarGetName(resvar), ARTIFICIALVARNAMEPREFIX, strlen(ARTIFICIALVARNAMEPREFIX)) == 0 )
 #else
       )
 #endif
    {
-      SCIP_CALL( SCIPchgVarType(scip, resvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-      assert(!infeasible);
+      SCIP_VAR* activeresvar;
+      SCIP_VAR* activevar;
+      int v;
+
+      if( SCIPisTransformed(scip) )
+         activeresvar = SCIPvarGetProbvar(resvar);
+      else
+         activeresvar = resvar;
+
+      if( SCIPvarGetType(activeresvar) == SCIP_VARTYPE_BINARY )
+      {
+         /* check if we can upgrade the variable type of the resultant */
+         for( v = nvars - 1; v >= 0; --v )
+         {
+            if( SCIPisTransformed(scip) )
+               activevar = SCIPvarGetProbvar(vars[v]);
+            else
+               activevar = vars[v];
+
+            if( activevar == activeresvar || SCIPvarGetType(activevar) == SCIP_VARTYPE_IMPLINT )
+               break;
+         }
+
+         /* upgrade the type of the resultant */
+         if( v < 0 )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, resvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            assert(!infeasible);
+         }
+      }
    }
 
    /* create constraint data */
