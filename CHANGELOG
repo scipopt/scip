@@ -20,6 +20,8 @@ parameters:
 - one can now set emphasis parameters at the beginning of a settings file; it should start with "emphasis:" and
   the contain the emphasis string, e.g., "emphasis: feasibility" or "emphasis: heuristics off".
 - new parameter "heur/indicator/improvesols" that turns on the improvement of external solutions by one-opt
+- new advanced parameter "constraints/linear/rangedrowpropagation" to disabled newly implemented propagtion algorithm
+  for ranged rows and equations
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
@@ -32,6 +34,7 @@ performance improvements:
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
   coefficients
 - using sparsity information of the SoPlex LP
+- new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
 
 interface:
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
