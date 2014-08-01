@@ -277,7 +277,7 @@ SCIP_Real calcRelError(
     * confidence interval bound at confidence level of 95% for individual variable reliability.
     * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
     *
-    * the factor 1.96 comes from the 95% confidence interval
+    * the factor 1.96 is the critical value of a standard normal distribution at 5 % error rate.
     */
    if( SCIPisFeasPositive(scip, relerror) )
    {

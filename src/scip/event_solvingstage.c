@@ -36,6 +36,7 @@
  */
 #define MAXLINELEN 1024   /**< limit for line length */
 #define DEFAULT_ENABLED FALSE /**< should the event handler be executed? */
+#define DEFAULT_TESTMODE FALSE /**< should the event handler test the criteria? */
 #define DEFAULT_SOLUFILENAME "myshort.solu" /**< default filename to read solution value from */
 #define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//testset//"
 #define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"
@@ -93,6 +94,11 @@ struct SCIP_EventhdlrData
    SCIP_Bool            usefileweights;
    SCIP_Bool            useweightedquotients;
    SCIP_EVENTHDLR*      linregeventhdlr;
+   SCIP_Bool            testmode;
+   SCIP_Bool            rank1reached;
+   SCIP_Bool            estimatereached;
+   SCIP_Bool            optimalreached;
+   SCIP_Bool            logreached;
 };
 
 /*
@@ -240,67 +246,117 @@ SCIP_Real getGap(
 }
 
 static
+SCIP_Bool checkRankOneCriterion(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   if( SCIPgetNSols(scip) > 0 )
+      return SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNRank1Nodes(scip) == 0;
+   else
+      return FALSE;
+}
+
+static
+SCIP_Bool checkEstimateCriterion(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   if( SCIPgetNSols(scip) > 0 )
+      return SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNNodesBelowIncumbent(scip) == 0;
+   else
+      return FALSE;
+}
+
+static
+SCIP_Bool checkLogCriterion(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIP_Real axisintercept = SCIPgetCurrentTangentAxisIntercept(scip, eventhdlrdata->linregeventhdlr);
+      if( !SCIPisInfinity(scip, axisintercept) )
+      {
+         SCIP_Real primalbound;
+         SCIP_Real lambda;
+         SCIP_Real firstprimalbound = SCIPgetFirstPrimalBound(scip);
+         primalbound = SCIPgetPrimalbound(scip);
+         lambda = (axisintercept - primalbound) / (firstprimalbound - primalbound);
+         if( SCIPisNegative(scip, lambda) )
+            return TRUE;
+      }
+   }
+   return FALSE;
+}
+
+static
+SCIP_Bool checkOptimalSolution(
+   SCIP*                 scip,
+   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   )
+{
+   SCIP_Real referencevalue;
+   SCIP_Real primalbound;
+
+   referencevalue = eventhdlrdata->optimalvalue;
+   primalbound = SCIPgetPrimalbound(scip);
+   if(!SCIPisInfinity(scip, REALABS(primalbound)) && !SCIPisInfinity(scip, referencevalue) )
+   {
+      SCIP_Real max = MAX3(1.0, REALABS(primalbound), REALABS(referencevalue));
+      if( EPSZ((primalbound - referencevalue)/max, 1e-9) )
+         return TRUE;
+   }
+   return FALSE;
+}
+
+static
 SCIP_Bool transitionPhase3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata
    )
 {
-   SCIP_Real primalbound;
-   SCIP_Real referencevalue;
-
    if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
       return TRUE;
 
    switch( eventhdlrdata->transitionmethod )
    {
       case 'r':
-         if( SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNRank1Nodes(scip) == 0 )
+         if( checkRankOneCriterion(scip, eventhdlrdata) )
          {
-
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a rank 1 transition: nodes: %lld, rank1: %d bound: %9.5g\n",
-                  SCIPgetNNodes(scip), SCIPgetNRank1Nodes(scip), SCIPgetPrimalbound(scip));
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a rank 1 transition: nodes: %lld, rank1: %d bound: %9.5g time: %.2f\n",
+                  SCIPgetNNodes(scip), SCIPgetNRank1Nodes(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
          break;
       case 'o':
-         referencevalue = eventhdlrdata->optimalvalue;
-         primalbound = SCIPgetPrimalbound(scip);
-         if(!SCIPisInfinity(scip, REALABS(primalbound)) && !SCIPisInfinity(scip, referencevalue) )
+         if( checkOptimalSolution(scip, eventhdlrdata) )
          {
-            SCIP_Real max = MAX3(1.0, REALABS(primalbound), REALABS(referencevalue));
-            return EPSZ((primalbound-referencevalue)/max, 1e-9);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "optimal solution found: %lld, bound: %9.5g time: %.2f\n",
+                  SCIPgetNNodes(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
+            return TRUE;
          }
          break;
       case 'c':
          return FALSE;
          break;
       case 'e':
-         if( SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNNodesBelowIncumbent(scip) == 0 )
+         if( checkEstimateCriterion(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering an estimate transition: nodes: %lld, estimate: %d bound: %9.5g\n",
-                  SCIPgetNNodes(scip), SCIPgetNNodesBelowIncumbent(scip), SCIPgetPrimalbound(scip));
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering an estimate transition: nodes: %lld, estimate: %d bound: %9.5g time: %.2f\n",
+                  SCIPgetNNodes(scip), SCIPgetNNodesBelowIncumbent(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
          return FALSE;
          break;
       case 'l':
-      {
-         SCIP_Real axisintercept = SCIPgetCurrentTangentAxisIntercept(scip, eventhdlrdata->linregeventhdlr);
-
-         if( !SCIPisInfinity(scip, axisintercept) )
+         if( checkLogCriterion(scip, eventhdlrdata) )
          {
-            SCIP_Real firstprimalbound = SCIPgetFirstPrimalBound(scip);
-            SCIP_Real lambda;
-            primalbound = SCIPgetPrimalbound(scip);
-            lambda = (axisintercept - primalbound) / (firstprimalbound - primalbound);
-            if( SCIPisNegative(scip, lambda) )
-            {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a log regression phase transition: nodes: lambda = %.2f \n",lambda);
-               return TRUE;
-            }
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a log regression phase transition: %.2f", SCIPgetSolvingTime(scip));
+            return TRUE;
          }
-      }
-
          break;
       default:
          return FALSE;
@@ -549,8 +605,16 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
    if( eventhdlrdata->enabled )
    {
       SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
+   }
+
+   if( eventhdlrdata->enabled || eventhdlrdata->testmode )
+   {
       SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, NULL) );
    }
+   eventhdlrdata->optimalreached = FALSE;
+   eventhdlrdata->logreached = FALSE;
+   eventhdlrdata->rank1reached = FALSE;
+   eventhdlrdata->estimatereached = FALSE;
 
    eventhdlrdata->linregeventhdlr = SCIPfindEventhdlr(scip, "logregression");
    return SCIP_OKAY;
@@ -579,6 +643,33 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
    if( eventhdlrdata->enabled )
    {
       SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
+   }
+
+   if( eventhdlrdata->testmode )
+   {
+      if( !eventhdlrdata->rank1reached && checkRankOneCriterion(scip, eventhdlrdata) )
+      {
+         eventhdlrdata->rank1reached = TRUE;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
+
+      if( !eventhdlrdata->estimatereached && checkEstimateCriterion(scip, eventhdlrdata) )
+      {
+         eventhdlrdata->estimatereached = TRUE;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
+
+      if( !eventhdlrdata->optimalreached && checkOptimalSolution(scip, eventhdlrdata) )
+      {
+         eventhdlrdata->optimalreached = TRUE;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
+
+      if( !eventhdlrdata->logreached && checkLogCriterion(scip, eventhdlrdata) )
+      {
+         eventhdlrdata->logreached = TRUE;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
    }
 
    return SCIP_OKAY;
@@ -630,6 +721,9 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
                &eventhdlrdata->lambda23, FALSE, DEFAULT_LAMBA23, 0,MAXGAP, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/testmode", "should the event handler test for phase transition?",
+         &eventhdlrdata->testmode, FALSE, DEFAULT_TESTMODE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/solufilename","file to parse solution information from",
          &eventhdlrdata->solufilename, FALSE, DEFAULT_SOLUFILENAME, NULL, NULL) );

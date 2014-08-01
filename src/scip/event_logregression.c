@@ -32,7 +32,7 @@
 /*
  * Data structures
  */
-#define DEFAULT_ENABLED FALSE /**< should the event handler be executed? */
+#define DEFAULT_ENABLED TRUE /**< should the event handler be executed? */
 #define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND /**< the actual event to be caught */
 #define DEFAULT_XTYPE    'n' /**< default type to use for log regression - (t)ime, (n)odes, (l)p iterations */
 #define XTYPES           "lnt"
