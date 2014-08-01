@@ -54,7 +54,7 @@ SCIP_RETCODE runShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-    /* include stp pricer */
+   /* include stp pricer */
    SCIP_CALL( SCIPincludePricerStp(scip) );
 
    /* include steiner tree reader */
@@ -67,12 +67,11 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
 
    /* include Takahashi Matsuyama heuristic */
-
    SCIP_CALL( SCIPincludeHeurTM(scip) );
 #if 0
 
    /* include Rayward-Smith heuristic */
-    SCIP_CALL( SCIPincludeHeurRS(scip) );
+   SCIP_CALL( SCIPincludeHeurRS(scip) );
 #endif
 
    /* include local heuristics */

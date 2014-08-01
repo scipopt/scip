@@ -47,6 +47,7 @@ CMAINOBJ	=	cmain.o \
 			heur_tm.o \
 			heur_local.o \
 			heur_rs.o \
+			misc_stp.o \
 			probdata_stp.o \
 			reader_stp.o \
 			pricer_stp.o \

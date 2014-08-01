@@ -18,8 +18,17 @@
 #define GRAPH_HAS_COORDINATES     1
 #define GRAPH_IS_GRIDGRAPH        2
 #define GRAPH_IS_DIRECTED         4
+
+#define STP_UNDIRECTED              0
+#define STP_DIRECTED                1
+#define STP_PRIZE_COLLECTING        2
+#define STP_NODE_WEIGHTS            3
+#define STP_DEG_CONS                4
+#define STP_REVENUES_BUDGET_HOPCONS 5
+
 #include "heur_tm.h"
 #include "scip/scip.h"
+#include "misc_stp.h"
 typedef struct
 {
    /* Knots
@@ -43,6 +52,9 @@ typedef struct
                    /* for the ieat array, -1 if not used          */
    int*    outbeg; /* Array [0..knots-1] with starting slot index */
                    /* for the oeat array, -1 if not used          */
+   int*    maxdeg; /* Array [0..knots-1] containing the maximal
+                      degrees of all nodes (only used for Degree-
+                      Constraint STPs)                            */
    /* Edges
     */
    int     esize;  /* Count of allocated edge slots               */
@@ -79,9 +91,8 @@ typedef struct
    int* path_heap;
    int* path_state;
 
-   /* is the root given?
-    */
-   int rootisfixed;
+   /* type of Steiner Tree Problem  */
+   int stp_type;
 
 } GRAPH;
 

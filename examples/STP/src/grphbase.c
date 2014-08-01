@@ -71,6 +71,8 @@ GRAPH* graph_init(
    p->xpos  = malloc((size_t)ksize * sizeof(int));
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
+   p->maxdeg = NULL;
+
    p->mincut_dist = NULL;
    p->mincut_head = NULL;
    p->mincut_numb = NULL;
@@ -114,7 +116,7 @@ void graph_resize(
    int    layers)
 {
    int i;
-
+   assert(0);
    assert(p      != NULL);
    assert((ksize  < 0) || (ksize  >= p->knots));
    assert((esize  < 0) || (esize  >= p->edges));
@@ -188,7 +190,8 @@ void graph_free(
    free(p->oeat);
    free(p->xpos);
    free(p->ypos);
-
+   if( p->stp_type == STP_DEG_CONS )
+      free(p->maxdeg);
    free(p);
 }
 
@@ -196,7 +199,6 @@ GRAPH* graph_copy(
    const GRAPH* p)
 {
    GRAPH* g;
-
    assert(p != NULL);
 
    g = graph_init(p->ksize, p->esize, p->layers, p->flags);
@@ -220,6 +222,7 @@ GRAPH* graph_copy(
    g->knots = p->knots;
    g->terms = p->terms;
    g->edges = p->edges;
+   g->stp_type = p->stp_type;
 
    memcpy(g->locals, p->locals, p->layers * sizeof(*p->locals));
    memcpy(g->source, p->source, p->layers * sizeof(*p->source));
@@ -238,6 +241,12 @@ GRAPH* graph_copy(
    memcpy(g->xpos,   p->xpos,   p->ksize  * sizeof(*p->xpos));
    memcpy(g->ypos,   p->ypos,   p->ksize  * sizeof(*p->ypos));
 
+   if( g->stp_type == STP_DEG_CONS )
+   {
+      assert(p->maxdeg != NULL);
+      g->maxdeg = malloc((size_t)(g->knots) * sizeof(int));
+      memcpy(g->maxdeg,   p->maxdeg,   p->knots  * sizeof(*p->maxdeg));
+   }
    assert(graph_valid(p));
 
    return g;
@@ -825,10 +834,11 @@ GRAPH *graph_pack(
       assert(q->term[new[p->source[l]]] == l);
       q->source[l] = new[p->source[l]];
    }
-   q->rootisfixed = p->rootisfixed;
-
+   q->stp_type = p->stp_type;
+   q->maxdeg = p->maxdeg;
    free(new);
 
+   p->stp_type = UNKNOWN;
    graph_free(p);
 
 #if 0

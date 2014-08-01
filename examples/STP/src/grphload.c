@@ -3,7 +3,7 @@
 /*   Type....: Function                                                      */
 /*   File....: grphload.c                                                    */
 /*   Name....: Graph File Loader                                             */
-/*   Author..: Thorsten Koch                                                 */
+/*   Author..: Thorsten Koch, Daniel Rehfeldt                                */
 /*   Copyright by Author, All rights reserved                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -99,6 +99,8 @@ struct key
 #define KEY_PRESOLVE_UPPER       5004
 #define KEY_PRESOLVE_TIME        5005
 
+#define KEY_MAXDEGS_MD           6000
+
 static const struct key keyword_table[] =
    {
       /*
@@ -123,6 +125,9 @@ static const struct key keyword_table[] =
       {  "graph.edges",         KEY_GRAPH_EDGES,         "n"    },
       {  "graph.end",           KEY_END,                 NULL   },
       {  "graph.nodes",         KEY_GRAPH_NODES,         "n"    },
+
+      {  "maximumdegrees.end",  KEY_END,                 NULL   },
+      {  "maximumdegrees.md",   KEY_MAXDEGS_MD,          "n"    },
 
       {  "presolve.date",       KEY_PRESOLVE_DATE,       "s"    },
       {  "presolve.end",        KEY_END,                 NULL   },
@@ -170,6 +175,7 @@ static struct section section_table[] =
       { "comment",     NULL,  FLAG_REQUIRED, SECTION_MISSING },
       { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
+      { "maximumdegrees", "mdg", FLAG_OPTIONAL, SECTION_MISSING },
       { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
       { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
       { "terminals",   "trm", FLAG_REQUIRED, SECTION_MISSING },
@@ -565,6 +571,7 @@ GRAPH* graph_load(
    const char*  msg_keyword_sd  = "Found Keyword \"%s\", code = %d";
    const char*  err_badedge_ddd = "Bad edge %d-%d (%d nodes)";
    const char*  err_badroot_dd  = "Bad root %d (%d nodes)";
+   const char*  err_baddeg_dd   = "More degree constraints (%d) than nodes (%d)";
    const char*  msg_finish_dddd = "Knots: %d  Edges: %d  Terminals: %d  Source=%d\n";
 
    const char*  endofline = "#;\n\r";
@@ -589,6 +596,7 @@ GRAPH* graph_load(
    int          i;
    int          nodes = 0;
    int          edges = 0;
+   int          ndegs = 0;
    int          has_coordinates = FALSE;
    int          is_gridgraph    = FALSE;
 
@@ -791,6 +799,7 @@ GRAPH* graph_load(
                         graph_knot_add(g, -1, 0, 0);
 
                      g->source[0] = -1;
+		     g->stp_type = STP_UNDIRECTED;
                   }
                   if (((int)para[0].n <= nodes) && ((int)para[1].n <= nodes))
                   {
@@ -807,6 +816,29 @@ GRAPH* graph_load(
                      ret = FAILURE;
                   }
                   break;
+	       case KEY_MAXDEGS_MD :
+                  printf("MAX DEGS number  %d : ", ndegs);
+		  assert(g != NULL);
+		  assert((int)para[0].n >= 0);
+
+		  if( ndegs < nodes )
+		  {
+                     if( g->maxdeg == NULL )
+                     {
+                        g->maxdeg = malloc((size_t)nodes * sizeof(int));
+                        g->stp_type = STP_DEG_CONS;
+                     }
+                     g->maxdeg[ndegs++] = (int)para[0].n;
+
+                     printf(", deg:  %d : \n", g->maxdeg[ndegs - 1]);
+                     break;
+		  }
+		  else
+		  {
+                     message(MSG_FATAL, &curf, err_baddeg_dd,
+                        ndegs, nodes);
+                     ret = FAILURE;
+		  }
                case KEY_TERMINALS_TERMINALS :
                   break;
                case KEY_TERMINALS_ROOT :
@@ -882,7 +914,6 @@ GRAPH* graph_load(
 
       if (g->source[0] == -1)
       {
-	 g->rootisfixed = FALSE;
          for(i = 0; i < g->knots; i++)
             if ((g->term[i] == 0)
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
@@ -890,7 +921,7 @@ GRAPH* graph_load(
       }
       else
       {
-         g->rootisfixed = TRUE;
+         g->stp_type = STP_DIRECTED;
       }
       graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
          | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));

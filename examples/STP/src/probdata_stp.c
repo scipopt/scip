@@ -61,6 +61,7 @@ struct SCIP_ProbData
    SCIP_Bool             bigt;               /**< stores whether the 'T' model is being used (not relevant in the cut mode) */
 
    GRAPH*                graph;        	     /**< the graph */
+   SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
@@ -75,6 +76,7 @@ struct SCIP_ProbData
    int                   nlayers;            /**< number of layers */
    int                   nnodes;             /**< number of nodes */
    int                   nvars;              /**< number of variables */
+   int                   stp_type;           /**< STP type */
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
 };
@@ -233,6 +235,7 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->graph = graph;
    (*probdata)->xval = NULL;
    (*probdata)->lastlpiters = -1;
+   (*probdata)->stp_type = graph->stp_type;
    (*probdata)->copy = FALSE;
 
    return SCIP_OKAY;
@@ -257,6 +260,19 @@ SCIP_RETCODE probdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->edgevars[e]) );
    }
    SCIPfreeMemoryArrayNull(scip, &(*probdata)->edgevars);
+
+   /* Degree-Constrained STP? */
+   if( (*probdata)->stp_type == STP_DEG_CONS )
+   {
+      assert((*probdata)->mode == MODE_CUT);
+
+      /* release degree constraints */
+      for( t = 0; t < (*probdata)->nnodes; ++t)
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->degcons[t])) );
+      }
+      SCIPfreeMemoryArrayNull(scip, &((*probdata)->degcons));
+   }
 
    /* release path constraints */
    if( (*probdata)->mode == MODE_PRICE )
@@ -284,7 +300,7 @@ SCIP_RETCODE probdataFree(
       }
       SCIPfreeMemoryArrayNull(scip, &(*probdata)->flowvars);
    }
-
+   //else if( TODO??
    /* release edge constraints (Price or Flow) */
    if( (*probdata)->mode != MODE_CUT)
    {
@@ -376,6 +392,43 @@ SCIP_RETCODE probdataPrintGraph(
 
    return SCIP_OKAY;
 }
+
+/** create (node-) degree constraints (Cut Mode only) */
+static
+SCIP_RETCODE createDegreeConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+
+{
+   GRAPH* graph;
+   char consname[SCIP_MAXSTRLEN];
+   int k;
+   int nnodes;
+
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
+   SCIPdebugPrintf("createDegreeConstraints \n");
+   graph = probdata->graph;
+   nnodes = probdata->nnodes;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->degcons), nnodes ) );
+
+   for( k = 0; k < nnodes; ++k )
+   {
+      printf("max %d \n",graph->maxdeg[k]);
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "DegreeConstraint%d", k);
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->degcons[k]), consname, 0, NULL, NULL,
+            -SCIPinfinity(scip), graph->maxdeg[k], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      printf("fs\n");
+
+      SCIP_CALL( SCIPaddCons(scip, probdata->degcons[k]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** create constraints (in Flow or Price Mode) */
 static
@@ -573,6 +626,19 @@ SCIP_RETCODE createVariables(
                SCIP_CALL( SCIPaddVar(scip, probdata->edgevars[k * nedges + e]) );
             }
          }
+
+         /* Degree-Constrained STP? */
+         if( graph->stp_type == STP_DEG_CONS )
+	 {
+	    for( k = 0; k < nnodes; ++k )
+            {
+	       for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->degcons[k], probdata->edgevars[e], 1.0) );
+		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->degcons[k], probdata->edgevars[flipedge(e)], 1.0) );
+	       }
+	    }
+	 }
       }
       /* Price or Flow mode */
       else
@@ -785,6 +851,31 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       {
          (*targetdata)->edgecons = NULL;
          (*targetdata)->pathcons = NULL;
+	 if( sourcedata->stp_type == STP_DEG_CONS )
+	 {
+            SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
+
+            for( c = sourcedata->nnodes - 1; c >= 0; --c )
+            {
+               SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->degcons[c], &((*targetdata)->degcons[c]),
+                     SCIPconsGetHdlr(sourcedata->degcons[c]), varmap, consmap,
+                     SCIPconsGetName(sourcedata->degcons[c]),
+                     SCIPconsIsInitial(sourcedata->degcons[c]),
+                     SCIPconsIsSeparated(sourcedata->degcons[c]),
+                     SCIPconsIsEnforced(sourcedata->degcons[c]),
+                     SCIPconsIsChecked(sourcedata->degcons[c]),
+                     SCIPconsIsPropagated(sourcedata->degcons[c]),
+                     SCIPconsIsLocal(sourcedata->degcons[c]),
+                     SCIPconsIsModifiable(sourcedata->degcons[c]),
+                     SCIPconsIsDynamic(sourcedata->degcons[c]),
+                     SCIPconsIsRemovable(sourcedata->degcons[c]),
+                     SCIPconsIsStickingAtNode(sourcedata->degcons[c]),
+                     global, &success) );
+               assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->degcons[c]) );
+            }
+	 }
       }
       /* Price or Flow mode */
       else
@@ -865,7 +956,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
                SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->pathcons[c]) );
             }
          }
-         /* transform constraints and variables*/
+         /* transform constraints and variables */
          else if( sourcedata->mode == MODE_FLOW )
          {
 	    if( sourcedata->bigt )
@@ -1019,6 +1110,11 @@ SCIP_DECL_PROBTRANS(probtransStp)
       {
          (*targetdata)->edgecons = NULL;
          (*targetdata)->pathcons = NULL;
+	 if( sourcedata->stp_type == STP_DEG_CONS )
+	 {
+	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
+            SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnodes, sourcedata->degcons, (*targetdata)->degcons) );
+	 }
       }
       /* Price or Flow mode */
       else
@@ -1142,11 +1238,21 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* set solving mode */
    if( mode == 'f' )
+   {
+      assert(graph->stp_type == STP_UNDIRECTED);
       probdata->mode = MODE_FLOW;
+   }
    else if( mode == 'p' )
+   {
+      assert(graph->stp_type == STP_UNDIRECTED);
       probdata->mode = MODE_PRICE;
+   }
    else
       probdata->mode = MODE_CUT;
+
+   /* only use reduction for undirected STP's in graphs */
+   if( graph->stp_type != STP_UNDIRECTED )
+      reduction = 0;
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
@@ -1162,7 +1268,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph_path_init(graph);
 
    /* select a root node */
-   if( !graph->rootisfixed && compcentral != CENTER_DEG )
+   if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG )
       graph->source[0] = central_terminal(graph, compcentral);
 
    /* print the graph */
@@ -1173,12 +1279,13 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* presolving */
    offset = reduce(graph, reduction);
-   /* offset = 0; */
+
    graph_path_exit(graph);
 
    probdata->graph = graph_pack(graph);
-   /*probdata->graph = graph;*/
+
    graph = probdata->graph;
+   printf("xx \n");
 
    /* if graph reduction solved the whole problem, NULL is returned */
    if( graph != NULL )
@@ -1228,6 +1335,10 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIP_CALL( SCIPcreateConsStp(scip, &cons, "stpcons", probdata->graph) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+	 /* if the problem is a Degree-Constrained-STP, additional constraints are required */
+	 if( graph->stp_type == STP_DEG_CONS )
+	    SCIP_CALL( createDegreeConstraints(scip, probdata) );
       }
       else
       {
