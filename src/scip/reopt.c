@@ -226,61 +226,70 @@ SCIP_Real soltreeGetHammingDist(
 /* add solutions to origprimal space */
 static
 SCIP_RETCODE soltreeUpdateSols(
+   SCIP*                 scip,
    SCIP_REOPT*           reopt,
-   SCIP_PRIMAL*          primal,
-   BMS_BLKMEM*           probmem,
-   SCIP_SET*             set,
-   SCIP_MESSAGEHDLR*     messagehdlr,
-   SCIP_STAT*            stat,
-   SCIP_PROB*            origprob,
-   SCIP_PROB*            transprob,
-   SCIP_TREE*            tree,
-   SCIP_LP*              lp,
-   SCIP_EVENTQUEUE*      eventqueue,
-   SCIP_EVENTFILTER*     eventfilter,
+   SCIP_Bool             sepabestsol,
    int                   run,
    int*                  naddedsols
 )
 {
    int s;
+   SCIP_HEUR* heur;
 
    (*naddedsols) = 0;
 
-   for(s = reopt->nsols[run]-1; s >= 0; s--)
+   heur = SCIPfindHeur(scip, "reoptsols");
+   assert(heur != NULL);
+
+   for(s = 0; s < reopt->nsols[run]; s++)
    {
       SCIP_SOL* sol;
       SCIP_Real solobj;
 
       /* add a solution one once, if it occurs in more
        * than one run */
-      if( !reopt->sols[run][s]->updated )
+      if( !reopt->sols[run][s]->updated && !reopt->sols[run][s]->infeasible )
       {
          sol = reopt->sols[run][s]->sol;
          SCIPsolSetNodenum(sol, 0);
-         SCIPsolRecomputeObj(sol, set, stat, origprob);
-         solobj = SCIPsolGetObj(sol, set, transprob);
+         SCIPsolSetHeur(sol, heur);
+         SCIP_CALL( SCIPrecomputeSol(scip, sol) );
+         solobj = SCIPgetSolTransObj(scip, sol);
 
          /* we do not want to add solutions with objective value +infinity */
-         if( !SCIPisInfinity(set->scip, solobj) && !SCIPisInfinity(set->scip, -solobj) )
+         if( !SCIPisInfinity(scip, solobj) && !SCIPisInfinity(scip, -solobj)
+         && SCIPisFeasLT(scip, solobj, SCIPgetCutoffbound(scip)) )
          {
-            SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+            SCIP_SOL* bestsol = SCIPgetBestSol(scip);
             SCIP_Bool stored;
+            SCIP_Bool feasible;
 
-            /* add primal solution to solution storage by copying it */
-            SCIP_CALL( SCIPprimalAddSol(primal, probmem, set, messagehdlr, stat, origprob, transprob,
-                  tree, lp, eventqueue, eventfilter, sol, &stored) );
-
-            if( stored )
+            if( sepabestsol )
             {
-               if( bestsol != SCIPgetBestSol(set->scip) )
-                  SCIPstoreSolutionGap(set->scip);
-
-               /* mark the solution as already added and used */
-               reopt->sols[run][s]->updated = TRUE;
-               reopt->sols[run][s]->used = TRUE;
-
-               (*naddedsols)++;
+               SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, FALSE, FALSE) );
             }
+            else
+               feasible = TRUE;
+
+            if( feasible)
+            {
+               /* add primal solution to solution storage by copying it */
+               SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+
+               if( stored )
+               {
+                  if( bestsol != SCIPgetBestSol(scip) )
+                     SCIPstoreSolutionGap(scip);
+
+                  /* mark the solution as already added and used */
+                  reopt->sols[run][s]->updated = TRUE;
+                  reopt->sols[run][s]->used = TRUE;
+
+                  (*naddedsols)++;
+               }
+            }
+            else
+               reopt->sols[run][s]->infeasible = TRUE;
          }
       }
    }
@@ -327,7 +336,10 @@ SCIP_Real reoptSimilarity(
    norm_n1 = sqrt(norm_n1);
    norm_n2 = sqrt(norm_n2);
 
-   return scalarproduct/(norm_n1*norm_n2);
+   if( norm_n1*norm_n2 == 0 )
+      return -2.0;
+   else
+      return scalarproduct/(norm_n1*norm_n2);
 }
 
 static
@@ -346,6 +358,9 @@ SCIP_RETCODE createSolTree(
    reopt->soltree->root->father = NULL;
    reopt->soltree->root->rchild = NULL;
    reopt->soltree->root->lchild = NULL;
+   reopt->soltree->root->used = FALSE;
+   reopt->soltree->root->infeasible = FALSE;
+   reopt->soltree->root->val = -1;
 
    return SCIP_OKAY;
 }
@@ -423,6 +438,7 @@ SCIP_RETCODE soltreeAddNode(
    newnode->sol = NULL;
    newnode->updated = FALSE;
    newnode->used = FALSE;
+   newnode->infeasible = FALSE;
    newnode->father = father;
    newnode->rchild = NULL;
    newnode->lchild = NULL;
@@ -447,6 +463,7 @@ SCIP_RETCODE soltreeAddSol(
    SCIP_SOL*             sol,
    SCIP_SOLNODE**        solnode,
    int                   nvars,
+   SCIP_Bool             bestsol,
    SCIP_Bool*            added
 )
 {
@@ -510,11 +527,13 @@ SCIP_RETCODE soltreeAddSol(
    }
 
    /* the solution was added */
-   if( (*added) || hamdist >= set->reopt_minavghamdist )
+   if( *added || hamdist >= set->reopt_minavghamdist || bestsol)
    {
       SCIP_SOL* copysol;
 
-      if( (*added) )
+      assert(cursolnode->lchild == NULL && cursolnode->rchild == NULL);
+
+      if( *added )
       {
          SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
          SCIPsolSetHeur(sol, NULL);
@@ -528,15 +547,16 @@ SCIP_RETCODE soltreeAddSol(
           * storage of this round */
          (*added) = TRUE;
 
+      if( bestsol )
+         reopt->lastbestsol = cursolnode->sol;
+
       (*solnode) = cursolnode;
    }
 
 #ifdef SCIP_DEBUG
    {
-      if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist < (SCIP_Real)1/SCIPgetNVars(scip) )
-         printf(">> solution%s added (Hamming-Distance --).\n", (*added) ? "" : " not");
-      else
-         printf(">> solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
+      if( set->reopt_minavghamdist >= (SCIP_Real)1/SCIPgetNVars(scip) )
+         printf("** reoptimization ** solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
    }
 #endif
 
@@ -612,6 +632,9 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->solssize = NULL;
    (*reopt)->runsize = 200;
    (*reopt)->run = -1;
+   (*reopt)->simtolastobj = -2.0;
+   (*reopt)->simtofirstobj = -2.0;
+   (*reopt)->lastbestsol = NULL;
 
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->sols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->nsols, (*reopt)->runsize) );
@@ -677,6 +700,7 @@ SCIP_RETCODE SCIPreoptAddSol(
    SCIP_SET*             set,
    SCIP_STAT*            stat,
    SCIP_SOL*             sol,
+   SCIP_Bool             bestsol,
    SCIP_Bool*            added,
    int                   run
 )
@@ -695,7 +719,7 @@ SCIP_RETCODE SCIPreoptAddSol(
    SCIP_CALL( ensureSolsSize(reopt, set, reopt->nsols[run], run) );
 
    /** ad solution to solution tree */
-   SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetOrigVars(scip), sol, &solnode, SCIPgetNOrigVars(scip), added) );
+   SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetOrigVars(scip), sol, &solnode, SCIPgetNOrigVars(scip), bestsol, added) );
 
    if( (*added) )
    {
@@ -753,18 +777,9 @@ int SCIPreoptGetNSols(
 SCIP_RETCODE SCIPreoptUpdateSols(
    SCIP*                 scip,
    SCIP_REOPT*           reopt,
-   SCIP_PRIMAL*          primal,
-   BMS_BLKMEM*           probmem,
-   SCIP_SET*             set,
-   SCIP_MESSAGEHDLR*     messagehdlr,
-   SCIP_STAT*            stat,
-   SCIP_PROB*            origprob,
-   SCIP_PROB*            transprob,
-   SCIP_TREE*            tree,
-   SCIP_LP*              lp,
-   SCIP_EVENTQUEUE*      eventqueue,
-   SCIP_EVENTFILTER*     eventfilter,
-   SCIP_Real             simparam
+   int                   savesols,
+   SCIP_Real             objsim,
+   SCIP_Real             sepabestsol
 )
 {
    int naddedsols;
@@ -773,57 +788,47 @@ SCIP_RETCODE SCIPreoptUpdateSols(
    int run;
 
    assert(reopt != NULL);
-   assert(primal != NULL);
-   assert(probmem != NULL);
-   assert(set != NULL);
-   assert(messagehdlr != NULL);
-   assert(stat != NULL);
-   assert(origprob != NULL);
-   assert(transprob != NULL);
-   assert(tree != NULL);
-   assert(lp != NULL);
-   assert(eventqueue != NULL);
-   assert(eventfilter != NULL);
 
    /** we can skip this method if we have no solutions saved */
-   if( set->reopt_savesols == 0 )
+   if( savesols == 0 )
       return SCIP_OKAY;
 
    naddedsols = 0;
    naddedsolsrun = -1;
    nsols = reopt->soltree->nsols;
 
-   for(run = reopt->run; run >= 0 && (naddedsolsrun != 0 || set->reopt_saveglbcons); run--)
+   for(run = reopt->run; run >= 0; run--)
    {
       SCIP_Real sim;
 
       naddedsolsrun = 0;
 
-      if( set->reopt_objsim == 0 )
+      if( objsim == 0 )
          sim = 1;
       else
-         sim = reoptSimilarity(reopt, origprob->nvars,run, reopt->run+1);
+         sim = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, reopt->run+1);
 
-      if( sim >= simparam )
+      if( sim >= objsim )
       {
-         SCIP_CALL( soltreeUpdateSols(reopt, primal, probmem, set, messagehdlr,
-               stat, origprob, transprob, tree, lp, eventqueue, eventfilter,
-               run, &naddedsolsrun) );
+         SCIP_CALL( soltreeUpdateSols(scip, reopt, sepabestsol, run, &naddedsolsrun) );
 
          naddedsols += naddedsolsrun;
 
 #ifdef SCIP_DEBUG
          {
-            if( set->reopt_objsim == 0  )
-               printf(">> add %d solutions from run %d (lambda --).\n", naddedsolsrun, run);
-            else
-               printf(">> add %d solutions from run %d (lambda %.4f).\n", naddedsolsrun, run, sim);
+            if( naddedsolsrun > 0 )
+            {
+               if( set->reopt_objsim == 0  )
+                  printf("** reoptimization ** add %d solutions from run %d.\n", naddedsolsrun, run);
+               else
+                  printf("** reoptimization ** add %d solutions from run %d (lambda %.4f).\n", naddedsolsrun, run, sim);
+            }
          }
 #endif
       }
    }
 
-   printf("reuse %u/%u soultions.\n", naddedsols, nsols);
+   printf("%u/%u reoptimized solutions, feasible solution found by reopsols heuristic, best objective value %.6e\n", naddedsols, nsols, SCIPgetPrimalbound(scip));
 
    /* reset the marks for added solutions */
    if(  reopt->soltree ->nsols > 0 )
@@ -845,7 +850,7 @@ SCIP_RETCODE SCIPreoptUpdateSols(
    nsavedsols = 0;
 
    if( reopt->soltree->root->lchild != NULL
-    && reopt->soltree->root->rchild != NULL)
+    || reopt->soltree->root->rchild != NULL)
       nsavedsols = soltreeNInducedtSols(reopt->soltree->root);
 
    return nsavedsols;
@@ -881,12 +886,6 @@ SCIP_RETCODE SCIPreoptSaveObj(
 
    assert(reopt != NULL);
 
-   /* at this moment we need the objective only
-    * to decide if we want to add solution or not,
-    * so we can skip this if objsim == 0 */
-   if( set->reopt_objsim == 0 && set->reopt_delay == 0.0 )
-      return SCIP_OKAY;
-
    /* check memory */
    SCIP_CALL( ensureRunSize(reopt, set, run) );
 
@@ -904,7 +903,25 @@ SCIP_RETCODE SCIPreoptSaveObj(
 
 #ifdef SCIP_DEBUG
    {
-      printf(">> saved obj for run %d ...\n", run);
+      printf("** reoptimization ** saved obj for run %d.\n", run);
+   }
+#endif
+
+   /* calculate similarity to last objective */
+   if( run >= 1 )
+   {
+      /* calculate similarity to first objective */
+      if( run > 1 && reopt->simtofirstobj >= -1 )
+         reopt->simtofirstobj = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, 0);
+
+      /* calculate similarity to last objective */
+      reopt->simtolastobj = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, run-1);
+   }
+
+#ifdef SCIP_DEBUG
+   {
+      if( run >= 1 )
+         printf("** reoptimization ** new objective has similarity of %.4f/%.4f compared to first/previous.\n", reopt->simtofirstobj, reopt->simtolastobj);
    }
 #endif
 
@@ -927,7 +944,7 @@ SCIP_Bool SCIPreoptCheckRestart(
 
    if( reopt->run > 0 && set->reopt_delay > 0.0 )
    {
-      (*sim) = reoptSimilarity(reopt, nvars, reopt->run, reopt->run-1);
+      (*sim) = reopt->simtolastobj;
    }
 
    if( (*sim) >= set->reopt_delay )
@@ -936,3 +953,90 @@ SCIP_Bool SCIPreoptCheckRestart(
       return TRUE;
 }
 
+/*
+ * returns the similarity to the previous objective function,
+ * if no objective functions are saved the similarity is -2.0.
+ */
+SCIP_Real SCIPreoptGetSimToPrevious(
+      SCIP_REOPT*        reopt
+)
+{
+   assert(reopt != NULL);
+   return reopt->simtolastobj;
+}
+
+/*
+ * returns the similarity to the first objective function,
+ * if no objective functions are saved the similarity is -2.0.
+ */
+SCIP_Real SCIPreoptGetSimToFirst(
+      SCIP_REOPT*        reopt
+)
+{
+   assert(reopt != NULL);
+   return reopt->simtofirstobj;
+}
+
+/*
+ * returns the best solution of the last run
+ */
+SCIP_SOL* SCIPreoptGetLastBestSol(
+   SCIP_REOPT*           reopt
+)
+{
+   assert(reopt != NULL);
+   return reopt->lastbestsol;
+}
+
+/*
+ * returns true if the sign of the objective coefficient has changed
+ */
+SCIP_Bool SCIPreoptIsObjCoefNegated(
+   SCIP_REOPT*           reopt,
+   int                   varnr
+)
+{
+   assert(reopt != NULL);
+
+   if( reopt->objs[reopt->run][varnr] == 0 || reopt->objs[reopt->run-1][varnr] == 0 )
+      return FALSE;
+
+   if( reopt->objs[reopt->run] != NULL && reopt->run >= 1 )
+   {
+      return ( (SCIP_Real)reopt->objs[reopt->run][varnr]/reopt->objs[reopt->run-1][varnr] < 0 ? TRUE : FALSE );
+   }
+
+   return FALSE;
+}
+
+/*
+ * returns if a variable enters or leaves the objective function.
+ */
+void SCIPreoptEnterOrLeaveObj(
+   SCIP_REOPT*           reopt,
+   int                   varnr,
+   SCIP_Bool*            entering,
+   SCIP_Bool*            leaving
+)
+{
+   assert(reopt != NULL);
+
+   *entering = FALSE;
+   *leaving = FALSE;
+
+   if( reopt->objs[reopt->run] == NULL || reopt->run == 0)
+      return;
+
+   /* variable leaves the objective */
+   if( reopt->objs[reopt->run][varnr] == 0 && reopt->objs[reopt->run-1][varnr] != 0 )
+   {
+      *leaving = TRUE;
+   }
+   /* variable enters the objective function */
+   else if( reopt->objs[reopt->run][varnr] != 0 && reopt->objs[reopt->run-1][varnr] == 0 )
+   {
+      *entering = TRUE;
+   }
+
+   return;
+}

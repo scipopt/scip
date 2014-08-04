@@ -273,8 +273,9 @@
 #define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
                                                      such that the path get not shrunk */
 #define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
-#define SCIP_DEFAULT_REOPT_SAVEGLBCONS    FALSE /**< save global constraints to separate solutions found so far */
-#define SCIP_DEFAULT_REOPT_SAVELOCCONS    FALSE /**< save local constraints to separate solutions found so far */
+#define SCIP_DEFAULT_REOPT_SEPAGLBSOLS    FALSE /**< save global constraints to separate solutions found so far */
+#define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
+#define SCIP_DEFAULT_REOPT_SEPALOCSOLS    FALSE /**< save local constraints to separate solutions found so far */
 #define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate only the best solution, i.e., for constraint shortest path problems */
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
@@ -1565,14 +1566,19 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_savelpbasis, TRUE, SCIP_DEFAULT_REOPT_SAVELPBASIS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/saveglbcons",
+         "reoptimization/globalcons/sepasols",
          "save global constraints to separate solutions found so far.",
-         &(*set)->reopt_saveglbcons, TRUE, SCIP_DEFAULT_REOPT_SAVEGLBCONS,
+         &(*set)->reopt_sepaglbsols, FALSE, SCIP_DEFAULT_REOPT_SEPAGLBSOLS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/saveloccons",
+         "reoptimization/globalcons/sepainfsubtrees",
+         "save global constraints to separate infeasible subtrees.",
+         &(*set)->reopt_sepaglbinfsubtrees, FALSE, SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/localcons/sepasols",
          "save local constraints to separate solutions found so far.",
-         &(*set)->reopt_saveloccons, TRUE, SCIP_DEFAULT_REOPT_SAVELOCCONS,
+         &(*set)->reopt_sepalocsols, FALSE, SCIP_DEFAULT_REOPT_SEPALOCSOLS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/sepabestsol",

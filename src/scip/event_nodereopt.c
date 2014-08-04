@@ -19,6 +19,8 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
+
 #include "scip/branch_nodereopt.h"
 #include "scip/branch_pseudo.h"
 #include "scip/event_nodereopt.h"
@@ -41,6 +43,7 @@ struct SCIP_EventhdlrData
    int*                  seennodes;               /** array of already seen nodes and their event, 0: not seen yet, 1: branched, 2: infeasible, 3: feasible */
    SCIP_EVENTTYPE        lasteventtype;           /** last caught eventtype */
    SCIP_Bool             reopt;                   /** is reoptimization enabled */
+   SCIP_Bool             strbrinleafs;            /** save strong branching information in leaf nodes. */
    SCIP_Bool             init;                    /** data is initialized */
 };
 
@@ -106,16 +109,11 @@ checkCutoffReason(
       }
    }
 
-#ifdef DEBUG_MODE
-   {
-      if( eventnode != SCIPgetRootNode(scip) )
-      {
-         printf("Node #%llu from #%llu with event %x, strong branched %u\n", SCIPnodeGetNumber(eventnode), SCIPnodeGetNumber(SCIPnodeGetParent(eventnode)), eventtype, strongbranched);
-      }
-      else
-      printf("Node #%llu with event %x\n", SCIPnodeGetNumber(eventnode), eventtype);
-   }
-#endif
+   SCIPdebugMessage("check the reason of cutoff for node %lld:\n", SCIPnodeGetNumber(eventnode));
+   SCIPdebugMessage(" -> focusnode: %u\n", SCIPgetCurrentNode(scip) == eventnode);
+   SCIPdebugMessage(" -> depth: %d, eff. root depth: %d\n", SCIPnodeGetDepth(eventnode), SCIPgetEffectiveRootDepth(scip));
+   SCIPdebugMessage(" -> strong branched: %u\n", strongbranched);
+   SCIPdebugMessage(" -> LP solstat     : %d\n", solstat);
 
    /** three different cases are possible: NODEBRANCHED, NODEFEASIBLE, NODEINFEASIBLE */
    switch (eventtype)
@@ -142,18 +140,24 @@ checkCutoffReason(
              */
          if( strongbranched )
          {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+            SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
             SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
+
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_LOGICORNODE) );
          }
          else
          {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
+
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT) );
          }
-
       }
       else
       {
@@ -169,16 +173,23 @@ checkCutoffReason(
           */
          if( strongbranched )
          {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+            SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+
             SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
             SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
+
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_LOGICORNODE) );
          }
          else
          {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
+
             SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT) );
          }
       }
@@ -197,13 +208,40 @@ checkCutoffReason(
       }
 
       /** we can delete all pseudo information; because we have to revive this node and we don't wont to split up */
-      if (SCIPnodeGetDepth(eventnode) == SCIPgetEffectiveRootDepth(scip) && strongbranched )
+      if(SCIPnodeGetDepth(eventnode) == SCIPgetEffectiveRootDepth(scip) && strongbranched)
       {
-         SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
+         if( !eventhdlrdata->strbrinleafs )
+         {
+            SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
+
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_FEASIBLE);
+            SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE));
+         }
+         else
+         {
+            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+            SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+
+            SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED));
+            SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
+         }
+      }
+      else if(SCIPnodeGetDepth(eventnode) > SCIPgetEffectiveRootDepth(scip) && strongbranched && eventhdlrdata->strbrinleafs)
+      {
+         SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+         SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+
+         SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+         SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
       }
 
-      /* if the node was created by branch_nodereopt, only the LP basis will be refreshed (if enabled) */
-      SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE));
+      if( !strongbranched )
+      {
+         /* if the node was created by branch_nodereopt, only the LP basis will be refreshed (if enabled) */
+         SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_FEASIBLE);
+         SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE));
+      }
 
       break;
 
@@ -222,70 +260,109 @@ checkCutoffReason(
          if (SCIPnodeGetNumber(eventnode) == eventhdlrdata->lastbranched)
             break;
 
-         /**
-          * we have to look at the LP solstat
-          * a) the LP is not INFEASIBLE, we have to save this node
-          * b) the LP is INFEASIBLE, we can delete this node an all pseudo-branching information;
-          *    because all bound changes belongs to infeasible branched. TODO: <- check this case ! ! !
+         /*
+          * if the node is strong branched we possible detects an infeasible subtree, if not,
+          * the whole node is either infeasible or exceeds the cutoff bound.
           */
-         if (solstat != SCIP_LPSOLSTAT_INFEASIBLE || strongbranched)
+         if( strongbranched )
          {
-//            if (eventnode != SCIPgetRootNode(scip))
-//            {
-            /* the node is strong branched and is infeasible, we can cutoff this subtree */
-            if( solstat == SCIP_LPSOLSTAT_INFEASIBLE && strongbranched )
+            /*
+             * 1. the LP is not solved or infeasible: the subnode is infeasible and can be discarded
+             *    because either the LP proves infeasibility or a constraint handler.
+             *    We have to store an infeasible subtree constraint
+             * 2. the LP exceeds the objective limit, we have to store the node and can delete the
+             *    strong branching information
+             */
+            if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
             {
                /* add a dummy variable, because the bound changes were not global in the
                 * sense of effective root depth */
-               if( SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
+               if( SCIPnodeGetDepth(eventnode) > SCIPgetEffectiveRootDepth(scip) )
                {
                   SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
                }
-               printf(">> infeasible subtree in node %d.\n", SCIPnodeGetNumber(eventnode));
-               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+
+               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_INFSUBTREE);
+               SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_INFSUBTREE);
+
+               /* save the node as a strong branched node */
+               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_INFSUBTREE) );
+
+               /* mark the strong branching decision as infeasible subtree */
                SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_INFSUBTREE) );
             }
-            /* the two remaining cases are:
-             * 1) the node is strong branched, but the LP is not infeasible, we have to
-             *    save this nodes and can delete strong branch information
-             * 2) the node is neither strong branched nor is the LP infeasible, we have to
-             *    add the node */
             else
             {
-               assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE);
-	       
-	       if( eventnode != SCIPgetRootNode(scip) )
-	       {
-		  SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
-	       }
+               assert(SCIP_LPSOLSTAT_OBJLIMIT || SCIP_LPSOLSTAT_OPTIMAL || SCIP_LPSOLSTAT_NOTSOLVED);
 
-               if( SCIPgetEffectiveRootDepth(scip) >= SCIPnodeGetDepth(eventnode) && strongbranched )
+               /* delete strong branching information of some exists */
+               if( SCIPnodeGetDepth(eventnode) <= SCIPgetEffectiveRootDepth(scip))
                {
-                  SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
+                  if( !eventhdlrdata->strbrinleafs )
+                  {
+                     SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
+
+                     SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED) );
+                  }
+                  else
+                  {
+                     SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+                     SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+                     SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
+                  }
+               }
+               else
+               {
+                  if( !eventhdlrdata->strbrinleafs )
+                  {
+                     SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED) );
+                  }
+                  else
+                  {
+                     SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+                     SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+
+                     SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+                     SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, eventnode, REOPT_CONSTYPE_STRBRANCHED) );
+                  }
                }
             }
-//            }
-
          }
          else
          {
-            assert(solstat == SCIP_LPSOLSTAT_INFEASIBLE);
-            assert(!strongbranched);
-
-            if( SCIPnodeGetReopttype(eventnode) >= SCIP_REOPTTYPE_TRANSIT )
+            /*
+             * 1. the LP is not solved or infeasible: the whole node is infeasible and can be discarded
+             *    because either the LP proves infeasibility or a constraint handler.
+             * 2. the LP exceeds the objective limit, we have to store the node and can delete the
+             *    strong branching information
+             */
+            if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
             {
-               /* remove the all information from data structure */
-               SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, eventnode, FALSE, TRUE) );
+               /* save the information of an infeasible node */
+               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_INFEASIBLE);
+               SCIP_CALL(SCIPbranchruleNodereoptInfNode(scip, eventnode));
             }
+            else
+            {
+               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
 
-            /* increase number of infeasible nodes, add a global cut (if enabled) */
-            SCIP_CALL(SCIPbranchruleNodereoptInfNode(scip, eventnode));
+               /* store the node */
+               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+            }
          }
       }
       else
       {
+         SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
+
          /* if the node was created by branch_nodereopt, nothing happens */
          SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+
       }
 
       break;
@@ -342,8 +419,15 @@ SCIP_DECL_EVENTINIT(eventInitNodereopt)
    /** check if all variable are binary, if not, disable reoptimization */
    if( !eventhdlrdata->init )
    {
+      int maxsavednodes;
+
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &eventhdlrdata->reopt) );
       if( eventhdlrdata->reopt && SCIPgetNImplVars(scip) + SCIPgetNIntVars(scip) > 0 )
+         eventhdlrdata->reopt = FALSE;
+
+      SCIP_CALL( SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &maxsavednodes) );
+
+      if( maxsavednodes == 0 )
          eventhdlrdata->reopt = FALSE;
    }
 
@@ -447,55 +531,62 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
    if (!eventhdlrdata->reopt)
       return SCIP_OKAY;
 
-#ifdef DEBUG_MODE
+   /* return of the event node is a probing or refocus node */
+   if( SCIPnodeGetType(eventnode) == SCIP_NODETYPE_PROBINGNODE || SCIPnodeGetType(eventnode) == SCIP_NODETYPE_REFOCUSNODE )
+      return SCIP_OKAY;
+
+   if( eventhdlrdata->lastnodenr == SCIPnodeGetNumber(eventnode) )
    {
-      printf("event %x for node %lld\n", SCIPeventGetType(event), SCIPnodeGetNumber(SCIPeventGetNode(event)));
+      switch ( SCIPeventGetType(event) ) {
+         case SCIP_EVENTTYPE_NODEFEASIBLE:
+            if( eventhdlrdata->lasteventtype != SCIP_EVENTTYPE_NODEFEASIBLE )
+            {
+               SCIPdebugMessage("node %lld was already seen as <%s>, new event is <SCIP_EVENTTYPE_FEASIBLE>.\n",
+                     SCIPnodeGetNumber(eventnode),
+                     eventhdlrdata->lasteventtype == SCIP_EVENTTYPE_NODEBRANCHED ? "SCIP_EVENTTYPE_NODEBRANCHED" : "SCIP_EVENTTYPE_NODEINFEASIBLE");
+               assert(eventhdlrdata->lasteventtype == SCIP_EVENTTYPE_NODEFEASIBLE);
+            }
+            break;
+
+         case SCIP_EVENTTYPE_NODEBRANCHED:
+            SCIPdebugMessage("node %lld was already seen as <%s>, new event is <SCIP_EVENTTYPE_BRANCHED>.\n",
+                  SCIPnodeGetNumber(eventnode),
+                     eventhdlrdata->lasteventtype == SCIP_EVENTTYPE_NODEFEASIBLE ? "SCIP_EVENTTYPE_NODEFEASIBLE" : "SCIP_EVENTTYPE_NODEINFEASIBLE");
+            assert(SCIPeventGetType(event) != SCIP_EVENTTYPE_NODEFEASIBLE);
+            break;
+
+         case SCIP_EVENTTYPE_NODEINFEASIBLE:
+            if( eventhdlrdata->lasteventtype == SCIP_EVENTTYPE_NODEBRANCHED)
+            {
+               SCIPdebugMessage("node %lld was already seen as <%s>, new event is <SCIP_EVENTTYPE_NODEBRANCHED>.\n",
+                     SCIPnodeGetNumber(eventnode),
+                     eventhdlrdata->lasteventtype == SCIP_EVENTTYPE_NODEINFEASIBLE ? "SCIP_EVENTTYPE_NODEINFEASIBLE" : "SCIP_EVENTTYPE_NODEBRANCHED");
+               assert(eventhdlrdata->lasteventtype == SCIP_EVENTTYPE_NODEBRANCHED);
+            }
+            break;
+
+         default:
+            break;
+      }
+
+      return SCIP_OKAY;
    }
-#endif
 
-//   /** check if the seen nodes array is big enough */
-//   if (SCIPnodeGetNumber(eventnode) >= eventhdlrdata->allocseennodes)
-//   {
-//      int i;
-//      SCIPreallocMemoryArray(scip, &(eventhdlrdata->seennodes), SCIPnodeGetNumber(eventnode) + 100);
-//      for (i = eventhdlrdata->allocseennodes - 1; i < SCIPnodeGetNumber(eventnode) + 100; ++i)
-//         eventhdlrdata->seennodes[i] = 0;
-//
-//      eventhdlrdata->allocseennodes = SCIPnodeGetNumber(eventnode) + 100;
-//   }
+   SCIPdebugMessage("catch event %x for node %lld\n", SCIPeventGetType(event), SCIPnodeGetNumber(SCIPeventGetNode(event)));
 
-//   assert(SCIPnodeGetNumber(eventnode) < eventhdlrdata->allocseennodes);
-//
-//   eventhdlrdata->highestseennodenr = (SCIPnodeGetNumber(eventnode) > eventhdlrdata->highestseennodenr ?
-//               SCIPnodeGetNumber(eventnode) : eventhdlrdata->highestseennodenr);
+   eventhdlrdata->lastnodenr = SCIPnodeGetNumber(eventnode);
+   eventhdlrdata->lasteventtype = SCIPeventGetType(event);
 
    /** if the current node is the root, than clear the data structure, set the new event and return */
    if (SCIPgetRootNode(scip) == eventnode)
    {
-//      if (eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 0)
-//      {
-//         switch (SCIPeventGetType(event))
-//            {
-//         case SCIP_EVENTTYPE_NODEBRANCHED:
-//            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 1;
-//            break;
-//
-//         case SCIP_EVENTTYPE_NODEINFEASIBLE:
-//            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
-//            break;
-//
-//         case SCIP_EVENTTYPE_NODEFEASIBLE:
-//            eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 3;
-//            break;
-//            }
-//      }
-
-      eventhdlrdata->lastnodenr = SCIPnodeGetNumber(eventnode);
-      eventhdlrdata->lasteventtype = SCIPeventGetType(event);
-
       if (SCIPbranchrulePseudoIsPseudoBranched(scip, eventnode))
       {
          SCIP_CALL(checkCutoffReason(scip, eventhdlrdata, event));
+      }
+      else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED)
+      {
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT) );
       }
       else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFEASIBLE)
       {
@@ -504,6 +595,10 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
       else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE
             && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE)
          assert(FALSE);
+      else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE)
+      {
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED) );
+      }
 
       return SCIP_OKAY;
    }
@@ -516,44 +611,18 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
       /** the node was already seen as branched node and the only allowed event is NODEINFEASIBLE
        * we don't save this node because we have already saved the children.
        */
-      if (SCIPnodeGetReopttype(eventnode) <= SCIP_REOPTTYPE_STRBRANCHED)//(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 1)
+      if (SCIPnodeGetReopttype(eventnode) <= SCIP_REOPTTYPE_STRBRANCHED)
       {
          assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE);
          return SCIP_OKAY;
       }
       else
       {
-//         printf("Node %llu was already seen as %u and is now %x, this is not allowed!\n",
-//               SCIPnodeGetNumber(eventnode),
-//               eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1], SCIPeventGetType(event));
          assert(SCIPnodeGetReopttype(eventnode) <= SCIP_REOPTTYPE_STRBRANCHED);
-//         assert(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] == 1);
       }
    }
-//   else
-//      switch (SCIPeventGetType(event))
-//         {
-//      case SCIP_EVENTTYPE_NODEBRANCHED:
-//         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 1;
-//         break;
-//
-//      case SCIP_EVENTTYPE_NODEINFEASIBLE:
-//         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 2;
-//         break;
-//
-//      case SCIP_EVENTTYPE_NODEFEASIBLE:
-//         eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] = 3;
-//         break;
-//         }
-
-//   assert(eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode) - 1] > 0
-//       && eventhdlrdata->seennodes[SCIPnodeGetNumber(eventnode)] <= 3);
-//   assert(eventhdlrdata->lastnodenr != SCIPnodeGetNumber(eventnode));
 
    checkCutoffReason(scip, eventhdlrdata, event);
-
-//   eventhdlrdata->lastnodenr = SCIPnodeGetNumber(eventnode);
-//   eventhdlrdata->lasteventtype = SCIPeventGetType(event);
 
    return SCIP_OKAY;
 }
@@ -636,6 +705,10 @@ SCIPincludeEventHdlrNodereopt(
    SCIP_CALL(SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeNodereopt));
 
    eventhdlrdata->init = FALSE;
+
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/strbrinleafs", "store determined strong branching information in leaf nodes.",
+         &eventhdlrdata->strbrinleafs, TRUE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

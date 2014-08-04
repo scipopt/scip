@@ -57,6 +57,7 @@ SCIP_RETCODE SCIPreoptAddSol(
    SCIP_SET*             set,
    SCIP_STAT*            stat,
    SCIP_SOL*             sol,
+   SCIP_Bool             bestsol,
    SCIP_Bool*            added,
    int                   run
    );
@@ -82,18 +83,9 @@ extern
 SCIP_RETCODE SCIPreoptUpdateSols(
    SCIP*                 scip,
    SCIP_REOPT*           reopt,
-   SCIP_PRIMAL*          primal,
-   BMS_BLKMEM*           probmem,
-   SCIP_SET*             set,
-   SCIP_MESSAGEHDLR*     messagehdlr,
-   SCIP_STAT*            stat,
-   SCIP_PROB*            origprob,
-   SCIP_PROB*            transprob,
-   SCIP_TREE*            tree,
-   SCIP_LP*              lp,
-   SCIP_EVENTQUEUE*      eventqueue,
-   SCIP_EVENTFILTER*     eventfilter,
-   SCIP_Real             simparam
+   int                   savesols,
+   SCIP_Real             objsim,
+   SCIP_Real             sepabestsol
    );
 
 /* returns the number of saved solutions overall runs */
@@ -136,6 +128,50 @@ int* SCIPreoptGetSimilarityIdx(
    int                   obj_id,
    int*                  sim_ids,
    int*                  nids
+   );
+
+/*
+ * returns the similarity to the previous objective function
+ */
+extern
+SCIP_Real SCIPreoptGetSimToPrevious(
+      SCIP_REOPT*        reopt
+   );
+
+/*
+ * returns the similarity to the first objective function
+ */
+extern
+SCIP_Real SCIPreoptGetSimToFirst(
+      SCIP_REOPT*        reopt
+   );
+
+/*
+ * returns the best solution of the last run
+ */
+extern
+SCIP_SOL* SCIPreoptGetLastBestSol(
+   SCIP_REOPT*           reopt
+   );
+
+/*
+ * returns true if the sign of the objective coefficient has changed
+ */
+extern
+SCIP_Bool SCIPreoptIsObjCoefNegated(
+   SCIP_REOPT*           reopt,
+   int                   varnr
+   );
+
+/*
+ * returns if a variable enters or leaves the objective function.
+ */
+extern
+void SCIPreoptEnterOrLeaveObj(
+   SCIP_REOPT*           reopt,
+   int                   varnr,
+   SCIP_Bool*            entering,
+   SCIP_Bool*            leaving
    );
 
 #ifdef __cplusplus

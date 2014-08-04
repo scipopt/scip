@@ -326,6 +326,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
+			scip/event_focusroot.o \
 			scip/event_globalboundchg.o \
 			scip/event_nodereopt.o \
 			scip/heur_actconsdiving.o \
@@ -350,6 +351,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_rens.o \
+			scip/heur_reoptsols.o \
 			scip/heur_randrounding.o \
 			scip/heur_rins.o \
 			scip/heur_rootsoldiving.o \
@@ -359,6 +361,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_simplerounding.o \
 			scip/heur_subnlp.o \
 			scip/heur_trivial.o \
+			scip/heur_trivialnegation.o \
 			scip/heur_trysol.o \
 			scip/heur_twoopt.o \
 			scip/heur_undercover.o \

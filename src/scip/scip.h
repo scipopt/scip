@@ -15233,6 +15233,16 @@ SCIP_Real SCIPgetSolTransObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
+/*
+ * recomputes the objective value of an original solution, e.g., when transferring solutions
+ * from the solution pool (objective coefficients might have changed in the meantime)
+ */
+EXTERN
+SCIP_RETCODE SCIPrecomputeSol(
+   SCIP*                 scip,
+   SCIP_SOL*             sol
+   );
+
 /** maps original space objective value into transformed objective value
  *
  *  @return transformed objective value

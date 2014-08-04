@@ -362,8 +362,9 @@ struct SCIP_Set
    int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
    int                   reopt_maxdiffofnodes;/**< maximal number of children */
    SCIP_Bool             reopt_savelpbasis;  /**< save the LP basis of feasible and branched nodes during reoptimization */
-   SCIP_Bool             reopt_saveglbcons;  /**< save global constraints to separate solutions found so far */
-   SCIP_Bool             reopt_saveloccons;  /**< save local constraints to separate solutions found so far */
+   SCIP_Bool             reopt_sepaglbsols;  /**< save global constraints to separate solutions found so far */
+   SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
+   SCIP_Bool             reopt_sepalocsols;  /**< save local constraints to separate solutions found so far */
    SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constraint shortest path */
    int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
    int                   reopt_solvelpdiff;  /**< difference of path length between two ancestor nodes to solve the LP */

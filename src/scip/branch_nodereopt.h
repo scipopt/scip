@@ -66,6 +66,11 @@ SCIP_RETCODE SCIPbranchruleNodereoptForceRestart(
    );
 
 extern
+SCIP_RETCODE SCIPbranchnodereoptCheckFeasibility(
+   SCIP*                 scip
+   );
+
+extern
 SCIP_RETCODE SCIPbranchruleNodereoptSetRootLPI(
    SCIP*                 scip
    );
@@ -101,8 +106,18 @@ SCIP_RETCODE SCIPbranchruleNodereoptGetStatistic(
    int*                  nrediednodesround,
    int*                  nruns,
    int*                  nrestarts,
+   int*                  firstrestart,
+   int*                  lastrestart,
    int*                  nrestartsround,
-   int*                  ninfsubtrees
+   int*                  ninfsubtrees,
+   int*                  mfscalls,
+   int*                  mfssucces,
+   int*                  lisk,
+   SCIP_Real*            mfstime,
+   int*                  rtfcalls,
+   int*                  rtfsucces,
+   int*                  lck,
+   SCIP_Real*            rtftime
    );
 
 extern
@@ -122,6 +137,17 @@ SCIP_RETCODE SCIPbranchruleNodereoptSolveLP(
    SCIP*                 scip,
    SCIP_NODE*            node,
    SCIP_Bool*            solvelp
+   );
+
+/*
+ * Save global constraint to separate solution
+ */
+extern
+SCIP_RETCODE SCIPbranchruleNodereoptSaveGlobaleCons(
+   SCIP*                 scip,
+   SCIP_SOL*             sol,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat
    );
 
 extern

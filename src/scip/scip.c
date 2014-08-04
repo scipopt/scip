@@ -706,8 +706,8 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->delayedcutpool = NULL;
 
    /* disable reoptimization if (*scip)->set->reopt_maxsavednodes = 0 */
-   if( (*scip)->set->reopt_enable && (*scip)->set->reopt_maxsavednodes == 0 )
-      (*scip)->set->reopt_enable = FALSE;
+//   if( (*scip)->set->reopt_enable && (*scip)->set->reopt_maxsavednodes == 0 )
+//      (*scip)->set->reopt_enable = FALSE;
 
    SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
 
@@ -11727,16 +11727,9 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->reopt_enable && scip->stat->reopt_nruns >= 1 )
    {
-      /* start clock */
-      SCIP_CALL( SCIPstartUpdatesoluTime(scip) );
-
-      SCIP_CALL( SCIPreoptUpdateSols(scip, scip->reopt, scip->primal, scip->mem->probmem,
-            scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-            scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, scip->set->reopt_objsim));
-
-      /* stop clock */
-      SCIP_CALL( SCIPstopUpdatesoluTime(scip) );
+      SCIP_CALL( SCIPreoptUpdateSols(scip, scip->reopt, scip->set->reopt_savesols, scip->set->reopt_objsim, scip->set->reopt_sepabestsol) );
    }
+//   if( !scip->set->reopt_enable || scip->stat->reopt_nruns < 1 )
    else
    {
       for( s = scip->origprimal->nsols - 1; s >= 0; --s )
@@ -13202,6 +13195,9 @@ SCIP_RETCODE SCIPsolve(
       /* start clock */
       SCIP_CALL( SCIPstartSaveTime(scip) );
 
+      /* allocate memory */
+      SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, scip->set->limit_maxsol) );
+
       /* save the objective function */
       SCIP_CALL( SCIPreoptSaveObj(scip, scip->reopt, scip->set, scip->stat->reopt_nruns) );
 
@@ -13267,9 +13263,13 @@ SCIP_RETCODE SCIPsolve(
           && scip->stat->reopt_nruns >= 1
           && scip->set->reopt_enable )
          {
+            SCIP_CALL( SCIPbranchnodereoptCheckFeasibility(scip) );
+
             SCIP_CALL( SCIPbranchruleNodereoptRestartCheck(scip) );
 
-            if( scip->set->reopt_saveglbcons || scip->set->reopt_sepabestsol )
+            if( scip->set->reopt_sepaglbinfsubtrees
+             || scip->set->reopt_sepaglbsols
+             || scip->set->reopt_sepabestsol )
             {
                SCIP_CALL( SCIPbranchruleNodereoptAddGlobalCons(scip) );
             }
@@ -13347,12 +13347,10 @@ SCIP_RETCODE SCIPsolve(
       int nsols;
       int s;
 
-      nsols = MIN(scip->primal->nsols, scip->set->reopt_savesols);
+      nsols = scip->set->reopt_savesols == -1 ? INT_MAX : scip->set->reopt_savesols;
+      nsols = MIN(scip->primal->nsols, nsols);
 
-      /* allocate memory */
-      SCIP_CALL( SCIPreoptAddRun(scip->set, scip->reopt, scip->stat->reopt_nruns, nsols) );
-
-      for( s = 0; s < nsols; ++s )
+      for( s = 0; s < nsols; s++ )
       {
          SCIP_SOL* sol;
          SCIP_Bool added;
@@ -13366,21 +13364,31 @@ SCIP_RETCODE SCIPsolve(
             SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
          }
 
-         if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL )
+         if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL
+          || (s == 0 && scip->set->reopt_sepabestsol) )
          {
             if( s != 0 || !scip->set->reopt_sepabestsol )
             {
-               SCIP_CALL( SCIPreoptAddSol(scip, scip->reopt, scip->set, scip->stat, sol, &added, scip->stat->reopt_nruns) );
+               SCIP_CALL( SCIPreoptAddSol(scip, scip->reopt, scip->set, scip->stat, sol, s == 0, &added, scip->stat->reopt_nruns) );
             }
 
-            if( (scip->set->reopt_saveglbcons && added)
-             || (scip->set->reopt_sepabestsol && s == 0) )
+            if ( scip->set->reopt_sepabestsol )
             {
-              if( SCIPsolGetNodenum(sol) == 0 && SCIPsolGetHeur(sol) == NULL)
-              {
-                                  SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
-              }
-           }
+               if( s == 0 )
+               {
+                  SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
+               }
+            }
+            else
+            {
+               if( scip->set->reopt_sepaglbsols && added )
+               {
+                 if( SCIPsolGetNodenum(sol) == 0 && SCIPsolGetHeur(sol) == NULL)
+                 {
+                    SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
+                 }
+               }
+            }
          }
       }
 
@@ -13406,7 +13414,7 @@ SCIP_RETCODE SCIPsolve(
 
       SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &remainingtime));
       clocktime = SCIPgetSolvingTime(scip);
-      SCIP_CALL(SCIPsetRealParam(scip, "limits/time", remainingtime - clocktime));
+      SCIP_CALL(SCIPsetRealParam(scip, "limits/time", MAX(0, remainingtime - clocktime)));
    }
 
    if( !statsprinted )
@@ -30658,6 +30666,24 @@ SCIP_Real SCIPgetSolTransObj(
    }
 }
 
+/*
+ * recomputes the objective value of an original solution, e.g., when transferring solutions
+ * from the solution pool (objective coefficients might have changed in the meantime)
+ */
+SCIP_RETCODE SCIPrecomputeSol(
+   SCIP*                 scip,
+   SCIP_SOL*             sol
+)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPrecomputeSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
+
+   return SCIP_OKAY;
+}
+
 /** maps original space objective value into transformed objective value
  *
  *  @return transformed objective value
@@ -35695,84 +35721,106 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPprintReoptStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   int nsolssaved;
+   int nsolsused;
+   int nrestarts;
+   int firstrestart;
+   int lastrestart;
+   int liscalls;
+   int lissuccess;
+   int lisk;
+   SCIP_Real listime;
+   int lccalls;
+   int lcsuccess;
+   int lck;
+   SCIP_Real lctime;
 
-   switch( scip->set->stage )
+   SCIP_CALL( checkStage(scip, "SCIPprintReoptStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   nsolssaved = scip->set->reopt_enable ? SCIPreoptNSavedSols(scip->reopt) : 0;
+   nsolsused = scip->set->reopt_enable ? SCIPreoptNUsedSols(scip->reopt) : 0;
+
+   nrestarts = 0;
+   firstrestart = 0;
+   lastrestart = 0;
+   liscalls = 0;
+   lissuccess = 0;
+   lisk = 0;
+   listime = 0;
+   lccalls = 0;
+   lcsuccess = 0;
+   lck = 0;
+   lctime = 0;
+
+   if( scip->set->reopt_enable )
    {
-      case SCIP_STAGE_SOLVED:
-      {
-         int nsolssaved;
-         int nsolsused;
+      SCIP_CALL( SCIPbranchruleNodereoptGetStatistic(scip,
+               &scip->stat->reopt_feasnodesoverall, &scip->stat->reopt_feasnodes,
+               &scip->stat->reopt_infeasnodesoverall, &scip->stat->reopt_infeasnodes,
+               &scip->stat->reopt_prunednodesoverall, &scip->stat->reopt_prunednodes,
+               &scip->stat->reopt_rediednodesoverall, &scip->stat->reopt_rediednodes,
+               &scip->stat->reopt_nruns, &nrestarts, &firstrestart, &lastrestart, NULL,
+               &scip->stat->reopt_infsubtrees, &liscalls, &lissuccess, &lisk, &listime,
+               &lccalls, &lcsuccess, &lck, &lctime) );
 
-         nsolssaved = scip->set->reopt_enable ? SCIPreoptNSavedSols(scip->reopt) : 0;
-         nsolsused = scip->set->reopt_enable ? SCIPreoptNUsedSols(scip->reopt) : 0;
+   }
+   else
+   {
+      scip->stat->reopt_feasnodesoverall = 0;
+      scip->stat->reopt_feasnodes = 0;
+      scip->stat->reopt_infeasnodesoverall = 0;
+      scip->stat->reopt_infeasnodes = 0;
+      scip->stat->reopt_prunednodesoverall = 0;
+      scip->stat->reopt_prunednodes = 0;
+      scip->stat->reopt_rediednodesoverall = 0;
+      scip->stat->reopt_rediednodes = 0;
+      scip->stat->reopt_nruns = 0;
+      scip->stat->reopt_infsubtrees = 0;
+   }
 
-         if( scip->set->reopt_enable )
-         {
-            SCIP_CALL( SCIPbranchruleNodereoptGetStatistic(scip,
-                     &scip->stat->reopt_feasnodesoverall, &scip->stat->reopt_feasnodes,
-                     &scip->stat->reopt_infeasnodesoverall, &scip->stat->reopt_infeasnodes,
-                     &scip->stat->reopt_prunednodesoverall, &scip->stat->reopt_prunednodes,
-                     &scip->stat->reopt_rediednodesoverall, &scip->stat->reopt_rediednodes,
-                     &scip->stat->reopt_nruns, NULL, NULL, &scip->stat->reopt_infsubtrees) );
+   /* decrease nruns by 1 to count the first non-reopt run */
+   scip->stat->reopt_nruns++;
 
-         }
-         else
-         {
-            scip->stat->reopt_feasnodesoverall = 0;
-            scip->stat->reopt_feasnodes = 0;
-            scip->stat->reopt_infeasnodesoverall = 0;
-            scip->stat->reopt_infeasnodes = 0;
-            scip->stat->reopt_prunednodesoverall = 0;
-            scip->stat->reopt_prunednodes = 0;
-            scip->stat->reopt_rediednodesoverall = 0;
-            scip->stat->reopt_rediednodes = 0;
-            scip->stat->reopt_nruns = 0;
-            scip->stat->reopt_infsubtrees = 0;
-         }
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->reopt_nruns);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time               :\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  init time        : %10.2f\n", SCIPclockGetTime(scip->stat->revivetimeoverall) + SCIPclockGetTime(scip->stat->updatesolutimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  update time      : %10.2f (included in init)\n", SCIPclockGetTime(scip->stat->updatesolutimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  save time  (sec) : %10.2f\n", SCIPclockGetTime(scip->stat->savetimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Nodes              :       feas     infeas     pruned     redied\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
+         scip->stat->reopt_feasnodesoverall, scip->stat->reopt_infeasnodesoverall,
+         scip->stat->reopt_prunednodesoverall, scip->stat->reopt_rediednodesoverall);
+   if( scip->stat->reopt_nruns == 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n", 0, 0, 0, 0);
 
-         /* decrease nruns by 1 to count the first non-reopt run */
-         scip->stat->reopt_nruns++;
-
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->reopt_nruns);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time               :\n");
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtimeoverall));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtimeoverall));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  init time        : %10.2f\n", SCIPclockGetTime(scip->stat->revivetimeoverall) + SCIPclockGetTime(scip->stat->updatesolutimeoverall));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  update time      : %10.2f (included in init)\n", SCIPclockGetTime(scip->stat->updatesolutimeoverall));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  save time  (sec) : %10.2f\n", SCIPclockGetTime(scip->stat->savetimeoverall));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Nodes              :       feas     infeas     pruned     redied\n");
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
-               scip->stat->reopt_feasnodesoverall, scip->stat->reopt_infeasnodesoverall,
-               scip->stat->reopt_prunednodesoverall, scip->stat->reopt_rediednodesoverall);
-         if( scip->stat->reopt_nruns == 0 )
-         {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n", 0, 0, 0, 0);
-
-         }
-         else
-         {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
-                  (SCIP_Real)scip->stat->reopt_feasnodesoverall/scip->stat->reopt_nruns,
-                  (SCIP_Real)scip->stat->reopt_infeasnodesoverall/scip->stat->reopt_nruns,
-                  (SCIP_Real)scip->stat->reopt_prunednodesoverall/scip->stat->reopt_nruns,
-                  (SCIP_Real)scip->stat->reopt_rediednodesoverall/scip->stat->reopt_nruns);
-         }
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Solutions          :      saved     reused\n");
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", nsolssaved, nsolsused);
-         if( scip->stat->reopt_nruns == 0 )
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", 0, 0);
-         else
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", (SCIP_Real)nsolssaved/scip->stat->reopt_nruns, (SCIP_Real)nsolsused/scip->stat->reopt_nruns);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "inf Subtress       : %10d\n", scip->stat->reopt_infsubtrees);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
+            (SCIP_Real)scip->stat->reopt_feasnodesoverall/scip->stat->reopt_nruns,
+            (SCIP_Real)scip->stat->reopt_infeasnodesoverall/scip->stat->reopt_nruns,
+            (SCIP_Real)scip->stat->reopt_prunednodesoverall/scip->stat->reopt_nruns,
+            (SCIP_Real)scip->stat->reopt_rediednodesoverall/scip->stat->reopt_nruns);
+   }
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Solutions          :      saved     reused\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", nsolssaved, nsolsused);
+   if( scip->stat->reopt_nruns == 0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", 0, 0);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n", (SCIP_Real)nsolssaved/scip->stat->reopt_nruns, (SCIP_Real)nsolsused/scip->stat->reopt_nruns);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "inf Subtress       : %10d\n", scip->stat->reopt_infsubtrees);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Restarts           : %10d\n", nrestarts);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d\n", MAX(0,firstrestart));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d\n", MAX(0,lastrestart));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Heuristics         :     #Calls   #Success       Time     avg. k\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  largest subtree  : %10d %10d %10.2f %10.2f\n", liscalls, lissuccess, listime, ((SCIP_Real)lisk)/lissuccess);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  lazy compression : %10d %10d %10.2f %10.2f\n", lccalls, lcsuccess, lctime, ((SCIP_Real)lck)/lcsuccess);
 
 
-         return SCIP_OKAY;
-      }
-      default:
-         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-         return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
+   return SCIP_OKAY;
 }
 
 /** outputs history statistics about branchings on variables

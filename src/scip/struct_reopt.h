@@ -42,8 +42,11 @@ struct SCIP_Reopt
    int*                  nsols;              /**< number of solutions stored in sols[x] array */
 
    SCIP_Real**           objs;               /**< list of objective coefficients */
-
+   SCIP_SOL*             lastbestsol;        /**< best solution of the last round */
    SCIP_SOLTREE*         soltree;            /**< tree to handle all saved solutions */
+
+   SCIP_Real             simtolastobj;       /**< similarity to the last objective function */
+   SCIP_Real             simtofirstobj;      /**< similarity to the first objective function */
 };
 
 /** nodes of SCIP_SolTree */
@@ -55,6 +58,7 @@ struct SCIP_SolNode
    SCIP_SOLNODE*         lchild;
    SCIP_Bool             updated;
    SCIP_Bool             used;
+   SCIP_Bool             infeasible;
    int                   val;
 };
 

@@ -31,8 +31,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
 #include <assert.h>
-
 #include "scip/branch_pseudo.h"
 #include "scip/branch_nodereopt.h"
 #include "scip/cons_linear.h"
@@ -46,7 +46,6 @@
 #define BRANCHRULE_MAXDEPTH        0
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-//#define DEBUG_MODE
 /*
  * Data structures
  */
@@ -235,7 +234,8 @@ SCIP_RETCODE SCIPbranchrulePseudoGenerateCons(
    int*                  nvars,
    int                   nallocvars,
    int                   externID,
-   SCIP_Bool             local
+   SCIP_Bool             local,
+   SCIP_Bool             cleardata
 )
 {
    SCIP_BRANCHRULE* branchrule;
@@ -281,12 +281,15 @@ SCIP_RETCODE SCIPbranchrulePseudoGenerateCons(
       consdata->vals[varnr] = branchruledata->consdata[nodeID]->vals[varnr];
    }
 
-   SCIP_CALL( deleteConsData(scip, branchruledata, nodeID, FALSE) );
-
-   if( nodeID >= 1 )
+   if( cleardata )
    {
-      branchruledata->exIDtoinID[externID] = 0;
-      SCIP_CALL( SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t) nodeID) );
+      SCIP_CALL( deleteConsData(scip, branchruledata, nodeID, FALSE) );
+
+      if( nodeID >= 1 )
+      {
+         branchruledata->exIDtoinID[externID] = 0;
+         SCIP_CALL( SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t) nodeID) );
+      }
    }
 
    return SCIP_OKAY;
@@ -399,7 +402,7 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
       assert( branchruledata->nrpseudobranchednodes < branchruledata->allocmemsizeconsdata );
 
       /** get an empty slot (to ensure that ID != NULL, the queue should contains only IDs >= 1); the 0 is always reserved for the root */
-      if( SCIPnodeGetDepth(node) == 0 )
+      if( SCIPgetFocusDepth(scip) == 0 )
          branchruledata->nodeID = 0;
       else
       {
@@ -412,8 +415,8 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
        */
       if( var != NULL )
       {
-         assert( newbound > -1 );
-         assert( SCIPnodeGetDepth(node) <= SCIPgetEffectiveRootDepth(scip) );
+         assert(newbound > -1);
+         assert(SCIPgetFocusDepth(scip) <= SCIPgetEffectiveRootDepth(scip) || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
          if( branchruledata->consdata[branchruledata->nodeID] == NULL )
          {
@@ -546,7 +549,7 @@ SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
     *
     * if the node depth is equal to the effective root depth all boundchanges are already known.
     */
-   if( SCIPnodeGetDepth(node) != SCIPgetEffectiveRootDepth(scip) )
+   if( SCIPgetFocusDepth(scip) > SCIPgetEffectiveRootDepth(scip) )
    {
       npseudobranchvars = SCIPgetNBinVars(scip);
       assert( npseudobranchvars > 0 );
@@ -597,13 +600,14 @@ SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
    assert( branchruledata->consdata[branchruledata->nodeID]->vars != NULL );
    assert( branchruledata->consdata[branchruledata->nodeID]->vals != NULL );
 
-#ifdef DEBUG_MODE
+#ifdef SCIP_DEBUG
    {
       int varnr;
-      printf("FINISHED NODE #%llu WITH %d pb-vars:\n", SCIPnodeGetNumber(node), branchruledata->consdata[branchruledata->nodeID]->nvars);
+      SCIPdebugMessage("finish collecting strong branching information about node %lld.\n", SCIPnodeGetNumber(node));
+      SCIPdebugMessage(" -> nvars: %d\n", branchruledata->consdata[branchruledata->nodeID]->nvars);
       for(varnr = 0; varnr < branchruledata->consdata[branchruledata->nodeID]->nvars; ++varnr)
       {
-         printf( "\t%s %s %f\n", SCIPvarGetName( branchruledata->consdata[branchruledata->nodeID]->vars[varnr] ), branchruledata->consdata[branchruledata->nodeID]->vals[varnr] == 1 ? "=>" : "<=", branchruledata->consdata[branchruledata->nodeID]->vals[varnr] );
+         SCIPdebugMessage("  %s %s %f\n", SCIPvarGetName( branchruledata->consdata[branchruledata->nodeID]->vars[varnr] ), branchruledata->consdata[branchruledata->nodeID]->vals[varnr] == 1 ? "=>" : "<=", branchruledata->consdata[branchruledata->nodeID]->vals[varnr] );
       }
    }
 #endif
@@ -761,11 +765,7 @@ SCIP_RETCODE SCIPbranchrulePseudoDeleteLastNodeInfo(
    branchruledata->lastseennode = -1;
    branchruledata->nodeID = -1;
 
-#ifdef DEBUG_MODE
-   {
-      printf("DELETE LAST INFOS ABOUT NODE #%llu\n", SCIPnodeGetNumber(node));
-   }
-#endif
+   SCIPdebugMessage("delete strong branching information about node %lld\n", SCIPnodeGetNumber(node));
 
    return SCIP_OKAY;
 }
@@ -902,11 +902,16 @@ SCIP_DECL_BRANCHINIT(branchInitPseudo)
    /** check if all variable are binary, if not, disable reoptimization */
    if( !branchruledata->init )
    {
+      int maxsavednodes;
+
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &branchruledata->reopt) );
       if( branchruledata->reopt && SCIPgetNOrigImplVars(scip) + SCIPgetNOrigIntVars(scip) > 0 )
-      {
          branchruledata->reopt = FALSE;
-      }
+
+      SCIP_CALL( SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &maxsavednodes) );
+
+      if( maxsavednodes == 0 )
+         branchruledata->reopt = FALSE;
    }
 
    /** initialize the data and change parameters */

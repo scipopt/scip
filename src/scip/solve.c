@@ -22,7 +22,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include <assert.h>
 
 #include "scip/def.h"
@@ -4071,7 +4070,6 @@ SCIP_RETCODE SCIPsolveCIP(
 
    nextnode = NULL;
    unbounded = FALSE;
-   eventthrown = FALSE;
 
    while( !SCIPsolveIsStopped(set, stat, TRUE) && !(*restart) )
    {
@@ -4083,11 +4081,10 @@ SCIP_RETCODE SCIPsolveCIP(
 
       foundsol = FALSE;
       infeasible = FALSE;
+      eventthrown = FALSE;
 
       do
       {
-         eventthrown = FALSE;
-
          /* update the memory saving flag, switch algorithms respectively */
          SCIPstatUpdateMemsaveMode(stat, set, messagehdlr, mem);
 

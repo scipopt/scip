@@ -807,12 +807,12 @@ SCIP_RETCODE consdataCreate(
    else if( SCIPisInfinity(scip, lhs) )
       lhs = SCIPinfinity(scip);
 
-   if( SCIPisGT(scip, lhs, rhs) )
-   {
-      SCIPerrorMessage("left hand side of linear constraint greater than right hand side\n");
-      SCIPerrorMessage(" -> lhs=%g, rhs=%g\n", lhs, rhs);
-      return SCIP_INVALIDDATA;
-   }
+//   if( SCIPisGT(scip, lhs, rhs) )
+//   {
+//      SCIPerrorMessage("left hand side of linear constraint greater than right hand side\n");
+//      SCIPerrorMessage(" -> lhs=%g, rhs=%g\n", lhs, rhs);
+//      return SCIP_INVALIDDATA;
+//   }
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 

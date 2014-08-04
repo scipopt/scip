@@ -47,8 +47,8 @@ typedef struct LogicOrData LOGICORDATA;
 enum Reopt_ConsType
 {
    REOPT_CONSTYPE_SEPASOLUTION = 0,
-   REOPT_CONSTYPE_INFSUBTREE = 1,
-   REOPT_CONSTYPE_STRBRANCHED = 2
+   REOPT_CONSTYPE_INFSUBTREE   = 1,
+   REOPT_CONSTYPE_STRBRANCHED  = 2
 };
 typedef enum Reopt_ConsType REOPT_CONSTYPE;
 
@@ -168,7 +168,8 @@ SCIP_RETCODE SCIPbranchrulePseudoGenerateCons(
    int*                  nvars,
    int                   nallocvars,
    int                   ID,
-   SCIP_Bool             local
+   SCIP_Bool             local,
+   SCIP_Bool             cleardata
    );
 
 extern

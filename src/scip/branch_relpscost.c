@@ -26,7 +26,6 @@
 
 #include "scip/branch_relpscost.h"
 
-
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
 #define BRANCHRULE_PRIORITY      10000
