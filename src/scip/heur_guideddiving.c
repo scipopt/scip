@@ -94,7 +94,7 @@ SCIP_DECL_HEURFREE(heurFreeGuideddiving) /*lint --e{715}*/
    assert(heurdata != NULL);
    assert(heurdata->diveset != NULL);
 
-   SCIPdivesetFree(&heurdata->diveset);
+   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
