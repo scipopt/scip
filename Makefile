@@ -596,14 +596,14 @@ ifeq ($(FILES),)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 else
 		$(SHELL) -ec  'for i in $(FILES); \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 endif

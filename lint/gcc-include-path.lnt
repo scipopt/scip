@@ -1,0 +1,8 @@
+--i"/usr/include/c++/4.6"
+--i"/usr/include/c++/4.6/x86_64-linux-gnu/."
+--i"/usr/include/c++/4.6/backward"
+--i"/usr/lib/gcc/x86_64-linux-gnu/4.6/include"
+--i"/usr/local/include"
+--i"/usr/lib/gcc/x86_64-linux-gnu/4.6/include-fixed"
+--i"/usr/include/x86_64-linux-gnu"
+--i"/usr/include"
