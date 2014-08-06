@@ -705,22 +705,25 @@ void SCIPvisualFoundSolution(
          while ( pnode != NULL && SCIPnodeGetType(pnode) == SCIP_NODETYPE_PROBINGNODE )
             pnode = pnode->parent;
 
-         /* get node num from hash map */
-         nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, pnode);
+         if ( pnode != NULL )
+         {
+            /* get node num from hash map */
+            nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, pnode);
 
-         /* get nodenum of parent node from hash map */
-         parentnodenum = (pnode->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, pnode->parent) : 0);
-         assert( pnode->parent == NULL || parentnodenum > 0 );
+            /* get nodenum of parent node from hash map */
+            parentnodenum = (pnode->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, pnode->parent) : 0);
+            assert( pnode->parent == NULL || parentnodenum > 0 );
 
-         /* get branching information */
-         getBranchInfo(pnode, &branchvar, &branchtype, &branchbound);
+            /* get branching information */
+            getBranchInfo(pnode, &branchvar, &branchtype, &branchbound);
 
-         /* determine branching type */
-         if ( branchvar != NULL )
-            t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
+            /* determine branching type */
+            if ( branchvar != NULL )
+               t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
 
-         printTime(visual, stat, FALSE);
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "integer %d %d %c %f\n", (int)nodenum, (int)parentnodenum, t, obj);
+            printTime(visual, stat, FALSE);
+            SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "integer %d %d %c %f\n", (int)nodenum, (int)parentnodenum, t, obj);
+         }
       }
       else
       {
