@@ -30419,9 +30419,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          /* copy indicator variables */
          if( nindcands > 0 )
          {
-            BMScopyMemoryArray(&(divecands[nlpcands]), indcands, nindcands);
-            BMScopyMemoryArray(&(divecandssol[nlpcands]), indcandssol, nindcands);
-            BMScopyMemoryArray(&(divecandsfrac[nlpcands]), indcandsfrac, nindcands);
+            BMScopyMemoryArray(&(divecands[nlpcands]), indcands, nindcands); /*lint !e866*/
+            BMScopyMemoryArray(&(divecandssol[nlpcands]), indcandssol, nindcands); /*lint !e866*/
+            BMScopyMemoryArray(&(divecandsfrac[nlpcands]), indcandsfrac, nindcands); /*lint !e866*/
          }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &candscores, ndivecands) );
@@ -30700,7 +30700,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIPfreeBufferArray(scip, &divecands);
       }
 
-      if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+      assert( !lperror );
+      if( !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
          /* get new diving candidate variables */
          SCIP_CALL( getDivingCandidates(scip, diveset, indconshdlr,
@@ -38011,7 +38012,7 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */
    )
-{
+{  /*lint --e{715}*/
    SCIPwarningMessage(scip, "SCIPwriteImplicationConflictGraph() is deprecated and does not do anything anymore. All binary to binary implications are now stored in the clique data structure, which can be written to a GML formatted file via SCIPwriteCliqueGraph().\n");
 
    return SCIP_OKAY;
