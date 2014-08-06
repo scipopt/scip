@@ -104,6 +104,9 @@
 -ecall(747,strncat)
 -ecall(747,strncpy)
 -ecall(747,strncmp)
+-ecall(747,vsnprintf)
+-ecall(747,getcwd)
+-ecall(747,strerror_r)
 
 // ------------------------------------------------------------------
 // turn off several warnings for memory functions, since they usually are false positive and clutter the output
@@ -123,6 +126,7 @@
 -emacro(571,SCIPreallocBlockMemoryArray)
 -emacro(571,BMSallocClearMemoryArray)
 -emacro(571,BMSallocMemoryArray)
+-emacro(571,BMSallocMemorySize)
 -emacro(571,BMSreallocMemoryArray)
 -emacro(571,BMSallocBlockMemoryArray)
 -emacro(571,BMSreallocMemoryArray)
@@ -144,6 +148,7 @@
 
 // Avoid "Possible truncation of addition" - this might give interesting information, but clutters the output
 -emacro(776,BMSmoveMemoryArray)
+-emacro(776,BMSallocMemorySize)
 -emacro(776,BMSclearMemoryArray)
 -emacro(776,BMSallocMemoryArray)
 -emacro(776,BMSfreeBlockMemoryArray)
