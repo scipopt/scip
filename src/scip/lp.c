@@ -5464,7 +5464,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
          minval = MIN(minval, absval);
       }
    }
-   if( minval == SCIP_REAL_MAX )
+   if( minval == SCIP_REAL_MAX ) /*lint !e777*/
    {
       /* all coefficients are zero (inside tolerances) */
       if( intscalar != NULL )
