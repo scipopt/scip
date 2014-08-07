@@ -36,12 +36,15 @@ namespace SCIPInterval_NAMESPACE {
 #endif
 
 /** an interval that extends the SCIP_INTERVAL struct
- * by various methods to allow calculating with intervals as with ordinary numbers */
+ *
+ *  Used by various methods to allow calculating with intervals as with ordinary numbers.
+ */
 class SCIPInterval : public SCIP_INTERVAL
 {
 public:
    /** value to use for infinity
-    * currently a global variable, thus use with care!
+    *
+    *  Currently a global variable, thus use with care!
     */
    static SCIP_Real infinity;
 
@@ -51,7 +54,7 @@ public:
       SCIPintervalSetBounds(this, -infinity, infinity);
    }
 
-   /* constructor for an SCIP_INTERVAL struct */
+   /** constructor for an SCIP_INTERVAL struct */
    SCIPInterval(
       const SCIP_INTERVAL& x                 /**< interval to copy */
       )
@@ -242,14 +245,14 @@ SCIPInterval operator/(
    return resultant;
 }
 
-/** cosinus of an interval */
+/** cosine of an interval */
 inline
 SCIPInterval cos(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement cosinus for intervals */
-   SCIPerrorMessage("Cosinus of interval not implemented. Returning trivial interval [-1,1].\n");
+   /* @todo implement cosine for intervals */
+   SCIPerrorMessage("Cosine of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
 }
@@ -322,14 +325,14 @@ SCIPInterval signpow(
    return resultant;
 }
 
-/** sinus of an interval */
+/** sine of an interval */
 inline
 SCIPInterval sin(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement sinus for intervals */
-   SCIPerrorMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
+   /* @todo implement sine for intervals */
+   SCIPerrorMessage("Sine of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
 }
@@ -386,7 +389,7 @@ SCIPInterval sign(
    return resultant;
 }
 
-/** macro to easy definition of so far unimplemented interval functions */
+/** macro for easy definition of not implemented interval functions */
 #define SCIP_INTERVALARITH_UNDEFFUNC(function)                                  \
 inline                                                                          \
 SCIPInterval function(                                                          \
