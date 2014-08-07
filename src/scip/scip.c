@@ -30221,7 +30221,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       return SCIP_OKAY;
 
    /* allow at least a certain number of LP iterations in this dive */
-   maxnlpiterations = MAX(maxnlpiterations, SCIPdivesetGetNLPIterations(diveset) + MINLPITER);
+   if( SCIPdivesetGetNLPIterations(diveset) + MINLPITER > maxnlpiterations )
+      maxnlpiterations = SCIPdivesetGetNLPIterations(diveset) + MINLPITER;
 
    /* if indicator variables are present, add them to the set of diving candidates */
    /* todo maybe store those constraints once and not every time */
@@ -30598,8 +30599,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
          if( !cutoff && targetdepth > divedepth )
          {
-            assert(ncandstofix > 1);
-            assert(ncandstofix == 1 || divecands != NULL);
+            assert(nextcand >= 0 && nextcand < ndivecands);
+            assert(divecands != NULL);
+            assert(divecandssol != NULL);
 
             /* we need to search for the next candidate in our list which was not previously fixed or whose LP solution
              * is not already infeasible
@@ -30629,20 +30631,26 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* resolve the diving LP */
       if( !cutoff )
       {
+         int lpiterationlimit;
+         SCIP_RETCODE retstat;
+
+         nlpiterations = SCIPgetNLPIterations(scip);
+
+         /* allow at least MINLPITER more iterations */
+         lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset));
+         lpiterationlimit = MAX(lpiterationlimit, MINLPITER);
+
+         retstat = SCIPsolveProbingLP(scip, lpiterationlimit, &lperror, &cutoff);
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
 #ifdef NDEBUG
-         SCIP_RETCODE retstat;
-         nlpiterations = SCIPgetNLPIterations(scip);
-         retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset)), MINLPITER), &lperror, &cutoff);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage(scip, "Error while solving LP in Coefdiving heuristic; LP solve terminated with code <%d>\n",retstat);
+            SCIPwarningMessage(scip, "Error while solving LP in %s heuristic; LP solve terminated with code <%d>\n", SCIPheurGetName(heur), retstat);
          }
 #else
-         nlpiterations = SCIPgetNLPIterations(scip);
-         SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset)), MINLPITER), &lperror, &cutoff) );
+         SCIP_CALL( retstat );
 #endif
 
          if( lperror )
@@ -30700,7 +30708,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIPfreeBufferArray(scip, &divecands);
       }
 
-      assert( !lperror );
+      /* todo if only one candidate was fixed since last LP, use the LP Objective gain to update pseudo cost information */
       if( !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
          /* get new diving candidate variables */
