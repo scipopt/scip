@@ -582,7 +582,7 @@ SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
          constant = 0;
          scalar = 1;
 
-         if(SCIPvarIsOriginal(branchruledata->consdata[branchruledata->nodeID]->vars[var]) == 0)
+         if( !SCIPvarIsOriginal(branchruledata->consdata[branchruledata->nodeID]->vars[var]) )
          {
             SCIP_CALL(SCIPvarGetOrigvarSum(&(branchruledata->consdata[branchruledata->nodeID]->vars[var]), &scalar, &constant));
             branchruledata->consdata[branchruledata->nodeID]->vals[var] = (branchruledata->consdata[branchruledata->nodeID]->vals[var] - constant) / scalar;
@@ -759,13 +759,14 @@ SCIP_RETCODE SCIPbranchrulePseudoDeleteLastNodeInfo(
       internID = 0;
    }
 
+   SCIPdebugMessage("delete %d dual variable information about node %lld\n", branchruledata->consdata[internID]->nvars, SCIPnodeGetNumber(node));
+
    SCIP_CALL( deleteConsData(scip, branchruledata, internID, FALSE) );
 
    branchruledata->newnode = TRUE;
    branchruledata->lastseennode = -1;
    branchruledata->nodeID = -1;
 
-   SCIPdebugMessage("delete strong branching information about node %lld\n", SCIPnodeGetNumber(node));
 
    return SCIP_OKAY;
 }

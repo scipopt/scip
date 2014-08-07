@@ -7009,9 +7009,9 @@ void SCIPnodeGetParentBranchingsReopt(
       if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
        && (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-           && boundchgs[i].data.inferencedata.reason.cons != NULL)
-         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-           && boundchgs[i].data.inferencedata.reason.prop != NULL)) ) /*lint !e641*/
+           && boundchgs[i].data.inferencedata.reason.cons != NULL)) )
+//         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+//           && boundchgs[i].data.inferencedata.reason.prop != NULL)) ) /*lint !e641*/
       {
          (*nbranchvars)++;
       }
@@ -7026,9 +7026,9 @@ void SCIPnodeGetParentBranchingsReopt(
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
           && (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
             || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-              && boundchgs[i].data.inferencedata.reason.cons != NULL)
-            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-              && boundchgs[i].data.inferencedata.reason.prop != NULL)) ) /*lint !e641*/
+              && boundchgs[i].data.inferencedata.reason.cons != NULL)) )
+//            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+//              && boundchgs[i].data.inferencedata.reason.prop != NULL)) ) /*lint !e641*/
          {
             assert(boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY);
             assert(pos < *nbranchvars);
@@ -7037,11 +7037,6 @@ void SCIPnodeGetParentBranchingsReopt(
             boundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
             branchbounds[pos] = boundchgs[i].newbound;
             pos++;
-
-            if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL )
-            {
-               printf(">> propagator <%s> fixed variable <%s> to %f.\n", SCIPpropGetName(boundchgs[i].data.inferencedata.reason.prop), boundchgs[i].var->name, boundchgs[i].newbound);
-            }
          }
       }
    }

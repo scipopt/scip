@@ -1479,6 +1479,18 @@ SCIP_RETCODE SCIPchgLongintParam(
    SCIP_Longint          value               /**< new value of the parameter */
    );
 
+/**
+ * change the cutoff bound of the current LP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPsetLPCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   );
+
 /** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

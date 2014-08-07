@@ -133,6 +133,12 @@ SCIP_RETCODE SCIPbranchruleNodereoptStopUpdatesoluTime(
    );
 
 extern
+SCIP_Real SCIPbranchruleNodereoptGetCutoffbound(
+   SCIP*                 scip,
+   int                   nodeID
+   );
+
+extern
 SCIP_RETCODE SCIPbranchruleNodereoptSolveLP(
    SCIP*                 scip,
    SCIP_NODE*            node,

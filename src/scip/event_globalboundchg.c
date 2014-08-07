@@ -182,8 +182,8 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalboundchg)
    if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("catch event %x for node %lld\n", SCIPeventGetType(event), SCIPnodeGetNumber(SCIPeventGetNode(event)));
-   SCIPdebugMessage(" -> depth: %d\n");
+   SCIPdebugMessage("catch event %x for node %lld\n", SCIPeventGetType(event), SCIPnodeGetNumber(eventnode));
+   SCIPdebugMessage(" -> depth: %d\n", SCIPnodeGetDepth(eventnode));
    SCIPdebugMessage(" -> change bound for <%s>: %g -> %g\n", SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
    SCIP_CALL(SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, SCIPeventGetVar(event), boundtype, newbound));

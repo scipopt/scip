@@ -44,6 +44,8 @@ extern "C" {
 
 typedef struct LogicOrData LOGICORDATA;
 
+typedef struct SolData SOLDATA;
+
 enum Reopt_ConsType
 {
    REOPT_CONSTYPE_SEPASOLUTION = 0,

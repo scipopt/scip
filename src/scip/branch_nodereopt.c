@@ -58,6 +58,13 @@ struct LogicOrData
    int nvars;
 };
 
+struct SolData
+{
+   SCIP_Real**           vars;           /** solution values of the variables order by the SCIPvarGetIndex() */
+   int                   nsols;
+   int                   size;
+};
+
 /** Data for ancestor branching paths */
 struct NodeData
 {
@@ -68,6 +75,7 @@ struct NodeData
    SCIP_QUEUE*           nodechilds;
    SCIP_LPISTATE*        lpistate;
    SCIP_QUEUE*           conss;
+   SOLDATA*              soldata;
    int                   nvars;
    int                   parentID;
    SCIP_REOPTTYPE        reopttype;
@@ -145,6 +153,8 @@ struct SCIP_BranchruleData
                                                       calculated depending on number of variables? */
    SCIP_Bool             sepabestsol;             /** should the best solution be separated and forbidden, i.e, constraint shortest path? */
    SCIP_Bool             sepalocsols;             /** save local constraints */
+   SCIP_Bool             useoldlpssols;           /** use LP solution from previous iterations to improve the cutoff bound */
+
    int                   maxsavednodes;           /** maximal number of saved nodes for the reoptimization */
    int                   maxdiffofnodes;          /** maximal number of bound changes in two ancestor nodes such that
                                                       the path get not shrunk */
@@ -400,6 +410,7 @@ SCIP_RETCODE initNode(
       branchruledata->nodedata[nodeID]->vars = NULL;
       branchruledata->nodedata[nodeID]->varbounds = NULL;
       branchruledata->nodedata[nodeID]->varboundtypes = NULL;
+      branchruledata->nodedata[nodeID]->soldata = NULL;
    }
    else
    {
@@ -1910,6 +1921,7 @@ SCIP_RETCODE findLIS(
                commonvars1[2*SCIPvarGetIndex(consdata->vars[var])+1] = TRUE;
                (*nvarsLIS1)++;
             }
+            varnames[SCIPvarGetIndex(consdata->vars[var])] = SCIPvarGetName(consdata->vars[var]);
          }
 
          SCIPfreeMemoryArray(scip, &consdata->vals);
@@ -2017,6 +2029,8 @@ SCIP_RETCODE findLIS(
                   if( commonvars1[2*SCIPvarGetIndex(consdata->vars[var])+1] )
                      ncommonvars++;
                }
+               if( varnames[SCIPvarGetIndex(consdata->vars[var])] == NULL )
+                  varnames[SCIPvarGetIndex(consdata->vars[var])] = SCIPvarGetName(consdata->vars[var]);
             }
 
             SCIPfreeMemoryArray(scip, &consdata->vals);
@@ -2717,7 +2731,7 @@ SCIP_RETCODE runHeuristics(
    for(nodeID = 1; nodeID < branchruledata->allocmemsizenodedata; nodeID++)
    {
       if( branchruledata->nodedata[nodeID] != NULL
-       && branchruledata->nodedata[nodeID]->nvars >= 1
+       && lengthBranchPathByID(nodeID, branchruledata) >= 1
        && (branchruledata->nodedata[nodeID]->nodechilds == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds)) )
       {
          if( branchruledata->cpressnodes == 0 )
@@ -2773,7 +2787,7 @@ SCIP_RETCODE runHeuristics(
       minLoss = MIN(lossLIS1/nnodesLIS1, lossLIS2/nnodesLIS2);
       depth = lossLIS1/nnodesLIS1 <= lossLIS2/nnodesLIS2 ? nvarsLIS1 : nvarsLIS2;
 
-      if( branchruledata->lisenable && (minLoss < branchruledata->lisloss || depth >= branchruledata->lisdepth) )
+      if( branchruledata->lisenable )
       {
          if( nnodesLIS1 > 1 && nvarsLIS1 > 1 ) /* if nnnodesLIS1feas = 1 then LIS is equivalent to LC */
             successLIS1 = TRUE;
@@ -2792,14 +2806,12 @@ SCIP_RETCODE runHeuristics(
    {
       if( nnodesToCompress > 0 && !successLIS1 && !successLIS2 )
       {
-         if( (nnodesLIS1 > nnodesLIS2 && (nnodesLIS1*branchruledata->lcsuccess > branchruledata->lck || branchruledata->lcsuccess == 0))
-          || (nnodesLIS1 == nnodesLIS2 && nvarsLIS1 > nvarsLIS2 && (nnodesLIS1*branchruledata->lcsuccess > branchruledata->lck || branchruledata->lcsuccess == 0)) )
+         if( nnodesLIS1 > nnodesLIS2 || (nnodesLIS1 == nnodesLIS2 && nvarsLIS1 >= nvarsLIS2) )
          {
             SCIP_CALL( findLC(scip, branchruledata, LIS1, nnodesLIS1, varsLC, valsLC, boundsLC, nvarsLC, consLC) );
             successLC1 = TRUE;
          }
-         else if( (nnodesLIS1 < nnodesLIS2 && (nnodesLIS2*branchruledata->lcsuccess > branchruledata->lck || branchruledata->lcsuccess == 0))
-               || (nnodesLIS1 == nnodesLIS2 && nvarsLIS1 < nvarsLIS2 && (nnodesLIS2*branchruledata->lcsuccess > branchruledata->lck || branchruledata->lcsuccess == 0)) )
+         else if( nnodesLIS1 < nnodesLIS2 || (nnodesLIS1 == nnodesLIS2 && nvarsLIS1 < nvarsLIS2) )
          {
             SCIP_CALL( findLC(scip, branchruledata, LIS2, nnodesLIS2, varsLC, valsLC, boundsLC, nvarsLC, consLC) );
             successLC2 = TRUE;
@@ -2982,6 +2994,108 @@ SCIP_RETCODE runHeuristics(
 
    return SCIP_OKAY;
 }
+
+/*
+ * save current best feasible solution
+ */
+static
+SCIP_RETCODE saveSol(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata,
+   int                   nodeID
+)
+{
+   SCIP_VAR** vars;
+   int nsols;
+   int var;
+
+   assert(scip != NULL);
+   assert(branchruledata != NULL);
+   assert(0 <= nodeID);
+   assert(nodeID < branchruledata->allocmemsizenodedata);
+   assert(branchruledata->nodedata[nodeID] != NULL);
+   assert(SCIPhasCurrentNodeLP(scip));
+//   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+
+   /* allocate memory if node LP solutions exists */
+   if( branchruledata->nodedata[nodeID]->soldata == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->nodedata[nodeID]->soldata) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->soldata->vars, 10) );
+      branchruledata->nodedata[nodeID]->soldata->nsols = 0;
+      branchruledata->nodedata[nodeID]->soldata->size = 10;
+   }
+   else if( branchruledata->nodedata[nodeID]->soldata->nsols == branchruledata->nodedata[nodeID]->soldata->size-1 )
+   {
+      branchruledata->nodedata[nodeID]->soldata->size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->soldata->vars, branchruledata->nodedata[nodeID]->soldata->size) );
+   }
+
+   assert(branchruledata->nodedata[nodeID]->soldata->nsols+1 < branchruledata->nodedata[nodeID]->soldata->size);
+
+   /* allocate memory and save the solution values */
+   SCIPdebugMessage("save LP solution at nodeID %d:\n", nodeID);
+   SCIPdebugMessage(" -> nsols: %d\n", branchruledata->nodedata[nodeID]->soldata->nsols+1);
+
+   nsols = branchruledata->nodedata[nodeID]->soldata->nsols;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->soldata->vars[nsols], SCIPgetNOrigVars(scip)) );
+
+   vars = SCIPgetOrigVars(scip);
+   for(var = 0; var < SCIPgetNOrigVars(scip); var++)
+   {
+      int idx;
+      idx = SCIPvarGetIndex(vars[var]);
+      branchruledata->nodedata[nodeID]->soldata->vars[nsols][idx] = SCIPvarGetSol(vars[var], TRUE);
+      SCIPdebugMessage("  <%s> = %g\n", SCIPvarGetName(vars[var]), SCIPvarGetSol(vars[var], TRUE));
+   }
+   branchruledata->nodedata[nodeID]->soldata->nsols++;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_Real getCutoffbound(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata,
+   int                   nodeID
+)
+{
+   SCIP_Real cutoffbound;
+   SCIP_VAR** vars;
+   int sol;
+   int var;
+
+   assert(scip != NULL);
+   assert(branchruledata != NULL);
+   assert(0 <= nodeID && nodeID < branchruledata->allocmemsizenodedata);
+   assert(branchruledata->nodedata[nodeID] != NULL);
+//   assert(branchruledata->nodedata[nodeID]->reopttype == SCIP_REOPTTYPE_FEASIBLE);
+
+   cutoffbound = SCIPinfinity(scip);
+   vars = SCIPgetOrigVars(scip);
+
+   if( branchruledata->nodedata[nodeID]->soldata == NULL || branchruledata->nodedata[nodeID]->soldata->nsols == 0 )
+      return -cutoffbound;
+
+   for(sol = 0; sol < branchruledata->nodedata[nodeID]->soldata->nsols; sol++)
+   {
+      SCIP_Real objval;
+      objval = 0;
+
+      for(var = 0; var < SCIPgetNOrigVars(scip); var++)
+      {
+         int idx;
+         idx = SCIPvarGetIndex(vars[var]);
+
+         objval += (SCIPvarGetObj(vars[var]) * branchruledata->nodedata[nodeID]->soldata->vars[sol][idx]);
+      }
+
+      cutoffbound = MIN(cutoffbound, objval);
+   }
+
+   return cutoffbound;
+}
+
 
 /*
  * Execute the branching of nodes with additional constraints.
@@ -3941,6 +4055,8 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
             branchruledata->nsavednodes++;
          }
 
+         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
+
          break;
 
       case SCIP_REOPTTYPE_INFSUBTREE:
@@ -3964,6 +4080,8 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
          {
             SCIP_CALL(saveLPIstate(scip, branchruledata, node, nodeID));
          }
+
+         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
 
          break;
 
@@ -4378,6 +4496,9 @@ SCIP_RETCODE SCIPbranchruleNodereoptRestartCheck(
             /* clear saved information in branch_pseudo */
             SCIP_CALL(SCIPbranchrulePseudoReset(scip, TRUE));
 
+            /* init data for the root node */
+            SCIP_CALL( initNode(scip, branchruledata, 0) );
+
             /* reset flag */
             branchruledata->restart = FALSE;
 
@@ -4548,6 +4669,26 @@ SCIP_RETCODE SCIPbranchruleNodereoptStopUpdatesoluTime(
    SCIP_CALL( SCIPstopClock(scip, branchruledata->updatesolutime) );
 
    return SCIP_OKAY;
+}
+
+SCIP_Real SCIPbranchruleNodereoptGetCutoffbound(
+   SCIP*                 scip,
+   int                   nodeID
+)
+{
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   assert(scip != NULL);
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->reopt);
+
+   return getCutoffbound(scip, branchruledata, nodeID);
 }
 
 /*
@@ -5088,6 +5229,9 @@ SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    SCIP_CALL(SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolnodereopt));
 
    /* parameter */
+   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/usepldlpsols", "use LP solution from previous iterations to improve the cutoff bound.",
+         &branchruledata->useoldlpssols, TRUE, FALSE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/reducetofrontier", "delete stored nodes which were not revived.",
          &branchruledata->reducetofrontier, TRUE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/LargestSubtree", "enable largest subtree heuristic.",
