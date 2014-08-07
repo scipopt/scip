@@ -1390,224 +1390,224 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
 /** a default implementation of expression interval evaluation that always gives a correct result */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntDefault )
-{
+{   /*lint --e{715}*/
    SCIPintervalSetEntire(infinity, result);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** a default implementation of expression curvature check that always gives a correct result */
 static
 SCIP_DECL_EXPRCURV( exprcurvDefault )
-{
+{   /*lint --e{715}*/
    *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_VAR */
 static
 SCIP_DECL_EXPREVAL( exprevalVar )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(varvals != NULL);
 
    *result = varvals[opdata.intval];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_VAR */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntVar )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(varvals != NULL);
 
    *result = varvals[opdata.intval];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_VAR */
 static
 SCIP_DECL_EXPRCURV( exprcurvVar )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
 
    *result = SCIP_EXPRCURV_LINEAR;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_CONST */
 static
 SCIP_DECL_EXPREVAL( exprevalConst )
-{
+{   /*lint --e{715}*/
    assert(result != NULL);
 
    *result = opdata.dbl;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_CONST */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntConst )
-{
+{   /*lint --e{715}*/
    assert(result != NULL);
 
    SCIPintervalSet(result, opdata.dbl);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_CONST */
 static
 SCIP_DECL_EXPRCURV( exprcurvConst )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
 
    *result = SCIP_EXPRCURV_LINEAR;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_PARAM */
 static
 SCIP_DECL_EXPREVAL( exprevalParam )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(paramvals != NULL );
 
    *result = paramvals[opdata.intval];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_PARAM */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntParam )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(paramvals != NULL );
 
    SCIPintervalSet(result, paramvals[opdata.intval]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_PARAM */
 static
 SCIP_DECL_EXPRCURV( exprcurvParam )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
 
    *result = SCIP_EXPRCURV_LINEAR;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_PLUS */
 static
 SCIP_DECL_EXPREVAL( exprevalPlus )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] + argvals[1];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_PLUS */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntPlus )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalAdd(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_PLUS */
 static
 SCIP_DECL_EXPRCURV( exprcurvPlus )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argcurv != NULL);
 
    *result = SCIPexprcurvAdd(argcurv[0], argcurv[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_MINUS */
 static
 SCIP_DECL_EXPREVAL( exprevalMinus )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] - argvals[1];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_MINUS */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntMinus )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalSub(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_MINUS */
 static
 SCIP_DECL_EXPRCURV( exprcurvMinus )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argcurv != NULL);
 
    *result = SCIPexprcurvAdd(argcurv[0], SCIPexprcurvNegate(argcurv[1]));
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_MUL */
 static
 SCIP_DECL_EXPREVAL( exprevalMult )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] * argvals[1];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_MUL */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntMult )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalMul(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_MUL */
 static
 SCIP_DECL_EXPRCURV( exprcurvMult )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
    assert(argbounds != NULL);
@@ -1627,36 +1627,36 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_DIV */
 static
 SCIP_DECL_EXPREVAL( exprevalDiv )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] / argvals[1];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_DIV */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntDiv )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalDiv(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_DIV */
 static
 SCIP_DECL_EXPRCURV( exprcurvDiv )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
    assert(argbounds != NULL);
@@ -1695,36 +1695,36 @@ SCIP_DECL_EXPRCURV( exprcurvDiv )
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_SQUARE */
 static
 SCIP_DECL_EXPREVAL( exprevalSquare )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] * argvals[0];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_SQUARE */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSquare )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalSquare(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_SQUARE */
 static
 SCIP_DECL_EXPRCURV( exprcurvSquare )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
    assert(argbounds != NULL);
@@ -1732,36 +1732,36 @@ SCIP_DECL_EXPRCURV( exprcurvSquare )
    *result = SCIPexprcurvPower(argbounds[0], argcurv[0], 2.0);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_SQRT */
 static
 SCIP_DECL_EXPREVAL( exprevalSquareRoot )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = sqrt(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_SQRT */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSquareRoot )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalSquareRoot(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_SQRT */
 static
 SCIP_DECL_EXPRCURV( exprcurvSquareRoot )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
 
@@ -1775,36 +1775,36 @@ SCIP_DECL_EXPRCURV( exprcurvSquareRoot )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_REALPOWER */
 static
 SCIP_DECL_EXPREVAL( exprevalRealPower )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = pow(argvals[0], opdata.dbl);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_REALPOWER */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntRealPower )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalPowerScalar(infinity, result, argvals[0], opdata.dbl);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_REALPOWER */
 static
 SCIP_DECL_EXPRCURV( exprcurvRealPower )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
    assert(argbounds != NULL);
@@ -1812,12 +1812,12 @@ SCIP_DECL_EXPRCURV( exprcurvRealPower )
    *result = SCIPexprcurvPower(argbounds[0], argcurv[0], opdata.dbl);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_INTPOWER */
 static
 SCIP_DECL_EXPREVAL( exprevalIntPower )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
@@ -1844,24 +1844,24 @@ SCIP_DECL_EXPREVAL( exprevalIntPower )
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_INTPOWER */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntIntPower )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalPowerScalar(infinity, result, argvals[0], (SCIP_Real)opdata.intval);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_INTPOWER */
 static
 SCIP_DECL_EXPRCURV( exprcurvIntPower )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
    assert(argbounds != NULL);
@@ -1869,12 +1869,12 @@ SCIP_DECL_EXPRCURV( exprcurvIntPower )
    *result = SCIPexprcurvPower(argbounds[0], argcurv[0], (SCIP_Real)opdata.intval);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_SIGNPOWER */
 static
 SCIP_DECL_EXPREVAL( exprevalSignPower )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
@@ -1884,24 +1884,24 @@ SCIP_DECL_EXPREVAL( exprevalSignPower )
       *result = -pow(-argvals[0], opdata.dbl);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_SIGNPOWER */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSignPower )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalSignPowerScalar(infinity, result, argvals[0], opdata.dbl);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_SIGNPOWER */
 static
 SCIP_DECL_EXPRCURV( exprcurvSignPower )
-{
+{   /*lint --e{715}*/
    SCIP_INTERVAL tmp;
    SCIP_EXPRCURV left;
    SCIP_EXPRCURV right;
@@ -1939,36 +1939,36 @@ SCIP_DECL_EXPRCURV( exprcurvSignPower )
    *result = (SCIP_EXPRCURV) (left & right);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_EXP */
 static
 SCIP_DECL_EXPREVAL( exprevalExp )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = exp(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_EXP */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntExp )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalExp(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_EXP */
 static
 SCIP_DECL_EXPRCURV( exprcurvExp )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
 
@@ -1981,36 +1981,36 @@ SCIP_DECL_EXPRCURV( exprcurvExp )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_LOG */
 static
 SCIP_DECL_EXPREVAL( exprevalLog )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = log(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_LOG */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntLog )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalLog(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_LOG */
 static
 SCIP_DECL_EXPRCURV( exprcurvLog )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
 
@@ -2023,24 +2023,24 @@ SCIP_DECL_EXPRCURV( exprcurvLog )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_SIN */
 static
 SCIP_DECL_EXPREVAL( exprevalSin )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = sin(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_SIN */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
@@ -2049,7 +2049,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /* @todo implement exprcurvSin */
 #define exprcurvSin exprcurvDefault
@@ -2057,19 +2057,19 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
 /** point evaluation for EXPR_COS */
 static
 SCIP_DECL_EXPREVAL( exprevalCos )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = cos(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_COS */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
@@ -2078,7 +2078,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /* @todo implement exprcurvCos */
 #define exprcurvCos exprcurvDefault
@@ -2086,14 +2086,14 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
 /** point evaluation for EXPR_TAN */
 static
 SCIP_DECL_EXPREVAL( exprevalTan )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = tan(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /* @todo implement SCIPintervalTan */
 #define exprevalIntTan exprevalIntDefault
@@ -2105,14 +2105,14 @@ SCIP_DECL_EXPREVAL( exprevalTan )
 #ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_EXPREVAL( exprevalErf )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = erf(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /* @todo implement SCIPintervalErf */
 #define exprevalIntErf exprevalIntDefault
@@ -2122,7 +2122,7 @@ SCIP_DECL_EXPREVAL( exprevalErf )
 
 static
 SCIP_DECL_EXPREVAL( exprevalErfi )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
@@ -2130,7 +2130,7 @@ SCIP_DECL_EXPREVAL( exprevalErfi )
    SCIPerrorMessage("erfi not implemented");
 
    return SCIP_ERROR;
-} /*lint !e715*/
+}
 
 /* @todo implement SCIPintervalErfi */
 #define exprevalIntErfi NULL
@@ -2141,31 +2141,31 @@ SCIP_DECL_EXPREVAL( exprevalErfi )
 /** point evaluation for EXPR_MIN */
 static
 SCIP_DECL_EXPREVAL( exprevalMin )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = MIN(argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_MIN */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntMin )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalMin(result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_MIN */
 static
 SCIP_DECL_EXPRCURV( exprcurvMin )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argcurv != NULL);
 
@@ -2179,36 +2179,36 @@ SCIP_DECL_EXPRCURV( exprcurvMin )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_MAX */
 static
 SCIP_DECL_EXPREVAL( exprevalMax )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = MAX(argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_MAX */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntMax )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalMax(result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_MAX */
 static
 SCIP_DECL_EXPRCURV( exprcurvMax )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argcurv != NULL);
 
@@ -2221,36 +2221,36 @@ SCIP_DECL_EXPRCURV( exprcurvMax )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_ABS */
 static
 SCIP_DECL_EXPREVAL( exprevalAbs )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = ABS(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_ABS */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntAbs )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalAbs(result, argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_ABS */
 static
 SCIP_DECL_EXPRCURV( exprcurvAbs )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argcurv   != NULL);
    assert(argbounds != NULL);
@@ -2270,36 +2270,36 @@ SCIP_DECL_EXPRCURV( exprcurvAbs )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_SIGN */
 static
 SCIP_DECL_EXPREVAL( exprevalSign )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = SIGN(argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_SIGN */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSign )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL);
 
    SCIPintervalSign(result, argvals[0]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_SIGN */
 static
 SCIP_DECL_EXPRCURV( exprcurvSign )
-{
+{   /*lint --e{715}*/
    assert(result    != NULL);
    assert(argbounds != NULL);
 
@@ -2310,12 +2310,12 @@ SCIP_DECL_EXPRCURV( exprcurvSign )
       *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_SUM */
 static
 SCIP_DECL_EXPREVAL( exprevalSum )
-{
+{   /*lint --e{715}*/
    int i;
 
    assert(result  != NULL);
@@ -2326,12 +2326,12 @@ SCIP_DECL_EXPREVAL( exprevalSum )
       *result += argvals[i];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_SUM */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSum )
-{
+{   /*lint --e{715}*/
    int i;
 
    assert(result  != NULL);
@@ -2343,12 +2343,12 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSum )
       SCIPintervalAdd(infinity, result, *result, argvals[i]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_SUM */
 static
 SCIP_DECL_EXPRCURV( exprcurvSum )
-{
+{   /*lint --e{715}*/
    int i;
 
    assert(result  != NULL);
@@ -2360,12 +2360,12 @@ SCIP_DECL_EXPRCURV( exprcurvSum )
       *result = SCIPexprcurvAdd(*result, argcurv[i]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_PRODUCT */
 static
 SCIP_DECL_EXPREVAL( exprevalProduct )
-{
+{   /*lint --e{715}*/
    int i;
 
    assert(result  != NULL);
@@ -2376,12 +2376,12 @@ SCIP_DECL_EXPREVAL( exprevalProduct )
       *result *= argvals[i];
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_PRODUCT */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntProduct )
-{
+{   /*lint --e{715}*/
    int i;
 
    assert(result  != NULL);
@@ -2393,12 +2393,12 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntProduct )
       SCIPintervalMul(infinity, result, *result, argvals[i]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_PRODUCT */
 static
 SCIP_DECL_EXPRCURV( exprcurvProduct )
-{
+{   /*lint --e{715}*/
    SCIP_Bool hadnonconst;
    SCIP_Real constants;
    int i;
@@ -2437,12 +2437,12 @@ SCIP_DECL_EXPRCURV( exprcurvProduct )
    *result = SCIPexprcurvMultiply(constants, *result);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** point evaluation for EXPR_LINEAR */
 static
 SCIP_DECL_EXPREVAL( exprevalLinear )
-{
+{   /*lint --e{715}*/
    SCIP_Real* coef;
    int i;
 
@@ -2459,12 +2459,12 @@ SCIP_DECL_EXPREVAL( exprevalLinear )
    assert(++coef == (SCIP_Real*)opdata.data);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_LINEAR */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntLinear )
-{
+{   /*lint --e{715}*/
    assert(result  != NULL);
    assert(argvals != NULL || nargs == 0);
    assert(opdata.data != NULL);
@@ -2473,12 +2473,12 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntLinear )
    SCIPintervalAddScalar(infinity, result, *result, ((SCIP_Real*)opdata.data)[nargs]);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_LINEAR */
 static
 SCIP_DECL_EXPRCURV( exprcurvLinear )
-{
+{   /*lint --e{715}*/
    SCIP_Real* data;
    int i;
 
@@ -2494,12 +2494,12 @@ SCIP_DECL_EXPRCURV( exprcurvLinear )
       *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(data[i], argcurv[i]));
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** expression data copy for EXPR_LINEAR */
 static
 SCIP_DECL_EXPRCOPYDATA( exprCopyDataLinear )
-{
+{  /*lint --e{715}*/
    SCIP_Real* targetdata;
 
    assert(blkmem != NULL);
@@ -2517,7 +2517,7 @@ SCIP_DECL_EXPRCOPYDATA( exprCopyDataLinear )
 /** expression data free for EXPR_LINEAR */
 static
 SCIP_DECL_EXPRFREEDATA( exprFreeDataLinear )
-{
+{  /*lint --e{715}*/
    SCIP_Real* freedata;
 
    assert(blkmem != NULL);
@@ -2532,7 +2532,7 @@ SCIP_DECL_EXPRFREEDATA( exprFreeDataLinear )
 /** point evaluation for EXPR_QUADRATIC */
 static
 SCIP_DECL_EXPREVAL( exprevalQuadratic )
-{
+{   /*lint --e{715}*/
    SCIP_EXPRDATA_QUADRATIC* quaddata;
    SCIP_Real* lincoefs;
    SCIP_QUADELEM* quadelems;
@@ -2564,12 +2564,12 @@ SCIP_DECL_EXPREVAL( exprevalQuadratic )
       *result += quadelems->coef * argvals[quadelems->idx1] * argvals[quadelems->idx2];  /*lint !e613*/
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_QUADRATIC */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
-{
+{   /*lint --e{715}*/
    SCIP_EXPRDATA_QUADRATIC* quaddata;
    SCIP_Real* lincoefs;
    SCIP_QUADELEM* quadelems;
@@ -2691,12 +2691,12 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
    assert(i == nquadelems);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_QUADRATIC */
 static
 SCIP_DECL_EXPRCURV( exprcurvQuadratic )
-{
+{   /*lint --e{715}*/
    SCIP_EXPRDATA_QUADRATIC* data;
    SCIP_QUADELEM* quadelems;
    int nquadelems;
@@ -2759,12 +2759,12 @@ SCIP_DECL_EXPRCURV( exprcurvQuadratic )
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** expression data copy for EXPR_QUADRATIC */
 static
 SCIP_DECL_EXPRCOPYDATA( exprCopyDataQuadratic )
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA_QUADRATIC* sourcedata;
 
    assert(blkmem != NULL);
@@ -2782,7 +2782,7 @@ SCIP_DECL_EXPRCOPYDATA( exprCopyDataQuadratic )
 /** expression data free for EXPR_QUADRATIC */
 static
 SCIP_DECL_EXPRFREEDATA( exprFreeDataQuadratic )
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA_QUADRATIC* quadraticdata;
 
    assert(blkmem != NULL);
@@ -2808,7 +2808,7 @@ SCIP_DECL_EXPRFREEDATA( exprFreeDataQuadratic )
 /** point evaluation for EXPR_POLYNOMIAL */
 static
 SCIP_DECL_EXPREVAL( exprevalPolynomial )
-{
+{   /*lint --e{715}*/
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
    SCIP_EXPRDATA_MONOMIAL*   monomialdata;
    SCIP_Real childval;
@@ -2896,12 +2896,12 @@ SCIP_DECL_EXPREVAL( exprevalPolynomial )
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** interval evaluation for EXPR_POLYNOMIAL */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
-{
+{   /*lint --e{715}*/
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
    SCIP_EXPRDATA_MONOMIAL*   monomialdata;
    SCIP_INTERVAL childval;
@@ -2990,12 +2990,12 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** curvature for EXPR_POLYNOMIAL */
 static
 SCIP_DECL_EXPRCURV( exprcurvPolynomial )
-{
+{   /*lint --e{715}*/
    SCIP_EXPRDATA_POLYNOMIAL* data;
    SCIP_EXPRDATA_MONOMIAL** monomials;
    SCIP_EXPRDATA_MONOMIAL* monomial;
@@ -3024,12 +3024,12 @@ SCIP_DECL_EXPRCURV( exprcurvPolynomial )
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** expression data copy for EXPR_POLYNOMIAL */
 static
 SCIP_DECL_EXPRCOPYDATA( exprCopyDataPolynomial )
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA_POLYNOMIAL* sourcepolynomialdata;
    SCIP_EXPRDATA_POLYNOMIAL* targetpolynomialdata;
 
@@ -3044,12 +3044,12 @@ SCIP_DECL_EXPRCOPYDATA( exprCopyDataPolynomial )
    opdatatarget->data = (void*)targetpolynomialdata;
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** expression data free for EXPR_POLYNOMIAL */
 static
 SCIP_DECL_EXPRFREEDATA( exprFreeDataPolynomial )
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
 
    assert(blkmem != NULL);
@@ -3058,7 +3058,7 @@ SCIP_DECL_EXPRFREEDATA( exprFreeDataPolynomial )
    assert(polynomialdata != NULL);
 
    polynomialdataFree(blkmem, &polynomialdata);
-} /*lint !e715*/
+}
 
 /** element in table of expression operands */
 struct exprOpTableElement
