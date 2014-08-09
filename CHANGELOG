@@ -35,6 +35,8 @@ fixed bugs:
 - fixed bug changing the variable type of an negated variable
 - use dual feasibility tolerance for comparisons regarding reduced costs
 - fixed bug with freeing problem: need to reset objective limit
+- fixed bug in presolve of cons_nonlinear: wrong constraint upgrades may have been performed due to outdated bound
+  information in expression graph
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
