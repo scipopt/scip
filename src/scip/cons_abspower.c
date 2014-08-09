@@ -6314,11 +6314,12 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
             SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->x, 1.0) );
          }
          SCIP_CALL( SCIPaddCons(scip, lincons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
          SCIPdebugMessage("upgraded constraint <%s> to linear constraint due to binary x-variable\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
          SCIPdebugPrintCons(scip, lincons, NULL);
+
+         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );  /*lint !e613*/
          ++*nupgdconss;
