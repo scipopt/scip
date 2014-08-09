@@ -324,21 +324,26 @@ SCIP_RETCODE SCIPvisualNewChild(
 
    if ( visual->bakfile != NULL )
    {
-      if ( branchvar != NULL )
+      if ( visual->firstnode )
+      {
+         printTime(visual, stat, FALSE);
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "candidate 1 0 M %f %f %d\n", lowerbound, 0.0, 0);
+         visual->firstnode = FALSE;
+      }
+      else if ( branchvar != NULL )
       {
          char t;
-
-         if ( visual->firstnode )
-         {
-            printTime(visual, stat, FALSE);
-            SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "branched 1 0 M %f %f %d\n", lowerbound, 0.0, 0);
-            visual->firstnode = FALSE;
-         }
 
          /* todo: get information about fractionalities */
          t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
          printTime(visual, stat, FALSE);
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "branched %d %d %c %f %f %d\n", (int)nodenum, (int)parentnodenum, t,
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "candidate %d %d %c %f %f %d\n", (int)nodenum, (int)parentnodenum, t,
+            lowerbound, 0.0, 0);
+      }
+      else
+      {
+         printTime(visual, stat, FALSE);
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "candidate %d %d M %f %f %d\n", (int)nodenum, (int)parentnodenum,
             lowerbound, 0.0, 0);
       }
    }
