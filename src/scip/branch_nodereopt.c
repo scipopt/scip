@@ -4055,7 +4055,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
             branchruledata->nsavednodes++;
          }
 
-         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
+//         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
 
          break;
 
@@ -4081,7 +4081,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
             SCIP_CALL(saveLPIstate(scip, branchruledata, node, nodeID));
          }
 
-         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
+//         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
 
          break;
 
@@ -4741,7 +4741,7 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
 
       if( branchruledata->maxdiffofnodes == -1 )
       {
-         branchruledata->maxdiffofnodes = floor(log10((SCIP_Real)SCIPgetNOrigBinVars(scip))/log10(2))-1;
+         branchruledata->maxdiffofnodes = floor(log10((SCIP_Real)SCIPgetNBinVars(scip))/log10(2))-1;
       }
 
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/dynamicdiffofnodes", &branchruledata->dynamicdiffofnodes));

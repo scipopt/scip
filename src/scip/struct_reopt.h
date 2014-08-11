@@ -38,6 +38,8 @@ struct SCIP_Reopt
 
    int                   run;                /**< current position in the sols array*/
    int                   runsize;            /**< allocated memory for runs */
+   int                   firstobj;           /**< first non empty objective function */
+
    int*                  solssize;           /**< size of sols[x] arrays */
    int*                  nsols;              /**< number of solutions stored in sols[x] array */
 

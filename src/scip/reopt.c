@@ -20,7 +20,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <assert.h>
-
+#define SCIP_DEBUG
 #include "scip/def.h"
 #include "scip/scip.h"
 #include "scip/set.h"
@@ -153,20 +153,27 @@ SCIP_Real soltreeHammingDistSub(
    if( SCIPsetIsFeasEQ(set, objval, 0) )
    {
       if( node->lchild != NULL )
+      {
          hamdist += (soltreeNInducedtSols(node->lchild)
                    + soltreeHammingDistSub(scip, set, stat, sol, node->lchild, vars, id+1));
-
+      }
       if( node->rchild != NULL )
+      {
          hamdist += soltreeHammingDistSub(scip, set, stat, sol, node->rchild, vars, id+1);
+      }
    }
    else
    {
       if( node->rchild != NULL )
+      {
          hamdist += (soltreeNInducedtSols(node->rchild)
                    + soltreeHammingDistSub(scip, set, stat, sol, node->rchild, vars, id+1));
+      }
 
       if( node->lchild != NULL )
+      {
          hamdist += soltreeHammingDistSub(scip, set, stat, sol, node->lchild, vars, id+1);
+      }
    }
 
    return hamdist;
@@ -204,23 +211,31 @@ SCIP_Real soltreeGetHammingDist(
    if( SCIPsetIsFeasEQ(set, objval, 0) )
    {
       if( reopt->soltree->root->lchild != NULL )
+      {
          hamdist += (soltreeNInducedtSols(reopt->soltree->root->lchild)
                    + soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->lchild, vars, 1));
+      }
 
       if( reopt->soltree->root->rchild != NULL )
+      {
          hamdist += soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->rchild, vars, 1);
+      }
    }
    else
    {
       if( reopt->soltree->root->rchild != NULL )
+      {
          hamdist += (soltreeNInducedtSols(reopt->soltree->root->rchild)
                    + soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->rchild, vars, 1));
+      }
 
       if( reopt->soltree->root->lchild != NULL )
+      {
          hamdist += soltreeHammingDistSub(scip, set, stat, sol, reopt->soltree->root->lchild, vars, 1);
+      }
    }
 
-   return hamdist/(soltreeNInducedtSols(reopt->soltree->root)*SCIPgetNVars(scip));
+   return hamdist/(reopt->soltree->nsols*SCIPgetNBinVars(scip));
 }
 
 /* add solutions to origprimal space */
@@ -481,9 +496,9 @@ SCIP_RETCODE soltreeAddSol(
    /** either all variables are delete or the given minimal Hamming-Distance is at most
     *  1/SCIPgetNVars(scip), which is the minimum possible Hamming-Distance.
     */
-   if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist <= (SCIP_Real)1/SCIPgetNVars(scip) )
+   if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist == 1 || set->reopt_minavghamdist < (SCIP_Real)1/(SCIPgetNBinVars(scip)*reopt->soltree->nsols) )
    {
-      hamdist = set->reopt_minavghamdist;
+      hamdist = 1;
    }
    else
    {
@@ -527,7 +542,7 @@ SCIP_RETCODE soltreeAddSol(
    }
 
    /* the solution was added */
-   if( *added || hamdist >= set->reopt_minavghamdist || bestsol)
+   if( *added || hamdist >= set->reopt_minavghamdist )
    {
       SCIP_SOL* copysol;
 
@@ -555,8 +570,8 @@ SCIP_RETCODE soltreeAddSol(
 
 #ifdef SCIP_DEBUG
    {
-      if( set->reopt_minavghamdist >= (SCIP_Real)1/SCIPgetNVars(scip) )
-         printf("** reoptimization ** solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
+      if( set->reopt_minavghamdist <= 0.5 && set->reopt_minavghamdist > 0)
+         SCIPdebugMessage("** reoptimization ** solution%s added (Hamming-Distance %.4f).\n", (*added) ? "" : " not", hamdist);
    }
 #endif
 
@@ -635,6 +650,7 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->simtolastobj = -2.0;
    (*reopt)->simtofirstobj = -2.0;
    (*reopt)->lastbestsol = NULL;
+   (*reopt)->firstobj = -1;
 
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->sols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->nsols, (*reopt)->runsize) );
@@ -717,6 +733,8 @@ SCIP_RETCODE SCIPreoptAddSol(
 
    /* check memory */
    SCIP_CALL( ensureSolsSize(reopt, set, reopt->nsols[run], run) );
+
+   solnode = NULL;
 
    /** ad solution to solution tree */
    SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetOrigVars(scip), sol, &solnode, SCIPgetNOrigVars(scip), bestsol, added) );
@@ -818,17 +836,17 @@ SCIP_RETCODE SCIPreoptUpdateSols(
          {
             if( naddedsolsrun > 0 )
             {
-               if( set->reopt_objsim == 0  )
-                  printf("** reoptimization ** add %d solutions from run %d.\n", naddedsolsrun, run);
+               if( objsim == 0  )
+                  SCIPdebugMessage("** reoptimization ** add %d solutions from run %d.\n", naddedsolsrun, run);
                else
-                  printf("** reoptimization ** add %d solutions from run %d (lambda %.4f).\n", naddedsolsrun, run, sim);
+                  SCIPdebugMessage("** reoptimization ** add %d solutions from run %d (lambda %.4f).\n", naddedsolsrun, run, sim);
             }
          }
 #endif
       }
    }
 
-   printf("%u/%u reoptimized solutions, feasible solution found by reopsols heuristic, best objective value %.6e\n", naddedsols, nsols, SCIPgetPrimalbound(scip));
+   printf("%u/%u reoptimized solutions, feasible solution found by reoptsols heuristic, best objective value %.6e\n", naddedsols, nsols, SCIPgetPrimalbound(scip));
 
    /* reset the marks for added solutions */
    if(  reopt->soltree ->nsols > 0 )
@@ -899,31 +917,26 @@ SCIP_RETCODE SCIPreoptSaveObj(
    for(id = 0; id < SCIPgetNOrigVars(scip); id++)
    {
       reopt->objs[run][id] = SCIPvarGetObj(vars[id]);
-   }
 
-#ifdef SCIP_DEBUG
-   {
-      printf("** reoptimization ** saved obj for run %d.\n", run);
+      /* mark this objective as the first non empty */
+      if( reopt->firstobj == -1 && reopt->objs[run][id] != 0 )
+         reopt->firstobj = run;
    }
-#endif
 
    /* calculate similarity to last objective */
    if( run >= 1 )
    {
       /* calculate similarity to first objective */
-      if( run > 1 && reopt->simtofirstobj >= -1 )
-         reopt->simtofirstobj = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, 0);
+      if( run > 1 && reopt->firstobj < run )
+         reopt->simtofirstobj = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, reopt->firstobj);
 
       /* calculate similarity to last objective */
       reopt->simtolastobj = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, run-1);
+
+      SCIPdebugMessage("new objective has similarity of %.4f/%.4f compared to first/previous.\n", reopt->simtofirstobj, reopt->simtolastobj);
    }
 
-#ifdef SCIP_DEBUG
-   {
-      if( run >= 1 )
-         printf("** reoptimization ** new objective has similarity of %.4f/%.4f compared to first/previous.\n", reopt->simtofirstobj, reopt->simtolastobj);
-   }
-#endif
+   SCIPdebugMessage("saved obj for run %d.\n", run);
 
    return SCIP_OKAY;
 }
