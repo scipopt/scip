@@ -7892,6 +7892,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
       for( c = 0; c < nconss; ++c )
       {
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
          /* call upgrade methods if constraint was not presolved, has been changed, or the expression graph has changed */
          if( !consdata->ispresolved || havegraphchange )
          {
