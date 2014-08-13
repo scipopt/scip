@@ -20,7 +20,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+//#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 
@@ -64,7 +64,6 @@ struct SCIP_BranchruleData
    int                   inititer;           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
    int                   maxbdchgs;          /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 };
-
 
 /*
  * local methods
@@ -199,6 +198,7 @@ SCIP_RETCODE execRelpscost(
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_Bool             executebranch,      /**< execute a branching step or run probing only */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    )
 {
@@ -709,7 +709,7 @@ SCIP_RETCODE execRelpscost(
    }
 
    /* if no domain could be reduced, create the branching */
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && executebranch )
    {
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
@@ -759,6 +759,7 @@ SCIP_RETCODE execRelpscost(
 
       *result = SCIP_BRANCHED;
    }
+
    return SCIP_OKAY;
 }
    
@@ -817,7 +818,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    assert(nlpcands > 0);
 
    /* execute branching rule */
-   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, result) );
+   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -915,6 +916,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_Bool             executebranching,   /**< perform a branching step after probing */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    )
 {
@@ -928,7 +930,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    assert(branchrule != NULL);
    
    /* execute branching rule */
-   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, branchcands, branchcandssol, branchcandsfrac, nbranchcands, result) );
+   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, branchcands, branchcandssol, branchcandsfrac, nbranchcands, executebranching, result) );
    
    return SCIP_OKAY;
 }

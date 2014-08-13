@@ -357,7 +357,9 @@ SCIP_Bool SCIPbranchrulePseudoIsPseudoBranched(
     && branchruledata->nodeID == 0 )
       return TRUE;
 
-   else if( branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] != 0 )
+   else if( node != SCIPgetRootNode(scip)
+         && branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] != 0
+         && branchruledata->consdata[branchruledata->nodetoid[SCIPnodeGetNumber(node)-1]]->nvars > 0 )
       return TRUE;
 
    return FALSE;
@@ -459,7 +461,8 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
          {
             SCIP_CALL( reallocNodeID(scip, branchruledata, SCIPnodeGetNumber(node)) );
          }
-         assert( branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] == 0 );
+         assert( branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] == 0
+              || branchruledata->consdata[branchruledata->nodetoid[SCIPnodeGetNumber(node)-1]]->nvars == 0);
          branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] = branchruledata->nodeID;
       }
    }
@@ -612,6 +615,7 @@ SCIP_RETCODE SCIPbranchrulePseudoNodeFinished(
    }
 #endif
 
+   branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] = 0;
    branchruledata->nrpseudobranchednodes++;
    branchruledata->newnode = TRUE;
    branchruledata->nodeID = -1;
@@ -667,7 +671,8 @@ SCIP_RETCODE SCIPbranchrulePseudoDelInformation(
  */
 SCIP_RETCODE SCIPbranchrulePseudoReset(
    SCIP*                 scip,
-   SCIP_Bool             restart
+   SCIP_Bool             restart,
+   SCIP_Bool             exceptroot
 )
 {
    SCIP_BRANCHRULE* branchrule;
@@ -696,7 +701,7 @@ SCIP_RETCODE SCIPbranchrulePseudoReset(
       /** clear queue with open IDs */
       SCIPqueueClear(branchruledata->openIDs);
 
-      for(i = 0; i < branchruledata->allocmemsizeconsdata; i++)
+      for(i = (int) exceptroot; i < branchruledata->allocmemsizeconsdata; i++)
       {
          if( branchruledata->consdata[i] != NULL )
          {
@@ -714,7 +719,7 @@ SCIP_RETCODE SCIPbranchrulePseudoReset(
 
    branchruledata->lastseennode = -1;
    branchruledata->newnode = TRUE;
-   branchruledata->nrpseudobranchednodes = 0;
+   branchruledata->nrpseudobranchednodes = branchruledata->consdata[0]->nvars > 0 ? 1 : 0;
 
    return SCIP_OKAY;
 }

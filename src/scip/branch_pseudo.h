@@ -89,7 +89,8 @@ SCIP_RETCODE SCIPbranchrulePseudoSetParams(
 extern
 SCIP_RETCODE SCIPbranchrulePseudoReset(
    SCIP*                 scip,
-   SCIP_Bool             restart
+   SCIP_Bool             restart,
+   SCIP_Bool             exceptroot
    );
 
 extern

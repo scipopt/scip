@@ -65,6 +65,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_Bool             executebranching,   /**< perform a branching step after probing */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    );
 

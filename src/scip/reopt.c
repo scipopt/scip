@@ -20,7 +20,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <assert.h>
-#define SCIP_DEBUG
+
 #include "scip/def.h"
 #include "scip/scip.h"
 #include "scip/set.h"
@@ -900,6 +900,7 @@ SCIP_RETCODE SCIPreoptSaveObj(
 )
 {
    SCIP_VAR** vars;
+   int v;
    int id;
 
    assert(reopt != NULL);
@@ -913,9 +914,10 @@ SCIP_RETCODE SCIPreoptSaveObj(
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &reopt->objs[run], SCIPgetNOrigVars(scip)) );
 
    /* save coefficients */
-   vars = SCIPgetVars(scip);
-   for(id = 0; id < SCIPgetNOrigVars(scip); id++)
+   vars = SCIPgetOrigVars(scip);
+   for(v = 0; v < SCIPgetNOrigVars(scip); v++)
    {
+      id = SCIPvarGetIndex(vars[v]);
       reopt->objs[run][id] = SCIPvarGetObj(vars[id]);
 
       /* mark this objective as the first non empty */
