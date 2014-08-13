@@ -33,6 +33,7 @@
 
 -function(exit,__assertfail)
 
+
 // ---------------------------------------------------------
 // treat particular messages:
 -emacro(506,debugMessage)         // Constant value Boolean
@@ -162,5 +163,8 @@
 -emacro(776,SCIPduplicateMemoryArray)
 
 -ecall(776,SCIPhashmapInsert)
+
+// turn off "Suspicious cast" messages involving size_t in SCIPhashmapInsert
+-ecall(571,SCIPhashmapInsert)
 
 // ------------------------------------------------------------------
