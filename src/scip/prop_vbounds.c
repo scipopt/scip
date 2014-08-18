@@ -1916,10 +1916,10 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
 
-   /* create pseudoobj propagator data */
+   /* create vbounds propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
-   /*  reset propagation data */
+   /* reset propagation data */
    resetPropdata(propdata);
 
    /* include propagator */
