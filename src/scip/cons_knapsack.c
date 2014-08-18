@@ -11539,7 +11539,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       assert(consdata1 != NULL);
 
       /* if both constraints didn't change since last pair processing, we can ignore the pair */
-      if( consdata0->presolved && consdata0->presolved )
+      if( consdata0->presolved && consdata1->presolved )
          continue;
 
       assert(consdata1->nvars >= 1);

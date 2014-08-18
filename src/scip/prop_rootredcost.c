@@ -157,7 +157,7 @@ int countNonZeroRootRedcostVars(
       assert(vars[v] != NULL);
 
       redcost = SCIPvarGetBestRootRedcost(vars[v]);
-      if( !SCIPisFeasZero(scip, redcost) )
+      if( !SCIPisDualfeasZero(scip, redcost) )
          count++;
    }
 
@@ -240,7 +240,7 @@ SCIP_RETCODE propdataInit(
          var = vars[v];
          redcost = SCIPvarGetBestRootRedcost(var);
 
-         if( SCIPisFeasZero(scip, redcost) )
+         if( SCIPisDualfeasZero(scip, redcost) )
             continue;
 
          assert(k < nredcostvars);
@@ -304,7 +304,7 @@ SCIP_RETCODE propagateRootRedcostVar(
 
    rootredcost = SCIPvarGetBestRootRedcost(var);
    assert(rootredcost != SCIP_INVALID); /*lint !e777*/
-   assert(!SCIPisFeasZero(scip, rootredcost));
+   assert(!SCIPisDualfeasZero(scip, rootredcost));
 
    rootsol = SCIPvarGetBestRootSol(var);
    rootlpobjval = SCIPvarGetBestRootLPObjval(var);
@@ -312,7 +312,7 @@ SCIP_RETCODE propagateRootRedcostVar(
    /* calculate reduced cost based bound */
    newbd = rootsol + (cutoffbound - rootlpobjval) / rootredcost;
 
-   if( SCIPisFeasPositive(scip, rootredcost) )
+   if( SCIPisDualfeasPositive(scip, rootredcost) )
    {
       assert(SCIPisFeasLE(scip, rootsol, SCIPvarGetLbGlobal(var))); /* lb might have been increased in the meantime */
 
@@ -321,7 +321,7 @@ SCIP_RETCODE propagateRootRedcostVar(
    }
    else
    {
-      assert(SCIPisFeasNegative(scip, rootredcost));
+      assert(SCIPisDualfeasNegative(scip, rootredcost));
       assert(SCIPisFeasGE(scip, rootsol, SCIPvarGetUbGlobal(var))); /* ub might have been decreased in the meantime */
 
       /* strengthen lower bound */

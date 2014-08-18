@@ -50,7 +50,7 @@ using std::vector;
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;
 
-/** CppAD needs to know a fixed upper bound on the number of threads at compile time.
+/* CppAD needs to know a fixed upper bound on the number of threads at compile time.
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
  */
 #ifndef CPPAD_MAX_NUM_THREADS
@@ -77,14 +77,14 @@ namespace CppAD
 {
 template <> SCIPInterval erf_template(
    const SCIPInterval    &x
-)
+   )
 {
    CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
    return SCIPInterval();
 }
 template <> AD<SCIPInterval> erf_template(
    const AD<SCIPInterval> &x
-)
+   )
 {
    CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
    return AD<SCIPInterval>();
@@ -108,6 +108,7 @@ bool in_parallel(void)
 }
 
 /** CppAD callback function that returns the number of the current thread
+ *
  * assigns a new number to the thread if new
  */
 static
@@ -149,7 +150,8 @@ size_t thread_num(void)
 }
 
 /** sets up CppAD's datastructures for running in multithreading mode
- * it must be called once before multithreading is started
+ *
+ *  It must be called once before multithreading is started.
  */
 static
 char init_parallel(void)
@@ -164,7 +166,8 @@ char init_parallel(void)
 }
 
 /** a dummy variable that can is initialized to the result of init_parallel
- * the purpose is to make sure that init_parallel() is called before any multithreading is started
+ *
+ *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
 static char init_parallel_return = init_parallel();
 
@@ -178,7 +181,7 @@ SCIPInterval CondExpOp(
    const SCIPInterval&   right,
    const SCIPInterval&   trueCase,
    const SCIPInterval&   falseCase)
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "SCIPInterval CondExpOp(...)",
       "Error: cannot use CondExp with an interval type"
@@ -202,7 +205,7 @@ inline
 bool IdenticalPar(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    return true;
 }
 
@@ -239,7 +242,7 @@ inline
 bool GreaterThanZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "GreaterThanZero(x)",
       "Error: cannot use GreaterThanZero with interval"
@@ -253,7 +256,7 @@ inline
 bool GreaterThanOrZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__ ,
       "GreaterThanOrZero(x)",
       "Error: cannot use GreaterThanOrZero with interval"
@@ -267,7 +270,7 @@ inline
 bool LessThanZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "LessThanZero(x)",
       "Error: cannot use LessThanZero with interval"
@@ -281,7 +284,7 @@ inline
 bool LessThanOrZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "LessThanOrZero(x)",
       "Error: cannot use LessThanOrZero with interval"
@@ -295,7 +298,7 @@ inline
 int Integer(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "Integer(x)",
       "Error: cannot use Integer with interval"
@@ -324,14 +327,14 @@ struct SCIP_ExprInt
 struct SCIP_ExprIntData
 {
 public:
-   /* constructor */
+   /** constructor */
    SCIP_ExprIntData()
-      : need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
+      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
    { }
 
-   /* destructor */
+   /** destructor */
    ~SCIP_ExprIntData()
-   { }
+   { }/*lint --e{1540}*/
 
    vector< AD<double> >  X;                  /**< vector of dependent variables */
    vector< AD<double> >  Y;                  /**< result vector */ 
@@ -358,15 +361,16 @@ public:
 #ifndef NO_CPPAD_USER_ATOMIC
 
 /** computes sparsity of jacobian for a univariate function during a forward sweep
- * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
- * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
+ *
+ *  For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
+ *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
  */
 static
 bool univariate_for_sparse_jac(
-   size_t                     q,  /**< number of columns in R */
-   const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-   CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
-)
+   size_t                     q,             /**< number of columns in R */
+   const CppAD::vector<bool>& r,             /**< sparsity of R, columnwise */
+   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, columnwise */
+   )
 {
    assert(r.size() == q);
    assert(s.size() == q);
@@ -376,16 +380,17 @@ bool univariate_for_sparse_jac(
    return true;
 }
 
-/** computes sparsity of jacobian during a reverse sweep
- * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
- * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+/** Computes sparsity of jacobian during a reverse sweep
+ *
+ *  For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
+ *  Since f'(x) is dense, the sparsity of R will be the sparsity of S.
  */
 static
 bool univariate_rev_sparse_jac(
-   size_t                     q,  /**< number of rows in R */
-   CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-   const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
-)
+   size_t                     q,             /**< number of rows in R */
+   CppAD::vector<bool>&       r,             /**< sparsity of R, rowwise */
+   const CppAD::vector<bool>& s              /**< vector to store sparsity of S, rowwise */
+   )
 {
    assert(r.size() == q);
    assert(s.size() == q);
@@ -396,19 +401,20 @@ bool univariate_rev_sparse_jac(
 }
 
 /** computes sparsity of hessian during a reverse sweep
- * Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
- * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+ *
+ *  Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
+ *  we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
  */
 static
 bool univariate_rev_sparse_hes(
-   const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-   const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-   CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-   size_t                                  q,  /**< number of columns in R, U, and V */
-   const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-   const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-   CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-)
+   const CppAD::vector<bool>& vx,            /**< indicates whether argument is a variable, or empty vector */
+   const CppAD::vector<bool>& s,             /**< sparsity pattern of S = g'(y) */
+   CppAD::vector<bool>&  t,                  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+   size_t                q,                  /**< number of columns in R, U, and V */
+   const CppAD::vector<bool>& r,             /**< sparsity pattern of R */
+   const CppAD::vector<bool>& u,             /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+   CppAD::vector<bool>&  v                   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+   )
 {
    assert(r.size() == q);
    assert(s.size() == 1);
@@ -423,8 +429,10 @@ bool univariate_rev_sparse_hes(
    //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
    v = u;
    if( s[0] )
+   {
       for( size_t j = 0; j < q; ++j )
          v[j] |= r[j];
+   }
 
    return true;
 }
@@ -432,10 +440,10 @@ bool univariate_rev_sparse_hes(
 
 /** Automatic differentiation of x -> x^p, p>=2 integer, as CppAD user-atomic function.
  *
- * This class implements forward and reverse operations for the function x -> x^p for use within CppAD.
- * While CppAD would implement integer powers as a recursion of multiplications, we still use pow functions as they allow us to avoid overestimation in interval arithmetics.
+ *  This class implements forward and reverse operations for the function x -> x^p for use within CppAD.
+ *  While CppAD would implement integer powers as a recursion of multiplications, we still use pow functions as they allow us to avoid overestimation in interval arithmetics.
  *
- * @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
+ *  @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
  */
 template<class Type>
 class atomic_posintpower : public CppAD::atomic_base<Type>
@@ -463,6 +471,7 @@ private:
    }
 
    /** forward sweep of positive integer power
+    *
     * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
     * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
     * in the taylor expansion of f(x) = x^p.
@@ -474,13 +483,13 @@ private:
     *           = p * (p-1) * tx[0]^(p-2) * tx[1]^2 + p * tx[0]^(p-1) * tx[2]
     */
    bool forward(
-      size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
-      CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
-   )
+      size_t                     q,          /**< lowest order Taylor coefficient that we are evaluating */
+      size_t                     p,          /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
+      CppAD::vector<bool>&       vy,         /**< vector to store which function values depend on variables, or empty vector */
+      const CppAD::vector<Type>& tx,         /**< values for taylor coefficients of x */
+      CppAD::vector<Type>&       ty          /**< vector to store taylor coefficients of y */
+      )
    {
       assert(exponent > 1);
       assert(tx.size() >= p+1);
@@ -534,6 +543,7 @@ private:
    }
 
    /** reverse sweep of positive integer power
+    *
     * Assume y(x) is a function of the taylor coefficients of f(x) = x^p for x, i.e.,
     *   y(x) = [ x^p, p * x^(p-1) * x', p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x'', ... ].
     * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
@@ -563,12 +573,12 @@ private:
     * \f$
     */
    bool reverse(
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
-      CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
-      const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
-   )
+      size_t                     p,          /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<Type>& tx,         /**< values for taylor coefficients of x */
+      const CppAD::vector<Type>& ty,         /**< values for taylor coefficients of y */
+      CppAD::vector<Type>&       px,         /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      const CppAD::vector<Type>& py          /**< values for partial derivatives of g(x) w.r.t. y */
+      )
    {
       assert(exponent > 1);
       assert(px.size() >= p+1);
@@ -604,14 +614,15 @@ private:
    using CppAD::atomic_base<Type>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
+    *
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                     q,  /**< number of columns in R */
-      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
-   )
+      size_t                     q,          /**< number of columns in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
+      )
    {
       return univariate_for_sparse_jac(q, r, s);
    }
@@ -619,14 +630,15 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
+    *
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
    bool rev_sparse_jac(
-      size_t                     q,  /**< number of rows in R */
-      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
-   )
+      size_t                     q,          /**< number of rows in R */
+      CppAD::vector<bool>&       r,          /**< sparsity of R, rowwise */
+      const CppAD::vector<bool>& s           /**< vector to store sparsity of S, rowwise */
+      )
    {
       return univariate_rev_sparse_jac(q, r, s);
    }
@@ -634,18 +646,19 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
-    * Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
-    * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+    *
+    *  Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
+    *  we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
    bool rev_sparse_hes(
-      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in R, U, and V */
-      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-   )
+      const CppAD::vector<bool>&   vx,       /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>&   s,        /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&         t,        /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                       q,        /**< number of columns in R, U, and V */
+      const CppAD::vector<bool>&   r,        /**< sparsity pattern of R */
+      const CppAD::vector<bool>&   u,        /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&         v         /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
@@ -658,7 +671,7 @@ void posintpower(
    vector<Type>&         in,                 /**< vector which first argument is base */
    vector<Type>&         out,                /**< vector where to store result in first argument */
    size_t                exponent            /**< exponent */
-)
+   )
 {
    static atomic_posintpower<typename Type::value_type> pip;
    pip(in, out, exponent);
@@ -672,7 +685,7 @@ void posintpower(
    vector<Type>&         in,                 /**< vector which first argument is base */
    vector<Type>&         out,                /**< vector where to store result in first argument */
    size_t                exponent            /**< exponent */
-)
+   )
 {
    out[0] = pow(in[0], (int)exponent);
 }
@@ -684,11 +697,11 @@ void posintpower(
 
 /** Automatic differentiation of x -> sign(x)abs(x)^p, p>=1, as CppAD user-atomic function.
  *
- * This class implements forward and reverse operations for the function x -> sign(x)abs(x)^p for use within CppAD.
- * While we otherwise would have to use discontinuous sign and abs functions, our own implementation allows to provide
- * a continuously differentiable function.
+ *  This class implements forward and reverse operations for the function x -> sign(x)abs(x)^p for use within CppAD.
+ *  While we otherwise would have to use discontinuous sign and abs functions, our own implementation allows to provide
+ *  a continuously differentiable function.
  *
- * @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
+ *  @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
  */
 template<class Type>
 class atomic_signpower : public CppAD::atomic_base<Type>
@@ -708,7 +721,7 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
     */
    virtual void set_id(size_t id)
    {
@@ -716,6 +729,7 @@ private:
    }
 
    /** forward sweep of signpower
+    *
     * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
     * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
     * in the taylor expansion of f(x) = sign(x)abs(x)^p.
@@ -727,13 +741,13 @@ private:
     *           = p * (p-1) * sign(tx[0]) * abs(tx[0])^(p-2) * tx[1]^2 + p * abs(tx[0])^(p-1) * tx[2]
     */
    bool forward(
-      size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
-      CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
-   )
+      size_t                      q,         /**< lowest order Taylor coefficient that we are evaluating */
+      size_t                      p,         /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<bool>&  vx,        /**< indicates whether argument is a variable, or empty vector */
+      CppAD::vector<bool>&        vy,        /**< vector to store which function values depend on variables, or empty vector */
+      const CppAD::vector<Type>&  tx,        /**< values for taylor coefficients of x */
+      CppAD::vector<Type>&        ty         /**< vector to store taylor coefficients of y */
+      )
    {
       assert(exponent > 0.0);
       assert(tx.size() >= p+1);
@@ -786,6 +800,7 @@ private:
    }
 
    /** reverse sweep of signpower
+    *
     * Assume y(x) is a function of the taylor coefficients of f(x) = sign(x)|x|^p for x, i.e.,
     *   y(x) = [ f(x), f'(x), f''(x), ... ].
     * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
@@ -815,11 +830,11 @@ private:
     * \f$
     */
    bool reverse(
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
-      CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
-      const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+      size_t                      p,         /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<Type>&  tx,        /**< values for taylor coefficients of x */
+      const CppAD::vector<Type>&  ty,        /**< values for taylor coefficients of y */
+      CppAD::vector<Type>&        px,        /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      const CppAD::vector<Type>&  py         /**< values for partial derivatives of g(x) w.r.t. y */
       )
    {
       assert(exponent > 1);
@@ -869,13 +884,14 @@ private:
    using CppAD::atomic_base<Type>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
+    *
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+      size_t                     q,          /**< number of columns in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
       )
    {
       return univariate_for_sparse_jac(q, r, s);
@@ -884,13 +900,14 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
+    *
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
    bool rev_sparse_jac(
-      size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
+      size_t                     q,          /**< number of rows in R */
+      CppAD::vector<bool>&       r,          /**< sparsity of R, rowwise */
+      const CppAD::vector<bool>& s           /**< vector to store sparsity of S, rowwise */
       )
    {
       return univariate_rev_sparse_jac(q, r, s);
@@ -899,18 +916,19 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
+    *
     * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
    bool rev_sparse_hes(
-      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-   )
+      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>& s,          /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&       t,          /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                     q,          /**< number of columns in S and R */
+      const CppAD::vector<bool>& r,          /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,          /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&       v           /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
@@ -936,7 +954,7 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
     */
    virtual void set_id(size_t id)
    {
@@ -945,7 +963,7 @@ private:
 
    /** specialization of atomic_signpower::forward template for SCIPinterval
     *
-    * @todo try to compute tighter resultants
+    *  @todo try to compute tighter resultants
     */
    bool forward(
       size_t                             q,  /**< lowest order Taylor coefficient that we are evaluating */
@@ -954,7 +972,7 @@ private:
       CppAD::vector<bool>&               vy, /**< vector to store which function values depend on variables, or empty vector */
       const CppAD::vector<SCIPInterval>& tx, /**< values for taylor coefficients of x */
       CppAD::vector<SCIPInterval>&       ty  /**< vector to store taylor coefficients of y */
-   )
+      )
    {
       assert(exponent > 0.0);
       assert(tx.size() >= p+1);
@@ -1008,7 +1026,7 @@ private:
 
    /** specialization of atomic_signpower::reverse template for SCIPinterval
     *
-    * @todo try to compute tighter resultants
+    *  @todo try to compute tighter resultants
     */
    bool reverse(
       size_t                             p,  /**< highest order Taylor coefficient that we are evaluating */
@@ -1065,13 +1083,14 @@ private:
    using CppAD::atomic_base<SCIPInterval>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
+    *
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+      size_t                     q,          /**< number of columns in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
       )
    {
       return univariate_for_sparse_jac(q, r, s);
@@ -1080,13 +1099,14 @@ private:
    using CppAD::atomic_base<SCIPInterval>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
+    *
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
     */
    bool rev_sparse_jac(
-      size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
+      size_t                     q,          /**< number of rows in R */
+      CppAD::vector<bool>&       r,          /**< sparsity of R, rowwise */
+      const CppAD::vector<bool>& s           /**< vector to store sparsity of S, rowwise */
       )
    {
       return univariate_rev_sparse_jac(q, r, s);
@@ -1095,23 +1115,25 @@ private:
    using CppAD::atomic_base<SCIPInterval>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
+    *
     * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
    bool rev_sparse_hes(
-      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-   )
+      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>& s,          /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&       t,          /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                     q,          /**< number of columns in S and R */
+      const CppAD::vector<bool>& r,          /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,          /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&       v           /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
 };
 
+/** template for evaluation for signpower operator */
 template<class Type>
 static
 void evalSignPower(
@@ -1133,7 +1155,8 @@ void evalSignPower(
 #else
 
 /** template for evaluation for signpower operator
- * only implemented for real numbers, thus gives error by default
+ *
+ *  Only implemented for real numbers, thus gives error by default.
  */
 template<class Type>
 static
@@ -1142,15 +1165,14 @@ void evalSignPower(
    Type&                 arg,                /**< operand */
    SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalSignPower()",
       "Error: SignPower not implemented for this value type"
       );
 }
 
-/** specialization of signpower evaluation for real numbers
- */
+/** specialization of signpower evaluation for real numbers */
 template<>
 void evalSignPower(
    CppAD::AD<double>&    resultant,          /**< resultant */
@@ -1557,8 +1579,9 @@ void evalUser(
 #endif
 
 /** template for evaluation for minimum operator
- * only implemented for real numbers, thus gives error by default
- * @todo implement own userad function
+ *
+ *  Only implemented for real numbers, thus gives error by default.
+ *  @todo implement own userad function
  */
 template<class Type>
 static
@@ -1567,15 +1590,14 @@ void evalMin(
    Type&                 arg1,               /**< first operand */
    Type&                 arg2                /**< second operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalMin()",
       "Error: Min not implemented for this value type"
       );
 }
 
-/** specialization of minimum evaluation for real numbers
- */
+/** specialization of minimum evaluation for real numbers */
 template<>
 void evalMin(
    CppAD::AD<double>&    resultant,          /**< resultant */
@@ -1587,8 +1609,9 @@ void evalMin(
 }
 
 /** template for evaluation for maximum operator
- * only implemented for real numbers, thus gives error by default
- * @todo implement own userad function
+ *
+ *  Only implemented for real numbers, thus gives error by default.
+ *  @todo implement own userad function
  */
 template<class Type>
 static
@@ -1597,15 +1620,14 @@ void evalMax(
    Type&                 arg1,               /**< first operand */
    Type&                 arg2                /**< second operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalMax()",
       "Error: Max not implemented for this value type"
       );
 }
 
-/** specialization of maximum evaluation for real numbers
- */
+/** specialization of maximum evaluation for real numbers */
 template<>
 void evalMax(
    CppAD::AD<double>&    resultant,          /**< resultant */
@@ -1617,7 +1639,8 @@ void evalMax(
 }
 
 /** template for evaluation for square-root operator
- * default is to use the standard sqrt-function
+ *
+ *  Default is to use the standard sqrt-function.
  */
 template<class Type>
 static
@@ -1630,7 +1653,8 @@ void evalSqrt(
 }
 
 /** specialization of square-root operator for numbers
- * we perturb the function a little bit so that it's derivatives are defined in 0.0
+ *
+ *  We perturb the function a little bit so that it's derivatives are defined in 0.0.
  */
 template<>
 void evalSqrt(
@@ -1641,8 +1665,7 @@ void evalSqrt(
    resultant = sqrt(arg + 1e-20) - 1e-10;
 }
 
-/** template for evaluation for absolute value operator
- */
+/** template for evaluation for absolute value operator */
 template<class Type>
 static
 void evalAbs(
@@ -1654,7 +1677,8 @@ void evalAbs(
 }
 
 /** specialization of absolute value evaluation for intervals
- * use sqrt(x^2) for now @todo implement own userad function
+ *
+ *  Use sqrt(x^2) for now @todo implement own userad function.
  */
 template<>
 void evalAbs(
@@ -1727,20 +1751,21 @@ SCIP_RETCODE eval(
    Type&                 val                 /**< buffer to store expression value */
    )
 {
-   Type* buf;
+   Type* buf = 0;
 
    assert(expr != NULL);
 
    /* todo use SCIP_MAXCHILD_ESTIMATE as in expression.c */
 
-   buf = NULL;
    if( SCIPexprGetNChildren(expr) )
    {
       if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )
          return SCIP_NOMEMORY;
 
       for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
+      {
          SCIP_CALL( eval(SCIPexprGetChildren(expr)[i], x, param, buf[i]) );
+      }
    }
 
    switch(SCIPexprGetOperator(expr))
@@ -1760,62 +1785,77 @@ SCIP_RETCODE eval(
       break;
 
    case SCIP_EXPR_PLUS:
+      assert( buf != 0 );
       val = buf[0] + buf[1];
       break;
 
    case SCIP_EXPR_MINUS:
+      assert( buf != 0 );
       val = buf[0] - buf[1];
       break;
 
    case SCIP_EXPR_MUL:
+      assert( buf != 0 );
       val = buf[0] * buf[1];
       break;
 
    case SCIP_EXPR_DIV:
+      assert( buf != 0 );
       val = buf[0] / buf[1];
       break;
 
    case SCIP_EXPR_SQUARE:
+      assert( buf != 0 );
       evalIntPower(val, buf[0], 2);
       break;
 
    case SCIP_EXPR_SQRT:
+      assert( buf != 0 );
       evalSqrt(val, buf[0]);
       break;
 
    case SCIP_EXPR_REALPOWER:
+      assert( buf != 0 );
       val = CppAD::pow(buf[0], SCIPexprGetRealPowerExponent(expr));
       break;
 
    case SCIP_EXPR_INTPOWER:
+      assert( buf != 0 );
       evalIntPower(val, buf[0], SCIPexprGetIntPowerExponent(expr));
       break;
 
    case SCIP_EXPR_SIGNPOWER:
+      assert( buf != 0 );
       evalSignPower(val, buf[0], expr);
       break;
 
    case SCIP_EXPR_EXP:
+      assert( buf != 0 );
       val = exp(buf[0]);
       break;
 
    case SCIP_EXPR_LOG:
+      assert( buf != 0 );
       val = log(buf[0]);
       break;
 
    case SCIP_EXPR_SIN:
+      assert( buf != 0 );
       val = sin(buf[0]);
       break;
 
    case SCIP_EXPR_COS:
+      assert( buf != 0 );
       val = cos(buf[0]);
       break;
 
    case SCIP_EXPR_TAN:
+      assert( buf != 0 );
       val = tan(buf[0]);
       break;
 #ifdef SCIP_DISABLED_CODE /* these operators are currently disabled */
    case SCIP_EXPR_ERF:
+      assert( buf != 0 );
       val = erf(buf[0]);
       break;
 
@@ -1823,28 +1863,34 @@ SCIP_RETCODE eval(
       return SCIP_ERROR;
 #endif
    case SCIP_EXPR_MIN:
+      assert( buf != 0 );
       evalMin(val, buf[0], buf[1]);
       break;
 
    case SCIP_EXPR_MAX:
+      assert( buf != 0 );
       evalMax(val, buf[0], buf[1]);
       break;
 
    case SCIP_EXPR_ABS:
+      assert( buf != 0 );
       evalAbs(val, buf[0]);
       break;
 
    case SCIP_EXPR_SIGN:
+      assert( buf != 0 );
       val = sign(buf[0]);
       break;
 
    case SCIP_EXPR_SUM:
+      assert( buf != 0 );
       val = 0.0;
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
          val += buf[i];
       break;
 
    case SCIP_EXPR_PRODUCT:
+      assert( buf != 0 );
       val = 1.0;
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
          val *= buf[i];
@@ -1857,6 +1903,7 @@ SCIP_RETCODE eval(
       coefs = SCIPexprGetLinearCoefs(expr);
       assert(coefs != NULL || SCIPexprGetNChildren(expr) == 0);
 
+      assert( buf != 0 );
       val = SCIPexprGetLinearConstant(expr);
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
          val += coefs[i] * buf[i];
@@ -1872,6 +1919,8 @@ SCIP_RETCODE eval(
       Type lincoef;
       vector<Type> in(1);
       vector<Type> out(1);
+
+      assert( buf != 0 );
 
       lincoefs   = SCIPexprGetQuadLinearCoefs(expr);
       nquadelems = SCIPexprGetNQuadElements(expr);
@@ -1936,6 +1985,8 @@ SCIP_RETCODE eval(
       SCIP_Real* exponents;
       int i;
       int j;
+
+      assert( buf != 0 );
 
       val = SCIPexprGetPolynomialConstant(expr);
 
@@ -2002,7 +2053,8 @@ SCIP_RETCODE eval(
 }
 
 /** analysis an expression tree whether it requires retaping on every evaluation
- * this may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...)
+ *
+ *  This may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...).
  */
 static
 bool needAlwaysRetape(SCIP_EXPR* expr)
@@ -2033,18 +2085,19 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 }
 
 /** replacement for CppAD's default error handler
- * in debug mode, CppAD gives an error when an evaluation contains a nan
- * we do not want to stop execution in such a case, since the calling routine should check for nan's and decide what to do
- * since we cannot ignore this particular error, we ignore all
- * @todo find a way to check whether the error corresponds to a nan and communicate this back
+ *
+ *  In debug mode, CppAD gives an error when an evaluation contains a nan.
+ *  We do not want to stop execution in such a case, since the calling routine should check for nan's and decide what to do.
+ *  Since we cannot ignore this particular error, we ignore all.
+ *  @todo find a way to check whether the error corresponds to a nan and communicate this back
  */
 static
 void cppaderrorcallback(
-   bool               known,                 /**< is the error from a known source? */
-   int                line,                  /**< line where error occured */
-   const char*        file,                  /**< file where error occured */
-   const char*        exp,                   /**< error condition */
-   const char*        msg                    /**< error message */
+   bool                  known,              /**< is the error from a known source? */
+   int                   line,               /**< line where error occured */
+   const char*           file,               /**< file where error occured */
+   const char*           exp,                /**< error condition */
+   const char*           msg                 /**< error message */
    )
 {
    SCIPdebugMessage("ignore CppAD error from %sknown source %s:%d: msg: %s exp: %s\n", known ? "" : "un", file, line, msg, exp);
@@ -2171,7 +2224,8 @@ SCIP_RETCODE SCIPexprintFreeData(
 }
 
 /** notify expression interpreter that a new parameterization is used
- * this probably causes retaping by AD algorithms
+ *
+ *  This probably causes retaping by AD algorithms.
  */
 SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -2402,8 +2456,9 @@ SCIP_RETCODE SCIPexprintGradInt(
 }
 
 /** gives sparsity pattern of hessian
- * NOTE: this function might be replaced later by something nicer 
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ *
+ *  NOTE: this function might be replaced later by something nicer.
+ *  Since the AD code might need to do a forward sweep, you should pass variable values in here.
  */
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -2472,7 +2527,8 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
 }
 
 /** computes value and dense hessian of an expression tree
- * the full hessian is computed (lower left and upper right triangle)
+ *
+ *  The full hessian is computed (lower left and upper right triangle).
  */
 SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */

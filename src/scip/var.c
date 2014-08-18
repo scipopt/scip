@@ -12412,11 +12412,11 @@ void SCIPvarUpdateBestRootSol(
    assert(var->scip == set->scip);
 
    /* if reduced cost are zero nothing to update */
-   if( SCIPsetIsFeasZero(set, rootredcost) )
+   if( SCIPsetIsDualfeasZero(set, rootredcost) )
       return;
 
    /* check if we have already a best combination stored */
-   if( !SCIPsetIsFeasZero(set, var->bestrootredcost) )
+   if( !SCIPsetIsDualfeasZero(set, var->bestrootredcost) )
    {
       SCIP_Real currcutoffbound;
       SCIP_Real cutoffbound;
@@ -12560,10 +12560,10 @@ SCIP_Real SCIPvarGetRedcost(
          SCIP_Real redcost = SCIPcolGetRedcost(col, stat, lp);
 
          assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
-               (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsFeasNegative(set, redcost) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsDualfeasNegative(set, redcost) ||
                   SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
          assert(((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
-               (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsFeasPositive(set, redcost) ||
+               (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsDualfeasPositive(set, redcost) ||
                   SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE);
 
          if( (varfixing && ((lpissolbasic && basestat == SCIP_BASESTAT_LOWER) ||
@@ -12712,7 +12712,7 @@ SCIP_Real SCIPvarGetImplRedcost(
          else
             redcost = -SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
 
-         if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
+         if( (varfixing && SCIPsetIsDualfeasPositive(set, redcost)) || (!varfixing && SCIPsetIsDualfeasNegative(set, redcost)) )
             implredcost += redcost;
       }
 
@@ -12771,7 +12771,7 @@ SCIP_Real SCIPvarGetImplRedcost(
             if( basestat == SCIP_BASESTAT_LOWER && boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, bounds[v], lb) )
             {
                redcost = SCIPcolGetRedcost(col, stat, lp);
-               assert(!SCIPsetIsFeasNegative(set, redcost));
+               assert(!SCIPsetIsDualfeasNegative(set, redcost));
 
                if( !varfixing )
                   redcost *= (lb - bounds[v]);
@@ -12781,7 +12781,7 @@ SCIP_Real SCIPvarGetImplRedcost(
             else if( basestat == SCIP_BASESTAT_UPPER && boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, bounds[v], ub) )
             {
                redcost = SCIPcolGetRedcost(col, stat, lp);
-               assert(!SCIPsetIsFeasPositive(set, redcost));
+               assert(!SCIPsetIsDualfeasPositive(set, redcost));
 
                if( varfixing )
                   redcost *= (bounds[v] - ub);
@@ -12797,7 +12797,7 @@ SCIP_Real SCIPvarGetImplRedcost(
             if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasEQ(set, lb, primsol) && SCIPsetIsFeasGT(set, bounds[v], lb) )
             {
                redcost = SCIPcolGetRedcost(col, stat, lp);
-               assert(!SCIPsetIsFeasNegative(set, redcost));
+               assert(!SCIPsetIsDualfeasNegative(set, redcost));
 
                if( varfixing )
                   redcost *= (lb - bounds[v]);
@@ -12807,7 +12807,7 @@ SCIP_Real SCIPvarGetImplRedcost(
             else if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasEQ(set, ub, primsol) && SCIPsetIsFeasLT(set, bounds[v], ub) )
             {
                redcost = SCIPcolGetRedcost(col, stat, lp);
-               assert(!SCIPsetIsFeasPositive(set, redcost));
+               assert(!SCIPsetIsDualfeasPositive(set, redcost));
 
                if( varfixing )
                   redcost *= (bounds[v] - ub);
@@ -12817,7 +12817,7 @@ SCIP_Real SCIPvarGetImplRedcost(
          }
 
          /* improve implied reduced cost */
-         if( (varfixing && SCIPsetIsFeasPositive(set, redcost)) || (!varfixing && SCIPsetIsFeasNegative(set, redcost)) )
+         if( (varfixing && SCIPsetIsDualfeasPositive(set, redcost)) || (!varfixing && SCIPsetIsDualfeasNegative(set, redcost)) )
             implredcost += redcost;
       }
    }

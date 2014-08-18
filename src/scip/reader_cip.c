@@ -115,7 +115,7 @@ SCIP_RETCODE getInputString(
       if( endline == NULL )
          pos = cipinput->len - 1;
       else
-         pos = endline - cipinput->strbuf;
+         pos = (int) (endline - cipinput->strbuf);
 
       /* don't erase the '\n' from all buffers for constraints */
       if( endline != NULL && cipinput->section == CIP_CONSTRAINTS )
@@ -586,12 +586,12 @@ SCIP_RETCODE getFixedVariable(
          if ( strncmp(str, "indslack", 8) == 0 )
          {
             (void) strcpy(name, "indlin");
-            (void) strcat(name, str+8);
+            (void) strncat(name, str+8, SCIP_MAXSTRLEN-7);
          }
          else if ( strncmp(str, "t_indslack", 10) == 0 )
          {
             (void) strcpy(name, "indlin");
-            (void) strcat(name, str+10);
+            (void) strncat(name, str+10, SCIP_MAXSTRLEN-7);
          }
          else
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );

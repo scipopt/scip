@@ -167,7 +167,7 @@ void setPowerOfTwo(
    assert(0 <= exponent && exponent < LONG_MAX);
 
 #ifdef WITH_GMP
-   mpz_ui_pow_ui(*value, 2, (unsigned long) exponent);
+   mpz_ui_pow_ui(*value, 2UL, (unsigned long) exponent);
 #else
    assert(exponent < 64);
    (*value) = 1 << exponent;
@@ -194,7 +194,7 @@ void addOne(
    )
 {
 #ifdef WITH_GMP
-   mpz_add_ui(*value, *value, 1);
+   mpz_add_ui(*value, *value, 1UL);
 #else
    (*value)++;
 #endif

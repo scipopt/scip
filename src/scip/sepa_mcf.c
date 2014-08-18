@@ -1279,7 +1279,7 @@ SCIP_RETCODE extractCapacityRows(
             capacityrowscores[r] += 500.0;
 
          /* all coefficients of flow variables are equal: score +250 */
-         if( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX )
+         if( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX ) /*lint !e777*/
             capacityrowscores[r] += 250.0;
 
          /* all coefficients of flow variables are +1 or -1: score +100 */

@@ -1733,12 +1733,12 @@ void SCIPprobUpdateBestRootSol(
 
             /* get reduced cost if the variable gets fixed to zero */
             lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, prob, lp);
-            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
+            assert( !SCIPsetIsDualfeasPositive(set, lbrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             /* get reduced cost if the variable gets fixed to one */
             ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, prob, lp);
-            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
+            assert( !SCIPsetIsDualfeasNegative(set, ubrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             if( -lbrootredcost > ubrootredcost )

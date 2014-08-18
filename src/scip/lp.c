@@ -5464,7 +5464,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
          minval = MIN(minval, absval);
       }
    }
-   if( minval == SCIP_REAL_MAX )
+   if( minval == SCIP_REAL_MAX ) /*lint !e777*/
    {
       /* all coefficients are zero (inside tolerances) */
       if( intscalar != NULL )
@@ -13041,7 +13041,7 @@ SCIP_RETCODE lpLexDualSimplex(
                else
                {
                   /* reduced cost == 0 -> possible candidate */
-                  if( SCIPsetIsFeasZero(set, redcost[c]) )
+                  if( SCIPsetIsDualfeasZero(set, redcost[c]) )
                   {
                      ++nDualDeg;
                      /* only if we have not yet found a candidate */
@@ -16225,12 +16225,12 @@ SCIP_RETCODE SCIPlpGetSol(
          if( stilldualfeasible )
          {
             compslack = MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost;
-            stilldualfeasible = !SCIPsetIsFeasPositive(set, compslack);
+            stilldualfeasible = !SCIPsetIsDualfeasPositive(set, compslack);
          }
          if( stilldualfeasible )
          {
             compslack = MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost;
-            stilldualfeasible = !SCIPsetIsFeasNegative(set, compslack);
+            stilldualfeasible = !SCIPsetIsDualfeasNegative(set, compslack);
          }
 
          SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
@@ -16238,8 +16238,8 @@ SCIP_RETCODE SCIPlpGetSol(
             SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
             SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
             primalfeasible != NULL ? stillprimalfeasible : TRUE,
-            !SCIPsetIsFeasPositive(set, MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost),
-            !SCIPsetIsFeasNegative(set, MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost),
+            !SCIPsetIsDualfeasPositive(set, MIN((lpicols[c]->primsol - lpicols[c]->lb), 1.0) * lpicols[c]->redcost),
+            !SCIPsetIsDualfeasNegative(set, MIN((lpicols[c]->ub - lpicols[c]->primsol), 1.0) * lpicols[c]->redcost),
             dualfeasible != NULL ? stilldualfeasible : TRUE);
       }
       else
@@ -16249,17 +16249,17 @@ SCIP_RETCODE SCIPlpGetSol(
           * bounds, its reduced cost must be zero
           */
          if( stilldualfeasible && SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
-            stilldualfeasible = !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
+            stilldualfeasible = !SCIPsetIsDualfeasPositive(set, lpicols[c]->redcost);
          if( stilldualfeasible && SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
-            stilldualfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+            stilldualfeasible = !SCIPsetIsDualfeasNegative(set, lpicols[c]->redcost);
 
          SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
             SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
             SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
             primalfeasible != NULL ? stillprimalfeasible : TRUE,
-            !SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) || !SCIPsetIsFeasPositive(set, lpicols[c]->redcost),
-            !SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) || !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
+            !SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) || !SCIPsetIsDualfeasPositive(set, lpicols[c]->redcost),
+            !SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) || !SCIPsetIsDualfeasNegative(set, lpicols[c]->redcost),
             dualfeasible != NULL ? stilldualfeasible : TRUE);
       }
 
@@ -16294,18 +16294,18 @@ SCIP_RETCODE SCIPlpGetSol(
          double compslack;
 
          /* complementary slackness in barrier solutions is measured as product of primal slack and dual multiplier;
-          * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinty() for unbounded
+          * we use a slack of at most 1, because otherwise we multiply by something like SCIPinfinity() for unbounded
           * variables, which would magnify even the tiniest violation in the dual multiplier
           */
          if( stilldualfeasible )
          {
             compslack = MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol;
-            stilldualfeasible = !SCIPsetIsFeasPositive(set, compslack);
+            stilldualfeasible = !SCIPsetIsDualfeasPositive(set, compslack);
          }
          if( stilldualfeasible )
          {
             compslack = MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol;
-            stilldualfeasible = !SCIPsetIsFeasNegative(set, compslack);
+            stilldualfeasible = !SCIPsetIsDualfeasNegative(set, compslack);
          }
 
          SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
@@ -16313,8 +16313,8 @@ SCIP_RETCODE SCIPlpGetSol(
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
             primalfeasible != NULL ? stillprimalfeasible : TRUE,
-            !SCIPsetIsFeasPositive(set, MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol),
-            !SCIPsetIsFeasNegative(set, MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol),
+            !SCIPsetIsDualfeasPositive(set, MIN((lpirows[r]->activity - lpirows[r]->lhs), 1.0) * lpirows[r]->dualsol),
+            !SCIPsetIsDualfeasNegative(set, MIN((lpirows[r]->rhs - lpirows[r]->activity), 1.0) * lpirows[r]->dualsol),
             dualfeasible != NULL ? stilldualfeasible : TRUE);
       }
       else
@@ -16324,17 +16324,17 @@ SCIP_RETCODE SCIPlpGetSol(
           * strictly within left-hand and right-hand side, its dual multiplier must be zero
           */
          if( stilldualfeasible && SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
-            stilldualfeasible = !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
+            stilldualfeasible = !SCIPsetIsDualfeasPositive(set, lpirows[r]->dualsol);
          if( stilldualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
-            stilldualfeasible = !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
+            stilldualfeasible = !SCIPsetIsDualfeasNegative(set, lpirows[r]->dualsol);
 
          SCIPdebugMessage(" row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, lpirows[r]->activity, lpirows[r]->dualsol,
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
             primalfeasible != NULL ? stillprimalfeasible : TRUE,
-            !SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol),
-            !SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol),
+            !SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) || !SCIPsetIsDualfeasPositive(set, lpirows[r]->dualsol),
+            !SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) || !SCIPsetIsDualfeasNegative(set, lpirows[r]->dualsol),
             dualfeasible != NULL ? stilldualfeasible : TRUE);
       }
 

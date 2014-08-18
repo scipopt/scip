@@ -1072,6 +1072,7 @@ BMS_CHKMEM* createChkmem(
 {
    BMS_CHKMEM* chkmem;
 
+   assert(size >= 0);
    assert(BMSisAligned((size_t)size));
 
    BMSallocMemory(&chkmem);
@@ -1540,6 +1541,7 @@ int getHashNumber(
    int                   size                /**< element size */
    )
 {
+   assert(size >= 0);
    assert(BMSisAligned((size_t)size));
 
    return (size % CHKHASH_SIZE);

@@ -332,7 +332,7 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    /* check that the data menber are in the range of the available bits */
-   assert((int)proprule < (1<<2));
+   assert((int)proprule <= (1<<2)-1); /*lint !e685*/
    assert(data1 >= 0 && data1 < (1<<15));
    assert(data2 >= 0 && data2 < (1<<15));
 
@@ -11291,6 +11291,7 @@ SCIP_RETCODE getNodeIdx(
          assert(tcliquegraph->nnodes < tcliquegraph->size);
 
          pos = tcliquegraph->nnodes;
+         assert(pos >= 0);
 
          tcliquegraph->durations[pos] = 0;
          tcliquegraph->weights[pos] = 0;
@@ -12058,7 +12059,7 @@ SCIP_RETCODE createTcliqueGraph(
 
       /* insert all active variables into the garph */
       assert(SCIPvarGetProbindex(var) == v);
-      SCIP_CALL( SCIPhashmapInsert(varmap, (void*)var, (void*)(size_t)v) );
+      SCIP_CALL( SCIPhashmapInsert(varmap, (void*)var, (void*)(size_t)v) ); /*lint !e571*/
    }
 
    (*tcliquegraph)->nnodes = nvars;

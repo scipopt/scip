@@ -13325,6 +13325,9 @@ SCIP_RETCODE freeTransform(
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
+   /* reset objective limit */
+   SCIP_CALL( SCIPsetObjlimit(scip, SCIPinfinity(scip)) );
+
    /* reset original variable's local and global bounds to their original values */
    SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
 
@@ -32064,8 +32067,6 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       {
          varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
          assert(varcopy != NULL);
-         assert(SCIPisFeasGE(scip, solvals[v], SCIPvarGetLbLocal(varcopy)));
-         assert(SCIPisFeasLE(scip, solvals[v], SCIPvarGetUbLocal(varcopy)));
 
          fixval = solvals[v];
 
@@ -32121,6 +32122,12 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
 
+            if( SCIPisFeasLT(scip, solvals[v], SCIPvarGetLbLocal(varcopy)) || SCIPisFeasGT(scip, solvals[v], SCIPvarGetUbLocal(varcopy)) )
+            {
+               SCIP_CALL( SCIPchgVarType(subscip, varcopy, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+               assert(!infeasible);
+            }
+
             /* fix variable to its value in the solution */
             SCIP_CALL( SCIPfixVar(subscip, varcopy, fixval, &infeasible, &fixed) );
             assert(!infeasible);
@@ -32173,6 +32180,9 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    /* the solution of the sub-SCIP should have the same objective value */
    if( *success && !SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
    {
+      /* @todo how should we avoid numerical trobles here for large objective values? */
+      if( (SCIPgetSolOrigObj(scip, *sol) / SCIPepsilon(scip)) < 1e+15 ||
+         REALABS(SCIPgetSolOrigObj(scip, *sol) - SCIPgetSolOrigObj(scip, sourcesol)) > 1e-12 * SCIPgetSolOrigObj(scip, *sol) )
       *success = FALSE;
    }
 

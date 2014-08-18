@@ -3436,7 +3436,7 @@ SCIP_RETCODE nodeToLeaf(
 
 #ifndef NDEBUG
    /* check, if the LP state fork is the first node with LP state information on the path back to the root */
-   if( cutoffbound != SCIP_REAL_MIN ) /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
+   if( cutoffbound != SCIP_REAL_MIN ) /*lint !e777*/ /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
    {
       SCIP_NODE* pathnode;
       pathnode = (*node)->parent;
@@ -5611,7 +5611,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    /* calculate initial domain width of child nodes
     * if we have at least one finite bound, choose width such that we have roughly the same number of nodes left and right of val
     */
-   if( width == SCIP_REAL_MAX )
+   if( width == SCIP_REAL_MAX ) /*lint !e777*/
    {
       /* unbounded variable, let's create a child with a small domain */
       width = 1.0;

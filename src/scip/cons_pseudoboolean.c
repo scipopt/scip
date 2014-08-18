@@ -915,10 +915,14 @@ SCIP_RETCODE transformToOrig(
          assert(SCIPgetVarsAnd(scip, consanddata->origcons) != NULL);
          consanddata->nvars = SCIPgetNVarsAnd(scip, consanddata->origcons);
          consanddata->svars = consanddata->nvars;
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), SCIPgetVarsAnd(scip, consanddata->origcons), consanddata->nvars) );
 
-         /* sort variables */
-         SCIPsortPtr((void**)(consanddata->vars), SCIPvarComp, consanddata->nvars);
+         if( consanddata->nvars > 0 )
+         {
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), SCIPgetVarsAnd(scip, consanddata->origcons), consanddata->nvars) );
+
+            /* sort variables */
+            SCIPsortPtr((void**)(consanddata->vars), SCIPvarComp, consanddata->nvars);
+         }
 
          /* check that the hash map and tabkle are still having all information */
          if( conshdlrdata->inithashmapandtable )
@@ -3758,6 +3762,10 @@ SCIP_RETCODE computeConsAndDataChanges(
       /* get new and-variables */
       nnewvars = SCIPgetNVarsAnd(scip, consanddata->cons);
       newvars = SCIPgetVarsAnd(scip, consanddata->cons);
+
+      /* stop if the constraint has no variables or there was an error (coverity issue) */
+      if( nnewvars <= 0 )
+         continue;
 
 #ifndef NDEBUG
       /* check that old variables are sorted */
@@ -8650,6 +8658,10 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
       nvars = SCIPgetNVarsAnd(scip, andconss[c]);
       assert(vars != NULL && nvars > 0);
       assert(res != NULL);
+
+      /* stop if the constraint has 0 variables or an error occurred (coverity issue) */
+      if( nvars <= 0 )
+         continue;
 
       /* if allocated memory in this for loop was already used, allocate a new block, otherwise we only need to copy the variables */
       if( memisinvalid )

@@ -79,6 +79,11 @@ fixed bugs:
   optimization process was restarted later
 - fixed bug with reading '>=1' indicator constraints in LP-files
 - fixed bug changing the variable type of an negated variable
+- use dual feasibility tolerance for comparisons regarding reduced costs
+- fixed bug with freeing problem: need to reset objective limit
+- fixed bug in presolve of cons_nonlinear: wrong constraint upgrades may have been performed due to outdated bound
+  information in expression graph
+- fixed numerical troubles in SCIPcreateFiniteSolCopy()
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
@@ -97,6 +102,7 @@ interface:
 - SCIPapplyProximity() has an additional argument freesubscip, which causes the method to free
   the created subscip automatically at the end.
 - new method SCIPdeleteSubproblemProximity() to free proximity subproblem manually as external caller
+- added dialog for writing the finite solution (calling SCIPcreateFiniteSolCopy() before writing)
 
 parameters:
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25

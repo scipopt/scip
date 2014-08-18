@@ -830,9 +830,8 @@ SCIP_RETCODE consdataCreate(
 
    if( SCIPisGT(scip, lhs, rhs) )
    {
-      SCIPerrorMessage("left hand side of linear constraint greater than right hand side\n");
-      SCIPerrorMessage(" -> lhs=%g, rhs=%g\n", lhs, rhs);
-      return SCIP_INVALIDDATA;
+      SCIPwarningMessage(scip, "left hand side of linear constraint greater than right hand side\n");
+      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", lhs, rhs);
    }
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );

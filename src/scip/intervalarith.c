@@ -60,7 +60,7 @@ void SCIPintervalSetRoundingMode(
    if( fesetround(roundmode) != 0 )
    {
       SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
-      SCIPABORT();
+      abort();
    }
 }
 
@@ -106,7 +106,7 @@ void SCIPintervalSetRoundingMode(
    if( write_rnd(roundmode) != 0 )
    {
       SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
-      SCIPABORT();
+      abort();
    }
 }
 
@@ -152,7 +152,7 @@ void SCIPintervalSetRoundingMode(
    if( (_controlfp(roundmode, _MCW_RC) & _MCW_RC) != roundmode )
    {
       SCIPerrorMessage("error setting rounding mode to %x\n", roundmode);
-      SCIPABORT();
+      abort();
    }
 }
 

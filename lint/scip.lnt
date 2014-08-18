@@ -163,4 +163,9 @@
 
 -ecall(776,SCIPhashmapInsert)
 
+// turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
+-ecall(571,SCIPhashmapInsert)
+-ecall(571,SCIPhashmapGetImage)
+-ecall(571,SCIPhashmapExists)
+
 // ------------------------------------------------------------------
