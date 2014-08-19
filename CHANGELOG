@@ -85,6 +85,7 @@ fixed bugs:
 - fixed bug in presolve of cons_nonlinear: wrong constraint upgrades may have been performed due to outdated bound
   information in expression graph
 - fixed numerical troubles in SCIPcreateFiniteSolCopy()
+- fixed bug in SCIPpermuteProb(): if called before transforming the problem, data structures were not initialized yet
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
