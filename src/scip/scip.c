@@ -9092,27 +9092,39 @@ SCIP_RETCODE SCIPpermuteProb(
    {
       int i;
 
-      /* loop over all constraint handlers */
-      for( i = 0; i < nconshdlrs; ++i )
+      /* we must only permute active constraints */
+      if( SCIPisTransformed(scip) )
       {
-         SCIP_CONS** conss;
-         int nconss;
+         /* loop over all constraint handlers */
+         for( i = 0; i < nconshdlrs; ++i )
+         {
+            SCIP_CONS** conss;
+            int nconss;
 
-         conss = SCIPconshdlrGetConss(conshdlrs[i]);
-
-         /* we must only permute active constraints */
-         if( SCIPisTransformed(scip) )
+            conss = SCIPconshdlrGetConss(conshdlrs[i]);
             nconss = SCIPconshdlrGetNActiveConss(conshdlrs[i]);
-         else
-            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
 
-         assert(nconss == 0 || conss != NULL);
+            assert(nconss == 0 || conss != NULL);
+
+            SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+
+            /* readjust the mapping of constraints to array positions */
+            for( j = 0; j < nconss; ++j )
+               conss[j]->consspos = j;
+         }
+      }
+      else
+      {
+         SCIP_CONS** conss = scip->origprob->conss;
+         int nconss = scip->origprob->nconss;
 
          SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
 
-         /* readjust the mapping of constraints to array positions */
          for( j = 0; j < nconss; ++j )
-            conss[j]->consspos = j;
+         {
+            assert(conss[j]->consspos == -1);
+            conss[j]->addarraypos = j;
+         }
       }
    }
 
