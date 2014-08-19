@@ -8792,6 +8792,21 @@ SCIP_RETCODE SCIPreadProb(
             SCIPfreeMemoryArray(scip, &nconss);
          }
 
+         /* in case the permutation seed is different to -1, permute the original problem */
+         if( scip->set->misc_permutationseed > -1 )
+         {
+            SCIP_Bool permuteconss;
+            SCIP_Bool permutevars;
+
+            permuteconss = scip->set->misc_permuteconss;
+            permutevars = scip->set->misc_permutevars;
+
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "permute original problem using random seed %d\n", scip->set->misc_permutationseed);
+
+            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+         }
+
          /* get reading time */
          readingtime = SCIPgetReadingTime(scip);
 
