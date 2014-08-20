@@ -9092,27 +9092,39 @@ SCIP_RETCODE SCIPpermuteProb(
    {
       int i;
 
-      /* loop over all constraint handlers */
-      for( i = 0; i < nconshdlrs; ++i )
+      /* we must only permute active constraints */
+      if( SCIPisTransformed(scip) )
       {
-         SCIP_CONS** conss;
-         int nconss;
+         /* loop over all constraint handlers */
+         for( i = 0; i < nconshdlrs; ++i )
+         {
+            SCIP_CONS** conss;
+            int nconss;
 
-         conss = SCIPconshdlrGetConss(conshdlrs[i]);
-
-         /* we must only permute active constraints */
-         if( SCIPisTransformed(scip) )
+            conss = SCIPconshdlrGetConss(conshdlrs[i]);
             nconss = SCIPconshdlrGetNActiveConss(conshdlrs[i]);
-         else
-            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
 
-         assert(nconss == 0 || conss != NULL);
+            assert(nconss == 0 || conss != NULL);
+
+            SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+
+            /* readjust the mapping of constraints to array positions */
+            for( j = 0; j < nconss; ++j )
+               conss[j]->consspos = j;
+         }
+      }
+      else
+      {
+         SCIP_CONS** conss = scip->origprob->conss;
+         int nconss = scip->origprob->nconss;
 
          SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
 
-         /* readjust the mapping of constraints to array positions */
          for( j = 0; j < nconss; ++j )
-            conss[j]->consspos = j;
+         {
+            assert(conss[j]->consspos == -1);
+            conss[j]->addarraypos = j;
+         }
       }
    }
 
@@ -13290,6 +13302,9 @@ SCIP_RETCODE freeTransform(
 
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
+
+   /* reset objective limit */
+   SCIP_CALL( SCIPsetObjlimit(scip, SCIPinfinity(scip)) );
 
    /* reset original variable's local and global bounds to their original values */
    SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
@@ -31208,8 +31223,6 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       {
          varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
          assert(varcopy != NULL);
-         assert(SCIPisFeasGE(scip, solvals[v], SCIPvarGetLbLocal(varcopy)));
-         assert(SCIPisFeasLE(scip, solvals[v], SCIPvarGetUbLocal(varcopy)));
 
          fixval = solvals[v];
 
@@ -31265,6 +31278,12 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
 
+            if( SCIPisFeasLT(scip, solvals[v], SCIPvarGetLbLocal(varcopy)) || SCIPisFeasGT(scip, solvals[v], SCIPvarGetUbLocal(varcopy)) )
+            {
+               SCIP_CALL( SCIPchgVarType(subscip, varcopy, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+               assert(!infeasible);
+            }
+
             /* fix variable to its value in the solution */
             SCIP_CALL( SCIPfixVar(subscip, varcopy, fixval, &infeasible, &fixed) );
             assert(!infeasible);
@@ -31317,6 +31336,9 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    /* the solution of the sub-SCIP should have the same objective value */
    if( *success && !SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
    {
+      /* @todo how should we avoid numerical trobles here for large objective values? */
+      if( (SCIPgetSolOrigObj(scip, *sol) / SCIPepsilon(scip)) < 1e+15 ||
+         REALABS(SCIPgetSolOrigObj(scip, *sol) - SCIPgetSolOrigObj(scip, sourcesol)) > 1e-12 * SCIPgetSolOrigObj(scip, *sol) )
       *success = FALSE;
    }
 

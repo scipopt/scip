@@ -115,7 +115,7 @@ SCIP_RETCODE getInputString(
       if( endline == NULL )
          pos = cipinput->len - 1;
       else
-         pos = endline - cipinput->strbuf;
+         pos = (int) (endline - cipinput->strbuf);
 
       /* don't erase the '\n' from all buffers for constraints */
       if( endline != NULL && cipinput->section == CIP_CONSTRAINTS )
