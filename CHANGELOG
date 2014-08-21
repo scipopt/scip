@@ -40,6 +40,8 @@ fixed bugs:
 - fixed numerical troubles in SCIPcreateFiniteSolCopy()
 - fixed bug in SCIPpermuteProb(): if called before transforming the problem, data structures were not initialized yet
 - fixed bug in trysol heuristic not saving the best solution in maximization problems
+- fixed bug in aggregation procedure if two variables were of non-binary type but for one of the variables
+  SCIPvarIsBinary() returned true
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
