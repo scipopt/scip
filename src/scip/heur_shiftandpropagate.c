@@ -1696,6 +1696,93 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       }
    }
 
+   /* if binary variables without locks should be fixed, we want to treat them first, so we put them to the front */
+   if( heurdata->fixbinlocks )
+   {
+      SCIP_VAR* var;
+      int nbinwithoutlocks = 0;
+
+      /* count number of binaries without locks */
+      if( heurdata->preferbinaries )
+      {
+         for( c = 0; c < nbinvars; ++c )
+         {
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+               ++nbinwithoutlocks;
+         }
+      }
+      else
+      {
+         for( c = 0; c < ndiscvars; ++c )
+         {
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            if( SCIPvarIsBinary(var) )
+            {
+               if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+                  ++nbinwithoutlocks;
+            }
+         }
+      }
+
+      printf("nbinwithoutlocks: %d\n", nbinwithoutlocks);
+
+      if( nbinwithoutlocks > 0 )
+      {
+         SCIP_VAR* binvar;
+         int b = 1;
+         int tmp;
+         c = 0;
+         binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+         var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+
+         /* if c reaches nbinwithoutlocks, then all binary variables without locks were sorted to the beginning of the array */
+         while( c < nbinwithoutlocks )
+         {
+            /* search for next variable which is not a binary variable without locks */
+            while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
+            {
+               ++c;
+               var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            }
+            if( c >= nbinwithoutlocks )
+               break;
+
+            /* search for next binary variable without locks (with position > c) */
+            if( b <= c )
+            {
+               b = c + 1;
+               binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+            }
+            while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUp(binvar) > 0 && SCIPvarGetNLocksDown(binvar) > 0) )
+            {
+               ++b;
+               binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+            }
+
+            /* swap the two variables */
+            tmp = permutation[b];
+            permutation[b] = permutation[c];
+            permutation[c] = tmp;
+
+            /* increase counters */
+            ++c;
+            ++b;
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+         }
+      }
+
+#ifndef NDEBUG
+      for( c = 0; c <= ndiscvars; ++c )
+      {
+         assert((c < nbinwithoutlocks) == (SCIPvarIsBinary(SCIPcolGetVar(heurdata->lpcols[permutation[c]]))
+               && (SCIPvarGetNLocksUp(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0
+                  || SCIPvarGetNLocksDown(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0)));
+      }
+#endif
+   }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &eventdatas, matrix->ndiscvars) );
    BMSclearMemoryArray(eventdatas, matrix->ndiscvars);
 
@@ -1767,7 +1854,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIPdebugMessage("Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
 
-      /* ignore variable if propagation fixed it(lb and ub will be zero) */
+      /* ignore variable if propagation fixed it (lb and ub will be zero) */
       if( SCIPisFeasZero(scip, matrix->upperbounds[permutedvarindex]) )
       {
          assert(!SCIPisInfinity(scip, ub));
