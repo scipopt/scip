@@ -71,6 +71,7 @@ do
     if test -e $EXMFILE
     then
         cp $EXMFILE $EXMFILE.old-$DATEINT
+        rm $EXMFILE
     fi
     if test -e $LSTFILE
     then
@@ -85,7 +86,6 @@ do
     echo "* InputFileName,ModelType,SolverName,OptionFile,Direction,NumberOfEquations,NumberOfVariables,NumberOfDiscreteVariables,NumberOfNonZeros,NumberOfNonlinearNonZeros," >> $TRCFILE
     echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime,ETSolver,NumberOfIterations,NumberOfNodes" >> $TRCFILE
     echo "*" >> $TRCFILE
-    echo > $EXMFILE
     echo > $LSTFILE
 
     echo "create overall output, error, and trace file for $EVALFILE"
