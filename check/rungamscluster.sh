@@ -75,7 +75,6 @@ then
   else
     GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
   fi
-  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
   echo   "scaled yes" >> $OPTDIR/examiner2.opt
   echo "unscaled yes" >> $OPTDIR/examiner2.opt
   echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt
