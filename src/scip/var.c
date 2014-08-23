@@ -4914,7 +4914,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    *aggregated = FALSE;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) )
+   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&
+         SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary)) )
    {
       SCIP_VAR* var;
       SCIP_Real scalar;

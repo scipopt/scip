@@ -592,6 +592,14 @@ preprocess:     checkdefines
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
+
+		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
+			then \
+				echo "-> generating gcc-include-path lint-file" ; \
+				cd lint; $(MAKE) -f co-gcc.mak ; \
+			else \
+				echo "-> lint Makefile not found"; \
+			fi'
 ifeq ($(FILES),)
 		$(SHELL) -ec 'for i in $^; \
 			do \

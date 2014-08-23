@@ -479,8 +479,8 @@ private:
     *           = tx[0]^p,
     *       y'  = p * x^(p-1) * x'
     *           = p * tx[0]^(p-1) * tx[1],
-    *       y'' = p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x''
-    *           = p * (p-1) * tx[0]^(p-2) * tx[1]^2 + p * tx[0]^(p-1) * tx[2]
+    *       y'' = 1/2 * p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x''
+    *           = 1/2 * p * (p-1) * tx[0]^(p-2) * tx[1]^2 + p * tx[0]^(p-1) * tx[2]
     */
    bool forward(
       size_t                     q,          /**< lowest order Taylor coefficient that we are evaluating */
@@ -520,18 +520,17 @@ private:
       {
          if( exponent > 2 )
          {
-            // ty[2] = exponent * (exponent-1) * pow(tx[0], exponent-2) * tx[1] * tx[1] + exponent * pow(tx[0], exponent-1) * tx[2];
+            // ty[2] = 1/2 * exponent * (exponent-1) * pow(tx[0], exponent-2) * tx[1] * tx[1] + exponent * pow(tx[0], exponent-1) * tx[2];
             ty[2]  = CppAD::pow(tx[0], exponent-2) * tx[1] * tx[1];
-            ty[2] *= exponent-1;
+            ty[2] *= (exponent-1) / 2.0;
             ty[2] += CppAD::pow(tx[0], exponent-1) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
             assert(exponent == 2);
-            // ty[2] = exponent * tx[1] * tx[1] + exponent * tx[0] * tx[2];
-            ty[2]  = tx[1] * tx[1] + tx[0] * tx[2];
-            ty[2] *= exponent;
+            // ty[2] = 1/2 * exponent * tx[1] * tx[1] + exponent * tx[0] * tx[2];
+            ty[2]  = tx[1] * tx[1] + 2.0 * tx[0] * tx[2];
          }
       }
 
@@ -737,8 +736,8 @@ private:
     *           = sign(tx[0])abs(tx[0])^p,
     *       y'  = p * abs(x)^(p-1) * x'
     *           = p * abs(tx[0])^(p-1) * tx[1],
-    *       y'' = p * (p-1) * sign(x) * abs(x)^(p-2) * x'^2 + p * abs(x)^(p-1) * x''
-    *           = p * (p-1) * sign(tx[0]) * abs(tx[0])^(p-2) * tx[1]^2 + p * abs(tx[0])^(p-1) * tx[2]
+    *       y'' = 1/2 * p * (p-1) * sign(x) * abs(x)^(p-2) * x'^2 + p * abs(x)^(p-1) * x''
+    *           = 1/2 * p * (p-1) * sign(tx[0]) * abs(tx[0])^(p-2) * tx[1]^2 + p * abs(tx[0])^(p-1) * tx[2]
     */
    bool forward(
       size_t                      q,         /**< lowest order Taylor coefficient that we are evaluating */
@@ -779,16 +778,15 @@ private:
          if( exponent != 2.0 )
          {
             ty[2]  = SIGN(tx[0]) * pow(REALABS(tx[0]), exponent - 2.0) * tx[1] * tx[1];
-            ty[2] *= exponent - 1.0;
+            ty[2] *= (exponent - 1.0) / 2.0;
             ty[2] += pow(REALABS(tx[0]), exponent - 1.0) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
-            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+            // y'' = 2 (1/2 * sign(x) * x'^2 + |x|*x'') = sign(tx[0]) * tx[1]^2 + 2 * abs(tx[0]) * tx[2]
             ty[2]  = SIGN(tx[0]) * tx[1] * tx[1];
-            ty[2] += REALABS(tx[0]) * tx[2];
-            ty[2] *= exponent;
+            ty[2] += 2.0 * REALABS(tx[0]) * tx[2];
          }
       }
 
@@ -1001,19 +999,18 @@ private:
 
       if( q <= 2 && 2 <= p )
       {
-         if( p != 2.0 )
+         if( exponent != 2.0 )
          {
             ty[2]  = CppAD::signpow(tx[0], exponent - 2.0) * CppAD::square(tx[1]);
-            ty[2] *= exponent - 1.0;
+            ty[2] *= (exponent - 1.0) / 2.0;
             ty[2] += CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
-            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+            // y'' = 2 (1/2 * sign(x) * x'^2 + |x|*x'') = sign(tx[0]) * tx[1]^2 + 2 * abs(tx[0]) * tx[2]
             ty[2]  = CppAD::sign(tx[0]) * CppAD::square(tx[1]);
-            ty[2] += CppAD::abs(tx[0]) * tx[2];
-            ty[2] *= exponent;
+            ty[2] += 2.0 * CppAD::abs(tx[0]) * tx[2];
          }
       }
 
@@ -2299,7 +2296,7 @@ SCIP_RETCODE SCIPexprintEval(
          data->x[i] = varvals[i];
 
       data->val = data->f.Forward(0, data->x)[0];
-      SCIPdebugMessage("Eval used foward sweep to compute value %g\n", data->val);
+      SCIPdebugMessage("Eval used forward sweep to compute value %g\n", data->val);
    }
 
    *val = data->val;
@@ -2557,11 +2554,24 @@ SCIP_RETCODE SCIPexprintHessianDense(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+#if 1
+   /* this one uses reverse mode */
    vector<double> hess(data->f.Hessian(data->x, 0));
 
    int nn = n*n;
    for (int i = 0; i < nn; ++i)
       hessian[i] = hess[i];
+
+#else
+   /* this one uses forward mode */
+   for( int i = 0; i < n; ++i )
+      for( int j = 0; j < n; ++j )
+      {
+         vector<int> ii(1,i);
+         vector<int> jj(1,j);
+         hessian[i*n+j] = data->f.ForTwo(data->x, ii, jj)[0];
+      }
+#endif
 
 /* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG

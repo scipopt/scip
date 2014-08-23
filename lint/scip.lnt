@@ -51,7 +51,11 @@
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 -emacro(506,assert)               // Constant value Boolean
 
--emacro(*,isfinite)       // turn off all messages for isfinite
+-emacro(506,isfinite)       // turn off all messages for isfinite
+-emacro(686,isfinite)       // turn off all messages for isfinite
+-emacro(736,isfinite)       // turn off all messages for isfinite
+-emacro(747,isfinite)       // turn off all messages for isfinite
+-emacro(866,isfinite)       // turn off all messages for isfinite
 
 -esym(578,clock)          // Declaration of symbol hides symbol
 -esym(578,scip)           // Declaration of symbol hides symbol

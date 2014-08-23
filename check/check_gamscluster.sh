@@ -363,16 +363,17 @@ do
     # additional environment variables needed by rungamscluster.sh
     export BASENAME=$FILENAME
     export FILENAME=$i
-    export GAMSBIN="$GAMSBIN"
-    export GAMSOPTS="$GAMSOPTS"
-    export GMSFILE=$GMSFILE
-    export INPUTDIR=$INPUTDIR
-    export MODTYPE=$MODTYPE
-    export SOLVER=$SOLVER
-    export GDXFILE=$GDXFILE
-    export CLIENTTMPDIR=$CLIENTTMPDIR
-    export PASSSTARTSOL=$PASSSTARTSOL
-    export EXAMINER=$EXAMINER
+    export GAMSBIN
+    export GAMSOPTS
+    export GMSFILE
+    export INPUTDIR
+    export MODTYPE
+    export SOLVER
+    export GDXFILE
+    export CLIENTTMPDIR
+    export PASSSTARTSOL
+    export EXAMINER
+    export SETNAME
 
     case $QUEUETYPE in
       srun )
