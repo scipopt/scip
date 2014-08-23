@@ -9443,6 +9443,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
    case SCIP_EXPR_SIGN:
    case SCIP_EXPR_PRODUCT:
    case SCIP_EXPR_POLYNOMIAL:
+   case SCIP_EXPR_USER:
       /* these do not look like an quadratic expression (assuming the expression graph simplifier did run) */
       return SCIP_OKAY;
 
