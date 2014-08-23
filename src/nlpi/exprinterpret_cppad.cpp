@@ -1249,15 +1249,25 @@ private:
    }
 
    /** forward sweep of userexpr
-    * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
-    * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
-    * in the taylor expansion of f(x).
-    * Thus, y   = f(x)
-    *           = f(tx[0]),
-    *       y'  = f'(x) * x'
-    *           = f'(tx[0]) * tx[1],
-    *       y'' = f''(x) * x'^2 + f'(x) * x''
-    *           = f''(tx[0]) * tx[1]^2 + f'(tx[0]) * tx[2]
+    *
+    * We follow http://www.coin-or.org/CppAD/Doc/atomic_forward.xml
+    *   Note, that p and q are interchanged!
+    *
+    * For a scalar variable t, let
+    *   Y(t) = f(X(t))
+    *   X(t) = x^0 + x^1 t^1 + ... + x^p t^p
+    * where for x^i the i an index, while for t^i the i is an exponent.
+    * Thus, x^k = 1/k! X^(k) (0),   where X^(k)(.) denotes the k-th derivative.
+    *
+    * Next, let y^k = 1/k! Y^(k)(0) be the k'th taylor coefficient of Y. Thus,
+    *   y^0 = Y^(0)(0)     =     Y(0)   = f(X(0)) = f(x^0)
+    *   y^1 = Y^(1)(0)     =     Y'(0)  = f'(X(0)) * X'(0) = f'(x^0) * x^1
+    *   y^2 = 1/2 Y^(2)(0) = 1/2 Y''(0) = 1/2 X'(0) * f''(X(0)) X'(0) + 1/2 * f'(X(0)) * X''(0) = 1/2 x^1 * f''(x^0) * x^1 + f'(x^0) * x^2
+    *
+    * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k], we get
+    *   ty[0] = y^0 = f(x^0) = f(tx[{1..n}*(p+1)])
+    *   ty[1] = y^1 = f'(x^0) * tx[{1..n}*(p+1)+1] = sum(i=1..n, grad[i] * tx[i*(p+1)+1]),  where grad = f'(x^0)
+    *   ty[2] = 1/2 sum(i,j=1..n, x[i*(p+1)+1] * x[j*(p+1)+q] * hessian[i,j]) + sum(i=1..n, grad[i] * x[i*(p+1)+2])
     */
    bool forward(
       size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
@@ -1342,34 +1352,60 @@ private:
       return true;
    }
 
-   /** reverse sweep of user expression
-    * Assume y(x) is a function of the taylor coefficients of f(x), i.e.,
-    *   y(x) = [ f(x), f'(x), f''(x), ... ].
-    * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
-    * where x^[l] is the l'th taylor coefficient (x, x', x'', ...) and h(x) = g(y(x)) for some function g:R^k -> R.
-    * That is, we have to compute
-    *\f$
-    * px[l] = \partial h / \partial x^[l] = (\partial g / \partial y) * (\partial y / \partial x^[l])
-    *       = \sum_{i=0}^k (\partial g / \partial y_i) * (\partial y_i / \partial x^[l])
-    *       = \sum_{i=0}^k py[i] * (\partial y_i / \partial x^[l])
-    *\f$
+   /** reverse sweep of userexpr
     *
-    * For k = 0, this means
-    *\f$
-    * px[0] = py[0] * (\partial y_0 / \partial x^[0])
-    *       = py[0] * (\partial f(x) / \partial x)
-    *       = py[0] * f'(tx[0])
+    * We follow http://www.coin-or.org/CppAD/Doc/atomic_reverse.xml
+    *   Note, that there q is our p.
+    *
+    * For a scalar variable t, let
+    *   Y(t) = f(X(t))
+    *   X(t) = x^0 + x^1 t^1 + ... + x^p t^p
+    * where for x^i the i an index, while for t^i the i is an exponent.
+    * Thus, x^k = 1/k! X^(k) (0),   where X^(k)(.) denotes the k-th derivative.
+    *
+    * Next, let y^k = 1/k! Y^(k)(0) be the k'th taylor coefficient of Y. Thus,
+    *   Y(t) = y^0 + y^1 t^1 + y^2 t^2 + ...
+    * y^0, y^1, ... are the taylor coefficients of f(x).
+    *
+    * Further, let F(x^0,..,x^p) by given as F^k(x) = y^k. Thus,
+    *   F^0(x) = y^0 = Y^(0)(0)   = f(x^0)
+    *   F^1(x) = y^1 = Y^(1)(0)   = f'(x^0) * x^1
+    *   F^2(x) = y^2 = 1/2 Y''(0) = 1/2 x^1 f''(x^0) x^1 + f'(x^0) x^2
+    *
+    * Given functions G: R^(p+1) -> R and H: R^(n*(p+1)) -> R, where H(x^0, x^1, .., x^p) = G(F(x^0,..,x^p)),
+    * we have to return the value of \f$\partial H / \partial x^l, l = 0..p,\f$ in px. Therefor,
+    * \f$
+    *  px^l = \partial H / \partial x^l
+    *       = sum(k=0..p, (\partial G / \partial y^k) * (\partial y^k / \partial x^l)
+    *       = sum(k=0..p, py[k] * (\partial F^k / \partial x^l)
     * \f$
     *
-    * For k = 1, this means
-    *\f$
-    * px[0] = py[0] * (\partial y_0  / \partial x^[0]) + py[1] * (\partial y_1   / \partial x^[0])
-    *       = py[0] * (\partial f(x) / \partial x)     + py[1] * (\partial f'(x) / \partial x)
-    *       = py[0] * f'(tx[0])                        + py[1] * f''(tx[0]) * tx[1]
-    * px[1] = py[0] * (\partial y_0  / \partial x^[1]) + py[1] * (\partial y_1 / \partial x^[1])
-    *       = py[0] * (\partial f(x) / \partial x')    + py[1] * (\partial f'(x) / \partial x')
-    *       = py[0] * 0                                + py[1] * f'(tx[0])
+    * For p = 0, this means
     * \f$
+    *  px^0 = py[0] * \partial F^0 / \partial x^0
+    *       = py[0] * \partial f(x^0) / \partial x^0
+    *       = py[0] * f'(x^0)
+    * \f$
+    *
+    * For p = 1, this means
+    * \f$
+    * %l=0:
+    *  px^0 = py[0] * \partial F^0    / \partial x^0) + py[1] * \partial F^1 / \partial x^0)
+    *       = py[0] * \partial f(x^0) / \partial x^0) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    *       = py[0] * f'(x^0)                         + py[1] * f''(x^0) * x^1
+    * %l=1:
+    *  px^1 = py[0] * \partial F^0    / \partial x^1) + py[1] * \partial F^1 / \partial x^1)
+    *       = py[0] * \partial f(x^0) / \partial x^1) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    *       = py[0] * 0                               + py[1] * f'(x^0)
+    * \f$
+    *
+    * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k] and
+    *   px^k = (px[k], px[(p+1)+k], px[2*(p+1)+k], ..., px[n*(p+1)+k], we get
+    * for p = 0:
+    *   px[i] = (px^0)_i = py[0] * grad[i]
+    * for p = 1:
+    *   px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
+    *   px[i*2+1] = (px^1)_i = py[1] * grad[i]
     */
    bool reverse(
       size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
@@ -1409,19 +1445,22 @@ private:
       switch( p )
       {
       case 0:
+         // px[j] = (px^0)_j = py[0] * grad[j]
          for( size_t i = 0; i < n; ++i )
-            px[i] = py[i] * gradient[i];
+            px[i] = py[0] * gradient[i];
          break;
 
       case 1:
-#if 0  // FIXME
-         for( size_t j = 0; j < n; ++j )
+         //  px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
+         //  px[i*2+1] = (px^1)_i = py[1] * grad[i]
+         for( size_t i = 0; i < n; ++i )
          {
-            px[j * (p+1)]     = py[0] * gradient[j] /*  dF_0^0/dx_j^0 */  + py[1] * hessian[j+n*???] * tx[???] /*  dF_0^1/dx_j^0 */
-            px[j * (p+1) + 1] = py[1] * gradient[j] /*  dF_0^1/dx_j^1 */
+            px[i*2+0] = py[0] * gradient[i];
+            for( size_t j = 0; j < n; ++j )
+               px[i*2+0] += py[1] * hessian[i+n*j] * tx[j*2+1];
+
+            px[i*2+1] = py[1] * gradient[i];
          }
-#endif
-         return false;
          break;
 
       default:
@@ -1532,7 +1571,7 @@ private:
          for( j = 0; j < q; j++ )
             for( i = 0; i < n; i++ )
                for( k = 0; k < n; ++k )
-                  v[ i * q + j] |= r[ k * q + j];  // TODO is this correct???
+                  v[ i * q + j] |= r[ k * q + j];
 
       return true;
    }
