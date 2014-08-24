@@ -132,6 +132,8 @@
 -emacro(571,BMSallocClearMemoryArray)
 -emacro(571,BMSallocMemoryArray)
 -emacro(571,BMSallocMemorySize)
+-emacro(571,BMScopyMemorySize)
+-emacro(571,BMSreallocMemorySize)
 -emacro(571,BMSreallocMemoryArray)
 -emacro(571,BMSallocBlockMemoryArray)
 -emacro(571,BMSreallocMemoryArray)
@@ -171,6 +173,7 @@
 // turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
 -ecall(571,SCIPhashmapInsert)
 -ecall(571,SCIPhashmapGetImage)
+-ecall(571,SCIPhashmapSetImage)
 -ecall(571,SCIPhashmapExists)
 
 // ------------------------------------------------------------------
