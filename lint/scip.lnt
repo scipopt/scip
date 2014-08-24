@@ -110,6 +110,7 @@
 -ecall(747,strncpy)
 -ecall(747,strncmp)
 -ecall(747,vsnprintf)
+-ecall(747,snprintf)
 -ecall(747,getcwd)
 -ecall(747,strerror_r)
 
@@ -169,6 +170,7 @@
 -emacro(776,SCIPduplicateMemoryArray)
 
 -ecall(776,SCIPhashmapInsert)
+-ecall(776,SCIPhashmapExists)
 
 // turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
 -ecall(571,SCIPhashmapInsert)
@@ -177,3 +179,9 @@
 -ecall(571,SCIPhashmapExists)
 
 // ------------------------------------------------------------------
+// turn off some warnings about C++ classes:
+-e1768    // Virtual function has an access different from the access in the base class
+-e1784    // Symbol 'Symbol' previously declared as "C", compare with Location XX
+
+-ecall(747, std::vector::operator[])  // Significant prototype coercion
+
