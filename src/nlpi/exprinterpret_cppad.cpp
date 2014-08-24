@@ -30,6 +30,13 @@
 #include <vector>
 using std::vector;
 
+/* Turn off lint warning "747: Significant prototype coercion" and "732: Loss of sign".
+ * The first warning is generated for expressions like t[0], where t is a vector, since 0 is an integer constant, but a
+ * size_t is expected (usually long unsigned). The second is generated for expressions like t[n], where n is an
+ * integer. Both code pieces are likely to be correct. It seems to be impossible to inhibit these messages for
+ * vector<*>::operator[] only. */
+/*lint --e{747,732}*/
+
 /* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivaties of power operators
  * via CppAD's user-atomic function feature
  * our customized implementation should give better results (tighter intervals) for the interval data type
@@ -416,7 +423,7 @@ bool univariate_rev_sparse_hes(
    const CppAD::vector<bool>& u,             /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
    CppAD::vector<bool>&  v                   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
    )
-{  /*line --e{439}*/
+{  /*lint --e{439}*/
    assert(r.size() == q);
    assert(s.size() == 1);
    assert(t.size() == 1);
