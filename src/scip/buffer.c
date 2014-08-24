@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPbufferAllocMemSave(
    )
 {
    assert( num >= 0 );
-   if( ((size_t)(num)) > (UINT_MAX / elemsize) )
+   if( ((size_t)(num)) > (UINT_MAX / elemsize) ) /*lint !e571*/
    {
       *ptr = NULL;
       return SCIP_NOMEMORY;
@@ -250,7 +250,7 @@ SCIP_RETCODE SCIPbufferDuplicateMemSave(
    )
 {
    assert( num >= 0 );
-   if( ((size_t)(num)) > (UINT_MAX / elemsize) )
+   if( ((size_t)(num)) > (UINT_MAX / elemsize) ) /*lint !e571*/
    {
       *ptr = NULL;
       return SCIP_NOMEMORY;
@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPbufferReallocMemSave(
    )
 {
    assert( num >= 0 );
-   if( ((size_t)(num)) > (UINT_MAX / elemsize) )
+   if( ((size_t)(num)) > (UINT_MAX / elemsize) ) /*lint !e571*/
    {
       *ptr = NULL;
       return SCIP_NOMEMORY;

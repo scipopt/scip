@@ -416,7 +416,7 @@ bool univariate_rev_sparse_hes(
    const CppAD::vector<bool>& u,             /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
    CppAD::vector<bool>&  v                   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
    )
-{
+{  /*line --e{439}*/
    assert(r.size() == q);
    assert(s.size() == 1);
    assert(t.size() == 1);
@@ -1520,7 +1520,7 @@ SCIP_RETCODE eval(
       assert( buf != 0 );
       val = SCIPexprGetLinearConstant(expr);
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-         val += coefs[i] * buf[i];
+         val += coefs[i] * buf[i]; /*lint !e613*/
       break;
    }
 
@@ -1550,7 +1550,7 @@ SCIP_RETCODE eval(
       int i = 0;
       for( int argidx = 0; argidx < SCIPexprGetNChildren(expr); ++argidx )
       {
-         if( i == nquadelems || quadelems[i].idx1 > argidx )
+         if( i == nquadelems || quadelems[i].idx1 > argidx ) /*lint !e613*/
          {
             /* there are no quadratic terms with argidx in its first argument, that should be easy to handle */
             if( lincoefs != NULL )
@@ -1561,15 +1561,15 @@ SCIP_RETCODE eval(
          sqrcoef = 0.0;
          lincoef = lincoefs != NULL ? lincoefs[argidx] : 0.0;
 
-         assert(i < nquadelems && quadelems[i].idx1 == argidx);
+         assert(i < nquadelems && quadelems[i].idx1 == argidx); /*lint !e613*/
          do
          {
             if( quadelems[i].idx2 == argidx )
-               sqrcoef += quadelems[i].coef;
+               sqrcoef += quadelems[i].coef; /*lint !e613*/
             else
-               lincoef += quadelems[i].coef * buf[quadelems[i].idx2];
+               lincoef += quadelems[i].coef * buf[quadelems[i].idx2]; /*lint !e613*/
             ++i;
-         } while( i < nquadelems && quadelems[i].idx1 == argidx );
+         } while( i < nquadelems && quadelems[i].idx1 == argidx ); /*lint !e613*/
          assert(i == nquadelems || quadelems[i].idx1 > argidx);
 
          /* this is not as good as what we can get from SCIPintervalQuad, but easy to implement */
@@ -1918,7 +1918,6 @@ SCIP_RETCODE SCIPexprintEval(
 }
 
 /** evaluates an expression tree on intervals */
-extern
 SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */

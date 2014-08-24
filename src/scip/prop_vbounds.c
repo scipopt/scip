@@ -346,7 +346,7 @@ SCIP_RETCODE catchEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -395,7 +395,7 @@ SCIP_RETCODE dropEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -1475,7 +1475,7 @@ SCIP_RETCODE propagateVbounds(
             if( !SCIPvarIsBinary(var) || (lower && SCIPvarGetLbLocal(var) > 0.5)
                   || (!lower && SCIPvarGetUbLocal(var) < 0.5) )
             {
-               SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(v + 1)) );
+               SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(v + 1)) ); /*lint !e571 !e776*/
                propdata->inqueue[v] = TRUE;
             }
          }
@@ -1893,7 +1893,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    /* add the bound change to the propagation queue, if it is not already contained */
    if( !propdata->inqueue[idx] )
    {
-      SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) );
+      SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) ); /*lint !e571 !e776*/
       propdata->inqueue[idx] = TRUE;
    }
    assert(SCIPpqueueNElems(propdata->propqueue) > 0);
