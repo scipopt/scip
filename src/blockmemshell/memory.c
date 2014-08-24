@@ -1063,7 +1063,7 @@ BMS_CHKMEM* createChkmem(
    BMS_CHKMEM* chkmem;
 
    assert(size >= 0);
-   assert(BMSisAligned((size_t)size));
+   assert(BMSisAligned((size_t)size)); /*lint !e571*/
 
    BMSallocMemory(&chkmem);
    if( chkmem == NULL )
@@ -1386,7 +1386,7 @@ void* BMSduplicateChunkMemory_call(
 
    ptr = BMSallocChunkMemory_call(chkmem, size, filename, line);
    if( ptr != NULL )
-      BMScopyMemorySize(ptr, source, chkmem->elemsize);
+      BMScopyMemorySize(ptr, source, (size_t) chkmem->elemsize);
 
    return ptr;
 }
@@ -1532,7 +1532,7 @@ int getHashNumber(
    )
 {
    assert(size >= 0);
-   assert(BMSisAligned((size_t)size));
+   assert(BMSisAligned((size_t)size)); /*lint !e571*/
 
    return (size % CHKHASH_SIZE);
 }
@@ -1670,7 +1670,7 @@ void* BMSallocBlockMemory_call(
    }
    debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
-   blkmem->memused += size;
+   blkmem->memused += (long long) size;
 
    checkBlkmem(blkmem);
 
@@ -1767,7 +1767,7 @@ void BMSfreeBlockMemory_call(
       /* free memory in chunk block */
       freeChkmemElement(chkmem, ptr, filename, line);
 
-      blkmem->memused -= size;
+      blkmem->memused -= (long long) size;
       assert(blkmem->memused >= 0);
    }
    else if( size != 0 )
@@ -1839,7 +1839,7 @@ size_t BMSgetBlockPointerSize_call(
    if( chkmem == NULL )
       return 0;
 
-   return (size_t)(chkmem->elemsize);
+   return (size_t)(chkmem->elemsize); /*lint !e571*/
 }
 
 /** outputs allocation diagnostics of block memory */

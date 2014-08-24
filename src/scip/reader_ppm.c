@@ -195,8 +195,9 @@ void calcColorValue(
 {
    SCIP_Real coeflog;
 
-   assert (scip != NULL);
-   assert (readerdata != NULL);
+   assert(scip != NULL);
+   assert(readerdata != NULL);
+   assert(readerdata->rgb_limit >= 0);
 
    coeflog = SCIPfloor(scip,log10(coef));
 

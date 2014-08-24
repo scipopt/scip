@@ -242,7 +242,7 @@ int mygetc(
       if ( NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp) )
          return EOF;
 #else
-      size_t len = (size_t) FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
+      size_t len = (size_t) FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp); /*lint !e571 !e747*/
 
       if( len == 0 || len > sizeof(ppos->buf) - 1 )
          return EOF;

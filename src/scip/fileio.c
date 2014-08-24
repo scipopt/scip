@@ -46,18 +46,18 @@ SCIP_FILE* SCIPfdopen(int fildes, const char *mode)
 size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
 {
 #ifndef NDEBUG
-   int nbytesread = gzread((gzFile)stream, ptr, size * nmemb);
+   int nbytesread = gzread((gzFile)stream, ptr, (unsigned) size * nmemb);
    assert(nbytesread >= 0);
 
    return (size_t) nbytesread;
 #else
-   return (size_t) gzread((gzFile)stream, ptr, size * nmemb);
+   return (size_t) gzread((gzFile)stream, ptr, (unsigned) size * nmemb);
 #endif
 }
 
 size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
 {
-   return (size_t) gzwrite((gzFile)stream, ptr, size * nmemb);
+   return (size_t) gzwrite((gzFile)stream, ptr, (unsigned) size * nmemb);
 }
 
 int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
@@ -108,7 +108,7 @@ int SCIPfflush(SCIP_FILE *stream)
 
 int SCIPfseek(SCIP_FILE *stream, long offset, int whence)
 {
-   return gzseek((gzFile)stream, offset, whence);
+   return (int) gzseek((gzFile)stream, offset, whence);
 }
 
 void SCIPrewind(SCIP_FILE *stream)

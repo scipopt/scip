@@ -6893,7 +6893,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
 
          if( nbranchings > 0 )
          {
-            SCIPgmlWriteArc(file, (unsigned int)(size_t)nbranchings, (unsigned int)(size_t)(nbranchings-1), NULL, NULL);
+            SCIPgmlWriteArc(file, (unsigned int)nbranchings, (unsigned int)(nbranchings-1), NULL, NULL);
          }
 
          nbranchings++;

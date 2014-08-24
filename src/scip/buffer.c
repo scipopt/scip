@@ -148,6 +148,7 @@ SCIP_RETCODE SCIPbufferDuplicateMem(
    )
 {
    assert(source != NULL);
+   assert(size >= 0);
 
    /* allocate a buffer of the given size */
    SCIP_CALL( SCIPbufferAllocMem(buffer, set, ptr, size) );
@@ -210,6 +211,8 @@ SCIP_RETCODE SCIPbufferReallocMem(
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, (void*)ptr);
 
 #else
+   assert(ptr != NULL);
+   assert(size >= 0);
    SCIP_ALLOC( BMSreallocMemorySize(ptr, size) );
 #endif
 
@@ -225,6 +228,7 @@ SCIP_RETCODE SCIPbufferAllocMemSave(
    size_t                elemsize            /**< size of one element in the array */
    )
 {
+   assert( num >= 0 );
    if( ((size_t)(num)) > (UINT_MAX / elemsize) )
    {
       *ptr = NULL;
@@ -245,6 +249,7 @@ SCIP_RETCODE SCIPbufferDuplicateMemSave(
    size_t                elemsize            /**< size of one element in the array */
    )
 {
+   assert( num >= 0 );
    if( ((size_t)(num)) > (UINT_MAX / elemsize) )
    {
       *ptr = NULL;
@@ -264,6 +269,7 @@ SCIP_RETCODE SCIPbufferReallocMemSave(
    size_t                elemsize            /**< size of one element in the array */
    )
 {
+   assert( num >= 0 );
    if( ((size_t)(num)) > (UINT_MAX / elemsize) )
    {
       *ptr = NULL;
@@ -290,6 +296,7 @@ void SCIPbufferFreeMem(
    assert(buffer->firstfree <= buffer->ndata);
    assert(buffer->firstfree >= 1);
    assert(dummysize == 0);
+   assert(ptr != NULL);
 
    /* Search the pointer in the buffer list
     * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
@@ -344,5 +351,3 @@ void SCIPbufferPrint(
    }
    printf("    %8d bytes total in %d buffers\n", totalmem, buffer->ndata);
 }
-
-

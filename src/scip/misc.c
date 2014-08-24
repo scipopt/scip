@@ -2277,7 +2277,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
-            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -2648,7 +2648,7 @@ SCIP_RETCODE SCIPintarrayExtend(
 
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -3014,7 +3014,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
 
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866 !e766*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -3369,7 +3369,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866 !e766*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -5433,7 +5433,7 @@ SCIP_RETCODE SCIPdigraphCopy(
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
             sourcedigraph->componentstarts[ncomponents]) );
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
-            sourcedigraph->componentstarts,ncomponents + 1) );
+            sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e766*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
    else

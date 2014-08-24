@@ -3710,10 +3710,10 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    }
    assert(set->nextcodes < set->extcodessize);
 
-   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)+1);  /*lint !e866*/
+   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) (strlen(name)+1));  /*lint !e866*/
    if( description != NULL )
    {
-      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) strlen(description)+1);  /*lint !e866*/
+      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) (strlen(description)+1));  /*lint !e866*/
    }
    else
    {

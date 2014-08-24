@@ -31339,7 +31339,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       /* @todo how should we avoid numerical trobles here for large objective values? */
       if( (SCIPgetSolOrigObj(scip, *sol) / SCIPepsilon(scip)) < 1e+15 ||
          REALABS(SCIPgetSolOrigObj(scip, *sol) - SCIPgetSolOrigObj(scip, sourcesol)) > 1e-12 * SCIPgetSolOrigObj(scip, *sol) )
-      *success = FALSE;
+         *success = FALSE;
    }
 
  TERMINATE:
