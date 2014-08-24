@@ -137,15 +137,15 @@ sizes:
 	@$(ECHO) '\
 extern  "C" int printf(const char*, ...);\
 int main() {\
-printf( "-ss%u  ", sizeof(short) );\
-printf( "-si%u  ", sizeof(int) );\
-printf( "-sl%u  ", sizeof(long) );\
-printf( "-sll%u  ", sizeof(long long) );\
-printf( "-sf%u  ", sizeof(float) );\
-printf( "-sd%u  ", sizeof(double) );\
-printf( "-sld%u  ", sizeof(long double) );\
-printf( "-sp%u  ", sizeof(void*) );\
-printf( "-sw%u  ", sizeof(wchar_t) );\
+printf( "-ss%lu  ", sizeof(short) );\
+printf( "-si%lu  ", sizeof(int) );\
+printf( "-sl%lu  ", sizeof(long) );\
+printf( "-sll%lu  ", sizeof(long long) );\
+printf( "-sf%lu  ", sizeof(float) );\
+printf( "-sd%lu  ", sizeof(double) );\
+printf( "-sld%lu  ", sizeof(long double) );\
+printf( "-sp%lu  ", sizeof(void*) );\
+printf( "-sw%lu  ", sizeof(wchar_t) );\
 }' >$(SIZE_GEN).cc
 	$(GXX) $(SIZE_GEN).cc -o $(SIZE_GEN)
 	./$(SIZE_GEN) >size-options.lnt
