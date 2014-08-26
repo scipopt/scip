@@ -5872,7 +5872,7 @@ SCIP_RETCODE rangedRowPropagation(
 		  {
                      if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
 		     {
-			if( consdata->vars[v] != infcheckvars[w] )
+			if( w >= ninfcheckvars || consdata->vars[v] != infcheckvars[w] )
 			{
 #ifndef NDEBUG
                            int v2 = v + 1;
@@ -5880,7 +5880,7 @@ SCIP_RETCODE rangedRowPropagation(
 
                            assert((nfixedconsvars == 0) ? (consdata->nvars - v - 1 == ninfcheckvars - w) : TRUE);
 
-                           for( ; v2 < consdata->nvars; ++v2 )
+                           for( ; v2 < consdata->nvars && w2 < ninfcheckvars; ++v2 )
                            {
                               if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v2]), SCIPvarGetUbLocal(consdata->vars[v2])) )
                                  continue;
@@ -6077,7 +6077,7 @@ SCIP_RETCODE rangedRowPropagation(
 	       {
                   if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
 		  {
-		     if( consdata->vars[v] != infcheckvars[w] )
+		     if( w >= ninfcheckvars || consdata->vars[v] != infcheckvars[w] )
 		     {
 #ifndef NDEBUG
                         int v2 = v + 1;
@@ -6085,7 +6085,7 @@ SCIP_RETCODE rangedRowPropagation(
 
                         assert((nfixedconsvars == 0) ? (consdata->nvars - v - 1 == ninfcheckvars - w) : TRUE);
 
-                        for( ; v2 < consdata->nvars; ++v2 )
+                        for( ; v2 < consdata->nvars && w2 < ninfcheckvars; ++v2 )
                         {
                            if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v2]), SCIPvarGetUbLocal(consdata->vars[v2])) )
                               continue;
