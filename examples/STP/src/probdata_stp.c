@@ -1808,11 +1808,55 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    /* Cut mode */
    else
    {
+      SCIP_Bool feasible;
+
       /* store the new solution value */
       SCIP_CALL( SCIPsetSolVals(scip, sol, probdata->nvars, edgevars, nval) );
 
+      SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
+
+      printf("checked sol: feasible=%d\n", feasible);
+
+      /* check solution for feasibility in original problem space */
+      if( !feasible )
+      {
+         SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
+
+         printf("checked sol: feasible=%d\n", feasible);
+
+         if( feasible )
+         {
+            SCIP_SOL* newsol;
+            SCIP_VAR** origvars;
+            SCIP_VAR* var;
+            int norigvars;
+            int v;
+
+            SCIP_CALL( SCIPcreateOrigSol(scip, &newsol, SCIPsolGetHeur(sol)) );
+            origvars = SCIPgetOrigVars(scip);
+            norigvars = SCIPgetNOrigVars(scip);
+
+            for( v = 0; v < norigvars; ++v )
+            {
+               var = origvars[v];
+               SCIP_CALL( SCIPsetSolVal(scip, newsol, var, SCIPgetSolVal(scip, sol, var)) );
+            }
+
+            SCIP_CALL( SCIPfreeSol(scip, &sol) );
+            sol = newsol;
+         }
+      }
+
       /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, success) );
+      if( feasible )
+      {
+#ifndef NDEBUG
+         SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, &feasible) );
+         assert(feasible);
+#endif
+
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, success) );
+      }
 
       /* assert(*success ); */
    }
