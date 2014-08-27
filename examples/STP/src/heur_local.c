@@ -37,7 +37,7 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           (SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_AFTERLPLOOP )
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_DURINGROOT    TRUE
@@ -340,7 +340,7 @@ SCIP_RETCODE do_local(
    nodes[root].edge = -1;
 
    /** VERTEX  INSERTION */
-   if( 0 )  /* TODO adapt function to directed graph */
+   if( 1 )  /* TODO adapt function to directed graph */
    {
       int newnode = 0;
       int oedge;
@@ -2100,10 +2100,11 @@ SCIP_DECL_HEURINITSOL(heurInitsolLocal)
    heurdata->lastsolindex = -1;
 
    if( heurdata->duringroot && SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE);
 
    return SCIP_OKAY;
 }
+
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
@@ -2161,7 +2162,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(graph != NULL);
 
    /* the local heuristics may not work correctly for problems other than undirected STPs */
-   if( graph->stp_type != STP_UNDIRECTED )
+   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID )
       return SCIP_OKAY;
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */

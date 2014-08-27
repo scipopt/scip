@@ -17,7 +17,7 @@
  * aufgerufen, werden diese Knoten und Kanten nicht uebernommen.
  */
 #define GRPHBASE_C
-
+#include "scip/misc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +44,6 @@ GRAPH* graph_init(
    p = malloc(sizeof(*p));
 
    assert(p != NULL);
-
    p->ksize  = ksize;
    p->knots  = 0;
    p->terms  = 0;
@@ -61,8 +60,11 @@ GRAPH* graph_init(
 
    p->esize = esize;
    p->edges = 0;
+
    p->cost  = malloc((size_t)esize * sizeof(double));
+
    p->tail  = malloc((size_t)esize * sizeof(int));
+
    p->head  = malloc((size_t)esize * sizeof(int));
 
    p->ieat  = malloc((size_t)esize * sizeof(int));
@@ -72,6 +74,9 @@ GRAPH* graph_init(
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
    p->maxdeg = NULL;
+   p->grid_coordinates = NULL;
+   p->grid_ncoords = NULL;
+   p->prize = NULL;
 
    p->mincut_dist = NULL;
    p->mincut_head = NULL;
@@ -116,7 +121,6 @@ void graph_resize(
    int    layers)
 {
    int i;
-   assert(0);
    assert(p      != NULL);
    assert((ksize  < 0) || (ksize  >= p->knots));
    assert((esize  < 0) || (esize  >= p->edges));
@@ -155,6 +159,11 @@ void graph_resize(
       p->ieat  = realloc(p->ieat, (size_t)esize * sizeof(int));
       p->oeat  = realloc(p->oeat, (size_t)esize * sizeof(int));
    }
+   if( p->stp_type == STP_GRID )
+   {
+      p->grid_ncoords = realloc(p->grid_ncoords, (size_t)p->grid_dim * sizeof(int));
+      assert(p->grid_ncoords != NULL);
+   }
    assert(p->locals != NULL);
    assert(p->source != NULL);
    assert(p->term   != NULL);
@@ -171,6 +180,381 @@ void graph_resize(
    assert(p->ypos   != NULL);
 }
 
+
+/** used by graph_grid_create */
+static
+int getNodeNumber(
+   int  grid_dim,
+   int  shiftcoord,
+   int* ncoords,
+   int* currcoord
+   )
+{
+   int number = 0;
+   int tmp;
+   int i;
+   int j;
+   for( i = 0; i < grid_dim; i++ )
+   {
+      tmp = 1;
+      for( j = i + 1; j < grid_dim; j++ )
+      {
+         tmp = tmp * ncoords[j];
+      }
+      if( shiftcoord == i )
+         number += (currcoord[i] + 1) * tmp;
+      else
+         number += currcoord[i] * tmp;
+   }
+   number++;
+   return number;
+}
+
+/** used by graph_grid_create */
+static
+void compEdges(
+   int   coord,
+   int   grid_dim,
+   int*  ncoords,
+   int*  currcoord,
+   int*  edgecosts,
+   int*  gridedgecount,
+   int** coords,
+   int** gridedges
+   )
+{
+   int j;
+   int i = 0;
+   while( i < ncoords[coord] )
+   {
+      currcoord[coord] = i;
+      if( coord < grid_dim - 1 )
+         compEdges(coord + 1, grid_dim, ncoords, currcoord, edgecosts, gridedgecount, coords, gridedges);
+      else
+      {
+         for( j = 0; j < grid_dim; j++ )
+         {
+            if( currcoord[j] + 1 < ncoords[j] )
+            {
+               gridedges[0][*gridedgecount] = getNodeNumber(grid_dim, -1, ncoords, currcoord);
+               gridedges[1][*gridedgecount] = getNodeNumber(grid_dim, j, ncoords, currcoord);
+               edgecosts[*gridedgecount] = coords[j][currcoord[j] + 1] - coords[j][currcoord[j]];
+               /*     printf("edgeXXX %d_%d %d \n ", coords[j][currcoord[j] + 1],  coords[j][currcoord[j]], gridedgecount );*/
+               (*gridedgecount)++;
+               /*   printf("edge %d_%d \n ", getNodeNumber(-1), getNodeNumber(j) );*/
+            }
+         }
+      }
+      i++;
+   }
+}
+
+
+/** creates a graph out of a given grid */
+GRAPH* graph_grid_create(
+   int** coords,
+   int nterms,
+   int grid_dim,
+   int scale_order
+   )
+{
+   GRAPH* graph;
+   double cost;
+   int    i;
+   int    j;
+   int    k;
+   int    tmp;
+   int    shift;
+   int    nnodes = 0;
+   int    nedges;
+   double  scale_factor;
+   int    gridedgecount;
+   int*   ncoords;
+   int*   currcoord;
+   int*   edgecosts;
+   int**  termcoords;
+   int**  gridedges;
+   assert(coords != NULL);
+   assert(grid_dim > 1);
+   assert(nterms > 0);
+
+   scale_factor = pow(10.0, (double) scale_order);
+
+   /* initalize the terminal-coordinates array */
+   termcoords = (int**) malloc(grid_dim * sizeof(int*));
+   for( i = 0; i < grid_dim; i++ )
+   {
+      termcoords[i] = (int*) malloc(nterms * sizeof(int));
+      for( j = 0; j < nterms; j++ )
+	 termcoords[i][j] = coords[i][j];
+   }
+   ncoords = (int*) malloc(grid_dim * sizeof(int));
+   currcoord = (int*) malloc(grid_dim * sizeof(int));
+
+   /* sort the coordinates and delete multiples */
+   for( i = 0; i < grid_dim; i++ )
+   {
+      ncoords[i] = 1;
+      SCIPsortInt(coords[i], nterms);
+      shift = 0;
+      for( j = 0; j < nterms - 1; j++ )
+      {
+         if( coords[i][j] == coords[i][j + 1] )
+         {
+            shift++;
+         }
+         else
+         {
+            /* printf("%d_%d %d=%d \n", j + 1 - shift, j + 1, coords[i][j+ 1 - shift],coords[i][j + 1] ); */
+            coords[i][j + 1 - shift] = coords[i][j + 1];
+            ncoords[i]++;
+         }
+      }
+      /* for( j = 0; j < nterms + 1; j++ )
+         {
+         printf(" %d ", coords[i][j]);
+         }
+         printf( "\n");*/
+   }
+
+   nnodes = 1;
+   for( i = 0; i < grid_dim; i++ )
+   {
+      nnodes = nnodes * ncoords[i];
+   }
+   tmp = 0;
+   for( i = 0; i < grid_dim; i++ )
+   {
+      tmp = tmp + nnodes / ncoords[i];
+   }
+
+   nedges = grid_dim * nnodes - tmp;
+   gridedges = (int**) malloc(2 * sizeof(int*));
+   edgecosts = (int*) malloc(nedges * sizeof(int));
+   gridedges[0] = (int*) malloc(nedges * sizeof(int));
+   gridedges[1] = (int*) malloc(nedges * sizeof(int));
+   gridedgecount = 0;
+
+   compEdges(0, grid_dim, ncoords, currcoord, edgecosts, &gridedgecount, coords, gridedges);
+
+   /* initialize empty graph with allocated slots for nodes and edges */
+   graph = graph_init(nnodes, 2 * nedges, 1, 0);
+
+   graph->grid_ncoords = (int*) malloc(grid_dim * sizeof(int));
+   for( i = 0; i < grid_dim; i++ )
+      graph->grid_ncoords[i] = ncoords[i];
+
+   graph->grid_dim = grid_dim;
+   graph->grid_coordinates = coords;
+
+   /* add nodes */
+   for( i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1, -1, -1);
+
+   /* add edges */
+   for( i = 0; i < nedges; i++ )
+   {
+      /* (re) scale edge costs */
+      cost = (double) edgecosts[i] / scale_factor;
+      graph_edge_add(graph, gridedges[0][i] - 1, gridedges[1][i] - 1, cost, cost);
+   }
+
+   /* add terminals */
+   for( i = 0; i < nterms; i++ )
+   {
+      for( j = 0; j < grid_dim; j++ )
+      {
+	 for( k = 0; k <= ncoords[j]; k++ )
+	 {
+	    if( k == ncoords[j] )
+	    {
+	       printf( "COUNTING ERROR IN graph_grid_create \n");
+	       assert(0);
+	       return NULL;
+	    }
+	    if( coords[j][k] == termcoords[j][i] )
+	    {
+               currcoord[j] = k;
+               break;
+	    }
+	 }
+      }
+      /* the position of the (future) terminal */
+      k = getNodeNumber(grid_dim, -1, ncoords, currcoord) - 1;
+      tmp = -1;
+
+      if( i == 0 )
+      {
+	 graph->source[0] = k;
+	 printf("root: (%d", termcoords[0][i]);
+	 for( j = 1; j < grid_dim; j++ )
+            printf(", %d", termcoords[j][i]);
+	 printf(")\n");
+      }
+
+      /* make a terminal out of the node */
+      graph_knot_chg(graph, k, 0, -1, -1);
+   }
+
+   graph->stp_type = STP_GRID;
+
+   for( i = 0; i < grid_dim; i++ )
+   {
+      free(termcoords[i]);
+      if( i < 2 )
+	 free(gridedges[i]);
+   }
+
+   free(termcoords);
+   free(edgecosts);
+   free(gridedges);
+   free(ncoords);
+   free(currcoord);
+   return graph;
+}
+
+/** computes coordinates of node 'node' */
+void graph_grid_coordinates(
+   int**  coords,
+   int**  nodecoords,  /* coordinates of the node (to be computed) */
+   int*   ncoords,
+   int    node,
+   int    grid_dim
+   )
+{
+   int i;
+   int j;
+   int tmp;
+   int coord;
+   assert(grid_dim > 1);
+   assert(node >= 0);
+   assert(coords != NULL);
+   assert(ncoords != NULL);
+   if( *nodecoords == NULL )
+      *nodecoords = (int*) malloc(grid_dim * sizeof(int));
+
+   for( i = 0; i < grid_dim; i++ )
+   {
+      tmp = 1;
+      for( j = i; j < grid_dim; j++ )
+         tmp = tmp * ncoords[j];
+
+      coord = node % tmp;
+      tmp = tmp / ncoords[i];
+      coord = coord / tmp;
+      (*nodecoords)[i] = coords[i][coord];
+   }
+}
+
+/** alters the graph in such a way that each optimal STP solution of the
+ * new graph corresponds to an optimal Prize Collecting solution of the original graph
+ */
+void
+graph_prize_transform(
+   GRAPH* graph
+   )
+{
+   int k;
+   int root;
+   int node;
+   int nnodes;
+   int nterms;
+   double* prize;
+   assert(graph != NULL);
+   assert(graph->edges == graph->esize);
+   root = graph->source[0];
+   nnodes = graph->knots;
+   prize = graph->prize;
+   nterms = graph->terms;
+   assert(prize != NULL);
+   assert(nnodes == graph->ksize);
+   assert(root >= 0);
+   /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
+   graph_resize(graph, (graph->ksize + graph->terms + 1), (graph->esize + graph->terms * 6) , -1);
+
+
+   for( k = 0; k < nterms; ++k )
+   {
+      /* create a new node */
+      graph_knot_add(graph, -1, -1, -1);
+   }
+   /* new root */
+   root = graph->knots;
+   graph_knot_add(graph, 0, -1, -1);
+   nterms = 0;
+   graph->source[0] = root;
+   for( k = 0; k < nnodes; ++k )
+   {
+      /* is the kth node a terminal other than the root? */
+      if( Is_term(graph->term[k]) )
+      {
+
+         /* the copied node */
+         node = nnodes + nterms;
+
+         /* switch the terminal property */
+         graph->term[k] = -1;
+         graph->term[node] = 0;
+
+         /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
+         graph_edge_add(graph, root, node, prize[nterms++], FARAWAY);
+         graph_edge_add(graph, root, k, 0, FARAWAY);
+         graph_edge_add(graph, k, node, 0, FARAWAY);
+      }
+   }
+   graph->source[0] = root;
+   assert((nterms + 1) == graph->terms);
+}
+
+
+void
+graph_maxweight_transform(
+   GRAPH* graph,
+   double* maxweights
+   )
+{
+   int e;
+   int i;
+   int nnodes;
+   int nterms = 0;
+
+   assert(maxweights != NULL);
+   assert(graph != NULL);
+   assert(graph->terms == 0);
+   nnodes = graph->knots;
+
+   /* count number of terminals, modify incoming edges for non-terminals */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( LT(maxweights[i], 0.0) )
+      {
+         for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            graph->cost[e] -= maxweights[i];
+         }
+      }
+      else
+      {
+	 graph_knot_chg(graph, i, 0, -1, -1);
+	 nterms++;
+      }
+   }
+   graph->prize = malloc((size_t)nterms * sizeof(double));
+   nterms = 0;
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(graph->term[i]) )
+      {
+         assert(!LT(maxweights[i], 0.0));
+         graph->prize[nterms++] = maxweights[i];
+      }
+
+   }
+   assert(nterms == graph->terms);
+   graph_prize_transform(graph);
+   graph->stp_type = STP_MAX_NODE_WEIGHT;
+
+}
 void graph_free(
    GRAPH* p)
 {
@@ -192,6 +576,14 @@ void graph_free(
    free(p->ypos);
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
+   else if(p->stp_type == STP_GRID )
+   {
+      int i;
+      for( i = 0; i < p->grid_dim; i++ )
+	 free(p->grid_coordinates[i]);
+      free(p->grid_coordinates);
+      free(p->grid_ncoords);
+   }
    free(p);
 }
 
@@ -246,6 +638,22 @@ GRAPH* graph_copy(
       assert(p->maxdeg != NULL);
       g->maxdeg = malloc((size_t)(g->knots) * sizeof(int));
       memcpy(g->maxdeg,   p->maxdeg,   p->knots  * sizeof(*p->maxdeg));
+   }
+   else if( p->stp_type == STP_GRID )
+   {
+      int i;
+      assert(p->grid_ncoords != NULL);
+      assert(p->grid_coordinates != NULL);
+
+      g->grid_coordinates = malloc((size_t)(p->grid_dim) * sizeof(int*));
+      memcpy(g->grid_coordinates,   p->grid_coordinates,   p->grid_dim * sizeof(*p->grid_coordinates));
+      for( i = 0; i < p->grid_dim; i++)
+      {
+	 g->grid_coordinates[i] = malloc((size_t)(p->terms) * sizeof(int));
+	 memcpy(g->grid_coordinates[i],   p->grid_coordinates[i],   p->terms * sizeof(*(p->grid_coordinates[i])));
+      }
+      g->grid_ncoords = malloc((size_t)(p->grid_dim) * sizeof(int));
+      memcpy(g->grid_ncoords,   p->grid_ncoords,   p->grid_dim * sizeof(*p->grid_ncoords));
    }
    assert(graph_valid(p));
 
@@ -726,7 +1134,6 @@ GRAPH *graph_pack(
    GRAPH* p)
 {
    const char* msg1   = " ok\nKnots: %d  Edges: %d  Terminals: %d\n";
-   const char* msg2   = " vanished !\n";
 
    GRAPH* q;
    int*   new;
@@ -765,7 +1172,7 @@ GRAPH *graph_pack(
       free(new);
       graph_free(p);
 
-      (void)printf(msg2);
+      printf(" vanished !\n");
 
       return(NULL);
    }
@@ -788,13 +1195,13 @@ GRAPH *graph_pack(
    for(i = 0; i < p->knots; i++)
    {
       assert(p->term[i] < p->layers);
-
+#if 0
       if ((i % 100) == 0)
       {
          (void)fputc('k', stdout);
          (void)fflush(stdout);
       }
-
+#endif
       if (p->grad[i] > 0)
          graph_knot_add(q, p->term[i], p->xpos[i], p->ypos[i]);
    }
@@ -803,12 +1210,13 @@ GRAPH *graph_pack(
     */
    for(i = 0; i < p->edges; i += 2)
    {
+#if 0
       if ((i % 1000) == 0)
       {
          (void)fputc('e', stdout);
          (void)fflush(stdout);
       }
-
+#endif
       if (p->ieat[i] == EAT_FREE)
       {
          assert(p->oeat[i]     == EAT_FREE);
@@ -836,6 +1244,10 @@ GRAPH *graph_pack(
    }
    q->stp_type = p->stp_type;
    q->maxdeg = p->maxdeg;
+   q->grid_dim = p->grid_dim;
+   q->grid_ncoords = p->grid_ncoords;
+   q->grid_coordinates = p->grid_coordinates;
+
    free(new);
 
    p->stp_type = UNKNOWN;

@@ -72,26 +72,37 @@ struct key
 #define KEY_COMMENT_NAME         1001
 #define KEY_COMMENT_DATE         1002
 #define KEY_COMMENT_CREATOR      1003
-#define KEY_COMMENT_REMARK       1004
+#define KEY_COMMENT_PROBLEM      1004
+#define KEY_COMMENT_REMARK       1005
 
 #define KEY_GRAPH_NODES          2001
 #define KEY_GRAPH_EDGES          2002
 #define KEY_GRAPH_E              2003
 #define KEY_GRAPH_A              2004
 
-#define KEY_TERMINALS_TERMINALS  3001
-#define KEY_TERMINALS_T          3002
-#define KEY_TERMINALS_ROOT       3003
+#define KEY_TERMINALS_END        3001
+#define KEY_TERMINALS_TERMINALS  3002
+#define KEY_TERMINALS_T          3003
+#define KEY_TERMINALS_TP         3004
+#define KEY_TERMINALS_ROOT       3005
+//#define KEY_TERMINALS_T2          3006
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
-#define KEY_COORDINATES_GRID     4003
+#define KEY_COORDINATES_DDDD     4003
+#define KEY_COORDINATES_DDDDD    4004
+#define KEY_COORDINATES_DDDDDD   4005
+#define KEY_COORDINATES_DDDDDDD  4006
+#define KEY_COORDINATES_DDDDDDDD 4007
 
-#define KEY_SOLUTION_VALUE       4001
-#define KEY_SOLUTION_DATE        4002
-#define KEY_SOLUTION_TIME        4003
-#define KEY_SOLUTION_STEINER     4004
-#define KEY_SOLUTION_S           4005
+#define KEY_COORDINATES_END      4011
+#define KEY_COORDINATES_GRID     4012
+
+#define KEY_SOLUTION_VALUE       4021
+#define KEY_SOLUTION_DATE        4022
+#define KEY_SOLUTION_TIME        4023
+#define KEY_SOLUTION_STEINER     4024
+#define KEY_SOLUTION_S           4025
 
 #define KEY_PRESOLVE_DATE        5001
 #define KEY_PRESOLVE_FIXED       5002
@@ -99,54 +110,70 @@ struct key
 #define KEY_PRESOLVE_UPPER       5004
 #define KEY_PRESOLVE_TIME        5005
 
-#define KEY_MAXDEGS_MD           6000
+#define KEY_NODEWEIGHTS_NW       6000
+
+#define KEY_PRIZECOLL_MD         7000
+
+#define KEY_MAXDEGS_MD           8000
+
 
 static const struct key keyword_table[] =
    {
       /*
        * *** The keywords MUST be sorted alphabetically ! ***
        */
-      {  ".eof",                KEY_EOF,                 NULL   },
-      {  ".section",            KEY_SECTION,             NULL   },
+      {  ".eof",                     KEY_EOF,                    NULL        },
+      {  ".section",                 KEY_SECTION,                NULL        },
 
-      {  "comment.creator",     KEY_COMMENT_CREATOR,     "s"    },
-      {  "comment.date",        KEY_COMMENT_DATE,        "s"    },
-      {  "comment.end",         KEY_END,                 NULL   },
-      {  "comment.name",        KEY_COMMENT_NAME,        "s"    },
-      {  "comment.remark",      KEY_COMMENT_REMARK,      "s"    },
+      {  "comment.creator",          KEY_COMMENT_CREATOR,        "s"         },
+      {  "comment.date",             KEY_COMMENT_DATE,           "s"         },
+      {  "comment.end",              KEY_END,                    NULL        },
+      {  "comment.name",             KEY_COMMENT_NAME,           "s"         },
+      {  "comment.problem",          KEY_COMMENT_PROBLEM,        "s"         },
+      {  "comment.remark",           KEY_COMMENT_REMARK,         "s"         },
 
-      {  "coordinates.dd",      KEY_COORDINATES_DD,      "nnn"  },
-      {  "coordinates.ddd",     KEY_COORDINATES_DDD,     "nnnn" },
-      {  "coordinates.end",     KEY_END,                 NULL   },
-      {  "coordinates.grid",    KEY_COORDINATES_GRID,    NULL   },
+      {  "coordinates.dd",           KEY_COORDINATES_DD,         "nnn"       },
+      {  "coordinates.ddd",          KEY_COORDINATES_DDD,        "nnnn"      },
+      {  "coordinates.dddd",         KEY_COORDINATES_DDDD,       "nnnnn"     },
+      {  "coordinates.ddddd",        KEY_COORDINATES_DDDDD,      "nnnnnn"    },
+      {  "coordinates.dddddd",       KEY_COORDINATES_DDDDDD,     "nnnnnnn"   },
+      {  "coordinates.ddddddd",      KEY_COORDINATES_DDDDDDD,    "nnnnnnnn"  },
+      {  "coordinates.dddddddd",     KEY_COORDINATES_DDDDDDDD,   "nnnnnnnnn" },
+      {  "coordinates.end",          KEY_COORDINATES_END,        NULL        },
+      {  "coordinates.grid",         KEY_COORDINATES_GRID,       NULL        },
 
-      {  "graph.a",             KEY_GRAPH_A,             "nnnn" },
-      {  "graph.e",             KEY_GRAPH_E,             "nnn"  },
-      {  "graph.edges",         KEY_GRAPH_EDGES,         "n"    },
-      {  "graph.end",           KEY_END,                 NULL   },
-      {  "graph.nodes",         KEY_GRAPH_NODES,         "n"    },
+      {  "graph.a",                  KEY_GRAPH_A,                "nnnn"      },
+      {  "graph.e",                  KEY_GRAPH_E,                "nnn"       },
+      {  "graph.edges",              KEY_GRAPH_EDGES,            "n"         },
+      {  "graph.end",                KEY_END,                    NULL        },
+      {  "graph.nodes",              KEY_GRAPH_NODES,            "n"         },
 
-      {  "maximumdegrees.end",  KEY_END,                 NULL   },
-      {  "maximumdegrees.md",   KEY_MAXDEGS_MD,          "n"    },
+      {  "maximumdegrees.end",       KEY_END,                    NULL        },
+      {  "maximumdegrees.md",        KEY_MAXDEGS_MD,             "n"         },
 
-      {  "presolve.date",       KEY_PRESOLVE_DATE,       "s"    },
-      {  "presolve.end",        KEY_END,                 NULL   },
-      {  "presolve.fixed",      KEY_PRESOLVE_FIXED,      "n"    },
-      {  "presolve.lower",      KEY_PRESOLVE_LOWER,      "n"    },
-      {  "presolve.time",       KEY_PRESOLVE_TIME,       "n"    },
-      {  "presolve.upper",      KEY_PRESOLVE_UPPER,      "n"    },
+      {  "nodeweights.end",          KEY_END,                    NULL        },
+      {  "nodeweights.nw",           KEY_NODEWEIGHTS_NW,         "n"         },
 
-      {  "solution.date",       KEY_SOLUTION_DATE,       "s"    },
-      {  "solution.end",        KEY_END,                 NULL   },
-      {  "solution.s",          KEY_SOLUTION_S,          "n"    },
-      {  "solution.steiner",    KEY_SOLUTION_STEINER,    "n"    },
-      {  "solution.time",       KEY_SOLUTION_TIME,       "n"    },
-      {  "solution.value",      KEY_SOLUTION_VALUE,      "n"    },
+      {  "presolve.date",            KEY_PRESOLVE_DATE,          "s"         },
+      {  "presolve.end",             KEY_END,                    NULL        },
+      {  "presolve.fixed",           KEY_PRESOLVE_FIXED,         "n"         },
+      {  "presolve.lower",           KEY_PRESOLVE_LOWER,         "n"         },
+      {  "presolve.time",            KEY_PRESOLVE_TIME,          "n"         },
+      {  "presolve.upper",           KEY_PRESOLVE_UPPER,         "n"         },
 
-      {  "terminals.end",       KEY_END,                 NULL   },
-      {  "terminals.root",      KEY_TERMINALS_ROOT,      "n"    },
-      {  "terminals.t",         KEY_TERMINALS_T,         "n"    },
-      {  "terminals.terminals", KEY_TERMINALS_TERMINALS, "n"    },
+      {  "solution.date",            KEY_SOLUTION_DATE,          "s"         },
+      {  "solution.end",             KEY_END,                    NULL        },
+      {  "solution.s",               KEY_SOLUTION_S,             "n"         },
+      {  "solution.steiner",         KEY_SOLUTION_STEINER,       "n"         },
+      {  "solution.time",            KEY_SOLUTION_TIME,          "n"         },
+      {  "solution.value",           KEY_SOLUTION_VALUE,         "n"         },
+
+      {  "terminals.end",            KEY_TERMINALS_END,          NULL        },
+      {  "terminals.root",           KEY_TERMINALS_ROOT,         "n"         },
+      {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
+      //{  "terminals.t",              KEY_TERMINALS_T2,            "nn"         },
+      {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
+      {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
    };
 
 struct section
@@ -176,9 +203,10 @@ static struct section section_table[] =
       { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
       { "maximumdegrees", "mdg", FLAG_OPTIONAL, SECTION_MISSING },
+      { "nodeweights", "nwg", FLAG_OPTIONAL, SECTION_MISSING },
       { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
       { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
-      { "terminals",   "trm", FLAG_REQUIRED, SECTION_MISSING },
+      { "terminals",   "trm", FLAG_OPTIONAL, SECTION_MISSING },
    };
 
 typedef struct current_file
@@ -294,6 +322,7 @@ static int sec_cmp(
 /*--- Returns  : 0 for success and < 0 for failure.                       ---*/
 /*---------------------------------------------------------------------------*/
 static int get_arguments(
+   int stp_type,
    const CURF* curf,
    const char* format,
    const char* s,
@@ -304,7 +333,9 @@ static int get_arguments(
 
    int missmatch = FALSE;
    int i;
-
+   int decimal_spaces;
+   char is_negative;
+   //char first = TRUE;
    assert(format != NULL);
    assert(s      != NULL);
    assert(para   != NULL);
@@ -322,24 +353,35 @@ static int get_arguments(
       case 'n' :  /* Numeric */
          /* Go to next digit.
           */
-         while((*s != '\0') && !isdigit(*s))
+         while((*s != '\0') && !isdigit(*s) && (*s != '.') && (*s != '-') )
+	 {
             s++;
-
+	 }
          /* Someting left ?
           */
          if (*s != '\0')
          {
-            assert(isdigit(*s));
+            assert(isdigit(*s) || (*s == '.') || (*s == '-'));
 
             /* Get it.
              */
             para->n = 0;
-
-            while(isdigit(*s))
+            decimal_spaces = -1;
+	    is_negative = FALSE;
+            while(isdigit(*s) || (*s == '.') || (*s == '-'))
             {
-               para->n = para->n * 10 + (*s - '0');
+	       if( *s == '.' )
+		  decimal_spaces = 0;
+	       else if( *s == '-' )
+		  is_negative = TRUE;
+	       else if( decimal_spaces != -1 )
+		  para->n = para->n + pow(10, -(++decimal_spaces)) * (*s - '0');
+	       else
+                  para->n = para->n * 10 + (*s - '0');
                s++;
             }
+            if( is_negative )
+               para->n = (-1) * para->n;
             missmatch = FALSE;
          }
          break;
@@ -379,7 +421,11 @@ static int get_arguments(
       else
       {
          para++;
+	 //if( stp_type == STP_MAX_NODE_WEIGHT && first == TRUE )
+         //first = FALSE;
+	 //else
          format++;
+
       }
    }
    return((*format == '\0') ? SUCCESS : FAILURE);
@@ -554,6 +600,137 @@ static int start_section(
    return(ret);
 }
 
+inline static
+void init_coordinates(
+   GRAPH* g,
+   PARA* para,
+   double*** coordinates,
+   int* grid_dim,
+   int* termcount,
+   int  dim,
+   int  nodes
+   )
+{
+   int i;
+
+   if( *coordinates == NULL )
+   {
+      assert(g == NULL);
+      assert(*termcount == 0);
+      assert(nodes > 0);
+
+      *grid_dim = dim;
+
+      /* allocate memory for the coordinate arrays */
+      *coordinates = (double**) malloc(dim * sizeof(double*));
+
+      for( i = 0; i < dim; i++ )
+         (*coordinates)[i] = (double*) malloc((nodes) * sizeof(double));
+   }
+
+   for( i = 0; i < dim; i++ )
+      (*coordinates)[i][*termcount] = (double)para[i + 1].n;
+
+   (*termcount)++;
+}
+
+#if 0
+static int get_scale_order(
+   double number
+   )
+{
+   int order = 0;
+   double i;
+   for( i = number; GT(fabs(i), floor(fabs(i))); i = i * 10.0 )
+      order++;
+   return order;
+}
+#endif
+static int get_scale_order(
+   double number
+   )
+{
+   int order = 0;
+   int ints;
+   int trail_zeroes;
+   int length;
+   int i;
+   char s;
+   char str_number[SCIP_MAXSTRLEN];
+   (void)SCIPsnprintf(str_number, SCIP_MAXSTRLEN, "%f", number);
+   length = strlen(str_number);
+
+   for( i = 0; i < length; i++ )
+   {
+      if( str_number[length - i - 1] != '0' )
+         break;
+   }
+   trail_zeroes = i;
+
+   for( i = 0; i < length; i++ )
+   {
+      s = str_number[i];
+      if( s == '.' )
+         break;
+   }
+   ints = i;
+   order = length - ints - trail_zeroes - 1;
+
+   return order;
+}
+
+
+/* scales coordinates in such a way, that they become integer */
+static void scale_coords(
+   double** coordinates,
+   int*** scaled_coords,
+   int* scale_order,
+   int nnodes,
+   int grid_dim
+   )
+{
+   int i;
+   int j;
+   int tmp;
+   int scale_factor;
+   int max_order = 0;
+
+   assert(coordinates != NULL);
+   assert(nnodes > 0);
+   assert(grid_dim > 1);
+
+   scale_factor = 1;
+   *scaled_coords = (int**) malloc(grid_dim * sizeof(int*));
+
+   for( i = 0; i < grid_dim; i++ )
+      for( j = 0; j < nnodes; j++ )
+      {
+	 tmp = get_scale_order(coordinates[i][j]);
+
+	 if( max_order < tmp )
+	 {
+	    max_order = tmp;
+	    printf("new max coord: %f \n", coordinates[i][j]);
+            printf("max order: %d \n", max_order);
+	 }
+      }
+
+   printf("max order: %d \n", max_order);
+   *scale_order = max_order;
+   scale_factor = pow(10, max_order);
+   printf("scale_factor: %d \n", scale_factor);
+   for( i = 0; i < grid_dim; i++ )
+   {
+      (*scaled_coords)[i] = (int*) malloc(nnodes * sizeof(int));
+      for( j = 0; j < nnodes; j++ )
+	 (*scaled_coords)[i][j] = coordinates[i][j] * scale_factor;
+   }
+
+
+
+
+}
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Steiner Tree Problem Load                                ---*/
 /*--- Function : Reads a file in STP format and parses it.                ---*/
@@ -583,6 +760,8 @@ GRAPH* graph_load(
    CURF         curf;
    CURF         save;
    PARA         para    [MAX_ARGUMENTS];
+   double       nodeweight;
+   double*      maxnodeweights = NULL;
    char         buffer  [MAX_LINE_LEN];
    char         pathname[MAX_PATH_LEN];
    char         basename[MAX_PATH_LEN];
@@ -593,12 +772,20 @@ GRAPH* graph_load(
    char*        s;
    char*        t;
    struct key*  p;
+   double**     coordinates = NULL;
    int          i;
+   int          grid_dim = -1;
+   int          terms = 0;
    int          nodes = 0;
    int          edges = 0;
-   int          ndegs = 0;
+   int          nwcount = 0;
+   int          degcount = 0;
+   int          stp_type = -1;
+   int          termcount = 0;
+   int          scale_order;
    int          has_coordinates = FALSE;
    int          is_gridgraph    = FALSE;
+   int**        scaled_coordinates;
 
    assert(file != NULL);
 
@@ -724,14 +911,22 @@ GRAPH* graph_load(
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
          {
+	    const char* format;
             assert(p != NULL);
 
             message(MSG_DEBUG, &curf, msg_keyword_sd, p->keyword, p->sw_code);
 
             /* Yes, so lets get the rest of the line if possible
              */
+	    if( stp_type == STP_MAX_NODE_WEIGHT && p->format != NULL && p->sw_code == KEY_TERMINALS_T )
+	    {
+	       printf("format before: %s \n", p->format);
+	       format = "nn";
+	    }
+	    else
+	       format = p->format;
             if ((p->format == NULL)
-               || !get_arguments(&curf, p->format, s, para))
+               || !get_arguments(stp_type, &curf, format, s, para))
             {
                /* Now, what should we do ?
                 */
@@ -778,6 +973,13 @@ GRAPH* graph_load(
                case KEY_COMMENT_NAME :
                case KEY_COMMENT_DATE :
                case KEY_COMMENT_CREATOR :
+	       case KEY_COMMENT_PROBLEM :
+                  (void)printf("Problem: [%s]\n", para[0].s);
+		  if( strcmp(para[0].s, "Maximum Node Weight Connected Subgraph") == 0 )
+		  {
+		     stp_type = STP_MAX_NODE_WEIGHT;
+		  }
+                  break;
                case KEY_COMMENT_REMARK :
                   (void)printf("Comment: [%s]\n", para[0].s);
                   break;
@@ -799,7 +1001,10 @@ GRAPH* graph_load(
                         graph_knot_add(g, -1, 0, 0);
 
                      g->source[0] = -1;
-		     g->stp_type = STP_UNDIRECTED;
+		     if( stp_type == -1 )
+		        g->stp_type = STP_UNDIRECTED;
+		     else
+		        g->stp_type = stp_type;
                   }
                   if (((int)para[0].n <= nodes) && ((int)para[1].n <= nodes))
                   {
@@ -817,29 +1022,63 @@ GRAPH* graph_load(
                   }
                   break;
 	       case KEY_MAXDEGS_MD :
-                  printf("MAX DEGS number  %d : ", ndegs);
+                  printf("MAX DEGS number  %d : ", degcount);
 		  assert(g != NULL);
 		  assert((int)para[0].n >= 0);
 
-		  if( ndegs < nodes )
+		  if( degcount < nodes )
 		  {
                      if( g->maxdeg == NULL )
                      {
                         g->maxdeg = malloc((size_t)nodes * sizeof(int));
                         g->stp_type = STP_DEG_CONS;
                      }
-                     g->maxdeg[ndegs++] = (int)para[0].n;
+                     g->maxdeg[degcount++] = (int)para[0].n;
 
-                     printf(", deg:  %d : \n", g->maxdeg[ndegs - 1]);
+                     printf(", deg:  %d : \n", g->maxdeg[degcount - 1]);
                      break;
 		  }
 		  else
 		  {
                      message(MSG_FATAL, &curf, err_baddeg_dd,
-                        ndegs, nodes);
+                        degcount, nodes);
                      ret = FAILURE;
 		  }
+	       case KEY_NODEWEIGHTS_NW :
+		  nodeweight = (double) para[0].n;
+		  assert(g != NULL);
+		  assert(presol != NULL);
+
+		  if( g->stp_type != STP_NODE_WEIGHTS )
+		     g->stp_type = STP_NODE_WEIGHTS;
+		  if( Is_term(g->term[nwcount]) )
+                     presol->fixed += nodeweight;
+		  else
+                     /* add node-weight to edge-weight of all incoming edges */
+                     for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
+                        g->cost[i] += nodeweight;
+		  nwcount++;
+		  break;
+	       case KEY_TERMINALS_END :
+
+		  if( stp_type == STP_MAX_NODE_WEIGHT )
+		  {
+		     assert(nodes == termcount);
+		     graph_maxweight_transform(g, maxnodeweights);
+		     free(maxnodeweights);
+		  }
+
+		  curf.section = &section_table[0];
+                  break;
                case KEY_TERMINALS_TERMINALS :
+		  terms = (int)para[0].n;
+		  assert(terms > 0);
+		  if( stp_type == STP_MAX_NODE_WEIGHT )
+		  {
+                     assert(maxnodeweights == NULL);
+                     assert(terms == nodes);
+                     maxnodeweights = malloc((size_t)terms * sizeof(double));
+		  }
                   break;
                case KEY_TERMINALS_ROOT :
                   assert(g != NULL);
@@ -854,22 +1093,79 @@ GRAPH* graph_load(
                   }
                   break;
                case KEY_TERMINALS_T :
-                  graph_knot_chg(g, (int)para[0].n - 1, 0,
-                     NO_CHANGE, NO_CHANGE);
+		  if( stp_type == STP_MAX_NODE_WEIGHT )
+		  {
+		     assert(maxnodeweights != NULL);
+		     maxnodeweights[(int)para[0].n - 1] = (double)para[1].n;
+		     printf("maxnodeweight: %f \n", (double)para[1].n);
+		     termcount++;
+		  }
+		  else
+                     graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+                  break;
+	       case KEY_TERMINALS_TP :
+                  graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+		  if( g->stp_type != STP_PRIZE_COLLECTING )
+		  {
+		     assert(g->prize == NULL);
+		     g->stp_type = STP_PRIZE_COLLECTING;
+		     g->prize = malloc((size_t)terms * sizeof(double));
+		  }
+		  g->prize[termcount++] = (double)para[1].n;
                   break;
                case KEY_COORDINATES_DD :
-                  has_coordinates = TRUE;
-                  graph_knot_chg(g, (int)para[0].n - 1, NO_CHANGE,
-                     (int)para[1].n, (int)para[2].n);
+                  /*has_coordinates = TRUE;
+                    graph_knot_chg(g, (int)para[0].n - 1, NO_CHANGE,
+                    (int)para[1].n, (int)para[2].n);*/
+		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 2, nodes);
                   break;
                case KEY_COORDINATES_DDD :
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 3, nodes);
                   break;
+	       case KEY_COORDINATES_DDDD :
+		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 4, nodes);
+                  break;
+	       case KEY_COORDINATES_DDDDD :
+		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 5, nodes);
+                  break;
+	       case KEY_COORDINATES_DDDDDD :
+		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 6, nodes);
+                  break;
+	       case KEY_COORDINATES_DDDDDDD :
+		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 7, nodes);
+                  break;
+	       case KEY_COORDINATES_DDDDDDDD :
+		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 8, nodes);
+                  break;
+	       case KEY_COORDINATES_END :
+		  assert(g == NULL);
+		  assert(grid_dim > 1);
+		  message(MSG_INFO, &curf, "CRC [%X]", crc);
+
+                  curf.section = &section_table[0];
+		  if( termcount != nodes )
+		  {
+		     message(MSG_FATAL, &curf, "node number does not match coordinates \n");
+                     ret = FAILURE;
+		     break;
+		  }
+
+		  /* scale all coordinates such that they are integers */
+		  scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim);
+
+		  for( i = 0; i < grid_dim; i++ )
+                     free(coordinates[i]);
+
+		  free(coordinates);
+		  g = graph_grid_create(scaled_coordinates, nodes, grid_dim, scale_order);
+
+		  break;
                case KEY_COORDINATES_GRID :
                   is_gridgraph = TRUE;
                   break;
                case KEY_PRESOLVE_FIXED :
                   if (presol != NULL)
-                     presol->fixed = (double)para[0].n;
+                     presol->fixed += (double)para[0].n;
                   break;
                case KEY_PRESOLVE_DATE :
                   (void)printf("Found presolve information %s\n",
@@ -919,7 +1215,7 @@ GRAPH* graph_load(
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
                g->source[0] = i;
       }
-      else
+      else if( g->stp_type != STP_GRID )
       {
          g->stp_type = STP_DIRECTED;
       }

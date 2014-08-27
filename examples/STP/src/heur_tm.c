@@ -34,7 +34,7 @@
 #define HEUR_NAME             "TM"
 #define HEUR_DESC             "takahashi matsuyama primal heuristic for steiner trees"
 #define HEUR_DISPCHAR         '+'
-#define HEUR_PRIORITY         0
+#define HEUR_PRIORITY         1 //TODO 0
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -158,7 +158,7 @@ static
 SCIP_RETCODE do_prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
+   SCIP_Real*      cost,               /**< edge costs */
    int                   layer,
    int*                  result,             /**< ST edges */
    char*                 connected           /**< ST nodes */
@@ -245,8 +245,8 @@ SCIP_RETCODE do_tm(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    PATH**                path,
-   const SCIP_Real*      cost,
-   const SCIP_Real*      costrev,
+   SCIP_Real*      cost,
+   SCIP_Real*      costrev,
    int                   layer,
    int                   start,
    int*                  result,
@@ -303,6 +303,7 @@ SCIP_RETCODE do_tm(
 
          /*
           */
+	 //printf("node %d \n", i);
          if( path[i] == NULL )
          {
             SCIP_CALL( SCIPallocBufferArray(scip, &(path[i]), nnodes) );
@@ -319,7 +320,7 @@ SCIP_RETCODE do_tm(
 
             assert(i != j);
             assert(connected[j]);
-
+            //printf("dist %d->%d %f\n", i, j , path[i][j].dist);
             if (LT(path[i][j].dist, min))
             {
                min = path[i][j].dist;
@@ -355,7 +356,7 @@ SCIP_RETCODE do_tm(
       {
          e = path[newval][k].edge;
          k = g->tail[e];
-
+         //printf("add %d\n", k);
          if (!connected[k])
          {
             connected[k] = TRUE;
@@ -380,8 +381,8 @@ SCIP_RETCODE do_tm_degcons(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    PATH**                path,
-   const SCIP_Real*      cost,
-   const SCIP_Real*      costrev,
+   SCIP_Real*      cost,
+   SCIP_Real*      costrev,
    int                   layer,
    int                   start,
    int*                  result,
@@ -519,8 +520,8 @@ SCIP_RETCODE do_tm_polzin(
    const GRAPH*          g,                  /**< graph structure */
    SCIP_PQUEUE*          pqueue,
    GNODE**               gnodearr,
-   const SCIP_Real*      cost,
-   const SCIP_Real*      costrev,
+   SCIP_Real*            cost,
+   SCIP_Real*            costrev,
    int                   layer,
    SCIP_Real**           distarr,
    int                   start,
@@ -853,8 +854,9 @@ SCIP_RETCODE do_layer(
    int           layer,
    int*          best_result,
    int           runs,
-   const SCIP_Real* cost,
-   const SCIP_Real* costrev
+   SCIP_Real* cost,
+   SCIP_Real* costrev,
+   SCIP_Longint ncalls
    )
 {
    PATH** path;
@@ -926,18 +928,25 @@ SCIP_RETCODE do_layer(
    }
    else
    {
-      runs = (runs > nnodes) ? nnodes         : runs;
+      /*runs = (runs > nnodes) ? nnodes         : runs;*/
       best = (best < 0)            ? graph->source[layer] : best;
 
-      for( k = 0; k < nnodes; k++ )
-      {
+      /* for( k = 0; k < nnodes; k++ )
+         {
          assert(graph->grad[k] > 0);
 
          start[k] = k;
+         }*/
+      if( graph->stp_type == STP_DEG_CONS )
+         mode = TM;
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+      {
+	 if( runs > (nterms - 1) )
+	    runs = nterms - 1;
+	 mode = TM;
       }
-
       /* if we run over all nodes, we do not need to do the following */
-      if( runs < nnodes )
+      else if( runs < nnodes )
       {
 #if 0
          int random;
@@ -954,20 +963,28 @@ SCIP_RETCODE do_layer(
 #else
          int* realterms = SCIPprobdataGetRTerms(scip);
          int nrealterms = SCIPprobdataGetRNTerms(scip);
-
+         int z;
          start[0] = graph->source[0];
          for( r = 1; r < runs; r++ )
          {
-            if( r < nrealterms + 1 )
+            if( r < nrealterms )
             {
-               start[r] = realterms[r - 1];
-               start[realterms[r - 1]] = r;
+               start[r] = realterms[(ncalls + r) % (nrealterms)];
+               //start[r] = realterms[(r) % (nrealterms)];
             }
             else
             {
-               break;
+	       z = 0;
+	       while( Is_term(graph->term[(ncalls + r + z) % nnodes]) )
+		  z++;
+               start[r] = (ncalls + r + z) % nnodes;
             }
          }
+
+         /*     z = 0;
+                while( Is_term(graph->term[(ncalls + r + z) % nnodes]) )
+                z++;
+                start[runs - 1] = (ncalls + r + z) % nnodes;*/
 #endif
          /* check if we have a best starting value */
          for( r = 0; r < runs; r++ )
@@ -981,9 +998,11 @@ SCIP_RETCODE do_layer(
       else
       {
          runs = nnodes;
+	 for( k = 0; k < nnodes; k++ )
+            start[k] = k;
       }
 
-      if( mode == TM || graph->stp_type == STP_DEG_CONS )
+      if( mode == TM )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
          BMSclearMemoryArray(path, nnodes);
@@ -1011,56 +1030,156 @@ SCIP_RETCODE do_layer(
       }
       /*graph_path_exit(graph);
         graph_path_init(graph); */
-
-      for( r = 0; r < runs; r++ )
+      /* incorrect if layers > 1 ! */
+      assert(graph->layers == 1);
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
       {
-         /* incorrect if layers > 1 ! */
-         assert(graph->layers == 1);
+         int* rootedges_t;
+         int* rootedges_z;
+         int root;
+	 int rootedge;
 
-         for( e = 0; e < nedges; e++ )
-            result[e] = -1;
-
-         /* SCIP_CALL( do_heuristic(scip, graph, layer, result, start[r], connected, cost, costrev, path, nodeterms, nodenterms, ncheckedterms, pqueue, (r == 0) ,
-            (r == runs - 1)) );
-            SCIP_CALL( do_heuristic(scip, graph, pqueue, path, gnodearr, distarr, cost, costrev, layer, start[r], result,
-            vcount, nodesid, nodenterms, basearr, edgearr, (r == 0), (r == runs - 1), connected) );*/
-
-         if( graph->stp_type == STP_DEG_CONS )
-	 {
-	    mode = TM; //TODO
-            SCIP_CALL( do_tm_degcons(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
-	 }
-	 else if( mode == TM )
-            SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
-	 else
-            SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, distarr, start[r], result, vcount,
-                  nodenterms, basearr, edgearr, (r == 0), connected) );
-
-         obj = 0.0;
-         objt = 0.0;
-         /* here another measure than in the do_(...) heuristics is being used*/
-         for( e = 0; e < nedges; e++)
-            obj += (result[e] > -1) ? graph->cost[e] : 0.0;
-         for( e = 0; e < nedges; e++)
-            objt += (result[e] > -1) ? cost[e] : 0.0;
-         //SCIPdebugMessage(" Obj=%.12e\n", obj);
-
-         if( SCIPisLT(scip, obj, min) )
+         root = graph->source[0];
+         k = 0;
+         r = 0;
+	 /* todo take all out edges rotate amongst them, allocate only once*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &rootedges_t, nterms - 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &rootedges_z, nterms - 1) );
+         for( e = graph->inpbeg[root]; e != EAT_LAST; e = graph->ieat[e] )
          {
-            min = obj;
+	    if(  Is_term(graph->term[graph->tail[e]]) )
 
-            SCIPdebugMessage(" Objt=%.12e    ", objt);
-            printf(" Obj(run: %d)=%.12e\n", r, obj);
-
-            for( e = 0; e < nedges; e++ )
+               rootedges_t[k++] = e;
+	    else
 	    {
-               best_result[e] = result[e];
-               //      if( best_result[e] != - 1)
-               //	  printf("%d->%d %d\n", graph->tail[e], graph->head[e], best_result[e]);
+               costrev[e] = FARAWAY;
+	       assert(graph->cost[flipedge(e)] == 0);
+	       graph->cost[flipedge(e)] = FARAWAY;
+               rootedges_z[r++] = e;
 	    }
-            //    printGraph(scip, graph, "DEGCON", best_result);
-            //  assert(0);
-            best = start[r];
+         }
+
+         for( r = 0; r < runs; r++ )
+         {
+            rootedge = rootedges_z[(ncalls + r) % (nterms - 1)];
+            costrev[rootedge] = 0;
+            graph->cost[flipedge(rootedge)] = 0;
+            //  printf("rootedge %d->%d \n", graph->tail[rootedge], graph->head[rootedge]);
+            for( e = 0; e < nedges; e++ )
+               result[e] = -1;
+
+            if( r != 0 )
+            {
+               for( k = 0; k < nterms - 1; k++ )
+               {
+                  e = rootedges_t[k];
+                  //     printf("edgeroot %d->%d \n", graph->tail[e], graph->head[e]);
+                  path[graph->tail[e]][root].dist = graph->cost[flipedge(e)];
+                  path[graph->tail[e]][root].edge = e;
+               }
+
+               k = graph->tail[rootedge - 2];
+               // printf("k k %d->%d \n", k, k);
+               path[k][root].dist = 0.0;
+               path[k][root].edge = rootedge;
+               assert(graph->head[rootedge - 2] == root);
+               // printf("edgeterm2root %d->%d \n", graph->tail[rootedge-2], graph->head[rootedge-2]);
+            }
+            if( mode == TM )
+               SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, root, result, connected) );
+            else
+               SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, distarr, root, result, vcount,
+                     nodenterms, basearr, edgearr, (r == 0), connected) );
+
+            obj = 0.0;
+
+            /* here another measure than in the do_(...) heuristics is being used*/
+            for( e = 0; e < nedges; e++)
+               obj += (result[e] > -1) ? graph->cost[e] : 0.0;
+
+            if( SCIPisLT(scip, obj, min) )
+            {
+               min = obj;
+
+               SCIPdebugMessage(" Objt=%.12e    ", objt);
+               printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
+
+               for( e = 0; e < nedges; e++ )
+               {
+                  best_result[e] = result[e];
+
+               }
+
+            }
+	    //assert(r < 2);
+            graph->cost[flipedge(rootedge)] = FARAWAY;
+            costrev[rootedge] = FARAWAY;
+         }
+
+         for( r = 0; r < nterms - 1; r++ )
+         {
+            rootedge = rootedges_z[r];
+            assert(costrev[rootedge] == FARAWAY);
+            costrev[rootedge] = 0;
+            graph->cost[flipedge(rootedge)] = 0;
+         }
+         SCIPfreeBufferArray(scip, &rootedges_t);
+         SCIPfreeBufferArray(scip, &rootedges_z);
+      }
+      else
+      {
+         for( r = 0; r < runs; r++ )
+         {
+            for( e = 0; e < nedges; e++ )
+               result[e] = UNKNOWN;
+
+            if( graph->stp_type == STP_DEG_CONS )
+            {
+               SCIP_CALL( do_tm_degcons(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
+            }
+            else if( mode == TM )
+               SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
+            else
+               SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, distarr, start[r], result, vcount,
+                     nodenterms, basearr, edgearr, (r == 0), connected) );
+
+            obj = 0.0;
+            objt = 0.0;
+            /* here another measure than in the do_(...) heuristics is being used*/
+            for( e = 0; e < nedges; e++)
+               obj += (result[e] > -1) ? graph->cost[e] : 0.0;
+            for( e = 0; e < nedges; e++)
+               objt += (result[e] > -1) ? cost[e] : 0.0;
+            //SCIPdebugMessage(" Obj=%.12e\n", obj);
+
+            if( SCIPisLT(scip, obj, min) )
+            {
+               min = obj;
+
+               SCIPdebugMessage(" Objt=%.12e    ", objt);
+               printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
+               if( 0 && graph->stp_type == STP_PRIZE_COLLECTING )
+               {
+                  for( e = 0; e < nedges; e++ )
+                  {
+                     best_result[e] = result[e];
+                     if( graph->tail[e] == graph->source[0] && graph->head[e] == start[r])
+                        best_result[e] = CONNECT;
+                     if( best_result[e] != - 1)
+                        printf("%d->%d %d\n", graph->tail[e], graph->head[e], best_result[e]);
+                  }
+               }
+               else{
+                  for( e = 0; e < nedges; e++ )
+                  {
+                     best_result[e] = result[e];
+                     // if( best_result[e] != - 1)
+                     //  printf("%d->%d %d\n", graph->tail[e], graph->head[e], best_result[e]);
+                  }
+               }
+               //    printGraph(scip, graph, "DEGCON", best_result);
+               best = start[r];
+            }
          }
       }
    }
@@ -1081,9 +1200,9 @@ SCIP_RETCODE do_layer(
       for( k = nnodes - 1; k >= 0; k-- )
       {
          SCIPfreeBuffer(scip, &gnodearr[k]);
-	 SCIPfreeBufferArray(scip, &distarr[k]);
-	 SCIPfreeBufferArray(scip, &edgearr[k]);
-	 SCIPfreeBufferArray(scip, &basearr[k]);
+         SCIPfreeBufferArray(scip, &distarr[k]);
+         SCIPfreeBufferArray(scip, &edgearr[k]);
+         SCIPfreeBufferArray(scip, &basearr[k]);
       }
       SCIPfreeBufferArray(scip, &distarr);
       SCIPfreeBufferArray(scip, &edgearr);
@@ -1343,7 +1462,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          }
       }
       /* can we connect the network */
-      SCIP_CALL( do_layer(scip, graph, layer, results, runs, cost, costrev) );
+      SCIP_CALL( do_layer(scip, graph, layer, results, runs, cost, costrev, heurdata->ncalls) );
 
       /* take the path */
       if( graph->layers > 1 )

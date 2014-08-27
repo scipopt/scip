@@ -25,6 +25,8 @@
 #define STP_NODE_WEIGHTS            3
 #define STP_DEG_CONS                4
 #define STP_REVENUES_BUDGET_HOPCONS 5
+#define STP_GRID                    6
+#define STP_MAX_NODE_WEIGHT         7
 
 #include "heur_tm.h"
 #include "scip/scip.h"
@@ -44,6 +46,7 @@ typedef struct
                    /* root of network [i], -1 if unknown          */
    int*    term;   /* Array [0..knots-1] of networknumber for     */
                    /* knot [i], -1 if [i] is never a terminal     */
+   double* prize;  /* Array [0..terms-1] of terminal prizes	  */
    int*    mark;   /* Array [0..knots-1], normaly TRUE or FALSE   */
                    /* to mark knots for inclusion in the shortest */
                    /* path / minimum spanning tree routine        */
@@ -90,6 +93,12 @@ typedef struct
     */
    int* path_heap;
    int* path_state;
+
+   /* data for grid problems
+    */
+   int       grid_dim;
+   int*      grid_ncoords;
+   int**     grid_coordinates;
 
    /* type of Steiner Tree Problem  */
    int stp_type;
@@ -148,6 +157,10 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 extern GRAPH *graph_init(int, int, int, int);
 extern void   graph_resize(GRAPH*, int, int, int);
 extern void   graph_free(GRAPH*);
+extern void   graph_prize_transform(GRAPH*);
+extern void   graph_maxweight_transform(GRAPH*, double*);
+extern GRAPH* graph_grid_create(int**, int, int, int);
+extern void   graph_grid_coordinates(int**, int**, int*, int, int);
 extern GRAPH* graph_copy(const GRAPH*);
 extern void   graph_flags(GRAPH*, int);
 extern void   graph_show(const GRAPH*);
