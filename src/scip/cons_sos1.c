@@ -1760,7 +1760,6 @@ SCIP_DECL_CONSPROP(consPropSOS1)
       SCIP_CONSDATA* consdata;
       SCIP_Bool cutoff;
 
-      *result = SCIP_DIDNOTFIND;
       assert( conss[c] != NULL );
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
