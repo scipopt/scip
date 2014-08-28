@@ -47,6 +47,7 @@ GRAPH* graph_init(
    p->ksize  = ksize;
    p->knots  = 0;
    p->terms  = 0;
+   p->stp_type = -1;
    p->flags  = flags;
    p->layers = layers;
    p->locals = malloc((size_t)layers * sizeof(int));

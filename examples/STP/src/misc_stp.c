@@ -93,6 +93,7 @@ NODE* SCIPlinkcuttreeFindMax(
    SCIP_Real max = -1;
    while( p != NULL )
    {
+      assert(p->edge >= 0);
       if( SCIPisGE(scip, cost[p->edge], max) )
       {
          max = cost[p->edge];
@@ -248,11 +249,13 @@ SCIP_RETCODE pairheapCombineSiblings(
          *size = *size * 2;
       }
 #endif
+      assert(size > nsiblings);
       treearray[nsiblings] = (*p);
       if( (*p)->prev != NULL )
          (*p)->prev->sibling = NULL;
       (*p) = (*p)->sibling;
    }
+   assert(size > nsiblings);
    treearray[nsiblings] = NULL;
 
 #if 0
@@ -347,7 +350,7 @@ void SCIPpairheapDeletemin(
       if( (*root)->child != NULL )
       {
 	 newroot = (*root)->child;
-         pairheapCombineSiblings(scip, &newroot, --(*size));
+         pairheapCombineSiblings(scip, &newroot, (*size)--);
       }
 
       SCIPfreeBuffer(scip, root);

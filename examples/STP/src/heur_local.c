@@ -340,7 +340,7 @@ SCIP_RETCODE do_local(
    nodes[root].edge = -1;
 
    /** VERTEX  INSERTION */
-   if( 1 )  /* TODO adapt function to directed graph */
+   if( 0 )  /* TODO adapt function to directed graph */
    {
       int newnode = 0;
       int oedge;
@@ -1045,6 +1045,7 @@ SCIP_RETCODE do_local(
 
                /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
                supergraph = graph_init(nsupernodes, nboundedges * 2, 1, 0);
+	       supergraph->stp_type = STP_UNDIRECTED;
 
                /* add vertices to the supergraph */
                for( k = 0; k < nsupernodes; k++ )
@@ -2030,17 +2031,18 @@ SCIP_RETCODE do_local(
    obj = 0.0;
    for( e = 0; e < nedges; e++)
       obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-   if( 1 )
+   /* if( 1 )
       printf(" ObjAfterHeurLocal=%.12e\n", obj);
-   /*
-     if(1)
-     {
-     const char base[] = "X/aft";
-     char filename [ FILENAME_MAX ];
-     sprintf(filename, "%s%d.gml", base, debcount++);
-     SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-     }
-   */
+
+      if(1)
+      {
+      const char base[] = "X/graphafterlocal";
+      char filename [ FILENAME_MAX ];
+      sprintf(filename, "%s.gml", base);
+      SCIP_CALL( printGraph(scip, graph, filename, best_result) );
+      assert(0);
+      }*/
+
    SCIPfreeBufferArray(scip, &nodes);
    SCIPfreeBufferArray(scip, &steinertree);
    return SCIP_OKAY;
@@ -2189,7 +2191,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( xval == NULL )
    {
       BMScopyMemoryArray(cost, graph->cost, graph->edges);
-      /* TODO chg. for asymmetric graphs */
+      /* TODO chg. for directed assym graphs */
       for( e = 0; e < graph->edges; e += 2 )
       {
          costrev[e] = cost[e + 1];
