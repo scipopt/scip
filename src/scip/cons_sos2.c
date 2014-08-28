@@ -793,6 +793,8 @@ SCIP_RETCODE propSOS2(
    int*                  ngen                /**< pointer to incremental counter for domain changes */
    )
 {
+   int ngenold;
+
    assert( scip != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
@@ -800,6 +802,7 @@ SCIP_RETCODE propSOS2(
    assert( ngen != NULL );
 
    *cutoff = FALSE;
+   ngenold = *ngen;
 
    /* if more than two variables are fixed to be nonzero */
    if ( consdata->nfixednonzeros > 2 )
@@ -818,7 +821,6 @@ SCIP_RETCODE propSOS2(
       SCIP_Bool tightened;
       SCIP_Bool success;
       int firstFixedNonzero;
-      int ngenold;
       int nvars;
       int j;
 
@@ -826,7 +828,6 @@ SCIP_RETCODE propSOS2(
       nvars = consdata->nvars;
       vars = consdata->vars;
       assert( vars != NULL );
-      ngenold = ngen;
 
       /* search nonzero variable */
       for (j = 0; j < nvars; ++j)
