@@ -1073,6 +1073,22 @@ SCIP_Bool SCIPisPresolveFinished(
    return finished;
 }
 
+/** returns whether SCIP has performed presolving during the last solve
+ *
+ *  @return Returns TRUE if presolving was performed during the last solve
+ */
+SCIP_Bool SCIPhasPerformedPresolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPerformedPresolve", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->performpresol;
+}
+
 /** returns whether the user pressed CTRL-C to interrupt the solving process
  *
  *  @return Returns TRUE if Ctrl-C was pressed, otherwise FALSE.

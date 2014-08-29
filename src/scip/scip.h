@@ -336,6 +336,15 @@ SCIP_Bool SCIPisPresolveFinished(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether SCIP has performed presolving during the last solve
+ *
+ *  @return Returns TRUE if presolving was performed during the last solve
+ */
+EXTERN
+SCIP_Bool SCIPhasPerformedPresolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether the user pressed CTRL-C to interrupt the solving process
  *
  *  @return Returns TRUE if Ctrl-C was pressed, otherwise FALSE.
@@ -15644,6 +15653,9 @@ SCIP_RETCODE SCIPprintTransSol(
    );
 
 /** outputs dual solution from LP solver to file stream
+ *
+ *  @note This only works if no presolving has been performed, which can be checked by calling method \ref
+ *        SCIPhasPerformedPresolve().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

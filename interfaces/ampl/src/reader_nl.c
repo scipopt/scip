@@ -1291,6 +1291,7 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
    SCIP_Real* x;
+   SCIP_Real* y;
    const char* msg;
    ASL* asl;
 
@@ -1352,6 +1353,7 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
          return SCIP_INVALIDDATA;
    }
 
+   /* get best primal solution */
    x = NULL;
    if( SCIPgetBestSol(scip) != NULL )
    {
@@ -1359,10 +1361,48 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
       SCIP_CALL( SCIPgetSolVals(scip, SCIPgetBestSol(scip), probdata->nvars, probdata->vars, x) );
    }
 
+   /* if the problem is an LP and presolving was turned off, then we try to return the vector of dual multipliers */
+   y = NULL;
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && !SCIPhasPerformedPresolve(scip) && SCIPgetNVars(scip) == SCIPgetNContVars(scip) )
+   {
+      SCIP_CONSHDLR* linconshdlr;
+      SCIP_CONS** conss;
+      int nconss;
+      int c;
+
+      linconshdlr = SCIPfindConshdlr(scip, "linear");
+      assert(linconshdlr != NULL);
+
+      conss = SCIPgetConss(scip);
+      nconss = SCIPgetNConss(scip);
+      assert(conss != NULL);
+      assert(nconss >= 0);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &y, nconss) );
+
+      for( c = 0; c < SCIPgetNConss(scip); ++c )
+      {
+         SCIP_CONS* transcons;
+
+         /* dual solution is created by LP solver and therefore only available for linear constraints */
+         SCIP_CALL( SCIPgetTransformedCons(scip, conss[c], &transcons) );
+         if( transcons == NULL || SCIPconsGetHdlr(transcons) != linconshdlr )
+         {
+            SCIPfreeBufferArray(scip, &y);
+            y = NULL;
+            break;
+         }
+
+         y[c] = SCIPgetDualsolLinear(scip, transcons);
+         assert(y[c] != SCIP_INVALID); /*lint !e777*/
+      }
+   }
+
    asl = probdata->asl;
-   write_sol((char*)msg, x, NULL, NULL);
+   write_sol((char*)msg, x, y, NULL);
 
    SCIPfreeBufferArrayNull(scip, &x);
+   SCIPfreeBufferArrayNull(scip, &y);
 
    return SCIP_OKAY;
 }
