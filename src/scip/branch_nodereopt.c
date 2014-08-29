@@ -5362,7 +5362,7 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
    if (!branchruledata->init)
    {
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/enable", &branchruledata->reopt));
-      if (branchruledata->reopt && SCIPgetNOrigImplVars(scip) + SCIPgetNOrigIntVars(scip) > 0)
+      if (branchruledata->reopt && SCIPgetNOrigIntVars(scip) > 0)
       {
          branchruledata->reopt = FALSE;
          printf(">> reoptimization is disabled, because the problem has non binary variables.\n");
