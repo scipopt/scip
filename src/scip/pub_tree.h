@@ -108,6 +108,20 @@ void SCIPnodeGetAncestorBranchingsReopt(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
+/*
+ * SPECIAL FOR REOPTIMIZATION: return all bound changes applied after the first dual reduction
+ */
+EXTERN
+void SCIPnodeGetAfterDualBranchingsReopt(
+   SCIP_NODE*            node,
+   SCIP_VAR**            vars,
+   SCIP_Real*            varbounds,
+   SCIP_BOUNDTYPE*       varboundtypes,
+   int                   start,
+   int*                  nbranchvars,
+   int                   branchvarssize
+   );
+
 EXTERN
 void SCIPnodeGetConsAndPropReopt(
    SCIP_NODE*            node,               /**< node data */

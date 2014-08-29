@@ -1383,7 +1383,7 @@ SCIP_RETCODE addLocalConsToNode(
       SCIP_VAR** vars;
       SCIP_Bool initial;
       SCIP_Bool sepa;
-      char* consname;
+      const char* consname;
       int varnr;
 
       /** copy variables and negate them if necessary */
@@ -1846,9 +1846,6 @@ SCIP_RETCODE moveChildrenUp(
    int                   parentID
 )
 {
-   SCIP_NODE** children;
-   int nchildren;
-   int child;
    int childID;
    int varnr;
    int nvars;
@@ -2367,8 +2364,6 @@ SCIP_RETCODE genLC(
 {
    int consID;
    int nodeID;
-   int parentID;
-   int cons;
    int var;
    int newID;
 
@@ -2543,68 +2538,6 @@ SCIP_RETCODE genLC(
 
    /* stop time */
    SCIP_CALL( SCIPstopClock(scip, branchruledata->lctime) );
-
-   return SCIP_OKAY;
-}
-
-/*
- * collect the constraints along the root path
- */
-static
-SCIP_RETCODE getConsAlongPath(
-   SCIP*                 scip,
-   SCIP_BRANCHRULEDATA*  branchruledata,
-   int                   nodeID,
-   LOGICORDATA**         consdata,
-   int*                  ncons
-)
-{
-   int parentID;
-   int cons;
-
-   assert(scip != NULL);
-   assert(branchruledata != NULL);
-   assert(nodeID >= 0);
-   assert(nodeID < branchruledata->allocmemsizenodedata);
-   assert(consdata != NULL || *ncons == 0);
-
-   parentID = nodeID;
-   cons = 0;
-   while( parentID != 0 && cons < *ncons )
-   {
-      assert(branchruledata->nodedata[parentID] != NULL);
-      if( branchruledata->nodedata[parentID]->conss != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->conss) )
-      {
-         int nconss;
-         int nconssseen;
-         LOGICORDATA* ccons;
-
-         nconss = SCIPqueueNElems(branchruledata->nodedata[parentID]->conss);
-         nconssseen = 0;
-
-         while( nconssseen < nconss )
-         {
-            ccons = (LOGICORDATA*) SCIPqueueRemove(branchruledata->nodedata[parentID]->conss);
-
-            if( ccons->constype == REOPT_CONSTYPE_STRBRANCHED )
-            {
-               SCIP_CALL( SCIPallocMemory(scip, &consdata[cons]) );
-               SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata[cons]->vars, ccons->vars, ccons->nvars) );
-               SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata[cons]->vals, ccons->vals, ccons->nvars) );
-               consdata[cons]->nvars = ccons->nvars;
-               consdata[cons]->constype = ccons->constype;
-               cons++;
-            }
-            nconssseen++;
-
-            SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[parentID]->conss, (void*) ccons) );
-         }
-
-      }
-      parentID = branchruledata->nodedata[parentID]->parentID;
-   }
-
-   *ncons = cons;
 
    return SCIP_OKAY;
 }
@@ -3241,63 +3174,6 @@ SCIP_RETCODE runHeuristics(
    return SCIP_OKAY;
 }
 
-/*
- * save current best feasible solution
- */
-static
-SCIP_RETCODE saveSol(
-   SCIP*                 scip,
-   SCIP_BRANCHRULEDATA*  branchruledata,
-   int                   nodeID
-)
-{
-   SCIP_VAR** vars;
-   int nsols;
-   int var;
-
-   assert(scip != NULL);
-   assert(branchruledata != NULL);
-   assert(0 <= nodeID);
-   assert(nodeID < branchruledata->allocmemsizenodedata);
-   assert(branchruledata->nodedata[nodeID] != NULL);
-   assert(SCIPhasCurrentNodeLP(scip));
-
-   /* allocate memory if node LP solutions exists */
-   if( branchruledata->nodedata[nodeID]->soldata == NULL )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->nodedata[nodeID]->soldata) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->soldata->vars, 10) );
-      branchruledata->nodedata[nodeID]->soldata->nsols = 0;
-      branchruledata->nodedata[nodeID]->soldata->size = 10;
-   }
-   else if( branchruledata->nodedata[nodeID]->soldata->nsols == branchruledata->nodedata[nodeID]->soldata->size-1 )
-   {
-      branchruledata->nodedata[nodeID]->soldata->size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->soldata->vars, branchruledata->nodedata[nodeID]->soldata->size) );
-   }
-
-   assert(branchruledata->nodedata[nodeID]->soldata->nsols+1 < branchruledata->nodedata[nodeID]->soldata->size);
-
-   /* allocate memory and save the solution values */
-   SCIPdebugMessage("save LP solution at nodeID %d:\n", nodeID);
-   SCIPdebugMessage(" -> nsols: %d\n", branchruledata->nodedata[nodeID]->soldata->nsols+1);
-
-   nsols = branchruledata->nodedata[nodeID]->soldata->nsols;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->soldata->vars[nsols], SCIPgetNOrigVars(scip)) );
-
-   vars = SCIPgetOrigVars(scip);
-   for(var = 0; var < SCIPgetNOrigVars(scip); var++)
-   {
-      int idx;
-      idx = SCIPvarGetIndex(vars[var]);
-      branchruledata->nodedata[nodeID]->soldata->vars[nsols][idx] = SCIPvarGetSol(vars[var], TRUE);
-      SCIPdebugMessage("  <%s> = %g\n", SCIPvarGetName(vars[var]), SCIPvarGetSol(vars[var], TRUE));
-   }
-   branchruledata->nodedata[nodeID]->soldata->nsols++;
-
-   return SCIP_OKAY;
-}
-
 static
 SCIP_Real getCutoffbound(
    SCIP*                 scip,
@@ -3503,16 +3379,10 @@ SCIP_RETCODE Exec(
     */
    if(SCIPgetRootNode(scip) == SCIPgetCurrentNode(scip) && branchruledata->nodedata[0]->dualcons[0] != NULL)
    {
-      SCIP_NODE* child1;
-      SCIP_NODE* child2;
       LOGICORDATA* consdata;
       int child1_ID;
       int child2_ID;
-      int nvars;
       int v;
-
-      child1 = NULL;
-      child2 = NULL;
 
       assert(branchruledata->nodedata[0]->dualcons[0] != NULL);
       assert(branchruledata->nodedata[0]->dualcons[0]->vars != NULL);
@@ -3814,8 +3684,6 @@ SCIP_RETCODE Exec(
       /** the node at position childID was strongbranched, we have to split this node */
       if (branchruledata->nodedata[childID]->dualcons[0] != NULL )
       {
-         int nvars;
-
          assert(branchruledata->nodedata[childID]->reopttype == SCIP_REOPTTYPE_STRBRANCHED
              || branchruledata->nodedata[childID]->reopttype == SCIP_REOPTTYPE_INFSUBTREE);
 
@@ -3976,8 +3844,6 @@ SCIP_RETCODE Exec(
          assert(branchruledata->nodedata[childID] != NULL);
          SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, child2, SCIP_REOPTTYPE_LEAF, TRUE) );
       }
-
-      SKIPCHILD:
 
       curChild++;
    }
