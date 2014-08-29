@@ -444,7 +444,8 @@ bool univariate_rev_sparse_hes(
    v = u;
    if( s[0] )
       for( size_t j = 0; j < q; ++j )
-         v[j] = v[j] || r[j];
+         if( r[j] )
+            v[j] = true;
 
    return true;
 }
