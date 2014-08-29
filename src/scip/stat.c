@@ -305,7 +305,6 @@ void SCIPstatResetPresolving(
    stat->npresolupgdconss = 0;
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;
-   stat->performpresol = FALSE;
 
    SCIPstatResetCurrentRun(stat, FALSE);
 }
