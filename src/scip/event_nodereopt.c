@@ -31,8 +31,6 @@
 #define EVENTHDLR_NAME         "nodereopt"
 #define EVENTHDLR_DESC         "event handler for nodereopt event"
 
-//#define DEBUG_MODE
-
 /** event handler data */
 struct SCIP_EventhdlrData
 {
@@ -143,19 +141,19 @@ checkCutoffReason(
             SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
             SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
 
-            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED, TRUE) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
             SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
 
-            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_LOGICORNODE) );
+            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_LOGICORNODE, TRUE) );
          }
          else
          {
             SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
 
-            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT) );
+            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT, TRUE) );
          }
       }
       else
@@ -176,19 +174,19 @@ checkCutoffReason(
             SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
 
             SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
-            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED, TRUE) );
          }
          else if( SCIPbranchruleNodereoptGetNAddedConss(scip, eventnode) > 0 )
          {
             SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
 
-            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_LOGICORNODE) );
+            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_LOGICORNODE, TRUE) );
          }
          else
          {
             SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
 
-            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT) );
+            SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT, TRUE) );
          }
       }
       break;
@@ -215,14 +213,14 @@ checkCutoffReason(
                SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
 
                SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_FEASIBLE);
-               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE));
+               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE, FALSE));
             }
             else
             {
                SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
                SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
 
-               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED));
+               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED, TRUE));
             }
          }
          else if(SCIPnodeGetDepth(eventnode) > SCIPgetEffectiveRootDepth(scip) )
@@ -230,7 +228,7 @@ checkCutoffReason(
             if( !eventhdlrdata->strbrinleafs )
             {
                SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_FEASIBLE);
-               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE) );
+               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE, FALSE) );
             }
             else
             {
@@ -238,7 +236,7 @@ checkCutoffReason(
                SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
 
                SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
-               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED, TRUE) );
             }
          }
       }
@@ -246,7 +244,7 @@ checkCutoffReason(
       {
          /* if the node was created by branch_nodereopt, only the LP basis will be refreshed (if enabled) */
          SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_FEASIBLE);
-         SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE));
+         SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE, TRUE));
       }
 
       break;
@@ -292,7 +290,7 @@ checkCutoffReason(
                SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_INFSUBTREE);
 
                /* save the node as a strong branched node */
-               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_INFSUBTREE) );
+               SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_INFSUBTREE, FALSE) );
             }
             else
             {
@@ -306,14 +304,14 @@ checkCutoffReason(
                      SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
 
                      SCIP_CALL(SCIPbranchrulePseudoDeleteLastNodeInfo(scip, eventnode));
-                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED) );
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED, FALSE) );
                   }
                   else
                   {
                      SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
                      SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
 
-                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED, TRUE) );
                   }
                }
                else
@@ -321,7 +319,7 @@ checkCutoffReason(
                   if( !eventhdlrdata->strbrinleafs )
                   {
                      SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
-                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED) );
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED, FALSE) );
                   }
                   else
                   {
@@ -329,7 +327,7 @@ checkCutoffReason(
                      SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
 
                      SCIP_CALL( SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, NULL, SCIP_BOUNDTYPE_LOWER, -1) );
-                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED) );
+                     SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_STRBRANCHED, TRUE) );
                   }
                }
             }
@@ -353,7 +351,7 @@ checkCutoffReason(
                SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
 
                /* store the node */
-               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+               SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED, TRUE));
             }
          }
       }
@@ -362,7 +360,7 @@ checkCutoffReason(
          SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
 
          /* if the node was created by branch_nodereopt, nothing happens */
-         SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED));
+         SCIP_CALL(SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED, TRUE));
 
       }
 
@@ -587,18 +585,18 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
       }
       else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED)
       {
-         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT) );
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_TRANSIT, FALSE) );
       }
       else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFEASIBLE)
       {
-         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE) );
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_FEASIBLE, FALSE) );
       }
       else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE
             && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE)
          assert(FALSE);
       else if (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE)
       {
-         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED) );
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, eventnode, SCIP_REOPTTYPE_PRUNED, FALSE) );
       }
 
       return SCIP_OKAY;

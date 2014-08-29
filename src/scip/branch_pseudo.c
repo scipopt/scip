@@ -357,11 +357,12 @@ SCIP_Bool SCIPbranchrulePseudoIsPseudoBranched(
     && branchruledata->nodeID == 0 )
       return TRUE;
 
-   else if( node != SCIPgetRootNode(scip)
-         && branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] != 0
-         && branchruledata->consdata[branchruledata->nodetoid[SCIPnodeGetNumber(node)-1]]->nvars > 0 )
+   else if( node != SCIPgetRootNode(scip) && SCIPnodeGetNumber(node) < branchruledata->allocmemsizenodeID )
+   {
+      if( branchruledata->nodetoid[SCIPnodeGetNumber(node)-1] != 0
+       && branchruledata->consdata[branchruledata->nodetoid[SCIPnodeGetNumber(node)-1]]->nvars > 0 )
       return TRUE;
-
+   }
    return FALSE;
 }
 
@@ -448,8 +449,8 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
          branchruledata->consdata[branchruledata->nodeID]->vals[0] = newbound;
          branchruledata->consdata[branchruledata->nodeID]->nvars = 1;
 
-         assert( branchruledata->consdata[branchruledata->nodeID]->vals[0] == 0
-               || branchruledata->consdata[branchruledata->nodeID]->vals[0] == 1 );
+         assert( SCIPisFeasEQ(scip, branchruledata->consdata[branchruledata->nodeID]->vals[0], 0 )
+              || SCIPisFeasEQ(scip, branchruledata->consdata[branchruledata->nodeID]->vals[0], 1) );
       }
 
       branchruledata->newnode = FALSE;
@@ -472,7 +473,7 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
 
       assert(var != NULL);
       assert(newbound != -1);
-      assert(0 == newbound || newbound == 1);
+      assert( SCIPisFeasEQ(scip, newbound, 0) || SCIPisFeasEQ(scip, newbound, 1) );
       assert(branchruledata->consdata[branchruledata->nodeID] != NULL);
       assert(branchruledata->consdata[branchruledata->nodeID]->allocmem > 0);
       assert(branchruledata->consdata[branchruledata->nodeID]->nvars >= 1);
@@ -512,8 +513,8 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
       branchruledata->consdata[branchruledata->nodeID]->vals[pbvars] = newbound;
       branchruledata->consdata[branchruledata->nodeID]->nvars++;
 
-      assert( branchruledata->consdata[branchruledata->nodeID]->vals[pbvars] == 0
-            || branchruledata->consdata[branchruledata->nodeID]->vals[pbvars] == 1 );
+      assert( SCIPisFeasEQ(scip, branchruledata->consdata[branchruledata->nodeID]->vals[pbvars], 0)
+           || SCIPisFeasEQ(scip, branchruledata->consdata[branchruledata->nodeID]->vals[pbvars], 1) );
    }
 
    return SCIP_OKAY;
@@ -719,7 +720,10 @@ SCIP_RETCODE SCIPbranchrulePseudoReset(
 
    branchruledata->lastseennode = -1;
    branchruledata->newnode = TRUE;
-   branchruledata->nrpseudobranchednodes = branchruledata->consdata[0]->nvars > 0 ? 1 : 0;
+   if( exceptroot )
+      branchruledata->nrpseudobranchednodes = ( branchruledata->consdata[0] == NULL ? 0 : branchruledata->consdata[0]->nvars > 0 ? 1 : 0 );
+   else
+      branchruledata->nrpseudobranchednodes = 0;
 
    return SCIP_OKAY;
 }

@@ -54,6 +54,7 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/pub_misc.h"
+#include "scip/branch_nodereopt.h"
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
@@ -4148,6 +4149,11 @@ SCIP_RETCODE SCIPsolveCIP(
 
       assert(eventthrown == FALSE);
 
+      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) )
+      {
+         SCIP_CALL( SCIPbranchruledataNodereoptLPTimeStart(set->scip) );
+      }
+
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore, branchcand,
             cutpool, delayedcutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur, &stopped) );
@@ -4155,6 +4161,11 @@ SCIP_RETCODE SCIPsolveCIP(
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
       assert(SCIPtreeGetFocusNode(tree) == focusnode);
+
+      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) )
+      {
+         SCIP_CALL( SCIPbranchruledataNodereoptLPTimeStop(set->scip) );
+      }
 
       if( stopped )
          break;

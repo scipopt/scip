@@ -2387,8 +2387,13 @@ SCIP_RETCODE SCIPcopyConss(
        * were locally added during the search and we are currently in a node which belongs to the
        * corresponding subtree.
        */
-      nsourceconss = SCIPconshdlrGetNActiveConss(sourceconshdlrs[i]);
+      if( global )
+         nsourceconss = SCIPconshdlrGetNConss(sourceconshdlrs[i]);
+      else
+         nsourceconss = SCIPconshdlrGetNActiveConss(sourceconshdlrs[i]);
       sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
+
+
 
 #if 0
       /* @todo using the following might reduce the number of copied constraints - check whether this is better */
@@ -2412,13 +2417,13 @@ SCIP_RETCODE SCIPcopyConss(
       {
          /* all constraints have to be active */
          assert(sourceconss[c] != NULL);
-         assert(SCIPconsIsActive(sourceconss[c]));
+         //assert(SCIPconsIsActive(sourceconss[c]));
          assert(!SCIPconsIsDeleted(sourceconss[c]));
 
          /* in case of copying the global problem we have to ignore the local constraints which are active */
          if( global && SCIPconsIsLocal(sourceconss[c]) )
          {
-            SCIPdebugMessage("did not copy active local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
+            SCIPdebugMessage("did not copy local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
 
@@ -11160,7 +11165,13 @@ SCIP_RETCODE SCIPdelConsLocal(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       node = SCIPtreeGetCurrentNode(scip->tree);
-      if( SCIPnodeGetDepth(node) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
+
+      /* we must not use the effective root depth, because we still need the constraint for a potential global copy
+       * (local bounds of the effective root might have been used for deciding redundantness of the constraint,
+       *  but they might differ from the global bounds)
+       * @todo should we rather apply the local domains of the effective root as global bounds?
+       */
+      if( SCIPnodeGetDepth(node) == 0 )
       {
          SCIP_CALL( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
       }
@@ -11745,7 +11756,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->reopt_enable && scip->stat->reopt_nruns >= 1 )
    {
-      SCIP_CALL( SCIPreoptUpdateSols(scip, scip->reopt, scip->set->reopt_savesols, scip->set->reopt_objsim, scip->set->reopt_sepabestsol) );
+      SCIP_CALL( SCIPreoptUpdateSols(scip, scip->reopt, scip->set->reopt_savesols, scip->set->reopt_objsimsol, scip->set->reopt_sepabestsol) );
    }
 //   if( !scip->set->reopt_enable || scip->stat->reopt_nruns < 1 )
    else
@@ -13382,8 +13393,7 @@ SCIP_RETCODE SCIPsolve(
             SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
          }
 
-         if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL
-          || (s == 0 && scip->set->reopt_sepabestsol) )
+         if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL || (s == 0 && scip->set->reopt_sepabestsol) )
          {
             if( s != 0 || !scip->set->reopt_sepabestsol )
             {
@@ -13401,7 +13411,7 @@ SCIP_RETCODE SCIPsolve(
             {
                if( scip->set->reopt_sepaglbsols && added )
                {
-                 if( SCIPsolGetNodenum(sol) == 0 && SCIPsolGetHeur(sol) == NULL)
+                 if( SCIPsolGetHeur(sol) == NULL )
                  {
                     SCIP_CALL( SCIPbranchruleNodereoptSaveGlobaleCons(scip, sol, scip->set, scip->stat) );
                  }
@@ -13431,7 +13441,10 @@ SCIP_RETCODE SCIPsolve(
       SCIP_Real clocktime;
 
       SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &remainingtime));
-      clocktime = SCIPgetSolvingTime(scip);
+      if( scip->stat->reopt_nruns == 1 )
+         clocktime = SCIPgetSolvingTime(scip);
+      else
+         clocktime = SCIPgetSolvingTime(scip) - SCIPgetPresolvingTime(scip);
       SCIP_CALL(SCIPsetRealParam(scip, "limits/time", MAX(0, remainingtime - clocktime)));
    }
 
@@ -35752,11 +35765,18 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    int lcsuccess;
    int lck;
    SCIP_Real lctime;
+   SCIP_Real lptime;
+   SCIP_Real lptime_maxthread;
+   SCIP_Real solving;
+   SCIP_Real presolving;
 
    SCIP_CALL( checkStage(scip, "SCIPprintReoptStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    nsolssaved = scip->set->reopt_enable ? SCIPreoptNSavedSols(scip->reopt) : 0;
    nsolsused = scip->set->reopt_enable ? SCIPreoptNUsedSols(scip->reopt) : 0;
+
+   solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
+   presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
 
    nrestarts = 0;
    firstrestart = 0;
@@ -35769,6 +35789,9 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    lcsuccess = 0;
    lck = 0;
    lctime = 0;
+   lptime = 0;
+   lptime_maxthread = 0;
+
 
    if( scip->set->reopt_enable )
    {
@@ -35779,7 +35802,10 @@ SCIP_RETCODE SCIPprintReoptStatistics(
                &scip->stat->reopt_rediednodesoverall, &scip->stat->reopt_rediednodes,
                &scip->stat->reopt_nruns, &nrestarts, &firstrestart, &lastrestart, NULL,
                &scip->stat->reopt_infsubtrees, &liscalls, &lissuccess, &lisk, &listime,
-               &lccalls, &lcsuccess, &lck, &lctime) );
+               &lccalls, &lcsuccess, &lck, &lctime, &lptime, &lptime_maxthread) );
+
+      presolving /= scip->stat->reopt_nruns;
+      solving -= (scip->stat->reopt_nruns - 1)*presolving;
 
    }
    else
@@ -35800,12 +35826,14 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    scip->stat->reopt_nruns++;
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->reopt_nruns);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time               :\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtimeoverall));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time         (sec) :\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solving);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", presolving);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  init time        : %10.2f\n", SCIPclockGetTime(scip->stat->revivetimeoverall) + SCIPclockGetTime(scip->stat->updatesolutimeoverall));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  update time      : %10.2f (included in init)\n", SCIPclockGetTime(scip->stat->updatesolutimeoverall));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  save time  (sec) : %10.2f\n", SCIPclockGetTime(scip->stat->savetimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  save time        : %10.2f\n", SCIPclockGetTime(scip->stat->savetimeoverall));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  hypoth. Threads  : %10d %10d\n", 1, 8);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "    LP time        : %10.2f %10.2f\n", lptime, lptime_maxthread);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Nodes              :       feas     infeas     pruned     redied\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
          scip->stat->reopt_feasnodesoverall, scip->stat->reopt_infeasnodesoverall,

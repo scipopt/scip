@@ -72,16 +72,27 @@ struct NodeData
    SCIP_VAR**            vars;
    SCIP_Real*            varbounds;
    SCIP_BOUNDTYPE*       varboundtypes;
+
+   SCIP_VAR**            afterdualvars;
+   SCIP_Real*            afterdualvarbounds;
+   SCIP_BOUNDTYPE*       afterdualvarboundtypes;
+
    SCIP_Bool             pseudobranched;
    SCIP_QUEUE*           nodechilds;
    SCIP_LPISTATE*        lpistate;
    SCIP_QUEUE*           conss;
    LOGICORDATA**         dualcons;
+   LOGICORDATA*          consandprop;
    SOLDATA*              soldata;
+
    int                   nvars;
+   int                   nafterdualvars;
+
    int                   parentID;
    SCIP_REOPTTYPE        reopttype;
+
    int                   allocmem;
+   int                   afterdualallocmem;
 };
 typedef struct NodeData NODEDATA;
 
@@ -147,6 +158,11 @@ struct SCIP_BranchruleData
    SCIP_CLOCK*           updatesolutime;          /** time needed to update solutions */
    SCIP_CLOCK*           savetime;                /** time needed to save nodes */
 
+   /** time for hypothetical multi-threading with 8 cores */
+   SCIP_CLOCK**          threadclock;
+   SCIP_CLOCK*           lpclock;
+   int                   nlp;
+
    /** Parameter stuff */
    SCIP_Bool             reopt;                   /** boolean flag if the reoptimization should enabled. */
    SCIP_Bool             restart;                 /** should the problem be restarted? */
@@ -155,7 +171,8 @@ struct SCIP_BranchruleData
                                                       calculated depending on number of variables? */
    SCIP_Bool             sepabestsol;             /** should the best solution be separated and forbidden, i.e, constraint shortest path? */
    SCIP_Bool             sepalocsols;             /** save local constraints */
-   SCIP_Bool             useoldlpssols;           /** use LP solution from previous iterations to improve the cutoff bound */
+
+   SCIP_Real             objsimrootLP;            /** similarity of two sequential objective function to disable solving the root LP. */
 
    int                   maxsavednodes;           /** maximal number of saved nodes for the reoptimization */
    int                   maxdiffofnodes;          /** maximal number of bound changes in two ancestor nodes such that
@@ -168,6 +185,8 @@ struct SCIP_BranchruleData
    /** heuristic */
    int                   cpressnodes;             /** type of nodes which should compressed 0: all, 1: pruned, 2: feasible */
    SCIP_Bool             reducetofrontier;        /** delete nodes which were not revived in the last iteration */
+   SCIP_Bool             shrink;                  /** shrink transit nodes */
+   SCIP_Bool             strongbranchinginit;     /** strong branching at the root nodes */
 
    SCIP_CLOCK*           listime;                 /** time spend in LIS heuristic */
    SCIP_Real             lisloss;                 /** loss of the last LIS */
@@ -253,14 +272,12 @@ SCIP_RETCODE saveLocalConssData(
          SCIPallocMemory(scip, &consdata);
 
          consdata->nvars = SCIPgetNVarsLogicor(scip, addedcons[consnr]);
-         if( strcmp("globalsepasolution", SCIPconsGetName(addedcons[consnr])) == 0
-          || strcmp("localsepasolution", SCIPconsGetName(addedcons[consnr])) == 0 )
+
+         if( strcmp("sepasolution", SCIPconsGetName(addedcons[consnr])) == 0 )
             consdata->constype = REOPT_CONSTYPE_SEPASOLUTION;
-         else if( strcmp("globalinfsubtree", SCIPconsGetName(addedcons[consnr])) == 0
-               || strcmp("localinfsubtree", SCIPconsGetName(addedcons[consnr])) == 0 )
+         else if( strcmp("infsubtree", SCIPconsGetName(addedcons[consnr])) == 0 )
             consdata->constype = REOPT_CONSTYPE_INFSUBTREE;
-         else if( strcmp("globalstrbranch", SCIPconsGetName(addedcons[consnr])) == 0
-               || strcmp("localstrbranch", SCIPconsGetName(addedcons[consnr])) == 0 )
+         else if( strcmp("strbranch", SCIPconsGetName(addedcons[consnr])) == 0 )
             consdata->constype = REOPT_CONSTYPE_STRBRANCHED;
 
          assert(consdata->constype == REOPT_CONSTYPE_SEPASOLUTION
@@ -405,13 +422,18 @@ SCIP_RETCODE initNode(
       branchruledata->nodedata[nodeID]->lpistate = NULL;
       branchruledata->nodedata[nodeID]->nodechilds = NULL;
       branchruledata->nodedata[nodeID]->nvars = 0;
+      branchruledata->nodedata[nodeID]->nafterdualvars = 0;
       branchruledata->nodedata[nodeID]->parentID = -1;
       branchruledata->nodedata[nodeID]->pseudobranched = FALSE;
       branchruledata->nodedata[nodeID]->reopttype = SCIP_REOPTTYPE_NONE;
       branchruledata->nodedata[nodeID]->allocmem = 0;
+      branchruledata->nodedata[nodeID]->afterdualallocmem = 0;
       branchruledata->nodedata[nodeID]->vars = NULL;
       branchruledata->nodedata[nodeID]->varbounds = NULL;
       branchruledata->nodedata[nodeID]->varboundtypes = NULL;
+      branchruledata->nodedata[nodeID]->afterdualvars = NULL;
+      branchruledata->nodedata[nodeID]->afterdualvarbounds = NULL;
+      branchruledata->nodedata[nodeID]->afterdualvarboundtypes = NULL;
       branchruledata->nodedata[nodeID]->soldata = NULL;
 
       /* [0] : constraint of the last iteration (need to add in this iteration);
@@ -419,6 +441,8 @@ SCIP_RETCODE initNode(
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[nodeID]->dualcons, 2) );
       branchruledata->nodedata[nodeID]->dualcons[0] = NULL;
       branchruledata->nodedata[nodeID]->dualcons[1] = NULL;
+
+      branchruledata->nodedata[nodeID]->consandprop = NULL;
    }
    else
    {
@@ -447,6 +471,7 @@ SCIP_RETCODE transformIntoOrig(
    assert(nodeID >= 1);
    assert(branchruledata->nodedata[nodeID] != NULL );
 
+   /* transform branching variables and bound changes applied before the first dual reduction */
    for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
    {
       SCIP_Real constant;
@@ -461,6 +486,23 @@ SCIP_RETCODE transformIntoOrig(
          branchruledata->nodedata[nodeID]->varbounds[varnr] = (branchruledata->nodedata[nodeID]->varbounds[varnr] - constant) / scalar;
       }
       assert(SCIPvarIsOriginal(branchruledata->nodedata[nodeID]->vars[varnr]));
+   }
+
+   /* transform bound changes applied after the first dual reduction */
+   for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nafterdualvars; varnr++)
+   {
+      SCIP_Real constant;
+      SCIP_Real scalar;
+
+      scalar = 1;
+      constant = 0;
+
+      if(!SCIPvarIsOriginal(branchruledata->nodedata[nodeID]->afterdualvars[varnr]))
+      {
+         SCIP_CALL( SCIPvarGetOrigvarSum(&branchruledata->nodedata[nodeID]->afterdualvars[varnr], &scalar, &constant)) ;
+         branchruledata->nodedata[nodeID]->afterdualvarbounds[varnr] = (branchruledata->nodedata[nodeID]->afterdualvarbounds[varnr] - constant) / scalar;
+      }
+      assert(SCIPvarIsOriginal(branchruledata->nodedata[nodeID]->afterdualvars[varnr]));
    }
 
    return SCIP_OKAY;
@@ -551,7 +593,7 @@ SCIP_RETCODE saveAncestorBranchings(
       assert(branchruledata->nodedata[nodeID]->varboundtypes == NULL );
 
       /** Allocate memory for node information */
-      branchruledata->nodedata[nodeID]->allocmem = SCIPgetNOrigVars(scip);
+      branchruledata->nodedata[nodeID]->allocmem = 10;
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->vars), branchruledata->nodedata[nodeID]->allocmem) );
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->varbounds), branchruledata->nodedata[nodeID]->allocmem) );
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->varboundtypes), branchruledata->nodedata[nodeID]->allocmem) );
@@ -582,8 +624,77 @@ SCIP_RETCODE saveAncestorBranchings(
    assert(nbranchvars <= branchruledata->nodedata[nodeID]->allocmem);
    assert(branchruledata->nodedata[nodeID]->vars != NULL );
 
-   /** transform the bounds of branched variables and ensure that they are original. */
-   SCIP_CALL( transformIntoOrig(scip, branchruledata, nodeID) );
+   return SCIP_OKAY;
+}
+
+/*
+ * save bound changes made after dual operations, e.g. strong branching.
+ */
+static
+SCIP_RETCODE saveAfterDualBranchings(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata,
+   SCIP_NODE*            node,
+   int                   nodeID
+)
+{
+   int nbranchvars;
+
+   assert(scip != NULL);
+   assert(branchruledata != NULL);
+   assert(node != NULL);
+   assert(0 < nodeID && nodeID < branchruledata->allocmemsizenodedata);
+   assert(branchruledata->nodedata[nodeID] != NULL );
+
+   /* allocate memory */
+   if (branchruledata->nodedata[nodeID]->afterdualallocmem == 0)
+   {
+      assert(branchruledata->nodedata[nodeID]->afterdualvars == NULL );
+      assert(branchruledata->nodedata[nodeID]->afterdualvarbounds == NULL );
+      assert(branchruledata->nodedata[nodeID]->afterdualvarboundtypes == NULL );
+
+      /** Allocate memory for node information */
+      branchruledata->nodedata[nodeID]->afterdualallocmem = 10;
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->afterdualvars), branchruledata->nodedata[nodeID]->afterdualallocmem) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->afterdualvarbounds), branchruledata->nodedata[nodeID]->afterdualallocmem) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(branchruledata->nodedata[nodeID]->afterdualvarboundtypes), branchruledata->nodedata[nodeID]->afterdualallocmem) );
+   }
+
+   assert(branchruledata->nodedata[nodeID]->afterdualallocmem > 0);
+   assert(branchruledata->nodedata[nodeID]->nafterdualvars >= 0);
+
+   SCIPnodeGetAfterDualBranchingsReopt(node,
+         branchruledata->nodedata[nodeID]->afterdualvars,
+         branchruledata->nodedata[nodeID]->afterdualvarbounds,
+         branchruledata->nodedata[nodeID]->afterdualvarboundtypes,
+         branchruledata->nodedata[nodeID]->nafterdualvars,
+         &nbranchvars,
+         branchruledata->nodedata[nodeID]->afterdualallocmem - branchruledata->nodedata[nodeID]->nafterdualvars);
+
+   if( nbranchvars > branchruledata->nodedata[nodeID]->afterdualallocmem - branchruledata->nodedata[nodeID]->nafterdualvars)
+   {
+      int newsize;
+      newsize = branchruledata->nodedata[nodeID]->afterdualallocmem - branchruledata->nodedata[nodeID]->nafterdualvars + nbranchvars + 1;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(branchruledata->nodedata[nodeID]->afterdualvars), newsize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(branchruledata->nodedata[nodeID]->afterdualvarbounds), newsize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(branchruledata->nodedata[nodeID]->afterdualvarboundtypes), newsize) );
+      branchruledata->nodedata[nodeID]->afterdualallocmem = newsize;
+
+      SCIPnodeGetAfterDualBranchingsReopt(node,
+            branchruledata->nodedata[nodeID]->afterdualvars,
+            branchruledata->nodedata[nodeID]->afterdualvarbounds,
+            branchruledata->nodedata[nodeID]->afterdualvarboundtypes,
+            branchruledata->nodedata[nodeID]->nafterdualvars,
+            &nbranchvars,
+            branchruledata->nodedata[nodeID]->afterdualallocmem - branchruledata->nodedata[nodeID]->nafterdualvars);
+   }
+
+   assert(nbranchvars <= branchruledata->nodedata[nodeID]->afterdualallocmem); /* this should be the case */
+
+   branchruledata->nodedata[nodeID]->nafterdualvars = nbranchvars;
+
+   assert(nbranchvars <= branchruledata->nodedata[nodeID]->afterdualallocmem);
+   assert(branchruledata->nodedata[nodeID]->afterdualvars != NULL );
 
    return SCIP_OKAY;
 }
@@ -819,15 +930,7 @@ SCIP_RETCODE saveGlobalCons(
                }
                assert(SCIPvarGetStatus(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]) == SCIP_VARSTATUS_ORIGINAL);
 
-               if(SCIPisFeasEQ(scip, SCIPvarGetSol(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos], TRUE), 1))
-               {
-                  branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 1;
-               }
-               else
-               {
-                  assert(SCIPisFeasEQ(scip, SCIPvarGetSol(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos], TRUE), 0));
-                  branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 0;
-               }
+               branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = (branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] - constant) * scalar;
 
                branchruledata->globalcons[branchruledata->nconsglobal]->nvars++;
             }
@@ -903,7 +1006,7 @@ SCIP_RETCODE saveLocalConsData(
    assert(SCIPnodeGetReoptID(node) > 0);
 
    /** ensure that all variables are binary */
-   if( SCIPgetNOrigIntVars(scip) + SCIPgetNOrigImplVars(scip) == 0 )
+   if( SCIPgetNIntVars(scip) == 0 )
    {
       SCIP_VAR** vars;
       LOGICORDATA* consdata;
@@ -939,15 +1042,8 @@ SCIP_RETCODE saveLocalConsData(
                   SCIP_CALL( SCIPvarGetOrigvarSum( &consdata->vars[consdata->nvars], &scalar, &constant) );
                }
 
-               if(SCIPisFeasEQ(scip, SCIPvarGetSol(consdata->vars[consdata->nvars], TRUE), 1))
-               {
-                  consdata->vals[consdata->nvars] = 1;
-               }
-               else
-               {
-                  assert(SCIPisFeasEQ(scip, SCIPvarGetSol(consdata->vars[consdata->nvars], TRUE), 0));
-                  consdata->vals[consdata->nvars] = 0;
-               }
+               consdata->vals[consdata->nvars] = (consdata->vals[consdata->nvars] - constant) * scalar;
+
                consdata->nvars++;
             }
          }
@@ -1100,7 +1196,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddGlobalCons(
       {
          for(varnr = 0; varnr < branchruledata->globalcons[consnr]->nvars; varnr++)
          {
-            if(branchruledata->globalcons[consnr]->vals[varnr] == 1)
+            if( SCIPisFeasEQ(scip, branchruledata->globalcons[consnr]->vals[varnr], 1) )
             {
                assert(SCIPvarIsOriginal(branchruledata->globalcons[consnr]->vars[varnr]));
                SCIP_CALL( SCIPgetNegatedVar(scip, branchruledata->globalcons[consnr]->vars[varnr], &branchruledata->globalcons[consnr]->vars[varnr]) );
@@ -1184,7 +1280,7 @@ SCIP_RETCODE fixVarsInNode(
       }
 
       /* check memory */
-      SCIP_CALL( checkMemory(scip, branchruledata, nodeID, MAX(SCIPgetNBinVars(scip), branchruledata->nodedata[nodeID]->allocmem+consdata->nvars)) );
+      SCIP_CALL( checkMemory(scip, branchruledata, nodeID, branchruledata->nodedata[nodeID]->nvars+consdata->nvars) );
    }
 
    for(varnr = 0; varnr < consdata->nvars; varnr++)
@@ -1193,7 +1289,7 @@ SCIP_RETCODE fixVarsInNode(
 
       var = consdata->vars[varnr];
       val = consdata->vals[varnr];
-      boundtype = val == 1 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+      boundtype = SCIPisFeasEQ(scip, val, 1) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
       SCIP_CALL(SCIPvarGetProbvarBound(&var, &val, &boundtype));
       assert(SCIPvarIsTransformedOrigvar(var));
 
@@ -1241,20 +1337,11 @@ SCIP_RETCODE fixVarsInNode(
 
          if (!SCIPvarIsOriginal(branchruledata->nodedata[nodeID]->vars[varpos]))
          {
-            if (val == 1)
-            {
-               SCIP_CALL( SCIPvarGetOrigvarSum(&branchruledata->nodedata[nodeID]->vars[varpos], &scalar, &constant) );
-               branchruledata->nodedata[nodeID]->varbounds[varpos] = 1;
-               branchruledata->nodedata[nodeID]->varboundtypes[varpos] = SCIP_BOUNDTYPE_LOWER;
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarGetOrigvarSum(&branchruledata->nodedata[nodeID]->vars[varpos], &scalar, &constant) );
-               branchruledata->nodedata[nodeID]->varbounds[varpos] = 0;
-               branchruledata->nodedata[nodeID]->varboundtypes[varpos] = SCIP_BOUNDTYPE_UPPER;
-            }
+            SCIP_CALL( SCIPvarGetOrigvarSum(&branchruledata->nodedata[nodeID]->vars[varpos], &scalar, &constant) );
          }
          assert(SCIPvarIsOriginal(branchruledata->nodedata[nodeID]->vars[varpos]));
+         branchruledata->nodedata[nodeID]->varbounds[varpos] = (val - constant) * scalar;
+         branchruledata->nodedata[nodeID]->varboundtypes[varpos] = (SCIPisFeasEQ(scip, branchruledata->nodedata[nodeID]->varbounds[varpos], 0) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
          branchruledata->nodedata[nodeID]->nvars++;
       }
    }
@@ -1296,7 +1383,7 @@ SCIP_RETCODE addLocalConsToNode(
       SCIP_VAR** vars;
       SCIP_Bool initial;
       SCIP_Bool sepa;
-      const char* consname;
+      char* consname;
       int varnr;
 
       /** copy variables and negate them if necessary */
@@ -1309,11 +1396,11 @@ SCIP_RETCODE addLocalConsToNode(
          assert(SCIPvarIsOriginal(vars[varnr]));
 
          val = consdata->vals[varnr];
-         boundtype = val == 1 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+         boundtype = SCIPisFeasEQ(scip, val, 1) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
          SCIP_CALL(SCIPvarGetProbvarBound(&vars[varnr], &val, &boundtype));
          assert(SCIPvarIsTransformed(vars[varnr]));
 
-         if(val == 1)
+         if( SCIPisFeasEQ(scip, val, 1) )
          {
             SCIP_CALL( SCIPgetNegatedVar(scip, vars[varnr], &vars[varnr]) );
             assert(SCIPvarIsNegated(vars[varnr]));
@@ -1321,26 +1408,29 @@ SCIP_RETCODE addLocalConsToNode(
       }
 
       /* if we want to save LP basis, the constraints need to not initial */
-      initial = !branchruledata->savelpbasis;
-      sepa = !branchruledata->savelpbasis;
-
       if( consdata->constype == REOPT_CONSTYPE_SEPASOLUTION )
       {
-         consname = "localsepasolution";
+         consname = "sepasolution";
          initial = FALSE;
          sepa = FALSE;
       }
       else if( consdata->constype == REOPT_CONSTYPE_INFSUBTREE )
-         consname = "localinfsubtree";
+      {
+         consname = "infsubtree";
+         initial = TRUE;
+         sepa = FALSE;
+      }
       else
       {
          assert( consdata->constype == REOPT_CONSTYPE_STRBRANCHED);
-         consname = "localstrbranch";
+         consname = "strbranch";
+         initial = TRUE;
+         sepa = FALSE;
       }
+
       /** add old constraints to child1 */
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, consdata->nvars, vars,
             initial, sepa, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE));
-
 
       SCIPdebugMessage(" -> added constraint\n");
       SCIPdebugPrintCons(scip, cons, NULL);
@@ -1376,7 +1466,7 @@ SCIP_RETCODE getLastSavedNode(
    /** look for a saved parent along the root-path */
    while((*parent) != SCIPgetRootNode(scip))
    {
-      (*nbndchgs) += SCIPnodeGetNDomchg(*parent);
+      (*nbndchgs) += SCIPnodeGetNDomchg(*parent, TRUE, TRUE, FALSE);
       (*parent) = SCIPnodeGetParent(*parent);
 
       if((*parent) == SCIPgetRootNode(scip))
@@ -1467,6 +1557,24 @@ SCIP_RETCODE deleteNodeData(
       if (branchruledata->nodedata[nodeID]->vars != NULL )
       {
          SCIPfreeMemoryArray(scip, &branchruledata->nodedata[nodeID]->vars);
+      }
+
+      /* free afterdual-boundtypes */
+      if (branchruledata->nodedata[nodeID]->afterdualvarboundtypes != NULL )
+      {
+         SCIPfreeMemoryArray(scip, &branchruledata->nodedata[nodeID]->afterdualvarboundtypes);
+      }
+
+      /* free afterdual-bounds */
+      if (branchruledata->nodedata[nodeID]->afterdualvarbounds != NULL )
+      {
+         SCIPfreeMemoryArray(scip, &branchruledata->nodedata[nodeID]->afterdualvarbounds);
+      }
+
+      /* free afterdual-variables */
+      if (branchruledata->nodedata[nodeID]->afterdualvars != NULL )
+      {
+         SCIPfreeMemoryArray(scip, &branchruledata->nodedata[nodeID]->afterdualvars);
       }
 
       SCIPfreeMemory(scip, &branchruledata->nodedata[nodeID]);
@@ -1575,71 +1683,149 @@ SCIP_RETCODE changeAncestorBranchings(
    assert(child1 != NULL );
 
    /** copy memory to ensure that only original variables are saved */
-   if( branchruledata->nodedata[nodeID]->nvars == 0 )
+   if( branchruledata->nodedata[nodeID]->nvars == 0
+    && branchruledata->nodedata[nodeID]->nafterdualvars == 0)
       return SCIP_OKAY;
-
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vars, branchruledata->nodedata[nodeID]->vars, branchruledata->nodedata[nodeID]->nvars) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vals, branchruledata->nodedata[nodeID]->varbounds, branchruledata->nodedata[nodeID]->nvars) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &boundtypes, branchruledata->nodedata[nodeID]->varboundtypes, branchruledata->nodedata[nodeID]->nvars) );
-
-   SCIPdebugMessage(" -> change ancestor branchings:\n");
 
    /**
     * Chance bounds due to all ancestors.
-    * Fix all decisions from branching path child1 and child2
+    * Fix all decisions that were applied before the first dual reduction.
     */
-   for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
+   if( branchruledata->nodedata[nodeID]->nvars > 0 )
    {
-      SCIP_Real oldlb;
-      SCIP_Real oldub;
-      SCIP_Real newbound;
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &vars, branchruledata->nodedata[nodeID]->vars, branchruledata->nodedata[nodeID]->nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &vals, branchruledata->nodedata[nodeID]->varbounds, branchruledata->nodedata[nodeID]->nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &boundtypes, branchruledata->nodedata[nodeID]->varboundtypes, branchruledata->nodedata[nodeID]->nvars) );
 
-      assert(SCIPvarIsOriginal(vars[varnr]));
+      SCIPdebugMessage(" -> change ancestor branchings:\n");
 
-      SCIP_CALL( SCIPvarGetProbvarBound(&vars[varnr], &vals[varnr], &boundtypes[varnr]) );
-
-      assert(SCIPvarIsTransformed(vars[varnr]));
-
-      oldlb = SCIPvarGetLbLocal(vars[varnr]);
-      oldub = SCIPvarGetUbLocal(vars[varnr]);
-      newbound = vals[varnr];
-
-      if(boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER
-      && SCIPisGT(scip, newbound, oldlb)
-      && SCIPisFeasLE(scip, newbound, oldub))
+      for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
       {
-         SCIP_CALL( SCIPchgVarLbNode(scip, child1, vars[varnr], newbound) );
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+         SCIP_Real newbound;
 
-         if(child2 != NULL )
+         assert(SCIPvarIsOriginal(vars[varnr]));
+
+         SCIP_CALL( SCIPvarGetProbvarBound(&vars[varnr], &vals[varnr], &boundtypes[varnr]) );
+
+         assert(SCIPvarIsTransformed(vars[varnr]));
+
+         oldlb = SCIPvarGetLbLocal(vars[varnr]);
+         oldub = SCIPvarGetUbLocal(vars[varnr]);
+         newbound = vals[varnr];
+
+         if(boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER
+         && SCIPisGT(scip, newbound, oldlb)
+         && SCIPisFeasLE(scip, newbound, oldub))
          {
-            SCIP_CALL( SCIPchgVarLbNode(scip, child2, vars[varnr], newbound) );
-         }
-      }
-      else if(boundtypes[varnr] == SCIP_BOUNDTYPE_UPPER
-           && SCIPisLT(scip, newbound, oldub)
-           && SCIPisFeasGE(scip, newbound, oldlb))
-      {
-         SCIP_CALL( SCIPchgVarUbNode(scip, child1, vars[varnr], newbound) );
+            SCIP_CALL( SCIPchgVarLbNode(scip, child1, vars[varnr], newbound) );
 
-         if(child2 != NULL )
+            if(child2 != NULL )
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, child2, vars[varnr], newbound) );
+            }
+         }
+         else if(boundtypes[varnr] == SCIP_BOUNDTYPE_UPPER
+              && SCIPisLT(scip, newbound, oldub)
+              && SCIPisFeasGE(scip, newbound, oldlb))
          {
-            SCIP_CALL( SCIPchgVarUbNode(scip, child2, vars[varnr], newbound) );
+            SCIP_CALL( SCIPchgVarUbNode(scip, child1, vars[varnr], newbound) );
+
+            if(child2 != NULL )
+            {
+               SCIP_CALL( SCIPchgVarUbNode(scip, child2, vars[varnr], newbound) );
+            }
          }
-      }
-      else if(boundtypes[varnr] != SCIP_BOUNDTYPE_LOWER
-           && boundtypes[varnr] != SCIP_BOUNDTYPE_UPPER)
-      {
-         printf("** Unknown boundtype: %d **\n", boundtypes[varnr]);
-         assert(boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER || boundtypes[varnr] == SCIP_BOUNDTYPE_UPPER);
+         else if(boundtypes[varnr] != SCIP_BOUNDTYPE_LOWER
+              && boundtypes[varnr] != SCIP_BOUNDTYPE_UPPER)
+         {
+            printf("** Unknown boundtype: %d **\n", boundtypes[varnr]);
+            assert(boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER || boundtypes[varnr] == SCIP_BOUNDTYPE_UPPER);
+         }
+
+         SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(vars[varnr]), boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ? "=>" : "<=", newbound);
       }
 
-      SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(vars[varnr]), boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ? "=>" : "<=", newbound);
+      /** free memory */
+      SCIPfreeMemoryArray(scip, &vars);
+      SCIPfreeMemoryArray(scip, &vals);
+      SCIPfreeMemoryArray(scip, &boundtypes);
    }
 
-   /** free memory */
-   SCIPfreeMemoryArray(scip, &vars);
-   SCIPfreeMemoryArray(scip, &vals);
-   SCIPfreeMemoryArray(scip, &boundtypes);
+   /**
+    * Chance bounds due to all ancestors.
+    * Fix all decisions that were applied after the first dual reduction.
+    *
+    * Additionally, all these bound changes can be transfered to "normal" bound changes
+    * because the node is split.
+    */
+   if( branchruledata->nodedata[nodeID]->nafterdualvars > 0 )
+   {
+      assert(branchruledata->nodedata[nodeID]->reopttype != SCIP_REOPTTYPE_INFSUBTREE);
+
+      /* reallocate memory to transfer the after-dual bound changes */
+      SCIP_CALL( checkMemory(scip, branchruledata, nodeID, branchruledata->nodedata[nodeID]->nvars + branchruledata->nodedata[nodeID]->nafterdualvars) );
+
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &vars, branchruledata->nodedata[nodeID]->afterdualvars, branchruledata->nodedata[nodeID]->nafterdualvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &vals, branchruledata->nodedata[nodeID]->afterdualvarbounds, branchruledata->nodedata[nodeID]->nafterdualvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &boundtypes, branchruledata->nodedata[nodeID]->afterdualvarboundtypes, branchruledata->nodedata[nodeID]->nafterdualvars) );
+
+      SCIPdebugMessage(" -> change ancestor branchings (after dual):\n");
+
+      for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nafterdualvars; varnr++)
+      {
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+         SCIP_Real newbound;
+
+         /* transfer the bound change */
+         assert(SCIPvarIsOriginal(branchruledata->nodedata[nodeID]->afterdualvars[varnr]));
+         branchruledata->nodedata[nodeID]->vars[branchruledata->nodedata[nodeID]->nvars] = branchruledata->nodedata[nodeID]->afterdualvars[varnr];
+         branchruledata->nodedata[nodeID]->varbounds[branchruledata->nodedata[nodeID]->nvars] = branchruledata->nodedata[nodeID]->afterdualvarbounds[varnr];
+         branchruledata->nodedata[nodeID]->varboundtypes[branchruledata->nodedata[nodeID]->nvars] = branchruledata->nodedata[nodeID]->afterdualvarboundtypes[varnr];
+         branchruledata->nodedata[nodeID]->nvars++;
+
+         assert(SCIPvarIsOriginal(vars[varnr]));
+
+         SCIP_CALL( SCIPvarGetProbvarBound(&vars[varnr], &vals[varnr], &boundtypes[varnr]) );
+
+         assert(SCIPvarIsTransformed(vars[varnr]));
+
+         oldlb = SCIPvarGetLbLocal(vars[varnr]);
+         oldub = SCIPvarGetUbLocal(vars[varnr]);
+         newbound = vals[varnr];
+
+         if(boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER
+         && SCIPisGT(scip, newbound, oldlb)
+         && SCIPisFeasLE(scip, newbound, oldub))
+         {
+            SCIP_CALL( SCIPchgVarLbNode(scip, child1, vars[varnr], newbound) );
+         }
+         else if(boundtypes[varnr] == SCIP_BOUNDTYPE_UPPER
+              && SCIPisLT(scip, newbound, oldub)
+              && SCIPisFeasGE(scip, newbound, oldlb))
+         {
+            SCIP_CALL( SCIPchgVarUbNode(scip, child1, vars[varnr], newbound) );
+         }
+         else if(boundtypes[varnr] != SCIP_BOUNDTYPE_LOWER
+              && boundtypes[varnr] != SCIP_BOUNDTYPE_UPPER)
+         {
+            printf("** Unknown boundtype: %d **\n", boundtypes[varnr]);
+            assert(boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER || boundtypes[varnr] == SCIP_BOUNDTYPE_UPPER);
+         }
+
+         SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(vars[varnr]), boundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ? "=>" : "<=", newbound);
+      }
+
+      /** free memory */
+      SCIPfreeMemoryArray(scip, &vars);
+      SCIPfreeMemoryArray(scip, &vals);
+      SCIPfreeMemoryArray(scip, &boundtypes);
+
+      /* mark the after-dual variables deleted */
+      branchruledata->nodedata[nodeID]->nafterdualvars = 0;
+   }
 
    return SCIP_OKAY;
 }
@@ -1655,23 +1841,26 @@ static
 SCIP_RETCODE moveChildrenUp(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
+   SCIP_NODE*            parentnode,
    int                   nodeID,
-   int                   destnodeID
+   int                   parentID
 )
 {
+   SCIP_NODE** children;
+   int nchildren;
+   int child;
+   int childID;
+   int varnr;
+   int nvars;
+
    assert(branchruledata != NULL);
    assert(nodeID >= 1);
-   assert(destnodeID >= 0);
+   assert(parentID >= 0);
    assert(branchruledata->nodedata[nodeID]->nodechilds != NULL);
 
    while(!SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds))
    {
-      SCIP_VAR** vars;
-      int childID;
-      int varnr;
-
       childID = (int) (size_t) SCIPqueueRemove(branchruledata->nodedata[nodeID]->nodechilds);
-      SCIP_CALL(SCIPduplicateMemoryArray(scip, &vars, branchruledata->nodedata[nodeID]->vars, branchruledata->nodedata[nodeID]->nvars));
 
       /* check the memory */
       SCIP_CALL( checkMemory(scip, branchruledata, childID, branchruledata->nodedata[childID]->nvars + branchruledata->nodedata[nodeID]->nvars) );
@@ -1680,14 +1869,18 @@ SCIP_RETCODE moveChildrenUp(
       /** save branching information */
       for(varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
       {
-         branchruledata->nodedata[childID]->vars[branchruledata->nodedata[childID]->nvars] = vars[varnr];
-         branchruledata->nodedata[childID]->varbounds[branchruledata->nodedata[childID]->nvars] = branchruledata->nodedata[nodeID]->varbounds[varnr];
-         branchruledata->nodedata[childID]->varboundtypes[branchruledata->nodedata[childID]->nvars] = branchruledata->nodedata[nodeID]->varboundtypes[varnr];
+         nvars = branchruledata->nodedata[childID]->nvars;
+         branchruledata->nodedata[childID]->vars[nvars] = branchruledata->nodedata[nodeID]->vars[varnr];
+         branchruledata->nodedata[childID]->varbounds[nvars] = branchruledata->nodedata[nodeID]->varbounds[varnr];
+         branchruledata->nodedata[childID]->varboundtypes[nvars] = branchruledata->nodedata[nodeID]->varboundtypes[varnr];
          branchruledata->nodedata[childID]->nvars++;
       }
-      branchruledata->nodedata[childID]->parentID = destnodeID;
-      SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[destnodeID]->nodechilds, (void* ) (size_t ) childID));
-      SCIPfreeMemoryArray(scip, &vars);
+
+      /* update the ID of the parent node */
+      branchruledata->nodedata[childID]->parentID = parentID;
+
+      /* insert the node as a child */
+      SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[parentID]->nodechilds, (void* ) (size_t ) childID));
    }
 
    return SCIP_OKAY;
@@ -1741,11 +1934,11 @@ SCIP_RETCODE genLocalCons(
          assert(SCIPvarIsOriginal(vars[varnr]));
 
          val = consdata->vals[varnr];
-         boundtype = val == 1 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+         boundtype = SCIPisFeasEQ(scip, val, 1) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
          SCIP_CALL( SCIPvarGetProbvarBound(&vars[varnr], &val, &boundtype) );
          assert(SCIPvarIsTransformed(vars[varnr]));
 
-         if (val == 1)
+         if ( SCIPisFeasEQ(scip, val, 1) )
          {
             SCIP_CALL( SCIPgetNegatedVar(scip, vars[varnr], &vars[varnr]) );
             assert(SCIPvarIsNegated(vars[varnr]));
@@ -1753,15 +1946,15 @@ SCIP_RETCODE genLocalCons(
       }
 
       if( consdata->constype == REOPT_CONSTYPE_SEPASOLUTION )
-         consname = "localsepasolution";
+         consname = "sepasolution";
       else if( consdata->constype == REOPT_CONSTYPE_INFSUBTREE )
       {
-         consname = "localinfsubtree";
+         consname = "infsubtree";
       }
       else
       {
          assert( consdata->constype == REOPT_CONSTYPE_STRBRANCHED);
-         consname = "localstrbranch";
+         consname = "strbranch";
       }
 
       /** add old constraints to child1 */
@@ -2196,9 +2389,17 @@ SCIP_RETCODE genLC(
    }
 
    /* save node with added constraints */
+   if (SCIPqueueIsEmpty(branchruledata->openIDs))
+   {
+      SCIP_CALL(reallocNodedata(scip, branchruledata));
+   }
+
    newID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
    assert(newID >= 1);
    assert(newID < branchruledata->allocmemsizenodedata);
+   assert(branchruledata->nodedata[newID] == NULL
+      || (branchruledata->nodedata[newID]->nvars == 0
+          && (branchruledata->nodedata[newID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[newID]->conss))) );
 
    if( branchruledata->nodedata[newID] == NULL )
    {
@@ -2231,6 +2432,11 @@ SCIP_RETCODE genLC(
    /* store nodes */
    for(nodeID = 0; nodeID < nnodes; nodeID++)
    {
+      if (SCIPqueueIsEmpty(branchruledata->openIDs))
+      {
+         SCIP_CALL(reallocNodedata(scip, branchruledata));
+      }
+
       newID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
       assert(newID >= 1);
       assert(newID < branchruledata->allocmemsizenodedata);
@@ -2238,6 +2444,9 @@ SCIP_RETCODE genLC(
       assert(vars[nodeID] != NULL);
       assert(bounds[nodeID] != NULL);
       assert(boundtypes[nodeID] != NULL);
+      assert(branchruledata->nodedata[newID] == NULL
+         || (branchruledata->nodedata[newID]->nvars == 0
+             && (branchruledata->nodedata[newID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[newID]->conss))) );
 
       if( branchruledata->nodedata[newID] == NULL )
       {
@@ -2553,7 +2762,15 @@ SCIP_RETCODE genLIS(
    assert(branchruledata->nodedata[parentID] != NULL);
 
    /** generate LIS child */
+   if (SCIPqueueIsEmpty(branchruledata->openIDs))
+   {
+      SCIP_CALL(reallocNodedata(scip, branchruledata));
+   }
+
    LISnodeID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
+   assert(branchruledata->nodedata[LISnodeID] == NULL
+      || (branchruledata->nodedata[LISnodeID]->nvars == 0
+          && (branchruledata->nodedata[LISnodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[LISnodeID]->conss))) );
    assert(LISnodeID > 0);
    assert(branchruledata->nodedata[LISnodeID] == NULL || branchruledata->nodedata[LISnodeID]->nvars == 0);
 
@@ -2599,7 +2816,15 @@ SCIP_RETCODE genLIS(
    branchruledata->nsavednodes++;
 
    /** generate child with constraint */
+   if (SCIPqueueIsEmpty(branchruledata->openIDs))
+   {
+      SCIP_CALL(reallocNodedata(scip, branchruledata));
+   }
+
    notLISnodeID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
+   assert(branchruledata->nodedata[notLISnodeID] == NULL
+      || (branchruledata->nodedata[notLISnodeID]->nvars == 0
+          && (branchruledata->nodedata[notLISnodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[notLISnodeID]->conss))) );
    assert(branchruledata->nodedata[notLISnodeID] == NULL || branchruledata->nodedata[notLISnodeID]->nvars == 0);
    assert(notLISnodeID > 0);
 
@@ -2808,7 +3033,7 @@ SCIP_RETCODE runHeuristics(
       minLoss = MIN(lossLIS1/nnodesLIS1, lossLIS2/nnodesLIS2);
       depth = lossLIS1/nnodesLIS1 <= lossLIS2/nnodesLIS2 ? nvarsLIS1 : nvarsLIS2;
 
-      if( branchruledata->lisenable && minLoss <= branchruledata->lisloss)
+      if( branchruledata->lisenable && (minLoss <= branchruledata->lisloss || depth > branchruledata->lisdepth) )
       {
          if( nnodesLIS1 > 1 && nvarsLIS1 > 1 ) /* if nnnodesLIS1feas = 1 then LIS is equivalent to LC */
             successLIS1 = TRUE;
@@ -3036,7 +3261,6 @@ SCIP_RETCODE saveSol(
    assert(nodeID < branchruledata->allocmemsizenodedata);
    assert(branchruledata->nodedata[nodeID] != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
-//   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* allocate memory if node LP solutions exists */
    if( branchruledata->nodedata[nodeID]->soldata == NULL )
@@ -3090,7 +3314,6 @@ SCIP_Real getCutoffbound(
    assert(branchruledata != NULL);
    assert(0 <= nodeID && nodeID < branchruledata->allocmemsizenodedata);
    assert(branchruledata->nodedata[nodeID] != NULL);
-//   assert(branchruledata->nodedata[nodeID]->reopttype == SCIP_REOPTTYPE_FEASIBLE);
 
    cutoffbound = SCIPinfinity(scip);
    vars = SCIPgetOrigVars(scip);
@@ -3146,6 +3369,8 @@ SCIP_RETCODE dryBranch(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &redundantvars, branchruledata->nodedata[nodeID]->nvars) );
 
+   SCIPdebugMessage("start dry branching at ID %d:\n", nodeID);
+
    if( branchruledata->nodedata[nodeID]->nvars > 0 )
    {
       for(var = 0; var < branchruledata->nodedata[nodeID]->nvars && !(*cutoff); var++)
@@ -3162,7 +3387,7 @@ SCIP_RETCODE dryBranch(
          /* check for infeasibility */
          if( SCIPisFeasEQ(scip, lb, ub) && !SCIPisFeasEQ(scip, lb, branchruledata->nodedata[nodeID]->varbounds[var]) )
          {
-            SCIPdebugMessage("<%s> is fixed to %g, can not change bound to %g -> cutoff\n",
+            SCIPdebugMessage(" -> <%s> is fixed to %g, can not change bound to %g -> cutoff\n",
                SCIPvarGetName(branchruledata->nodedata[nodeID]->vars[var]), lb, branchruledata->nodedata[nodeID]->varbounds[var]);
 
             *cutoff = TRUE;
@@ -3171,7 +3396,7 @@ SCIP_RETCODE dryBranch(
          /* check for redundancy */
          if( SCIPisFeasEQ(scip, lb, ub) && SCIPisFeasEQ(scip, lb, branchruledata->nodedata[nodeID]->varbounds[var]) )
          {
-            SCIPdebugMessage("<%s> is already fixed to %g -> redundant bound change\n",
+            SCIPdebugMessage(" -> <%s> is already fixed to %g -> redundant bound change\n",
                SCIPvarGetName(branchruledata->nodedata[nodeID]->vars[var]), lb);
 
             redundantvars[nredundantvars] = var;
@@ -3180,15 +3405,19 @@ SCIP_RETCODE dryBranch(
       }
 
       /* delete redundant variables */
-      if( nredundantvars == branchruledata->nodedata[nodeID]->nvars )
+      if( nredundantvars == branchruledata->nodedata[nodeID]->nvars
+       && (branchruledata->nodedata[nodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss)) )
       {
          *redundant = TRUE;
-         SCIPdebugMessage("node at ID %d is redundant\n", nodeID);
+         SCIPdebugMessage(" -> node at ID %d is redundant\n", nodeID);
       }
       else if( nredundantvars > 0 )
       {
-         SCIPdebugMessage("node at ID %d has %d/%d redundant bound changes -> reduce to %d\n",
-               nodeID, nredundantvars, branchruledata->nodedata[nodeID]->nvars, branchruledata->nodedata[nodeID]->nvars-nredundantvars);
+         /* all bound changes are redundant but there are added constraints */
+         SCIPdebugMessage(" -> node at ID %d has %d/%d redundant bound changes, %d local constraints -> reduce to %d\n",
+               nodeID, nredundantvars, branchruledata->nodedata[nodeID]->nvars,
+               branchruledata->nodedata[nodeID]->nodechilds == NULL ? 0 : SCIPqueueNElems(branchruledata->nodedata[nodeID]->nodechilds),
+               branchruledata->nodedata[nodeID]->nvars-nredundantvars);
          nredundantvars--;
          while( nredundantvars >= 0 )
          {
@@ -3212,6 +3441,11 @@ SCIP_RETCODE dryBranch(
 
       /* retransform into original space */
       SCIP_CALL( transformIntoOrig(scip, branchruledata, nodeID) );
+   }
+   else if( branchruledata->nodedata[nodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss) )
+   {
+      *redundant = TRUE;
+      SCIPdebugMessage(" -> node at ID %d is redundant\n", nodeID);
    }
 
    /* free memory */
@@ -3245,19 +3479,22 @@ SCIP_RETCODE Exec(
    assert(branchruledata != NULL );
    assert(branchruledata->reopt);
 
+   nodeID = SCIPgetRootNode(scip) == SCIPgetCurrentNode(scip) ? 0 : SCIPnodeGetReoptID(SCIPgetCurrentNode(scip));
+
    SCIPdebugMessage("branch reoptimized node %llu:\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
-   if( branchruledata->nodedata[0]->dualcons[0] != NULL )
+   if( branchruledata->nodedata[nodeID]->dualcons[0] != NULL )
    {
       SCIPdebugMessage(" -> dual information: %u (constype: %d, nvars: %d)\n",
-            branchruledata->nodedata[0]->pseudobranched,
-            branchruledata->nodedata[0]->dualcons[0]->constype,
-            branchruledata->nodedata[0]->dualcons[0]->nvars);
+            branchruledata->nodedata[nodeID]->pseudobranched,
+            branchruledata->nodedata[nodeID]->dualcons[0]->constype,
+            branchruledata->nodedata[nodeID]->dualcons[0]->nvars);
    }
    else
    {
-      SCIPdebugMessage(" -> dual information: %u (constype: -, nvars: -)\n", branchruledata->nodedata[0]->pseudobranched);
+      SCIPdebugMessage(" -> dual information: %u (constype: -, nvars: -)\n", branchruledata->nodedata[nodeID]->pseudobranched);
    }
-   SCIPdebugMessage(" -> nchildren: %d\n", branchruledata->nodedata[0]->nodechilds == NULL ? 0 : SCIPqueueNElems(branchruledata->nodedata[0]->nodechilds));
+
+   SCIPdebugMessage(" -> nchildren: %d\n", branchruledata->nodedata[nodeID]->nodechilds == NULL ? 0 : SCIPqueueNElems(branchruledata->nodedata[nodeID]->nodechilds));
 
    /**
     * current node is equal to the root and the root was pseudo-branched
@@ -3268,8 +3505,11 @@ SCIP_RETCODE Exec(
    {
       SCIP_NODE* child1;
       SCIP_NODE* child2;
+      LOGICORDATA* consdata;
       int child1_ID;
+      int child2_ID;
       int nvars;
+      int v;
 
       child1 = NULL;
       child2 = NULL;
@@ -3281,13 +3521,13 @@ SCIP_RETCODE Exec(
 
       /***********************************************************************
        *
-       * create copy of root and add all decisions from strong branching
+       * create two child nodes of the root node but do not create them,
+       * add them to the data structure only.
        *
        * A: the added constraint is a strong branching constraint
        *   1. get a free slot to save all information, initialize the data
-       *   2. fix all decisions from strong branching
+       *   2. copy all decisions from strong branching
        *   3. move all children of root node to child1 (if some exists)
-       *   4. add child1 to the list of current leafs from re-optimization
        *
        * B: the added constraints is an infeasible subtree constraint
        *   DO NOTHING
@@ -3296,20 +3536,23 @@ SCIP_RETCODE Exec(
       switch (branchruledata->nodedata[0]->dualcons[0]->constype) {
          case REOPT_CONSTYPE_STRBRANCHED:
 
-            SCIP_CALL( SCIPcreateChild(scip, &child1, 0.0, SCIPgetLocalTransEstimate(scip)) );
-            assert(child1 != NULL );
-
             /** add this node (the branching path is empty, thats way this method will on
              * allocate memory and create a link between node number and ID) */
-            child1_ID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
-            SCIP_CALL( initNode(scip, branchruledata, child1_ID) );
-            SCIP_CALL( SCIPnodeSetReoptID(child1, child1_ID) );
+            if (SCIPqueueIsEmpty(branchruledata->openIDs))
+            {
+               SCIP_CALL(reallocNodedata(scip, branchruledata));
+            }
 
-            SCIPdebugMessage("reoptimize from ID %d\n", 0);
-            SCIPdebugMessage(" -> create new node %lld, depth %d, ID %d\n", SCIPnodeGetNumber(child1), branchruledata->nodedata[0]->dualcons[0]->nvars, child1_ID);
+            child1_ID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
+            assert(branchruledata->nodedata[child1_ID] == NULL
+               || (branchruledata->nodedata[child1_ID]->nvars == 0
+                   && (branchruledata->nodedata[child1_ID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[child1_ID]->conss))) );
+            SCIP_CALL( initNode(scip, branchruledata, child1_ID) );
+            branchruledata->nsavednodes++;
+
+            SCIPdebugMessage("add a child at ID %d\n", child1_ID);
 
             /* tag node as TRANSIT */
-            SCIP_CALL( SCIPnodeSetReopttype(child1, SCIP_REOPTTYPE_TRANSIT) );
             branchruledata->nodedata[child1_ID]->reopttype = SCIP_REOPTTYPE_TRANSIT;
             SCIPdebugMessage(" -> set reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
 
@@ -3341,8 +3584,28 @@ SCIP_RETCODE Exec(
             }
             SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[0]->nodechilds, (void* ) (size_t ) child1_ID) );
 
-            /** fix the corresponding variables from 'cons' in child1 */
-            SCIP_CALL( fixVarsInNode(scip, branchruledata, child1, branchruledata->nodedata[0]->dualcons[0], TRUE, FALSE, child1_ID, FALSE) );
+            /** fix the corresponding variables in child1 */
+            if( branchruledata->nodedata[child1_ID]->allocmem == 0 )
+            {
+               SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[child1_ID]->vars, branchruledata->nodedata[0]->dualcons[0]->nvars) );
+               SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[child1_ID]->varbounds, branchruledata->nodedata[0]->dualcons[0]->nvars) );
+               SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[child1_ID]->varboundtypes, branchruledata->nodedata[0]->dualcons[0]->nvars) );
+               branchruledata->nodedata[child1_ID]->allocmem = branchruledata->nodedata[0]->dualcons[0]->nvars;
+            }
+            else
+            {
+               SCIP_CALL( checkMemory(scip, branchruledata, child1_ID, branchruledata->nodedata[0]->dualcons[0]->nvars) );
+            }
+            assert(branchruledata->nodedata[child1_ID]->nvars == 0);
+
+            for(v = 0; v < branchruledata->nodedata[0]->dualcons[0]->nvars; v++)
+            {
+               branchruledata->nodedata[child1_ID]->vars[v] = branchruledata->nodedata[0]->dualcons[0]->vars[v];
+               branchruledata->nodedata[child1_ID]->varbounds[v] = branchruledata->nodedata[0]->dualcons[0]->vals[v];
+               branchruledata->nodedata[child1_ID]->varboundtypes[v] = (SCIPisFeasEQ(scip, branchruledata->nodedata[0]->dualcons[0]->vals[v], 0) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+               branchruledata->nodedata[child1_ID]->nvars++;
+            }
+
          break;
 
          case REOPT_CONSTYPE_INFSUBTREE:
@@ -3362,14 +3625,74 @@ SCIP_RETCODE Exec(
        *
        ***********************************************************************/
 
-      SCIP_CALL( SCIPcreateChild(scip, &child2, 0.0, SCIPgetLocalTransEstimate(scip)) );
-      assert(child2 != NULL);
-
-      SCIPdebugMessage("new node from ID %d\n", 0);
-      SCIPdebugMessage(" -> create new node %lld, depth 0\n", SCIPnodeGetNumber(child2));
-
       /* add the logic-or constraint 'cons' to child2 */
-      SCIP_CALL( addLocalConsToNode(scip, branchruledata, child2, branchruledata->nodedata[0]->dualcons[0], FALSE, -1) );
+      if (SCIPqueueIsEmpty(branchruledata->openIDs))
+      {
+         SCIP_CALL(reallocNodedata(scip, branchruledata));
+      }
+
+      child2_ID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
+      assert(branchruledata->nodedata[child2_ID] == NULL
+         || (branchruledata->nodedata[child2_ID]->nvars == 0
+             && (branchruledata->nodedata[child2_ID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[child2_ID]->conss))) );
+      SCIP_CALL( initNode(scip, branchruledata, child2_ID) );
+      branchruledata->nsavednodes++;
+
+      SCIPdebugMessage("add a child at ID %d\n", child2_ID);
+
+      if( branchruledata->nodedata[0]->dualcons[0]->nvars > 1 )
+      {
+         /* tag node as LOGICOR */
+         branchruledata->nodedata[child2_ID]->reopttype = SCIP_REOPTTYPE_LOGICORNODE;
+         SCIPdebugMessage(" -> set reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
+
+         if( branchruledata->nodedata[child2_ID]->conss == NULL )
+         {
+            SCIP_CALL( SCIPqueueCreate(&branchruledata->nodedata[child2_ID]->conss, 1, 2) );
+         }
+         assert(SCIPqueueIsEmpty(branchruledata->nodedata[child2_ID]->conss));
+
+         SCIP_CALL( SCIPallocMemory(scip, &consdata) );
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->vars, branchruledata->nodedata[0]->dualcons[0]->vars, branchruledata->nodedata[0]->dualcons[0]->nvars) );
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->vals, branchruledata->nodedata[0]->dualcons[0]->vals, branchruledata->nodedata[0]->dualcons[0]->nvars) );
+         consdata->nvars = branchruledata->nodedata[0]->dualcons[0]->nvars;
+         consdata->constype = branchruledata->nodedata[0]->dualcons[0]->constype;
+
+         SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[child2_ID]->conss, (void*) consdata) );
+      }
+      else
+      {
+         /* tag node as LEAF */
+         branchruledata->nodedata[child2_ID]->reopttype = SCIP_REOPTTYPE_LEAF;
+         SCIPdebugMessage(" -> set reopttype: %d\n", SCIP_REOPTTYPE_LEAF);
+
+         if( branchruledata->nodedata[child2_ID]->allocmem == 0 )
+         {
+            branchruledata->nodedata[child2_ID]->allocmem = 1;
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &branchruledata->nodedata[child2_ID]->vars, branchruledata->nodedata[0]->dualcons[0]->vars, 1) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &branchruledata->nodedata[child2_ID]->varbounds, branchruledata->nodedata[0]->dualcons[0]->vals, 1) );
+            SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nodedata[child2_ID]->varboundtypes, 1) );
+         }
+         else
+         {
+            assert(branchruledata->nodedata[child2_ID]->nvars == 0);
+            SCIP_CALL( checkMemory(scip, branchruledata, child2_ID, 1) );
+            branchruledata->nodedata[child2_ID]->vars[0] = branchruledata->nodedata[0]->dualcons[0]->vars[0];
+            branchruledata->nodedata[child2_ID]->varbounds[0] = branchruledata->nodedata[0]->dualcons[0]->vals[0];
+         }
+         branchruledata->nodedata[child2_ID]->varboundtypes[0] = (SCIPisFeasEQ(scip, branchruledata->nodedata[0]->dualcons[0]->vals[0], 0) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+         branchruledata->nodedata[child2_ID]->nvars = 1;
+      }
+
+      /* set the root as parent */
+      branchruledata->nodedata[child2_ID]->parentID = 0;
+
+      /* ad the ID as an child node */
+      if( branchruledata->nodedata[0]->nodechilds == NULL )
+      {
+         SCIP_CALL( SCIPqueueCreate(&branchruledata->nodedata[0]->nodechilds, 2, 2) );
+      }
+      SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[0]->nodechilds, (void* ) (size_t ) child2_ID) );
 
       /** free consdata and move */
       SCIPfreeMemoryArray(scip, &branchruledata->nodedata[0]->dualcons[0]->vars);
@@ -3383,22 +3706,12 @@ SCIP_RETCODE Exec(
          branchruledata->nodedata[0]->dualcons[1] = NULL;
       }
 
-      /** check if child2 includes some added constraints and save this node*/
-      if(SCIPnodeGetNAddedcons(scip, child2) > 0)
-      {
-         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, child2, SCIP_REOPTTYPE_LOGICORNODE) );
-      }
-
       /** remove pseudobranched flag */
       branchruledata->nodedata[0]->pseudobranched = (branchruledata->nodedata[0]->dualcons[0] != NULL);
       branchruledata->nsavednodes--;
-      branchruledata->nrevivednodes++;
 
-      SCIPdebugMessage("*******************************************\n");
-
-      *result = SCIP_BRANCHED;
-
-      return SCIP_OKAY;
+      nodeID = 0;
+      goto REVIVE;
    }
    else if(SCIPgetRootNode(scip) == SCIPgetCurrentNode(scip)
          && !branchruledata->nodedata[0]->pseudobranched)
@@ -3412,7 +3725,6 @@ SCIP_RETCODE Exec(
     * we have to generate all nodes in currentleafIDs and one node extra with the fixed bounds if the node was pseudo-branched.
     * all nodes with a non empty queue in 'nodechilds' will be add to currentleafIDs.
     */
-   nodeID = SCIPnodeGetReoptID(SCIPgetCurrentNode(scip));
    assert(nodeID >= 1);
 
    REVIVE:
@@ -3432,6 +3744,52 @@ SCIP_RETCODE Exec(
    redundant = FALSE;
 
    curChild = 1;
+
+   /* check if the child node is infeasible or redundant due to strong branching.
+    * infeasible nodes can be deleted. if a node is redundant, we move all children
+    * to the current node, i.e., we shrink the node w/o copying the bound changes
+    * because these are redundant.
+    * */
+   while( curChild <= nChilds && branchruledata->strongbranchinginit )
+   {
+      childID = (int) (size_t) SCIPqueueRemove(branchruledata->nodedata[nodeID]->nodechilds);
+
+      SCIP_CALL( dryBranch(scip, branchruledata, childID, &redundant, &cutoff) );
+
+      if( redundant )
+      {
+         /* shrink the node */
+         SCIPdebugMessage(" -> shrink redundant node: nchild = %d\n",
+               branchruledata->nodedata[childID]->nodechilds == NULL ? 0 : SCIPqueueNElems(branchruledata->nodedata[childID]->nodechilds));
+
+         if( branchruledata->nodedata[childID]->nodechilds != NULL )
+         {
+            SCIP_CALL( moveChildrenUp(scip, branchruledata, SCIPgetCurrentNode(scip), childID, nodeID) );
+         }
+
+         /* delete redundant node */
+         SCIP_CALL( deleteNodeData(scip, branchruledata, childID, TRUE) );
+         SCIP_CALL( SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t) childID) );
+
+         nredundant++;
+      }
+      else if( cutoff )
+      {
+         /* delete the induced subtree and the node itself */
+         SCIP_CALL( deleteChildrenBelow(scip, branchruledata, childID, TRUE) );
+      }
+      else
+      {
+         /* the node is still a child node and need to be reoptimized */
+         SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[nodeID]->nodechilds, (void*) (size_t) childID) );
+      }
+
+      curChild++;
+   }
+
+   nChilds = SCIPqueueNElems(branchruledata->nodedata[nodeID]->nodechilds);
+   curChild = 1;
+
    while (curChild <= nChilds)
    {
       SCIP_NODE* child1;
@@ -3449,29 +3807,12 @@ SCIP_RETCODE Exec(
       assert(childID >= 1);
       assert(childID < branchruledata->allocmemsizenodedata);
 
-      /* check if the child node is infeasible or redundant due to strong branching */
-      SCIP_CALL( dryBranch(scip, branchruledata, childID, &redundant, &cutoff) );
-
-      if( redundant )
-      {
-         nredundant++;
-         SCIP_CALL( deleteChildrenBelow(scip, branchruledata, childID, TRUE) );
-         goto SKIPCHILD;
-      }
-      else if( cutoff )
-      {
-         SCIP_CALL( deleteChildrenBelow(scip, branchruledata, childID, TRUE) );
-         goto SKIPCHILD;
-      }
-
-      branchruledata->nrevivednodes++;
-
       SCIPdebugMessage("reoptimize node from ID %d\n", childID);
 
       ncreatedchilds++;
 
       /** the node at position childID was strongbranched, we have to split this node */
-      if (branchruledata->nodedata[childID]->dualcons[0] != NULL)
+      if (branchruledata->nodedata[childID]->dualcons[0] != NULL )
       {
          int nvars;
 
@@ -3507,7 +3848,7 @@ SCIP_RETCODE Exec(
                SCIP_CALL( changeAncestorBranchings(scip, branchruledata, childID, child1, child2) );
 
                /** fix all decisions from strong branching in child1 iff the constraint is of type STRBRNACHED */
-               SCIP_CALL( fixVarsInNode(scip, branchruledata, child1, branchruledata->nodedata[childID]->dualcons[0], TRUE, FALSE, childID, branchruledata->savelpbasis) );
+               SCIP_CALL( fixVarsInNode(scip, branchruledata, child1, branchruledata->nodedata[childID]->dualcons[0], TRUE, FALSE, childID, FALSE) );
 
                SCIPdebugMessage(" -> new node from ID, depth %d\n", depth + branchruledata->nodedata[childID]->nvars);
 
@@ -3620,18 +3961,20 @@ SCIP_RETCODE Exec(
 
       /** insert child1 to the child list of nodeID */
       SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[nodeID]->nodechilds, (void* ) (size_t ) childID) );
-      SCIP_CALL( SCIPnodeSetReoptID(child1, childID) );
+      SCIPnodeSetReoptID(child1, childID);
 
       /* set the REOPTTYPE */
       assert(branchruledata->nodedata[childID]->reopttype >= SCIP_REOPTTYPE_TRANSIT);
-      SCIP_CALL( SCIPnodeSetReopttype(child1, branchruledata->nodedata[childID]->reopttype) );
+      if( branchruledata->nodedata[childID]->reopttype == SCIP_REOPTTYPE_STRBRANCHED )
+         branchruledata->nodedata[childID]->reopttype = SCIP_REOPTTYPE_TRANSIT;
+      SCIPnodeSetReopttype(child1, branchruledata->nodedata[childID]->reopttype);
       SCIPdebugMessage(" -> set reopttype: %d\n", branchruledata->nodedata[childID]->reopttype);
 
       /** check if child2 includes some added constraints, save this node and set REOPT to true */
       if(child2 != NULL && SCIPnodeGetNAddedcons(scip, child2) > 0)
       {
          assert(branchruledata->nodedata[childID] != NULL);
-         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, child2, SCIP_REOPTTYPE_LEAF) );
+         SCIP_CALL( SCIPbranchruleNodereoptAddNode(scip, child2, SCIP_REOPTTYPE_LEAF, TRUE) );
       }
 
       SKIPCHILD:
@@ -3828,6 +4171,66 @@ SCIP_RETCODE SCIPbranchnodereoptCheckFeasibility(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE shrinkNode(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata,
+   SCIP_NODE*            node,
+   int                   nodeID,
+   SCIP_Bool*            shrank
+)
+{
+   SCIP_NODE* parent;
+   int ndomchgs;
+   int parentID;
+
+   assert(scip != NULL);
+   assert(branchruledata != NULL);
+   assert(node != NULL);
+   assert(0 < nodeID && nodeID < branchruledata->allocmemsizenodedata);
+   assert(branchruledata->nodedata[nodeID] != NULL);
+
+   if( branchruledata->nodedata[nodeID]->nodechilds != NULL
+    && !SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds) )
+   {
+      ndomchgs = 0;
+      parentID = -1;
+      parent = NULL;
+
+      SCIP_CALL( getLastSavedNode(scip, branchruledata, node, &parent, &parentID, &ndomchgs) );
+
+      assert(parentID != nodeID);
+      assert(branchruledata->nodedata[parentID] != NULL );
+      assert(branchruledata->nodedata[parentID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds));
+
+      /* check if we want move all children to the next saved node above */
+      if( (!branchruledata->dynamicdiffofnodes && ndomchgs <= branchruledata->maxdiffofnodes)
+          ||(branchruledata->dynamicdiffofnodes && ndomchgs <= ceil(log10((SCIP_Real) (SCIPgetNOrigBinVars(scip) - MIN(SCIPgetNOrigBinVars(scip)-1, lengthBranchPath(parent, branchruledata))))/log10(2.0))) )
+      {
+         SCIPdebugMessage("shrink node %lld at ID %d, nchild %d\n", SCIPnodeGetNumber(node), nodeID,
+               branchruledata->nodedata[nodeID]->nodechilds == NULL ? 0 : SCIPqueueNElems(branchruledata->nodedata[nodeID]->nodechilds));
+
+         /* copy the references of child nodes  to the parent*/
+         SCIP_CALL( moveChildrenUp(scip, branchruledata, parent, nodeID, parentID) );
+
+         /* delete the current node */
+         while( (int) (size_t) SCIPqueueFirst(branchruledata->nodedata[parentID]->nodechilds) != nodeID )
+         {
+            SCIP_CALL( SCIPqueueInsert(branchruledata->nodedata[parentID]->nodechilds, SCIPqueueRemove(branchruledata->nodedata[parentID]->nodechilds)) );
+         }
+         assert((int) (size_t) SCIPqueueFirst(branchruledata->nodedata[parentID]->nodechilds) == nodeID);
+         SCIPqueueRemove(branchruledata->nodedata[parentID]->nodechilds);
+
+         SCIP_CALL( deleteNodeData(scip, branchruledata, nodeID, TRUE) );
+         SCIP_CALL( SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t) nodeID) );
+
+         *shrank = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 SCIP_RETCODE SCIPbranchruleNodereoptSetRootLPI(
    SCIP*                 scip
 )
@@ -3866,12 +4269,14 @@ SCIP_RETCODE SCIPbranchruleNodereoptSetRootLPI(
 SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
    SCIP*                 scip,
    SCIP_NODE*            node,                    /** current node */
-   SCIP_REOPTTYPE        reopttype
+   SCIP_REOPTTYPE        reopttype,
+   SCIP_Bool             saveafterdual
 )
 {
    SCIP_BRANCHRULE* branchrule;
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_NODE* parent;
+   SCIP_Bool shrank;
    int nodeID;
    int parentID;
    int ndualvars;
@@ -3885,6 +4290,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
 
    parentID = -1;
    parent = NULL;
+   shrank = FALSE;
 
    if( branchruledata->maxsavednodes == 0 )
       return SCIP_OKAY;
@@ -3910,10 +4316,19 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       assert(nodeID < branchruledata->allocmemsizenodedata);
       assert(branchruledata->nodedata[nodeID] != NULL);
 
+      SCIPdebugMessage("update node %lld at ID %u:\n", SCIPnodeGetNumber(node), nodeID);
+
+      if( saveafterdual )
+      {
+         SCIPdebugMessage(" -> update after-dual bound changes.\n");
+         SCIP_CALL( saveAfterDualBranchings(scip, branchruledata, node, nodeID) );
+
+         /* ensure that all variables are original */
+         SCIP_CALL( transformIntoOrig(scip, branchruledata, nodeID) );
+      }
 #ifdef SCIP_DEBUG
          int varnr;
 
-         SCIPdebugMessage("update node %lld at ID %u:\n", SCIPnodeGetNumber(node), nodeID);
          SCIPdebugMessage(" -> nvars: %d, ncons: %d, parentID: %d, reopttype: %d\n",
                branchruledata->nodedata[nodeID]->nvars,
                branchruledata->nodedata[nodeID]->conss != NULL ? SCIPqueueNElems(branchruledata->nodedata[nodeID]->conss) : 0,
@@ -3924,6 +4339,11 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
             SCIPdebugMessage("  <%s> %s %f\n", SCIPvarGetName(branchruledata->nodedata[nodeID]->vars[varnr]),
                   branchruledata->nodedata[nodeID]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                         "=>" : "<=", branchruledata->nodedata[nodeID]->varbounds[varnr]);
+
+         for (varnr = 0; varnr < branchruledata->nodedata[nodeID]->nafterdualvars; varnr++)
+            SCIPdebugMessage("  <%s> %s %f (after dual red.)\n", SCIPvarGetName(branchruledata->nodedata[nodeID]->afterdualvars[varnr]),
+                  branchruledata->nodedata[nodeID]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                        "=>" : "<=", branchruledata->nodedata[nodeID]->afterdualvarbounds[varnr]);
 #endif
 
       /** update LPI state if node is pseudobranched or feasible */
@@ -3931,30 +4351,11 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
          case SCIP_REOPTTYPE_TRANSIT:
             assert(branchruledata->nodedata[nodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss));
 
-            if( branchruledata->nodedata[nodeID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds) )
+            if( branchruledata->shrink )
             {
-               int nbndchgdiff;
-
-               SCIP_CALL( getLastSavedNode(scip, branchruledata, node, &parent, &parentID, &nbndchgdiff) );
-               assert(parentID != nodeID);
-               assert(branchruledata->nodedata[parentID] != NULL );
-               assert(branchruledata->nodedata[parentID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[parentID]->nodechilds));
-
-               /* check if we can move all children to the next saved node above */
-               if( (!branchruledata->dynamicdiffofnodes && nbndchgdiff <= branchruledata->maxdiffofnodes)
-                 ||(branchruledata->dynamicdiffofnodes && nbndchgdiff <= ceil(log10((SCIP_Real) (SCIPgetNOrigBinVars(scip) - MIN(SCIPgetNOrigBinVars(scip)-1, lengthBranchPath(parent, branchruledata))))/log10(2.0))) )
-               {
-                  SCIP_CALL( moveChildrenUp(scip, branchruledata, nodeID, parentID) );
-
-                  /* delete this node */
-                  SCIP_CALL( SCIPbranchruleNodereoptRemoveNode(scip, node, TRUE, FALSE) );
-
-                  /** stop clock */
-                  SCIP_CALL(SCIPstopSaveTime(scip));
-
-                  return SCIP_OKAY;
-               }
+               SCIP_CALL( shrinkNode(scip, branchruledata, node, nodeID, &shrank) );
             }
+
             goto TRANSIT;
 
             break;
@@ -4146,7 +4547,15 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
 
       /** get an empty slot (to ensure that ID != NULL, the queue should contains only IDs >= 1);
        * the 0 is always reserved for the root */
+      if (SCIPqueueIsEmpty(branchruledata->openIDs))
+      {
+         SCIP_CALL(reallocNodedata(scip, branchruledata));
+      }
+
       nodeID = (int) (size_t) SCIPqueueRemove(branchruledata->openIDs);
+      assert(branchruledata->nodedata[nodeID] == NULL
+         || (branchruledata->nodedata[nodeID]->nvars == 0
+             && (branchruledata->nodedata[nodeID]->conss == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->conss))) );
       assert(nodeID >= 1 && nodeID < branchruledata->allocmemsizenodedata);
       assert(SCIPgetRootNode(scip) != node);
 
@@ -4170,7 +4579,20 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       SCIP_CALL(SCIPqueueInsert(branchruledata->nodedata[parentID]->nodechilds, (void* ) (size_t ) nodeID));
 
       /* save branching path */
-      SCIP_CALL(saveAncestorBranchings(scip, branchruledata, node, parent, nodeID, parentID));
+      SCIP_CALL( saveAncestorBranchings(scip, branchruledata, node, parent, nodeID, parentID) );
+
+      /* save bound changes after some dual reduction */
+      if( saveafterdual )
+      {
+         SCIP_CALL( saveAfterDualBranchings(scip, branchruledata, node, nodeID) );
+      }
+      else
+      {
+         SCIPdebugMessage(" -> skip saving bound changes after dual reductions.\n");
+      }
+
+      /** transform all bounds of branched variables and ensure that they are original. */
+      SCIP_CALL( transformIntoOrig(scip, branchruledata, nodeID) );
 
       /** save pseudo-constraints (if one exists) */
       if (SCIPnodeGetNAddedcons(scip, node) >= 1)
@@ -4184,7 +4606,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       }
 
       /* set ID */
-      SCIP_CALL(SCIPnodeSetReoptID(node, nodeID));
+      SCIPnodeSetReoptID(node, nodeID);
 
       /* set the REOPTTYPE */
       SCIPnodeSetReopttype(node, reopttype);
@@ -4195,7 +4617,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       int varnr;
       SCIPdebugMessage("save node #%lld\n", SCIPnodeGetNumber(node));
       SCIPdebugMessage(" -> ID %d, nvars %d, ncons %d, reopttype %d\n",
-            nodeID, branchruledata->nodedata[nodeID]->nvars,
+            nodeID, branchruledata->nodedata[nodeID]->nvars + branchruledata->nodedata[nodeID]->nafterdualvars,
             branchruledata->nodedata[nodeID]->conss == NULL ? 0 : SCIPqueueNElems(branchruledata->nodedata[nodeID]->conss),
             reopttype);
       for (varnr = 0; varnr < branchruledata->nodedata[nodeID]->nvars; varnr++)
@@ -4203,6 +4625,12 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
          SCIPdebugMessage("  <%s> %s %f\n", SCIPvarGetName(branchruledata->nodedata[nodeID]->vars[varnr]),
                branchruledata->nodedata[nodeID]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                      "=>" : "<=", branchruledata->nodedata[nodeID]->varbounds[varnr]);
+      }
+      for (varnr = 0; varnr < branchruledata->nodedata[nodeID]->nafterdualvars; varnr++)
+      {
+         SCIPdebugMessage("  <%s> %s %f (after dual red.)\n", SCIPvarGetName(branchruledata->nodedata[nodeID]->afterdualvars[varnr]),
+               branchruledata->nodedata[nodeID]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                     "=>" : "<=", branchruledata->nodedata[nodeID]->afterdualvarbounds[varnr]);
       }
 #endif
    }
@@ -4212,19 +4640,25 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
       case SCIP_REOPTTYPE_LOGICORNODE:
       case SCIP_REOPTTYPE_LEAF:
          TRANSIT:
-         branchruledata->nodedata[nodeID]->reopttype = reopttype;
 
-         if( branchruledata->savelpbasis
-          && reopttype != SCIP_REOPTTYPE_LOGICORNODE
-          && SCIPgetCurrentNode(scip) == node
-          && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         if( !shrank )
          {
-            SCIP_CALL( saveLPIstate(scip, branchruledata, node, nodeID) );
-            branchruledata->nsavednodes++;
+            branchruledata->nodedata[nodeID]->reopttype = reopttype;
+
+            if( branchruledata->savelpbasis
+             && reopttype != SCIP_REOPTTYPE_LOGICORNODE
+             && SCIPgetCurrentNode(scip) == node
+             && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIP_CALL( saveLPIstate(scip, branchruledata, node, nodeID) );
+               branchruledata->nsavednodes++;
+            }
          }
-
-//         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
-
+         else
+         {
+            SCIPnodeSetReoptID(node, -1);
+            SCIPnodeSetReopttype(node, SCIP_REOPTTYPE_NONE);
+         }
          break;
 
       case SCIP_REOPTTYPE_INFSUBTREE:
@@ -4249,8 +4683,6 @@ SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
          {
             SCIP_CALL(saveLPIstate(scip, branchruledata, node, nodeID));
          }
-
-//         SCIP_CALL( saveSol(scip, branchruledata, nodeID) );
 
          /* finish the collection of dual information */
          SCIP_CALL( SCIPbranchrulePseudoNodeFinished(scip, node, (reopttype == SCIP_REOPTTYPE_STRBRANCHED ? REOPT_CONSTYPE_STRBRANCHED : REOPT_CONSTYPE_INFSUBTREE)) );
@@ -4436,15 +4868,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptSaveGlobaleCons(
             }
             assert(SCIPvarGetStatus(branchruledata->globalcons[branchruledata->nconsglobal]->vars[pos]) == SCIP_VARSTATUS_ORIGINAL);
 
-            if( SCIPisFeasEQ(scip, solval, 1) )
-            {
-               branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 1;
-            }
-            else
-            {
-               assert(SCIPisFeasEQ(scip, solval, 0));
-               branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = 0;
-            }
+            branchruledata->globalcons[branchruledata->nconsglobal]->vals[pos] = (solval - constant) * scalar;
 
             branchruledata->globalcons[branchruledata->nconsglobal]->nvars++;
          }
@@ -4560,7 +4984,7 @@ SCIP_RETCODE SCIPbranchruleNodereoptRemoveNode(
    /* delete node data */
    assert(branchruledata->nodedata[nodeID]->nodechilds == NULL || SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds));
    SCIP_CALL(deleteNodeData(scip, branchruledata, nodeID, TRUE));
-   SCIP_CALL(SCIPnodeSetReoptID(node, -1));
+   SCIPnodeSetReoptID(node, -1);
    SCIPnodeSetReopttype(node, SCIP_REOPTTYPE_NONE);
 
    /* insert the empty slot the queue of empty slots */
@@ -4620,13 +5044,18 @@ SCIP_RETCODE SCIPbranchruleNodereoptSolveLP(
    assert(branchruledata != NULL );
 
    /* get the ID */
-   nodeID = SCIPnodeGetReoptID(node);
+   nodeID = (SCIPgetRootNode(scip) == node ? 0 : SCIPnodeGetReoptID(node));
 
    (*solvelp) = TRUE;
 
-   /* the root LP should be always solved */
    if( nodeID == 0 )
-      return SCIP_OKAY;
+   {
+      if( branchruledata->nodedata[0]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[0]->nodechilds) )
+      {
+         if( SCIPreoptGetSimToPrevious(scip->reopt) >= branchruledata->objsimrootLP )
+            (*solvelp) = FALSE;
+      }
+   }
    else
       switch (branchruledata->solvelp) {
          /* solve all LPs */
@@ -4640,10 +5069,15 @@ SCIP_RETCODE SCIPbranchruleNodereoptSolveLP(
             break;
 
          default:
-            if( (int) SCIPnodeGetReopttype(node) < branchruledata->solvelp )
-               (*solvelp) = FALSE;
+            if( branchruledata->nodedata[nodeID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds) )
+            {
+               if( (int) SCIPnodeGetReopttype(node) < branchruledata->solvelp )
+                  (*solvelp) = FALSE;
+            }
             break;
       }
+
+   assert(*solvelp || (branchruledata->nodedata[nodeID]->nodechilds != NULL && !SCIPqueueIsEmpty(branchruledata->nodedata[nodeID]->nodechilds)));
 
    return SCIP_OKAY;
 }
@@ -4738,7 +5172,9 @@ SCIP_RETCODE SCIPbranchruleNodereoptGetStatistic(
    int*                  lccalls,
    int*                  lcsucces,
    int*                  lck,
-   SCIP_Real*            lctime
+   SCIP_Real*            lctime,
+   SCIP_Real*            lptime,
+   SCIP_Real*            lptime_maxthread
 )
 {
    SCIP_BRANCHRULE* branchrule;
@@ -4824,6 +5260,19 @@ SCIP_RETCODE SCIPbranchruleNodereoptGetStatistic(
    if( lctime != NULL )
       (*lctime) = SCIPgetClockTime(scip, branchruledata->lctime);
 
+   if( lptime != NULL )
+      (*lptime) = SCIPgetClockTime(scip, branchruledata->lpclock);
+
+   if( lptime_maxthread != NULL )
+   {
+      int thread;
+      (*lptime_maxthread) = 0;
+      for(thread = 0; thread < 8; thread++)
+      {
+         (*lptime_maxthread) = MAX(*lptime_maxthread, SCIPgetClockTime(scip, branchruledata->threadclock[thread]));
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4891,6 +5340,51 @@ SCIP_Real SCIPbranchruleNodereoptGetCutoffbound(
    return getCutoffbound(scip, branchruledata, nodeID);
 }
 
+SCIP_RETCODE SCIPbranchruledataNodereoptLPTimeStart(
+   SCIP*                 scip
+)
+{
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   assert(scip != NULL);
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->reopt);
+
+   SCIP_CALL( SCIPstartClock(scip, branchruledata->lpclock) );
+   SCIP_CALL( SCIPstartClock(scip, branchruledata->threadclock[branchruledata->nlp%8]) );
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPbranchruledataNodereoptLPTimeStop(
+   SCIP*                 scip
+)
+{
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   assert(scip != NULL);
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->reopt);
+
+   SCIP_CALL( SCIPstopClock(scip, branchruledata->lpclock) );
+   SCIP_CALL( SCIPstopClock(scip, branchruledata->threadclock[branchruledata->nlp%8]) );
+   branchruledata->nlp++;
+
+   return SCIP_OKAY;
+}
+
 /* remove LP branching candidates that are already strong branched  */
 static
 SCIP_RETCODE checkLPBranchCands(
@@ -4936,7 +5430,7 @@ SCIP_RETCODE checkLPBranchCands(
       assert(SCIPvarIsOriginal(origvar));
 
       id = SCIPvarGetIndex(origvar);
-      SCIPreoptEnterOrLeaveObj(scip->reopt, id,& entering, &leaving);
+      SCIPreoptEnterOrLeaveObj(scip->reopt, id, &entering, &leaving);
 
       if( SCIPreoptIsObjCoefNegated(scip->reopt, id) )
       {
@@ -5037,6 +5531,8 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/localcons/sepasols", &branchruledata->sepalocsols));
       SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/sepabestsol", &branchruledata->sepabestsol));
 
+      SCIP_CALL(SCIPgetRealParam(scip, "reoptimization/objsimrootLP", &branchruledata->objsimrootLP));
+
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/solvelp", &branchruledata->solvelp));
       SCIP_CALL(SCIPgetIntParam(scip, "reoptimization/solvelpdiff", &branchruledata->solvelpdiff));
 
@@ -5099,6 +5595,15 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       SCIP_CALL(SCIPclockCreate(&branchruledata->updatesolutime, SCIP_CLOCKTYPE_DEFAULT));
       SCIP_CALL(SCIPclockCreate(&branchruledata->savetime, SCIP_CLOCKTYPE_DEFAULT));
 
+      /** hypothetical multi-threading */
+      SCIP_CALL(SCIPallocMemoryArray(scip, &branchruledata->threadclock, 8));
+      for(slot = 0; slot < 8; slot++)
+      {
+         SCIP_CALL(SCIPclockCreate(&branchruledata->threadclock[slot], SCIP_CLOCKTYPE_DEFAULT));
+      }
+      SCIP_CALL(SCIPclockCreate(&branchruledata->lpclock, SCIP_CLOCKTYPE_DEFAULT));
+      branchruledata->nlp = 0;
+
       /* allocate data if nodes shall saved */
       if( branchruledata->maxsavednodes > 0 )
       {
@@ -5141,10 +5646,6 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
 
    SCIP_CALL(SCIPsetIntParam(scip, "propagating/pseudoobj/freq", -1));
    SCIP_CALL(SCIPsetIntParam(scip, "propagating/pseudoobj/maxprerounds", 0));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "propagating/probing/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0));
-   SCIP_CALL(SCIPsetIntParam(scip, "propagating/probing/maxruns", 0));
 
    SCIP_CALL(SCIPsetIntParam(scip, "propagating/redcost/freq", -1));
    SCIP_CALL(SCIPsetIntParam(scip, "propagating/redcost/maxprerounds", 0));
@@ -5271,6 +5772,7 @@ SCIP_DECL_BRANCHFREE(branchFreenodereopt)
    if (branchruledata->init )
    {
       int nodeID;
+      int t;
 
       assert(branchruledata->reopt);
 
@@ -5289,6 +5791,11 @@ SCIP_DECL_BRANCHFREE(branchFreenodereopt)
       SCIPfreeClock(scip, &branchruledata->savetime);
       SCIPfreeClock(scip, &branchruledata->listime);
       SCIPfreeClock(scip, &branchruledata->lctime);
+
+      SCIPfreeClock(scip, &branchruledata->lpclock);
+      for(t = 0; t < 8; t++)
+         SCIPfreeClock(scip, &branchruledata->threadclock[t]);
+      SCIPfreeMemoryArray(scip, &branchruledata->threadclock);
 
       /** free data for global constraints */
       for (nodeID = 0; nodeID < branchruledata->nconsglobal; nodeID++)
@@ -5331,8 +5838,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
 
    if ( branchruledata->reopt )
    {
-//      if (branchruledata->nsavednodes > 0)
-//      {
       if ((SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) && branchruledata->nodedata[0]->pseudobranched)
        || (SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip)
          && branchruledata->nodedata[0]->nodechilds != NULL
@@ -5346,19 +5851,23 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
          SCIP_CALL( SCIPstartInitTime(scip) );
          SCIP_CALL( SCIPstartClock(scip, branchruledata->inittime));
 
-         if( SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
+         if( branchruledata->strongbranchinginit
+          && SCIPreoptGetSimToPrevious(scip->reopt) < branchruledata->objsimrootLP
+          && SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip))
          {
             /* get branching candidates */
             SCIP_CALL( SCIPgetLPBranchCands(scip, &branchcands, &branchcandssol, &branchcandsfrac, NULL, &nbranchcands, NULL) );
-            assert(nbranchcands > 0);
-
-            /* select only some 'good' candidates */
-            SCIP_CALL( checkLPBranchCands(scip, branchruledata, 0, branchcands, branchcandssol, branchcandsfrac, &nbranchcands) );
 
             /* run strong branching initialization */
             if( nbranchcands > 0 )
             {
-               SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+               /* select only some 'good' candidates */
+               SCIP_CALL( checkLPBranchCands(scip, branchruledata, 0, branchcands, branchcandssol, branchcandsfrac, &nbranchcands) );
+
+               if( nbranchcands > 0 )
+               {
+                  SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+               }
                assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
             }
          }
@@ -5415,8 +5924,6 @@ static SCIP_DECL_BRANCHEXECEXT(branchExecextnodereopt)
 
    if (branchruledata->reopt)
    {
-//      if (branchruledata->nsavednodes > 0)
-//      {
       if ((SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) && branchruledata->nodedata[0]->pseudobranched)
        || (SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip)
          && branchruledata->nodedata[0]->nodechilds != NULL
@@ -5430,19 +5937,23 @@ static SCIP_DECL_BRANCHEXECEXT(branchExecextnodereopt)
          SCIP_CALL( SCIPstartInitTime(scip) );
          SCIP_CALL( SCIPstartClock(scip, branchruledata->inittime));
 
-         if( SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
+         if( branchruledata->strongbranchinginit
+          && SCIPreoptGetSimToPrevious(scip->reopt) < branchruledata->objsimrootLP
+          && SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
          {
             /* get branching candidates */
             SCIP_CALL( SCIPgetLPBranchCands(scip, &branchcands, &branchcandssol, &branchcandsfrac, NULL, &nbranchcands, NULL) );
-            assert(nbranchcands > 0);
-
-            /* select only some 'good' candidates */
-               SCIP_CALL( checkLPBranchCands(scip, branchruledata, 0, branchcands, branchcandssol, branchcandsfrac, &nbranchcands) );
 
             /* run strong branching initialization */
             if( nbranchcands > 0 )
             {
-               SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+               /* select only some 'good' candidates */
+               SCIP_CALL( checkLPBranchCands(scip, branchruledata, 0, branchcands, branchcandssol, branchcandsfrac, &nbranchcands) );
+
+               if( nbranchcands > 0 )
+               {
+                  SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+               }
                assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
             }
          }
@@ -5499,8 +6010,6 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
 
    if (branchruledata->reopt)
    {
-//      if (branchruledata->nsavednodes > 0)
-//      {
       if ((SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) && branchruledata->nodedata[0]->pseudobranched)
        || (SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip)
          && branchruledata->nodedata[0]->nodechilds != NULL
@@ -5514,19 +6023,23 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
          SCIP_CALL( SCIPstartInitTime(scip) );
          SCIP_CALL( SCIPstartClock(scip, branchruledata->inittime));
 
-         if( SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
+         if( branchruledata->strongbranchinginit
+          && SCIPreoptGetSimToPrevious(scip->reopt) < branchruledata->objsimrootLP
+          && SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
          {
             /* get branching candidates */
             SCIP_CALL( SCIPgetLPBranchCands(scip, &branchcands, &branchcandssol, &branchcandsfrac, NULL, &nbranchcands, NULL) );
-            assert(nbranchcands > 0);
-
-            /* select only some 'good' candidates */
-            SCIP_CALL( checkLPBranchCands(scip, branchruledata, 0, branchcands, branchcandssol, branchcandsfrac, &nbranchcands) );
 
             /* run strong branching initialization */
             if( nbranchcands > 0 )
             {
-               SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+               /* select only some 'good' candidates */
+               SCIP_CALL( checkLPBranchCands(scip, branchruledata, 0, branchcands, branchcandssol, branchcandsfrac, &nbranchcands) );
+
+               if( nbranchcands > 0 )
+               {
+                  SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+               }
                assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
             }
          }
@@ -5598,16 +6111,18 @@ SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    SCIP_CALL(SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolnodereopt));
 
    /* parameter */
-   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/usepldlpsols", "use LP solution from previous iterations to improve the cutoff bound.",
-         &branchruledata->useoldlpssols, TRUE, FALSE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/shrinktransit", "upgrade the child nodes of transit nodes to the next save node above.",
+         &branchruledata->shrink, TRUE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/strongbranchinginit", "use strong branching at the root node if we reoptimize the root?",
+         &branchruledata->strongbranchinginit, TRUE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/reducetofrontier", "delete stored nodes which were not revived.",
-         &branchruledata->reducetofrontier, TRUE, FALSE, NULL, NULL) );
+         &branchruledata->reducetofrontier, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/LargestSubtree", "enable largest subtree heuristic.",
          &branchruledata->lisenable, TRUE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "reoptimization/LazyCompr", "enable lazy compression heuristic.",
          &branchruledata->lcenable, TRUE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "reoptimization/compressnodes", "compress 0: nodes, 1: nodes, 2: feasible nodes.",
+   SCIP_CALL( SCIPaddIntParam(scip, "reoptimization/compressnodes", "compress 0: all, 1: pruned, 2: feasible nodes.",
          &branchruledata->cpressnodes, TRUE, 2, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;

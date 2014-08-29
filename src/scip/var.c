@@ -11911,8 +11911,8 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
       /* if the variable has no parent variables, it was generated during solving and has no corresponding original var */
       if( (*var)->nparentvars == 0 )
       {
-         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED )
-            //&& SCIPvarGetStatus((*var)->negatedvar) == SCIP_VARSTATUS_ORIGINAL )
+         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED
+            && SCIPvarGetStatus((*var)->negatedvar) == SCIP_VARSTATUS_ORIGINAL )
          {
             *scalar *= -1.0;
             *constant -= (*var)->data.negate.constant * (*scalar);

@@ -79,7 +79,8 @@ extern
 SCIP_RETCODE SCIPbranchruleNodereoptAddNode(
    SCIP*                 scip,
    SCIP_NODE*            node,               /** current node */
-   SCIP_REOPTTYPE        reopttype
+   SCIP_REOPTTYPE        reopttype,
+   SCIP_Bool             saveafterdual
    );
 
 extern
@@ -117,7 +118,9 @@ SCIP_RETCODE SCIPbranchruleNodereoptGetStatistic(
    int*                  rtfcalls,
    int*                  rtfsucces,
    int*                  lck,
-   SCIP_Real*            rtftime
+   SCIP_Real*            rtftime,
+   SCIP_Real*            lptime,
+   SCIP_Real*            lptime_maxthread
    );
 
 extern
@@ -136,6 +139,16 @@ extern
 SCIP_Real SCIPbranchruleNodereoptGetCutoffbound(
    SCIP*                 scip,
    int                   nodeID
+   );
+
+extern
+SCIP_RETCODE SCIPbranchruledataNodereoptLPTimeStart(
+   SCIP*                 scip
+   );
+
+extern
+SCIP_RETCODE SCIPbranchruledataNodereoptLPTimeStop(
+   SCIP*                 scip
    );
 
 extern

@@ -321,15 +321,14 @@ SCIP_Real reoptSimilarity(
    int                   obj2_id
 )
 {
-   SCIP_Real norm_n1;
-   SCIP_Real norm_n2;
-   SCIP_Real scalarproduct;
+   SCIP_Real similarity;
+   SCIP_Bool onediffertozero;
    int id;
 
+   onediffertozero = FALSE;
+
    /* calc similarity */
-   norm_n1 = 0.0;
-   norm_n2 = 0.0;
-   scalarproduct = 0.0;
+   similarity = 0.0;
    for(id = 0; id < nvars; id++)
    {
       SCIP_Real c1;
@@ -338,23 +337,17 @@ SCIP_Real reoptSimilarity(
       c1 = reopt->objs[obj1_id][id];
       c2 = reopt->objs[obj2_id][id];
 
+      if( c1 != 0 || c2 != 0 )
+         onediffertozero = TRUE;
+
       /** vector product */
-      scalarproduct += c1*c2;
-
-      /** norm of normalvector to obj1 */
-      norm_n1 += c1*c1;
-
-      /** norm of normalvector to obj1 */
-      norm_n2 += c2*c2;
+      similarity += c1*c2;
    }
 
-   norm_n1 = sqrt(norm_n1);
-   norm_n2 = sqrt(norm_n2);
-
-   if( norm_n1*norm_n2 == 0 )
+   if( !onediffertozero )
       return -2.0;
    else
-      return scalarproduct/(norm_n1*norm_n2);
+      return similarity;
 }
 
 static
@@ -900,6 +893,7 @@ SCIP_RETCODE SCIPreoptSaveObj(
 )
 {
    SCIP_VAR** vars;
+   SCIP_Real norm;
    int v;
    int id;
 
@@ -909,6 +903,7 @@ SCIP_RETCODE SCIPreoptSaveObj(
    SCIP_CALL( ensureRunSize(reopt, set, run) );
 
    vars = SCIPgetOrigVars(scip);
+   norm = 0;
 
    /* get memory */
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &reopt->objs[run], SCIPgetNOrigVars(scip)) );
@@ -919,10 +914,20 @@ SCIP_RETCODE SCIPreoptSaveObj(
    {
       id = SCIPvarGetIndex(vars[v]);
       reopt->objs[run][id] = SCIPvarGetObj(vars[id]);
+      norm += (SCIPvarGetObj(vars[id]) * SCIPvarGetObj(vars[id]));
 
       /* mark this objective as the first non empty */
       if( reopt->firstobj == -1 && reopt->objs[run][id] != 0 )
          reopt->firstobj = run;
+   }
+   assert(norm >= 0);
+   norm = sqrt(norm);
+
+   /* normalize the coefficients */
+   for(v = 0; v < SCIPgetNOrigVars(scip) && norm > 0; v++)
+   {
+      id = SCIPvarGetIndex(vars[v]);
+      reopt->objs[run][id] /= norm;
    }
 
    /* calculate similarity to last objective */

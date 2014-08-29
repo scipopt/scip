@@ -884,7 +884,7 @@ SCIP_RETCODE nodeReleaseParent(
 
       /* update the effective root depth */
       assert(tree->effectiverootdepth >= 0);
-      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth )
+      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth && FALSE ) /* ????????????? */
       {
          tree->effectiverootdepth++;
          SCIPdebugMessage("unlinked node #%"SCIP_LONGINT_FORMAT" in depth %d -> new effective root depth: %d\n", 
@@ -1729,7 +1729,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-   if( node->depth == 0 )
+   if( node->depth <= tree->effectiverootdepth )
    {
       oldlb = SCIPvarGetLbGlobal(var);
       oldub = SCIPvarGetUbGlobal(var);
@@ -4363,10 +4363,7 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventqueue, tree, lp) );
       assert(tree->effectiverootdepth < tree->pathlen || *node == NULL || *cutoff);
 
-      /*
-       * currently disabled because of reoptimization
-       */
-      if( tree->effectiverootdepth > appliedeffectiverootdepth && *node != NULL && !(*cutoff) && FALSE )
+      if( tree->effectiverootdepth > appliedeffectiverootdepth && *node != NULL && !(*cutoff) )
       {
          int d;
 
@@ -6684,7 +6681,7 @@ SCIP_REOPTTYPE SCIPnodeGetReopttype(
    return node->reopttype;
 }
 
-SCIP_RETCODE SCIPnodeSetReopttype(
+void SCIPnodeSetReopttype(
    SCIP_NODE*            node,
    SCIP_REOPTTYPE        reopttype
    )
@@ -6701,7 +6698,6 @@ SCIP_RETCODE SCIPnodeSetReopttype(
        || reopttype == SCIP_REOPTTYPE_FEASIBLE);
 
    node->reopttype = reopttype;
-   return SCIP_OKAY;
 }
 
 int SCIPnodeGetReoptID(
@@ -6713,7 +6709,7 @@ int SCIPnodeGetReoptID(
    return node->reoptID;
 }
 
-SCIP_RETCODE SCIPnodeSetReoptID(
+void SCIPnodeSetReoptID(
    SCIP_NODE*            node,
    int                   id
    )
@@ -6722,7 +6718,6 @@ SCIP_RETCODE SCIPnodeSetReoptID(
    assert(id == -1 || 1 <= id);
 
    node->reoptID = id;
-   return SCIP_OKAY;
 }
 
 int SCIPnodeGetReoptredies(
@@ -6757,21 +6752,33 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
 }
 
 int SCIPnodeGetNDomchg(
-   SCIP_NODE*            node                /**< node */
+   SCIP_NODE*            node,               /**< node */
+   SCIP_Bool             branching,          /**< count branching decisions */
+   SCIP_Bool             consinfer,          /**< count constraint propagation */
+   SCIP_Bool             propinfer           /**< count propagation */
    )
 {
    int ndomchgs;
+   int i;
 
    assert(node != NULL);
 
    ndomchgs = 0;
 
-   while(SCIPnodeGetDepth(node) != 0)
+   if(node->domchg != NULL)
    {
-      if(node->domchg != NULL)
-         ndomchgs += node->domchg->domchgbound.nboundchgs;
-
-      node = node->parent;
+      for(i = 0; i < node->domchg->domchgbound.nboundchgs; i++ )
+      {
+         if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
+          && branching )
+            ndomchgs++;
+         else if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+               && consinfer )
+            ndomchgs++;
+         else if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+               && propinfer )
+            ndomchgs++;
+      }
    }
 
    return ndomchgs;
@@ -6982,6 +6989,7 @@ void SCIPnodeGetParentBranchingsReopt(
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int i;
+   int first_dual;
 
    assert(node != NULL);
    assert(branchvars != NULL);
@@ -7001,43 +7009,113 @@ void SCIPnodeGetParentBranchingsReopt(
    assert(boundchgs != NULL);
    assert(nboundchgs >= 0);
 
+   i = 0;
+
+   while( i < nboundchgs
+       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
+       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
+      i++;
+
+   first_dual = i;
+   nboundchgs = first_dual;
+
    /* count the number of branching decisions; branching decisions have to be in the beginning of the bound change
     * array
     */
    for( i = 0; i < nboundchgs; i++)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
-       && (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
-         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-           && boundchgs[i].data.inferencedata.reason.cons != NULL)) )
-//         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-//           && boundchgs[i].data.inferencedata.reason.prop != NULL)) ) /*lint !e641*/
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
+       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL) )
       {
-         (*nbranchvars)++;
+         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            (*nbranchvars)++;
       }
    }
 
    /* if the arrays have enough space store the branching decisions */
    if( branchvarssize >= *nbranchvars )
    {
-      int pos;
-      for( i = 0, pos= 0; i < nboundchgs; i++)
+      int p;
+      for(i = 0, p = 0; i < nboundchgs; i++)
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
-          && (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
-            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-              && boundchgs[i].data.inferencedata.reason.cons != NULL)) )
-//            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-//              && boundchgs[i].data.inferencedata.reason.prop != NULL)) ) /*lint !e641*/
+         if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING
+          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL) )
          {
-            assert(boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY);
-            assert(pos < *nbranchvars);
-
-            branchvars[pos] = boundchgs[i].var;
-            boundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-            branchbounds[pos] = boundchgs[i].newbound;
-            pos++;
+            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            {
+               branchvars[p] = boundchgs[i].var;
+               boundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+               branchbounds[p] = boundchgs[i].newbound;
+               p++;
+            }
          }
+      }
+   }
+}
+
+void SCIPnodeGetParentConsAndPropReopt(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            bounds,             /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
+   int*                  nvars,              /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   varssize            /**< available slots in arrays */
+)
+{
+   SCIP_BOUNDCHG* boundchgs;
+   int nboundchgs;
+   int i;
+   int v;
+
+   assert(node != NULL);
+   assert(vars != NULL);
+   assert(bounds != NULL);
+   assert(boundtypes != NULL);
+   assert(nvars != NULL);
+   assert(varssize >= 0);
+
+   (*nvars) = 0;
+
+   if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
+      return;
+
+   nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
+   boundchgs = node->domchg->domchgbound.boundchgs;
+
+   assert(boundchgs != NULL);
+   assert(nboundchgs >= 0);
+
+   /* count the number of branching decisions; branching decisions have to be in the beginning of the bound change
+    * array
+    */
+   for( i = nboundchgs-1; i >= 0; i--)
+   {
+      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
+      {
+         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            (*nvars)++;
+      }
+   }
+
+   /* if the arrays have enough space store the branching decisions */
+   if( varssize >= *nvars )
+   {
+      for(i = nboundchgs-1, v = 0; i >= 0; i--)
+      {
+         if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
+         {
+            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            {
+               vars[v] = boundchgs[i].var;
+               boundtypes[v] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+               bounds[v] = boundchgs[i].newbound;
+               v++;
+            }
+         }
+         else
+            break;
       }
    }
 }
@@ -7080,8 +7158,7 @@ void SCIPnodeGetAncestorBranchings(
 }
 
 /** SPECIAL FOR REOPTIMIZATION: returns the set of variable branchings that were performed until a
- * ancestor nodes (nodes on the path to the given parent) to create this node;
- * addionally, we save all fixings from constraint propagation, too. */
+ * ancestor nodes (nodes on the path to the given parent) to create this node */
 void SCIPnodeGetAncestorBranchingsReopt(
    SCIP_NODE*            node,               /**< node data */
    SCIP_NODE*            parent,             /**< node data of the last ancestor node */
@@ -7114,6 +7191,124 @@ void SCIPnodeGetAncestorBranchingsReopt(
       size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
 
       SCIPnodeGetParentBranchingsReopt(node, &branchvars[start], &branchbounds[start], &boundtypes[start], &nodenbranchvars, size);
+      *nbranchvars += nodenbranchvars;
+
+      node = node->parent;
+   }
+}
+
+/*
+ * SPECIAL FOR REOPTIMIZATION: return all bound changes applied after the first dual reduction
+ */
+void SCIPnodeGetAfterDualBranchingsReopt(
+   SCIP_NODE*            node,
+   SCIP_VAR**            vars,
+   SCIP_Real*            varbounds,
+   SCIP_BOUNDTYPE*       varboundtypes,
+   int                   start,
+   int*                  nbranchvars,
+   int                   branchvarssize
+)
+{
+   SCIP_BOUNDCHG* boundchgs;
+   int nboundchgs;
+   int first_dual;
+   int i;
+
+   assert(node != NULL);
+   assert(vars != NULL);
+   assert(varbounds != NULL);
+   assert(varboundtypes != NULL);
+   assert(nbranchvars != NULL);
+   assert(branchvarssize >= 0);
+
+   (*nbranchvars) = 0;
+
+   if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
+      return;
+
+   nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
+   boundchgs = node->domchg->domchgbound.boundchgs;
+
+   assert(boundchgs != NULL);
+   assert(nboundchgs >= 0);
+
+   i = 0;
+
+   while( i < nboundchgs
+       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
+       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
+      i++;
+
+   first_dual = i;
+
+   /* count the number of branching decisions; branching decisions have to be in the beginning of the bound change
+    * array
+    */
+   for( ; i < nboundchgs; i++)
+   {
+      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING);
+
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
+      {
+         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            (*nbranchvars)++;
+      }
+   }
+
+   /* if the arrays have enough space store the branching decisions */
+   if( branchvarssize >= *nbranchvars )
+   {
+      int p;
+      for(i = first_dual, p = start; i < nboundchgs; i++)
+      {
+         if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
+         {
+            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            {
+               vars[p] = boundchgs[i].var;
+               varboundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+               varbounds[p] = boundchgs[i].newbound;
+               p++;
+            }
+         }
+      }
+   }
+}
+
+
+void SCIPnodeGetConsAndPropReopt(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_NODE*            parent,             /**< node data of the last ancestor node */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
+)
+{
+   assert(node != NULL);
+   assert(parent != NULL);
+   assert(branchvars != NULL);
+   assert(branchbounds != NULL);
+   assert(boundtypes != NULL);
+   assert(nbranchvars != NULL);
+   assert(branchvarssize >= 0);
+
+   (*nbranchvars) = 0;
+
+   while( SCIPnodeGetNumber(node) != SCIPnodeGetNumber(parent) )
+   {
+      int nodenbranchvars;
+      int start;
+      int size;
+
+      start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
+      size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
+
+      SCIPnodeGetParentConsAndPropReopt(node, &branchvars[start], &branchbounds[start], &boundtypes[start], &nodenbranchvars, size);
       *nbranchvars += nodenbranchvars;
 
       node = node->parent;

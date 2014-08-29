@@ -115,6 +115,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
    /* initialize data structure */
    SCIP_CALL( SCIPcreateSol(scip, &allchanged, heur) );
+   SCIP_CALL( SCIPcreateSol(scip, &feasiblechanged, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &singlenegatedsol, heur) );
 
    /* copy the solutions */
@@ -149,7 +150,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          /* check if a a variable enters or leaves the objective function */
          SCIPreoptEnterOrLeaveObj(scip->reopt, SCIPvarGetIndex(vars[i]), &entering, &leaving);
 
-         if( negated || entering )
+         if( negated || entering || leaving )
          {
             solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
 

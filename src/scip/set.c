@@ -281,8 +281,9 @@
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
-#define SCIP_DEFAULT_REOPT_OBJSIM           0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
+#define SCIP_DEFAULT_REOPT_OBJSIMSOL        0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
+#define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     1.0 /**< similarity of two sequential objective function to disable solving the root LP. */
 #define SCIP_DEFAULT_REOPT_DELAY            0.0 /**< start reoptimzing the search if the new objective function has similarity of
                                                      at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
@@ -1587,8 +1588,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelp",
-         "at which reopttype should the LP be solved? (1: transit, 2: strong branched, 3: w/ added logicor, 4: only leafs).",
-         &(*set)->reopt_solvelp, TRUE, SCIP_DEFAULT_REOPT_SOLVELP, 1, 4,
+         "at which reopttype should the LP be solved? (1: transit, 3: strong branched, 4: w/ added logicor, 5: only leafs).",
+         &(*set)->reopt_solvelp, TRUE, SCIP_DEFAULT_REOPT_SOLVELP, 1, 5,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelpdiff",
@@ -1606,9 +1607,14 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_minavghamdist, TRUE, SCIP_DEFAULT_REOPT_MINAVGHAMDIST, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "reoptimization/objsim",
+         "reoptimization/objsimrootLP",
+         "similarity of two sequential objective function to disable solving the root LP.",
+         &(*set)->reopt_objsimrootLP, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, 0, 1,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "reoptimization/objsimsol",
          "similarity of two objective function to reuse stored solutions.",
-         &(*set)->reopt_objsim, TRUE, SCIP_DEFAULT_REOPT_OBJSIM, 0, 1,
+         &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/delay",

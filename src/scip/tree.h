@@ -323,7 +323,10 @@ void SCIPnodeGetPseudoBranchings(
 
 extern
 int SCIPnodeGetNDomchg(
-   SCIP_NODE*            node                /**< node */
+   SCIP_NODE*            node,               /**< node */
+   SCIP_Bool             branching,          /**< count branching decisions */
+   SCIP_Bool             consinfer,          /**< count constraint propagation */
+   SCIP_Bool             propinfer           /**< count propagation */
    );
 
 extern

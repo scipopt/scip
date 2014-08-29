@@ -34,8 +34,6 @@
 #define RELAX_FREQ             1
 
 
-
-
 /*
  * Data structures
  */
@@ -45,6 +43,7 @@
 /** relaxator data */
 struct SCIP_RelaxData
 {
+   SCIP_Bool             reopt;
    SCIP_Longint          lastnode;
 };
 
@@ -96,6 +95,8 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolreoptsolvelp)
 
    relaxdata->lastnode = -1;
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &relaxdata->reopt) );
+
    return SCIP_OKAY;
 }
 
@@ -118,8 +119,11 @@ SCIP_DECL_RELAXEXEC(relaxExecreoptsolvelp)
 
    node = SCIPgetCurrentNode(scip);
 
+   if( !relaxdata->reopt )
+      return SCIP_OKAY;
+
    /** check is the node come from reoptimiziation */
-   if( SCIPnodeGetReoptID(node) > -1 && relaxdata->lastnode != SCIPnodeGetNumber(node) )
+   if( SCIPgetRootNode(scip) == node || (SCIPnodeGetReoptID(node) > -1 && relaxdata->lastnode != SCIPnodeGetNumber(node)) )
    {
       relaxdata->lastnode = SCIPnodeGetNumber(node);
       SCIP_CALL( SCIPbranchruleNodereoptSolveLP(scip, node, &solvelp) );
