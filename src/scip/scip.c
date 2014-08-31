@@ -36009,20 +36009,7 @@ void printPresolverStatistics(
    {
       SCIP_PROP* prop;
       prop = scip->set->props[i];
-      if( SCIPpropDoesPresolve(prop)
-#if 0
-         && ( SCIPpropGetNFixedVars(prop) > 0
-            || SCIPpropGetNAggrVars(prop) > 0
-            || SCIPpropGetNChgVarTypes(prop) > 0
-            || SCIPpropGetNChgBds(prop) > 0
-            || SCIPpropGetNAddHoles(prop) > 0
-            || SCIPpropGetNDelConss(prop) > 0
-            || SCIPpropGetNAddConss(prop) > 0
-            || SCIPpropGetNChgSides(prop) > 0
-            || SCIPpropGetNChgCoefs(prop) > 0
-            || SCIPpropGetNUpgdConss(prop) > 0)
-#endif
-         )
+      if( SCIPpropDoesPresolve(prop) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",

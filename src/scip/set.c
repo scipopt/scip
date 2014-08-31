@@ -1346,8 +1346,7 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-   /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 0
+#if 0 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
