@@ -3855,7 +3855,7 @@ SCIP_RETCODE focusnodeToSubroot(
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up whole LP to keep only necessary columns and rows */
-#if 0
+#ifdef SCIP_DISABLED_CODE
       if( tree->focusnode->depth == 0 )
       {
          SCIP_CALL( SCIPlpCleanupAll(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
