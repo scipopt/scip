@@ -584,7 +584,7 @@
  *
  * - <code>NOBLKBUFMEM=\<true\></code> turns off the internal SCIP block and buffer memory.  This way the code can be checked by valgrind or
  *   similar tools. (The individual options <code>NOBLKMEM=\<true\></code> and <code>NOBUFMEM=\<true\></code> to turn off the SCIP block and
- *   buffer memory, respectively, exist as well.
+ *   buffer memory, respectively, exist as well).
  *
  * - <code>SHARED=\<true\></code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
