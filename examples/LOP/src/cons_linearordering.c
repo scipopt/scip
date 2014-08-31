@@ -43,10 +43,8 @@
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
@@ -86,7 +84,7 @@ SCIP_RETCODE LinearOrderingSeparate(
    {
       for (j = 0; j < n && ! (*cutoff); ++j)
       {
-	 SCIP_Real valIJ = 0.0;
+	 SCIP_Real valIJ;
 	 if (j == i)
 	    continue;
 
@@ -235,10 +233,10 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    consdata->n = n;
 
    /* transform variables */
-   SCIPallocBlockMemoryArray(scip, &consdata->vars, n);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) );
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
@@ -451,7 +449,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
       {
 	 for (j = 0; j < n; ++j)
 	 {
-	    SCIP_Real valIJ = 0.0;
+	    SCIP_Real valIJ;
 	    if (j == i)
 	       continue;
 
@@ -1139,10 +1137,10 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
    consdata->n = n;
-   SCIPallocBlockMemoryArray(scip, &consdata->vars, n);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) );
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
