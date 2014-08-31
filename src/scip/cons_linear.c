@@ -2833,7 +2833,7 @@ SCIP_Real consdataGetActivity(
       SCIPdebugMessage("corrected activity of linear constraint: %.15g\n", activity);
    }
 
-   if( activity == SCIP_INVALID )
+   if( activity == SCIP_INVALID ) /*lint !e777*/
       return activity;
    else if( activity < 0 )
       activity = MAX(activity, -SCIPinfinity(scip)); /*lint !e666*/
@@ -2858,7 +2858,7 @@ SCIP_Real consdataGetFeasibility(
 
    activity = consdataGetActivity(scip, consdata, sol);
 
-   if( activity == SCIP_INVALID )
+   if( activity == SCIP_INVALID ) /*lint !e777*/
       return -SCIPinfinity(scip);
 
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
@@ -5659,7 +5659,7 @@ SCIP_RETCODE checkCons(
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
     */
-   if( activity == SCIP_INVALID )
+   if( activity == SCIP_INVALID ) /*lint !e777*/
    {
       assert(sol == NULL);
       *violated = TRUE;
@@ -13421,7 +13421,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          SCIPinfoMessage(scip, NULL, ";\n");
 
-         if( activity == SCIP_INVALID )
+         if( activity == SCIP_INVALID ) /*lint !e777*/
             SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
          else if( SCIPisFeasLT(scip, activity, consdata->lhs) )
             SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);

@@ -2298,7 +2298,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          int componentidx;
 
          /* get its index */
-         componentidx = (int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1)) - 1;
+         componentidx = (int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1)) - 1; /*lint !e776*/
          assert(propdata->startcomponents[componentidx] == component);
 
          if( propdata->startindices[componentidx] > startidx )

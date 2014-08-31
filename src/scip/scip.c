@@ -1057,7 +1057,7 @@ SCIP_Bool SCIPisPresolveFinished(
          || (scip->stat->npresolchgcoefs - scip->stat->lastnpresolchgcoefs
             <= scip->set->presol_abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
    /* since 2005, we do not take cliques and implications into account when deciding whether to stop presolving */
    /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
    finished = finished
