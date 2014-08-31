@@ -117,13 +117,14 @@ lint/size-options.lnt // This .lnt file should be generated (preferrably
 // GNU statement-expressions wrapped in __extension__().
 ++d"__extension__=/*lint -e(160) */"
 
-++d__builtin_va_list=void*            // used by stdarg.h
-++d__builtin_stdarg_start()=_to_semi  // ditto
-++d__builtin_va_end()=_to_semi        // ditto
-//++d"__builtin_va_arg(a,b)=(*( (b *) ( ((a) += sizeof(b)) - sizeof(b) )))"
-++d__builtin_va_arg(a,b)=_to_semi          // redefined to avoid errors
-++d__builtin_va_copy(a,b)=a=(va_list){0}   // try to fix uninitialized args
+++d__builtin_va_list=void*                 // used by stdarg.h
 ++d__builtin_va_start(a,b)=a=(va_list){0}  // try to fix uninitialized args
+++d__builtin_stdarg_start()=_to_semi       // ditto
+++d__builtin_va_end()=_to_semi             // ditto
+++d"__builtin_va_arg(a,b)=(*( (b *) ( ((a) += sizeof(b)) - sizeof(b) )))"
+++d__builtin_va_copy(a,b)=a=(va_list){0}   // try to fix uninitialized args
+
+
 ++d__null=0
 +rw(_to_semi)           // needed for the two macros above.
 +rw(__typeof__)         // activate __typeof__ keyword

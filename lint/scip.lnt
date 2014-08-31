@@ -21,6 +21,9 @@
 +libh(cplex.h) // declare CPLEX file as library
 +fll           // permit long lont int
 
+// turn off error 39 in libraries
+-elib(39)
+
 //  The following functions exhibit variable return modes.
 //  That is, they may equally-usefully be called for a value
 //  as called just for their effects.  Accordingly we inhibit
@@ -33,6 +36,8 @@
 
 -function(exit,__assertfail)
 
+// turn off all errors for va_* functions:
+-emacro((*),va_*)
 
 // ---------------------------------------------------------
 // treat particular messages:
