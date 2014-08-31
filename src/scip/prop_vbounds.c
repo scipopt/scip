@@ -902,38 +902,11 @@ SCIP_RETCODE initData(
          /* If the vbvar is binary, the vbound should be stored as an implication already.
           * However, it might happen that vbvar was integer when the variable bound was added, but was converted
           * to a binary variable later during presolving when its upper bound was changed to 1. In this case,
+          * the implication might not have been created.
           */
          if( SCIPvarGetType(vbvar) == SCIP_VARTYPE_BINARY
             && SCIPvarHasImplic(vbvar, isIndexLowerbound(startidx), var, getBoundtype(v)) )
          {
-#if 0
-            SCIP_VAR** implvars;
-            SCIP_Real* implbounds;
-            SCIP_BOUNDTYPE* impltypes;
-            int nimplvars;
-            int j;
-            SCIP_Bool startlower;
-
-            startlower = isIndexLowerbound(startidx);
-
-            implvars = SCIPvarGetImplVars(vbvar, startlower);
-            impltypes = SCIPvarGetImplTypes(vbvar, startlower);
-            implbounds = SCIPvarGetImplBounds(vbvar, startlower);
-            nimplvars = SCIPvarGetNImpls(vbvar, startlower);
-
-            for( j = 0; j < nimplvars; ++j )
-            {
-               if( (implvars[j] == var) && (lower == (impltypes[j] == SCIP_BOUNDTYPE_LOWER)) )
-               {
-                  if( lower )
-                     assert(SCIPisGE(scip, implbounds[j], (startlower ? coef : 0.0) + constant));
-                  else
-                     assert(SCIPisLE(scip, implbounds[j], (startlower ? coef : 0.0) + constant));
-                  break;
-               }
-            }
-            assert(j  < nimplvars);
-#endif
             SCIPdebugMessage("varbound <%s> %s %g * <%s> + %g not added to propagator data due to reverse implication\n",
                SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
                SCIPvarGetName(vbvar), constant);
