@@ -2290,6 +2290,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
       int startidx;
 
       component = eventdata->startcomponents[i];
+      assert(component >= 0);
       startidx = eventdata->startindices[i];
 
       /* there is already an entry for this component */
@@ -2298,7 +2299,8 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          int componentidx;
 
          /* get its index */
-         componentidx = (int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1)) - 1; /*lint !e776*/
+         componentidx = ((int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e776*/
+         assert(componentidx >= 0);
          assert(propdata->startcomponents[componentidx] == component);
 
          if( propdata->startindices[componentidx] > startidx )
