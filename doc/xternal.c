@@ -582,9 +582,11 @@
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
- * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked by valgrind or
- *   similar tools.
- * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.  (The binary uses these shared
+ * - <code>NOBLKBUFMEM=\<true\></code> turns off the internal SCIP block and buffer memory.  This way the code can be checked by valgrind or
+ *   similar tools. (The individual options <code>NOBLKMEM=\<true\></code> and <code>NOBUFMEM=\<true\></code> to turn off the SCIP block and
+ *   buffer memory, respectively, exist as well.
+ *
+ * - <code>SHARED=\<true\></code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
  * - <code>OPT=prf</code> generates a profiling version of SCIP providing a detailed statistic of the time usage of
  *   every method of SCIP.

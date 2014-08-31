@@ -67,6 +67,10 @@ parameters:
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
 - changed default value of parameter heuristics/proximity/usefinallp to FALSE
 
+Makefile:
+- allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM. Note that you need
+  to clean all files before recompiling; also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
+
 SCIP version 3.1.0
 ==================
 
