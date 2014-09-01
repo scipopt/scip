@@ -3357,7 +3357,7 @@ SCIP_RETCODE Exec(
 
    nodeID = SCIPgetRootNode(scip) == SCIPgetCurrentNode(scip) ? 0 : SCIPnodeGetReoptID(SCIPgetCurrentNode(scip));
 
-   SCIPdebugMessage("branch reoptimized node %llu:\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMessage("branch reoptimized node %llu, ID %d:\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nodeID);
    if( branchruledata->nodedata[nodeID]->dualcons[0] != NULL )
    {
       SCIPdebugMessage(" -> dual information: %u (constype: %d, nvars: %d)\n",
@@ -3961,11 +3961,6 @@ void updateStatistics(
    assert(scip != NULL);
    assert(branchruledata != NULL);
    assert(branchruledata->reopt);
-
-//   printf("** reoptimization ** %d feasible  %d infeasible  %d pruned  %d redied  %.4f redied/revived.\n",
-//         branchruledata->nfeasnodesround, branchruledata->ninfeasnodesround, branchruledata->nprunednodesround,
-//         branchruledata->nrediednodesround,
-//         branchruledata->nrevivednodes == 0 ? 0 : (SCIP_Real)branchruledata->nrediednodesround/branchruledata->nrevivednodes);
 
    if (branchruledata->nfeasnodesround > branchruledata->nfeasnodesmax)
       branchruledata->nfeasnodesmax = branchruledata->nfeasnodesround;
@@ -5523,55 +5518,15 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
    SCIP_CALL(SCIPsetIntParam(scip, "propagating/vbounds/maxprerounds", -1));
 
    /* constraint handler */
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/SOS1/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/SOS2/propfreq", 1));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/abspower/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/abspower/dualpresolve", FALSE));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/and/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/and/dualpresolving", FALSE));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/bivariate/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/bounddisjunction/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/conjunction/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/countsols/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/cumulative/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/disjunction/propfreq", 1));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/indicator/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/indicator/dualreductions", FALSE));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/integral/propfreq", 1));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/linear/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/linking/propfreq", 1));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/logicor/dualpresolving", FALSE));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/nonlinear/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/or/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/orbitope/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/pseudoboolean/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/quadratic/propfreq", 1));
-
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/setppc/propfreq", 1));
    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/setppc/dualpresolving", FALSE));
 
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/soc/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/superindicator/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/varbound/propfreq", 1));
-   SCIP_CALL(SCIPsetIntParam(scip, "constraints/xor/propfreq", 1));
-
    SCIP_CALL(SCIPsetBoolParam(scip, "conflict/enable", FALSE));
-   SCIP_CALL(SCIPsetBoolParam(scip, "lp/disablecutoff", FALSE));
-   SCIP_CALL(SCIPsetBoolParam(scip, "misc/calcintegral", FALSE));
 
    /* capture and lock all variables */
    for(var = 0; var < SCIPgetNOrigVars(scip); var++)

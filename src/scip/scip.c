@@ -2418,10 +2418,10 @@ SCIP_RETCODE SCIPcopyConss(
          /* all constraints have to be active */
          assert(sourceconss[c] != NULL);
          //assert(SCIPconsIsActive(sourceconss[c]));
-         assert(!SCIPconsIsDeleted(sourceconss[c]));
+//         assert(!SCIPconsIsDeleted(sourceconss[c]));
 
          /* in case of copying the global problem we have to ignore the local constraints which are active */
-         if( global && SCIPconsIsLocal(sourceconss[c]) )
+         if( !SCIPconsIsDeleted(sourceconss[c]) && global && SCIPconsIsLocal(sourceconss[c]) )
          {
             SCIPdebugMessage("did not copy local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
             continue;

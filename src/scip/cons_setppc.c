@@ -5639,7 +5639,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             }
          }
       }
-      else if( !donotaggr && consdata->nvars == 2 )
+      else if( !donotaggr && consdata->nvars == 2 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
       {
          SCIP_Bool redundant;
 

@@ -24,6 +24,7 @@
 #include "scip/branch_nodereopt.h"
 #include "scip/branch_pseudo.h"
 #include "scip/event_nodereopt.h"
+#include "scip/type_reopt.h"
 #include "scip/pub_event.h"
 #include "scip/tree.h"
 #include <string.h>
@@ -531,7 +532,9 @@ SCIP_DECL_EVENTEXEC(eventExecNodereopt)
       return SCIP_OKAY;
 
    /* return of the event node is a probing or refocus node */
-   if( SCIPnodeGetType(eventnode) == SCIP_NODETYPE_PROBINGNODE || SCIPnodeGetType(eventnode) == SCIP_NODETYPE_REFOCUSNODE )
+   if( SCIPnodeGetType(eventnode) == SCIP_NODETYPE_PROBINGNODE
+    || SCIPnodeGetType(eventnode) == SCIP_NODETYPE_REFOCUSNODE
+    || SCIPnodeGetType(eventnode) == SCIP_NODETYPE_FORK )
       return SCIP_OKAY;
 
    if( eventhdlrdata->lastnodenr == SCIPnodeGetNumber(eventnode) )
