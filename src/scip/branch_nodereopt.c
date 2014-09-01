@@ -5337,8 +5337,23 @@ SCIP_RETCODE checkLPBranchCands(
  */
 
 #define branchCopynodereopt NULL;
-#define branchExitnodereopt NULL;
-#define branchInitsolnodereopt NULL;
+
+static
+SCIP_DECL_BRANCHEXIT(branchExitnodereopt)
+{
+   int var;
+
+   /* release and unlock all variables */
+   for(var = 0; var < SCIPgetNOrigVars(scip); var++)
+   {
+      SCIP_VAR* transvar;
+      transvar =  SCIPvarGetTransVar(SCIPgetOrigVars(scip)[var]);
+      SCIP_CALL( SCIPaddVarLocks(scip, transvar, -1, -1) );
+      SCIP_CALL( SCIPreleaseVar(scip, &transvar) );
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_BRANCHINIT(branchInitnodereopt)
@@ -5535,43 +5550,6 @@ SCIP_DECL_BRANCHINIT(branchInitnodereopt)
       transvar =  SCIPvarGetTransVar(SCIPgetOrigVars(scip)[var]);
       SCIP_CALL( SCIPcaptureVar(scip, transvar) );
       SCIP_CALL( SCIPaddVarLocks(scip, transvar, 1, 1) );
-   }
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_BRANCHEXITSOL(branchExitsolnodereopt)
-{
-   SCIP_BRANCHRULEDATA* branchruledata;
-   int var;
-
-   assert(scip != NULL );
-   assert(branchrule != NULL );
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL );
-
-   if (branchruledata->init && branchruledata->reopt)
-   {
-#ifdef CCHECK
-      if( SCIPgetStage(scip) == SCIP_STAGE_EXITSOLVE &&
-            SCIPgetStage(scip) != SCIP_STAGE_PROBLEM &&
-            SCIPgetNTotalNodes(scip) > 1 &&
-            SCIPhashmapGetNEntries(branchruledata->nodetoid) >= 1)
-      {
-         SCIP_CALL( checkConsistency(scip) );
-      }
-#endif
-   }
-
-   /* release and unlock all variables */
-   for(var = 0; var < SCIPgetNOrigVars(scip); var++)
-   {
-      SCIP_VAR* transvar;
-      transvar =  SCIPvarGetTransVar(SCIPgetOrigVars(scip)[var]);
-      SCIP_CALL( SCIPaddVarLocks(scip, transvar, -1, -1) );
-      SCIP_CALL( SCIPreleaseVar(scip, &transvar) );
    }
 
    return SCIP_OKAY;
@@ -5929,7 +5907,7 @@ SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    SCIP_CALL(SCIPsetBranchruleExecExt(scip, branchrule, branchExecextnodereopt));
    SCIP_CALL(SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsnodereopt));
    SCIP_CALL(SCIPsetBranchruleInit(scip, branchrule, branchInitnodereopt));
-   SCIP_CALL(SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolnodereopt));
+   SCIP_CALL(SCIPsetBranchruleExit(scip, branchrule, branchExitnodereopt));
 
    /* parameter */
 
