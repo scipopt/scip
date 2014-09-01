@@ -3393,7 +3393,8 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 
    if( tree->focuslpistate != NULL )
    {
-      SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->focuslpistate) );
+      SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->focuslpistate,
+            tree->focuslpstatefork->data.fork->lpwasprimfeas, tree->focuslpstatefork->data.fork->lpwasdualfeas) );
    }
 
    lpstatefork = tree->focuslpstatefork;

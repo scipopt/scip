@@ -13641,7 +13641,6 @@ SCIP_RETCODE SCIPsolve(
 {
    SCIP_Bool statsprinted = FALSE;
    SCIP_Bool restart;
-   int var;
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -13807,12 +13806,12 @@ SCIP_RETCODE SCIPsolve(
 
    if( scip->set->reopt_enable )
    {
-      /* start clock */
-      SCIP_CALL( SCIPstartSaveTime(scip) );
-
       /* save found solutions */
       int nsols;
       int s;
+
+      /* start clock */
+      SCIP_CALL( SCIPstartSaveTime(scip) );
 
       nsols = scip->set->reopt_savesols == -1 ? INT_MAX : scip->set->reopt_savesols;
       nsols = MIN(scip->primal->nsols, nsols);
@@ -13827,8 +13826,10 @@ SCIP_RETCODE SCIPsolve(
 
          if( !SCIPsolIsOriginal(sol) )
          {
+            SCIP_Bool hasinfval;
+
             /* retransform solution into the original problem space */
-            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
          }
 
          if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL || (s == 0 && scip->set->reopt_sepabestsol) )

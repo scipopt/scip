@@ -7018,8 +7018,6 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    )
 {
-   SCIP_EVENT event;
-
    /* apply bound change to the LP data */
    switch( boundtype )
    {

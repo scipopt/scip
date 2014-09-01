@@ -28,8 +28,8 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_tree.h"
-#include "scip/type_lpi.h"
 #include "scip/type_reopt.h"
+#include "lpi/type_lpi.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
