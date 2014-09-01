@@ -81,6 +81,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->userrestart = FALSE;
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
+   (*stat)->performpresol = FALSE;
    (*stat)->subscipdepth = 0;
 
    SCIPstatReset(*stat, set);

@@ -8951,7 +8951,7 @@ SCIP_RETCODE propagateBoundsCons(
                   {
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeUpwards();
-                     rhs2.sup = rhs.sup - minquadactivity;
+                     rhs2.sup = rhs.sup - minquadactivity;  /*lint !e644*/
                      /* if the residual quad min activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadminactinf == 0 && SCIPintervalGetInf(quadactcontr[i]) != 0.0 )
                         rhs2.sup += SCIPintervalGetInf(quadactcontr[i]);
@@ -8975,7 +8975,7 @@ SCIP_RETCODE propagateBoundsCons(
                   {
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeDownwards();
-                     rhs2.inf = rhs.inf - maxquadactivity;
+                     rhs2.inf = rhs.inf - maxquadactivity;  /*lint !e644*/
                      /* if the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadmaxactinf == 0 && SCIPintervalGetSup(quadactcontr[i]) != 0.0 )
                         rhs2.inf += SCIPintervalGetSup(quadactcontr[i]);

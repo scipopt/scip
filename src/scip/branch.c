@@ -2253,11 +2253,11 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
             if( SCIPsetIsInfinity(set, ub) )
             {
-               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb));
+               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb)); /*lint !e666*/
             }
             else if( SCIPsetIsInfinity(set, -lb) )
             {
-               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub));
+               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub)); /*lint !e666*/
             }
 
             lbabs = REALABS(lb);

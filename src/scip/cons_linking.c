@@ -111,7 +111,7 @@ void* getHashmapKey(
    )
 {
    /* return the unique variable index + 1 */
-   return (void*)(size_t)(SCIPvarGetIndex(var) + 1);
+   return (void*)(size_t)(SCIPvarGetIndex(var) + 1); /*lint !e571 !e776*/
 }
 
 /* sort binary variable in non-decreasing order w.r.t. coefficients */

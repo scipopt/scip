@@ -1239,9 +1239,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* this condition checks if we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation
     */
-   if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (maxsize_t / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) )
+   if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (maxsize_t / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) ) /*lint !e571*/
    {
-      SCIPdebugMessage("Too much memory (%lu) would be consumed.\n", (unsigned long) (((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues)));
+      SCIPdebugMessage("Too much memory (%lu) would be consumed.\n", (unsigned long) (((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues))); /*lint !e571*/
 
       *success = FALSE;
       goto TERMINATE;

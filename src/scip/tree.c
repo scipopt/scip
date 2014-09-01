@@ -3855,7 +3855,7 @@ SCIP_RETCODE focusnodeToSubroot(
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up whole LP to keep only necessary columns and rows */
-#if 0
+#ifdef SCIP_DISABLED_CODE
       if( tree->focusnode->depth == 0 )
       {
          SCIP_CALL( SCIPlpCleanupAll(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
@@ -6893,7 +6893,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
 
          if( nbranchings > 0 )
          {
-            SCIPgmlWriteArc(file, (unsigned int)(size_t)nbranchings, (unsigned int)(size_t)(nbranchings-1), NULL, NULL);
+            SCIPgmlWriteArc(file, (unsigned int)nbranchings, (unsigned int)(nbranchings-1), NULL, NULL);
          }
 
          nbranchings++;

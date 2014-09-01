@@ -92,6 +92,8 @@ fixed bugs:
 - fixed bug in trysol heuristic not saving the best solution in maximization problems
 - fixed bug in aggregation procedure if two variables were of non-binary type but for one of the variables
   SCIPvarIsBinary() returned true
+- treat activities of pseudo solutions as invalid when containing positive and negative infinity contributions
+- fixed bug in cons_setppc, wrongly aggregating variables if dual-presolving was disabled
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
@@ -115,6 +117,10 @@ interface:
 parameters:
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
 - changed default value of parameter heuristics/proximity/usefinallp to FALSE
+
+Makefile:
+- allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
+  also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
 
 SCIP version 3.1.0
 ==================

@@ -5565,12 +5565,7 @@ SCIP_RETCODE SCIPconsCopy(
       SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
    }
-#if 0
-   else
-   {
-      SCIPwarningMessage(scip, "constraint handler <%s> doesn't support copying constraints\n", sourceconshdlr->name);
-   }
-#endif
+
    return SCIP_OKAY;
 }
 

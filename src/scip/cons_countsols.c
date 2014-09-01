@@ -2543,11 +2543,11 @@ SCIP_RETCODE includeConshdlrCountsols(
 #ifdef WITH_GMP
 #ifdef mpir_version
    /* add info about using MPIR to external codes information */
-   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "MPIR %s", mpir_version);
+   (void) SCIPsnprintf(gmpversion, (int) sizeof(gmpversion), "MPIR %s", mpir_version);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "Multiple Precision Integers and Rationals Library developed by W. Hart (mpir.org)") );
 #else
    /* add info about using GMP to external codes information */
-   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %s", gmp_version);
+   (void) SCIPsnprintf(gmpversion, (int) sizeof(gmpversion), "GMP %s", gmp_version);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
 #endif
 #endif

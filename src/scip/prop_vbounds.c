@@ -346,7 +346,7 @@ SCIP_RETCODE catchEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -395,7 +395,7 @@ SCIP_RETCODE dropEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -902,38 +902,11 @@ SCIP_RETCODE initData(
          /* If the vbvar is binary, the vbound should be stored as an implication already.
           * However, it might happen that vbvar was integer when the variable bound was added, but was converted
           * to a binary variable later during presolving when its upper bound was changed to 1. In this case,
+          * the implication might not have been created.
           */
          if( SCIPvarGetType(vbvar) == SCIP_VARTYPE_BINARY
             && SCIPvarHasImplic(vbvar, isIndexLowerbound(startidx), var, getBoundtype(v)) )
          {
-#if 0
-            SCIP_VAR** implvars;
-            SCIP_Real* implbounds;
-            SCIP_BOUNDTYPE* impltypes;
-            int nimplvars;
-            int j;
-            SCIP_Bool startlower;
-
-            startlower = isIndexLowerbound(startidx);
-
-            implvars = SCIPvarGetImplVars(vbvar, startlower);
-            impltypes = SCIPvarGetImplTypes(vbvar, startlower);
-            implbounds = SCIPvarGetImplBounds(vbvar, startlower);
-            nimplvars = SCIPvarGetNImpls(vbvar, startlower);
-
-            for( j = 0; j < nimplvars; ++j )
-            {
-               if( (implvars[j] == var) && (lower == (impltypes[j] == SCIP_BOUNDTYPE_LOWER)) )
-               {
-                  if( lower )
-                     assert(SCIPisGE(scip, implbounds[j], (startlower ? coef : 0.0) + constant));
-                  else
-                     assert(SCIPisLE(scip, implbounds[j], (startlower ? coef : 0.0) + constant));
-                  break;
-               }
-            }
-            assert(j  < nimplvars);
-#endif
             SCIPdebugMessage("varbound <%s> %s %g * <%s> + %g not added to propagator data due to reverse implication\n",
                SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
                SCIPvarGetName(vbvar), constant);
@@ -1475,7 +1448,7 @@ SCIP_RETCODE propagateVbounds(
             if( !SCIPvarIsBinary(var) || (lower && SCIPvarGetLbLocal(var) > 0.5)
                   || (!lower && SCIPvarGetUbLocal(var) < 0.5) )
             {
-               SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(v + 1)) );
+               SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(v + 1)) ); /*lint !e571 !e776*/
                propdata->inqueue[v] = TRUE;
             }
          }
@@ -1893,7 +1866,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    /* add the bound change to the propagation queue, if it is not already contained */
    if( !propdata->inqueue[idx] )
    {
-      SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) );
+      SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) ); /*lint !e571 !e776*/
       propdata->inqueue[idx] = TRUE;
    }
    assert(SCIPpqueueNElems(propdata->propqueue) > 0);

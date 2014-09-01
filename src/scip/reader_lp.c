@@ -3233,7 +3233,9 @@ void checkConsnames(
 
    for( c = 0; c < nconss; ++c )
    {
-      assert( conss != NULL ); /* for lint */
+      int len;
+
+      assert(conss != NULL); /* for lint */
       cons = conss[c];
       assert(cons != NULL );
 
@@ -3246,23 +3248,22 @@ void checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
+      len = (int) strlen(SCIPconsGetName(cons));
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
          SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
 
-         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN)
-            || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN -  4) )
+         if( (SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN) || ( !SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN - 4) )
          {
-            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
-               LP_MAX_NAMELEN  - 1);
+            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n", LP_MAX_NAMELEN - 1);
             return;
          }
       }
-      else if( strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN )
+      else if( len > LP_MAX_NAMELEN )
       {
-         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
-            LP_MAX_NAMELEN  - 1);
+         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n", LP_MAX_NAMELEN - 1);
          return;
       }
    }

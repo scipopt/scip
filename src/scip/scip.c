@@ -1060,7 +1060,8 @@ SCIP_Bool SCIPisPresolveFinished(
          || (scip->stat->npresolchgcoefs - scip->stat->lastnpresolchgcoefs
             <= scip->set->presol_abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* since 2005, we do not take cliques and implications into account when deciding whether to stop presolving */
    /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
    finished = finished
       && (scip->stat->nimplications - scip->stat->lastnpresolimplications
@@ -32336,7 +32337,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       /* @todo how should we avoid numerical trobles here for large objective values? */
       if( (SCIPgetSolOrigObj(scip, *sol) / SCIPepsilon(scip)) < 1e+15 ||
          REALABS(SCIPgetSolOrigObj(scip, *sol) - SCIPgetSolOrigObj(scip, sourcesol)) > 1e-12 * SCIPgetSolOrigObj(scip, *sol) )
-      *success = FALSE;
+         *success = FALSE;
    }
 
  TERMINATE:
@@ -37013,20 +37014,7 @@ void printPresolverStatistics(
    {
       SCIP_PROP* prop;
       prop = scip->set->props[i];
-      if( SCIPpropDoesPresolve(prop)
-#if 0
-         && ( SCIPpropGetNFixedVars(prop) > 0
-            || SCIPpropGetNAggrVars(prop) > 0
-            || SCIPpropGetNChgVarTypes(prop) > 0
-            || SCIPpropGetNChgBds(prop) > 0
-            || SCIPpropGetNAddHoles(prop) > 0
-            || SCIPpropGetNDelConss(prop) > 0
-            || SCIPpropGetNAddConss(prop) > 0
-            || SCIPpropGetNChgSides(prop) > 0
-            || SCIPpropGetNChgCoefs(prop) > 0
-            || SCIPpropGetNUpgdConss(prop) > 0)
-#endif
-         )
+      if( SCIPpropDoesPresolve(prop) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
