@@ -1114,7 +1114,9 @@ SCIP_Real consdataComputePseudoActivity(
       }
    }
 
-   if( pseudoactivityneginf > 0 )
+   if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
+      return SCIP_INVALID;
+   else if( pseudoactivityneginf > 0 )
       return -SCIPinfinity(scip);
    else if( pseudoactivityposinf > 0 )
       return SCIPinfinity(scip);
@@ -2831,7 +2833,9 @@ SCIP_Real consdataGetActivity(
       SCIPdebugMessage("corrected activity of linear constraint: %.15g\n", activity);
    }
 
-   if( activity < 0 )
+   if( activity == SCIP_INVALID ) /*lint !e777*/
+      return activity;
+   else if( activity < 0 )
       activity = MAX(activity, -SCIPinfinity(scip)); /*lint !e666*/
    else
       activity = MIN(activity, SCIPinfinity(scip)); /*lint !e666*/
@@ -2853,6 +2857,9 @@ SCIP_Real consdataGetFeasibility(
    assert(consdata != NULL);
 
    activity = consdataGetActivity(scip, consdata, sol);
+
+   if( activity == SCIP_INVALID ) /*lint !e777*/
+      return -SCIPinfinity(scip);
 
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
@@ -5649,7 +5656,18 @@ SCIP_RETCODE checkCons(
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
-   if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
+   /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
+    * return infeasible for safety
+    */
+   if( activity == SCIP_INVALID ) /*lint !e777*/
+   {
+      assert(sol == NULL);
+      *violated = TRUE;
+
+      /* reset constraint age since we are in enforcement */
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+   }
+   else if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       /* the "normal" check: one of the two sides is violated */
       if( !checkrelmaxabs )
@@ -13406,10 +13424,11 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          SCIPinfoMessage(scip, NULL, ";\n");
 
-         if( SCIPisFeasLT(scip, activity, consdata->lhs) )
+         if( activity == SCIP_INVALID ) /*lint !e777*/
+            SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
+         else if( SCIPisFeasLT(scip, activity, consdata->lhs) )
             SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
-
-         if( SCIPisFeasGT(scip, activity, consdata->rhs) )
+         else if( SCIPisFeasGT(scip, activity, consdata->rhs) )
             SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", activity - consdata->rhs);
       }
    }
@@ -15438,7 +15457,11 @@ SCIP_Real* SCIPgetValsLinear(
    return consdata->vals;
 }
 
-/** gets the activity of the linear constraint in the given solution */
+/** gets the activity of the linear constraint in the given solution
+ *
+ *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
+ *        comprises positive and negative infinity contributions
+ */
 SCIP_Real SCIPgetActivityLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

@@ -262,7 +262,7 @@ SCIP_RETCODE readInputLine(
 
       /* copy the next input line into the input buffer */
       (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->inputlist->inputline,
-         (size_t)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
+         (size_t)(dialoghdlr->buffersize - dialoghdlr->bufferpos)); /*lint !e571 !e776*/
       dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
 
       /* free the input line */

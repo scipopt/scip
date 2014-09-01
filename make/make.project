@@ -66,6 +66,9 @@ SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
 LINKER  	=	C
 SHARED		=	false
+NOBLKMEM	=	false
+NOBUFMEM	=	false
+NOBLKBUFMEM	=	false
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
@@ -202,8 +205,16 @@ DFLAGS		+=	$(USRDFLAGS)
 # Memory Management
 #-----------------------------------------------------------------------------
 
-#FLAGS		+=	-DBMS_NOBLOCKMEM
-
+ifeq ($(NOBLKBUFMEM),true)
+     FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
+else
+  ifeq ($(NOBLKMEM),true)
+       FLAGS		+=	-DBMS_NOBLOCKMEM
+  endif
+  ifeq ($(NOBUFMEM),true)
+       FLAGS		+=	-DSCIP_NOBUFFERMEM
+  endif
+endif
 
 #-----------------------------------------------------------------------------
 # PARASCIP

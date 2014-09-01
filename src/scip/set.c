@@ -230,7 +230,7 @@
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
-                                                 *   freed (in case of bender decomposition this parameter should be set
+                                                 *   freed (in case of Benders decomposition this parameter should be set
                                                  *   to FALSE and therefore can be used to collect statistics over all
                                                  *   runs) */
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
@@ -1370,8 +1370,7 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-   /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 0
+#if 0 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
@@ -1400,7 +1399,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
-         "should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
+         "should the statistics be reset if the transformed problem is freed (in case of a Benders decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
          NULL, NULL) );
 
@@ -3826,10 +3825,10 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    }
    assert(set->nextcodes < set->extcodessize);
 
-   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)+1);  /*lint !e866*/
+   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) (strlen(name)+1));  /*lint !e866*/
    if( description != NULL )
    {
-      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) strlen(description)+1);  /*lint !e866*/
+      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) (strlen(description)+1));  /*lint !e866*/
    }
    else
    {

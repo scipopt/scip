@@ -30,6 +30,19 @@
 #include <vector>
 using std::vector;
 
+/* Turn off lint warning "747: Significant prototype coercion" and "732: Loss of sign".
+ * The first warning is generated for expressions like t[0], where t is a vector, since 0 is an integer constant, but a
+ * size_t is expected (usually long unsigned). The second is generated for expressions like t[n], where n is an
+ * integer. Both code pieces are likely to be correct. It seems to be impossible to inhibit these messages for
+ * vector<*>::operator[] only. */
+/*lint --e{747,732}*/
+
+/* Turn off lint info "1702 operator '...' is both an ordinary function 'CppAD::operator...' and a member function 'CppAD::SCIPInterval::operator...'.
+ * However, the functions have different signatures (the CppAD working on double, the SCIPInterval member
+ * function working on SCIPInterval's.
+ */
+/*lint --e{1702}*/
+
 /* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivaties of power operators
  * via CppAD's user-atomic function feature
  * our customized implementation should give better results (tighter intervals) for the interval data type
@@ -50,7 +63,7 @@ using std::vector;
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;
 
-/** CppAD needs to know a fixed upper bound on the number of threads at compile time.
+/* CppAD needs to know a fixed upper bound on the number of threads at compile time.
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
  */
 #ifndef CPPAD_MAX_NUM_THREADS
@@ -77,14 +90,14 @@ namespace CppAD
 {
 template <> SCIPInterval erf_template(
    const SCIPInterval    &x
-)
+   )
 {
    CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
    return SCIPInterval();
 }
 template <> AD<SCIPInterval> erf_template(
    const AD<SCIPInterval> &x
-)
+   )
 {
    CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
    return AD<SCIPInterval>();
@@ -181,7 +194,7 @@ SCIPInterval CondExpOp(
    const SCIPInterval&   right,
    const SCIPInterval&   trueCase,
    const SCIPInterval&   falseCase)
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "SCIPInterval CondExpOp(...)",
       "Error: cannot use CondExp with an interval type"
@@ -205,7 +218,7 @@ inline
 bool IdenticalPar(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    return true;
 }
 
@@ -242,7 +255,7 @@ inline
 bool GreaterThanZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "GreaterThanZero(x)",
       "Error: cannot use GreaterThanZero with interval"
@@ -256,7 +269,7 @@ inline
 bool GreaterThanOrZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__ ,
       "GreaterThanOrZero(x)",
       "Error: cannot use GreaterThanOrZero with interval"
@@ -270,7 +283,7 @@ inline
 bool LessThanZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "LessThanZero(x)",
       "Error: cannot use LessThanZero with interval"
@@ -284,7 +297,7 @@ inline
 bool LessThanOrZero(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "LessThanOrZero(x)",
       "Error: cannot use LessThanOrZero with interval"
@@ -298,7 +311,7 @@ inline
 int Integer(
    const SCIPInterval&   x                   /**< operand */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "Integer(x)",
       "Error: cannot use Integer with interval"
@@ -327,14 +340,14 @@ struct SCIP_ExprInt
 struct SCIP_ExprIntData
 {
 public:
-   /* constructor */
+   /** constructor */
    SCIP_ExprIntData()
-      : need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
+      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
    { }
 
-   /* destructor */
+   /** destructor */
    ~SCIP_ExprIntData()
-   { }
+   { }/*lint --e{1540}*/
 
    vector< AD<double> >  X;                  /**< vector of dependent variables */
    vector< AD<double> >  Y;                  /**< result vector */ 
@@ -368,10 +381,10 @@ public:
  */
 static
 bool univariate_for_sparse_jac(
-   size_t                     q,  /**< number of columns in R */
-   const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-   CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
-)
+   size_t                     q,             /**< number of columns in R */
+   const CppAD::vector<bool>& r,             /**< sparsity of R, columnwise */
+   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, columnwise */
+   )
 {
    assert(r.size() == q);
    assert(s.size() == q);
@@ -383,20 +396,20 @@ bool univariate_for_sparse_jac(
 
 /** Computes sparsity of jacobian during a reverse sweep
  *
- *  For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
- *  Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+ *  For a q x 1 matrix R, we have to return the sparsity pattern of the q x 1 matrix S(x) = R * f'(x).
+ *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
  */
 static
 bool univariate_rev_sparse_jac(
-   size_t                     q,  /**< number of rows in R */
-   CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-   const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
-)
+   size_t                     q,             /**< number of rows in R */
+   const CppAD::vector<bool>& r,             /**< sparsity of R, rowwise */
+   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, rowwise */
+   )
 {
    assert(r.size() == q);
    assert(s.size() == q);
 
-   r = s;
+   s = r;
 
    return true;
 }
@@ -408,15 +421,15 @@ bool univariate_rev_sparse_jac(
  */
 static
 bool univariate_rev_sparse_hes(
-   const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-   const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-   CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-   size_t                                  q,  /**< number of columns in R, U, and V */
-   const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-   const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-   CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-)
-{
+   const CppAD::vector<bool>& vx,            /**< indicates whether argument is a variable, or empty vector */
+   const CppAD::vector<bool>& s,             /**< sparsity pattern of S = g'(y) */
+   CppAD::vector<bool>&  t,                  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+   size_t                q,                  /**< number of columns in R, U, and V */
+   const CppAD::vector<bool>& r,             /**< sparsity pattern of R */
+   const CppAD::vector<bool>& u,             /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+   CppAD::vector<bool>&  v                   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+   )
+{  /*lint --e{439,715}*/  /* @todo take vx into account */
    assert(r.size() == q);
    assert(s.size() == 1);
    assert(t.size() == 1);
@@ -426,12 +439,13 @@ bool univariate_rev_sparse_hes(
    // T(x) = g'(f(x)) * f'(x) = S * f'(x), and f' is not identically 0
    t[0] = s[0];
 
-   // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
+   // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R466
    //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
    v = u;
    if( s[0] )
       for( size_t j = 0; j < q; ++j )
-         v[j] |= r[j];
+         if( r[j] )
+            v[j] = true;
 
    return true;
 }
@@ -478,16 +492,16 @@ private:
     *           = tx[0]^p,
     *       y'  = p * x^(p-1) * x'
     *           = p * tx[0]^(p-1) * tx[1],
-    *       y'' = p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x''
-    *           = p * (p-1) * tx[0]^(p-2) * tx[1]^2 + p * tx[0]^(p-1) * tx[2]
+    *       y'' = 1/2 * p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x''
+    *           = 1/2 * p * (p-1) * tx[0]^(p-2) * tx[1]^2 + p * tx[0]^(p-1) * tx[2]
     */
    bool forward(
-      size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
-      CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
+      size_t                     q,          /**< lowest order Taylor coefficient that we are evaluating */
+      size_t                     p,          /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
+      CppAD::vector<bool>&       vy,         /**< vector to store which function values depend on variables, or empty vector */
+      const CppAD::vector<Type>& tx,         /**< values for taylor coefficients of x */
+      CppAD::vector<Type>&       ty          /**< vector to store taylor coefficients of y */
       )
    {
       assert(exponent > 1);
@@ -519,18 +533,17 @@ private:
       {
          if( exponent > 2 )
          {
-            // ty[2] = exponent * (exponent-1) * pow(tx[0], exponent-2) * tx[1] * tx[1] + exponent * pow(tx[0], exponent-1) * tx[2];
+            // ty[2] = 1/2 * exponent * (exponent-1) * pow(tx[0], exponent-2) * tx[1] * tx[1] + exponent * pow(tx[0], exponent-1) * tx[2];
             ty[2]  = CppAD::pow(tx[0], exponent-2) * tx[1] * tx[1];
-            ty[2] *= exponent-1;
+            ty[2] *= (exponent-1) / 2.0;
             ty[2] += CppAD::pow(tx[0], exponent-1) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
             assert(exponent == 2);
-            // ty[2] = exponent * tx[1] * tx[1] + exponent * tx[0] * tx[2];
-            ty[2]  = tx[1] * tx[1] + tx[0] * tx[2];
-            ty[2] *= exponent;
+            // ty[2] = 1/2 * exponent * tx[1] * tx[1] + exponent * tx[0] * tx[2];
+            ty[2]  = tx[1] * tx[1] + 2.0 * tx[0] * tx[2];
          }
       }
 
@@ -572,13 +585,13 @@ private:
     * \f$
     */
    bool reverse(
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
-      CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
-      const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+      size_t                     p,          /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<Type>& tx,         /**< values for taylor coefficients of x */
+      const CppAD::vector<Type>& ty,         /**< values for taylor coefficients of y */
+      CppAD::vector<Type>&       px,         /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      const CppAD::vector<Type>& py          /**< values for partial derivatives of g(x) w.r.t. y */
       )
-   {
+   { /*lint --e{715}*/
       assert(exponent > 1);
       assert(px.size() >= p+1);
       assert(py.size() >= p+1);
@@ -618,9 +631,9 @@ private:
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                     q,  /**< number of columns in R */
-      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+      size_t                     q,          /**< number of columns in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
       )
    {
       return univariate_for_sparse_jac(q, r, s);
@@ -630,13 +643,13 @@ private:
 
    /** computes sparsity of jacobian during a reverse sweep
     *
-    * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
-    * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+    *  For a q x 1 matrix R, we have to return the sparsity pattern of the q x 1 matrix S(x) = R * f'(x).
+    *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool rev_sparse_jac(
-      size_t                     q,  /**< number of rows in R */
-      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
+      size_t                     q,          /**< number of rows in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, rowwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, rowwise */
       )
    {
       return univariate_rev_sparse_jac(q, r, s);
@@ -645,18 +658,19 @@ private:
    using CppAD::atomic_base<Type>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
-    * Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
-    * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+    *
+    *  Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
+    *  we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
    bool rev_sparse_hes(
-      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in R, U, and V */
-      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-   )
+      const CppAD::vector<bool>&   vx,       /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>&   s,        /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&         t,        /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                       q,        /**< number of columns in R, U, and V */
+      const CppAD::vector<bool>&   r,        /**< sparsity pattern of R */
+      const CppAD::vector<bool>&   u,        /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&         v         /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
@@ -666,10 +680,10 @@ private:
 template<class Type>
 static
 void posintpower(
-   vector<Type>&         in,                 /**< vector which first argument is base */
+   const vector<Type>&   in,                 /**< vector which first argument is base */
    vector<Type>&         out,                /**< vector where to store result in first argument */
    size_t                exponent            /**< exponent */
-)
+   )
 {
    static atomic_posintpower<typename Type::value_type> pip;
    pip(in, out, exponent);
@@ -680,10 +694,10 @@ void posintpower(
 /** power function with natural exponents */
 template<class Type>
 void posintpower(
-   vector<Type>&         in,                 /**< vector which first argument is base */
+   const vector<Type>&   in,                 /**< vector which first argument is base */
    vector<Type>&         out,                /**< vector where to store result in first argument */
    size_t                exponent            /**< exponent */
-)
+   )
 {
    out[0] = pow(in[0], (int)exponent);
 }
@@ -695,11 +709,11 @@ void posintpower(
 
 /** Automatic differentiation of x -> sign(x)abs(x)^p, p>=1, as CppAD user-atomic function.
  *
- * This class implements forward and reverse operations for the function x -> sign(x)abs(x)^p for use within CppAD.
- * While we otherwise would have to use discontinuous sign and abs functions, our own implementation allows to provide
- * a continuously differentiable function.
+ *  This class implements forward and reverse operations for the function x -> sign(x)abs(x)^p for use within CppAD.
+ *  While we otherwise would have to use discontinuous sign and abs functions, our own implementation allows to provide
+ *  a continuously differentiable function.
  *
- * @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
+ *  @todo treat the exponent as a (variable) argument to the function, with the assumption that we never differentiate w.r.t. it (this should make the approach threadsafe again)
  */
 template<class Type>
 class atomic_signpower : public CppAD::atomic_base<Type>
@@ -719,7 +733,7 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
     */
    virtual void set_id(size_t id)
    {
@@ -735,16 +749,16 @@ private:
     *           = sign(tx[0])abs(tx[0])^p,
     *       y'  = p * abs(x)^(p-1) * x'
     *           = p * abs(tx[0])^(p-1) * tx[1],
-    *       y'' = p * (p-1) * sign(x) * abs(x)^(p-2) * x'^2 + p * abs(x)^(p-1) * x''
-    *           = p * (p-1) * sign(tx[0]) * abs(tx[0])^(p-2) * tx[1]^2 + p * abs(tx[0])^(p-1) * tx[2]
+    *       y'' = 1/2 * p * (p-1) * sign(x) * abs(x)^(p-2) * x'^2 + p * abs(x)^(p-1) * x''
+    *           = 1/2 * p * (p-1) * sign(tx[0]) * abs(tx[0])^(p-2) * tx[1]^2 + p * abs(tx[0])^(p-1) * tx[2]
     */
    bool forward(
-      size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
-      CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
+      size_t                      q,         /**< lowest order Taylor coefficient that we are evaluating */
+      size_t                      p,         /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<bool>&  vx,        /**< indicates whether argument is a variable, or empty vector */
+      CppAD::vector<bool>&        vy,        /**< vector to store which function values depend on variables, or empty vector */
+      const CppAD::vector<Type>&  tx,        /**< values for taylor coefficients of x */
+      CppAD::vector<Type>&        ty         /**< vector to store taylor coefficients of y */
       )
    {
       assert(exponent > 0.0);
@@ -777,16 +791,15 @@ private:
          if( exponent != 2.0 )
          {
             ty[2]  = SIGN(tx[0]) * pow(REALABS(tx[0]), exponent - 2.0) * tx[1] * tx[1];
-            ty[2] *= exponent - 1.0;
+            ty[2] *= (exponent - 1.0) / 2.0;
             ty[2] += pow(REALABS(tx[0]), exponent - 1.0) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
-            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+            // y'' = 2 (1/2 * sign(x) * x'^2 + |x|*x'') = sign(tx[0]) * tx[1]^2 + 2 * abs(tx[0]) * tx[2]
             ty[2]  = SIGN(tx[0]) * tx[1] * tx[1];
-            ty[2] += REALABS(tx[0]) * tx[2];
-            ty[2] *= exponent;
+            ty[2] += 2.0 * REALABS(tx[0]) * tx[2];
          }
       }
 
@@ -828,13 +841,13 @@ private:
     * \f$
     */
    bool reverse(
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
-      CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
-      const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+      size_t                      p,         /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<Type>&  tx,        /**< values for taylor coefficients of x */
+      const CppAD::vector<Type>&  ty,        /**< values for taylor coefficients of y */
+      CppAD::vector<Type>&        px,        /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      const CppAD::vector<Type>&  py         /**< values for partial derivatives of g(x) w.r.t. y */
       )
-   {
+   { /*lint --e{715}*/
       assert(exponent > 1);
       assert(px.size() >= p+1);
       assert(py.size() >= p+1);
@@ -887,9 +900,9 @@ private:
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+      size_t                     q,          /**< number of columns in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
       )
    {
       return univariate_for_sparse_jac(q, r, s);
@@ -899,13 +912,13 @@ private:
 
    /** computes sparsity of jacobian during a reverse sweep
     *
-    * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
-    * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+    *  For a q x 1 matrix R, we have to return the sparsity pattern of the q x 1 matrix S(x) = R * f'(x).
+    *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool rev_sparse_jac(
-      size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
+      size_t                     q,          /**< number of rows in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, rowwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, rowwise */
       )
    {
       return univariate_rev_sparse_jac(q, r, s);
@@ -919,13 +932,13 @@ private:
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
    bool rev_sparse_hes(
-      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>& s,          /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&       t,          /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                     q,          /**< number of columns in S and R */
+      const CppAD::vector<bool>& r,          /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,          /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&       v           /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
       )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
@@ -952,7 +965,7 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
     */
    virtual void set_id(size_t id)
    {
@@ -961,7 +974,7 @@ private:
 
    /** specialization of atomic_signpower::forward template for SCIPinterval
     *
-    * @todo try to compute tighter resultants
+    *  @todo try to compute tighter resultants
     */
    bool forward(
       size_t                             q,  /**< lowest order Taylor coefficient that we are evaluating */
@@ -999,19 +1012,18 @@ private:
 
       if( q <= 2 && 2 <= p )
       {
-         if( p != 2.0 )
+         if( exponent != 2.0 )
          {
             ty[2]  = CppAD::signpow(tx[0], exponent - 2.0) * CppAD::square(tx[1]);
-            ty[2] *= exponent - 1.0;
+            ty[2] *= (exponent - 1.0) / 2.0;
             ty[2] += CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0) * tx[2];
             ty[2] *= exponent;
          }
          else
          {
-            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+            // y'' = 2 (1/2 * sign(x) * x'^2 + |x|*x'') = sign(tx[0]) * tx[1]^2 + 2 * abs(tx[0]) * tx[2]
             ty[2]  = CppAD::sign(tx[0]) * CppAD::square(tx[1]);
-            ty[2] += CppAD::abs(tx[0]) * tx[2];
-            ty[2] *= exponent;
+            ty[2] += 2.0 * CppAD::abs(tx[0]) * tx[2];
          }
       }
 
@@ -1033,7 +1045,7 @@ private:
       CppAD::vector<SCIPInterval>&       px, /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
       const CppAD::vector<SCIPInterval>& py  /**< values for partial derivatives of g(x) w.r.t. y */
       )
-   {
+   { /*lint --e{715} */
       assert(exponent > 1);
       assert(px.size() >= p+1);
       assert(py.size() >= p+1);
@@ -1086,9 +1098,9 @@ private:
     * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool for_sparse_jac(
-      size_t                                  q,  /**< number of columns in R */
-      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+      size_t                     q,          /**< number of columns in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
       )
    {
       return univariate_for_sparse_jac(q, r, s);
@@ -1098,13 +1110,13 @@ private:
 
    /** computes sparsity of jacobian during a reverse sweep
     *
-    * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
-    * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+    *  For a q x 1 matrix R, we have to return the sparsity pattern of the q x 1 matrix S(x) = R * f'(x).
+    *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
     */
    bool rev_sparse_jac(
-      size_t                                  q,  /**< number of rows in R */
-      CppAD::vector<bool>&       r,  /**< sparsity of R, rowwise */
-      const CppAD::vector<bool>& s   /**< vector to store sparsity of S, rowwise */
+      size_t                     q,          /**< number of rows in R */
+      const CppAD::vector<bool>& r,          /**< sparsity of R, rowwise */
+      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, rowwise */
       )
    {
       return univariate_rev_sparse_jac(q, r, s);
@@ -1118,24 +1130,25 @@ private:
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
    bool rev_sparse_hes(
-      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                                  q,  /**< number of columns in S and R */
-      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-   )
+      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>& s,          /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&       t,          /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                     q,          /**< number of columns in S and R */
+      const CppAD::vector<bool>& r,          /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,          /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&       v           /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+      )
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
 };
 
+/** template for evaluation for signpower operator */
 template<class Type>
 static
 void evalSignPower(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg,                /**< operand */
+   const Type&           arg,                /**< operand */
    SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
 {
@@ -1159,10 +1172,10 @@ template<class Type>
 static
 void evalSignPower(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg,                /**< operand */
+   const Type&           arg,                /**< operand */
    SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
-{
+{  /*lint --e{715}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalSignPower()",
       "Error: SignPower not implemented for this value type"
@@ -1173,7 +1186,7 @@ void evalSignPower(
 template<>
 void evalSignPower(
    CppAD::AD<double>&    resultant,          /**< resultant */
-   CppAD::AD<double>&    arg,                /**< operand */
+   const CppAD::AD<double>& arg,             /**< operand */
    SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
 {
@@ -1200,10 +1213,10 @@ template<class Type>
 static
 void evalMin(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg1,               /**< first operand */
-   Type&                 arg2                /**< second operand */
+   const Type&           arg1,               /**< first operand */
+   const Type&           arg2                /**< second operand */
    )
-{
+{  /*lint --e{715,1764}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalMin()",
       "Error: Min not implemented for this value type"
@@ -1214,8 +1227,8 @@ void evalMin(
 template<>
 void evalMin(
    CppAD::AD<double>&    resultant,          /**< resultant */
-   CppAD::AD<double>&    arg1,               /**< first operand */
-   CppAD::AD<double>&    arg2                /**< second operand */
+   const CppAD::AD<double>& arg1,            /**< first operand */
+   const CppAD::AD<double>& arg2             /**< second operand */
    )
 {
    resultant = MIN(arg1, arg2);
@@ -1230,10 +1243,10 @@ template<class Type>
 static
 void evalMax(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg1,               /**< first operand */
-   Type&                 arg2                /**< second operand */
+   const Type&           arg1,               /**< first operand */
+   const Type&           arg2                /**< second operand */
    )
-{
+{  /*lint --e{715,1764}*/
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalMax()",
       "Error: Max not implemented for this value type"
@@ -1244,8 +1257,8 @@ void evalMax(
 template<>
 void evalMax(
    CppAD::AD<double>&    resultant,          /**< resultant */
-   CppAD::AD<double>&    arg1,               /**< first operand */
-   CppAD::AD<double>&    arg2                /**< second operand */
+   const CppAD::AD<double>& arg1,            /**< first operand */
+   const CppAD::AD<double>& arg2             /**< second operand */
    )
 {
    resultant = MAX(arg1, arg2);
@@ -1259,7 +1272,7 @@ template<class Type>
 static
 void evalSqrt(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg                 /**< operand */
+   const Type&           arg                 /**< operand */
    )
 {
    resultant = sqrt(arg);
@@ -1272,7 +1285,7 @@ void evalSqrt(
 template<>
 void evalSqrt(
    CppAD::AD<double>&    resultant,          /**< resultant */
-   CppAD::AD<double>&    arg                 /**< operand */
+   const CppAD::AD<double>& arg              /**< operand */
    )
 {
    resultant = sqrt(arg + 1e-20) - 1e-10;
@@ -1283,7 +1296,7 @@ template<class Type>
 static
 void evalAbs(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg                 /**< operand */
+   const Type&           arg                 /**< operand */
    )
 {
    resultant = abs(arg);
@@ -1296,7 +1309,7 @@ void evalAbs(
 template<>
 void evalAbs(
    CppAD::AD<SCIPInterval>& resultant,       /**< resultant */
-   CppAD::AD<SCIPInterval>& arg              /**< operand */
+   const CppAD::AD<SCIPInterval>& arg        /**< operand */
    )
 {
    vector<CppAD::AD<SCIPInterval> > in(1, arg);
@@ -1312,8 +1325,8 @@ template<class Type>
 static
 void evalIntPower(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg,                /**< operand */
-   int                   exponent            /**< exponent */
+   const Type&           arg,                /**< operand */
+   const int             exponent            /**< exponent */
    )
 {
    if( exponent > 1 )
@@ -1364,20 +1377,21 @@ SCIP_RETCODE eval(
    Type&                 val                 /**< buffer to store expression value */
    )
 {
-   Type* buf;
+   Type* buf = 0;
 
    assert(expr != NULL);
 
    /* todo use SCIP_MAXCHILD_ESTIMATE as in expression.c */
 
-   buf = NULL;
    if( SCIPexprGetNChildren(expr) )
    {
-      if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )
+      if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )  /*lint !e666*/
          return SCIP_NOMEMORY;
 
       for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
+      {
          SCIP_CALL( eval(SCIPexprGetChildren(expr)[i], x, param, buf[i]) );
+      }
    }
 
    switch(SCIPexprGetOperator(expr))
@@ -1397,62 +1411,77 @@ SCIP_RETCODE eval(
       break;
 
    case SCIP_EXPR_PLUS:
+      assert( buf != 0 );
       val = buf[0] + buf[1];
       break;
 
    case SCIP_EXPR_MINUS:
+      assert( buf != 0 );
       val = buf[0] - buf[1];
       break;
 
    case SCIP_EXPR_MUL:
+      assert( buf != 0 );
       val = buf[0] * buf[1];
       break;
 
    case SCIP_EXPR_DIV:
+      assert( buf != 0 );
       val = buf[0] / buf[1];
       break;
 
    case SCIP_EXPR_SQUARE:
+      assert( buf != 0 );
       evalIntPower(val, buf[0], 2);
       break;
 
    case SCIP_EXPR_SQRT:
+      assert( buf != 0 );
       evalSqrt(val, buf[0]);
       break;
 
    case SCIP_EXPR_REALPOWER:
+      assert( buf != 0 );
       val = CppAD::pow(buf[0], SCIPexprGetRealPowerExponent(expr));
       break;
 
    case SCIP_EXPR_INTPOWER:
+      assert( buf != 0 );
       evalIntPower(val, buf[0], SCIPexprGetIntPowerExponent(expr));
       break;
 
    case SCIP_EXPR_SIGNPOWER:
+      assert( buf != 0 );
       evalSignPower(val, buf[0], expr);
       break;
 
    case SCIP_EXPR_EXP:
+      assert( buf != 0 );
       val = exp(buf[0]);
       break;
 
    case SCIP_EXPR_LOG:
+      assert( buf != 0 );
       val = log(buf[0]);
       break;
 
    case SCIP_EXPR_SIN:
+      assert( buf != 0 );
       val = sin(buf[0]);
       break;
 
    case SCIP_EXPR_COS:
+      assert( buf != 0 );
       val = cos(buf[0]);
       break;
 
    case SCIP_EXPR_TAN:
+      assert( buf != 0 );
       val = tan(buf[0]);
       break;
 #ifdef SCIP_DISABLED_CODE /* these operators are currently disabled */
    case SCIP_EXPR_ERF:
+      assert( buf != 0 );
       val = erf(buf[0]);
       break;
 
@@ -1460,28 +1489,34 @@ SCIP_RETCODE eval(
       return SCIP_ERROR;
 #endif
    case SCIP_EXPR_MIN:
+      assert( buf != 0 );
       evalMin(val, buf[0], buf[1]);
       break;
 
    case SCIP_EXPR_MAX:
+      assert( buf != 0 );
       evalMax(val, buf[0], buf[1]);
       break;
 
    case SCIP_EXPR_ABS:
+      assert( buf != 0 );
       evalAbs(val, buf[0]);
       break;
 
    case SCIP_EXPR_SIGN:
+      assert( buf != 0 );
       val = sign(buf[0]);
       break;
 
    case SCIP_EXPR_SUM:
+      assert( buf != 0 );
       val = 0.0;
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
          val += buf[i];
       break;
 
    case SCIP_EXPR_PRODUCT:
+      assert( buf != 0 );
       val = 1.0;
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
          val *= buf[i];
@@ -1494,9 +1529,10 @@ SCIP_RETCODE eval(
       coefs = SCIPexprGetLinearCoefs(expr);
       assert(coefs != NULL || SCIPexprGetNChildren(expr) == 0);
 
+      assert( buf != 0 );
       val = SCIPexprGetLinearConstant(expr);
       for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-         val += coefs[i] * buf[i];
+         val += coefs[i] * buf[i]; /*lint !e613*/
       break;
    }
 
@@ -1509,6 +1545,8 @@ SCIP_RETCODE eval(
       Type lincoef;
       vector<Type> in(1);
       vector<Type> out(1);
+
+      assert( buf != 0 );
 
       lincoefs   = SCIPexprGetQuadLinearCoefs(expr);
       nquadelems = SCIPexprGetNQuadElements(expr);
@@ -1524,7 +1562,7 @@ SCIP_RETCODE eval(
       int i = 0;
       for( int argidx = 0; argidx < SCIPexprGetNChildren(expr); ++argidx )
       {
-         if( i == nquadelems || quadelems[i].idx1 > argidx )
+         if( i == nquadelems || quadelems[i].idx1 > argidx ) /*lint !e613*/
          {
             /* there are no quadratic terms with argidx in its first argument, that should be easy to handle */
             if( lincoefs != NULL )
@@ -1535,16 +1573,16 @@ SCIP_RETCODE eval(
          sqrcoef = 0.0;
          lincoef = lincoefs != NULL ? lincoefs[argidx] : 0.0;
 
-         assert(i < nquadelems && quadelems[i].idx1 == argidx);
+         assert(i < nquadelems && quadelems[i].idx1 == argidx); /*lint !e613*/
          do
          {
-            if( quadelems[i].idx2 == argidx )
-               sqrcoef += quadelems[i].coef;
+            if( quadelems[i].idx2 == argidx )  /*lint !e613*/
+               sqrcoef += quadelems[i].coef; /*lint !e613*/
             else
-               lincoef += quadelems[i].coef * buf[quadelems[i].idx2];
+               lincoef += quadelems[i].coef * buf[quadelems[i].idx2]; /*lint !e613*/
             ++i;
-         } while( i < nquadelems && quadelems[i].idx1 == argidx );
-         assert(i == nquadelems || quadelems[i].idx1 > argidx);
+         } while( i < nquadelems && quadelems[i].idx1 == argidx ); /*lint !e613*/
+         assert(i == nquadelems || quadelems[i].idx1 > argidx);  /*lint !e613*/
 
          /* this is not as good as what we can get from SCIPintervalQuad, but easy to implement */
          if( sqrcoef != 0.0 )
@@ -1573,6 +1611,8 @@ SCIP_RETCODE eval(
       SCIP_Real* exponents;
       int i;
       int j;
+
+      assert( buf != 0 );
 
       val = SCIPexprGetPolynomialConstant(expr);
 
@@ -1661,7 +1701,7 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
       return true;
 
    default: ;
-   }
+   } /*lint !e788*/
 
    return false;
 }
@@ -1675,14 +1715,14 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
  */
 static
 void cppaderrorcallback(
-   bool               known,                 /**< is the error from a known source? */
-   int                line,                  /**< line where error occured */
-   const char*        file,                  /**< file where error occured */
-   const char*        exp,                   /**< error condition */
-   const char*        msg                    /**< error message */
+   bool                  known,              /**< is the error from a known source? */
+   int                   line,               /**< line where error occured */
+   const char*           file,               /**< file where error occured */
+   const char*           cond,               /**< error condition */
+   const char*           msg                 /**< error message */
    )
 {
-   SCIPdebugMessage("ignore CppAD error from %sknown source %s:%d: msg: %s exp: %s\n", known ? "" : "un", file, line, msg, exp);
+   SCIPdebugMessage("ignore CppAD error from %sknown source %s:%d: msg: %s exp: %s\n", known ? "" : "un", file, line, msg, cond);
 }
 
 /* install our error handler */
@@ -1745,7 +1785,7 @@ SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
    )
-{
+{ /*lint --e{429} */
    assert(tree    != NULL);
 
    SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
@@ -1880,8 +1920,8 @@ SCIP_RETCODE SCIPexprintEval(
       for( int i = 0; i < n; ++i )
          data->x[i] = varvals[i];
 
-      data->val = data->f.Forward(0, data->x)[0];
-      SCIPdebugMessage("Eval used foward sweep to compute value %g\n", data->val);
+      data->val = data->f.Forward(0, data->x)[0];  /*lint !e1793*/
+      SCIPdebugMessage("Eval used forward sweep to compute value %g\n", data->val);
    }
 
    *val = data->val;
@@ -1890,7 +1930,6 @@ SCIP_RETCODE SCIPexprintEval(
 }
 
 /** evaluates an expression tree on intervals */
-extern
 SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -1942,7 +1981,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
       for( int i = 0; i < n; ++i )
          data->int_x[i] = varvals[i];
 
-      data->int_val = data->int_f.Forward(0, data->int_x)[0];
+      data->int_val = data->int_f.Forward(0, data->int_x)[0];  /*lint !e1793*/
    }
 
    *val = data->int_val;
@@ -2087,8 +2126,8 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
 
    vector<bool> r(nn, false);
    for (int i = 0; i < n; ++i)
-      r[i*n+i] = true;
-   data->f.ForSparseJac(n, r); // need to compute sparsity for Jacobian first
+      r[i*n+i] = true;  /*lint !e647 !e1793*/
+   (void) data->f.ForSparseJac(n, r); // need to compute sparsity for Jacobian first
 
    SCIPdebugMessage("calling RevSparseHes\n");
 
@@ -2139,11 +2178,24 @@ SCIP_RETCODE SCIPexprintHessianDense(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+#if 1
+   /* this one uses reverse mode */
    vector<double> hess(data->f.Hessian(data->x, 0));
 
    int nn = n*n;
    for (int i = 0; i < nn; ++i)
       hessian[i] = hess[i];
+
+#else
+   /* this one uses forward mode */
+   for( int i = 0; i < n; ++i )
+      for( int j = 0; j < n; ++j )
+      {
+         vector<int> ii(1,i);
+         vector<int> jj(1,j);
+         hessian[i*n+j] = data->f.ForTwo(data->x, ii, jj)[0];
+      }
+#endif
 
 /* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG

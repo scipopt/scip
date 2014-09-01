@@ -312,7 +312,6 @@ SCIP_RETCODE execRelpscost(
    }
    else
    {
-      SCIP_SOL* bestsol;
       SCIP_VAR** vars;
       int* initcands;
       SCIP_Real* initcandscores;
@@ -348,6 +347,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Longint nlpiterationsquot;
       SCIP_Longint nsblpiterations;
       SCIP_Longint maxnsblpiterations;
+      int bestsolidx;
       int maxbdchgs;
       int bestpscand;
       int bestsbcand;
@@ -359,7 +359,7 @@ SCIP_RETCODE execRelpscost(
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
-      bestsol = SCIPgetBestSol(scip);
+      bestsolidx = SCIPgetBestSol(scip) == NULL ? -1 : SCIPsolGetIndex(SCIPgetBestSol(scip));
 
       /* get average conflict, inference, and pseudocost scores */
       avgconflictscore = SCIPgetAvgConflictScore(scip);
@@ -638,24 +638,14 @@ SCIP_RETCODE execRelpscost(
             break;
          }
 
-         /* evaluate strong branching */
-         down = MAX(down, lpobjval);
-         up = MAX(up, lpobjval);
-         downgain = down - lpobjval;
-         upgain = up - lpobjval;
-         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
-         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
-         assert(downinf || !downconflict);
-         assert(upinf || !upconflict);
-
          /* Strong branching might have found a new primal solution which updated the cutoff bound. In this case, the
           * provedbound computed before can be higher than the cutoffbound and the current node can be cut off.
           * Additionally, also if the value for the current best candidate is valid and exceeds the new cutoff bound,
           * we want to change the domain of this variable rather than branching on it.
           */
-         if( SCIPgetBestSol(scip) != bestsol )
+         if( SCIPgetBestSol(scip) != NULL && SCIPsolGetIndex(SCIPgetBestSol(scip)) != bestsolidx )
          {
-            bestsol = SCIPgetBestSol(scip);
+            bestsolidx = SCIPsolGetIndex(SCIPgetBestSol(scip));
 
             SCIPdebugMessage(" -> strong branching on variable <%s> lead to a new incumbent\n",
                SCIPvarGetName(branchcands[c]));
@@ -700,6 +690,16 @@ SCIP_RETCODE execRelpscost(
                }
             }
          }
+
+         /* evaluate strong branching */
+         down = MAX(down, lpobjval);
+         up = MAX(up, lpobjval);
+         downgain = down - lpobjval;
+         upgain = up - lpobjval;
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
+         assert(downinf || !downconflict);
+         assert(upinf || !upconflict);
 
          /* @todo: store pseudo cost only for valid bounds? and also if the other sb child was infeasible? */
          if( !downinf && !upinf )

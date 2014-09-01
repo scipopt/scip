@@ -2817,6 +2817,94 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write finitesolution command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         SCIPinfoMessage(scip, file, "solution status: ");
+         retcode = SCIPprintStatus(scip, file);
+         if( retcode != SCIP_OKAY )
+         {
+             fclose(file);
+             SCIP_CALL( retcode );
+         }
+         else
+         {
+            SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+
+            SCIPinfoMessage(scip, file, "\n");
+
+            if( bestsol != NULL )
+            {
+               SCIP_SOL* sol;
+               SCIP_Bool success;
+
+               retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
+
+               if( retcode == SCIP_OKAY )
+               {
+                  if( !success )
+                  {
+                     SCIPdialogMessage(scip, NULL, "error while creating finite solution\n");
+                  }
+                  else
+                  {
+                     retcode = SCIPprintSol(scip, sol, file, FALSE);
+                     SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+                  }
+
+                  SCIP_CALL( SCIPfreeSol(scip, &sol) );
+               }
+            }
+            else
+            {
+               SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
+               SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
+            }
+
+            fclose(file);
+
+            if( retcode != SCIP_OKAY )
+            {
+               SCIP_CALL( retcode );
+            }
+         }
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the write statistics command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
@@ -3478,6 +3566,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecWriteSolution, NULL, NULL,
             "solution", "write best primal solution to file", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write solution */
+   if( !SCIPdialogHasEntry(submenu, "finitesolution") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteFiniteSolution, NULL, NULL,
+            "finitesolution", "write best primal solution to file (try to make solution values finite, first)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

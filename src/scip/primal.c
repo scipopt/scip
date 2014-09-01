@@ -509,10 +509,13 @@ SCIP_RETCODE primalAddSol(
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) ) );
 
-#if 0
+#if 0 /* this is not a valid debug check, but can be used to track down numerical troubles */
 #ifndef NDEBUG
    /* check solution again completely
-    * (this may fail, because in the LP solver, the feasibility tolerance is a relative measure against the row's norm
+    * it fail for different reasons:
+    * - in the LP solver, the feasibility tolerance is a relative measure against the row's norm
+    * - in SCIP, the feasibility tolerance is a relative measure against the row's rhs/lhs
+    * - the rhs/lhs of a row might drastically change during presolving when variables are fixed or (multi-)aggregated
     */
    if( !SCIPsolIsOriginal(sol) )
    {

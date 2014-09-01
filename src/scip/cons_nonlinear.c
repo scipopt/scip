@@ -6315,6 +6315,7 @@ SCIP_RETCODE propagateBounds(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
+   SCIP_Bool             needclear,          /**< whether we may need to clear remainings from a previous backward propagation */
    SCIP_RESULT*          result,             /**< pointer to store the result of the propagation calls */
    int*                  nchgbds,            /**< buffer where to add the the number of changed bounds */
    int*                  ndelconss           /**< buffer where to increase if a constraint was deleted (locally) due to redundancy */
@@ -6363,7 +6364,7 @@ SCIP_RETCODE propagateBounds(
        * roundnr == 0 clears remainings from a previous backward propagation
        * @todo could give FALSE if no linear variable in the constraints had been relaxed since last time
        */
-      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, roundnr == 0, &domainerror) );
+      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, (roundnr == 0) && needclear, &domainerror) );
 
 #ifdef SCIP_OUTPUT
       {
@@ -7439,7 +7440,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
 
    /* run domain propagation */
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, &propresult, &dummy, &dummy) );
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
       *result = propresult;
@@ -7569,7 +7570,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
 
    /* run domain propagation */
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, &propresult, &dummy, &dummy) );
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
       *result = propresult;
@@ -7762,7 +7763,7 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
    assert(result != NULL);
 
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, result, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, result, &dummy, &dummy) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -7777,6 +7778,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
    SCIP_Bool          havegraphchange;
+   SCIP_Bool          tryupgrades;
    int                c;
 
    assert(scip     != NULL);
@@ -7802,7 +7804,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
    SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
-   havegraphchange |= havechange;
 
    /* if simplifier found some undefined expression, then declare problem as infeasible
     * usually, this should be discovered during domain propagation already, but since that is using interval arithmetics,
@@ -7813,18 +7814,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       return SCIP_OKAY;
    }
 
-   if( nrounds == 0 )
-   {
-      /* upgrade methods may look at expression graph bounds, which are not present in the first presolving round yet */
-      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, TRUE, &domainerror) );
+   havegraphchange |= havechange;
 
-      if( domainerror )
-      {
-         SCIPdebugMessage("propagating variable bounds through expression graph found that some expressions cannot be evaluated w.r.t. current bounds, thus cutoff\n");
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-   }
+   /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
+   tryupgrades = havegraphchange;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -7877,24 +7870,51 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          }
       }
 
-      /* call upgrade methods if constraint was not presolved, has been changed, or the expression graph has changed */
-      if( !consdata->ispresolved || havechange || havegraphchange )
-      {
-         SCIP_Bool upgraded;
+      /* remember that we want to call upgrade methods for the current constraint */
+      if( havechange )
+         consdata->ispresolved = FALSE;
 
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
-         if( upgraded )
-         {
-            *result = SCIP_SUCCESS;
-            continue;
-         }
-      }
-
-      consdata->ispresolved = TRUE;
+      /* if a constraint is not finished presolving yet, then we will try upgrade methods */
+      if( !consdata->ispresolved )
+         tryupgrades = TRUE;
    }
 
-   /* run domain propagation */
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, nchgbds, ndelconss) );
+   if( tryupgrades )
+   {
+      /* upgrade methods may look at expression graph bounds, which are not present in the first presolving round yet and may be invalid in later rounds (e.g., due to probing) */
+      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, TRUE, &domainerror) );
+
+      if( domainerror )
+      {
+         SCIPdebugMessage("propagating variable bounds through expression graph found that some expressions cannot be evaluated w.r.t. current bounds, thus cutoff\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      for( c = 0; c < nconss; ++c )
+      {
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
+         assert(consdata != NULL);
+
+         /* call upgrade methods if constraint was not presolved, has been changed, or the expression graph has changed */
+         if( !consdata->ispresolved || havegraphchange )
+         {
+            SCIP_Bool upgraded;
+
+            SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
+            if( upgraded )
+            {
+               *result = SCIP_SUCCESS;
+               continue;
+            }
+         }
+
+         consdata->ispresolved = TRUE;
+      }
+   }
+
+   /* run domain propagation (if updated bounds in graph above, then can skip cleanup) */
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, !tryupgrades, &propresult, nchgbds, ndelconss) );
    switch( propresult )
    {
    case SCIP_REDUCEDDOM:

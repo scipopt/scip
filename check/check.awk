@@ -98,7 +98,14 @@ BEGIN {
    }
 }
 /^IP\// {  # TEMPORARY HACK to parse .test files
-   intestfile[$1] = 1;
+   n  = split ($1, a, "/");
+   m = split(a[n], b, ".");
+   prob = b[1];
+   if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
+      m--;
+   for( i = 2; i < m; ++i )
+      prob = prob "." b[i];
+   intestfile[prob] = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
@@ -547,7 +554,7 @@ BEGIN {
    }
 
    if( (!onlyinsolufile || prob in solstatus) &&
-       (!onlyintestfile || intestfile[filename]) )
+       (!onlyintestfile || intestfile[prob]) )
    {
       # if sol file could not be read, fix status to be "unkown"
       if ( ! (prob in solstatus) )

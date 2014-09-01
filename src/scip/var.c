@@ -1425,8 +1425,8 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    /* capture branching and inference data associated with the bound changes */
    SCIP_CALL( boundchgCaptureData(boundchg) );
 
-#if 0
-#ifndef NDEBUG
+#ifdef SCIP_DISABLED_CODE /* expensive debug check */
+#ifdef SCIP_MORE_DEBUG
    {
       int i;
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
@@ -4915,6 +4915,11 @@ SCIP_RETCODE tryAggregateIntVars(
  *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
  *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ *
+ *  @todo check for fixings, infeasibility, bound changes, or domain holes:
+ *     a) if there is no easy aggregation and we have one binary variable and another integer/implicit/binary variable
+ *     b) for implicit integer variables with fractional aggregation scalar (we cannot (for technical reasons) and do
+ *        not want to aggregate implicit integer variables, since we loose the corresponding divisibility property)
  */
 SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4965,7 +4970,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    *aggregated = FALSE;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) )
+   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&
+         SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary)) )
    {
       SCIP_VAR* var;
       SCIP_Real scalar;
@@ -5041,18 +5047,10 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
          return SCIP_OKAY;
       }
 
-#if 0
       /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
        * since then we would loose the corresponding divisibility property
-       * @todo analyze the possible values of x and y and try to derive fixings, infeasibility, bound changes or domain holes
        */
-      if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT && !SCIPsetIsFeasIntegral(set, scalar) )
-      {
-         return SCIP_OKAY;
-      }
-#else
       assert(SCIPvarGetType(varx) != SCIP_VARTYPE_IMPLINT || SCIPsetIsFeasIntegral(set, scalar));
-#endif
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, lp, cliquetable, branchcand, eventqueue,
@@ -5066,14 +5064,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, transprob, origprob, primal, tree, lp, cliquetable, branchcand, eventfilter, eventqueue,
 	    varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
    }
-#if 0
-   else
-   {
-      /* @todo check for fixings or infeasibility when having one binary variable and another integer/implicit/binary
-       *       variable
-       */
-   }
-#endif
 
    return SCIP_OKAY;
 }

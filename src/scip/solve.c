@@ -3626,6 +3626,7 @@ SCIP_RETCODE solveNode(
        * allow restarting the optimization process later, we need to create a "branching" with only one child node that
        * is a copy of the focusnode
        */
+      SCIPtreeSetFocusNodeLP(tree, FALSE);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 1.0, focusnode->estimate) );
       assert(tree->nchildren >= 1);
       *stopped = TRUE;
