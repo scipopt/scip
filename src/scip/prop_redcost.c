@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@
 
 #define PROP_NAME              "redcost"
 #define PROP_DESC              "reduced cost strengthening propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_DURINGLPLOOP
+#define PROP_TIMING             SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY          +1000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -106,14 +106,14 @@ SCIP_RETCODE propagateRootRedcostBinvar(
    rootsol = SCIPvarGetBestRootSol(var);
    rootlpobjval = SCIPvarGetBestRootLPObjval(var);
 
-   if( SCIPisFeasZero(scip, rootredcost) )
+   if( SCIPisDualfeasZero(scip, rootredcost) )
       return SCIP_OKAY;
 
    assert(rootlpobjval != SCIP_INVALID); /*lint !e777*/
 
    if( rootsol > 0.5 )
    {
-      assert(!SCIPisFeasPositive(scip, rootredcost));
+      assert(!SCIPisDualfeasPositive(scip, rootredcost));
 
       /* update maximum reduced cost of a single binary variable */
       propdata->maxredcost = MAX(propdata->maxredcost, -rootredcost);
@@ -129,7 +129,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
    }
    else
    {
-      assert(!SCIPisFeasNegative(scip, rootredcost));
+      assert(!SCIPisDualfeasNegative(scip, rootredcost));
 
       /* update maximum reduced cost of a single binary variable */
       propdata->maxredcost = MAX(propdata->maxredcost, rootredcost);
@@ -153,21 +153,21 @@ SCIP_RETCODE propagateRootRedcostBinvar(
       SCIP_Real ubredcost;
 
       lbredcost = SCIPgetVarImplRedcost(scip, var, FALSE);
-      assert(!SCIPisFeasPositive(scip, lbredcost));
+      assert(!SCIPisDualfeasPositive(scip, lbredcost));
 
       ubredcost = SCIPgetVarImplRedcost(scip, var, TRUE);
-      assert(!SCIPisFeasNegative(scip, ubredcost));
+      assert(!SCIPisDualfeasNegative(scip, ubredcost));
 
       switch( SCIPcolGetBasisStatus(col) )
       {
       case SCIP_BASESTAT_LOWER:
          ubredcost -= SCIPgetVarRedcost(scip, var);
-         assert(!SCIPisFeasNegative(scip, ubredcost));
+         assert(!SCIPisDualfeasNegative(scip, ubredcost));
          break;
 
       case SCIP_BASESTAT_UPPER:
          lbredcost -= SCIPgetVarRedcost(scip, var);
-         assert(!SCIPisFeasPositive(scip, lbredcost));
+         assert(!SCIPisDualfeasPositive(scip, lbredcost));
          break;
 
       case SCIP_BASESTAT_BASIC:
@@ -207,7 +207,7 @@ SCIP_RETCODE propagateRedcostBinvar(
    {
    case SCIP_BASESTAT_LOWER:
       redcost = SCIPgetVarRedcost(scip, var);
-      assert(!SCIPisFeasNegative(scip, redcost));
+      assert(!SCIPisDualfeasNegative(scip, redcost));
 
       if( redcost > requiredredcost )
       {
@@ -222,7 +222,7 @@ SCIP_RETCODE propagateRedcostBinvar(
 
    case SCIP_BASESTAT_UPPER:
       redcost = SCIPgetVarRedcost(scip, var);
-      assert(!SCIPisFeasPositive(scip, redcost));
+      assert(!SCIPisDualfeasPositive(scip, redcost));
 
       if( -redcost > requiredredcost )
       {
@@ -239,7 +239,7 @@ SCIP_RETCODE propagateRedcostBinvar(
       return SCIP_OKAY;
 
    case SCIP_BASESTAT_ZERO:
-      assert(SCIPisFeasZero(scip, SCIPgetColRedcost(scip, col)));
+      assert(SCIPisDualfeasZero(scip, SCIPgetColRedcost(scip, col)));
       return SCIP_OKAY;
 
    default:
@@ -254,11 +254,11 @@ SCIP_RETCODE propagateRedcostBinvar(
    {
       /* collect implied reduced costs if the variable would be fixed to its lower bound */
       lbredcost = SCIPgetVarImplRedcost(scip, var, FALSE);
-      assert(!SCIPisFeasPositive(scip, lbredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      assert(!SCIPisDualfeasPositive(scip, lbredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
 
       /* collect implied reduced costs if the variable would be fixed to its upper bound */
       ubredcost = SCIPgetVarImplRedcost(scip, var, TRUE);
-      assert(!SCIPisFeasNegative(scip, ubredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      assert(!SCIPisDualfeasNegative(scip, ubredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
 
       if( -lbredcost > requiredredcost && ubredcost > requiredredcost )
       {
@@ -309,8 +309,8 @@ SCIP_RETCODE propagateRedcostVar(
    case SCIP_BASESTAT_LOWER:
       redcost = SCIPgetColRedcost(scip, col);
 
-      assert(!SCIPisFeasNegative(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
-      if( SCIPisFeasPositive(scip, redcost) )
+      assert(!SCIPisDualfeasNegative(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      if( SCIPisDualfeasPositive(scip, redcost) )
       {
          SCIP_Real oldlb;
          SCIP_Real oldub;
@@ -359,8 +359,8 @@ SCIP_RETCODE propagateRedcostVar(
    case SCIP_BASESTAT_UPPER:
       redcost = SCIPgetColRedcost(scip, col);
 
-      assert(!SCIPisFeasPositive(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
-      if( SCIPisFeasNegative(scip, redcost) )
+      assert(!SCIPisDualfeasPositive(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      if( SCIPisDualfeasNegative(scip, redcost) )
       {
          SCIP_Real oldlb;
          SCIP_Real oldub;
@@ -405,7 +405,7 @@ SCIP_RETCODE propagateRedcostVar(
       break;
 
    case SCIP_BASESTAT_ZERO:
-      assert(SCIPisFeasZero(scip, SCIPgetColRedcost(scip, col)));
+      assert(SCIPisDualfeasZero(scip, SCIPgetColRedcost(scip, col)));
       break;
 
    default:

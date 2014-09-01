@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -314,6 +314,13 @@ EXTERN
 void SCIPmessagePrintError(
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints an error message, acting like the vprintf() command using the static message handler */
+EXTERN
+void SCIPmessageVPrintError(
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    );
 
 /** Method to set the error printing method. Setting the error printing method to NULL will suspend all error methods.

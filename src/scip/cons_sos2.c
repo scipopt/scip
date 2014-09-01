@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -465,9 +465,9 @@ SCIP_RETCODE deleteVarSOS2(
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
    {
-      consdata->vars[j] = consdata->vars[j+1];
+      consdata->vars[j] = consdata->vars[j+1]; /*lint !e679*/
       if ( consdata->weights != NULL )
-         consdata->weights[j] = consdata->weights[j+1];
+         consdata->weights[j] = consdata->weights[j+1]; /*lint !e679*/
    }
    --consdata->nvars;
 
@@ -619,13 +619,14 @@ SCIP_RETCODE presolRoundSOS2(
             return SCIP_OKAY;
          }
 
-         lastFixedNonzero = j;
+         if( lastFixedNonzero == -1)
+            lastFixedNonzero = j;
       }
 
       /* if the variable is fixed to 0 we may delete it from our constraint */
       if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
       {
-         /* all rear variable fixed to 0 can be deleted */
+         /* all rear variables fixed to 0 can be deleted */
          if( j == consdata->nvars - 1 )
          {
             ++(*nremovedvars);
@@ -635,7 +636,7 @@ SCIP_RETCODE presolRoundSOS2(
 
             *success = TRUE;
          }
-         /* remember position of last variable variable for which all up front and this one are fixed to 0 */
+         /* remember position of last variable for which all up front and this one are fixed to 0 */
          else if( lastzero > j + 1 )
             lastzero = j;
       }
@@ -646,7 +647,7 @@ SCIP_RETCODE presolRoundSOS2(
    /* check that our vars array is still correct */
    assert(vars == consdata->vars);
 
-   /* remove first "lastzero" many varaibles, that are already fixed to 0 */
+   /* remove first "lastzero" many variables, that are already fixed to 0 */
    if( lastzero < consdata->nvars )
    {
       assert(lastzero >= 0);
@@ -663,7 +664,7 @@ SCIP_RETCODE presolRoundSOS2(
       *success = TRUE;
    }
 
-   /* check that our vars array is still correct */
+   /* check that our variable array is still correct */
    assert(vars == consdata->vars);
 
    *nremovedvars += localnremovedvars;
@@ -735,15 +736,15 @@ SCIP_RETCODE presolRoundSOS2(
    /* if there are exactly two fixed nonzero variables */
    else if ( nfixednonzeros == 2 )
    {
-      assert(0 <= lastFixedNonzero && lastFixedNonzero < consdata->nvars);
+      assert(0 < lastFixedNonzero && lastFixedNonzero < consdata->nvars);
       assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero])) ||
          SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero])));
-      /* the next variable need also to be nonzero */
-      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero + 1])) ||
-         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero + 1])));
+      /* the previous variable need also to be nonzero, otherwise the infeasibility should have been detected earlier */
+      assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero - 1])) ||
+         SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero - 1])));
 
       /* fix all variables before lastFixedNonzero to zero */
-      for( j = 0; j < lastFixedNonzero; ++j )
+      for( j = 0; j < lastFixedNonzero - 1; ++j )
       {
          SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
@@ -898,8 +899,7 @@ SCIP_RETCODE propSOS2(
       }
       assert( 0 <= firstFixedNonzero && firstFixedNonzero < nvars-1 );
 
-      SCIPdebugMessage("variables <%s> and <%s> are fixed nonzero, fixing other variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]),
-         SCIPvarGetName(vars[firstFixedNonzero+1]));
+      SCIPdebugMessage("variable <%s> is fixed to be nonzero, fixing variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
 
       /* fix variables before firstFixedNonzero to 0 */
       allVarFixed = TRUE;
@@ -2053,19 +2053,13 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
 static
 SCIP_DECL_CONSPARSE(consParseSOS2)
 {  /*lint --e{715}*/
-   char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real weight;
    const char* s;
    char* t;
-   int k;
 
    *success = TRUE;
    s = str;
-
-   /* skip white space and '<' */
-   while ( (*s != '\0' && isspace((unsigned char)*s)) || *s == '<' )
-      ++s;
 
    /* create empty SOS2 constraint */
    SCIP_CALL( SCIPcreateConsSOS2(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
@@ -2073,20 +2067,11 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
    /* loop through string */
    do
    {
-      /* find variable name */
-      k = 0;
-      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '(' && *s != '>' )
-         varname[k++] = *s++;
-      varname[k] = '\0';
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+      s = t;
 
-      if ( *s == '\0' )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
-      /* skip until beginning of weight (in particular, skip type specifier [?]) */
+      /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
 
@@ -2109,18 +2094,9 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
       }
       s = t;
 
-      /* skip white space, ',', '(', and '<' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' || *s == '<' ) )
+      /* skip white space, ',', and ')' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
          ++s;
-
-      /* get variable */
-      var = SCIPfindVar(scip, varname);
-      if ( var == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS2(scip, *cons, var, weight) );
@@ -2452,6 +2428,7 @@ int SCIPgetNVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2476,6 +2453,7 @@ SCIP_VAR** SCIPgetVarsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2500,6 +2478,7 @@ SCIP_Real* SCIPgetWeightsSOS2(
    {
       SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

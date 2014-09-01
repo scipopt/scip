@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -444,7 +444,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
       return;
 
    /* use shell sort on the remaining small list */
-   if( len <= SORTTPL_SHELLSORTMAX)
+   if( len <= SORTTPL_SHELLSORTMAX )
    {
       SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          (key,

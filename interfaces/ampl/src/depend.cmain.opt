@@ -24,7 +24,7 @@ cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
  ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
@@ -35,7 +35,7 @@ cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
  ../../src/scip/type_history.h ../../src/scip/struct_var.h \
  ../../src/scip/implics.h ../../src/scip/history.h \
- ../../src/scip/struct_history.h ../../src/scip/lpi.h \
+ ../../src/scip/struct_history.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
  ../../src/nlpi/type_exprinterpret.h ../../src/nlpi/struct_expr.h \
  ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
@@ -134,7 +134,7 @@ reader_nl.o: src/reader_nl.c src/reader_nl.h ../../src/scip/scip.h \
  ../../src/scip/pub_heur.h ../../src/scip/pub_implics.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
- ../../src/scip/type_stat.h ../../src/scip/type_lpi.h \
+ ../../src/scip/type_stat.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
  ../../src/scip/pub_misc.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -146,7 +146,7 @@ reader_nl.o: src/reader_nl.c src/reader_nl.h ../../src/scip/scip.h \
  ../../src/scip/pub_var.h ../../src/scip/type_history.h \
  ../../src/scip/struct_var.h ../../src/scip/implics.h \
  ../../src/scip/history.h ../../src/scip/struct_history.h \
- ../../src/scip/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/nlpi/struct_expr.h ../../src/scip/struct_scip.h \
  ../../src/scip/type_interrupt.h ../../src/scip/type_mem.h \

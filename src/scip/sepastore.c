@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -239,13 +239,117 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
-   if ( SCIPsetIsGT(set, minactivity, rhs) || SCIPsetIsLT(set, maxactivity, lhs) )
+   if ( SCIPsetIsFeasGT(set, minactivity, rhs) || SCIPsetIsFeasLT(set, maxactivity, lhs) )
    {
       SCIPdebugMessage("cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       *infeasible = TRUE;
       return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** checks whether a cut with only one variable can be applied as boundchange
+ *
+ * This is the case if the bound change would prove infeasibility (w.r.t feastol),
+ * or if the new bound is at least epsilon better than the old bound.
+ * In the latter case, also the opposite bound has to be taken into account.
+ */
+static
+SCIP_Bool sepastoreIsBdchgApplicable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< cut with a single variable */
+)
+{
+   SCIP_COL** cols;
+   SCIP_Real* vals;
+   SCIP_VAR* var;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Bool local;
+   SCIP_Real oldlb;
+   SCIP_Real oldub;
+
+   assert(set != NULL);
+   assert(!SCIProwIsModifiable(cut));
+   assert(SCIProwGetNNonz(cut) == 1);
+
+   /* get the single variable and its coefficient of the cut */
+   cols = SCIProwGetCols(cut);
+   assert(cols != NULL);
+
+   var = SCIPcolGetVar(cols[0]);
+   vals = SCIProwGetVals(cut);
+   assert(vals != NULL);
+   assert(!SCIPsetIsZero(set, vals[0]));
+
+   /* if the coefficient is nearly zero, we better ignore this cut for numerical reasons */
+   if( SCIPsetIsFeasZero(set, vals[0]) )
+      return FALSE;
+
+   local = SCIProwIsLocal(cut);
+
+   oldlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+   oldub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+
+   /* get the left hand side of the cut and convert it to a bound */
+   lhs = SCIProwGetLhs(cut);
+   if( !SCIPsetIsInfinity(set, -lhs) )
+   {
+      lhs -= SCIProwGetConstant(cut);
+      if( vals[0] > 0.0 )
+      {
+         /* coefficient is positive -> lhs corresponds to lower bound */
+         SCIP_Real newlb;
+
+         newlb = lhs/vals[0];
+         SCIPvarAdjustLb(var, set, &newlb);
+
+         if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
+            return TRUE;
+      }
+      else
+      {
+         /* coefficient is negative -> lhs corresponds to upper bound */
+         SCIP_Real newub;
+
+         newub = lhs/vals[0];
+         SCIPvarAdjustUb(var, set, &newub);
+
+         if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
+            return TRUE;
+      }
+   }
+
+   /* get the right hand side of the cut and convert it to a bound */
+   rhs = SCIProwGetRhs(cut);
+   if( !SCIPsetIsInfinity(set, rhs) )
+   {
+      rhs -= SCIProwGetConstant(cut);
+      if( vals[0] > 0.0 )
+      {
+         /* coefficient is positive -> rhs corresponds to upper bound */
+         SCIP_Real newub;
+
+         newub = rhs/vals[0];
+         SCIPvarAdjustUb(var, set, &newub);
+
+         if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
+            return TRUE;
+      }
+      else
+      {
+         /* coefficient is negative -> rhs corresponds to lower bound */
+         SCIP_Real newlb;
+
+         newlb = rhs/vals[0];
+         SCIPvarAdjustLb(var, set, &newlb);
+
+         if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
+            return TRUE;
+      }
    }
 
    return FALSE;
@@ -317,7 +421,7 @@ SCIP_RETCODE sepastoreAddCut(
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[0]) );
          SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
       }
-      
+
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts = 0;
       sepastore->nforcedcuts = 0;
@@ -326,10 +430,10 @@ SCIP_RETCODE sepastoreAddCut(
    /* a cut is forced to enter the LP if
     *  - we construct the initial LP, or
     *  - it has infinite score factor, or
-    *  - it is a bound change
+    *  - it is a bound change that can be applied
     * if it is a non-forced cut and no cuts should be added, abort
     */
-   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
+   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && sepastoreIsBdchgApplicable(set, cut));
    if( !forcecut && SCIPsetGetSepaMaxcuts(set, root) == 0 )
       return SCIP_OKAY;
 
@@ -486,7 +590,8 @@ SCIP_RETCODE sepastoreApplyLb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -494,31 +599,39 @@ SCIP_RETCODE sepastoreApplyLb(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             bound,              /**< new lower bound of variable */
    SCIP_Bool             local,              /**< is it a local bound change? (otherwise global) */
+   SCIP_Bool*            applied,            /**< pointer to store whether the domain change was applied */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if an infeasibility has been detected */
    )
 {
    assert(sepastore != NULL);
    assert(cutoff != NULL);
+   assert(applied != NULL);
+
+   /* adjust bound to the one that would be applied, so the SCIPsetIsGT check below is more reliable */
+   SCIPvarAdjustLb(var, set, &bound);
 
    if( local )
    {
       /* apply the local bound change or detect a cutoff */
       if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
       {
-         SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
             *cutoff = TRUE;
 
-         /* count the bound change as applied cut */
-         if( !sepastore->initiallp )
-            sepastore->ncutsapplied++;
+         *applied = TRUE;
+      }
+      else
+      {
+         SCIPdebugMessage(" -> ignoring bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
       }
    }
    else
@@ -526,12 +639,12 @@ SCIP_RETCODE sepastoreApplyLb(
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
       if( SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(var)) )
       {
-         SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
 
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
@@ -541,9 +654,12 @@ SCIP_RETCODE sepastoreApplyLb(
             *cutoff = TRUE;
          }
 
-         /* count the bound change as applied cut */
-         if( !sepastore->initiallp )
-            sepastore->ncutsapplied++;
+         *applied = TRUE;
+      }
+      else
+      {
+         SCIPdebugMessage(" -> ignoring global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
       }
    }
 
@@ -557,7 +673,8 @@ SCIP_RETCODE sepastoreApplyUb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -565,31 +682,39 @@ SCIP_RETCODE sepastoreApplyUb(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             bound,              /**< new upper bound of variable */
    SCIP_Bool             local,              /**< is it a local bound change? (otherwise global) */
+   SCIP_Bool*            applied,            /**< pointer to store whether the domain change was applied */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if an infeasibility has been detected */
    )
 {
    assert(sepastore != NULL);
    assert(cutoff != NULL);
+   assert(applied != NULL);
+
+   /* adjust bound to the one that would be applied, so the SCIPsetIsGT check below is more reliable */
+   SCIPvarAdjustUb(var, set, &bound);
 
    if( local )
    {
       /* apply the local bound change or detect a cutoff */
       if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
       {
-         SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
 
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else
             *cutoff = TRUE;
 
-         /* count the bound change as applied cut */
-         if( !sepastore->initiallp )
-            sepastore->ncutsapplied++;
+         *applied = TRUE;
+      }
+      else
+      {
+         SCIPdebugMessage(" -> ignoring bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
       }
    }
    else
@@ -597,12 +722,12 @@ SCIP_RETCODE sepastoreApplyUb(
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
       if( SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(var)) )
       {
-         SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage(" -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
 
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else
@@ -612,9 +737,12 @@ SCIP_RETCODE sepastoreApplyUb(
             *cutoff = TRUE;
          }
 
-         /* count the bound change as applied cut */
-         if( !sepastore->initiallp )
-            sepastore->ncutsapplied++;
+         *applied = TRUE;
+      }
+      else
+      {
+         SCIPdebugMessage(" -> ignoring global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
       }
    }
 
@@ -628,12 +756,15 @@ SCIP_RETCODE sepastoreApplyBdchg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_ROW*             cut,                /**< cut with a single variable */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base feasibility computation on */
+   SCIP_Bool*            applied,            /**< pointer to store whether the domain change was applied */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
@@ -648,7 +779,9 @@ SCIP_RETCODE sepastoreApplyBdchg(
    assert(!SCIProwIsModifiable(cut));
    assert(SCIProwGetNNonz(cut) == 1);
    assert(cutoff != NULL);
+   assert(applied != NULL);
 
+   *applied = FALSE;
    *cutoff = FALSE;
 
    /* get the single variable and its coefficient of the cut */
@@ -660,11 +793,11 @@ SCIP_RETCODE sepastoreApplyBdchg(
    assert(vals != NULL);
    assert(!SCIPsetIsZero(set, vals[0]));
 
-   local = SCIProwIsLocal(cut);
-
    /* if the coefficient is nearly zero, we better ignore this cut for numerical reasons */
    if( SCIPsetIsFeasZero(set, vals[0]) )
       return SCIP_OKAY;
+
+   local = SCIProwIsLocal(cut);
 
    /* get the left hand side of the cut and convert it to a bound */
    lhs = SCIProwGetLhs(cut);
@@ -674,14 +807,14 @@ SCIP_RETCODE sepastoreApplyBdchg(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> lhs corresponds to lower bound */
-         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, lhs/vals[0], local, cutoff) );
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+               var, lhs/vals[0], local, applied, cutoff) );
       }
       else
       {
          /* coefficient is negative -> lhs corresponds to upper bound */
-         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, lhs/vals[0], local, cutoff) );
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+               var, lhs/vals[0], local, applied, cutoff) );
       }
    }
 
@@ -693,14 +826,51 @@ SCIP_RETCODE sepastoreApplyBdchg(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> rhs corresponds to upper bound */
-         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, rhs/vals[0], local, cutoff) );
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+               var, rhs/vals[0], local, applied, cutoff) );
       }
       else
       {
          /* coefficient is negative -> rhs corresponds to lower bound */
-         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, rhs/vals[0], local, cutoff) );
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+               var, rhs/vals[0], local, applied, cutoff) );
+      }
+   }
+
+   /* count the bound change as applied cut */
+   if( *applied && !sepastore->initiallp )
+      sepastore->ncutsapplied++;
+
+   if( *applied && !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
+   {
+      SCIP_Real infeasibility;
+
+      /* calculate cut's infeasibility */
+      switch ( efficiacychoice )
+      {
+      case SCIP_EFFICIACYCHOICE_LP:
+         infeasibility = -SCIProwGetLPFeasibility(cut, set, stat, lp);
+         break;
+      case SCIP_EFFICIACYCHOICE_RELAX:
+         infeasibility = -SCIProwGetRelaxFeasibility(cut, set, stat);
+         break;
+      case SCIP_EFFICIACYCHOICE_NLP:
+         infeasibility = -SCIProwGetNLPFeasibility(cut, set, stat);
+         break;
+      default:
+         SCIPerrorMessage("Invalid efficiacy choice.\n");
+         return SCIP_INVALIDCALL;
+      }
+      /* a cut a*x<=b is applied as boundchange x<=b/a, so also the infeasibility needs to be divided by a (aka. scaled) */
+      infeasibility /= REALABS(vals[0]);
+
+      /* reduce relaxation feasibility tolerance */
+      if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) ) /*lint !e777*/
+      {
+         SCIP_Real epsilon = SCIPsetEpsilon(set);
+
+         set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, epsilon);
+         SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
       }
    }
 
@@ -728,7 +898,7 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
    while( pos < sepastore->ncuts )
    {
       SCIP_Real thisortho;
-      
+
       /* update orthogonality */
       thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
       if( thisortho < sepastore->orthogonalities[pos] )
@@ -765,12 +935,14 @@ SCIP_RETCODE sepastoreApplyCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< cut to apply to the LP */
    SCIP_Real             mincutorthogonality,/**< minimal orthogonality of cuts to apply to LP */
    int                   depth,              /**< depth of current node */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base feasibility computation on */
    int*                  ncutsapplied        /**< pointer to count the number of applied cuts */
    )
 {
@@ -811,6 +983,37 @@ SCIP_RETCODE sepastoreApplyCut(
       /* update the orthogonalities */
       SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality) );
       (*ncutsapplied)++;
+
+      if( !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
+      {
+         SCIP_Real infeasibility;
+
+         /* calculate cut's infeasibility */
+         switch ( efficiacychoice )
+         {
+         case SCIP_EFFICIACYCHOICE_LP:
+            infeasibility = -SCIProwGetLPFeasibility(cut, set, stat, lp);
+            break;
+         case SCIP_EFFICIACYCHOICE_RELAX:
+            infeasibility = -SCIProwGetRelaxFeasibility(cut, set, stat);
+            break;
+         case SCIP_EFFICIACYCHOICE_NLP:
+            infeasibility = -SCIProwGetNLPFeasibility(cut, set, stat);
+            break;
+         default:
+            SCIPerrorMessage("Invalid efficiacy choice.\n");
+            return SCIP_INVALIDCALL;
+         }
+
+         /* reduce relaxation feasibility tolerance */
+         if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) ) /*lint !e777*/
+         {
+            SCIP_Real epsilon = SCIPsetEpsilon(set);
+
+            set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, epsilon);
+            SCIPdebugMessage("reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -906,7 +1109,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -919,6 +1123,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 {
    SCIP_NODE* node;
    SCIP_Real mincutorthogonality;
+   SCIP_Bool applied;
    int depth;
    int maxsepacuts;
    int ncutsapplied;
@@ -963,17 +1168,21 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       assert(SCIPsetIsInfinity(set, sepastore->scores[pos]));
 
       /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
+      applied = FALSE;
       if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
       {
          SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
-         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cut, cutoff) );
+         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cut, efficiacychoice, &applied, cutoff) );
+
+         assert(applied || !sepastoreIsBdchgApplicable(set, cut));
       }
-      else
+
+      if( !applied )
       {
          /* add cut to the LP and update orthogonalities */
          SCIPdebugMessage(" -> applying forced cut <%s>\n", SCIProwGetName(cut));
          /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
       }
    }
 
@@ -982,16 +1191,16 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    {
       SCIP_ROW* cut;
       int bestpos;
-      
+
       /* get best non-forced cut */
       bestpos = sepastoreGetBestCut(sepastore);
       assert(sepastore->nforcedcuts <= bestpos && bestpos < sepastore->ncuts);
       assert(sepastore->scores[bestpos] != SCIP_INVALID ); /*lint !e777*/
       assert(sepastore->efficacies[bestpos] != SCIP_INVALID ); /*lint !e777*/
       cut = sepastore->cuts[bestpos];
-      assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1); /* bound changes are forced cuts */
+      assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1 || !sepastoreIsBdchgApplicable(set, cut)); /* applicable bound changes are forced cuts */
       assert(!SCIPsetIsInfinity(set, sepastore->scores[bestpos]));
-      
+
       SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
          SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
          sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
@@ -1005,11 +1214,12 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
       /* Do not add (non-forced) non-violated cuts.
        * Note: do not take SCIPsetIsEfficacious(), because constraint handlers often add cuts w.r.t. SCIPsetIsFeasPositive().
+       * Note2: if separating/feastolfac != -1, constraint handlers may even add cuts w.r.t. SCIPsetIsPositive(); those are currently rejected here
        */
       if( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
       {
          /* add cut to the LP and update orthogonalities */
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
       }
 
       /* release cut */
@@ -1051,7 +1261,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[c]) );
          SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
       }
-      
+
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[c], blkmem, set, lp) );
    }
 
@@ -1106,6 +1316,18 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIPdebugMessage("removed %d non-efficacious cuts\n", cnt);
 
    return SCIP_OKAY;
+}
+
+/** indicates whether a cut is applicable
+ *
+ * A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
+ */
+SCIP_Bool SCIPsepastoreIsCutApplicable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< cut to check */
+   )
+{
+   return SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1 || sepastoreIsBdchgApplicable(set, cut);
 }
 
 /** get cuts in the separation storage */

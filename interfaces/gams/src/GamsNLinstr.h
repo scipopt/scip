@@ -129,6 +129,44 @@ typedef enum
    fndummy
 } GamsFuncCode;
 
+static const char* GamsFuncCodeName[fndummy+1] =
+{
+   "mapval","ceil","floor","round",
+   "mod","trunc","sign","min",
+   "max","sqr","exp","log",
+   "log10","sqrt","abs","cos",
+   "sin","arctan","errf","dunfm",
+   "dnorm","power","jdate","jtime",
+   "jstart","jnow","error","gyear",
+   "gmonth","gday","gdow","gleap",
+   "ghour","gminute","gsecond",
+   "curseed","timest","timeco",
+   "timeex","timecl","frac","errorl",
+   "heaps","fact","unfmi","pi",
+   "ncpf","ncpcm","entropy","sigmoid",
+   "log2","boolnot","booland",
+   "boolor","boolxor","boolimp",
+   "booleqv","relopeq","relopgt",
+   "relopge","reloplt","relople",
+   "relopne","ifthen","rpower",
+   "edist","div","div0","sllog10",
+   "sqlog10","slexp","sqexp","slrec",
+   "sqrec","cvpower","vcpower",
+   "centropy","gmillisec","maxerror",
+   "timeel","gamma","loggamma","beta",
+   "logbeta","gammareg","betareg",
+   "sinh","cosh","tanh","mathlastrc",
+   "mathlastec","mathoval","signpower",
+   "handle","ncpvusin","ncpvupow",
+   "binomial","rehandle","gamsver",
+   "delhandle","tan","arccos",
+   "arcsin","arctan2","sleep","heapf",
+   "cohandle","gamsrel","poly",
+   "licensestatus","licenselevel","heaplimit",
+   "dummy"
+};
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,12 +31,12 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
-#include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
 #include "scip/type_sepa.h"
 #include "scip/type_misc.h"
+#include "lpi/type_lpi.h"
 
 #ifdef NDEBUG
 #include "scip/struct_lp.h"
@@ -212,7 +212,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
 #define SCIPcolGetMinPrimsol(col)       ((col)->minprimsol)
 #define SCIPcolGetMaxPrimsol(col)       ((col)->maxprimsol)
-#define SCIPcolGetBasisStatus(col)      ((col)->basisstatus)
+#define SCIPcolGetBasisStatus(col)      ((SCIP_BASESTAT)(col)->basisstatus)
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolGetIndex(col)            (col)->index
 #define SCIPcolIsIntegral(col)          (col)->integral

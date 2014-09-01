@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,7 +70,6 @@
 #define SCIP_DEFAULT_SEPATHRESHOLD             50 /**< threshold on number of generated cuts below which the ordinary separation is started */
 #define SCIP_DEFAULT_INCLOBJCUTOFF          FALSE /**< include the objective cutoff when computing the relative interior? */
 #define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
-#define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
 #define SCIP_DEFAULT_MAXUNSUCCESSFUL            0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
 #define SCIP_DEFAULT_MAXLPITERFACTOR         10.0 /**< factor for maximal LP iterations in relative interior computation compared to node LP iterations */
 
@@ -86,7 +85,6 @@ struct SCIP_SepaData
    int                   sepathreshold;      /**< threshold on number of generated cuts below which the ordinary separation is started */
    SCIP_Bool             inclobjcutoff;      /**< include the objective cutoff when computing the relative interior? */
    SCIP_Bool             recomputerelint;    /**< recompute relative interior in each separation call? */
-   char                  relintnormtype;     /**< type of norm to use when computing relative interior */
    int                   maxunsuccessful;    /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
    SCIP_Longint          discardnode;        /**< number of node for which separation is discarded */
@@ -311,10 +309,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
                return SCIP_OKAY;
          }
 
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (norm type: %c, time limit: %g, iter limit: %d) ...\n",
-            sepadata->relintnormtype, timelimit, iterlimit);
-         assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 's');
-         SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, sepadata->relintnormtype, timelimit, iterlimit, &sepadata->sepasol) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (time limit: %g, iter limit: %d) ...\n", timelimit, iterlimit);
+         SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, timelimit, iterlimit, &sepadata->sepasol) );
          sepadata->triedRelint = TRUE;
       }
    }
@@ -445,11 +441,6 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          "separating/closecuts/recomputerelint",
          "recompute relative interior point in each separation call?",
          &sepadata->recomputerelint, TRUE, SCIP_DEFAULT_RECOMPUTERELINT, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddCharParam(scip,
-         "separating/closecuts/relintnormtype",
-         "type of norm to use when computing relative interior: 'o'ne norm, 's'upremum norm",
-         &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "os", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/closecuts/maxunsuccessful",

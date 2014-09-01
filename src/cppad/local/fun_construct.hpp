@@ -1,13 +1,13 @@
-/* $Id: fun_construct.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: fun_construct.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
 # ifndef CPPAD_FUN_CONSTRUCT_INCLUDED
 # define CPPAD_FUN_CONSTRUCT_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -48,9 +48,9 @@ $icode%g% = %f%
 $head Purpose$$
 The $codei%AD<%Base%>%$$ object $icode f$$ can 
 store an AD of $icode Base$$
-$xref/glossary/Operation/Sequence/operation sequence/1/$$.
+$cref/operation sequence/glossary/Operation/Sequence/$$.
 It can then be used to calculate derivatives of the corresponding
-$xref/glossary/AD Function/AD function/$$
+$cref/AD function/glossary/AD Function/$$
 $latex \[
 	F : B^n \rightarrow B^m
 \] $$
@@ -62,7 +62,7 @@ $codei%
 	const %VectorAD% &%x%
 %$$
 It must be the vector argument in the previous call to
-$cref/Independent/$$.
+$cref Independent$$.
 Neither its size, or any of its values, are allowed to change
 between calling
 $codei%
@@ -82,10 +82,10 @@ The sequence of operations that map $icode x$$
 to $icode y$$ are stored in the ADFun object $icode f$$.
 
 $head VectorAD$$
-The type $icode VectorAD$$ must be a $cref/SimpleVector/$$ class with
+The type $icode VectorAD$$ must be a $cref SimpleVector$$ class with
 $cref/elements of type/SimpleVector/Elements of Specified Type/$$ 
 $codei%AD<%Base%>%$$.
-The routine $cref/CheckSimpleVector/$$ will generate an error message
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Default Constructor$$
@@ -101,7 +101,7 @@ $codei%AD<%Base%>%$$ object with no corresponding operation sequence; i.e.,
 $codei%
 	%f%.size_var()
 %$$
-returns the value zero (see $xref/seq_property/size_var/size_var/$$).
+returns the value zero (see $cref/size_var/seq_property/size_var/$$).
 
 $head Sequence Constructor$$
 $index sequence, ADFun constructor$$
@@ -133,7 +133,7 @@ Stop the tape and storing the operation sequence using
 $codei%
 	%f%.Dependent(%x%, %y%);
 %$$
-(see $xref/Dependent/$$).
+(see $cref Dependent$$).
 $lnext
 Calculating the first order taylor_ coefficients for all 
 the variables in the operation sequence using
@@ -142,19 +142,19 @@ $codei%
 %$$
 with $icode p$$ equal to zero and the elements of $icode x_p$$
 equal to the corresponding elements of $icode x$$
-(see $xref/Forward/$$).
+(see $cref Forward$$).
 $lend
 
 $head Copy Constructor$$
 $index copy, ADFun constructor$$
 $index ADFun, copy constructor$$
 $index constructor, ADFun copy$$
-It is an error to attempt to use the $code%ADFun<%Base%>%$$ copy constructor;
+It is an error to attempt to use the $codei%ADFun<%Base%>%$$ copy constructor;
 i.e., the following syntax is not allowed:
 $codei%
-	ADFun<%Base%> g(f)
+	ADFun<%Base%> %g%(%f%)
 %$$
-where $icode f$$ is an $code%ADFun<%Base%>%$$ object.
+where $icode f$$ is an $codei%ADFun<%Base%>%$$ object.
 Use its $cref/default constructor/FunConstruct/Default Constructor/$$ instead
 and its assignment operator.
 
@@ -211,15 +211,15 @@ $head Example$$
 
 $subhead Sequence Constructor$$
 The file
-$xref/Independent.cpp/$$ 
+$cref independent.cpp$$ 
 contains an example and test of the sequence constructor.
 It returns true if it succeeds and false otherwise.
 
 $subhead Default Constructor$$
 The files
-$xref/FunCheck.cpp/$$ 
+$cref fun_check.cpp$$ 
 and
-$xref/HesLagrangian.cpp/$$
+$cref hes_lagrangian.cpp$$
 contain an examples and tests using the default constructor.
 They return true if they succeed and false otherwise.
 
@@ -228,7 +228,7 @@ $children%
 %$$
 $subhead Assignment Operator$$
 The file 
-$cref/fun_assign.cpp/$$
+$cref fun_assign.cpp$$
 contains an example and test of the $codei%ADFun<%Base%>%$$
 assignment operator.
 It returns true if it succeeds and false otherwise.
@@ -237,8 +237,10 @@ $end
 ----------------------------------------------------------------------------
 */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup fun_construct_hpp fun_construct.hpp
+\{
 \file fun_construct.hpp
 ADFun function constructors and assignment operator.
 */
@@ -260,8 +262,9 @@ is the base for the recording that can be stored in this ADFun object;
 i.e., operation sequences that were recorded using the type \c AD<Base>.
 */
 template <typename Base>
-ADFun<Base>::ADFun(void)
-: total_num_var_(0)
+ADFun<Base>::ADFun(void) : 
+check_for_nan_(true) ,
+total_num_var_(0) 
 { }
 
 /*!
@@ -290,6 +293,7 @@ void ADFun<Base>::operator=(const ADFun<Base>& f)
 
 	// go through member variables in order
 	// (see ad_fun.hpp for meaning of each variable)
+	check_for_nan_             = true;
 	compare_change_            = 0;
 
 	taylor_.erase();
@@ -320,6 +324,10 @@ void ADFun<Base>::operator=(const ADFun<Base>& f)
 				f.taylor_[ i * taylor_col_dim_ + j ];
 		}
 	}
+
+	// allocate and copy the conditional skip information
+	cskip_op_.clear();
+	cskip_op_ = f.cskip_op_;
 
 	// allocate and copy the forward sparsity information
 	size_t n_set = f.for_jac_sparse_pack_.n_set();
@@ -389,8 +397,9 @@ are stored in this ADFun object.
 */
 template <typename Base>
 template <typename VectorAD>
-ADFun<Base>::ADFun(const VectorAD &x, const VectorAD &y)
-: total_num_var_(0)
+ADFun<Base>::ADFun(const VectorAD &x, const VectorAD &y) : 
+check_for_nan_(true) ,
+total_num_var_(0)
 {
 	CPPAD_ASSERT_KNOWN(
 		x.size() > 0,
@@ -400,9 +409,9 @@ ADFun<Base>::ADFun(const VectorAD &x, const VectorAD &y)
 		Variable(x[0]),
 		"ADFun<Base>: independent variable vector has been changed."
 	);
-	ADTape<Base> *tape = AD<Base>::tape_ptr(x[0].id_);
+	ADTape<Base>* tape = AD<Base>::tape_ptr(x[0].tape_id_);
 	CPPAD_ASSERT_KNOWN(
-		tape->size_independent_ == x.size(),
+		tape->size_independent_ == size_t ( x.size() ),
 		"ADFun<Base>: independent variable vector has been changed."
 	);
 	size_t j, n = x.size();
@@ -414,13 +423,13 @@ ADFun<Base>::ADFun(const VectorAD &x, const VectorAD &y)
 		"ADFun<Base>: independent variable vector has been changed."
 		);
 		CPPAD_ASSERT_KNOWN(
-		x[j].id_ == x[0].id_,
+		x[j].tape_id_ == x[0].tape_id_,
 		"ADFun<Base>: independent variable vector has been changed."
 		);
 	}
 	for(i = 0; i < m; i++)
 	{	CPPAD_ASSERT_KNOWN(
-		CppAD::Parameter( y[i] ) | (y[i].id_ == x[0].id_) ,
+		CppAD::Parameter( y[i] ) | (y[i].tape_id_ == x[0].tape_id_) ,
 		"ADFun<Base>: dependent vector contains variables for"
 		"\na different tape than the independent variables."
 		);
@@ -446,12 +455,14 @@ ADFun<Base>::ADFun(const VectorAD &x, const VectorAD &y)
 	// use independent variable values to fill in values for others
 # if CPPAD_USE_FORWARD0SWEEP
 	compare_change_ = forward0sweep(std::cout, false,
-		n, total_num_var_, &play_, taylor_col_dim_, taylor_.data()
+		n, total_num_var_, &play_, taylor_col_dim_, taylor_.data(),
+		cskip_op_
 	);
 # else
 	size_t p = 0;
 	compare_change_ = forward_sweep(std::cout, false,
-		p, n, total_num_var_, &play_, taylor_col_dim_, taylor_.data()
+		p, p, n, total_num_var_, &play_, taylor_col_dim_, taylor_.data(),
+		cskip_op_
 	);
 # endif
 	CPPAD_ASSERT_UNKNOWN( compare_change_ == 0 );
@@ -479,5 +490,6 @@ ADFun<Base>::ADFun(const VectorAD &x, const VectorAD &y)
 # endif
 }
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

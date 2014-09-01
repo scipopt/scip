@@ -1,13 +1,13 @@
-/* $Id: tape_link.hpp 2082 2011-08-31 17:50:58Z bradbell $ */
+/* $Id: tape_link.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_TAPE_LINK_INCLUDED
 # define CPPAD_TAPE_LINK_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -20,272 +20,266 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/thread_alloc.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup tape_link_hpp  tape_link.hpp
+\{
 \file tape_link.hpp
 Routines that Link AD<Base> and ADTape<Base> Objects \ref tape_link_hpp.
 
-All the routines are AD<Base> member functions and, except for \c tape_this, 
-they are all static functions. 
-
-\defgroup tape_link_hpp  tape_link.hpp
+The routines that connect the AD<Base> class to the corresponding tapes
+(one for each thread).
 */
-/* \{ */
-
 
 /*!
-Get the identifier for the tape 
-that records AD<Base> operations for the specified thread.
+Handle to the tape identifier for this AD<Base> class and the specific thread.
 
 \tparam Base
-is the base type corresponding to AD<Base> operations.
+is the base type for this AD<Base> class.
 
 \param thread
-is the index that identifes the current OpenMP thread.
-<tt>0 <= thread < thread_alloc::num_threads()</tt>.
+is the thread number. The following condition must hold
+\code
+(! thread_alloc::in_parallel()) || thread == thread_alloc::thread_num()
+\endcode
 
 \return
-The return value \c r 
-is a pointer to the tape identifier for the current thread.
-It can be used to get or set the value of <tt>*r</tt> and
-any such setting should abide by the following rules:
-\li
-Only the routines AD<Base>::tape_new and AD<Base>::tape_delete
-change the value of <tt>*r</tt>.
-\li
-If <tt>*r == 0</tt>, there is no tape currently recording for this thread.
-\li
-If <tt>*r != 0</tt>, there current is a tape recording for this thread.
-Furthermore the identifier satisfies the conditions
-<tt>*r > CPPAD_MAX_NUM_THREADS</tt> , and
-<tt>*r % CPPAD_MAX_NUM_THREADS == thread</tt>. 
-\li
-The value of <tt>*r</tt> must increase each time it is changed.
+is a handle to the tape identifier for this thread
+and AD<Base> class.
 */
 template <class Base>
-inline size_t * AD<Base>::id_handle(size_t thread)
+inline tape_id_t** AD<Base>::tape_id_handle(size_t thread)
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-	// Section 3.6.2 of the 1998 C++ standard specifies that storage for
-	// static objects will be zero initalized.
-	static size_t id_table[CPPAD_MAX_NUM_THREADS];
+	static tape_id_t* tape_id_table[CPPAD_MAX_NUM_THREADS];
+	CPPAD_ASSERT_UNKNOWN(
+	(! thread_alloc::in_parallel()) || thread == thread_alloc::thread_num() 
+	);
 
-	CPPAD_ASSERT_UNKNOWN( thread < thread_alloc::num_threads() );
-	CPPAD_ASSERT_UNKNOWN( 
-		(id_table[thread] == 0)
-		| (id_table[thread] % CPPAD_MAX_NUM_THREADS == thread)
-	); 
-	return id_table + thread;
+	return tape_id_table + thread;
 }
 
 /*!
-Get a handle to the tape 
-that records AD<Base> operations for the specified thread.
+Pointer to the tape identifier for this AD<Base> class and the specific thread.
 
 \tparam Base
-is the base type corresponding to AD<Base> operations.
+is the base type for this AD<Base> class.
 
 \param thread
-is the index that identifes the current OpenMP thread.
-If \c _OPENMP is not defined, \c thread must be zero.
-<tt>0 <= thread < thread_alloc::num_threads()</tt>.
+is the thread number; i.e.,
+\code
+thread == thread_alloc::thread_num()
+\endcode
+If this condition is not satisfied, and \c NDEBUG is not defined,
+a CPPAD_ASSERT_UNKNOWN is generated.
 
 \return
-The return value \c r
-is a handle to the tape that records AD<Base> operations
-for the current thread.
-This can be used to, create, get, or delete, the AD<Base> tape corresponding
-to the current thread. 
-If <tt>*r == CPPAD_NULL</tt>, there is no tape currently
-recording AD<Base> operations for the specified thread.
+is a pointer to the tape identifier for this thread
+and AD<Base> class.
+
+\par Restrictions
+This routine should only be called if there was a tape created
+for the specified thread (it may no longer be recording).
 */
 template <class Base>
-inline ADTape<Base> ** AD<Base>::tape_handle(size_t thread)
+inline tape_id_t* AD<Base>::tape_id_ptr(size_t thread)
+{	CPPAD_ASSERT_UNKNOWN( *tape_id_handle(thread) != CPPAD_NULL ) 	
+	return *tape_id_handle(thread); 
+}
+
+/*!
+Handle for the tape for this AD<Base> class and the specific thread.
+
+\tparam Base
+is the base type for this AD<Base> class.
+
+
+\param thread
+is the thread number; i.e.,
+\code
+thread == thread_alloc::thread_num()
+\endcode
+If this condition is not satisfied, and \c NDEBUG is not defined,
+a CPPAD_ASSERT_UNKNOWN is generated.
+
+\return
+is a handle for the  AD<Base> class and the specified thread.
+*/
+template <class Base>
+inline ADTape<Base>** AD<Base>::tape_handle(size_t thread)
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-	static ADTape<Base> *tape_table[CPPAD_MAX_NUM_THREADS];
-	CPPAD_ASSERT_UNKNOWN( thread < thread_alloc::num_threads() );
+	static ADTape<Base>* tape_table[CPPAD_MAX_NUM_THREADS];
+	CPPAD_ASSERT_UNKNOWN( thread == thread_alloc::thread_num() );
+
 	return tape_table + thread;
 }
 
 /*!
-Get a pointer to tape 
-that records AD<Base> operations for the current thread.
+Pointer for the tape for this AD<Base> class and the current thread.
+
+\code
+thread == thread_alloc::thread_num()
+\endcode
 
 \tparam Base
 is the base type corresponding to AD<Base> operations.
 
-\par thread
-is the index that identifes the current OpenMP thread.
-If \c _OPENMP is not defined, \c thread is zero.
-<tt>0 <= thread < thread_alloc::num_threads()</tt>.
-
 \return
-The return value \c r is a pointer to the tape that records AD<Base> operations
+is a pointer to the tape that is currently recording AD<Base> operations
 for the current thread.
-If <tt>r == CPPAD_NULL</tt>, there is no tape currently
-recording AD<Base> operations for the specified thread.
+If this value is \c CPPAD_NULL, there is no tape currently
+recording AD<Base> operations for this thread.
 */
-
 template <class Base>
-inline ADTape<Base> *AD<Base>::tape_ptr(void)
+inline ADTape<Base>* AD<Base>::tape_ptr(void)
 {	size_t thread = thread_alloc::thread_num();
 	return *tape_handle(thread); 
 }
 
 /*!
-Get a pointer to tape 
-that records AD<Base> operations for the current thread.
+Pointer for the tape for this AD<Base> class and the specified tape 
+identifier.
 
 \tparam Base
 is the base type corresponding to AD<Base> operations.
 
-\par thread
-is the index that identifes the current OpenMP thread.
-If \c _OPENMP is not defined, \c thread is zero.
-<tt>0 <= thread < thread_alloc::num_threads()</tt>.
-
-\param id
+\param tape_id
 is the identifier for the tape that is currently recording
 AD<Base> operations for the current thread.
-It must hold that <tt>thread = id % CPPAD_MAX_NUM_THREADS</tt>.
-Note this routine should be faster when NDEBUG is defined (?) than
-calling \c tape_ptr without the \c id argument.
+It must hold that the current thread is
+\code
+	thread = size_t( tape_id % CPPAD_MAX_NUM_THREADS )
+\endcode
+and that there is a tape recording AD<Base> operations 
+for this thread.
+If this is not the currently executing thread, 
+a variable from a different thread is being recorded on the
+tape for this thread which is a user error.
 
 \return
-The return value \c r is a pointer to the tape that records AD<Base> operations
-for the current thread.
-If <tt>r == CPPAD_NULL</tt>, there is no tape currently
-recording AD<Base> operations for the specified thread.
+is a pointer to the tape that is currently recording AD<Base> operations
+for the current thread (and it is not \c CPPAD_NULL).
+
+\par Restrictions
+This routine should only be called if there is a tape recording operaitons
+for the specified thread.
 */
 template <class Base>
-inline ADTape<Base> *AD<Base>::tape_ptr(size_t id)
-{
-	size_t thread = id % CPPAD_MAX_NUM_THREADS;
+inline ADTape<Base>* AD<Base>::tape_ptr(tape_id_t tape_id)
+{	size_t thread = size_t( tape_id % CPPAD_MAX_NUM_THREADS );
 	CPPAD_ASSERT_KNOWN(
 		thread == thread_alloc::thread_num(),
-		"Attempt to use an AD variable in two different OpenMP threads."
+		"Attempt to use an AD variable with two different threads."
 	);
-	CPPAD_ASSERT_UNKNOWN( id == *id_handle(thread) );
+	CPPAD_ASSERT_UNKNOWN( tape_id == *tape_id_ptr(thread) );
 	CPPAD_ASSERT_UNKNOWN( *tape_handle(thread) != CPPAD_NULL );
 	return *tape_handle(thread); 
 }
 
 /*!
-Create a new tape that records AD<Base> operations for current thread.
+Create and delete tapes that record AD<Base> operations for current thread.
+
+\par thread
+the current thread is given by
+\code
+thread = thread_alloc::thread_num()
+\endcode
 
 \tparam Base
 is the base type corresponding to AD<Base> operations.
 
-\par thread
-Let \c thread denote the current OpenMP thread number
-see \c thread_alloc::thread_num(). 
-If \c _OPENMP is not defined, \c thread is zero.
-It is a user error if <tt>thread >= thread_alloc::num_threads()</tt>.
+\param job
+This argument determines if we are creating a new tape, or deleting an
+old one.
+- \c tape_manage_new :
+Creates and a new tape. 
+It is assumed that there is no tape recording AD<Base> operations
+for this thread when \c tape_manage is called.
+It the input value of <tt>*tape_id_handle(thread)</tt> is \c CPPAD_NULL,
+it will be changed to a non-zero pointer and the corresponding value
+of <tt>*tape_id_ptr(thread)</tt> will be set to
+<tt>thread + CPPAD_MAX_NUM_THREADS</tt>.
+- \c tape_manage_delete :
+It is assumed that there is a tape recording AD<Base> operations
+for this thread when \c tape_manage is called.
+The value of <tt>*tape_id_ptr(thread)</tt> will be advanced by
+\c CPPAD_MAX_NUM_THREADS.
 
-\par tape_handle
-It is assumed that <tt>*tape_handle(thread) == CPPAD_NULL</tt>
-when \c tape_new is called.
-Upon return <tt>*tape_handle(thread)</tt> is a pointer
-to the new ADTape<Base> tape that was created.
-
-\par tape_id
-We use \c id to denote <tt>AD<Base>::tape_id(thread)</tt>.
-If <tt>*id</tt> is zero when \c tape_new is called,
-a new value is chosen by \c tape_new.
-Otherwise, <tt>*id</tt> is not modified.
 
 \return
-The return value \c id is the identifier for the new tape and satisfies
-the following conditions:
-\li
-<tt>id > CPPAD_MAX_NUM_THREADS</tt>
-\li
-<tt>thread = id % CPPAD_MAX_NUM_THREADS</tt>
-\li
-Each call to \c tape_new returns a different value \c id.
+- <tt>job == tape_manage_new</tt>: a pointer to the new tape is returned.
+- <tt>job == tape_manage_delete</tt>: the value \c CPPAD_NULL is returned.
 */
 template <class Base>
-size_t  AD<Base>::tape_new(void)
-{
-	size_t thread       = thread_alloc::thread_num();
-	size_t *id          = id_handle(thread);
-	ADTape<Base> **tape = tape_handle(thread);
+ADTape<Base>*  AD<Base>::tape_manage(tape_manage_job job)
+{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
+	static ADTape<Base>* tape_table[CPPAD_MAX_NUM_THREADS];
+	static ADTape<Base>  tape_zero;
+	static tape_id_t     tape_id_save[CPPAD_MAX_NUM_THREADS];
 
-	CPPAD_ASSERT_KNOWN(
-	thread < thread_alloc::num_threads(),
-	"Independent: current thread_num is greater than num_threads;\n"
-	"See parallel_setup for setting these values."
+	size_t thread        = thread_alloc::thread_num();
+	if( job == tape_manage_clear )
+	{	CPPAD_ASSERT_UNKNOWN(thread == 0 && (! thread_alloc::in_parallel()));	
+		for(thread = 0; thread < CPPAD_MAX_NUM_THREADS; thread++)
+		{	if( tape_table[thread] != CPPAD_NULL )
+			{	tape_id_save[thread]    = tape_table[thread]->id_;
+				*tape_id_handle(thread) = &tape_id_save[thread];
+
+				if( thread != 0 )
+					delete( tape_table[thread] );
+				tape_table[thread]   = CPPAD_NULL;
+			}
+		}  
+		return CPPAD_NULL;
+	}
+	tape_id_t** tape_id  = tape_id_handle(thread);
+	ADTape<Base>** tape  = tape_handle(thread);
+
+	if( tape_table[thread] == CPPAD_NULL )
+	{	// allocate separate memroy to avoid false sharing
+		if( thread == 0 )
+			tape_table[thread] = &tape_zero;
+		else	tape_table[thread] = new ADTape<Base>();
+		tape_table[thread]->id_ = tape_id_save[thread];
+		*tape_id                = &tape_table[thread]->id_;
+
+		// init tape id > 0 and thread == tape id % CPPAD_MAX_NUM_THREADS
+		if( **tape_id == 0 )
+			**tape_id = thread + CPPAD_MAX_NUM_THREADS;
+	}
+	// make sure tape_id_handle(thread) is pointing to the proper place
+	CPPAD_ASSERT_UNKNOWN( *tape_id == &tape_table[thread]->id_ );
+	// make sure tape_id value is valid for this thread
+	CPPAD_ASSERT_UNKNOWN( 
+		size_t( **tape_id % CPPAD_MAX_NUM_THREADS ) == thread 
 	);
 
-	// initialize so that id > 1 and thread == id % CPPAD_MAX_NUM_THREADS
-	if( *id == 0 )
-		*id = thread + 2 * CPPAD_MAX_NUM_THREADS;
-	// else *id has been set to its new value by tape_delete
+	switch(job)
+	{	case tape_manage_new:
+		// tape for this thread must be null at the start
+		CPPAD_ASSERT_UNKNOWN( *tape  == CPPAD_NULL );
+		*tape = tape_table[thread];
+		break;
 
-	// tape for this thread must be null at the start
-	CPPAD_ASSERT_UNKNOWN( *tape  == CPPAD_NULL );
-	*tape = new ADTape<Base>( *id );
+		case tape_manage_delete:
+		CPPAD_ASSERT_UNKNOWN( *tape  == tape_table[thread] );
+		CPPAD_ASSERT_KNOWN(
+			std::numeric_limits<CPPAD_TAPE_ID_TYPE>::max()
+			- CPPAD_MAX_NUM_THREADS > **tape_id,
+			"To many different tapes given the type used for "
+			"CPPAD_TAPE_ID_TYPE"
+		);
+		// advance tape identfier so all AD<Base> variables become parameters
+		**tape_id  += CPPAD_MAX_NUM_THREADS;
+		// free memory corresponding to recording in the old tape 
+		tape_table[thread]->Rec_.free();
+		// inform rest of CppAD that no tape recording for this thread
+		*tape = CPPAD_NULL;
+		break;
 
-	return *id;
-}
-
-/*!
-Delete the tape, and advance the id number, corresponding to AD<Base> 
-operations for the current thread.
-
-\tparam Base
-is the base type corresponding to AD<Base> operations.
-
-\param id_old
-Is the identifer for the tape that is recording AD<Base> operations
-for this thread.
-
-\par thread
-Let \c thread denote the current OpenMP thread number
-\c thread_alloc::thread_num(). 
-If \c _OPENMP is not defined, \c thread is zero.
-It must hold that <tt>thread = id_old % CPPAD_MAX_NUM_THREADS</tt>.
-
-\par tape_handle
-It is assumed that <tt>*tape_handle(thread) != CPPAD_NULL</tt>
-when \c tape_delete is called; i.e., AD<Base> operations for this
-thread are being recorded.
-The destructore for the corresponding tape is called and
-upon return <tt>*tape_handle(thread) == CPPAD_NULL</tt>.
-
-\par tape_id
-We use \c id to denote <tt>AD<Base>::tape_id(thread)</tt>.
-Upon the call to \c tape_delete, <tt>*id == id_old</tt>.
-Upon the return, 
-<tt>*id > id_old</tt> and <tt>thread = *id % CPPAD_MAX_NUM_THREADS</tt>
-*/
-template <class Base>
-void  AD<Base>::tape_delete(size_t id_old)
-{
-	size_t thread = id_old % CPPAD_MAX_NUM_THREADS;
-	CPPAD_ASSERT_KNOWN(
-		thread == thread_alloc::thread_num(),
-		"AD tape recording must stop in same thread as it started in."
-	);
-	size_t        *id   = id_handle(thread);
-	ADTape<Base> **tape = tape_handle(thread);
-
-	CPPAD_ASSERT_UNKNOWN( *id   == id_old     );
-	CPPAD_ASSERT_UNKNOWN( *tape != CPPAD_NULL );
-
-	// increase the id for this thread in a way such that 
-	// thread = id % CPPAD_MAX_NUM_THREADS
-	CPPAD_ASSERT_KNOWN(
-	size_t(*id) + CPPAD_MAX_NUM_THREADS <= 
-		std::numeric_limits<CPPAD_TAPE_ID_TYPE>::max(),
-	"To many different tapes given the type used for CPPAD_TAPE_ID_TYPE"
-	);
-	*id  += CPPAD_MAX_NUM_THREADS;
-
-	// delete the old tape for this thread
-	delete ( *tape );
-	*tape = CPPAD_NULL;
-
-	return;
+		case tape_manage_clear:
+		CPPAD_ASSERT_UNKNOWN(false);
+	}
+	return *tape;
 }
 
 /*!
@@ -295,34 +289,27 @@ Get a pointer to tape that records AD<Base> operations for the current thread.
 is the base type corresponding to AD<Base> operations.
 
 \par thread
-is the index that identifes the current OpenMP thread.
-If \c _OPENMP is not defined, \c thread is zero.
-<tt>0 <= thread < thread_alloc::num_threads()</tt>.
-
-\par id_
-This routine uses AD<Base>::id_ to determine the tape identifier 
-corresponding to the current object.
-It must hold that <tt>thread = id_ % CPPAD_MAX_NUM_THREADS</tt>.
-Note this routine should be faster when NDEBUG is defined (?) than
-calling \c tape_ptr without the \c id argument.
+The current thread must be given by
+\code
+	thread = this->tape_id_ % CPPAD_MAX_NUM_THREADS
+\endcode
 
 \return
-The return value \c r is a pointer to the tape that records AD<Base> operations
+is a pointer to the tape that is currently recording AD<Base> operations
 for the current thread.
-If <tt>r == CPPAD_NULL</tt>, there is no tape currently
-recording AD<Base> operations for the specified thread.
+This value must not be \c CPPAD_NULL; i.e., there must be a tape currently
+recording AD<Base> operations for this thread.
 */
 
 template <class Base>
 inline ADTape<Base> *AD<Base>::tape_this(void) const
 {	
-
-	size_t thread = id_ % CPPAD_MAX_NUM_THREADS;
-	CPPAD_ASSERT_UNKNOWN( id_ == *id_handle(thread) );
+	size_t thread = size_t( tape_id_ % CPPAD_MAX_NUM_THREADS );
+	CPPAD_ASSERT_UNKNOWN( tape_id_ == *tape_id_ptr(thread) );
 	CPPAD_ASSERT_UNKNOWN( *tape_handle(thread) != CPPAD_NULL );
 	return *tape_handle(thread);
 }
 
-/* \} */
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

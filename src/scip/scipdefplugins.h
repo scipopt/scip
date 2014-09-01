@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -75,6 +75,7 @@
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
+#include "scip/heur_dualval.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
@@ -114,6 +115,7 @@
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
 #include "scip/nodesel_hybridestim.h"
+#include "scip/nodesel_uct.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_boundshift.h"
 #include "scip/presol_components.h"

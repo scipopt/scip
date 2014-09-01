@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -103,8 +103,8 @@ struct ConstraintMatrix
    int                   ncols;              /**< complete number of columns */
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
-   int*                  nuplocks;           /**< number uplocks per variable */
-   int*                  ndownlocks;         /**< number downlocks per variable */
+   int*                  nuplocks;           /**< number of up locks per variable */
+   int*                  ndownlocks;         /**< number of down locks per variable */
 
    SCIP_VAR**            vars;               /**< variables pointer */
 
@@ -450,12 +450,14 @@ SCIP_RETCODE calcActivityBounds(
 
          /* get variable coefficient */
          val = *valpnt;
+         assert(!SCIPisZero(scip, val));
 
          assert(matrix->ncols > col);
 
          assert(!SCIPisInfinity(scip, matrix->lb[col]));
          assert(!SCIPisInfinity(scip, -matrix->ub[col]));
 
+         /* positive coefficient */
          if( val > 0.0 )
          {
             if( SCIPisInfinity(scip, matrix->ub[col]) )
@@ -468,7 +470,8 @@ SCIP_RETCODE calcActivityBounds(
             else
                matrix->minactivity[row] += val * matrix->lb[col];
          }
-         else if( val < 0.0 )
+         /* negative coefficient */
+         else
          {
             if( SCIPisInfinity(scip, -matrix->lb[col]) )
                matrix->maxactivityneginf[row]++;
@@ -3390,6 +3393,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                lb = SCIPvarGetLbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, lb));
 
+               SCIPdebugMessage("fixing dominated variable <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
+
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
@@ -3425,6 +3430,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                var = matrix->vars[v];
                ub = SCIPvarGetUbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, ub));
+
+               SCIPdebugMessage("fixing dominated variable <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
 
                /* fix at upper bound */
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
@@ -3515,12 +3522,12 @@ SCIP_RETCODE SCIPincludePresolDomcol(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/domcol/numminpairs",
-         "minimal number of pair comparisons ",
+         "minimal number of pair comparisons",
          &presoldata->numminpairs, FALSE, DEFAULT_NUMMINPAIRS, 100, DEFAULT_NUMMAXPAIRS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/domcol/nummaxpairs",
-         "maximal number of pair comparisons ",
+         "maximal number of pair comparisons",
          &presoldata->nummaxpairs, FALSE, DEFAULT_NUMMAXPAIRS, DEFAULT_NUMMINPAIRS, 1000000000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

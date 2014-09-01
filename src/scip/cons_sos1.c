@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -458,9 +458,9 @@ SCIP_RETCODE deleteVarSOS1(
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
    {
-      consdata->vars[j] = consdata->vars[j+1];
+      consdata->vars[j] = consdata->vars[j+1]; /*lint !e679*/
       if ( consdata->weights != NULL )
-         consdata->weights[j] = consdata->weights[j+1];
+         consdata->weights[j] = consdata->weights[j+1]; /*lint !e679*/
    }
    --consdata->nvars;
 
@@ -1983,19 +1983,13 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
 static
 SCIP_DECL_CONSPARSE(consParseSOS1)
 {  /*lint --e{715}*/
-   char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real weight;
    const char* s;
    char* t;
-   int k;
 
    *success = TRUE;
    s = str;
-
-   /* skip white space and '<' */
-   while ( (*s != '\0' && isspace((unsigned char)*s)) || *s == '<' )
-      ++s;
 
    /* create empty SOS1 constraint */
    SCIP_CALL( SCIPcreateConsSOS1(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
@@ -2003,20 +1997,11 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    /* loop through string */
    do
    {
-      /* find variable name */
-      k = 0;
-      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '(' && *s != '>' )
-         varname[k++] = *s++;
-      varname[k] = '\0';
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+      s = t;
 
-      if ( *s == '\0' )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
-      /* skip until beginning of weight (in particular, skip type specifier [?]) */
+      /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
 
@@ -2039,18 +2024,9 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
       }
       s = t;
 
-      /* skip white space, ',', '(', and '<' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' || *s == '<' ) )
+      /* skip white space, ',', and ')' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
          ++s;
-
-      /* get variable */
-      var = SCIPfindVar(scip, varname);
-      if ( var == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );
@@ -2400,6 +2376,7 @@ int SCIPgetNVarsSOS1(
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       SCIPABORT();
+      return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2424,6 +2401,7 @@ SCIP_VAR** SCIPgetVarsSOS1(
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -2448,6 +2426,7 @@ SCIP_Real* SCIPgetWeightsSOS1(
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

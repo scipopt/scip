@@ -1,4 +1,4 @@
-$(LIBOBJDIR)/scip/lpi_spx132.o: src/scip/lpi_spx132.cpp lib/spx132inc/spxsolver.h \
+$(LIBOBJDIR)/lpi/lpi_spx132.o: src/lpi/lpi_spx132.cpp lib/spx132inc/spxsolver.h \
  lib/spx132inc/spxdefines.h lib/spx132inc/timer.h lib/spx132inc/spxlp.h \
  lib/spx132inc/datakey.h lib/spx132inc/spxid.h lib/spx132inc/dvector.h \
  lib/spx132inc/vector.h lib/spx132inc/svector.h lib/spx132inc/svset.h \
@@ -16,9 +16,9 @@ $(LIBOBJDIR)/scip/lpi_spx132.o: src/scip/lpi_spx132.cpp lib/spx132inc/spxsolver.
  lib/spx132inc/spxpricer.h lib/spx132inc/spxsolver.h \
  lib/spx132inc/spxparmultpr.h lib/spx132inc/spxdevexpr.h \
  lib/spx132inc/spxfastrt.h lib/spx132inc/spxratiotester.h \
- src/scip/message.h src/scip/lpi.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/lpi/lpi.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
- src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
+ src/blockmemshell/memory.h src/lpi/type_lpi.h src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/bitencode.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \

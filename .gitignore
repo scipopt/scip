@@ -21,6 +21,7 @@ doc/html/
 doc/html_devel/
 doc/doxygen
 doc/scip.tag
+doc/*.tmp
 .cproject
 .project
 .settings/
@@ -35,3 +36,5 @@ interfaces/ampl/lint
 examples/CallableLibrary/lint
 unittests/check/results
 unittests/check/locks
+unittests/check/evalcheck.sh
+unittests/check/getlastprob.awk

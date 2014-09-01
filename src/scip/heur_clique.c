@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -764,7 +764,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       shortconflict = cutoff && (nonefixvars > 0);
 
       /* create own conflict */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%d", SCIPgetNNodes(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%"SCIP_LONGINT_FORMAT"", SCIPgetNNodes(scip));
 
       /* get negated variables for our conflict */
       SCIP_CALL( SCIPgetNegatedVars(scip, nonefixvars, onefixvars, onefixvars) );
@@ -980,7 +980,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             shortconflict = backtracked;
 
             /* create own conflict */
-            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%d", SCIPgetNNodes(scip));
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%"SCIP_LONGINT_FORMAT"", SCIPgetNNodes(scip));
 
             /* get negated variables for our conflict */
             SCIP_CALL( SCIPgetNegatedVars(scip, nonefixvars, onefixvars, onefixvars) );
@@ -1037,7 +1037,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* calculate next node number to run this heuristic */
    tmpnnodes = (SCIP_Longint) SCIPceil(scip, heurdata->nnodefornextrun * heurdata->multiplier);
    heurdata->nnodefornextrun = MIN(tmpnnodes, INT_MAX);
-   SCIPdebugMessage("Next run will be at node %lld.\n", heurdata->nnodefornextrun);
+   SCIPdebugMessage("Next run will be at node %"SCIP_LONGINT_FORMAT".\n", heurdata->nnodefornextrun);
 #endif
    return SCIP_OKAY;
 }

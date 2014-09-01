@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,7 +45,7 @@
 #define DEFAULT_MINFIXINGRATE 0.8           /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200           /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS    FALSE          /* should subproblem be created out of the rows in the LP rows,
+#define DEFAULT_USELPROWS     FALSE         /* should subproblem be created out of the rows in the LP rows,
                                              * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
                                              * cutpool of the original scip be copied to constraints of the subscip */
@@ -149,14 +149,14 @@ SCIP_RETCODE createSubproblem(
          lb = SCIPvarGetLbGlobal(subvars[i]);
          ub = SCIPvarGetUbGlobal(subvars[i]);
          assert(SCIPisLE(scip, lb, ub));
-         
+
          /* due to dual reductions, it may happen that the solution value is not in
             the variable's domain anymore */
          if( SCIPisLT(scip, solval, lb) )
             solval = lb;
          else if( SCIPisGT(scip, solval, ub) )
             solval = ub;
-         
+
          /* perform the bound change */
          if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
          {

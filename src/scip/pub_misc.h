@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,11 @@
 #ifndef __SCIP_PUB_MISC_H__
 #define __SCIP_PUB_MISC_H__
 
-
+/* on SunOS, the function finite(a) (for the SCIPisFinite macro below) is declared in ieeefp.h */
+#ifdef __sun
+#include <ieeefp.h>
+#endif
+#include <math.h>
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -67,6 +71,18 @@ void SCIPgmlWriteNode(
    const char*           nodetype,           /**< type of the node, or NULL */
    const char*           fillcolor,          /**< color of the node's interior, or NULL */
    const char*           bordercolor         /**< color of the node's border, or NULL */
+   );
+
+/** writes a node section including weight to the given graph file */
+EXTERN
+void SCIPgmlWriteNodeWeight(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor,        /**< color of the node's border, or NULL */
+   SCIP_Real             weight              /**< weight of node */
    );
 
 /** writes an edge section to the given graph file */
@@ -137,7 +153,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
 					      */
    );
 
-/** frees priority queue, but not the data elements themselves */
+/** frees sparse solution */
 EXTERN
 void SCIPsparseSolFree(
    SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
@@ -351,8 +367,11 @@ void SCIPhashtableFree(
  *
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ *
+ *  @deprecated Please use SCIPhashtableRemoveAll()
  */
 EXTERN
+SCIP_DEPRECATED
 void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
@@ -414,9 +433,19 @@ SCIP_RETCODE SCIPhashtableRemove(
    void*                 element             /**< element to remove from the table */
    );
 
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+EXTERN
+void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
 /** returns number of hash table elements */
 EXTERN
-SCIP_Longint SCIPhashtableGetNElemenets(
+SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
@@ -797,7 +826,10 @@ SCIP_RETCODE SCIPdigraphResize(
    int                   nnodes              /**< new number of nodes */
    );
 
-/** copies directed graph structure */
+/** copies directed graph structure
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
 EXTERN
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
@@ -850,14 +882,14 @@ int SCIPdigraphGetNNodes(
 
 /** returns the node data, or NULL if no data exist */
 EXTERN
-void* SCIPdigraphGetNodeDatas(
+void* SCIPdigraphGetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the node data is returned */
    );
 
 /** sets the node data */
 EXTERN
-void SCIPdigraphSetNodeDatas(
+void SCIPdigraphSetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    void*                 dataptr,            /**< user node data pointer, or NULL */
    int                   node                /**< node for which the node data is returned */
@@ -883,7 +915,7 @@ int* SCIPdigraphGetSuccessors(
    int                   node                /**< node for which the array of outgoing arcs is returned */
    );
 
-/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+/** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
 EXTERN
@@ -1413,6 +1445,17 @@ void SCIPsortRealPtrPtrInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortRealLongRealInt(
@@ -1899,6 +1942,17 @@ void SCIPsortDownRealPtrPtrInt(
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be sorted */
    int                   len                 /**< length of arrays */
    );
 
@@ -2470,6 +2524,23 @@ void SCIPsortedvecInsertRealPtrPtrInt(
    void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
    int                   intval,             /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
+   int*                  intarray1,          /**< int array where an element is to be inserted */
+   int*                  intarray2,          /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int                   intval1,            /**< additional value of new element */
+   int                   intval2,            /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -3179,6 +3250,23 @@ void SCIPsortedvecInsertDownRealPtrPtrInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
+   int*                  intarray1,          /**< int array where an element is to be inserted */
+   int*                  intarray2,          /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int                   intval1,            /**< additional value of new element */
+   int                   intval2,            /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownRealLongRealInt(
@@ -3794,6 +3882,18 @@ void SCIPsortedvecDelPosRealPtrPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray1,          /**< int array where an element is to be deleted */
+   int*                  intarray2,          /**< int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from four joint arrays of Reals/Long/Reals/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecDelPosRealLongRealInt(
@@ -4336,6 +4436,18 @@ void SCIPsortedvecDelPosDownRealPtrPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownRealPtrPtrIntInt(
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray1,          /**< int array where an element is to be deleted */
+   int*                  intarray2,          /**< int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from four joint arrays of Reals/Long/Reals/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownRealLongRealInt(
@@ -4855,6 +4967,23 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
    );
+
+/* The C99 standard defines the function (or macro) isfinite.
+ * On MacOS X, isfinite is also available.
+ * From the BSD world, there comes a function finite.
+ * On SunOS, finite is also available.
+ * In the MS compiler world, there is a function _finite.
+ * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
+ */
+#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
+#define SCIPisFinite isfinite
+#elif defined(_BSD_SOURCE) || defined(__sun)
+#define SCIPisFinite finite
+#elif defined(_MSC_VER)
+#define SCIPisFinite _finite
+#else
+#define SCIPisFinite(x) ((x) == (x))
+#endif
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.

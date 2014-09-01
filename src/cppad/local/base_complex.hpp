@@ -1,12 +1,12 @@
-/* $Id: base_complex.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: base_complex.hpp 2765 2013-03-03 15:48:35Z bradbell $ */
 # ifndef CPPAD_BASE_COMPLEX_INCLUDED
 # define CPPAD_BASE_COMPLEX_INCLUDED
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -59,12 +59,12 @@ $children%
 %$$
 
 $head Example$$
-The file $cref/ComplexPoly.cpp/$$ contains an example use of
-$code std::complex<double>$$ type for a CppAD $italic Base$$ type.
+The file $cref complex_poly.cpp$$ contains an example use of
+$code std::complex<double>$$ type for a CppAD $icode Base$$ type.
 It returns true if it succeeds and false otherwise.
 
 $head See Also$$
-The file $cref/not_complex_ad.cpp/$$ contains an example using
+The file $cref not_complex_ad.cpp$$ contains an example using
 complex arithmetic where the function is not complex differentiable.
 
 $head Include Order$$
@@ -179,20 +179,6 @@ namespace CppAD {
 	inline int Integer(const std::complex<double> &x)
 	{	return static_cast<int>( x.real() ); }
 }
-/*$$
-
-$head epsilon$$
-The standard double complex machine epsilon in a double,
-hence we must convert it to a complex to meet the prototype
-for the CppAD machine epsilon function.
-$codep */
-namespace CppAD {
-	template <>
-	inline std::complex<double> epsilon< std::complex<double> >(void)
-	{	double eps = std::numeric_limits<double>::epsilon();
-		return std::complex<double>(eps, 0.);
-	}
-}
 /* $$
 
 $head isnan$$
@@ -208,9 +194,7 @@ this function in the CppAD namespace.
 $codep */
 namespace CppAD {
 	inline bool isnan(const std::complex<double>& z)
-	{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;	
-		static const double nan = std::numeric_limits<double>::quiet_NaN();
-		return (z != z) | (z.real() == nan) | (z.imag() == nan);
+	{	return (z != z);
 	}
 }
 /* $$
@@ -264,6 +248,39 @@ namespace CppAD {
 		const std::complex<double> &x , 
 		const std::complex<double> &y )
 	{	return std::pow(x, y); }
+}
+/*$$
+
+$head limits$$
+The following defines the numeric limits functions
+$code epsilon$$, $code min$$, and $code max$$ for the type
+$code std::complex<double>$$.
+It also defines the deprecated $code epsilon$$ function:
+$codep */
+namespace CppAD {
+	template <>
+	class numeric_limits< std::complex<double> > {
+	public:
+		// machine epsilon
+		static  std::complex<double> epsilon(void)
+		{	double eps = std::numeric_limits<double>::epsilon();
+			return std::complex<double>(eps, 0.0);
+		}
+		// minimum positive normalized value
+		static  std::complex<double> min(void)
+		{	double min = std::numeric_limits<double>::min();
+			return std::complex<double>(min, 0.0);
+		}
+		// maximum finite value
+		static  std::complex<double> max(void)
+		{	double max = std::numeric_limits<double>::max();
+			return std::complex<double>(max, 0.0);
+		}
+	};
+	// deprecated machine epsilon
+	template <> 
+	inline std::complex<double> epsilon< std::complex<double> > (void)
+	{	return numeric_limits< std::complex<double> >::epsilon(); }
 }
 /* $$
 $end
@@ -333,17 +350,9 @@ namespace CppAD {
 	// Integer ------------------------------------------------------
 	inline int Integer(const std::complex<float> &x)
 	{	return static_cast<int>( x.real() ); }
-	// epsilon -------------------------------------------------------
-	template <>
-	inline std::complex<float> epsilon< std::complex<float> >(void)
-	{	float eps = std::numeric_limits<float>::epsilon();
-		return std::complex<float>(eps, 0.);
-	}
 	// isnan -------------------------------------------------------------
 	inline bool isnan(const std::complex<float>& z)
-	{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;	
-		static const float nan = std::numeric_limits<float>::quiet_NaN();
-		return (z != z) | (z.real() == nan) | (z.imag() == nan);
+	{	return (z != z);
 	}
 	// Valid standard math functions --------------------------------
 	CPPAD_STANDARD_MATH_UNARY(std::complex<float>, cos)
@@ -364,6 +373,29 @@ namespace CppAD {
 		const std::complex<float> &x , 
 		const std::complex<float> &y )
 	{	return std::pow(x, y); }
+	// numeric_limits -------------------------------------------------
+	template <>
+	class numeric_limits< std::complex<float> > {
+	public:
+		/// machine epsilon
+		static  std::complex<float> epsilon(void)
+		{	float eps = std::numeric_limits<float>::epsilon();
+			return std::complex<float>(eps, 0.0);
+		}
+		/// minimum positive normalized value
+		static  std::complex<float> min(void)
+		{	float min = std::numeric_limits<float>::min();
+			return std::complex<float>(min, 0.0);
+		}
+		/// maximum finite value
+		static  std::complex<float> max(void)
+		{	float max = std::numeric_limits<float>::max();
+			return std::complex<float>(max, 0.0);
+		}
+	};
+	template <> 
+	inline std::complex<float> epsilon< std::complex<float> >(void)
+	{	return numeric_limits< std::complex<float> >::epsilon(); }
 }
 
 // undefine macros only used by this file

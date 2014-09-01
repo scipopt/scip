@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -109,6 +109,7 @@ BEGIN {
 #
 /^@01/ { 
    filename = $2;
+   grepresult = ""
 
    n  = split ($2, a, "/");
    m = split(a[n], b, ".");
@@ -146,7 +147,7 @@ BEGIN {
    firstpb = +infty;
    db = -infty;
    dbset = 0;
-   rootdb = -infty;
+   dbforobjsense = -infty;
    simpiters = 0;
    bbnodes = 0;
    primlps = 0;
@@ -190,6 +191,8 @@ BEGIN {
    # get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
+   else if( $13 == "SoPlex2" )
+      lpsname = "spx2";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
    else if( $13 == "NONE]" )
@@ -236,9 +239,9 @@ BEGIN {
 # get objective sense
 #
 /^  Objective sense  :/ {
-   if ( $4 == "minimize" )
+   if ( $4 == "minimize" || $4 == "minimize\r")
       objsense = 1;
-   if ( $4 == "maximize" )
+   if ( $4 == "maximize" || $4 == "maximize\r" )
       objsense = -1;
 
    # objsense is 0 otherwise
@@ -381,7 +384,21 @@ BEGIN {
 # solution
 #
 /^Original Problem   : no problem exists./ { readerror = 1; }
-/^SCIP Status        :/ { aborted = 0; }
+/^SCIP Status        :/ {
+   # replace / by \/ in filename
+   fname = filename
+   gsub(/\//, "\\/",fname);
+
+   #grep between filename and next @01 for an error
+   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+   command | getline grepresult;
+
+   # set aborted flag correctly
+   if( grepresult == "" ) {
+      aborted = 0;
+   }
+}
+
 /solving was interrupted/ { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
@@ -401,8 +418,12 @@ BEGIN {
       dbset = 1;
       feasible = 0;
    }
-   else if( $4 == "-" ) {
+   else if( $4 == "-"  || $4 == "-\r") {
       pb = +infty;
+      feasible = 0;
+   }
+   else if( $5 == "(user" && $6 == "objective" && $7 == "limit)" ) {
+      pb = $4;
       feasible = 0;
    }
    else {
@@ -412,16 +433,13 @@ BEGIN {
    }
 }
 /^  Dual Bound       :/ {
-   if( $4 != "-" ) {
+   if( $4 != "-" && $4 != "-\r" ) {
       db = $4;
       dbset = 1;
    }
 }
-/^  Root Dual Bound  :/ {
-   if( $5 != "-" )
-      rootdb = $5;
-   else
-       rootdb = db;  # SCIP most likely finished during root node, perhaps due to a solution limit. the rootdb is NOT printed then, but needed later
+/^Dual Bound         :/ {
+    dbforobjsense = $4; # in old SCIP log files, this value is used to detect the objective sense
 }
 #
 # iterations
@@ -540,8 +558,8 @@ BEGIN {
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
-      temp = rootdb;
-      rootdb = 1.0*temp;
+      temp = dbforobjsense;
+      dbforobjsense = 1.0*temp;
       
       # if objsense could not be determined so far (output is maybe too old)
       if ( objsense == 0 )
@@ -549,14 +567,14 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-	 # firstpb and rootdb are used to detect the direction of optimization (min or max)
+	 # firstpb and dbforobjsense are used to detect the direction of optimization (min or max)
 	 if( timetofirst < 0.0 )
 	    temp = pb;
 	 else
 	    temp = firstpb;
 	 firstpb = 1.0*temp;
 
-	 if ( firstpb - rootdb > max(abstol,reltol) )
+	 if ( firstpb - dbforobjsense > max(abstol,reltol) )
 	    objsense = 1;   # minimize
 	 else
 	    objsense = -1;  # maximize
@@ -637,7 +655,11 @@ BEGIN {
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
+      {
          timeout = 0;
+         if( memlimitreached )
+            tottime = max(endtime - starttime, timelimit);
+      }
 
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
@@ -702,13 +724,13 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( objsense == -1 && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+         if( feasible && (( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) )) ) {
             status = "fail";
             failtime += tottime;
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) 
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached )
 	    {
                if( timeout )
                   status = "timeout";
@@ -725,7 +747,7 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
+               if( (db == -infty || (abs(pb - db) <= max(abstol, reltol))) && abs(pb - sol[prob]) <= reltol ) {
                   status = "ok";
                   pass++;
                }
@@ -901,6 +923,7 @@ BEGIN {
                 namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
+
          printf("%s\n", status);
       }
 
@@ -943,7 +966,7 @@ BEGIN {
             gamsprobtype = "MIP";
          #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
          #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
          printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
       }
    }

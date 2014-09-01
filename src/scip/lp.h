@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -214,6 +214,32 @@ SCIP_RETCODE SCIPlpStartStrongbranch(
 /** end strong branching - call after any strong branching */
 extern
 SCIP_RETCODE SCIPlpEndStrongbranch(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** sets strong branching information for a column variable */
+extern
+void SCIPcolSetStrongbranchData(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
+   SCIP_Real             sbdown,             /**< dual bound after branching column down */
+   SCIP_Real             sbup,               /**< dual bound after branching column up */
+   SCIP_Bool             sbdownvalid,        /**< is the returned down value a valid dual bound? */
+   SCIP_Bool             sbupvalid,          /**< is the returned up value a valid dual bound? */
+   SCIP_Longint          iter,               /**< total number of strong branching iterations */
+   int                   itlim               /**< iteration limit applied to the strong branching call */
+   );
+
+/** invalidates strong branching information for a column variable */
+extern
+void SCIPcolInvalidateStrongbranchData(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_LP*              lp                  /**< LP data */
    );
 
@@ -975,7 +1001,9 @@ SCIP_RETCODE SCIPlpSetState(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
+   SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             wasdualfeas         /**< dual feasibility when LP state information was stored */
    );
 
 /** frees LP state information */
@@ -984,6 +1012,30 @@ SCIP_RETCODE SCIPlpFreeState(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   );
+
+/** stores pricing norms into LP norms object */
+extern
+SCIP_RETCODE SCIPlpGetNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   );
+
+/** loads pricing norms from LP norms object into solver */
+extern
+SCIP_RETCODE SCIPlpSetNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS*        lpinorms            /**< LP pricing norms information */
+   );
+
+/** frees pricing norms information */
+extern
+SCIP_RETCODE SCIPlpFreeNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
    );
 
 /** sets the upper objective limit of the LP solver */
@@ -1049,7 +1101,12 @@ SCIP_Bool SCIPlpIsRootLPRelax(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** gets objective value of current LP */
+/** gets objective value of current LP
+ *
+ *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible
+ *        if a limit was hit during solving. It must not be used as a dual bound if the LP solution status is
+ *        SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ */
 extern
 SCIP_Real SCIPlpGetObjval(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1373,6 +1430,18 @@ SCIP_RETCODE SCIPlpEndProbing(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** informs the LP that the probing mode is now used for strongbranching */
+extern
+void SCIPlpStartStrongbranchProbing(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** informs the LP that the probing mode is not used for strongbranching anymore */
+extern
+void SCIPlpEndStrongbranchProbing(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** gets proven lower (dual) bound of last LP solution */
 extern
 SCIP_RETCODE SCIPlpGetProvedLowerbound(
@@ -1428,7 +1497,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
-   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
    SCIP_Real             timelimit,          /**< time limit for LP solver */
    int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_Real*            point,              /**< array to store relative interior point on exit */
@@ -1589,7 +1657,7 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
- 
+
 #endif
 
 #ifdef __cplusplus

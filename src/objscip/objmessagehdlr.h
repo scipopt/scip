@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -98,7 +98,7 @@ public:
 
 
 /** creates the message handler for the given message handler object */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateObjMessagehdlr(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
    scip::ObjMessagehdlr* objmessagehdlr,     /**< message handler object */
@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    );
 
 /** returns the message handler object for the given message handler */
-extern
+EXTERN
 scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );

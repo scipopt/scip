@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -735,12 +735,12 @@ SCIP_RETCODE createCoveringProblem(
             coveringconsvals[ntofix] = 1.0;
             ntofix++;
          }
+         negated = FALSE;
 
          /* if constraints with inactive variables are present, we have to find the corresponding active variable */
          andres = SCIPgetResultantAnd(scip, andcons);
          assert(andres != NULL);
          probindex = SCIPvarGetProbindex(andres);
-         negated = FALSE;
 
          /* if resultant is fixed this constraint can be either linearized or is redundant because all operands can be fixed */
          if( termIsConstant(scip, andres, 1.0, globalbounds) )
@@ -794,7 +794,9 @@ SCIP_RETCODE createCoveringProblem(
          assert(probindex >= 0);
          assert(!termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds));
 
-         /* if less than two variables are unfixed or the resultant variable is fixed, the entire constraint can be linearized anyway */
+         /* if less than two variables are unfixed or the resultant variable is fixed, the entire constraint can be
+	  * linearized anyway
+	  */
          if( ntofix >= 2 )
          {
             assert(ntofix <= SCIPgetNVarsAnd(scip, andcons));
@@ -2182,7 +2184,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
 
    /* deactivate expensive pre-root heuristics, since it may happen that the lp relaxation of the subproblem is already
-      infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
+    * infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
    if( !SCIPisParamFixed(subscip, "heuristics/shiftandpropagate/freq") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
@@ -2195,6 +2197,8 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( SCIPunfixParam(subscip, "heuristics/"HEUR_NAME"/freq") );
    }
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
+
+   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
@@ -2802,7 +2806,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
          SCIPstatistic(
             if( ncovers == 0 && success )
-               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100.0*coversize /(SCIP_Real)nvars);
             );
 
          assert(coversize >= 0);
@@ -3196,6 +3200,10 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);

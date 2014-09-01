@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -315,12 +315,11 @@ SCIP_Real executeStrongBranching(
    SCIP_BRANCHRULEDATA*  branchruledata      /**< the data of the branching rule */
    )
 {
-
    SCIP_NODE* newnode;
    SCIP_CONS* currentcons;
    SCIP_CONS* cons;
    SCIP_Bool cutoff;
-   
+   SCIP_Bool lperror;
    SCIP_Real newLb;
 
    assert(scip != NULL);
@@ -339,7 +338,8 @@ SCIP_Real executeStrongBranching(
    /* propagate the new b&b-node, i.e. fix vars to 0 that don't contain both node1 and node2 */
    SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, NULL) );
    /* solve the LP using pricing */
-   SCIP_CALL( SCIPsolveProbingLPWithPricing(scip, FALSE, FALSE, branchruledata->maxpricingrounds, &cutoff) );
+   SCIP_CALL( SCIPsolveProbingLPWithPricing(scip, FALSE, FALSE, branchruledata->maxpricingrounds, &lperror, &cutoff) );
+   assert(!lperror);
    assert(!cutoff);
    /* get the changed objective value */
    newLb = SCIPgetLPObjval(scip);

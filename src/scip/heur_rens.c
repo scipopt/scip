@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,9 +51,8 @@
 #define DEFAULT_LPLIMFAC      2.0       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_STARTSOL      'l'       /* solution that is used for fixing values                             */
 #define STARTSOL_CHOICES      "nl"      /* possible values for startsol ('l'p relaxation, 'n'lp relaxation)    */
-#define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
-                                         * otherwise, the copy constructors of the constraints handlers are used
-                                         */
+#define DEFAULT_USELPROWS     FALSE     /* should subproblem be created out of the rows in the LP rows,
+                                         * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
@@ -805,11 +804,15 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    assert( result != NULL );
    assert( SCIPhasCurrentNodeLP(scip) );
 
+   *result = SCIP_DELAYED;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
-
-   *result = SCIP_DELAYED;
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( heurdata->startsol == 'l' && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )

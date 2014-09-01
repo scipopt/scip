@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@
 /* default values for proximity-specific parameters */
 /* todo refine these values */
 #define DEFAULT_MAXNODES      10000LL    /* maximum number of nodes to regard in the subproblem                        */
-#define DEFAULT_MINIMPROVE    0.25       /* factor by which proximity should at least improve the incumbent            */
+#define DEFAULT_MINIMPROVE    0.02       /* factor by which proximity should at least improve the incumbent            */
 #define DEFAULT_MINGAP        0.01       /* minimum primal-dual gap for which the heuristic is executed                */
 #define DEFAULT_MINNODES      1LL        /* minimum number of nodes to regard in the subproblem                        */
 #define DEFAULT_MINLPITERS    200LL      /* minimum number of LP iterations to perform in one sub-mip                  */
@@ -58,7 +58,7 @@
 #define DEFAULT_USELPROWS     FALSE      /* should subproblem be constructed based on LP row information? */
 #define DEFAULT_BINVARQUOT    0.1        /* default threshold for percentage of binary variables required to start     */
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
-#define DEFAULT_USEFINALLP    TRUE       /* should the heuristic solve a final LP in case of continuous objective variables? */
+#define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
 
 /*
@@ -105,13 +105,13 @@ struct SCIP_HeurData
 static
 SCIP_RETCODE solveLp(
    SCIP*                 scip,               /* SCIP data structure */
-   SCIP_SOL*             sol,                /* current incumbent */
+   SCIP_SOL*             sol,                /* candidate solution for which continuous variables should be optimized */
    SCIP_Bool*            success             /* was the dive successful? */
 )
 {
    SCIP_VAR** vars;
    SCIP_RETCODE retstat;
-   
+
    int v;
    int nvars;
    int ncontvars;
@@ -121,7 +121,7 @@ SCIP_RETCODE solveLp(
    SCIP_Bool requiresnlp;
 
    assert(success != NULL);
- 
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
 
    nintvars = nvars - ncontvars;
@@ -180,6 +180,7 @@ SCIP_RETCODE solveLp(
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
+   /* terminate diving mode */
    SCIP_CALL( SCIPendDive(scip) );
 
    return SCIP_OKAY;
@@ -207,6 +208,7 @@ SCIP_RETCODE createNewSol(
    assert(subscip != NULL);
    assert(subvars != NULL);
    assert(subsol != NULL);
+   assert(success != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
@@ -225,8 +227,9 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
+   *success = FALSE;
    /* solve an LP with all integer variables fixed to improve solution quality */
-   if( ncontvars > 0 && usefinallp )
+   if( ncontvars > 0 && usefinallp && SCIPisLPConstructed(scip) )
    {
       int v;
       int ncontobjvars; /* does the problem instance have continuous variables with nonzero objective coefficients? */
@@ -251,20 +254,18 @@ SCIP_RETCODE createNewSol(
       }
 
       SCIPstatisticMessage(" Continuous Objective variables: %d, Euclidean OBJ: %g total, %g continuous\n", ncontobjvars, SCIPgetObjNorm(scip), sumofobjsquares);
-		/* solve a final LP to optimize solution values of continuous problem variables */
-      if( ncontobjvars > 0 )
+      /* solve a final LP to optimize solution values of continuous problem variables */
+      SCIPstatisticMessage("Solution Value before LP resolve: %g\n", SCIPgetSolOrigObj(scip, newsol));
+      SCIP_CALL( solveLp(scip, newsol, success) );
+
+      /* if the LP solve was not successful, reset the solution */
+      if( !*success )
       {
-         SCIPstatisticMessage("Solution Value before LP resolve: %g\n", SCIPgetSolOrigObj(scip, newsol));
-         SCIP_CALL( solveLp(scip, newsol, success) );
-
-         if( !*success )
+         for( v = nvars - 1; v >= nvars - ncontvars; --v )
          {
-            for( v = nvars - 1; v >= nvars - ncontvars; --v )
-            {
-               SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
-            }
-
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
          }
+
       }
    }
 
@@ -422,8 +423,8 @@ SCIP_RETCODE createRows(
 /** frees the subproblem */
 static
 SCIP_RETCODE deleteSubproblem(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*       heurdata            /**< heuristic data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    /* free remaining memory from heuristic execution */
@@ -532,7 +533,7 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    heurdata->lastsolidx = -1;
    heurdata->nusedlpiters = 0LL;
    heurdata->subprobidx = 0;
-   
+
    heurdata->subscip = NULL;
    heurdata->varmapfw = NULL;
    heurdata->subvars = NULL;
@@ -577,6 +578,8 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -629,7 +632,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
       nlpiters = MAX(nlpiters, heurdata->minlpiters);
 
       /* define and solve the proximity subproblem */
-      SCIP_CALL( SCIPapplyProximity(scip, heur, result, heurdata->minimprove, nnodes, nlpiters, &nusednodes, &nusedlpiters) );
+      SCIP_CALL( SCIPapplyProximity(scip, heur, result, heurdata->minimprove, nnodes, nlpiters, &nusednodes, &nusedlpiters, FALSE) );
 
       /* adjust node limit and LP iteration limit for future iterations */
       assert(nusednodes <= nnodes);
@@ -649,9 +652,15 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    if( foundsol )
       *result = SCIP_FOUNDSOL;
 
-   if( SCIPgetNActivePricers(scip) > 0 )
+   /* free the occupied memory */
+   if( heurdata->subscip != NULL )
    {
+/* just for testing the library method, in debug mode, we call the wrapper method for the actual delete method */
+#ifndef NDEBUG
+      SCIP_CALL( SCIPdeleteSubproblemProximity(scip) );
+#else
       SCIP_CALL( deleteSubproblem(scip, heurdata) );
+#endif
    }
    return SCIP_OKAY;
 }
@@ -661,8 +670,34 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
  * primal heuristic specific interface methods
  */
 
+/** frees the sub-MIP created by proximity */
+SCIP_RETCODE SCIPdeleteSubproblemProximity(
+   SCIP*                 scip                /** SCIP data structure */
+   )
+{
+   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
 
-/** main procedure of the proximity heuristic, creates and solves a sub-SCIP */
+   assert(scip != NULL);
+
+   heur = SCIPfindHeur(scip, HEUR_NAME);
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   if( heurdata != NULL )
+   {
+      SCIP_CALL( deleteSubproblem(scip, heurdata) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** main procedure of the proximity heuristic, creates and solves a sub-SCIP
+ *
+ *  @note the method can be applied in an iterative way, keeping the same subscip in between. If the @p freesubscip
+ *        parameter is set to FALSE, the heuristic will keep the subscip data structures. Always set this parameter
+ *        to TRUE, or call SCIPdeleteSubproblemProximity() afterwards
+ */
 SCIP_RETCODE SCIPapplyProximity(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -671,7 +706,8 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_Longint          nnodes,             /**< node limit for the subproblem                                       */
    SCIP_Longint          nlpiters,           /**< LP iteration limit for the subproblem                               */
    SCIP_Longint*         nusednodes,         /**< pointer to store number of used nodes in subscip                    */
-   SCIP_Longint*         nusedlpiters        /**< pointer to store number of used LP iterations in subscip            */
+   SCIP_Longint*         nusedlpiters,       /**< pointer to store number of used LP iterations in subscip            */
+   SCIP_Bool             freesubscip         /**< should the created sub-MIP be freed at the end of the method?       */
    )
 {
    SCIP*                 subscip;            /* the subproblem created by proximity              */
@@ -831,7 +867,7 @@ SCIP_RETCODE SCIPapplyProximity(
 
          SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
          for( i = 0; i < nvars; i++ )
-            subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+            subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
          SCIP_CALL( createRows(scip, subscip, subvars) );
       }
@@ -1030,6 +1066,12 @@ SCIP_RETCODE SCIPapplyProximity(
    heurdata->subvars = subvars;
    heurdata->objcons = objcons;
    heurdata->nsubvars = nvars;
+
+   /* delete the sub problem */
+   if( freesubscip )
+   {
+      SCIP_CALL( deleteSubproblem(scip, heurdata) );
+   }
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ int SCIPvarCompareActiveAndNegated(
    SCIP_VAR*             var1,               /**< first problem variable */
    SCIP_VAR*             var2                /**< second problem variable */
    );
-   
+
 /** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
  *  variables are handled as the same variables
  */
@@ -311,7 +311,10 @@ SCIP_RETCODE SCIPvarSetRemovable(
    SCIP_Bool             removable           /**< removable flag */
    );
 
-/** get name of variable */
+/** returns the name of the variable
+ *
+ *  @note to change the name of a variable, use SCIPchgVarName() from scip.h
+ */
 EXTERN
 const char* SCIPvarGetName(
    SCIP_VAR*             var                 /**< problem variable */

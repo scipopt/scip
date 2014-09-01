@@ -1,12 +1,12 @@
-/* $Id: error_handler.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: error_handler.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ERROR_HANDLER_INCLUDED
 # define CPPAD_ERROR_HANDLER_INCLUDED
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -75,21 +75,21 @@ This routine should not return; i.e., upon detection of the error,
 the routine calling $icode handler$$ does not know how to proceed.
 
 $head known$$
-The $icode handler$$ argument $italic known$$ has prototype
+The $icode handler$$ argument $icode known$$ has prototype
 $codei%
 	bool %known%
 %$$
 If it is true, the error being reported is from a know problem.
 
 $head line$$
-The $icode handler$$ argument $italic line$$ has prototype
+The $icode handler$$ argument $icode line$$ has prototype
 $codei%
 	int %line%
 %$$
 It reports the source code line number where the error is detected. 
 
 $head file$$
-The $icode handler$$ argument $italic file$$ has prototype
+The $icode handler$$ argument $icode file$$ has prototype
 $codei%
 	const char *%file%
 %$$
@@ -97,7 +97,7 @@ and is a $code '\0'$$ terminated character vector.
 It reports the source code file where the error is detected. 
 
 $head exp$$
-The $icode handler$$ argument $italic exp$$ has prototype
+The $icode handler$$ argument $icode exp$$ has prototype
 $codei%
 	const char *%exp%
 %$$
@@ -107,7 +107,7 @@ but is false,
 and thereby causes this call to $icode handler$$.
 
 $head msg$$
-The $icode handler$$ argument $italic msg$$ has prototype
+The $icode handler$$ argument $icode msg$$ has prototype
 $codei%
 	const char *%msg%
 %$$
@@ -120,7 +120,7 @@ $children%
 %$$
 $head Example$$
 The file
-$cref/ErrorHandler.cpp/$$
+$cref error_handler.cpp$$
 contains an example and test a test of using this routine.
 It returns true if it succeeds and false otherwise.
 
@@ -195,10 +195,6 @@ private:
 	{	using std::cerr;
 		using std::endl;
 
-# ifdef _OPENMP
-		int thread_num = omp_get_thread_num();
-# endif
-
 		cerr << CPPAD_PACKAGE_STRING;
 		if( known )
 			cerr << " error from a known source:" << endl;
@@ -209,9 +205,6 @@ private:
 		cerr << "    "     << exp                     << endl;
 		cerr << "at line " << line << " in the file " << endl;
 		cerr << "    "     << file                    << endl;
-# ifdef _OPENMP
-		cerr << "OpenMP: thread_num = " << thread_num << endl;
-# endif
 
 		// terminate program execution
 		assert(false);

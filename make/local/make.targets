@@ -9,9 +9,9 @@ testcluster:
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) \
+		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(OPTCOMMAND);
 
 .PHONY: testclustercpx
 testclustercpx:
@@ -45,12 +45,15 @@ testgamscluster:
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 
-SCIPEXAMPLES	=	Binpacking Coloring Eventhdlr MIPSolver TSP
+SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver Scheduler TSP VRP
 
 .PHONY: testexamples
 testexamples:
 		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
 
+.PHONY: docexamples
+docexamples:
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ doc || exit 1;)
 
 .PHONY: coverage
 coverage:

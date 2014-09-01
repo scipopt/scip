@@ -1,10 +1,10 @@
 #!/bin/bash
 # 
-# This scripts a regression for SCIP 
+# This script runs a regression test for SCIP
 #
-# As input it expect optional the path to SCIP. If no path is given the
+# As input it optionally expects the path to SCIP. If no path is given the
 # current directory is assumed to be the SCIP path. This optional argument
-# is need to be able to restart the script via a cron job
+# is needed to be able to restart the script via a cron job.
 #
 
 
@@ -21,7 +21,7 @@ fi
 cd $SCIPDIR
 
 # email variables
-ADMINEMAIL=heinz@zib.de
+ADMINEMAIL=miltenberger@zib.de
 LPIPDEVELOPERSEMAIL=lpip-developers@zib.de
 EMAILFROM="Git <git@zib.de>"
 HOSTNAME=`hostname`
@@ -45,16 +45,16 @@ TESTS=(short MMM bugs)
 # first delete cron jobs if one exists
 crontab -r
 
-# check if the script exist; if not we have the stop 
+# check if the script exists; if not we have to stop
 if [ ! -f $SCRIPTNAME ];
 then
     SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-    echo "kill script due to not exists of file $SCRIPTNAME in directory $SCIPDIR" 
+    echo "kill script due to not existing file $SCRIPTNAME in directory $SCIPDIR"
     echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
     exit;
 fi
 
-# if file named "kill" exist, stop the regression test
+# if file named "kill" exists, stop the regression test
 if [ -f "kill" ];
 then
     SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
@@ -71,15 +71,15 @@ else
     LASTGITHASH=0
 fi
 
-# send mail to admin to indicate that makeregression.sh (re)start 
+# send mail to admin to indicate that makeregression.sh has (re)started
 SUBJECT="[$HOSTNAME] (Re)Start $SCRIPTNAME"
 echo "Time stamp $SCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
 
 # pull new version form git repository
 git pull
 
-# to clean the local git repository perform a git st (to avoid a dirty hash)
-git st
+# to clean the local git repository perform a git status (to avoid a dirty hash)
+git status
 
 # get maybe new time stamp for makeregression.sh 
 NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
@@ -215,8 +215,8 @@ do
         # pull new version form git repository
         git pull
 	
-        # to clean the local git repository perform a git st (to avoid a dirty hash)
-	git st
+        # to clean the local git repository perform a git status (to avoid a dirty hash)
+	git status
 
 	NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
         

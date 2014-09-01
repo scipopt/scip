@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplics)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolImplics(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -201,7 +201,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
             {
                SCIP_Real implvarlb;
                SCIP_Real implvarub;
-               
+
                implvarlb = SCIPvarGetLbGlobal(implvars[0][i0]);
                implvarub = SCIPvarGetUbGlobal(implvars[0][i0]);
 

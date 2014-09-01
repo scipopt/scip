@@ -20,6 +20,8 @@
  * The code (including some comments) for this reader is based on OSnl2osil.cpp,
  * the nl-reader of the Optimization Services Project (https://projects.coin-or.org/OS).
  *
+ * The code for SOS reading is based on the AMPL/Bonmin interface (https://projects.coin-or.org/Bonmin).
+ *
  * For an incomplete documentation on how to hook up a solver to AMPL, see http://www.ampl.com/REFS/HOOKING/index.html.
  */
 
@@ -33,6 +35,8 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 
 /* we need the ABS define from ASL later */
 #undef ABS
@@ -55,13 +59,6 @@
  */
 
 struct cgrad;
-
-#if 0
-/** reader data */
-struct SCIP_ReaderData
-{
-};
-#endif
 
 /** problem data */
 struct SCIP_ProbData
@@ -544,82 +541,42 @@ SCIP_RETCODE walkExpression(
          break;
       }
 
+      case MINLIST:
       case MAXLIST:
       {
-         SCIP_EXPR** children;
-         int nchildren;
+         expr_va* amplexpr_va;
+         const de* d;
+         SCIP_EXPR* arg;
+         SCIP_EXPROP operand;
 
-         nchildren = amplexpr->R.ep - amplexpr->L.ep;
+         operand = opnum == MINLIST ? SCIP_EXPR_MIN : SCIP_EXPR_MAX;
+         amplexpr_va = (expr_va*)amplexpr;
 
-         switch( nchildren )
+         arg = NULL;
+         *scipexpr = NULL;
+         for( d = amplexpr_va->L.d; d->e; ++d )
          {
-            case 0:
+            if( *scipexpr == NULL )
             {
-               SCIPerrorMessage("MAXLIST operand with 0 children not allowed\n");
-               *doingfine = FALSE;
-               break;
-            }
-
-            case 1:
-            {
-               SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->L.ep[0], exprvaridx, nexprvars, nvars, doingfine) );
-               break;
-            }
-
-            default:
-            {
-               SCIP_EXPR* arg1;
-               SCIP_EXPR* arg2;
-
-               SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[0], exprvaridx, nexprvars, nvars, doingfine) );
-               if( !*doingfine )
-                  break;
-
-               SCIP_CALL( walkExpression(scip, &arg2, asl, amplexpr->L.ep[1], exprvaridx, nexprvars, nvars, doingfine) );
+               SCIP_CALL( walkExpression(scip, scipexpr, asl, d->e, exprvaridx, nexprvars, nvars, doingfine) );
                if( !*doingfine )
                {
-                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+                  SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
                   break;
                }
-
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, arg1, arg2) );
-
-               for( i = 2; i < nchildren; ++i )
-               {
-                  SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
-                  if( !*doingfine )
-                  {
-                     SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
-                     break;
-                  }
-
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg1) );
-               }
             }
-
-            break;
+            else
+            {
+               SCIP_CALL( walkExpression(scip, &arg, asl, d->e, exprvaridx, nexprvars, nvars, doingfine) );
+               if( !*doingfine )
+               {
+                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg);
+                  break;
+               }
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, operand, *scipexpr, arg) );
+            }
          }
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &children, nchildren) );
-
-         for( i = 0; i < nchildren; ++i )
-         {
-            SCIP_CALL( walkExpression(scip, &children[i], asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
-            if( !*doingfine )
-               break;
-         }
-         if( !*doingfine )
-         {
-            for( --i; i >= 0; --i )
-               SCIPexprFreeDeep(SCIPblkmem(scip), &children[i]);
-
-            SCIPfreeBufferArray(scip, &children);
-            break;
-         }
-
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_SUM, nchildren, children) );
-
-         SCIPfreeBufferArray(scip, &children);
+         assert(*scipexpr != NULL); /* empty list?? */
 
          break;
       }
@@ -953,14 +910,44 @@ SCIP_RETCODE setupConstraints(
          SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, consexpr, nexprvars, 0, NULL) );
          SCIP_CALL( SCIPexprtreeSetVars(exprtree, nexprvars, exprvars) );
 
-         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+         /* expression trees without variables raise assertions in CppAD, workaround here for now */
+         if( nexprvars > 0 )
+         {
+            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
 
-         /* add linear part of constraint */
-         for( cg = Cgrad[c]; cg; cg = cg->next )
-            if( !SCIPisZero(scip, cg->coef) )
+            /* add linear part of constraint */
+            for( cg = Cgrad[c]; cg; cg = cg->next )
+               if( !SCIPisZero(scip, cg->coef) )
+               {
+                  SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
+               }
+         }
+         else
+         {
+            SCIP_Real val;
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+
+            SCIP_CALL( SCIPexprtreeEval(exprtree, NULL, &val) );
+
+            if( !SCIPisInfinity(scip, -LUrhs[2*c]) )
+               lhs = LUrhs[2*c] - val;
+            else
+               lhs = -SCIPinfinity(scip);
+
+            if( !SCIPisInfinity(scip, LUrhs[2*c+1]) )
+               rhs = LUrhs[2*c+1] - val;
+            else
+               rhs = SCIPinfinity(scip);
+
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
+
+            /* add linear part of constraint */
+            for( cg = Cgrad[c]; cg; cg = cg->next )
             {
-               SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
             }
+         }
 
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
       }
@@ -976,6 +963,91 @@ SCIP_RETCODE setupConstraints(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE setupSOS(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Bool*            success
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   int varssize;
+   char name[20];
+   ASL* asl;
+   int copri[2] = {0,0};
+   int* starts = NULL;
+   int* indices = NULL;
+   char* types = NULL;
+   SCIP_Real* weights = NULL;
+   int* priorities = NULL;
+   int num;
+   int numNz;
+   int i;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(probdata != NULL);
+   assert(probdata->asl != NULL);
+   assert(probdata->vars != NULL || probdata->nvars == 0);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   asl = probdata->asl;
+
+   num = suf_sos(0 /*flags*/, &numNz, &types, &priorities, copri, &starts, &indices, &weights);
+
+   if( num == 0 )
+      return SCIP_OKAY;
+   assert(num > 0);
+
+   varssize = 10;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+   for( i = 0; i < num; ++i )
+   {
+      if( starts[i+1] - starts[i] > varssize )
+      {
+         varssize = SCIPcalcMemGrowSize(scip, starts[i+1] - starts[i]);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+      }
+
+      for( j = starts[i], k = 0; j < starts[i+1]; ++j, ++k )
+         vars[k] = probdata->vars[indices[j]];
+
+      sprintf(name, "sos%d", i);
+      switch( types[i] )
+      {
+         case '1' :
+         {
+            SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, k, vars, &weights[starts[i]], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+            break;
+         }
+
+         case '2' :
+         {
+            SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, k, vars, &weights[starts[i]], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+            break;
+         }
+
+         default :
+         {
+            SCIPerrorMessage("SOS type %c not supported by SCIP.\n", types[i]);
+            *success = FALSE;
+            break;
+         }
+      }
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of probdata
@@ -1007,7 +1079,7 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
  * Callback methods of reader
  */
 
-#if 0
+#if 0 /* TODO: implement, if one finds use for it */
 /** copy method for reader plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_READERCOPY(readerCopyNl)
@@ -1015,22 +1087,6 @@ SCIP_DECL_READERCOPY(readerCopyNl)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeReaderNl(scip) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-#if 0
-/** destructor of reader to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_READERFREE(readerFreeNl)
-{  /*lint --e{715}*/
-   SCIP_READERDATA* readerdata;
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-
-   SCIPfreeMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -1045,6 +1101,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    const char* filebasename;
    FILE* nl;
    ASL* asl;
+   SufDecl suftable[5];
 
    assert(scip != NULL);
    assert(reader != NULL);
@@ -1055,6 +1112,29 @@ SCIP_DECL_READERREAD(readerReadNl)
 
    /* initialize ASL */
    asl = ASL_alloc(ASL_read_fg);
+
+   /* make ASL aware of SOS suffixes */
+   suftable[0].name = (char*)"ref";
+   suftable[0].kind = ASL_Sufkind_var | ASL_Sufkind_real;
+   suftable[0].nextra = 0;
+
+   suftable[1].name = (char*)"sos";
+   suftable[1].kind = ASL_Sufkind_var;
+   suftable[1].nextra = 0;
+
+   suftable[2].name = (char*)"sos";
+   suftable[2].kind = ASL_Sufkind_con;
+   suftable[2].nextra = 0;
+
+   suftable[3].name = (char*)"sosno";
+   suftable[3].kind = ASL_Sufkind_var | ASL_Sufkind_real;
+   suftable[3].nextra = 0;
+
+   suftable[4].name = (char*)"priority";
+   suftable[4].kind = ASL_Sufkind_var;
+   suftable[4].nextra = 0;
+
+   suf_declare(suftable, 5);
 
    /* let ASL read .nl file
     * jac0dim will do exit(1) if the file is not found
@@ -1101,6 +1181,10 @@ SCIP_DECL_READERREAD(readerReadNl)
       return SCIP_READERROR;
 
    SCIP_CALL( setupConstraints(scip, probdata, &success) );
+   if( !success )
+      return SCIP_READERROR;
+
+   SCIP_CALL( setupSOS(scip, probdata, &success) );
    if( !success )
       return SCIP_READERROR;
 

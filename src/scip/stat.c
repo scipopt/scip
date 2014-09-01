@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,6 +65,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->sbsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -74,6 +75,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->savetimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->updatesolutime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->updatesolutimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->strongpropclock, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -123,6 +125,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
+   SCIPclockFree(&(*stat)->sbsoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
@@ -132,6 +135,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->savetimeoverall);
    SCIPclockFree(&(*stat)->updatesolutime);
    SCIPclockFree(&(*stat)->updatesolutimeoverall);
+   SCIPclockFree(&(*stat)->strongpropclock);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -184,7 +188,7 @@ void SCIPstatReset(
    assert(stat->marked_nvaridx >= 0);
    assert(stat->marked_ncolidx >= 0);
    assert(stat->marked_nrowidx >= 0);
-   
+
    SCIPclockReset(stat->solvingtime);
    SCIPclockReset(stat->presolvingtime);
    SCIPclockReset(stat->primallptime);
@@ -196,12 +200,14 @@ void SCIPstatReset(
    SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
+   SCIPclockReset(stat->sbsoltime);
    SCIPclockReset(stat->nodeactivationtime);
    SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
    SCIPclockReset(stat->revivetime);
    SCIPclockReset(stat->savetime);
    SCIPclockReset(stat->updatesolutime);
+   SCIPclockReset(stat->strongpropclock);
 
    SCIPhistoryReset(stat->glbhistory);
 
@@ -219,6 +225,7 @@ void SCIPstatReset(
    stat->nnodelpiterations = 0;
    stat->ninitlpiterations = 0;
    stat->ndivinglpiterations = 0;
+   stat->nsbdivinglpiterations = 0;
    stat->nsblpiterations = 0;
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
@@ -227,11 +234,15 @@ void SCIPstatReset(
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
+   stat->nsbsolsfound = 0;
+   stat->nexternalsolsfound = 0;
    stat->domchgcount = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;
    stat->nprobboundchgs = 0;
    stat->nprobholechgs = 0;
+   stat->nsbdowndomchgs = 0;
+   stat->nsbupdomchgs = 0;
    stat->nruns = 0;
    stat->nconfrestarts = 0;
    stat->nrootboundchgs = 0;
@@ -256,6 +267,7 @@ void SCIPstatReset(
    stat->nnodelps = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
+   stat->nsbdivinglps = 0;
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
@@ -266,6 +278,7 @@ void SCIPstatReset(
    stat->solindex = 0;
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
+   stat->ninitconssadded = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -291,7 +304,7 @@ void SCIPstatReset(
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
-   SCIPstatResetPrimalIntegral(stat, set);
+   SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
 }
 
 /** reset implication counter */
@@ -323,35 +336,43 @@ void SCIPstatResetPresolving(
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;
 
-   SCIPstatResetCurrentRun(stat);
+   SCIPstatResetCurrentRun(stat, FALSE);
 }
 
-/* reset primal integral */
-void SCIPstatResetPrimalIntegral(
-   SCIP_STAT*           stat,                /**< problem statistics data */
-   SCIP_SET*            set                  /**< global SCIP settings */
+/** reset primal-dual integral */
+void SCIPstatResetPrimalDualIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             partialreset        /**< should time and integral value be kept? (in combination with no statistical
+                                              *   reset, integrals are added for each problem to be solved) */
    )
 {
    assert(stat != NULL);
 
-   stat->primalintegralval = 0.0;
    stat->previousgap = 100.0;
-   stat->previntegralevaltime = 0.0;
    stat->lastprimalbound = SCIP_UNKNOWN;
    stat->lastdualbound = SCIP_UNKNOWN;
    stat->lastlowerbound = -SCIPsetInfinity(set);
    stat->lastupperbound = SCIPsetInfinity(set);
+
+   /* partial resets keep the integral value and previous evaluation time */
+   if( !partialreset )
+   {
+      stat->previntegralevaltime = 0.0;
+      stat->primaldualintegral = 0.0;
+   }
 }
 
-/** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
+/** update the primal-dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
  *  upper and lower bound, respectively
  */
 void SCIPstatUpdatePrimalDualIntegral(
-   SCIP_STAT*           stat,                /**< problem statistics data */
-   SCIP_SET*            set,                 /**< global SCIP settings */
-   SCIP_PROB*           prob,                /**< transformed problem data */
-   SCIP_Real            upperbound,          /**< current upper bound in transformed problem, or infinity */
-   SCIP_Real            lowerbound           /**< current lower bound in transformed space, or -infinity */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Real             upperbound,         /**< current upper bound in transformed problem, or infinity */
+   SCIP_Real             lowerbound          /**< current lower bound in transformed space, or -infinity */
    )
 {
    SCIP_Real currentgap;
@@ -368,39 +389,44 @@ void SCIPstatUpdatePrimalDualIntegral(
    if( !SCIPsetIsInfinity(set, upperbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
-      primalbound = SCIPprobExternObjval(prob, set, upperbound);
+      primalbound = SCIPprobExternObjval(transprob, origprob, set, upperbound);
+
+      if( SCIPsetIsZero(set, primalbound) )
+         primalbound = 0.0;
    }
    else
    {
       /* no new upper bound: use stored values from last update */
       upperbound = stat->lastupperbound;
       primalbound = stat->lastprimalbound;
+      assert(SCIPsetIsZero(set, primalbound) == (primalbound == 0.0)); /*lint !e777*/
    }
 
    if( !SCIPsetIsInfinity(set, -lowerbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
-      dualbound = SCIPprobExternObjval(prob, set, lowerbound);
+      dualbound = SCIPprobExternObjval(transprob, origprob, set, lowerbound);
+
+      if( SCIPsetIsZero(set, dualbound) )
+         dualbound = 0.0;
    }
    else
    {
       /* no new lower bound: use stored values from last update */
       lowerbound = stat->lastlowerbound;
       dualbound = stat->lastdualbound;
+      assert(SCIPsetIsZero(set, dualbound) == (dualbound == 0.0)); /*lint !e777*/
    }
 
-   if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN )
+   /* computation of the gap, special cases are handled first */
+   if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN ) /*lint !e777*/
       currentgap = 100.0;
-   /* the gap is 0.0 if the lower bound is greater-equal the upper bound or if primal and dualbound are equal */
+   /* the gap is 0.0 if bounds coincide */
    else if( SCIPsetIsGE(set, lowerbound, upperbound) || SCIPsetIsEQ(set, primalbound, dualbound) )
-   {
       currentgap = 0.0;
-   }
-   /* the gap is 100.0 if primal and dualbound have different signs */
-   else if( primalbound * dualbound < 0 )
-   {
+   /* the gap is 100.0 if bounds have different signs */
+   else if( primalbound * dualbound <= 0.0 ) /*lint !e777*/
       currentgap = 100.0;
-   }
    else if( !SCIPsetIsInfinity(set, REALABS(primalbound)) && !SCIPsetIsInfinity(set, REALABS(dualbound)) )
    {
       SCIP_Real absprim = REALABS(primalbound);
@@ -417,10 +443,9 @@ void SCIPstatUpdatePrimalDualIntegral(
 
    /* if primal and dual bound have opposite signs, the gap always evaluates to 100.0% */
    assert(currentgap == 0.0 || currentgap == 100.0 || SCIPsetIsGE(set, primalbound * dualbound, 0.0));
-   assert(SCIPsetIsGE(set, stat->previousgap, currentgap));
 
-   /* update the integral based on information based on previous information */
-   stat->primalintegralval += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
+   /* update the integral based on previous information */
+   stat->primaldualintegral += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
 
    /* update all relevant information for next evaluation */
    stat->previousgap = currentgap;
@@ -433,7 +458,8 @@ void SCIPstatUpdatePrimalDualIntegral(
 
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_Bool             solved              /**< is problem already solved? */
    )
 {
    assert(stat != NULL);
@@ -454,7 +480,6 @@ void SCIPstatResetCurrentRun(
    stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
    stat->lastbranchvar = NULL;
-   stat->status = SCIP_STATUS_UNKNOWN;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
    stat->nrootintfixingsrun = 0;
@@ -462,6 +487,9 @@ void SCIPstatResetCurrentRun(
    stat->nseparounds = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+
+   if( !solved )
+      stat->status = SCIP_STATUS_UNKNOWN;
 
    SCIPhistoryReset(stat->glbhistorycrun);
 

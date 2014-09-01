@@ -1,13 +1,13 @@
-/* $Id: rev_sparse_jac.hpp 2006 2011-07-12 17:35:39Z bradbell $ */
+/* $Id: rev_sparse_jac.hpp 2994 2013-10-23 15:47:20Z bradbell $ */
 # ifndef CPPAD_REV_SPARSE_JAC_INCLUDED
 # define CPPAD_REV_SPARSE_JAC_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -16,6 +16,9 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 /*
 $begin RevSparseJac$$
 $spell
+	optimizer
+	nz
+	CondExpRel
 	std
 	VecAD
 	var
@@ -35,21 +38,23 @@ $index sparse, reverse Jacobian$$
 $index pattern, reverse Jacobian$$
 
 $head Syntax$$
-$icode%r% = %F%.RevSparseJac(%p%, %s%)%$$
+$icode%s% = %f%.RevSparseJac(%q%, %r%)
+%$$
+$icode%s% = %f%.RevSparseJac(%q%, %r%, %transpose%)%$$
 
 $head Purpose$$
-We use $latex F : \R^n \rightarrow R^m$$ to denote the
-$xref/glossary/AD Function/AD function/$$ corresponding to $icode f$$.
-For a fixed $latex p \times m$$ matrix $latex S$$,
-the Jacobian of $latex S * F( x )$$
+We use $latex F : B^n \rightarrow B^m$$ to denote the
+$cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
+For a fixed matrix $latex R \in B^{q \times m}$$,
+the Jacobian of $latex R * F( x )$$
 with respect to $latex x$$ is
 $latex \[
-	J(x) = S * F^{(1)} ( x )
+	S(x) = R * F^{(1)} ( x )
 \] $$
 Given a
-$xref/glossary/Sparsity Pattern/sparsity pattern/$$ 
-for $latex S$$,
-$code RevSparseJac$$ returns a sparsity pattern for the $latex J(x)$$.
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
+for $latex R$$,
+$code RevSparseJac$$ returns a sparsity pattern for the $latex S(x)$$.
 
 $head f$$
 The object $icode f$$ has prototype
@@ -59,67 +64,116 @@ $codei%
 
 $head x$$
 the sparsity pattern is valid for all values of the independent 
-variables in $latex x \in \R^n$$
-(even if it has $cref/CondExp/$$ or $cref/VecAD/$$ operations).
+variables in $latex x \in B^n$$
+(even if it has $cref CondExp$$ or $cref VecAD$$ operations).
 
-$head p$$
-The argument $icode p$$ has prototype
+$head q$$
+The argument $icode q$$ has prototype
 $codei%
-	size_t %p%
+	size_t %q%
 %$$
 It specifies the number of rows in
-$latex S \in \R^{p \times m}$$ and the 
-Jacobian $latex J(x) \in \R^{p \times n}$$. 
+$latex R \in B^{q \times m}$$ and the 
+Jacobian $latex S(x) \in B^{q \times n}$$. 
 
-$head s$$
-The argument $icode s$$ has prototype
+$head transpose$$
+The argument $icode transpose$$ has prototype
 $codei%
-	const %VectorSet%& %s%
+	bool %transpose%
 %$$
-(see $xref/RevSparseJac/VectorSet/VectorSet/$$ below).
-If it has elements of type $code bool$$,
-its size is $latex p * m$$.
-If it has elements of type $code std::set<size_t>$$,
-its size is $icode p$$ and all its set elements are between
-zero and $latex m - 1$$.
-It specifies a 
-$xref/glossary/Sparsity Pattern/sparsity pattern/$$ 
-for the matrix $icode S$$.
+The default value $code false$$ is used when $icode transpose$$ is not present.
+
+$head nz_compare$$
+The argument $icode nz_compare$$ has prototype
+$codei%
+	bool %nz_compare%
+%$$
+If $icode nz_compare$$ is true,
+the derivatives with respect to left and right of the 
+$cref CondExp$$ below are considered to be non-zero:
+$codei%
+	%CondExp%Rel%(%left%, %right%, %if_true%, %if_false%)
+%$$
+This is used by the 
+$cref/optimizer/optimize/$$ with $cref checkpoint$$ functions
+to obtain the correct dependency relations.
+The default value $icode%nz_compare% = false%$$ is used when 
+$icode nz_compare$$ is not present.
 
 $head r$$
-The return value $icode r$$ has prototype
+The argument $icode s$$ has prototype
 $codei%
-	%VectorSet% %r%
+	const %VectorSet%& %r%
 %$$
-(see $xref/RevSparseJac/VectorSet/VectorSet/$$ below).
-If it has elements of type $code bool$$,
-its size is $latex p * n$$.
+see $cref/VectorSet/RevSparseJac/VectorSet/$$ below.
+
+$subhead transpose false$$
+If $icode r$$ has elements of type $code bool$$,
+its size is $latex q * m$$.
 If it has elements of type $code std::set<size_t>$$,
-its size is $icode p$$.
+its size is $icode q$$ and all its set elements are between
+zero and $latex m - 1$$.
 It specifies a 
-$xref/glossary/Sparsity Pattern/sparsity pattern/$$ 
-for the matrix $latex J(x)$$.
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
+for the matrix $latex R \in B^{q \times m}$$.
+
+$subhead transpose true$$
+If $icode r$$ has elements of type $code bool$$,
+its size is $latex m * q$$.
+If it has elements of type $code std::set<size_t>$$,
+its size is $icode m$$ and all its set elements are between
+zero and $latex q - 1$$.
+It specifies a 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
+for the matrix $latex R^\R{T} \in B^{m \times q}$$.
+
+$head s$$
+The return value $icode s$$ has prototype
+$codei%
+	%VectorSet% %s%
+%$$
+see $cref/VectorSet/RevSparseJac/VectorSet/$$ below.
+
+$subhead transpose false$$
+If it has elements of type $code bool$$,
+its size is $latex q * n$$.
+If it has elements of type $code std::set<size_t>$$,
+its size is $icode q$$ and all its set elements are between
+zero and $latex n - 1$$.
+It specifies a 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
+for the matrix $latex S(x) \in {q \times n}$$.
+
+$subhead transpose true$$
+If it has elements of type $code bool$$,
+its size is $latex n * q$$.
+If it has elements of type $code std::set<size_t>$$,
+its size is $icode n$$ and all its set elements are between
+zero and $latex q - 1$$.
+It specifies a 
+$cref/sparsity pattern/glossary/Sparsity Pattern/$$ 
+for the matrix $latex S(x)^\R{T} \in {n \times q}$$.
 
 $head VectorSet$$
-The type $icode VectorSet$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$
+The type $icode VectorSet$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$
 $code bool$$ or $code std::set<size_t>$$;
 see $cref/sparsity pattern/glossary/Sparsity Pattern/$$ for a discussion
 of the difference.
 
 $head Entire Sparsity Pattern$$
-Suppose that $latex p = m$$ and
-$latex S$$ is the $latex m \times m$$ identity matrix.
+Suppose that $latex q = m$$ and
+$latex R$$ is the $latex m \times m$$ identity matrix.
 In this case, 
-the corresponding value for $icode r$$ is a 
-sparsity pattern for the Jacobian $latex J(x) = F^{(1)} ( x )$$.
+the corresponding value for $icode s$$ is a 
+sparsity pattern for the Jacobian $latex S(x) = F^{(1)} ( x )$$.
 
 $head Example$$
 $children%
 	example/rev_sparse_jac.cpp
 %$$
 The file
-$xref/RevSparseJac.cpp/$$
+$cref rev_sparse_jac.cpp$$
 contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 
@@ -129,14 +183,17 @@ $end
 
 # include <cppad/local/std_set.hpp>
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup rev_sparse_jac_hpp rev_sparse_jac.hpp
+\{
 \file rev_sparse_jac.hpp
 Reverse mode Jacobian sparsity patterns.
 */
 
+// -------------------------------------------------------------------------
 /*!
-Calculate Jacobian sparsity patterns using reverse mode.
+Calculate Jacobian vector of bools sparsity patterns using reverse mode.
 
 The C++ source code corresponding to this operation is
 \verbatim
@@ -149,20 +206,31 @@ is the base type for this recording.
 \tparam VectorSet
 is a simple vector class with elements of type \c bool.
 
-\param p
-is the number of rows in the matrix \f$ S \f$.
+\param transpose
+are the sparsity patterns transposed.
 
-\param s
-is a sparsity pattern for the matrix \f$ S \f$.
+\param nz_compare
+Are the derivatives with respect to left and right of the expression below
+considered to be non-zero:
+\code
+	CondExpRel(left, right, if_true, if_false)
+\endcode
+This is used by the optimizer to obtain the correct dependency relations.
+
+\param q
+is the number of rows in the matrix \f$ R \f$.
 
 \param r
-the input value of \a r must be a vector with size \c p*n
+is a sparsity pattern for the matrix \f$ R \f$.
+
+\param s
+the input value of \a s must be a vector with size <tt>p*n</tt>
 where \c n is the number of independent variables
 corresponding to the operation sequence stored in \a play. 
-The input value of the components of \c r does not matter.
-On output, \a r is the sparsity pattern for the matrix
+The input value of the components of \c s does not matter.
+On output, \a s is the sparsity pattern for the matrix
 \f[
-	J(x) = S * F^{(1)} (x)
+	S(x) = R * F^{(1)} (x)
 \f]
 where \f$ F \f$ is the function corresponding to the operation sequence
 and \a x is any argument value.
@@ -185,9 +253,11 @@ pattern for.
 
 template <class Base, class VectorSet> 
 void RevSparseJacBool(
-	size_t                 p                , 
-	const VectorSet&       s                ,
-	VectorSet&             r                ,
+	bool                   transpose        ,
+	bool                   nz_compare       ,
+	size_t                 q                , 
+	const VectorSet&       r                ,
+	VectorSet&             s                ,
 	size_t                 total_num_var    ,
 	CppAD::vector<size_t>& dep_taddr        ,
 	CppAD::vector<size_t>& ind_taddr        ,
@@ -204,30 +274,35 @@ void RevSparseJacBool(
 	size_t n = ind_taddr.size();
 
 	CPPAD_ASSERT_KNOWN(
-		p > 0,
-		"RevSparseJac: p (first argument) is not greater than zero"
+		q > 0,
+		"RevSparseJac: q is not greater than zero"
 	);
-
 	CPPAD_ASSERT_KNOWN(
-		s.size() == p * m,
-		"RevSparseJac: s (second argument) length is not equal to\n"
-		"p (first argument) times range dimension for ADFun object."
+		size_t(r.size()) == q * m,
+		"RevSparseJac: size of r is not equal to\n"
+		"q times range dimension for ADFun object."
 	);
 
 	// vector of sets that will hold the results
 	sparse_pack    var_sparsity;
-	var_sparsity.resize(total_num_var, p);
+	var_sparsity.resize(total_num_var, q);
 
 	// The sparsity pattern corresponding to the dependent variables
 	for(i = 0; i < m; i++)
 	{	CPPAD_ASSERT_UNKNOWN( dep_taddr[i] < total_num_var );
-
-		for(j = 0; j < p; j++) if( s[ i * m + j ] )
-			var_sparsity.add_element( dep_taddr[i], j );
+		if( transpose )
+		{	for(j = 0; j < q; j++) if( r[ j * m + i ] )
+				var_sparsity.add_element( dep_taddr[i], j );
+		}
+		else
+		{	for(j = 0; j < q; j++) if( r[ i * q + j ] )
+				var_sparsity.add_element( dep_taddr[i], j );
+		}
 	}
 
 	// evaluate the sparsity patterns
 	RevJacSweep(
+		nz_compare,
 		n,
 		total_num_var,
 		&play,
@@ -235,7 +310,7 @@ void RevSparseJacBool(
 	);
 
 	// return values corresponding to dependent variables
-	CPPAD_ASSERT_UNKNOWN( r.size() == p * n );
+	CPPAD_ASSERT_UNKNOWN( size_t(s.size()) == q * n );
 	for(j = 0; j < n; j++)
 	{	CPPAD_ASSERT_UNKNOWN( ind_taddr[j] == (j+1) );
 
@@ -243,25 +318,27 @@ void RevSparseJacBool(
 		CPPAD_ASSERT_UNKNOWN( play.GetOp( ind_taddr[j] ) == InvOp );
 
 		// extract the result from var_sparsity
-		for(i = 0; i < p; i++) 
-			r[ i * n + j ] = false;
-		CPPAD_ASSERT_UNKNOWN( var_sparsity.end() == p );
+		if( transpose )
+		{	for(i = 0; i < q; i++)
+				s[ j * q + i ] = false;
+		}
+		else
+		{	for(i = 0; i < q; i++) 
+				s[ i * n + j ] = false;
+		}
+		CPPAD_ASSERT_UNKNOWN( var_sparsity.end() == q );
 		var_sparsity.begin(j+1);
 		i = var_sparsity.next_element();
-		while( i < p )
-		{	r[ i * n + j ] = true;
-			i              = var_sparsity.next_element();
+		while( i < q )
+		{	if( transpose )
+				s[ j * q + i ] = true;
+			else	s[ i * n + j ] = true;
+			i  = var_sparsity.next_element();
 		}
 	}
 }
-
 /*!
-\file rev_sparse_jac.hpp
-Reverse mode Jacobian sparsity patterns.
-*/
-
-/*!
-Calculate Jacobian sparsity patterns using reverse mode.
+Calculate Jacobian vector of sets sparsity patterns using reverse mode.
 
 The C++ source code corresponding to this operation is
 \verbatim
@@ -269,48 +346,45 @@ The C++ source code corresponding to this operation is
 \endverbatim
 
 \tparam Base
-is the base type for this recording.
+see \c RevSparseJacBool.
 
 \tparam VectorSet
 is a simple vector class with elements of type \c std::set<size_t>.
 
-\param p
-is the number of rows in the matrix \f$ S \f$.
+\param transpose
+see \c RevSparseJacBool.
 
-\param s
-is a sparsity pattern for the matrix \f$ S \f$.
+\param nz_compare
+see \c RevSparseJacBool.
+
+\param q
+see \c RevSparseJacBool.
 
 \param r
-the input value of \a r must be a vector with size \a p.
-On input, each element of \a r mus be an empty set.
-On output, \a r is the sparsity pattern for the matrix
-\f[
-	J(x) = S * F^{(1)} (x)
-\f]
-where \f$ F \f$ is the function corresponding to the operation sequence
-and \a x is any argument value.
+see \c RevSparseJacBool.
+
+\param s
+see \c RevSparseJacBool.
 
 \param total_num_var
-is the total number of variable in this recording.
+see \c RevSparseJacBool.
 
 \param dep_taddr
-maps dependendent variable index
-to the corresponding variable in the tape.
+see \c RevSparseJacBool.
 
 \param ind_taddr
-maps independent variable index
-to the corresponding variable in the tape.
+see \c RevSparseJacBool.
 
 \param play
-is the recording that defines the function we are computing the sparsity 
-pattern for.
+see \c RevSparseJacBool.
 */
-
 template <class Base, class VectorSet> 
 void RevSparseJacSet(
-	size_t                 p                , 
-	const VectorSet&       s                ,
-	VectorSet&             r                ,
+	bool                   transpose        ,
+	bool                   nz_compare       ,
+	size_t                 q                , 
+	const VectorSet&       r                ,
+	VectorSet&             s                ,
 	size_t                 total_num_var    ,
 	CppAD::vector<size_t>& dep_taddr        ,
 	CppAD::vector<size_t>& ind_taddr        ,
@@ -325,42 +399,61 @@ void RevSparseJacSet(
 		one_element_std_set<size_t>(), two_element_std_set<size_t>()
 	);
 
-	// range and domain dimensions for F
-	size_t m = dep_taddr.size();
+	// domain dimensions for F
 	size_t n = ind_taddr.size();
+	size_t m = dep_taddr.size();
 
 	CPPAD_ASSERT_KNOWN(
-		p > 0,
-		"RevSparseJac: p (first argument) is not greater than zero"
+		q > 0,
+		"RevSparseJac: q is not greater than zero"
 	);
-
 	CPPAD_ASSERT_KNOWN(
-		s.size() == p,
-		"RevSparseJac: s (second argument) length is not equal to "
-		"p (first argument)."
+		size_t(r.size()) == q || transpose,
+		"RevSparseJac: size of r is not equal to q and transpose is false."
+	);
+	CPPAD_ASSERT_KNOWN(
+		size_t(r.size()) == m || ! transpose,
+		"RevSparseJac: size of r is not equal to m and transpose is true."
 	);
 
-	// vector of sets that will hold the results
-	sparse_set     var_sparsity;
-	var_sparsity.resize(total_num_var, p);
+	// vector of lists that will hold the results
+	CPPAD_INTERNAL_SPARSE_SET    var_sparsity;
+	var_sparsity.resize(total_num_var, q);
 
 	// The sparsity pattern corresponding to the dependent variables
-	for(i = 0; i < p; i++)
-	{	itr = s[i].begin();
-		while(itr != s[i].end())
-		{	j = *itr++; 
-			CPPAD_ASSERT_KNOWN(
-				j < m,
-				"RevSparseJac: an element of the set s[i] "
-				"has value greater than or equal m."
-			);
-			CPPAD_ASSERT_UNKNOWN( dep_taddr[j] < total_num_var );
-			var_sparsity.add_element( dep_taddr[j], i );
+	if( transpose )
+	{	for(i = 0; i < m; i++)
+		{	itr = r[i].begin();
+			while(itr != r[i].end())
+			{	j = *itr++; 
+				CPPAD_ASSERT_KNOWN(
+				j < q,
+				"RevSparseJac: transpose is true and element of the set\n"
+				"r[i] has value greater than or equal q."
+				);
+				CPPAD_ASSERT_UNKNOWN( dep_taddr[i] < total_num_var );
+				var_sparsity.add_element( dep_taddr[i], j );
+			}
 		}
 	}
-
+	else
+	{	for(i = 0; i < q; i++)
+		{	itr = r[i].begin();
+			while(itr != r[i].end())
+			{	j = *itr++; 
+				CPPAD_ASSERT_KNOWN(
+				j < m,
+				"RevSparseJac: transpose is false and element of the set\n"
+				"r[i] has value greater than or equal range dimension."
+				);
+				CPPAD_ASSERT_UNKNOWN( dep_taddr[j] < total_num_var );
+				var_sparsity.add_element( dep_taddr[j], i );
+			}
+		}
+	}
 	// evaluate the sparsity patterns
 	RevJacSweep(
+		nz_compare,
 		n,
 		total_num_var,
 		&play,
@@ -368,31 +461,144 @@ void RevSparseJacSet(
 	);
 
 	// return values corresponding to dependent variables
-	CPPAD_ASSERT_UNKNOWN( r.size() == p );
+	CPPAD_ASSERT_UNKNOWN( size_t(s.size()) == q || transpose );
+	CPPAD_ASSERT_UNKNOWN( size_t(s.size()) == n || ! transpose );
 	for(j = 0; j < n; j++)
 	{	CPPAD_ASSERT_UNKNOWN( ind_taddr[j] == (j+1) );
 
 		// ind_taddr[j] is operator taddr for j-th independent variable
 		CPPAD_ASSERT_UNKNOWN( play.GetOp( ind_taddr[j] ) == InvOp );
 
-		// extract result from rev_hes_sparsity
-		// and add corresponding elements to sets in r
-		CPPAD_ASSERT_UNKNOWN( var_sparsity.end() == p );
+		CPPAD_ASSERT_UNKNOWN( var_sparsity.end() == q );
 		var_sparsity.begin(j+1);
 		i = var_sparsity.next_element();
-		while( i < p )
-		{	r[i].insert(j);
+		while( i < q )
+		{	if( transpose )
+				s[j].insert(i);
+			else	s[i].insert(j);
 			i = var_sparsity.next_element();
 		}
 	}
 }
+// --------------------------------------------------------------------------
 
+/*!
+Private helper function for \c RevSparseJac(q, r, transpose).
+
+All of the description in the public member function 
+\c RevSparseJac(q, r, transpose) apply.
+
+\param set_type
+is a \c bool value.
+This argument is used to dispatch to the proper source code
+depending on the value of \c VectorSet::value_type.
+
+\param transpose
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param nz_compare
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param q
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param r
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param s
+is the return value for the corresponding call to 
+RevSparseJac(q, r, transpose).
+*/
+
+template <class Base>
+template <class VectorSet>
+void ADFun<Base>::RevSparseJacCase(
+	bool                set_type          ,
+	bool                transpose         ,
+	bool                nz_compare        ,
+	size_t              q                 ,
+	const VectorSet&    r                 ,
+	VectorSet&          s                 )
+{	size_t n = Domain();
+
+	// dimension of the result vector
+	s.resize( q * n );
+
+	// store results in s
+	RevSparseJacBool(
+		transpose      ,
+		nz_compare     ,
+		q              ,
+		r              ,
+		s              ,
+		total_num_var_ ,
+		dep_taddr_     ,
+		ind_taddr_     ,
+		play_
+	);
+}
+
+/*!
+Private helper function for \c RevSparseJac(q, r, transpose).
+
+All of the description in the public member function 
+\c RevSparseJac(q, r, transpose) apply.
+
+\param set_type
+is a \c std::set<size_t> object.
+This argument is used to dispatch to the proper source code
+depending on the value of \c VectorSet::value_type.
+
+\param transpose
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param nz_compare
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param q
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param r
+See \c RevSparseJac(q, r, transpose, nz_compare)
+
+\param s
+is the return value for the corresponding call to RevSparseJac(q, r, transpose)
+*/
+
+template <class Base>
+template <class VectorSet>
+void ADFun<Base>::RevSparseJacCase(
+	const std::set<size_t>&      set_type          ,
+	bool                         transpose         ,
+	bool                         nz_compare        ,
+	size_t                       q                 ,
+	const VectorSet&             r                 ,
+	VectorSet&                   s                 )
+{	// dimension of the result vector
+	if( transpose )
+		s.resize( Domain() );
+	else	s.resize( q );
+
+	// store results in r
+	RevSparseJacSet(
+		transpose      ,
+		nz_compare     ,
+		q              ,
+		r              ,
+		s              ,
+		total_num_var_ ,
+		dep_taddr_     ,
+		ind_taddr_     ,
+		play_
+	);
+}
+// --------------------------------------------------------------------------
 /*!
 User API for Jacobian sparsity patterns using reverse mode.
 
 The C++ source code corresponding to this operation is
 \verbatim
-	s = f.RevSparseJac(q, r)
+	s = f.RevSparseJac(q, r, transpose, nz_compare)
 \endverbatim
 
 \tparam Base
@@ -402,132 +608,60 @@ is the base type for this recording.
 is a simple vector with elements of type \c bool.
 or \c std::set<size_t>.
 
-\param p
-is the number of rows in the matrix \f$ S \f$.
+\param q
+is the number of rows in the matrix \f$ R \f$.
 
-\param s
-is a sparsity pattern for the matrix \f$ S \f$.
+\param r
+is a sparsity pattern for the matrix \f$ R \f$.
+
+\param transpose
+are the sparsity patterns for \f$ R \f$ and \f$ S(x) \f$ transposed.
+
+\param nz_compare
+Are the derivatives with respect to left and right of the expression below
+considered to be non-zero:
+\code
+	CondExpRel(left, right, if_true, if_false)
+\endcode
+This is used by the optimizer to obtain the correct dependency relations.
+
 
 \return
-If \c VectorSet::value_type is \c bool,
-the return value \c r is a vector with size \c p*n
-where \c n is the number of independent variables
-corresponding to the operation sequence stored in \c f. 
-If \c VectorSet::value_type is \c std::set<size_t>,
-the return value \c r is a vector of sets with size \c p
-and with all its elements between zero and \c n - 1.
-The value of \a r is the sparsity pattern for the matrix
+If \c transpose is false (true), the return value is a sparsity pattern
+for \f$ S(x) \f$ (\f$ S(x)^T \f$) where
 \f[
-	J(x) = S * F^{(1)} (x)
+	S(x) = R * F^{(1)} (x)
 \f]
-where \f$ F \f$ is the function corresponding to the operation sequence
+and \f$ F \f$ is the function corresponding to the operation sequence
 and \a x is any argument value.
+If \c VectorSet::value_type is \c bool,
+the return value has size \f$ q * n \f$ ( \f$ n * q \f$).
+If \c VectorSet::value_type is \c std::set<size_t>,
+the return value has size \f$ q \f$ ( \f$ n \f$)
+and with all its elements between zero and \f$ n - 1 \f$ (\f$ q - 1 \f$).
 */
 template <class Base>
 template <class VectorSet>
 VectorSet ADFun<Base>::RevSparseJac(
-	size_t              p      , 
-	const VectorSet&    s      )
+	size_t              q          , 
+	const VectorSet&    r          ,
+	bool                transpose  ,
+	bool                nz_compare )
 {
-	VectorSet r;
+	VectorSet s;
 	typedef typename VectorSet::value_type Set_type;
 
 	RevSparseJacCase(
 		Set_type()    ,
-		p             ,
-		s             ,
-		r
+		transpose     ,
+		nz_compare    ,
+		q             ,
+		r             ,
+		s
 	);
-	return r;
+	return s;
 }
 
-/*!
-Private helper function for \c RevSparseJac(p, s).
-
-All of the description in the public member function \c RevSparseJac(p, s)
-applies.
-
-\param set_type
-is a \c bool value.
-This arugment is used to dispatch to the proper source code
-depending on the value of \c VectorSet::value_type.
-
-\param p
-See \c RevSparseJac(p, s).
-
-\param s
-See \c RevSparseJac(p, s).
-
-\param r
-is the return value for the corresponding call to RevSparseJac(p, s);
-*/
-
-template <class Base>
-template <class VectorSet>
-void ADFun<Base>::RevSparseJacCase(
-	bool                set_type          ,
-	size_t              p                 ,
-	const VectorSet&    s                 ,
-	VectorSet&          r                 )
-{	size_t n = Domain();
-
-	// dimension of the result vector
-	r.resize( p * n );
-
-	// store results in r
-	RevSparseJacBool(
-		p              ,
-		s              ,
-		r              ,
-		total_num_var_ ,
-		dep_taddr_     ,
-		ind_taddr_     ,
-		play_
-	);
-}
-
-/*!
-Private helper function for \c RevSparseJac(p, s).
-
-All of the description in the public member function \c RevSparseJac(p, s)
-applies.
-
-\param set_type
-is a \c std::set<size_t> object.
-This arugment is used to dispatch to the proper source code
-depending on the value of \c VectorSet::value_type.
-
-\param p
-See \c RevSparseJac(p, s).
-
-\param s
-See \c RevSparseJac(p, s).
-
-\param r
-is the return value for the corresponding call to RevSparseJac(p, s);
-*/
-
-template <class Base>
-template <class VectorSet>
-void ADFun<Base>::RevSparseJacCase(
-	const std::set<size_t>&      set_type          ,
-	size_t                       p                 ,
-	const VectorSet&             s                 ,
-	VectorSet&                   r                 )
-{	// dimension of the result vector
-	r.resize( p );
-
-	// store results in r
-	RevSparseJacSet(
-		p              ,
-		s              ,
-		r              ,
-		total_num_var_ ,
-		dep_taddr_     ,
-		ind_taddr_     ,
-		play_
-	);
-}
-
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

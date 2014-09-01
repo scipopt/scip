@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,7 +67,9 @@ void interruptHandler(
       exit(1);
    }
    else
+   {
       printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+   }
 }
 
 /** creates a CTRL-C interrupt data */
@@ -107,12 +109,12 @@ void SCIPinterruptCapture(
       interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
 #else
       struct sigaction newaction;
-      
+
       /* initialize new signal action */
       newaction.sa_handler = interruptHandler;
       newaction.sa_flags = 0;
       (void)sigemptyset(&newaction.sa_mask);
-      
+
       /* set new signal action, and remember old one */
       (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
 #endif
@@ -129,7 +131,7 @@ void SCIPinterruptRelease(
 {
    assert(interrupt != NULL);
    assert(interrupt->nuses >= 1);
-   
+
    interrupt->nuses--;
    if( interrupt->nuses == 0 )
    {

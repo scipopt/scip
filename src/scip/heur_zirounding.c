@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -220,7 +220,7 @@ void calculateBounds(
          return;
       }
 
-      SCIPdebugMessage("colval: %15.8f, downslack: %15.8f, upslack: %5.2f, lb: %5.2f, ub: %5.2f\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
+      SCIPdebugMessage("colval: %15.8g, downslack: %15.8g, upslack: %5.2g, lb: %5.2g, ub: %5.2g\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
          *lowerbound, *upperbound);
 
       /* if coefficient > 0, rounding up might violate up slack and rounding down might violate down slack
@@ -559,6 +559,10 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
    /* only call heuristic if an optimal LP-solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
@@ -702,7 +706,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       else
          upslacks[i] = rhs - activities[i];
 
-      SCIPdebugMessage("lhs:%5.2f <= act:%5.2f <= rhs:%5.2f --> down: %5.2f, up:%5.2f\n", lhs, activities[i], rhs, downslacks[i], upslacks[i]);
+      SCIPdebugMessage("lhs:%5.2f <= act:%5.2g <= rhs:%5.2g --> down: %5.2g, up:%5.2g\n", lhs, activities[i], rhs, downslacks[i], upslacks[i]);
 
       /* row is an equation. Try to find a slack variable in the row, i.e.,
        * a continuous variable which occurs only in this row. If no such variable exists,
@@ -815,7 +819,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
          /* calculate bounds for variable and make sure that there are no numerical inconsistencies */
          upperbound = SCIPinfinity(scip);
-         lowerbound = -SCIPinfinity(scip);
+         lowerbound = SCIPinfinity(scip);
          calculateBounds(scip, var, oldsolval, &upperbound, &lowerbound, upslacks, downslacks, nslacks, &numericalerror);
 
          if( numericalerror )
@@ -825,8 +829,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          up   = oldsolval + upperbound;
          down = oldsolval - lowerbound;
 
-         /* if the variable is integer, do not shift further than the nearest integer */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         /* if the variable is integer or implicit binary, do not shift further than the nearest integer */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY)
          {
             SCIP_Real ceilx;
             SCIP_Real floorx;
@@ -857,8 +861,13 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             /* once a possible shifting direction and value have been found, variable value is updated */
             shiftval = (direction == DIRECTION_UP ? up - oldsolval : down - oldsolval);
 
+            /* this improves numerical stability in some cases */
+            if( direction == DIRECTION_UP )
+               shiftval = MIN(shiftval, upperbound);
+            else
+               shiftval = MIN(shiftval, lowerbound);
             /* update the solution */
-            solarray[c] = oldsolval + shiftval;
+            solarray[c] = direction == DIRECTION_UP ? up : down;
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, solarray[c]) );
 
             /* update the rows activities and slacks */

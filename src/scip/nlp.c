@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -5029,7 +5029,12 @@ SCIP_RETCODE SCIPnlpCreate(
       if( set->nlp_solver[0] == '\0' )
       { /* take solver with highest priority */
          assert(set->nlpis != NULL);
-         (*nlp)->solver = set->nlpis[set->nnlpis-1];
+
+         /* sort the NLPIs if necessary */
+         if( !set->nlpissorted )
+            SCIPsetSortNlpis(set);
+
+         (*nlp)->solver = set->nlpis[0];
       }
       else
       { /* find user specified NLP solver */

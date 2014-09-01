@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,10 +77,10 @@ SCIP_RETCODE solSetArrayVal(
    SCIPvarMarkNotDeletable(var);
 
    /* mark the variable valid */
-   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
    /* set the value in the solution array */
-   SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, val) );
+   SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, val) );
 
    /* store whether the solution has infinite values assigned to variables */
    if( val != SCIP_UNKNOWN ) /*lint !e777*/
@@ -111,15 +111,15 @@ SCIP_RETCODE solIncArrayVal(
    if( !SCIPboolarrayGetVal(sol->valid, idx) )
    {
       /* mark the variable valid */
-      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
       /* set the value in the solution array */
-      SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, incval) );
+      SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
    }
    else
    {
       /* increase the value in the solution array */
-      SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+      SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
    }
 
    /* store whether the solution has infinite values assigned to variables */
@@ -297,12 +297,13 @@ SCIP_RETCODE SCIPsolCreate(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution in original problem space, initialized to zero */
+/** creates primal CIP solution in original problem space, initialized to the offset in the original problem */
 SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -317,7 +318,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
    (*sol)->solorigin = SCIP_SOLORIGIN_ORIGINAL;
-   (*sol)->obj = 0.0;
+   (*sol)->obj = origprob->objoffset;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
@@ -408,6 +409,143 @@ SCIP_RETCODE SCIPsolTransform(
    return SCIP_OKAY;
 }
 
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ */
+SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< either original or transformed problem, depending on sol origin */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             uselprows           /**< should LP row information be considered for none-objective variables */
+   )
+{
+   SCIP_VAR** vars;
+   int nimplvars;
+   int nbinvars;
+   int nintvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+
+   /* get variable data */
+   vars = SCIPprobGetVars(prob);
+   nbinvars = SCIPprobGetNBinVars(prob);
+   nintvars = SCIPprobGetNIntVars(prob);
+   nimplvars = SCIPprobGetNImplVars(prob);
+
+   if( nimplvars == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the last array position of implicit integer variables */
+   nimplvars = nbinvars + nintvars + nimplvars;
+
+   /* loop over implicit integer variables and round them up or down */
+   for( v = nbinvars + nintvars; v < nimplvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real obj;
+      SCIP_Real newsolval;
+      SCIP_Bool roundup;
+      SCIP_Bool rounddown;
+      int nuplocks;
+      int ndownlocks;
+
+      var = vars[v];
+
+      assert( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT );
+      solval = SCIPsolGetVal(sol, set, stat, var);
+
+      /* we do not need to round integral solution values or those of variables which are not column variables */
+      if( SCIPsetIsFeasIntegral(set, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+         continue;
+
+      nuplocks = SCIPvarGetNLocksUp(var);
+      ndownlocks = SCIPvarGetNLocksDown(var);
+      obj = SCIPvarGetObj(var);
+
+      roundup = FALSE;
+      rounddown = FALSE;
+
+      /* in case of a non-zero objective coefficient, there is only one possible rounding direction */
+      if( SCIPsetIsFeasNegative(set, obj) )
+         roundup = TRUE;
+      else if( SCIPsetIsFeasPositive(set, obj) )
+         rounddown = TRUE;
+      else if( uselprows )
+      {
+         /* determine rounding direction based on row violations */
+         SCIP_COL* col;
+         SCIP_ROW** rows;
+         SCIP_Real* vals;
+         int nrows;
+         int r;
+
+         col = SCIPvarGetCol(var);
+         vals = SCIPcolGetVals(col);
+         rows = SCIPcolGetRows(col);
+         nrows = SCIPcolGetNNonz(col);
+
+         /* loop over rows and search for equations whose violation can be decreased by rounding */
+         for( r = 0; r < nrows && !(roundup && rounddown); ++r )
+         {
+            SCIP_ROW* row;
+            SCIP_Real activity;
+            SCIP_Real rhs;
+            SCIP_Real lhs;
+
+            row = rows[r];
+            assert(!SCIPsetIsFeasZero(set, vals[r]));
+
+            if( SCIProwIsLocal(row) || !SCIProwIsInLP(row) )
+               continue;
+
+            rhs = SCIProwGetRhs(row);
+            lhs = SCIProwGetLhs(row);
+
+            if( SCIPsetIsInfinity(set, rhs) || SCIPsetIsInfinity(set, -lhs) )
+               continue;
+
+            activity = SCIProwGetSolActivity(row, set, stat, sol);
+            if( SCIPsetIsFeasLE(set, activity, rhs) && SCIPsetIsFeasLE(set, lhs, activity) )
+               continue;
+
+            if( (SCIPsetIsFeasGT(set, activity, rhs) && SCIPsetIsPositive(set, vals[r]))
+                  || (SCIPsetIsFeasLT(set, activity, lhs) && SCIPsetIsNegative(set, vals[r])) )
+               rounddown = TRUE;
+            else
+               roundup = TRUE;
+         }
+      }
+
+      /* in case of a tie, we select the rounding step based on the number of variable locks */
+      if( roundup == rounddown )
+      {
+         rounddown = ndownlocks <= nuplocks;
+         roundup = !rounddown;
+      }
+
+      /* round the variable up or down */
+      if( roundup )
+      {
+         newsolval = SCIPsetCeil(set, solval);
+         assert(SCIPsetIsFeasLE(set, newsolval, SCIPvarGetUbGlobal(var)));
+      }
+      else
+      {
+         assert( rounddown ); /* should be true because of the code above */
+         newsolval = SCIPsetFloor(set, solval);
+         assert(SCIPsetIsFeasGE(set, newsolval, SCIPvarGetLbGlobal(var)));
+      }
+
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, newsolval) );
+   }
+
+   return SCIP_OKAY;
+}
 /** creates primal CIP solution, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -835,7 +973,7 @@ SCIP_RETCODE SCIPsolSetVal(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_VAR*             var,                /**< variable to add to solution */
    SCIP_Real             val                 /**< solution value of variable */
    )
@@ -1241,14 +1379,15 @@ SCIP_Real SCIPsolGetRayVal(
 SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob            /**< original problem data */
    )
 {
    assert(sol != NULL);
 
    /* for original solutions, sol->obj contains the external objective value */
    if( SCIPsolIsOriginal(sol) )
-      return SCIPprobInternObjval(prob, set, sol->obj);
+      return SCIPprobInternObjval(transprob, origprob, set, sol->obj);
    else
       return sol->obj;
 }
@@ -1433,8 +1572,15 @@ SCIP_RETCODE SCIPsolRound(
          break;
 
       /* if solution value is already integral, there is nothing to do */
-      if( SCIPsetIsFeasIntegral(set, solval) )
+      if( SCIPsetIsIntegral(set, solval) )
          continue;
+
+      /* if solution value is already integral with feastol, round to nearest integral value */
+      if( SCIPsetIsFeasIntegral(set, solval) )
+      {
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, SCIPsetRound(set, solval)) );
+         continue;
+      }
 
       /* get rounding possibilities */
       mayrounddown = SCIPvarMayRoundDown(var);
@@ -1500,7 +1646,8 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
    )
 {
    SCIP_VAR** transvars;
@@ -1521,8 +1668,11 @@ SCIP_RETCODE SCIPsolRetransform(
    assert(sol->solorigin == SCIP_SOLORIGIN_ZERO);
    assert(origprob != NULL);
    assert(transprob != NULL);
+   assert(hasinfval != NULL);
    assert(!origprob->transformed);
    assert(transprob->transformed);
+
+   *hasinfval = FALSE;
 
    /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
     * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much
@@ -1577,10 +1727,12 @@ SCIP_RETCODE SCIPsolRetransform(
       if( SCIPsetIsInfinity(set, solvals[v]) )
       {
          solvals[v] = SCIPsetInfinity(set);
+         *hasinfval = TRUE;
       }
       else if( SCIPsetIsInfinity(set, -solvals[v]) )
       {
          solvals[v] = -SCIPsetInfinity(set);
+         *hasinfval = TRUE;
       }
    }
 
@@ -1634,7 +1786,7 @@ void SCIPsolRecomputeObj(
    nvars = origprob->nvars;
 
    /* recompute the objective value */
-   sol->obj = 0.0;
+   sol->obj = SCIPprobGetObjoffset(origprob);
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
@@ -1677,8 +1829,8 @@ SCIP_Bool SCIPsolsAreEqual(
    /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
    else
    {
-      obj1 = SCIPsolGetObj(sol1, set, transprob);
-      obj2 = SCIPsolGetObj(sol2, set, transprob);
+      obj1 = SCIPsolGetObj(sol1, set, transprob, origprob);
+      obj2 = SCIPsolGetObj(sol2, set, transprob, origprob);
    }
 
    /* solutions with different objective values cannot be the same */
@@ -1817,7 +1969,6 @@ SCIP_RETCODE SCIPsolPrint(
    return SCIP_OKAY;
 }
 
-
 /** outputs non-zero elements of solution representing a ray to file stream */
 SCIP_RETCODE SCIPsolPrintRay(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1947,6 +2098,7 @@ SCIP_RETCODE SCIPsolPrintRay(
 #undef SCIPsolGetRunnum
 #undef SCIPsolGetDepth
 #undef SCIPsolGetHeur
+#undef SCIPsolOrigAddObjval
 #undef SCIPsolGetPrimalIndex
 #undef SCIPsolSetPrimalIndex
 #undef SCIPsolGetIndex
@@ -1981,6 +2133,18 @@ SCIP_Real SCIPsolGetOrigObj(
    assert(SCIPsolIsOriginal(sol));
 
    return sol->obj;
+}
+
+/** adds value to the objective value of a given original primal CIP solution */
+void SCIPsolOrigAddObjval(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             addval              /**< offset value to add */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+
+   sol->obj += addval;
 }
 
 /** gets clock time, when this solution was found */

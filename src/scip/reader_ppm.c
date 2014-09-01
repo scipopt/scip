@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -171,10 +171,10 @@ void appendLine(
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
    assert( extension != NULL );
-   
+
    if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
-   
+
    /* append extension to linebuffer */
    strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
@@ -327,7 +327,7 @@ void printRow(
       }
       else
          (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
-      
+
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;
    }
@@ -519,7 +519,7 @@ SCIP_RETCODE SCIPwritePpm(
    SCIP_READERDATA*      readerdata,         /**< information for reader */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */

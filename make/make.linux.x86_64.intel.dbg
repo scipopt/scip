@@ -5,7 +5,7 @@ LINKCXX		=	icpc
 FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-O0 -g -fp-model extended -w1 -wd279,383,444,810,981  #-fno-rtti #-Xc
 CFLAGS		+=
-CXXFLAGS	+=	
+CXXFLAGS		+=	-std=c++0x
 ARFLAGS		=	crs
 LDFLAGS		+=	-lirc -lm -lstdc++ -static-intel
 ZLIB_FLAGS	=

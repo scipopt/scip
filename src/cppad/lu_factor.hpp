@@ -1,13 +1,13 @@
-/* $Id: lu_factor.hpp 1370 2009-05-31 05:31:50Z bradbell $ */
+/* $Id: lu_factor.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_LU_FACTOR_INCLUDED
 # define CPPAD_LU_FACTOR_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-08 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -44,12 +44,12 @@ $$
 $head Syntax$$ $code# include <cppad/lu_factor.hpp>$$
 $pre
 $$
-$syntax%%sign% = LuFactor(%ip%, %jp%, %LU%)%$$
+$icode%sign% = LuFactor(%ip%, %jp%, %LU%)%$$
 
 
 $head Description$$
-Computes an LU factorization of the matrix $italic A$$ 
-where $italic A$$ is a square matrix.
+Computes an LU factorization of the matrix $icode A$$ 
+where $icode A$$ is a square matrix.
 
 $head Include$$
 The file $code cppad/lu_factor.hpp$$ is included by $code cppad/cppad.hpp$$
@@ -68,137 +68,137 @@ $latex \[
 \] $$
 
 $head sign$$
-The return value $italic sign$$ has prototype
-$syntax%
+The return value $icode sign$$ has prototype
+$codei%
 	int %sign%
 %$$
-If $italic A$$ is invertible, $italic sign$$ is plus or minus one
+If $icode A$$ is invertible, $icode sign$$ is plus or minus one
 and is the sign of the permutation corresponding to the row ordering
-$italic ip$$ and column ordering $italic jp$$.
-If $italic A$$ is not invertible, $italic sign$$ is zero.
+$icode ip$$ and column ordering $icode jp$$.
+If $icode A$$ is not invertible, $icode sign$$ is zero.
 
 $head ip$$
-The argument $italic ip$$ has prototype
-$syntax%
+The argument $icode ip$$ has prototype
+$codei%
 	%SizeVector% &%ip%
 %$$
-(see description of $xref/LuFactor/SizeVector/SizeVector/$$ below).
-The size of $italic ip$$ is referred to as $italic n$$ in the
+(see description of $cref/SizeVector/LuFactor/SizeVector/$$ below).
+The size of $icode ip$$ is referred to as $icode n$$ in the
 specifications below.
-The input value of the elements of $italic ip$$ does not matter.
-The output value of the elements of $italic ip$$ determine
+The input value of the elements of $icode ip$$ does not matter.
+The output value of the elements of $icode ip$$ determine
 the order of the rows in the permuted matrix.
 
 $head jp$$
-The argument $italic jp$$ has prototype
-$syntax%
+The argument $icode jp$$ has prototype
+$codei%
 	%SizeVector% &%jp%
 %$$
-(see description of $xref/LuFactor/SizeVector/SizeVector/$$ below).
-The size of $italic jp$$ must be equal to $italic n$$.
-The input value of the elements of $italic jp$$ does not matter.
-The output value of the elements of $italic jp$$ determine
+(see description of $cref/SizeVector/LuFactor/SizeVector/$$ below).
+The size of $icode jp$$ must be equal to $icode n$$.
+The input value of the elements of $icode jp$$ does not matter.
+The output value of the elements of $icode jp$$ determine
 the order of the columns in the permuted matrix.
 
 $head LU$$
-The argument $italic LU$$ has the prototype
-$syntax%
+The argument $icode LU$$ has the prototype
+$codei%
 	%FloatVector% &%LU%
 %$$
-and the size of $italic LU$$ must equal $latex n * n$$
-(see description of $xref/LuFactor/FloatVector/FloatVector/$$ below).
+and the size of $icode LU$$ must equal $latex n * n$$
+(see description of $cref/FloatVector/LuFactor/FloatVector/$$ below).
 
 $subhead A$$
-We define $italic A$$ as the matrix corresponding to the input 
-value of $italic LU$$.
+We define $icode A$$ as the matrix corresponding to the input 
+value of $icode LU$$.
 
 $subhead P$$
-We define the permuted matrix $italic P$$ in terms of $italic A$$ by
-$syntax%
+We define the permuted matrix $icode P$$ in terms of $icode A$$ by
+$codei%
 	%P%(%i%, %j%) = %A%[ %ip%[%i%] * %n% + %jp%[%j%] ]
 %$$
 
 $subhead L$$
-We define the lower triangular matrix $italic L$$ in terms of the 
-output value of $italic LU$$.
-The matrix $italic L$$ is zero above the diagonal
+We define the lower triangular matrix $icode L$$ in terms of the 
+output value of $icode LU$$.
+The matrix $icode L$$ is zero above the diagonal
 and the rest of the elements are defined by
-$syntax%
+$codei%
 	%L%(%i%, %j%) = %LU%[ %ip%[%i%] * %n% + %jp%[%j%] ]
 %$$
 for $latex i = 0 , \ldots , n-1$$ and $latex j = 0 , \ldots , i$$.
 
 $subhead U$$
-We define the upper triangular matrix $italic U$$ in terms of the
-output value of $italic LU$$.
-The matrix $italic U$$ is zero below the diagonal,
+We define the upper triangular matrix $icode U$$ in terms of the
+output value of $icode LU$$.
+The matrix $icode U$$ is zero below the diagonal,
 one on the diagonal,
 and the rest of the elements are defined by
-$syntax%
+$codei%
 	%U%(%i%, %j%) = %LU%[ %ip%[%i%] * %n% + %jp%[%j%] ]
 %$$
 for $latex i = 0 , \ldots , n-2$$ and $latex j = i+1 , \ldots , n-1$$.
 
 $subhead Factor$$
-If the return value $italic sign$$ is non-zero,
-$syntax%
+If the return value $icode sign$$ is non-zero,
+$codei%
 	%L% * %U% = %P%
 %$$
-If the return value of $italic sign$$ is zero,
-the contents of $italic L$$ and $italic U$$ are not defined. 
+If the return value of $icode sign$$ is zero,
+the contents of $icode L$$ and $icode U$$ are not defined. 
 
 $subhead Determinant$$
 $index determinant$$
-If the return value $italic sign$$ is zero,
-the determinant of $italic A$$ is zero.
-If $italic sign$$ is non-zero,
-using the output value of $italic LU$$
-the determinant of the matrix $italic A$$ is equal to
-$syntax%
+If the return value $icode sign$$ is zero,
+the determinant of $icode A$$ is zero.
+If $icode sign$$ is non-zero,
+using the output value of $icode LU$$
+the determinant of the matrix $icode A$$ is equal to
+$codei%
 %sign% * %LU%[%ip%[0], %jp%[0]] * %...% * %LU%[%ip%[%n%-1], %jp%[%n%-1]] 
 %$$
 
 $head SizeVector$$
-The type $italic SizeVector$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type size_t/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode SizeVector$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type size_t/SimpleVector/Elements of Specified Type/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head FloatVector$$
-The type $italic FloatVector$$ must be a 
-$xref/SimpleVector//simple vector class/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode FloatVector$$ must be a 
+$cref/simple vector class/SimpleVector/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head Float$$
 This notation is used to denote the type corresponding
-to the elements of a $italic FloatVector$$.
-The type $italic Float$$ must satisfy the conditions
-for a $xref/NumericType/$$ type.
-The routine $xref/CheckNumericType/$$ will generate an error message
+to the elements of a $icode FloatVector$$.
+The type $icode Float$$ must satisfy the conditions
+for a $cref NumericType$$ type.
+The routine $cref CheckNumericType$$ will generate an error message
 if this is not the case.
 In addition, the following operations must be defined for any pair
-of $italic Float$$ objects $italic x$$ and $italic y$$:
+of $icode Float$$ objects $icode x$$ and $icode y$$:
 
 $table
 $bold Operation$$ $cnext $bold Description$$  $rnext
-$syntax%log(%x%)%$$ $cnext
-	returns the logarithm of $italic x$$ as a $italic Float$$ object
+$codei%log(%x%)%$$ $cnext
+	returns the logarithm of $icode x$$ as a $icode Float$$ object
 $tend
 
 $head AbsGeq$$
 Including the file $code lu_factor.hpp$$ defines the template function 
-$syntax%
+$codei%
 	template <typename %Float%>
 	bool AbsGeq<%Float%>(const %Float% &%x%, const %Float% &%y%)
 %$$
 in the $code CppAD$$ namespace.
 This function returns true if the absolute value of 
-$italic x$$ is greater than or equal the absolute value of $italic y$$. 
+$icode x$$ is greater than or equal the absolute value of $icode y$$. 
 It is used by $code LuFactor$$ to choose the pivot elements.
 This template function definition uses the operator 
-$code <=$$ to obtain the absolute value for $italic Float$$ objects. 
-If this operator is not defined for your use of $italic Float$$,
+$code <=$$ to obtain the absolute value for $icode Float$$ objects. 
+If this operator is not defined for your use of $icode Float$$,
 you will need to specialize this template so that it works for your
 use of $code LuFactor$$.
 $pre
@@ -206,7 +206,7 @@ $pre
 $$
 Complex numbers do not have the operation $code <=$$ defined.
 The specializations
-$syntax%
+$codei%
 bool AbsGeq< std::complex<float> > 
 	(const std::complex<float> &%x%, const std::complex<float> &%y%)
 bool AbsGeq< std::complex<double> > 
@@ -214,8 +214,8 @@ bool AbsGeq< std::complex<double> >
 %$$ 
 are define by including $code lu_factor.hpp$$
 These return true if the sum of the square of the real and imaginary parts
-of $italic x$$ is greater than or equal the 
-sum of the square of the real and imaginary parts of $italic y$$. 
+of $icode x$$ is greater than or equal the 
+sum of the square of the real and imaginary parts of $icode y$$. 
 
 $children%
 	example/lu_factor.cpp%
@@ -223,23 +223,23 @@ $children%
 %$$
 $head Example$$
 The file 
-$xref/LuFactor.cpp/$$
+$cref lu_factor.cpp$$
 contains an example and test of using $code LuFactor$$ by itself.
 It returns true if it succeeds and false otherwise.
 $pre
 
 $$
-The file $xref/lu_solve.hpp/$$ provides a useful example usage of 
+The file $cref lu_solve.hpp$$ provides a useful example usage of 
 $code LuFactor$$ with $code LuInvert$$.
 
 $head Source$$
-The file $cref/lu_factor.hpp/$$ contains the 
+The file $cref lu_factor.hpp$$ contains the 
 current source code that implements these specifications.
 
 $end
 --------------------------------------------------------------------------
 */
-// BEGIN PROGRAM
+// BEGIN C++
 
 # include <complex>
 # include <vector>
@@ -305,11 +305,11 @@ int LuFactor(SizeVector &ip, SizeVector &jp, FloatVector &LU)           //
 	// -------------------------------------------------------
 	size_t n = ip.size();
 	CPPAD_ASSERT_KNOWN(
-		jp.size() == n,
+		size_t(jp.size()) == n,
 		"Error in LuFactor: jp must have size equal to n"
 	);
 	CPPAD_ASSERT_KNOWN(
-		LU.size() == n * n,
+		size_t(LU.size()) == n * n,
 		"Error in LuFactor: LU must have size equal to n * m"
 	);
 	// -------------------------------------------------------
@@ -396,5 +396,5 @@ int LuFactor(SizeVector &ip, SizeVector &jp, FloatVector &LU)           //
 	return sign;
 }
 } // END CppAD namespace 
-// END PROGRAM
+// END C++
 # endif

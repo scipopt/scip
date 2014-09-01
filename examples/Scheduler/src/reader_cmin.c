@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,11 +43,10 @@
 
 #define DEFAULT_FILENAME           "-"  /**< name of the file including best known solutions */
 #define DEFAULT_DUALREDUCTION     TRUE  /**< add locks to avoid dual reductions */
-#define DEFAULT_BRANCHPRIORITY       1  /**< branching priority for the binary choice variables */
 #define DEFAULT_MIP              FALSE  /**< create a MIP formulation */
 #define DEFAULT_INITIAL           TRUE  /**< should model constraints be in initial LP? */
 #define DEFAULT_CIP               TRUE  /**< create a CIP formulation */
-#define DEFAULT_RELAXATION           0  /**< which relaxation should be added to the MIP model (0: none; 1: rectangle; 2: interval */
+#define DEFAULT_RELAXATION           3  /**< which relaxation should be added to the maseter (0: none; 1: single; 2: edge-finding; 3: energetic-reasoning */
 
 static const char delimchars[] = " \f\n\r\t\v";
 
@@ -385,6 +384,7 @@ int removeRedundantRows(
 static
 SCIP_RETCODE createIntervalRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
+   int                   relaxation,         /**< a linear relaxation base on edge-finding idea or energetic-reasoning idea */
    int                   resource,           /**< resource id */
    SCIP_VAR**            vars,               /**< assignment variables */
    int*                  durations,          /**< durations */
@@ -505,10 +505,24 @@ SCIP_RETCODE createIntervalRelaxation(
 
          for( v = 0; v < njobs; ++v)
          {
-            if( releasedates[v] >= starttime && deadlinedates[v] <= endtime )
+            int overlap;
+            int duration;
+
+            duration = durations[v];
+            overlap = MIN(endtime - starttime, duration);
+            assert(overlap > 0);
+            overlap = MIN3(overlap, releasedates[v] + duration - starttime, endtime - deadlinedates[v] + duration);
+
+            /* check for edge-finding idea */
+            if( relaxation == 2 &&  releasedates[v] >= starttime && deadlinedates[v] <= endtime )
             {
-               assert(vars[v] != NULL);
-               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(durations[v] * demands[v])) );
+               assert(duration == overlap);
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(duration * demands[v])) );
+            }
+            else if( relaxation == 3 && overlap > 0 )
+            {
+               assert(overlap <= duration);
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(overlap * demands[v])) );
             }
          }
 
@@ -738,12 +752,12 @@ SCIP_RETCODE createMipFormulation(
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
-   else if( relaxation == 2 )
+   else if( relaxation >= 2 )
    {
       /* create for each optimal resource a singe constraint relaxation */
       for( i = 0; i < nmachines; ++i )
       {
-         SCIP_CALL( createIntervalRelaxation(scip, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
+         SCIP_CALL( createIntervalRelaxation(scip, relaxation, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
       }
    }
 
@@ -990,7 +1004,6 @@ SCIP_RETCODE createCipFormulation(
    SCIP_VAR*** binvars;
    SCIP_VAR* var;
    int* machines;
-   int branchpriority;
 
    char name[SCIP_MAXSTRLEN];
 
@@ -1003,7 +1016,6 @@ SCIP_RETCODE createCipFormulation(
 
    SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/relaxation", &relaxation) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dualreduction", &dualreduction) );
-   SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/branchpriority", &branchpriority) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, njobs) );
 
@@ -1046,7 +1058,6 @@ SCIP_RETCODE createCipFormulation(
 
          SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(scip, var) );
-         SCIP_CALL( SCIPchgVarBranchPriority(scip, var, branchpriority) );
          binvars[i][nvars] = var;
          SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
@@ -1376,10 +1387,6 @@ SCIP_RETCODE SCIPincludeReaderCmin(
          "reading/"READER_NAME"/dualreduction", "add locks to avoid dual reductions?",
          NULL, FALSE, DEFAULT_DUALREDUCTION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "reading/"READER_NAME"/branchpriority", "branching priority for the binary choice variables",
-         NULL, FALSE, DEFAULT_BRANCHPRIORITY, -INT_MAX/4, INT_MAX/4, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/mip", "create a MIP formulation?",
          NULL, FALSE, DEFAULT_MIP, NULL, NULL) );
@@ -1393,8 +1400,8 @@ SCIP_RETCODE SCIPincludeReaderCmin(
          NULL, FALSE, DEFAULT_CIP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "reading/"READER_NAME"/relaxation", "which relaxation should be added to the MIP model (0: none; 1: rectangle; 2: interval",
-         NULL, FALSE, DEFAULT_RELAXATION, 0, 2, NULL, NULL) );
+         "reading/"READER_NAME"/relaxation", "which relaxation should be added to the maseter (0: none; 1: single; 2: edge-finding; 3: energetic-reasoning",
+         NULL, FALSE, DEFAULT_RELAXATION, 0, 3, NULL, NULL) );
 
    return SCIP_OKAY;
 }

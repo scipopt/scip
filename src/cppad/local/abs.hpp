@@ -1,13 +1,13 @@
-/* $Id: abs.hpp 2240 2011-12-31 05:33:55Z bradbell $ */
+/* $Id: abs.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
 # ifndef CPPAD_ABS_INCLUDED
 # define CPPAD_ABS_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -17,6 +17,7 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------------
 $begin abs$$
 $spell
+	fabs
 	Vec
 	std
 	faq
@@ -28,13 +29,16 @@ $spell
 $$
 
 $index abs, AD$$
+$index fabs, AD$$
 $index absolute, AD value$$
 $index value, AD absolute$$
 
 $section AD Absolute Value Function$$
 
 $head Syntax$$
-$icode%y% = abs(%x%)%$$
+$icode%y% = abs(%x%)
+%$$
+$icode%y% = fabs(%x%)%$$
 
 
 $head Purpose$$
@@ -111,7 +115,7 @@ $latex \[
 Note that $latex x^{(0)} = X(0)$$ is the value of $icode x$$ and
 $latex y^{(0)} = Y(0)$$ is the value of $icode y$$.
 In the equations above, the order $latex p$$ is specified
-by a call to $cref Forward$$ or $xref/Reverse/$$ as follows:
+by a call to $cref Forward$$ or $cref Reverse$$ as follows:
 $codei%
 	%f%.Forward(%p%, %dx%)
 	%f%.Reverse(%p%+1, %w%)
@@ -158,7 +162,7 @@ AD<Base> AD<Base>::Abs (void) const
 		// put operator in the tape
 		result.taddr_ = tape->Rec_.PutOp(AbsOp);
 		// make result a variable
-		result.id_    = tape->id_;
+		result.tape_id_    = tape->id_;
 	}
 	return result;
 }

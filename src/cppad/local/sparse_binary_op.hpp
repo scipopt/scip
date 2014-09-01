@@ -1,19 +1,21 @@
-/* $Id: sparse_binary_op.hpp 1986 2011-06-18 20:33:17Z bradbell $ */
+/* $Id: sparse_binary_op.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
 # ifndef CPPAD_SPARSE_BINARY_OP_INCLUDED
 # define CPPAD_SPARSE_BINARY_OP_INCLUDED
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
-CPPAD_BEGIN_NAMESPACE
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
+\defgroup sparse_binary_op_hpp sparse_binary_op.hpp
+\{
 \file sparse_binary_op.hpp
 Forward and reverse mode sparsity patterns for binary operators.
 */
@@ -35,7 +37,7 @@ where op is a C++ binary unary operator and both x and y are variables.
 
 \tparam Vector_set
 is the type used for vectors of sets. It can be either
-\c sparse_pack or \c sparse_set.
+\c sparse_pack, \c sparse_set, or \c sparse_list.
 
 \param i_z
 variable index corresponding to the result for this operation; 
@@ -114,7 +116,7 @@ and it uses them to compute the sparsity patterns for
 
 \tparam Vector_set
 is the type used for vectors of sets. It can be either
-\c sparse_pack or \c sparse_set.
+\c sparse_pack, \c sparse_set, or \c sparse_list.
 
 \param i_z
 variable index corresponding to the result for this operation; 
@@ -324,5 +326,6 @@ inline void reverse_sparse_hessian_pow_op(
 	return;
 }	
 
-CPPAD_END_NAMESPACE
+/*! \} */
+} // END_CPPAD_NAMESPACE
 # endif

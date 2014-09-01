@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -128,6 +128,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    SCIP_Longint          nchildren;          /**< number of children the constraint handler created during branching */
    SCIP_Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
+   SCIP_Longint          storedpropdomchgcount;/**< bound change number, where the domain propagation was called last before starting probing */
    SCIP_Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    SCIP_Longint          lastenfolpnode;     /**< last node at which the LP enforcement was called */
@@ -187,6 +188,7 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
+   SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this constraint handler during strong branching */
    SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
    SCIP_Longint          lastsepalpcount;    /**< last LP number, where the separations was called */
@@ -206,6 +208,9 @@ struct SCIP_Conshdlr
    int                   startnactiveconss;  /**< number of active constraints existing when problem solving started */
    int                   initconsssize;      /**< size of initconss array */
    int                   ninitconss;         /**< number of active constraints that must enter the LP */
+   int                   ninitconsskept;     /**< number of active constraints that must enter the LP, but were not initialized at
+                                              *   their valid node, so that they have to be initialized at every node at which they
+                                              *   are active; these constraints come first in the initconss array */
    int                   sepaconsssize;      /**< size of sepaconss array */
    int                   nsepaconss;         /**< number of active constraints that may be separated during LP processing */
    int                   nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */
@@ -258,6 +263,8 @@ struct SCIP_Conshdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
+   SCIP_Bool             duringsepa;         /**< is the constraint handler currently performing separation? */
+   SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */
    SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
 
    SCIP_QUEUE*           pendingconss;       /**< queue of pending constraints */

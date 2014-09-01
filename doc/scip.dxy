@@ -673,6 +673,7 @@ WARN_LOGFILE           =
 INPUT                  = . \
                          ../src \
                          ../src/scip \
+                         ../src/lpi \
                          ../src/nlpi \
                          ../src/objscip \
                          ../src/tclique \
@@ -700,6 +701,7 @@ FILE_PATTERNS          = scip*.h \
                          *_*.h \
                          lpi* \
                          exprinterpret* \
+                         intervalarithext* \
                          obj*.h \
                          def.h \
                          xternal.c \

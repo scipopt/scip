@@ -1,0 +1,43 @@
+Notes for SCIP Release 3.0.2
+
+
+Interface Changes
+=================
+
+- removed problematic function SCIPsetSlackVarIndicator() from cons_indicator
+
+
+Features
+========
+
+- can now output the solutions in the solution pool in the interactive shell
+
+- updated Mosek LP interface to compile with Mosek 7
+
+- display some syntax errors when reading erroneous CIP files
+
+- cons_xor now uses the integral variable in propagation
+
+- added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal()
+  to forbid removal of a column/row from the LP in the current node
+
+
+Bug Fixes
+=========
+
+- fixed bug in cons_integral: check integrality of implicit integer variables when
+  a solution is checked for feasibility
+
+- fixed bugs in parsing bounds from CIP-files, in reader_gms, and AMPL interface
+
+- fixed bugs with freeing C++ object data for problem and variables
+
+- fixed bugs in solution counting
+
+- forbid branching on variables with huge bounds
+
+- unlinking a solution now copies values smaller than SCIPepsilon() to avoid that
+  feasible solutions in the transformed problem become infeasible in the original
+  problem
+
+- many small bug fixes, see CHANGELOG

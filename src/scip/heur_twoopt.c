@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -508,7 +508,7 @@ SCIP_Real determineBound(
          if( rowpos >= 0 && !SCIPisFeasZero(scip, effect) )
          {
             /* effect does not equal zero, the bound is determined as minimum positive integer such that
-             * feasibility is remained in all constraints.
+             * feasibility of this constraint is maintained.
              * if constraint is an equality constraint, activity and lhs/rhs should be feasibly equal, which
              * will cause the method to return zero.
              */
@@ -517,6 +517,10 @@ SCIP_Real determineBound(
             activity = activities[rowpos];
             rhs = SCIProwGetRhs(row);
             lhs = SCIProwGetLhs(row);
+
+            /* if the row is an equation, abort because of effect being nonzero */
+            if( SCIPisFeasEQ(scip, lhs, rhs) )
+               return 0.0;
 
             assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
 
@@ -527,17 +531,24 @@ SCIP_Real determineBound(
             /* if the row has a left hand side, ensure that shifting preserves feasibility of this ">="-constraint */
             if( !SCIPisInfinity(scip, -lhs) && SCIPisFeasLT(scip, activity + (effect * bound), lhs) )
             {
+               SCIP_Real newval;
+
                assert(SCIPisNegative(scip, effect));
-               /*lint --e{414}*/
-               bound = MIN(bound - 1.0, SCIPfeasFloor(scip, (lhs - activity)/effect)); /*lint !e795 */
+
+               newval = SCIPfeasFloor(scip, (lhs - activity)/effect); /*lint !e414*/
+
+               bound = MIN(bound - 1.0, newval);
             }
 
             /* if the row has an upper bound, ensure that shifting preserves feasibility of this "<="-constraint */
             if( !SCIPisInfinity(scip, rhs) && SCIPisFeasGT(scip, activity + (effect * bound), rhs) )
             {
+               SCIP_Real newval;
+
                assert(SCIPisPositive(scip, effect));
-               /*lint --e{414}*/
-               bound = MIN(bound - 1.0, SCIPfeasFloor(scip, (rhs - activity)/effect)); /*lint !e795 */
+
+               newval = SCIPfeasFloor(scip, (rhs - activity)/effect); /*lint !e414*/
+               bound = MIN(bound - 1.0, newval);
             }
 
             assert(SCIPisFeasLE(scip, lhs, activity + effect * bound) && SCIPisFeasGE(scip, rhs, activity + effect * bound));
@@ -936,7 +947,7 @@ SCIP_RETCODE optimize(
          DIRECTION bestmasterdir;
          DIRECTION bestslavedir;
 
-         master = vars[blockstart[b] + m];
+         master = vars[blockstart[b] + m]; /*lint !e679*/
          masterobj = SCIPvarGetObj(master);
          mastersolval = SCIPgetSolVal(scip, worksol, master);
 

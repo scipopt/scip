@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -855,6 +855,8 @@ SCIP_RETCODE readPolynomial(
    int nvars;
    SCIP_HASHMAP* varhash;
 
+   SCIP_Real constant;
+
    SCIP_EXPRDATA_MONOMIAL** monomials;
    int monomialssize;
    int nmonomials;
@@ -937,6 +939,7 @@ SCIP_RETCODE readPolynomial(
    nvars = 0;
    nfactors = 0;
    monomialdegree = 0;
+   constant = 0.0;
    while( getNextToken(scip, pipinput) )
    {
       SCIP_VAR* var;
@@ -950,13 +953,20 @@ SCIP_RETCODE readPolynomial(
       issense = FALSE;  /* fix lint warning */
       if( (isnewsection = isNewSection(scip, pipinput)) ||  /*lint !e820*/ 
          (issense = isSense(pipinput, NULL))      ||  /*lint !e820*/
-         (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
+         ((nfactors > 0 || havevalue) && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
       {
          /* finish the current monomial */
-         SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialssize, nmonomials + 1) );
-         SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip),
-               &monomials[nmonomials], coefsign * coef, nfactors, varidxs, exponents) );
-         ++nmonomials;
+         if( nfactors > 0 )
+         {
+            SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialssize, nmonomials + 1) );
+            SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip),
+                  &monomials[nmonomials], coefsign * coef, nfactors, varidxs, exponents) );
+            ++nmonomials;
+         }
+         else if( havevalue) 
+         {
+            constant += coefsign * coef;
+         }
 
          if( monomialdegree > *degree )
             *degree = monomialdegree;
@@ -1100,7 +1110,7 @@ SCIP_RETCODE readPolynomial(
 
    /* create polynomial expression, let polynomial take over ownership of monomials */
    SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &expression, nvars, varexprs,
-         nmonomials, monomials, 0.0, FALSE) );
+         nmonomials, monomials, constant, FALSE) );
 
    SCIPfreeBufferArray(scip, &varexprs);
 
@@ -1152,7 +1162,7 @@ void getLinearAndQuadraticCoefs(
    nmonomials = SCIPexprGetNMonomials(expr);
    monomials  = SCIPexprGetMonomials(expr);
 
-   *constant = 0.0;
+   *constant = SCIPexprGetPolynomialConstant(expr);
    *nlinvars = 0;
    *nquadterms = 0;
    for( i = 0; i < nmonomials; ++i )
@@ -1249,16 +1259,20 @@ SCIP_RETCODE readObjective(
 
    assert(pipinput != NULL);
 
-   /* determine settings */
-   initial = pipinput->initialconss;
+   /* determine settings; note that reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model
+    * constraints and variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary
+    * objective variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
+    * of loose variables with infinite best bound cannot be solved)
+    */
+   initial = TRUE;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = pipinput->dynamicconss;
-   removable = pipinput->dynamicrows;
+   dynamic = FALSE;
+   removable = FALSE;
 
    /* read the objective coefficients */
    SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
@@ -1272,6 +1286,14 @@ SCIP_RETCODE readObjective(
 
       nmonomials = SCIPexprGetNMonomials(expr);
 
+      if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
+      {
+         SCIP_VAR* objconst;
+         SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, SCIPexprGetPolynomialConstant(expr), SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, objconst) );
+         SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
+      }
+
       assert(degree >= 0);
       if( degree == 1 )
       {
@@ -1281,7 +1303,6 @@ SCIP_RETCODE readObjective(
 
          assert(SCIPexprtreeGetVars(exprtree) != NULL);
          assert(SCIPexprGetNChildren(expr) == SCIPexprtreeGetNVars(exprtree));
-         assert(SCIPexprGetPolynomialConstant(expr) == 0.0);
 
          monomials  = SCIPexprGetMonomials(expr);
 
@@ -1331,7 +1352,7 @@ SCIP_RETCODE readObjective(
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
@@ -1375,7 +1396,7 @@ SCIP_RETCODE readObjective(
          SCIP_Real  rhs;
 
          SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
 
          minusone = -1.0;
@@ -2282,7 +2303,7 @@ void printRowNl(
       {
       case SCIP_EXPR_CONST:
       {
-         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr), varname);
+         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr));
          appendLine(scip, file, linebuffer, &linecnt, buffer);
 
          break;
@@ -2738,7 +2759,7 @@ SCIP_RETCODE printNonlinearCons(
 static
 SCIP_RETCODE collectAggregatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR**            vars,               /**< variable array */
    int*                  nAggregatedVars,    /**< number of aggregated variables on output */
    SCIP_VAR***           aggregatedVars,     /**< array storing the aggregated variables on output */
@@ -2781,7 +2802,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nAggregatedVars,    /**< number of aggregated variables */
    SCIP_VAR**            aggregatedVars      /**< array storing the aggregated variables */
    )
@@ -2919,7 +2940,7 @@ SCIP_RETCODE SCIPwritePip(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
@@ -3131,10 +3152,11 @@ SCIP_RETCODE SCIPwritePip(
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_Bool ispolynomial;
+         int nexprtrees = SCIPgetNExprtreesNonlinear(scip, cons);
 
          /* check whether expressions are polynomials (assumed simplified exprtrees) */
          ispolynomial = TRUE;
-         for( e = 0; e < SCIPgetNExprtreesNonlinear(scip, cons) && ispolynomial; ++e )
+         for( e = 0; e < nexprtrees && ispolynomial; ++e )
          {
             exprtree = SCIPgetExprtreesNonlinear(scip, cons)[e];
             expr = SCIPexprtreeGetRoot(exprtree);
@@ -3208,13 +3230,12 @@ SCIP_RETCODE SCIPwritePip(
             } /*lint !e788*/
 
             /* check if all children of root expression correspond to variables */
-            for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
+            for( v = 0; v < SCIPexprGetNChildren(expr) && ispolynomial; ++v )
             {
                if( SCIPexprGetOperator(SCIPexprGetChildren(expr)[v]) != SCIP_EXPR_VARIDX )
                {
                   SCIPwarningMessage(scip, "%dth expression tree of constraint <%s> is not simplified, cannot write in pip format\n", e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
-                  break;
                }
             }
          }

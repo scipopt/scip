@@ -71,7 +71,6 @@ int GAMSsolvetraceCreate(
    assert(filename != NULL);
    assert(solverid != NULL);
    assert(optfilenr >= 0);
-   assert(probname != NULL);
    assert(nodefreq >= 0);
    assert(timefreq >= 0.0);
 
@@ -87,8 +86,10 @@ int GAMSsolvetraceCreate(
    else
       optnrstr[0] = '\0';
 
-   fprintf((*solvetrace)->tracefile, "* solvetrace file %s: ID = %s%s Instance = %s\n", filename, solverid, optnrstr, probname);
-   fprintf((*solvetrace)->tracefile, "* fields are lineNum, seriesID, node, seconds, bestFound, bestBound\n");
+   fprintf((*solvetrace)->tracefile, "* solvetrace file %s: ID = %s%s", filename, solverid, optnrstr);
+   if( probname != NULL )
+      fprintf((*solvetrace)->tracefile, "Instance = %s", probname);
+   fprintf((*solvetrace)->tracefile, "\n* fields are lineNum, seriesID, node, seconds, bestFound, bestBound\n");
    fflush((*solvetrace)->tracefile);
 
    (*solvetrace)->infinity = infinity;

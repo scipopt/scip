@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -903,16 +903,12 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
    int nconss;
    int c;
 
+   *valid = TRUE;
+
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
    nconss = sourcedata->nconss;
-
-   if( nconss == 0 && !SCIPconsIsModifiable(sourcecons) )
-   {
-      *valid = TRUE;
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
    sourceconss = sourcedata->conss;
@@ -932,32 +928,46 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
 
    if( *valid )
    {
-      SCIP_CONS* relaxcons;
+      SCIP_CONS* sourcerelaxcons;
+      SCIP_CONS* targetrelaxcons;
 
-      relaxcons = sourcedata->relaxcons;
+      sourcerelaxcons = sourcedata->relaxcons;
+      targetrelaxcons = NULL;
 
-      if( relaxcons != NULL )
+      if( sourcerelaxcons != NULL )
       {
-         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, relaxcons, &relaxcons, SCIPconsGetHdlr(relaxcons),
-               varmap, consmap, SCIPconsGetName(relaxcons),
-               SCIPconsIsInitial(relaxcons), SCIPconsIsSeparated(relaxcons), SCIPconsIsEnforced(relaxcons),
-               SCIPconsIsChecked(relaxcons), SCIPconsIsPropagated(relaxcons),
-               SCIPconsIsLocal(relaxcons), SCIPconsIsModifiable(relaxcons),
-               SCIPconsIsDynamic(relaxcons), SCIPconsIsRemovable(relaxcons), SCIPconsIsStickingAtNode(relaxcons),
+         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcerelaxcons, &targetrelaxcons, SCIPconsGetHdlr(sourcerelaxcons),
+               varmap, consmap, SCIPconsGetName(sourcerelaxcons),
+               SCIPconsIsInitial(sourcerelaxcons), SCIPconsIsSeparated(sourcerelaxcons), SCIPconsIsEnforced(sourcerelaxcons),
+               SCIPconsIsChecked(sourcerelaxcons), SCIPconsIsPropagated(sourcerelaxcons),
+               SCIPconsIsLocal(sourcerelaxcons), SCIPconsIsModifiable(sourcerelaxcons),
+               SCIPconsIsDynamic(sourcerelaxcons), SCIPconsIsRemovable(sourcerelaxcons),
+               SCIPconsIsStickingAtNode(sourcerelaxcons),
                global, valid) );
       }
 
       if( *valid )
       {
-	 SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, relaxcons,
-	       initial, enforce, check, local, modifiable, dynamic) );
+         if( name == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, SCIPconsGetName(sourcecons), nconss, conss, targetrelaxcons,
+                  initial, enforce, check, local, modifiable, dynamic) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, targetrelaxcons,
+                  initial, enforce, check, local, modifiable, dynamic) );
+         }
 
-         SCIP_CALL( SCIPreleaseCons(scip, &relaxcons) );
+         if( targetrelaxcons != NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &targetrelaxcons) );
+         }
       }
    }
 
    /* release the copied constraints */
-   for(; c >= 0; --c )
+   for( c = (*valid ? c - 1 : c - 2); c >= 0; --c )
    {
       assert(conss[c] != NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );

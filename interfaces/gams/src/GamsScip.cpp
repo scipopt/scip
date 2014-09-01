@@ -128,11 +128,9 @@ int GamsScip::readyAPI(
    gev = (gevRec*)gmoEnvironment(gmo);
    assert(gev != NULL);
 
-   assert(pal == NULL);
-
    ipoptlicensed = false;
 #ifdef GAMS_BUILD
-   if( !palCreate(&pal, buffer, sizeof(buffer)) )
+   if( pal == NULL && !palCreate(&pal, buffer, sizeof(buffer)) )
       return 1;
 
 #define PALPTR pal
@@ -213,7 +211,7 @@ int GamsScip::callSolver()
    }
 
    // set number of threads for linear algebra routines used in Ipopt
-   setNumThreadsLinearAlgebra(gev, gevThreads(gev));
+   setNumThreads(gev, gevThreads(gev));
 
    // update error printing callback in SCIP to use current gev
    SCIPmessageSetErrorPrinting(printErrorGev, (void*)gev);
@@ -375,6 +373,16 @@ SCIP_RETCODE GamsScip::setupSCIP()
             SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "HSL MA27 and MC19", "Harwell Subroutine Libraries (www.hsl.rl.ac.uk) from commercially supported Ipopt") );
          }
       }
+/*
+      else
+      {
+         nlpiipopt = SCIPfindNlpi(scip, "ipopt");
+         if( nlpiipopt != NULL )
+         {
+            SCIPsetModifiedDefaultSettingsIpopt(nlpiipopt, "linear_solver mumps\n");
+         }
+      }
+*/
 
       /* SCIP_CALL( SCIPaddBoolParam(scip, "gams/solvefinal",
        * "whether the problem should be solved with fixed discrete variables to get dual values",

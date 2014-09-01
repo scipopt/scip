@@ -1,0 +1,82 @@
+Notes for SCIP Release 3.1
+
+
+Features
+========
+
+- new primal heuristics random rounding, proximity, and dual value
+
+- new branching rule cloud branching
+
+- added support for strong branching with domain propagation in full strong and
+  reliability pseudo cost branching
+
+- new node selectors breadthfirst and uct
+
+- computation of primal-dual integral
+
+- added possibility to add objective offset to original problem
+
+- the original problem can now be copied
+
+- upgrading can now be disabled for single linear constraints
+
+- the rank of cuts is now stored and taken into account to improve numerical stability
+
+- dual solution values can now be obtained in the interactive shell after solving a pure
+  LP without presolving
+
+- extended test scripts by statistical tests
+
+
+Interfaces
+==========
+
+- new SoPlex 2.0 interface, can be enabled with LPS=spx2
+
+- beta version of a python interface
+
+- beta version of a Java native interface
+
+- added copy of GAMS interface from COIN-OR/GAMSlinks project;
+  GAMS-reader in SCIP can now read model instances from .gms files
+
+- moved LP interfaces to separate directory src/lpi
+
+
+Performance Improvements and Bug Fixes
+======================================
+
+- major improvements in pseudo-boolean constraint handler
+
+- many presolving improvements in constraint handlers
+
+- performance improvement in domain propagation by marking constraints for propagation
+
+- dual fixing presolver was turned into a propagator
+
+- added more constraint upgrading possibilities
+
+- allow multiaggregation of binary variables
+
+- strong branching LP solutions are checked for integrality
+
+- improved handling of initial constraints created during solving
+
+- improved LP reoptimization for branch-and-price applications
+
+- improved numerical stability checks for LP solution
+
+- disabled scaling in feasibility check of nonlinear constraint handlers
+
+- and many bug fixes, see CHANGELOG
+
+
+Additional Notes
+================
+
+- new SCIP Optimization Suite homepages
+
+- new textbook Gomory mixed integer cuts example
+
+- very few interface changes, see CHANGELOG

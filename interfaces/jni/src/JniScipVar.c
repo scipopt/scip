@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3269,625 +3269,626 @@ jlong JNISCIPVAR(holelistGetNext)(
 
 
 
-
-
-// /** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
-//  *  data due to diving, that operate only on the LP without updating the variables
-//  */
-// jdouble JNISCIPVAR(varGetObjLP)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar                /**< JNI problem variable */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real obj;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    obj = SCIvarGetObjLP(var);
-
-//    return (jdouble)obj;
-// }
-
-// /** gets lower bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
-//  *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetLbLP)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    jlong                 jset                /**< global SCIP settings */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_SET* set;
-//    SCIP_Real lb;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    set = (SCIP_SET*) (size_t) jset;
-//    assert(set != NULL);
-
-//    lb = SCIvarGetLbLP(var, set);
-
-//    return (jdouble) lb;
-// }
-
-// /** gets upper bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
-//  *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetUbLP)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    jlong                 jset                /**< global SCIP settings */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_SET* set;
-//    SCIP_Real ub;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    set = (SCIP_SET*) (size_t) jset;
-//    assert(set != NULL);
-
-//    ub = SCIvarGetUbLPP(var, set);
-
-//    return (jdouble) ub;
-// }
-
-// /** gets pseudo solution value of variable at current node */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetPseudoSol_rec)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar                /**< JNI problem variable */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real sol;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    sol = SCIPvarGetPseudoSol_rec(var);
-
-//    return (jdouble) sol;
-// }
-
-// /** returns for given variable the reduced cost */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetRedcost)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    jboolean              jvarfixing,         /**< FALSE if for x == 0, TRUE for x == 1 */
-//    jlong                 jstat,              /**< problem statistics */
-//    jlong                 jlp                 /**< current LP data */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_LP* lp;
-
-//    SCIP_Real redcost;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-
-//    lp = (SCIP_LP*) (size_t) jlp;
-
-//    redcost = SCIPvarGetRedcost(var, (SCIP_Bool)jvarfixing, stat, lp);
-
-//    return (jdouble) redcost;
-// }
-
-// /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
-//  *  the binary variable is fixed to the given value
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetImplRedcost)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    jboolean              jvarfixing,         /**< FALSE if for x == 0, TRUE for x == 1 */
-//    jlong                 jstat,              /**< problem statistics */
-//    jlong                 jlp                 /**< current LP data */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_LP* lp;
-
-//    SCIP_Real redcost;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-
-//    lp = (SCIP_LP*) (size_t) jlp;
-
-//    redcost = SCIPvarGetImplRedcost(var, (SCIP_Bool)jvarfixing, stat, lp);
-
-//    return (jdouble) redcost;
-// }
-
-// /** returns the solution value of the problem variable in the relaxation solution */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetRelaxSol)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    jlong                 jset                /**< global SCIP settings */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_SET* set;
-//    SCIP_Real sol;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    set = (SCIP_SET*) (size_t) jset;
-//    assert(var != NULL);
-
-//    sol = SCIPvarGetRelaxSol(var, set);
-
-//    return (jdouble) sol;
-// }
-
-// /** returns the solution value of the transformed problem variable in the relaxation solution */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetRelaxSolTransVar)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar                /**< JNI problem variable */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real sol;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    sol = SCIPvarGetRelaxSolTransVar(var);
-
-//    return (jdouble) sol;
-// }
-
-// /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetPseudocost)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    jdouble               jsolvaldelta        /**< difference of variable's new LP value - old LP value */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real num;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    num = SCIPvarGetPseudocost(var, stat, (SCIP_Real) jsolvaldelta);
-
-//    return (jdouble) num;
-// }
-
-// /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value,
-//  *  only using the pseudo cost information of the current run
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetPseudocostCurrentRun)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    jdouble               jsolvaldelta        /**< difference of variable's new LP value - old LP value */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real num;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    num = SCIPvarGetPseudocostCurrentRun(var, stat, (SCIP_Real) jsolvaldelta);
-
-//    return (jdouble) num;
-// }
-
-// /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetPseudocostCount)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real num;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    num = SCIPvarGetPseudocostCount(var, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) num;
-// }
-
-// /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
-//  *  only using the pseudo cost information of the current run
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetPseudocostCountCurrentRun)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real num;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    num = SCIPvarGetPseudocostCountCurrentRun(var, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) num;
-// }
-
-// /** gets the average conflict length in given direction due to branching on the variable */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAvgConflictlength)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real num;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    num = SCIPvarGetAvgConflictlength(var, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) num;
-// }
-
-// /**  gets the average conflict length in given direction due to branching on the variable
-//  *   in the current run
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAvgConflictlengthCurrentRun)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real num;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    num = SCIPvarGetAvgConflictlengthCurrentRun(var, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) num;
-// }
-
-// /** returns the variable's VSIDS score */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetVSIDS_rec)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real vsids;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    vsids = SCIPvarGetVSIDS_rec(var, stat, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) vsids;
-// }
-
-// /** returns the variable's VSIDS score only using conflicts of the current run */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetVSIDSCurrentRun)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real vsids;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    vsids = SCIPvarGetVSIDSCurrentRun(var, stat, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) vsids;
-// }
-
-
-
-// /** returns the average number of inferences found after branching on the variable in given direction */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAvgInferences)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real ai;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    ai = SCIPvarGetAvgInferences(var, stat, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) ai;
-// }
-
-// /** returns the average number of inferences found after branching on the variable in given direction
-//  *  in the current run
-//  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAvgInferencesCurrentRun)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real ai;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    ai = SCIPvarGetAvgInferencesCurrentRun(var, stat, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) ai;
-// }
-
-
-
-// /** returns the average number of cutoffs found after branching on the variable in given direction */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAvgCutoffs)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real ac;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    ac = SCIPvarGetAvgCutoffs(var, stat, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) ac;
-// }
-
-// /** returns the average number of cutoffs found after branching on the variable in given direction in the current run */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAvgCutoffsCurrentRun)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_Real ac;
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    assert(stat != NULL);
-
-//    ac = SCIPvarGetAvgCutoffsCurrentRun(var, stat, (SCIP_BRANCHDIR) jdir);
-
-//    return (jdouble) ac;
-// }
-
-// /** returns at which depth in the tree a bound change was applied to the variable that conflicts with the
-//  *  given bound; returns -1 if the bound does not conflict with the current local bounds of the variable
-//  */
-// JNIEXPORT
-// jint JNISCIPVAR(varGetConflictingBdchgDepth)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jset,               /**< global SCIP settings */
-//    JNISCIP_ENUM          jboundtype,         /**< bound type of the conflicting bound */
-//    jdouble               jbound              /**< conflicting bound */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_SET* set;
-//    SCIP_BOUNDTYPE boundtype;
-//    SCIP_Real bound;
-//    int cbd;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    set = (SCIP_SET*) (size_t) jset;
-//    assert(set != NULL);
-
-//    boundtype = (SCIP_BOUNDTYPE) jboundtype;
-//    bound = (SCIP_Real) jbound;
-
-//    cbd = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, bound);
-
-//    return (jint) cbd;
-// }
-
-// /** returns the variable's VSIDS score */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetVSIDS)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< problem variable */
-//    jlong                 jstat,              /**< problem statistics */
-//    jint                  jdir                /**< branching direction (downwards, or upwards) */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_STAT* stat;
-//    SCIP_BRANCHDIR dir;
-//    SCIP_Real VSIDS;
-
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert (var != NULL);
-
-//    stat = (SCIP_STAT*) (size_t) jstat;
-//    dir = (SCIP_BRANCHDIR) jdir;
-
-//    VSIDS = SCIPvarGetVSIDS(var, stat, dir);
-
-//    return (jdouble) VSIDS;
-// }
-
-// /** returns the position of the bound change index */
-// JNIEXPORT
-// jint JNISCIPVAR(bdchgidxGetPos)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jbdchgidx           /**< bound change index */
-//    )
-// {
-//    SCIP_BDCHGIDX* bdchgidx;
-//    int pos;
-
-//    /* convert JNI pointer into C pointer */
-//    bdchgidx = (SCIP_BDCHGIDX*) (size_t) jbdchgidx;
-//    assert(bdchgidx != NULL);
-
-//    pos = SCIPbdchgidxGetPos(bdchgidx);
-
-//    return (jint) pos;
-// }
-
-// /** returns the relaxed bound change type */
-// JNIEXPORT
-// jdouble JNISCIPVAR(bdchginfoGetRelaxedBound)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jbdchginfo          /**< bound change information */
-//    )
-// {
-//    SCIP_BDCHGINFO* bdchginfo;
-//    SCIP_Real relaxed;
-
-//    /* convert JNI pointer into C pointer */
-//    bdchginfo = (SCIP_BDCHGINFO*) (size_t) jbdchginfo;
-//    assert(bdchginfo != NULL);
-
-//    relaxed = SCIPbdchginfoGetRelaxedBound(bdchginfo);
-
-//    return (jdouble) relaxed;
-// }
+#if 0
+
+/** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
+ *  data due to diving, that operate only on the LP without updating the variables
+ */
+jdouble JNISCIPVAR(varGetObjLP)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar                /**< JNI problem variable */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real obj;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   obj = SCIvarGetObjLP(var);
+
+   return (jdouble)obj;
+}
+
+/** gets lower bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
+ *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetLbLP)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   jlong                 jset                /**< global SCIP settings */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_SET* set;
+   SCIP_Real lb;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   set = (SCIP_SET*) (size_t) jset;
+   assert(set != NULL);
+
+   lb = SCIvarGetLbLP(var, set);
+
+   return (jdouble) lb;
+}
+
+/** gets upper bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
+ *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetUbLP)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   jlong                 jset                /**< global SCIP settings */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_SET* set;
+   SCIP_Real ub;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   set = (SCIP_SET*) (size_t) jset;
+   assert(set != NULL);
+
+   ub = SCIvarGetUbLPP(var, set);
+
+   return (jdouble) ub;
+}
+
+/** gets pseudo solution value of variable at current node */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetPseudoSol_rec)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar                /**< JNI problem variable */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real sol;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   sol = SCIPvarGetPseudoSol_rec(var);
+
+   return (jdouble) sol;
+}
+
+/** returns for given variable the reduced cost */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetRedcost)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   jboolean              jvarfixing,         /**< FALSE if for x == 0, TRUE for x == 1 */
+   jlong                 jstat,              /**< problem statistics */
+   jlong                 jlp                 /**< current LP data */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_LP* lp;
+
+   SCIP_Real redcost;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+
+   lp = (SCIP_LP*) (size_t) jlp;
+
+   redcost = SCIPvarGetRedcost(var, (SCIP_Bool)jvarfixing, stat, lp);
+
+   return (jdouble) redcost;
+}
+
+/** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
+ *  the binary variable is fixed to the given value
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetImplRedcost)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   jboolean              jvarfixing,         /**< FALSE if for x == 0, TRUE for x == 1 */
+   jlong                 jstat,              /**< problem statistics */
+   jlong                 jlp                 /**< current LP data */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_LP* lp;
+
+   SCIP_Real redcost;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+
+   lp = (SCIP_LP*) (size_t) jlp;
+
+   redcost = SCIPvarGetImplRedcost(var, (SCIP_Bool)jvarfixing, stat, lp);
+
+   return (jdouble) redcost;
+}
+
+/** returns the solution value of the problem variable in the relaxation solution */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetRelaxSol)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   jlong                 jset                /**< global SCIP settings */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_SET* set;
+   SCIP_Real sol;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   set = (SCIP_SET*) (size_t) jset;
+   assert(var != NULL);
+
+   sol = SCIPvarGetRelaxSol(var, set);
+
+   return (jdouble) sol;
+}
+
+/** returns the solution value of the transformed problem variable in the relaxation solution */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetRelaxSolTransVar)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar                /**< JNI problem variable */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real sol;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   sol = SCIPvarGetRelaxSolTransVar(var);
+
+   return (jdouble) sol;
+}
+
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetPseudocost)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   jdouble               jsolvaldelta        /**< difference of variable's new LP value - old LP value */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real num;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   num = SCIPvarGetPseudocost(var, stat, (SCIP_Real) jsolvaldelta);
+
+   return (jdouble) num;
+}
+
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value,
+ *  only using the pseudo cost information of the current run
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetPseudocostCurrentRun)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   jdouble               jsolvaldelta        /**< difference of variable's new LP value - old LP value */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real num;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   num = SCIPvarGetPseudocostCurrentRun(var, stat, (SCIP_Real) jsolvaldelta);
+
+   return (jdouble) num;
+}
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetPseudocostCount)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real num;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   num = SCIPvarGetPseudocostCount(var, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) num;
+}
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetPseudocostCountCurrentRun)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real num;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   num = SCIPvarGetPseudocostCountCurrentRun(var, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) num;
+}
+
+/** gets the average conflict length in given direction due to branching on the variable */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetAvgConflictlength)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real num;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   num = SCIPvarGetAvgConflictlength(var, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) num;
+}
+
+/**  gets the average conflict length in given direction due to branching on the variable
+ *   in the current run
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetAvgConflictlengthCurrentRun)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< JNI problem variable */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real num;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   num = SCIPvarGetAvgConflictlengthCurrentRun(var, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) num;
+}
+
+/** returns the variable's VSIDS score */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetVSIDS_rec)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real vsids;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   vsids = SCIPvarGetVSIDS_rec(var, stat, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) vsids;
+}
+
+/** returns the variable's VSIDS score only using conflicts of the current run */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetVSIDSCurrentRun)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real vsids;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   vsids = SCIPvarGetVSIDSCurrentRun(var, stat, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) vsids;
+}
+
+
+
+/** returns the average number of inferences found after branching on the variable in given direction */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetAvgInferences)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real ai;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   ai = SCIPvarGetAvgInferences(var, stat, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) ai;
+}
+
+/** returns the average number of inferences found after branching on the variable in given direction
+ *  in the current run
+ */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetAvgInferencesCurrentRun)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real ai;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   ai = SCIPvarGetAvgInferencesCurrentRun(var, stat, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) ai;
+}
+
+
+
+/** returns the average number of cutoffs found after branching on the variable in given direction */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetAvgCutoffs)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real ac;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   ac = SCIPvarGetAvgCutoffs(var, stat, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) ac;
+}
+
+/** returns the average number of cutoffs found after branching on the variable in given direction in the current run */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetAvgCutoffsCurrentRun)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_Real ac;
+
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   assert(stat != NULL);
+
+   ac = SCIPvarGetAvgCutoffsCurrentRun(var, stat, (SCIP_BRANCHDIR) jdir);
+
+   return (jdouble) ac;
+}
+
+/** returns at which depth in the tree a bound change was applied to the variable that conflicts with the
+ *  given bound; returns -1 if the bound does not conflict with the current local bounds of the variable
+ */
+JNIEXPORT
+jint JNISCIPVAR(varGetConflictingBdchgDepth)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jset,               /**< global SCIP settings */
+   JNISCIP_ENUM          jboundtype,         /**< bound type of the conflicting bound */
+   jdouble               jbound              /**< conflicting bound */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_SET* set;
+   SCIP_BOUNDTYPE boundtype;
+   SCIP_Real bound;
+   int cbd;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert(var != NULL);
+
+   set = (SCIP_SET*) (size_t) jset;
+   assert(set != NULL);
+
+   boundtype = (SCIP_BOUNDTYPE) jboundtype;
+   bound = (SCIP_Real) jbound;
+
+   cbd = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, bound);
+
+   return (jint) cbd;
+}
+
+/** returns the variable's VSIDS score */
+JNIEXPORT
+jdouble JNISCIPVAR(varGetVSIDS)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jvar,               /**< problem variable */
+   jlong                 jstat,              /**< problem statistics */
+   jint                  jdir                /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_STAT* stat;
+   SCIP_BRANCHDIR dir;
+   SCIP_Real VSIDS;
+
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*) (size_t) jvar;
+   assert (var != NULL);
+
+   stat = (SCIP_STAT*) (size_t) jstat;
+   dir = (SCIP_BRANCHDIR) jdir;
+
+   VSIDS = SCIPvarGetVSIDS(var, stat, dir);
+
+   return (jdouble) VSIDS;
+}
+
+/** returns the position of the bound change index */
+JNIEXPORT
+jint JNISCIPVAR(bdchgidxGetPos)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jbdchgidx           /**< bound change index */
+   )
+{
+   SCIP_BDCHGIDX* bdchgidx;
+   int pos;
+
+   /* convert JNI pointer into C pointer */
+   bdchgidx = (SCIP_BDCHGIDX*) (size_t) jbdchgidx;
+   assert(bdchgidx != NULL);
+
+   pos = SCIPbdchgidxGetPos(bdchgidx);
+
+   return (jint) pos;
+}
+
+/** returns the relaxed bound change type */
+JNIEXPORT
+jdouble JNISCIPVAR(bdchginfoGetRelaxedBound)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jbdchginfo          /**< bound change information */
+   )
+{
+   SCIP_BDCHGINFO* bdchginfo;
+   SCIP_Real relaxed;
+
+   /* convert JNI pointer into C pointer */
+   bdchginfo = (SCIP_BDCHGINFO*) (size_t) jbdchginfo;
+   assert(bdchginfo != NULL);
+
+   relaxed = SCIPbdchginfoGetRelaxedBound(bdchginfo);
+
+   return (jdouble) relaxed;
+}
 
 
 /** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
  *  e.g. obj(x) = 1 this method returns for ~x the value -1
  */
-// JNIEXPORT
-// jdouble JNISCIPVAR(varGetAggregatedObj)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar                /**< JNI problem variable */
-//    )
-// {
-//    SCIP_VAR* var;
-//    SCIP_Real* aggrobj;
+ JNIEXPORT
+ jdouble JNISCIPVAR(varGetAggregatedObj)(
+    JNIEnv*               env,                /**< JNI environment variable */
+    jobject               jobj,               /**< JNI class pointer */
+    jlong                 jvar                /**< JNI problem variable */
+    )
+ {
+    SCIP_VAR* var;
+    SCIP_Real* aggrobj;
 
-//    /* convert JNI pointer into C pointer */
-//    var = (SCIP_VAR*)(size_t)jvar;
-//    assert(var != NULL);
+    /* convert JNI pointer into C pointer */
+    var = (SCIP_VAR*)(size_t)jvar;
+    assert(var != NULL);
 
 
-//    JNISCIP_CALL( SCIPvarGetAggregatedObj(var, aggrobj) );
+    JNISCIP_CALL( SCIPvarGetAggregatedObj(var, aggrobj) );
 
-//return aggrobj;
-// }
+    return aggrobj;
+ }
+#endif
 
 /**@} */

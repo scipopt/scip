@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -185,7 +185,11 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+                                              *   but were not activated there? Should be FALSE for repeated calls at
+                                              *   one node or if the current focusnode is a child of the former one */
    );
 
 /** calls separator method of constraint handler to separate LP solution */
@@ -271,6 +275,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    int                   depth,              /**< depth of current node; -1 if preprocessing domain propagation */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
+   SCIP_Bool             instrongbranching,  /**< are we currently doing strong branching? */
    SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -344,7 +349,7 @@ void SCIPconshdlrSetFree(
 extern
 void SCIPconshdlrSetInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    );
 
 /** sets deinitialization method of constraint handler */
@@ -365,7 +370,7 @@ void SCIPconshdlrSetInitsol(
 extern
 void SCIPconshdlrSetExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))    /**< solving process deinitialization method of constraint handler */
    );
 
 /** sets preprocessing initialization method of constraint handler */
@@ -395,7 +400,7 @@ void SCIPconshdlrSetPresol(
 extern
 void SCIPconshdlrSetDelete(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSDELETE  ((*consdelete))    /**< free specific constraint data */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    );
 
 /** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
@@ -617,6 +622,7 @@ SCIP_RETCODE SCIPconsCreate(
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
+extern
 SCIP_RETCODE SCIPconsCopy(
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
    SCIP_SET*             set,                /**< global SCIP settings of the target SCIP */
@@ -906,6 +912,7 @@ extern
 SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             initial             /**< new value */
    );
 

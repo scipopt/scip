@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -106,6 +106,7 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
  *  - heurtiming      : current point in the node solving loop
+ *  - nodeinfeasible  : was the current node already detected to be infeasible?
  *  - result          : pointer to store the result of the heuristic call
  *
  *  possible return values for *result:
@@ -116,7 +117,7 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
  *                      its frequency
  */
 #define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_HEURTIMING heurtiming, \
-      SCIP_RESULT* result)
+      SCIP_Bool nodeinfeasible, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

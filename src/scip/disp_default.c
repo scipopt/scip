@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -352,7 +352,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       char c;
 
       heur = SCIPgetSolHeur(scip, sol);
-      
+
       if( heur == NULL )
       {
          if( SCIPsolIsOriginal(sol) )
@@ -362,7 +362,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       }
       else
          c = SCIPheurGetDispchar(heur);
-      
+
       SCIPinfoMessage(scip, file, "%c", c);
 
       SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
@@ -432,19 +432,19 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPAvgIters)
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPAVGITERS) == 0);
    assert(scip != NULL);
-   
+
    /**@todo Currently we are using the total number of nodes to compute the average LP iterations number. The reason for
     *       that is, that for the LP iterations only the total number (over all runs) are stored in the statistics. It
     *       would be nicer if the statistic also stores the number of LP iterations for the current run similar to the
     *       nodes.
     */
-   
+
    if( SCIPgetNNodes(scip) < 2 )
       SCIPinfoMessage(scip, file, "     - ");
    else
       SCIPinfoMessage(scip, file, "%6.1f ", 
          (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNTotalNodes(scip) - 1) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -460,6 +460,11 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPCOND) == 0);
    assert(scip != NULL);
 
+   /* note that after diving mode, the LPI may only have the basis information, but SCIPlpiWasSolved() can be false; in
+    * this case, we will (depending on the LP solver) probably not obtain the quality measure; one solution would be to
+    * store the results of SCIPlpiGetRealSolQuality() within the SCIP_LP after each LP solve; this would have the added
+    * advantage, that we reduce direct access to the LPI, but it sounds potentially expensive
+    */
    SCIP_CALL( SCIPgetLPI(scip, &lpi) );
    if( lpi == NULL )
    {
@@ -706,7 +711,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPseudoObjval)
       SCIPinfoMessage(scip, file, "    cutoff    ");
    else
       SCIPinfoMessage(scip, file, "%13.6e ", pseudoobj);
-  
+
    return SCIP_OKAY;
 }
 

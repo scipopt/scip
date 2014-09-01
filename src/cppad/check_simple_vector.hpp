@@ -1,13 +1,13 @@
-/* $Id: check_simple_vector.hpp 2085 2011-09-01 14:54:04Z bradbell $ */
+/* $Id: check_simple_vector.hpp 2870 2013-07-28 17:00:59Z bradbell $ */
 # ifndef CPPAD_CHECK_SIMPLE_VECTOR_INCLUDED
 # define CPPAD_CHECK_SIMPLE_VECTOR_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-11 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -41,8 +41,8 @@ $codei%CheckSimpleVector<%Scalar%, %Vector%>(%x%, %y%)%$$
 $head Purpose$$
 Preforms compile and run time checks that the type specified
 by $icode Vector$$ satisfies all the requirements for 
-a $xref/SimpleVector/$$ class with 
-$xref/SimpleVector/Elements of Specified Type/elements of type/$$ 
+a $cref SimpleVector$$ class with 
+$cref/elements of type/SimpleVector/Elements of Specified Type/$$ 
 $icode Scalar$$.
 If a requirement is not satisfied,
 a an error message makes it clear what condition is not satisfied.
@@ -55,11 +55,11 @@ $codei%
 	const %Scalar%& %y%
 %$$
 In addition, the check
-$code%
+$codei%
 	%x% == %x%
 %$$
 will return the boolean value $code true$$, and 
-$code%
+$codei%
 	%x% == %y%
 %$$
 will return $code false$$.
@@ -93,7 +93,7 @@ $head Example$$
 $children%
 	example/check_simple_vector.cpp
 %$$
-The file $xref/CheckSimpleVector.cpp/$$
+The file $cref check_simple_vector.cpp$$
 contains an example and test of this function where $icode S$$
 is the same as $icode T$$.
 It returns true, if it succeeds an false otherwise.
@@ -123,24 +123,22 @@ namespace CppAD {
 	struct ok_if_S_same_as_T { };
 
 	template <class T>
-	struct ok_if_S_same_as_T<T,T> { typedef T ok; };
+	struct ok_if_S_same_as_T<T,T> { T value; };
 
 	template <class Scalar, class Vector>
 	void CheckSimpleVector(const Scalar& x, const Scalar& y)
-	{	// Section 3.6.2 of ISO/IEC 14882:1998(E) states: "The storage for 
-		// objects with static storage duration (3.7.1) shall be zero-
-		// initialized (8.5) before any other initialization takes place."
-		static size_t count[CPPAD_MAX_NUM_THREADS];
-		size_t thread = thread_alloc::thread_num();
-		if( count[thread] > 0  )
+	{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
+		static size_t count;
+		if( count > 0  )
 			return;
-		count[thread]++;
+		count++;
 
 		// value_type must be type of elements of Vector
 		typedef typename Vector::value_type value_type;
 
 		// check that elements of Vector have type Scalar
-		typedef typename ok_if_S_same_as_T<Scalar, value_type>::ok ok;
+		struct ok_if_S_same_as_T<Scalar, value_type> x_copy;
+		x_copy.value = x;
 
 		// check default constructor
 		Vector d;
@@ -165,7 +163,7 @@ namespace CppAD {
 		);
 
 		// check copy constructor
-		s[0] = x;
+		s[0] = x_copy.value;
 		const Vector c(s);
 		s[0] = y;
 		CPPAD_ASSERT_KNOWN(

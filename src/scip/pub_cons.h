@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -189,6 +189,12 @@ SCIP_Real SCIPconshdlrGetEnfoPSTime(
 /** gets time in seconds used for propagation in this constraint handler */
 EXTERN
 SCIP_Real SCIPconshdlrGetPropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for propagation in this constraint handler during strong branching */
+EXTERN
+SCIP_Real SCIPconshdlrGetStrongBranchPropTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -468,7 +474,10 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
  * Constraint methods
  */
 
-/** returns the name of the constraint */
+/** returns the name of the constraint 
+ *
+ *  @note to change the name of a constraint, use SCIPchgConsName() from scip.h
+ */
 EXTERN
 const char* SCIPconsGetName(
    SCIP_CONS*            cons                /**< constraint */

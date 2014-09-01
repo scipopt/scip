@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,6 +25,7 @@
 #define __SCIP_PUB_FILEIO_H__
 
 #include <stddef.h>
+#include "scip/def.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,21 +33,21 @@ extern "C" {
 
 typedef struct SCIP_File SCIP_FILE;          /**< file data structure */
 
-extern SCIP_FILE* SCIPfopen(const char *path, const char *mode);
-extern SCIP_FILE* SCIPfdopen(int fildes, const char *mode);
-extern size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
-extern size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
-extern int SCIPfprintf(SCIP_FILE *stream, const char *format, ...);
-extern int SCIPfputc(int c, SCIP_FILE *stream);
-extern int SCIPfputs(const char *s, SCIP_FILE *stream);
-extern int SCIPfgetc(SCIP_FILE *stream);
-extern char* SCIPfgets(char *s, int size, SCIP_FILE *stream);
-extern int SCIPfflush(SCIP_FILE *stream);
-extern int SCIPfseek(SCIP_FILE *stream, long offset, int whence);
-extern void SCIPrewind(SCIP_FILE *stream);
-extern long SCIPftell(SCIP_FILE *stream);
-extern int SCIPfeof(SCIP_FILE *stream);
-extern int SCIPfclose(SCIP_FILE *fp);
+EXTERN SCIP_FILE* SCIPfopen(const char *path, const char *mode);
+EXTERN SCIP_FILE* SCIPfdopen(int fildes, const char *mode);
+EXTERN size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+EXTERN size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+EXTERN int SCIPfprintf(SCIP_FILE *stream, const char *format, ...);
+EXTERN int SCIPfputc(int c, SCIP_FILE *stream);
+EXTERN int SCIPfputs(const char *s, SCIP_FILE *stream);
+EXTERN int SCIPfgetc(SCIP_FILE *stream);
+EXTERN char* SCIPfgets(char *s, int size, SCIP_FILE *stream);
+EXTERN int SCIPfflush(SCIP_FILE *stream);
+EXTERN int SCIPfseek(SCIP_FILE *stream, long offset, int whence);
+EXTERN void SCIPrewind(SCIP_FILE *stream);
+EXTERN long SCIPftell(SCIP_FILE *stream);
+EXTERN int SCIPfeof(SCIP_FILE *stream);
+EXTERN int SCIPfclose(SCIP_FILE *fp);
 
 #ifdef __cplusplus
 }

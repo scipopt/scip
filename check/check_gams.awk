@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -164,9 +164,16 @@ END {
      if( modstat[m] != 1 && modstat[m] != 2 && modstat[m] != 3 && modstat[m] != 7 && modstat[m] != 8 )
        primalbnd[m] = ( maxobj[m] ? -infty : +infty );
 
-     # if dual bound is not given, but solver claimed model status "optimal", then we set dual bound to primal bound
-     if (dualbnd[m] == "NA")
-       dualbnd[m] = ( modstat[m] == 1 ? primalbnd[m] : ( maxobj[m] ? +infty : -infty ) );
+     # if dual bound is not given, try to guess from model status
+     if( dualbnd[m] == "NA" ) {
+       if( modstat[m] == 1 )  # if model status says "optimal", set dual bound to primal bound
+         dualbnd[m] = primalbnd[m];
+       else  # otherwise, set to worst possible dual bound
+         dualbnd[m] = maxobj[m] ? +infty : -infty;
+     }
+     # if model status says "infeasible", set dual bound to correct infinity
+     if( modstat[m] == 4 || modstat[m] == 10 || modstat[m] == 19 )
+       dualbnd[m] = maxobj[m] ? -infty : +infty;
 
      db = dualbnd[m];
      pb = primalbnd[m];
@@ -442,7 +449,7 @@ END {
          pavprob = substr(pavprob, length(pavprob)-24,25);
        #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
        #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-       printf("%s,MINLP,%s_%s,%d,%d,%d,%g,%g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
+       printf("%s,MINLP,%s_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
        printf("%d,%d,%d,%d\n", nodes[m], iters[m], cons[m], vars[m]) > PAVFILE;
      }
    }

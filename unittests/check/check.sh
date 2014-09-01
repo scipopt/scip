@@ -141,7 +141,7 @@ then
             break
 	fi
 
-	echo running single executable $BINNAME
+	# echo running single executable $BINNAME
 	echo @01 RUNNING SINGLE EXECUTABLE $BINNAME ===========                >> $OUTFILE
         echo @01 RUNNING SINGLE EXECUTABLE $BINNAME ===========                >> $ERRFILE
         date >>$OUTFILE

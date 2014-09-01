@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,6 +26,7 @@
 #include "scip/set.h"
 #include "scip/history.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_history.h"
 
 #ifndef NDEBUG
 #include "scip/struct_history.h"
@@ -144,7 +145,7 @@ void SCIPhistoryUpdatePseudocost(
    assert(!SCIPsetIsInfinity(set, objdelta));
    assert(!SCIPsetIsNegative(set, objdelta));
    assert(0.0 < weight && weight <= 1.0);
-   
+
    if( SCIPsetIsPositive(set, solvaldelta) )
    {
       /* variable's solution value moved upwards */
@@ -297,6 +298,8 @@ void SCIPvaluehistoryScaleVSIDS(
  * simple functions implemented as defines
  */
 
+#ifndef NDEBUG
+
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
@@ -337,11 +340,15 @@ SCIP_Real* SCIPvaluehistoryGetValues(
    return valuehistory->values;
 }
 
+#endif
+
 /**@} */
 
 /*
  * simple functions implemented as defines
  */
+
+#ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -385,7 +392,7 @@ SCIP_Real SCIPhistoryGetPseudocost(
    )
 {
    assert(history != NULL);
-   
+
    if( solvaldelta >= 0.0 )
       return solvaldelta * (history->pscostcount[1] > 0.0 ? history->pscostsum[1] / history->pscostcount[1] : 1.0);
    else
@@ -416,7 +423,7 @@ SCIP_Bool SCIPhistoryIsPseudocostEmpty(
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
-   
+
    return (history->pscostcount[dir] == 0.0);
 }
 
@@ -441,7 +448,7 @@ void SCIPhistoryScaleVSIDS(
    )
 {
    assert(history != NULL);
-   
+
    history->vsids[0] *= scalar;
    history->vsids[1] *= scalar;
 }
@@ -470,7 +477,7 @@ void SCIPhistoryIncNActiveConflicts(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1); 
    assert(length >= 0.0);
-   
+
    history->nactiveconflicts[dir]++;
    history->conflengthsum[dir] += length;
 }
@@ -626,3 +633,5 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 
    return history->nbranchings[dir] > 0 ? (SCIP_Real)history->branchdepthsum[dir]/(SCIP_Real)history->nbranchings[dir] : 1.0;
 }
+
+#endif

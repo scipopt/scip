@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -177,7 +177,7 @@ public:
 } /* namespace scip */
 
 
-   
+
 /** creates empty problem, initializes all solving data structures, and sets the user problem data to point to the
  *  given user data object
  *
@@ -201,7 +201,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // problem is freed and destructor of MyProbData is called here
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateObjProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPcreateObjProb(
  *  Warning! This method should only be called after a problem was created with SCIPcreateObjProb().
  *  Otherwise, a segmentation fault may arise, or an undefined pointer is returned.
  */
-extern
+EXTERN
 scip::ObjProbData* SCIPgetObjProbData(
    SCIP*                 scip                /**< SCIP data structure */
    );

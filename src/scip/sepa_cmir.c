@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -221,7 +221,7 @@ SCIP_RETCODE addCut(
          SCIP_ROW* cut;
          char cutname[SCIP_MAXSTRLEN];
          SCIP_Bool success;
-         
+
          /* create the cut */
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, 
@@ -234,7 +234,7 @@ SCIP_RETCODE addCut(
          SCIPdebugMessage(" -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
             cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-   
+
          /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
@@ -247,7 +247,7 @@ SCIP_RETCODE addCut(
          }
          else
             success = TRUE; /* also use cut if scaling failed */
-   
+
          /* if scaling was successful, add the cut */
          if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
          {
@@ -304,7 +304,7 @@ void updateNActiveConts(
       primsol = varsolvals[probindex];
       lb = bestcontlbs[probindex - nintvars];
       ub = bestcontubs[probindex - nintvars];
-      
+
       if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
          (*nactiveconts) += delta;
    }
@@ -388,7 +388,7 @@ SCIP_RETCODE tryDelta(
       assert(allowlocal || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
          delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
-               
+
       /* check if delta generates cut which is more violated */
       if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
       {
@@ -483,7 +483,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
     * strictly between its bounds) in the constructed mixed knapsack set, i.e., 
     * N* = { |alpha'_j| : j in N, alpha'_j != 0 and l_j < x*_j < u_j }
     */ 
-         
+
    /* search delta for generating a cut with maximum efficacy: 
     * delta = coefficient of integer variable in constructed mixed knapsack set which lies between its bounds
     */ 
@@ -516,7 +516,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real absmksetcoef;
-            
+
       var = vars[vi];
       assert(vi == SCIPvarGetProbindex(var));
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
@@ -599,7 +599,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
                &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(allowlocal || !cutislocal);
          assert(success); 
-         
+
          /* add the cut to the separation storage */
          SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutrank, cutclassname, cutoff, ncuts) );
       }
@@ -767,12 +767,12 @@ SCIP_RETCODE aggregation(
       rowweights[startrow] = 1.0;
    maxweight = 1.0;
    minweight = 1.0;
-   
+
    /* get nonzero columns and coefficients of startrow */
    startnonzcols =  SCIProwGetCols(rows[startrow]);
    nstartnonzcols = SCIProwGetNLPNonz(rows[startrow]);
    startnonzcoefs = SCIProwGetVals(rows[startrow]);
-   
+
    /* for all columns of startrow store coefficient as coefficient in aggregated row */ 
    BMSclearMemoryArray(aggrcoefs, ncols);
    naggrintnonzs = 0;
@@ -805,7 +805,7 @@ SCIP_RETCODE aggregation(
       if( !hasfractional && SCIPvarIsIntegral(var) )
       {
          SCIP_Real primsol;
-         
+
          primsol = varsolvals[SCIPvarGetProbindex(var)];
          hasfractional = !SCIPisFeasIntegral(scip, primsol);
       }
@@ -821,7 +821,7 @@ SCIP_RETCODE aggregation(
 
    /* decrease score of startrow in order to not aggregate it again too soon */
    decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
-   
+
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 
     * in order to get rid of a continuous variable
@@ -887,7 +887,7 @@ SCIP_RETCODE aggregation(
       }
 
       SCIPdebugMessage(" -> search column to eliminate\n");
-      
+
       /* search for "best" continuous variable in aggregated row:
        * - solution value is strictly between lower and upper bound
        * - it exists a not yet aggregated row with nonzero coefficient in this column
@@ -957,10 +957,10 @@ SCIP_RETCODE aggregation(
                SCIP_Real lhs;
                SCIP_Real rhs;
                int lppos;
-               
+
                lppos = SCIProwGetLPPos(nonzrows[r]);
                assert(0 <= lppos && lppos < nrows);
-               
+
                SCIPdebugMessage("        -> r=%d row <%s>: weight=%g, pos=%d, alpha_j=%g, a^r_j=%g, factor=%g, %g <= %g <= %g\n",
                   r, SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, aggrcoefs[c], nonzcoefs[r], 
                   - aggrcoefs[c] / nonzcoefs[r], SCIProwGetLhs(nonzrows[r]), 
@@ -977,7 +977,7 @@ SCIP_RETCODE aggregation(
                /* take only unmodifiable LP rows, that are not yet aggregated */
                if( rowweights[lppos] != 0.0 || SCIProwIsModifiable(nonzrows[r]) )
                   continue;
-               
+
                /* don't aggregate rows that would lead to a too extreme aggregation factor */
                factor = - aggrcoefs[c] / nonzcoefs[r]; 
                absfactor = REALABS(factor);
@@ -985,7 +985,7 @@ SCIP_RETCODE aggregation(
                   || absfactor > sepadata->maxrowfac * minweight
                   || maxweight > sepadata->maxrowfac * absfactor )
                   continue;
-               
+
                /* for selected real variable y_k, select constraint r with best score SCORE_r with r in P\Q, 
                 * where P\Q is the set of constraints not yet involved in the aggregation set
                 */
@@ -1002,7 +1002,7 @@ SCIP_RETCODE aggregation(
                if( (factor < 0.0 && SCIPisGT(scip, factor * (lhs - activity), maxslack))
                   || (factor > 0.0 && SCIPisGT(scip, factor * (rhs - activity), maxslack)) )
                   continue;
-               
+
                /* the row passed all tests: it is the best candidate up to now */
                bestbounddist = bounddist;
                bestscore = score; 
@@ -1032,15 +1032,15 @@ SCIP_RETCODE aggregation(
          SCIP_COL* col;
          SCIP_VAR* var;
          SCIP_Real bounddist;
-         
+
          c = aggrcontnonzposs[nzi];
          assert(0 <= c && c < ncols);
          assert(!SCIPisZero(scip, aggrcoefs[c]));
-         
+
          col = cols[c];
          var = SCIPcolGetVar(col);
          assert(varIsContinuous(var));
-         
+
          bounddist = aggrcontnonzbounddists[nzi];
 
          SCIPdebugMessage("     -> ignoring col <%s>[%g,%g]: sol=%g, dist=%g\n", 
@@ -1248,7 +1248,7 @@ SCIP_RETCODE separateCuts(
    /* check whether SCIP was stopped in the meantime */
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
-   
+
    /* get active problem variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -1475,7 +1475,7 @@ SCIP_DECL_SEPACOPY(sepaCopyCmir)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
- 
+
    return SCIP_OKAY;
 }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,6 +55,7 @@ struct SCIP_Prop
    SCIP_PROPDATA*        propdata;           /**< propagators local data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this propagator for the next stages */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this propagator */
+   SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this propagator during strong branching */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this propagator */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this propagator */
    int                   priority;           /**< priority of the propagator for propagation */

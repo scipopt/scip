@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,23 +60,27 @@ extern "C" {
  *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
  *        solver was interrupted.
  *
- *  @param[in] njobs               number of jobs (activities)
- *  @param[in] durations           array of durations
- *  @param[in,out] ests            array of earliest start times for each job
- *  @param[in,out] lsts            array of latest start times for each job
- *  @param[in] objvals             array of objective coefficients for each job (linear objective function), or NULL if none
- *  @param[in] demands             array of demands
- *  @param[in] capacity            cumulative capacity
- *  @param[in] hmin                left bound of time axis to be considered (including hmin)
- *  @param[in] hmax                right bound of time axis to be considered (not including hmax)
- *  @param[in] timelimit           time limit for solving in seconds
- *  @param[in] memorylimit         memory limit for solving in mega bytes (MB)
- *  @param[in] maxnodes            maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
+ *  input:
+ *  - njobs           : number of jobs (activities)
+ *  - objvals         : array of objective coefficients for each job (linear objective function), or NULL if none
+ *  - durations       : array of durations
+ *  - demands         : array of demands
+ *  - capacity        : cumulative capacity
+ *  - hmin            : left bound of time axis to be considered (including hmin)
+ *  - hmax            : right bound of time axis to be considered (not including hmax)
+ *  - timelimit       : time limit for solving in seconds
+ *  - memorylimit     : memory limit for solving in mega bytes (MB)
+ *  - maxnodes        : maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
  *
- *  @param[out] solved             pointer to store if the problem is solved (to optimality)
- *  @param[out] infeasible         pointer to store if the problem is infeasible
- *  @param[out] unbounded          pointer to store if the problem is unbounded
- *  @param[out] error              pointer to store if an error occurred
+ *  input/output:
+ *  - ests            : array of earliest start times for each job
+ *  - lsts            : array of latest start times for each job
+ *
+ *  output:
+ *  - solved          : pointer to store if the problem is solved (to optimality)
+ *  - infeasible      : pointer to store if the problem is infeasible
+ *  - unbounded       : pointer to store if the problem is unbounded
+ *  - error           : pointer to store if an error occurred
  *
  */
 #define SCIP_DECL_SOLVECUMULATIVE(x) SCIP_RETCODE x (int njobs, SCIP_Real* ests, SCIP_Real* lsts, SCIP_Real* objvals, \
@@ -272,7 +276,8 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
 
 /** propagate the given cumulative condition */
@@ -352,6 +357,35 @@ SCIP_RETCODE SCIPsolveCumulative(
    SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
    SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
    SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   );
+
+/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
+ *  completion time
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateWorstCaseProfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands             /**< array containing corresponding demands */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
+EXTERN
+int SCIPcomputeHmin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case resource profile */
+   int                   capacity            /**< capacity to check */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
+EXTERN
+int SCIPcomputeHmax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case profile */
+   int                   capacity            /**< capacity to check */
    );
 
 #ifdef __cplusplus

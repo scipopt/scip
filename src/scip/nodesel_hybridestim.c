@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -182,7 +182,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
        */
       if( SCIPgetNSolsFound(scip) == 0 )
          cutoffbound = lowerbound + 0.2 * (cutoffbound - lowerbound);
-         
+
       /* check, if plunging is forced at the current depth */
       if( plungedepth < minplungedepth )
          maxbound = SCIPinfinity(scip);
@@ -285,7 +285,7 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
       {
          int depth1;
          int depth2;
-         
+
          depth1 = SCIPnodeGetDepth(node1);
          depth2 = SCIPnodeGetDepth(node2);
          if( depth1 < depth2 )

@@ -1,13 +1,13 @@
-/* $Id: rev_two.hpp 1598 2009-12-03 02:59:52Z bradbell $ */
+/* $Id: rev_two.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
 # ifndef CPPAD_REV_TWO_INCLUDED
 # define CPPAD_REV_TWO_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-09 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
-                    Common Public License Version 1.0.
+                    Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
@@ -35,12 +35,12 @@ $index partial, easy$$
 $section Reverse Mode Second Partial Derivative Driver$$
 
 $head Syntax$$
-$syntax%%ddw% = %f%.RevTwo(%x%, %i%, %j%)%$$
+$icode%ddw% = %f%.RevTwo(%x%, %i%, %j%)%$$
 
 
 $head Purpose$$
 We use $latex F : B^n \rightarrow B^m$$ to denote the
-$xref/glossary/AD Function/AD function/$$ corresponding to $italic f$$.
+$cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
 The syntax above sets 
 $latex \[
 	ddw [ k * p + \ell ]
@@ -49,58 +49,58 @@ $latex \[
 \] $$
 for $latex k = 0 , \ldots , n-1$$
 and $latex \ell = 0 , \ldots , p$$,
-where $latex p$$ is the size of the vectors $italic i$$ and $italic j$$.
+where $latex p$$ is the size of the vectors $icode i$$ and $icode j$$.
 
 $head f$$
-The object $italic f$$ has prototype
-$syntax%
+The object $icode f$$ has prototype
+$codei%
 	ADFun<%Base%> %f%
 %$$
-Note that the $xref/ADFun/$$ object $italic f$$ is not $code const$$
-(see $xref/RevTwo/RevTwo Uses Forward/RevTwo Uses Forward/$$ below).
+Note that the $cref ADFun$$ object $icode f$$ is not $code const$$
+(see $cref/RevTwo Uses Forward/RevTwo/RevTwo Uses Forward/$$ below).
 
 $head x$$
-The argument $italic x$$ has prototype
-$syntax%
+The argument $icode x$$ has prototype
+$codei%
 	const %VectorBase% &%x%
 %$$
-(see $xref/RevTwo/VectorBase/VectorBase/$$ below)
+(see $cref/VectorBase/RevTwo/VectorBase/$$ below)
 and its size 
-must be equal to $italic n$$, the dimension of the
-$xref/seq_property/Domain/domain/$$ space for $italic f$$.
+must be equal to $icode n$$, the dimension of the
+$cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
 that point at which to evaluate the partial derivatives listed above.
 
 $head i$$
-The argument $italic i$$ has prototype
-$syntax%
+The argument $icode i$$ has prototype
+$codei%
 	const %VectorSize_t% &%i%
 %$$
-(see $xref/RevTwo/VectorSize_t/VectorSize_t/$$ below)
-We use $italic p$$ to denote the size of the vector $italic i$$.
-All of the indices in $italic i$$ 
-must be less than $italic m$$, the dimension of the
-$xref/seq_property/Range/range/$$ space for $italic f$$; i.e.,
+(see $cref/VectorSize_t/RevTwo/VectorSize_t/$$ below)
+We use $icode p$$ to denote the size of the vector $icode i$$.
+All of the indices in $icode i$$ 
+must be less than $icode m$$, the dimension of the
+$cref/range/seq_property/Range/$$ space for $icode f$$; i.e.,
 for $latex \ell = 0 , \ldots , p-1$$, $latex i[ \ell ]  < m$$.
 
 $head j$$
-The argument $italic j$$ has prototype
-$syntax%
+The argument $icode j$$ has prototype
+$codei%
 	const %VectorSize_t% &%j%
 %$$
-(see $xref/RevTwo/VectorSize_t/VectorSize_t/$$ below)
-and its size must be equal to $italic p$$,
-the size of the vector $italic i$$.
-All of the indices in $italic j$$ 
-must be less than $italic n$$; i.e.,
+(see $cref/VectorSize_t/RevTwo/VectorSize_t/$$ below)
+and its size must be equal to $icode p$$,
+the size of the vector $icode i$$.
+All of the indices in $icode j$$ 
+must be less than $icode n$$; i.e.,
 for $latex \ell = 0 , \ldots , p-1$$, $latex j[ \ell ]  < n$$.
 
 $head ddw$$
-The result $italic ddw$$ has prototype
-$syntax%
+The result $icode ddw$$ has prototype
+$codei%
 	%VectorBase% %ddw%
 %$$
-(see $xref/RevTwo/VectorBase/VectorBase/$$ below)
+(see $cref/VectorBase/RevTwo/VectorBase/$$ below)
 and its size is $latex n * p$$.
 It contains the requested partial derivatives; to be specific,
 for $latex k = 0 , \ldots , n - 1 $$ 
@@ -112,30 +112,32 @@ $latex \[
 \] $$
 
 $head VectorBase$$
-The type $italic VectorBase$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type Base/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode VectorBase$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type Base/SimpleVector/Elements of Specified Type/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head VectorSize_t$$
-The type $italic VectorSize_t$$ must be a $xref/SimpleVector/$$ class with
-$xref/SimpleVector/Elements of Specified Type/elements of type size_t/$$.
-The routine $xref/CheckSimpleVector/$$ will generate an error message
+The type $icode VectorSize_t$$ must be a $cref SimpleVector$$ class with
+$cref/elements of type size_t/SimpleVector/Elements of Specified Type/$$.
+The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head RevTwo Uses Forward$$
-After each call to $xref/Forward/$$,
-the object $italic f$$ contains the corresponding 
-$xref/glossary/Taylor Coefficient/Taylor coefficients/$$.
-After $code RevTwo$$,
-the previous calls to $xref/Forward/$$ are undefined.
+After each call to $cref Forward$$,
+the object $icode f$$ contains the corresponding 
+$cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
+After a call to $code RevTwo$$,
+the zero order Taylor coefficients correspond to
+$icode%f%.Forward(0, %x%)%$$
+and the other coefficients are unspecified.
 
 $head Examples$$
 $children%
 	example/rev_two.cpp
 %$$
 The routine 
-$xref/RevTwo.cpp//RevTwo/$$ is both an example and test.
+$cref/RevTwo/rev_two.cpp/$$ is both an example and test.
 It returns $code true$$, if it succeeds and $code false$$ otherwise.
 
 $end

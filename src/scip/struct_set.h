@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -134,13 +134,18 @@ struct SCIP_Set
    SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
-   char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */
+   char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */
+   char                  branch_firstsbchild;/**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
    SCIP_Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction
                                               *   in sum score function */
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
+   SCIP_Bool             branch_forceall;    /**< should all strong branching children be regarded even if
+                                              *   one is detected to be infeasible? (only with propagation) */
+   SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
+   SCIP_Bool             branch_roundsbsol;  /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
@@ -254,7 +259,9 @@ struct SCIP_Set
    SCIP_Bool             lp_cleanuprows;     /**< should new basic rows be removed after LP solving? */
    SCIP_Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
    SCIP_Bool             lp_checkstability;  /**< should LP solver's return status be checked for stability? */
-   SCIP_Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
+   SCIP_Real             lp_conditionlimit;  /**< maximum condition number of LP basis counted as stable (-1.0: no check) */
+   SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
+   SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
    SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
@@ -263,7 +270,7 @@ struct SCIP_Set
    int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualstalling; /**< turn on the lex dual algorithm only when stalling? */
-   SCIP_Bool             lp_disablecutoff;   /**< disables the cutoff bound in the LP solver */
+   int                   lp_disablecutoff;   /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
    SCIP_Real             lp_rowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    int                   lp_threads;         /**< number of threads used for solving the LP (0: automatic) */
@@ -284,7 +291,7 @@ struct SCIP_Set
    int                   mem_arraygrowinit;  /**< initial size of dynamically allocated arrays */
    int                   mem_treegrowinit;   /**< initial size of tree array */
    int                   mem_pathgrowinit;   /**< initial size of path array */
-   
+
    /* miscellaneous settings */
    SCIP_Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
    SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */
@@ -293,6 +300,8 @@ struct SCIP_Set
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
                                                *   (-1: no permutation) */
+   SCIP_Bool             misc_permuteconss;  /**< should order of constraints be permuted (depends on permutationseed)? */
+   SCIP_Bool             misc_permutevars;   /**< should order of variables be permuted (depends on permutationseed)? */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
@@ -304,6 +313,7 @@ struct SCIP_Set
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
    SCIP_Bool             misc_reusesols;     /**< should solutions from orig space used in primal space after transformation? */
+   SCIP_Bool             misc_finitesolstore;/**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -385,6 +395,8 @@ struct SCIP_Set
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
    SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
+   SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
    char                  sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
                                               *   'd'iscrete) */
@@ -419,6 +431,9 @@ struct SCIP_Set
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
+   int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
+                                              *   0; using this parameter we can change the starting index to be
+                                              *   different */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -109,7 +109,7 @@ SCIP_RETCODE readCnfLine(
       *buffer = '\0';
 
    assert((line == NULL) == (*buffer == '\0'));
- 
+
    return SCIP_OKAY;
 }
 
@@ -245,7 +245,7 @@ SCIP_RETCODE readCnf(
 
                clausenum++;
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "c%d", clausenum);
-               
+
                if( SCIPfindConshdlr(scip, "logicor") != NULL )
                {
                   /* if the constraint handler logicor exit create a logicor constraint */
@@ -265,9 +265,9 @@ SCIP_RETCODE readCnf(
                    * constraint */
                   SCIP_Real* vals;
                   int i;
-                  
+
                   SCIP_CALL( SCIPallocBufferArray(scip, &vals, clauselen) );
-                  
+
                   for( i = 0; i < clauselen; ++i )
                      vals[i] = 1.0;
 
@@ -289,7 +289,7 @@ SCIP_RETCODE readCnf(
                   retcode = SCIP_READERROR;
                   goto TERMINATE;
                }
-         
+
                /* add literal to clause */
                varnum = ABS(v)-1;
                if( v < 0 )
@@ -366,7 +366,7 @@ SCIP_DECL_READERCOPY(readerCopyCnf)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
- 
+
    return SCIP_OKAY;
 }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,20 +35,20 @@ extern "C" {
 #endif
 
 /** creates VBCTool data structure */
-extern
+EXTERN
 SCIP_RETCODE SCIPvbcCreate(
    SCIP_VBC**            vbc,                /**< pointer to store the VBC information */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** frees VBC Tool data structure */
-extern
+EXTERN
 void SCIPvbcFree(
    SCIP_VBC**            vbc                 /**< pointer to store the VBC information */
    );
 
 /** initializes VBC information and creates a file for VBC output */
-extern
+EXTERN
 SCIP_RETCODE SCIPvbcInit(
    SCIP_VBC*             vbc,                /**< VBC information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPvbcInit(
    );
 
 /** closes the VBC output file */
-extern
+EXTERN
 void SCIPvbcExit(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -65,7 +65,7 @@ void SCIPvbcExit(
    );
 
 /** creates a new node entry in the VBC output file */
-extern
+EXTERN
 SCIP_RETCODE SCIPvbcNewChild(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPvbcUpdateChild(
    );
 
 /** changes the color of the node to the color of solved nodes */
-extern
+EXTERN
 void SCIPvbcSolvedNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -89,7 +89,7 @@ void SCIPvbcSolvedNode(
    );
 
 /** changes the color of the node to the color of cutoff nodes */
-extern
+EXTERN
 void SCIPvbcCutoffNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -97,7 +97,7 @@ void SCIPvbcCutoffNode(
    );
 
 /** changes the color of the node to the color of nodes where a conflict constraint was found */
-extern
+EXTERN
 void SCIPvbcFoundConflict(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -105,7 +105,7 @@ void SCIPvbcFoundConflict(
    );
 
 /** changes the color of the node to the color of nodes that were marked to be repropagated */
-extern
+EXTERN
 void SCIPvbcMarkedRepropagateNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -113,7 +113,7 @@ void SCIPvbcMarkedRepropagateNode(
    );
 
 /** changes the color of the node to the color of repropagated nodes */
-extern
+EXTERN
 void SCIPvbcRepropagatedNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -121,7 +121,7 @@ void SCIPvbcRepropagatedNode(
    );
 
 /** changes the color of the node to the color of nodes with a primal solution */
-extern
+EXTERN
 void SCIPvbcFoundSolution(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -130,7 +130,7 @@ void SCIPvbcFoundSolution(
    );
 
 /** outputs a new global lower bound to the VBC output file */
-extern
+EXTERN
 void SCIPvbcLowerbound(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -138,7 +138,7 @@ void SCIPvbcLowerbound(
    );
 
 /** outputs a new global upper bound to the VBC output file */
-extern
+EXTERN
 void SCIPvbcUpperbound(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */

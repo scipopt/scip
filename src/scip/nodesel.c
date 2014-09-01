@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,6 +48,27 @@
 #define PQ_LEFTCHILD(p) (2*(p)+1)
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
 
+
+/** node comparator for node numbers */
+static
+SCIP_DECL_SORTPTRCOMP(nodeCompNumber)
+{  /*lint --e{715}*/
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   if( ((SCIP_NODE*)elem1)->number < ((SCIP_NODE*)elem2)->number )
+      return -1;
+   else if( ((SCIP_NODE*)elem1)->number > ((SCIP_NODE*)elem2)->number )
+      return +1;
+   else
+   {
+      /* no such two nodes should have the same node number */
+      assert(elem1 == elem2);
+      return 0;
+   }
+}
+
+
 /** resizes node memory to hold at least the given number of nodes */
 static
 SCIP_RETCODE nodepqResize(
@@ -57,7 +78,7 @@ SCIP_RETCODE nodepqResize(
    )
 {
    assert(nodepq != NULL);
-   
+
    if( minsize <= nodepq->size )
       return SCIP_OKAY;
 
@@ -120,7 +141,7 @@ SCIP_RETCODE SCIPnodepqFree(
 
    /* free the nodes of the queue */
    SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventqueue, tree, lp) );
-   
+
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
 
@@ -142,12 +163,22 @@ SCIP_RETCODE SCIPnodepqClear(
 
    assert(nodepq != NULL);
 
-   /* free the nodes of the queue */
-   for( i = 0; i < nodepq->len; ++i )
+   if( nodepq->len > 0 )
    {
-      assert(nodepq->slots[i] != NULL);
-      assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
-      SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, eventqueue, tree, lp) );
+      /* sort the sorts downwards after their number to increase speed when freeing in debug mode */
+      /* @todo: if a node is freed, the parent will also be freed, if no children are left; maybe we want to free all
+       *        nodes in the order of decreasing node numbers
+       */
+      SCIPsortDownPtr((void**)nodepq->slots, nodeCompNumber, nodepq->len);
+
+      /* free the nodes of the queue */
+      for( i = 0; i < nodepq->len; ++i )
+      {
+         assert(nodepq->slots[i] != NULL);
+         assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
+
+         SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, eventqueue, tree, lp) );
+      }
    }
 
    /* reset data */
@@ -187,19 +218,19 @@ SCIP_RETCODE SCIPnodepqSetNodesel(
 
       /* create new node priority queue */
       SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
-      
+
       /* resize the new node priority queue to be able to store all nodes */
       SCIP_CALL( nodepqResize(newnodepq, set, (*nodepq)->len) );
-      
+
       /* insert all nodes in the new node priority queue */
       for( i = 0; i < (*nodepq)->len; ++i )
       {
          SCIP_CALL( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
       }
-      
+
       /* destroy the old node priority queue without freeing the nodes */
       SCIPnodepqDestroy(nodepq);
-      
+
       /* use the new node priority queue */
       *nodepq = newnodepq;
    }
@@ -264,7 +295,7 @@ SCIP_RETCODE SCIPnodepqInsert(
       pos = PQ_PARENT(pos);
    }
    slots[pos] = node;
-   
+
    /* insert the final position into the bfs index queue */
    lowerbound = SCIPnodeGetLowerbound(node);
    bfspos = nodepq->len-1;
@@ -463,7 +494,7 @@ int nodepqFindNode(
 
    if( pos == nodepq->len )
       pos = -1;
-   
+
    return pos;
 }
 
@@ -1017,7 +1048,7 @@ void SCIPnodeselSetMemsavePriority(
 {
    assert(nodesel != NULL);
    assert(set != NULL);
-   
+
    nodesel->memsavepriority = priority;
    set->nodesel = NULL;
 }

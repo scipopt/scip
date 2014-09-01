@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -136,6 +137,16 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
+   );
+
+/** indicates whether a cut is applicable
+ *
+ * A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
+ */
+extern
+SCIP_Bool SCIPsepastoreIsCutApplicable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< cut to check */
    );
 
 /** get cuts in the separation storage */
