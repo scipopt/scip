@@ -6779,6 +6779,7 @@ SCIP_RETCODE generateCut(
    lhs = -SCIPinfinity(scip);
    rhs = SCIPinfinity(scip);
    cutname[0] = '\0';
+   rowefficacy = 0.0;
 
    /* if constraint function is factorable, then try to use factorable form to generate cut */
    if( consdata->factorleft != NULL )
