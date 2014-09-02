@@ -9,9 +9,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef CRC32_H
-#define CRC32_H
+#ifndef STP_CRC32_H
+#define STP_CRC32_H
 
-unsigned int crc32(const unsigned char*, unsigned int);
+unsigned int STPcrc32(const unsigned char*, unsigned int);
 
 #endif /* CRC32_H */
