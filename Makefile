@@ -443,6 +443,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
 			scip/lp.o \
+			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/nlp.o \
