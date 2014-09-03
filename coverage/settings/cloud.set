@@ -1,0 +1,6 @@
+# SCIP version 3.0.2.1
+
+# priority of branching rule <cloud>
+# [type: int, range: [-536870912,536870911], default: 0]
+branching/cloud/priority = 10000000
+
