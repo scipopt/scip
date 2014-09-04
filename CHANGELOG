@@ -44,6 +44,7 @@ fixed bugs:
   SCIPvarIsBinary() returned true
 - treat activities of pseudo solutions as invalid when containing positive and negative infinity contributions
 - fixed bug in cons_setppc, wrongly aggregating variables if dual-presolving was disabled
+- fixed bug that objective limit was not reset correctly during SCIPfreeTransform() for maximization problems
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
