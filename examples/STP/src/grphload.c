@@ -85,7 +85,6 @@ struct key
 #define KEY_TERMINALS_T          3003
 #define KEY_TERMINALS_TP         3004
 #define KEY_TERMINALS_ROOT       3005
-//#define KEY_TERMINALS_T2          3006
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -109,6 +108,11 @@ struct key
 #define KEY_PRESOLVE_LOWER       5003
 #define KEY_PRESOLVE_UPPER       5004
 #define KEY_PRESOLVE_TIME        5005
+#define KEY_PRESOLVE_EA          5006
+#define KEY_PRESOLVE_EC          5007
+#define KEY_PRESOLVE_ED          5008
+#define KEY_PRESOLVE_ES          5009
+
 
 #define KEY_NODEWEIGHTS_NW       6000
 
@@ -155,9 +159,14 @@ static const struct key keyword_table[] =
       {  "nodeweights.nw",           KEY_NODEWEIGHTS_NW,         "n"         },
 
       {  "presolve.date",            KEY_PRESOLVE_DATE,          "s"         },
+      {  "presolve.ea",              KEY_PRESOLVE_ED,            "nnnn"      },
+      {  "presolve.ec",              KEY_PRESOLVE_EC,            "nnn"       },
+      {  "presolve.ed",              KEY_PRESOLVE_ED,            "nnn"       },
       {  "presolve.end",             KEY_END,                    NULL        },
+      {  "presolve.es",              KEY_PRESOLVE_ES,            "nn"        },
       {  "presolve.fixed",           KEY_PRESOLVE_FIXED,         "n"         },
       {  "presolve.lower",           KEY_PRESOLVE_LOWER,         "n"         },
+      {  "presolve.orgnodes",        KEY_EOF,                    "n"         },
       {  "presolve.time",            KEY_PRESOLVE_TIME,          "n"         },
       {  "presolve.upper",           KEY_PRESOLVE_UPPER,         "n"         },
 
@@ -171,7 +180,6 @@ static const struct key keyword_table[] =
       {  "terminals.end",            KEY_TERMINALS_END,          NULL        },
       {  "terminals.root",           KEY_TERMINALS_ROOT,         "n"         },
       {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
-      //{  "terminals.t",              KEY_TERMINALS_T2,            "nn"         },
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
    };
@@ -335,7 +343,6 @@ static int get_arguments(
    int i;
    int decimal_spaces;
    char is_negative;
-   //char first = TRUE;
    assert(format != NULL);
    assert(s      != NULL);
    assert(para   != NULL);
@@ -421,9 +428,6 @@ static int get_arguments(
       else
       {
          para++;
-	 //if( stp_type == STP_MAX_NODE_WEIGHT && first == TRUE )
-         //first = FALSE;
-	 //else
          format++;
 
       }
@@ -548,7 +552,7 @@ static int start_section(
          message(MSG_FATAL, curf, err_badsect_s, sectname);
       else
       {
-         if (temp.section->mark & SECTION_EXISTEND)
+         if (0 && temp.section->mark & SECTION_EXISTEND)
             message(MSG_FATAL, curf, err_duplicate_s, sectname);
          else
          {
@@ -911,22 +915,23 @@ GRAPH* graph_load(
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
          {
-	    const char* format;
+	    char* format = (char*) p->format;
             assert(p != NULL);
 
             message(MSG_DEBUG, &curf, msg_keyword_sd, p->keyword, p->sw_code);
 
             /* Yes, so lets get the rest of the line if possible
              */
-	    if( stp_type == STP_MAX_NODE_WEIGHT && p->format != NULL && p->sw_code == KEY_TERMINALS_T )
+	    if( stp_type == STP_MAX_NODE_WEIGHT && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
 	    {
-	       printf("format before: %s \n", p->format);
-	       format = "nn";
+               if( p->sw_code == KEY_TERMINALS_T)
+                  format = (char*)"nn";
+               else if( p->sw_code == KEY_GRAPH_E )
+                  format = (char*)"nn";
 	    }
-	    else
-	       format = p->format;
+
             if ((p->format == NULL)
-               || !get_arguments(stp_type, &curf, format, s, para))
+               || !get_arguments(stp_type, &curf, (const char*) format, s, para))
             {
                /* Now, what should we do ?
                 */
@@ -978,6 +983,7 @@ GRAPH* graph_load(
 		  if( strcmp(para[0].s, "Maximum Node Weight Connected Subgraph") == 0 )
 		  {
 		     stp_type = STP_MAX_NODE_WEIGHT;
+		     printf("Maximum Node Weight Connect \n");
 		  }
                   break;
                case KEY_COMMENT_REMARK :
@@ -1006,7 +1012,12 @@ GRAPH* graph_load(
 		     else
 		        g->stp_type = stp_type;
                   }
-                  if (((int)para[0].n <= nodes) && ((int)para[1].n <= nodes))
+
+                  if(((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) && stp_type == STP_MAX_NODE_WEIGHT)
+		  {
+		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
+		  }
+                  else if (((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) )
                   {
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1,
                         (double)para[2].n,
@@ -1060,11 +1071,11 @@ GRAPH* graph_load(
 		  nwcount++;
 		  break;
 	       case KEY_TERMINALS_END :
-
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
 		     assert(nodes == termcount);
 		     graph_maxweight_transform(g, maxnodeweights);
+		     assert(g->stp_type == STP_MAX_NODE_WEIGHT );
 		     free(maxnodeweights);
 		  }
 
@@ -1073,6 +1084,7 @@ GRAPH* graph_load(
                case KEY_TERMINALS_TERMINALS :
 		  terms = (int)para[0].n;
 		  assert(terms > 0);
+
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
                      assert(maxnodeweights == NULL);
@@ -1097,7 +1109,9 @@ GRAPH* graph_load(
 		  {
 		     assert(maxnodeweights != NULL);
 		     maxnodeweights[(int)para[0].n - 1] = (double)para[1].n;
-		     printf("maxnodeweight: %f \n", (double)para[1].n);
+		     if( GT((double)para[1].n, 0.0) )
+                        presol->fixed -= (double)para[1].n;
+                     /*  printf("maxnodeweight: %f \n", (double)para[1].n);*/
 		     termcount++;
 		  }
 		  else
@@ -1183,6 +1197,14 @@ GRAPH* graph_load(
                   if (presol != NULL)
                      presol->time = (int)para[0].n;
                   break;
+	       case KEY_PRESOLVE_EA :
+		  break;
+	       case KEY_PRESOLVE_EC :
+		  break;
+	       case KEY_PRESOLVE_ED :
+		  break;
+	       case KEY_PRESOLVE_ES :
+		  break;
                default :
                   /* CONSTCOND */
                   assert(FALSE);
@@ -1215,7 +1237,7 @@ GRAPH* graph_load(
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
                g->source[0] = i;
       }
-      else if( g->stp_type != STP_GRID )
+      else if( stp_type == -1 )
       {
          g->stp_type = STP_DIRECTED;
       }

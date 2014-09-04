@@ -28,7 +28,6 @@
 #define STP_GRID                    6
 #define STP_MAX_NODE_WEIGHT         7
 
-#include "heur_tm.h"
 #include "scip/scip.h"
 #include "misc_stp.h"
 typedef struct
@@ -62,7 +61,7 @@ typedef struct
     */
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
-   double* cost;   /* Array [0..edges-1] of positiv edge costs    */
+   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs    */
    int*    tail;   /* Array [0..edges-1] of knot-number of tail   */
                    /* of edge [i]                                 */
    int*    head;   /* Array [0..edges-1] of knot-number of head   */
@@ -175,19 +174,20 @@ extern void   graph_uncover(GRAPH*);
 extern GRAPH* graph_pack(GRAPH*);
 extern void   graph_trail(const GRAPH*, int i);
 extern int    graph_valid(const GRAPH*);
+extern char    graph_sol_valid(const GRAPH*, int*);
 
 /* grphpath.c
  */
 extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
-extern void   graph_path_exec(const GRAPH*, int, int, const double*, PATH*);
+extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
-extern void   voronoi(const GRAPH*, const double*, const double*, char*, int*, PATH*);
+extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   heap_add(int*, int*, int*, int, PATH*);
-extern void   voronoi_repair(SCIP*, const GRAPH*, const double*, int*, int*, PATH*, int*, int, UF*);
-extern void   voronoi_repair_mult(SCIP*, const GRAPH*, const double*, int*, int*, int*, int*, char*, UF*, PATH*);
-extern SCIP_RETCODE  voronoi_extend(SCIP*, const GRAPH*, const double*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
-extern SCIP_RETCODE  voronoi_extend2(SCIP*, const GRAPH*, const double*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
+extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
+extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, char*, UF*, PATH*);
+extern SCIP_RETCODE  voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
+extern SCIP_RETCODE  voronoi_extend2(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE  voronoi_extend3(SCIP*, const GRAPH*, const double*, PATH*, GNODE***, int**, int**, char*, int*, int*, int*, int, int, int);
 
 

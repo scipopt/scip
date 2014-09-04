@@ -28,7 +28,7 @@
 #define __SCIP_HEUR_TM_H__
 
 #include "scip/scip.h"
-
+#include "grph.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,6 +37,16 @@ extern "C" {
    extern
    SCIP_RETCODE SCIPincludeHeurTM(
       SCIP*                 scip                /**< SCIP data structure */
+      );
+
+   extern
+   SCIP_RETCODE do_prune(
+      SCIP*                 scip,               /**< SCIP data structure */
+      const GRAPH*          g,                  /**< graph structure */
+      SCIP_Real*            cost,               /**< edge costs */
+      int                   layer,
+      int*                  result,             /**< ST edges */
+      char*                 connected           /**< ST nodes */
       );
 
 #ifdef __cplusplus

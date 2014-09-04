@@ -449,9 +449,9 @@ SCIP_RETCODE createPrizeConstraints(
 
    SCIPdebugPrintf("createPrizeConstraints \n");
 
-
-   // SCIP_CALL( SCIPallocMemory(scip, &(probdata->prizecons)) );
-
+#if 0
+   SCIP_CALL( SCIPallocMemory(scip, &(probdata->prizecons)) );
+#endif
 
    (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeConstraint");
    SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
@@ -641,7 +641,6 @@ SCIP_RETCODE createVariables(
    {
       int nedges = probdata->nedges;
       int nvars = probdata->nvars;
-      int nlayers = probdata->nlayers;
       int realnterms = probdata->realnterms;
       int root = graph->source[0];
       int nnodes = graph->knots;
@@ -653,7 +652,7 @@ SCIP_RETCODE createVariables(
       /* Cut mode */
       if( probdata->mode == MODE_CUT )
       {
-	 assert(nlayers == 1);
+	 assert(probdata->nlayers == 1);
          for( k = 0; k < 1; ++k )
          {
             for( e = 0; e < nedges; ++e )
@@ -690,14 +689,14 @@ SCIP_RETCODE createVariables(
 	    }
 	 }
 	 /* PRIZECOLLECTING STP? */
-         if( graph->stp_type == STP_PRIZE_COLLECTING )
+         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
 	 {
 	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
             {
                if( !Is_term(graph->term[graph->head[e]]) )
                {
                   SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
-                  printf("add to cons %d %d \n", graph->tail[e], graph->head[e] );
+                  /*printf("add to cons %d %d \n", graph->tail[e], graph->head[e] );*/
                }
             }
 	 }
@@ -1254,25 +1253,68 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
    graph = probd->graph;
    if( graph != NULL && graph->stp_type == STP_GRID )
    {
-
       sol = SCIPgetBestSol(scip);
 
+      /* print the coordinates of the best solution */
       if( sol != NULL )
       {
+	 SCIP_QUEUE* queue;
          int**  coords;
          int*  ncoords;
          int*  nodecoords;
          int e;
          int i;
+	 int* pnode;
+	 int root;
+	 int size = 0;
          int grid_dim;
 
 	 coords = graph->grid_coordinates;
+	 assert(coords != NULL);
 	 ncoords = graph->grid_ncoords;
 	 nodecoords = NULL;
+	 root = graph->source[0];
+	 assert(root >= 0);
 	 grid_dim = graph->grid_dim;
+	 assert(grid_dim > 1);
          edgevars = probd->edgevars;
 	 assert(ncoords != NULL);
-	 assert(coords != NULL);
+
+	 /* BFS until all terminals are reached */
+	 SCIP_CALL( SCIPqueueCreate(&queue, size, 2) );
+         for( e = 0; e < graph->edges; e++ )
+            if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
+               size++;
+	 assert(size > 0);
+
+	 SCIP_CALL( SCIPqueueInsert(queue, &root) );
+	 printf("Coordinates of the best found solution: \n");
+	 while( !SCIPqueueIsEmpty(queue) )
+	 {
+            pnode = (SCIPqueueRemove(queue));
+            for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+	       if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
+	       {
+	          graph_grid_coordinates(coords, &nodecoords, ncoords, graph->tail[e], grid_dim);
+                  printf("(%d", nodecoords[0]);
+                  for( i = 1; i < grid_dim; i++ )
+                     printf(", %d", nodecoords[i]);
+                  printf(") --> ");
+                  graph_grid_coordinates(coords, &nodecoords, ncoords, graph->head[e], grid_dim);
+                  printf("(%d", nodecoords[0]);
+                  for( i = 1; i < grid_dim; i++ )
+                     printf(", %d", nodecoords[i]);
+                  printf(") \n");
+
+		  SCIP_CALL( SCIPqueueInsert(queue, &(graph->head[e])) );
+	       }
+	    }
+	 }
+
+	 SCIPqueueFree(&queue);
+
+#if 0
          for( e = 0; e < graph->edges; e++ )
             if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
             {
@@ -1287,6 +1329,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
                   printf(", %d", nodecoords[i]);
                printf(") \n");
             }
+#endif
          free(nodecoords);
       }
    }
@@ -1390,15 +1433,11 @@ SCIP_RETCODE SCIPprobdataCreate(
       graph->source[0] = central_terminal(graph, compcentral);
 
    if( graph->stp_type == STP_PRIZE_COLLECTING )
-   {
       graph_prize_transform(graph);
-      //SCIP_CALL( probdataPrintGraph(graph, "prizedGraph.gml", NULL) );
-   }
+
    /* print the graph */
    if( print )
-   {
       SCIP_CALL( probdataPrintGraph(graph, "OriginalGraph.gml", NULL) );
-   }
 
    /* presolving */
    offset = reduce(graph, reduction);
@@ -1422,9 +1461,7 @@ SCIP_RETCODE SCIPprobdataCreate(
          graph_mincut_init(graph);
 
       if( print )
-      {
          SCIP_CALL( probdataPrintGraph(graph, "ReducedGraph.gml", NULL) );
-      }
 
       nedges = graph->edges;
       nnodes = graph->knots;
@@ -1462,7 +1499,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 	 if( graph->stp_type == STP_DEG_CONS )
 	    SCIP_CALL( createDegreeConstraints(scip, probdata) );
 
-	 if( graph->stp_type == STP_PRIZE_COLLECTING )
+	 if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT)
             SCIP_CALL( createPrizeConstraints(scip, probdata) );
       }
       else
@@ -1658,19 +1695,27 @@ SCIP_Real* SCIPprobdataGetXval(
    )
 {
    SCIP_PROBDATA* probdata;
-
+   SCIP_Real* vals;
+   int e;
+   int nedges;
    assert(scip != NULL);
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-
+   vals = probdata->xval;
+   assert(vals != NULL);
+   nedges = probdata->nedges;
+   assert(nedges > 0);
    /*if( probdata->lastlpiters < SCIPgetNLPIterations(scip) )*/
    {
-      SCIP_CALL_ABORT( SCIPgetSolVals(scip, sol, probdata->nvars, probdata->edgevars, probdata->xval) );
+      SCIP_CALL_ABORT( SCIPgetSolVals(scip, sol, nedges, probdata->edgevars, vals) );
       /*probdata->lastlpiters = SCIPgetNLPIterations(scip);*/
    }
 
-   return probdata->xval;
+   for( e = 0; e < nedges; e++ )
+      vals[e] = fmax(0.0, fmin(vals[e], 1.0));
+
+   return vals;
 }
 
 

@@ -429,6 +429,8 @@ static int czv_reduction(
       }
       /* Da ja Grad > 1 war muesste es die Kanten geben
        */
+      if( e2 < 0 )
+         printf("Error in czv_reduction (will be ignored) \n");
       assert(e1 >= 0);
       assert(e2 >= 0);
       assert(e1 != e2);

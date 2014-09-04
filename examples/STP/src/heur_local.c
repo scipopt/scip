@@ -26,6 +26,7 @@
 #include "heur_local.h"
 #include "probdata_stp.h"
 #include "grph.h"
+
 /* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
  *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
  */
@@ -186,6 +187,7 @@ static
 int stdeg(
    const GRAPH* graph,
    int* steineredges,
+   char* steinernodes,
    int node
    )
 {
@@ -201,7 +203,7 @@ int stdeg(
    while( e >= 0 )
    {
       /* check whether edge 'e' is in the ST */
-      if( steineredges[e] > -1 || steineredges[flipedge(e)] > -1 )
+      if( steineredges[e] > -1 && steinernodes[graph->head[e]] )
       {
          counter++;
       }
@@ -291,7 +293,7 @@ SCIP_RETCODE printGraph(
 
    return SCIP_OKAY;
 }
-
+static int SS=0;
 
 static
 SCIP_RETCODE do_local(
@@ -310,8 +312,9 @@ SCIP_RETCODE do_local(
    int root;
    int nnodes;
    int nedges;
+   int nimprovements = 0;
    char* steinertree;
-   printf("DO LOCAL \n");
+   printf("local heuristic running \n");
    root = graph->source[0];
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -329,7 +332,7 @@ SCIP_RETCODE do_local(
       assert(graph->head[e] == graph->tail[flipedge(e)]);
 
       /* if edge e is in the tree, so are its incident vertices */
-      if( best_result[e] != -1 )
+      if( best_result[e] == CONNECT )
       {
          steinertree[graph->tail[e]] = TRUE;
          steinertree[graph->head[e]] = TRUE;
@@ -601,10 +604,12 @@ SCIP_RETCODE do_local(
 
       for( e = 0; e < nedges; e++)
       {
-         /*if(best_result[e] > -1)
+         /*if(best_result[e] == CONNECT )
 	   printf("st edge: %d->%d \n", graph->tail[e], graph->head[e]);*/
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
       }
+
+      assert(graph_sol_valid(graph, best_result));
       if( debg )
          printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
       graphmark = graph->mark;
@@ -634,15 +639,17 @@ SCIP_RETCODE do_local(
       SCIP_CALL( SCIPallocBufferArray(scip, &dfstree, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nodesmark, nnodes) );
 
-      /*  const char baseo[] = "X/org";
-          char filenameo [ FILENAME_MAX ];
-          sprintf(filenameo, "%s%d.gml", baseo, debcount);
-          SCIP_CALL( printGraph(scip, graph, filenameo, best_result) );
-      */
       for( nruns = 0; nruns < 3 && localmoves > 0; nruns++ )
       {
          localmoves = 0;
+         if(0)
+         {
+            const char base[] = "X/graphbeflocal";
+            char filename [ FILENAME_MAX ];
+            sprintf(filename, "%s%d_%d.gml", base, SS, nruns);
+            SCIP_CALL( printGraph(scip, graph, filename, best_result) );
 
+         }
          /* initialize data structures */
          SCIPunionfindInit(scip, &uf, nnodes);
 
@@ -658,13 +665,15 @@ SCIP_RETCODE do_local(
          SCIP_CALL( SCIPallocBufferArray(scip, &kpedges, nstnodes) );
 
          /* compute a voronoi diagram with the ST nodes as bases */
-         voronoi(graph, graph->cost, graph->cost, steinertree, vbase, vnoi);
-         state = graph->path_state;
+         voronoi(scip, graph, graph->cost, graph->cost, steinertree, vbase, vnoi);
 
+         state = graph->path_state;
          /* initialize data structures  */
          for( k = 0; k < nnodes; k++ )
          {
-            assert(state[k] == CONNECT);
+            if( state[k] != CONNECT )
+               printf("not conn! %d\n", k);
+	    assert(state[k] == CONNECT);
 	    graphmark[k] = TRUE;
             pinned[k] = FALSE;
             nodesmark[k] = FALSE;
@@ -730,79 +739,23 @@ SCIP_RETCODE do_local(
          {
             crucnode = dfstree[i];
 	    scanned[crucnode] = TRUE;
+
 	    if( debg )
                printf("iteration %d (%d) \n", i, crucnode);
 
 	    /*  has the node been temporarily removed from the ST? */
 	    if( !graphmark[crucnode] )
-	    {
 	       continue;
-	    }
 
 	    /* is node 'crucnode' a removable crucial node? (i.e. not pinned or a terminal) */
             if( !pinned[crucnode] && !Is_term(graph->term[crucnode]) && nodeIsCrucial(graph, best_result, crucnode) )
 	    {
-               /* if current ST node is a terminal or pinned, update union-find structure and heaps before continuing */
-               if( !(1) && Is_term(graph->term[crucnode]) )//|| pinned[crucnode] )
-               {
-                  /* update union-find and pairing heaps: unite terminal 'crucnode' with all of its ancestor key-paths */
-                  for( edge = graph->outbeg[crucnode]; edge != EAT_LAST; edge = graph->oeat[edge] )
-                  {
-                     /* check whether edge 'edge' leads to an ancestor of terminal 'crucnode' */
-                     if( best_result[edge] != -1 && steinertree[graph->head[edge]] )
-                     {
-                        adjnode = graph->head[edge];
-
-                        /* meld the heaps */
-                        SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
-
-                        if( debg )
-                           printf( "unite 0 (%d) (%d) \n ",  crucnode, adjnode);
-                        /* update the union-find data structure */
-                        SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
-
-                        /* move along the key-path until its end (i.e. until a crucial node is reached) */
-                        while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
-                        {
-                           for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
-                           {
-                              if( best_result[e] != -1 )
-                                 break;
-                           }
-
-                           /* assert that each leaf of the ST is a terminal */
-                           /* TODO mustn be true after vertex insertion!!) */
-                           assert( e != EAT_LAST );
-                           adjnode = graph->head[e];
-                           if( !steinertree[adjnode] )
-                              break;
-
-                           if( debg )
-                              printf( "unite 1 (%d) (%d) \n ",  crucnode, adjnode);
-                           /* update the union-find data structure */
-                           SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
-
-                           /* meld the heaps */
-                           SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
-                        }
-                     }
-                  }
-                  continue;
-               }
-               if( !(1) && !nodeIsCrucial(graph, best_result, crucnode) )
-               {
-                  /* TODO replace*/
-                  assert( stdeg(graph, best_result, crucnode) <= 2 );
-                  continue;
-               }
                if (debg)
                   printf("Elimination: %d \n", crucnode);
 
                /* debug, TODO delete*/
                for( k = 0; k < nnodes; k++ )
-               {
                   assert( state[k] == CONNECT );
-               }
 
                /* find all (unique) key-paths starting in node 'crucnode' */
                k = UNKNOWN;
@@ -816,7 +769,7 @@ SCIP_RETCODE do_local(
                   if( (best_result[edge] > -1 && steinertree[graph->head[edge]]) || (best_result[flipedge(edge)] > -1 && steinertree[graph->tail[edge]]) )
                   {
                      kpcost += graph->cost[edge];
-                     //printf(" kpcost1 +  %f \n", graph->cost[edge]);
+
                      /* check whether the current edge leads to the ST root*/
                      if( best_result[flipedge(edge)] > -1 )
                      {
@@ -834,12 +787,12 @@ SCIP_RETCODE do_local(
                         while( !pinned[adjnode] && !nodeIsCrucial(graph, best_result, adjnode) && steinertree[adjnode] )
                         {
                            if( debg )
-                              printf( "unite 2 (%d) (%d) \n ",  crucnode, adjnode);
+                              printf( "unite in eliminate (%d) (%d) \n ",  crucnode, adjnode);
+
                            /* update the union-find data structure */
                            SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                            kpnodes[nkpnodes++] = adjnode;
-                           //printf(" kp node: %d \n", adjnode);
 
                            for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
                            {
@@ -851,6 +804,7 @@ SCIP_RETCODE do_local(
                                  break;
                               }
                            }
+
                            /* assert that each leaf of the ST is a terminal */
                            assert( e != EAT_LAST );
 
@@ -885,14 +839,12 @@ SCIP_RETCODE do_local(
                rootpathstart = nkpnodes;
                if( k != -1 )
                {
-                  //printf(" rootedge: %d_%d \n", graph->tail[nodes[crucnode].edge], graph->head[nodes[crucnode].edge]);
                   /* begin with the edge starting in the root-component of node 'crucnode' */
                   e = k;
                   adjnode = graph->tail[e];
                   while( !pinned[adjnode] && !nodeIsCrucial(graph, best_result, adjnode) && steinertree[adjnode] )
                   {
                      /* update the union-find data structure */
-                     //printf(" kp node root: %d \n", adjnode);
                      kpnodes[nkpnodes++] = adjnode;
 
                      for( e = graph->inpbeg[adjnode]; e != EAT_LAST; e = graph->ieat[e] )
@@ -957,8 +909,7 @@ SCIP_RETCODE do_local(
                      SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[l], &heapsize[l]);
 
                      node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
-                     adjnode = (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->tail[edge]]);
-                     assert(adjnode == l);
+                     assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
                      /*                    if ( edge != UNKNOWN )
                                            {
                                            printf("min edge from heap[%d]: %d_%d  |  ", l, graph->head[edge], graph->tail[edge]);
@@ -989,17 +940,15 @@ SCIP_RETCODE do_local(
 
                   /* check whether the current boundary-path connects two child components */
                   if( node != UNKNOWN && nodesmark[node] && adjnode != UNKNOWN && nodesmark[adjnode] )
-                     //  && !pinned[k] && !pinned[l] )
                   {
 		     assert(graphmark[node]);
 		     assert(graphmark[adjnode]);
-                     if( debg )
-		     {
-                        printf("ADD horizontal edge: %d_%d  \n ", graph->tail[edge], graph->head[edge]);
-			printf("ADD horizontal edge vbases: %d_%d  \n ", vbase[graph->tail[edge]], vbase[graph->head[edge]]);
-			printf("ADD horizontal edge ident: %d_%d  \n ", node, adjnode);
-
-		     }
+                     /*   if( debg )
+                          {
+                          printf("ADD horizontal edge: %d_%d  \n ", graph->tail[edge], graph->head[edge]);
+                          printf("ADD horizontal edge vbases: %d_%d  \n ", vbase[graph->tail[edge]], vbase[graph->head[edge]]);
+                          printf("ADD horizontal edge ident: %d_%d  \n ", node, adjnode);
+                          }*/
                      boundedges[nboundedges++] = edge;
                   }
                   lvledges_curr = lvledges_curr->parent;
@@ -1031,7 +980,8 @@ SCIP_RETCODE do_local(
                      }
                      if( vbase[node] != UNKNOWN )
                      {
-                        //printf("add to heap %d \n", node );
+		        if( debg )
+                           printf("add to heap %d \n", node );
                         heap_add(graph->path_heap, state, &count, node, vnoi);
                      }
                      blists_curr = blists_curr->parent;
@@ -1062,8 +1012,8 @@ SCIP_RETCODE do_local(
                for( l = 0; l < nboundedges; l++ )
                {
                   edge = boundedges[l];
-                  if( debg )
-                     printf("boundedgeALL: %d_%d  vbases: %d_%d \n ", graph->tail[edge], graph->head[edge],  vbase[graph->tail[edge]], vbase[graph->head[edge]]);
+                  /* if( debg )
+                     printf("boundedgeALL: %d_%d  vbases: %d_%d \n ", graph->tail[edge], graph->head[edge],  vbase[graph->tail[edge]], vbase[graph->head[edge]]);*/
                   node = SCIPunionfindFind(&uf, vbase[graph->tail[edge]]);
                   adjnode = SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
 
@@ -1096,24 +1046,20 @@ SCIP_RETCODE do_local(
                   else
                      edge = flipedge(boundedges[mst[l].edge / 2 ]);
 
-                  //printf(" MST egde: : %d -> %d \n", graph->tail[edge], graph->head[edge]);
                   mstcost += graph->cost[edge];
                   assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
 
                   /* mark the edge (in the original graph) as visited */
                   newedges[edge] = crucnode;
-                  //printf(" ADD edge: : %d -> %d \n", graph->tail[(edge)], graph->head[(edge)]);
 
                   /* traverse along the boundary-path belonging to the boundary-edge 'edge' */
                   for( node = graph->tail[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                   {
                      e = vnoi[node].edge;
-                     //printf(" edge: : %d -> %d \n", graph->tail[(e)], graph->head[(e)]);
 
                      /* if edge 'e' and its reversed have not been visited yet */
                      if( newedges[e] != crucnode && newedges[flipedge(e)] != crucnode )
                      {
-                        //printf(" ADD edge: : %d -> %d \n", graph->tail[(e)], graph->head[(e)]);
                         newedges[e] = crucnode;
                         mstcost += graph->cost[e];
                      }
@@ -1126,7 +1072,6 @@ SCIP_RETCODE do_local(
                      /* if edge 'e' and its reversed have not been visited yet */
                      if( newedges[vnoi[node].edge] != crucnode && newedges[e] != crucnode )
                      {
-                        //printf(" ADD edge: : %d -> %d \n", graph->tail[e], graph->head[e]);
                         newedges[e] = crucnode;
                         mstcost += graph->cost[e];
                      }
@@ -1137,13 +1082,9 @@ SCIP_RETCODE do_local(
                {
                   int added = 0;
                   int removed = 0;
-		  /*const char base2[] = "X/impro";
-                    char filename2 [ FILENAME_MAX ];
-                    sprintf(filename2, "%s%d.gml", base2, i);
-                    SCIP_CALL( printGraph(scip, graph, filename2, best_result) );
-                    printf("(run %d) \n ", i); */
 
                   localmoves++;
+		  nimprovements++;
                   //if( debg )
                   printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
@@ -1260,11 +1201,56 @@ SCIP_RETCODE do_local(
                         assert( graphmark[node] == TRUE );
 
                         /* is the pinned node its own component identifier? */
-                        if( !Is_term(graph->term[node]) && !pinned[node] && !scanned[node] )
+                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )//   !Is_term(graph->term[node]) )//TODO TODO TODO
                         {
                            oldedge = edge;
 			   if( debg )
-                              printf("A DAY IN THE LIFE \n \n");
+                              printf("A DAY IN THE LIFE ELIMINATE\n");
+
+                           for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
+                           {
+                              adjnode = graph->head[edge];
+                              /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
+                              if( best_result[edge] == CONNECT && steinertree[adjnode]  && SCIPunionfindFind(&uf, adjnode) != node )
+                              {
+
+                                 assert(scanned[adjnode]);
+                                 /* meld the heaps */
+                                 SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
+
+                                 if( debg )
+                                    printf( "unite eli pinned (%d) (%d) \n ",  node, adjnode);
+                                 /* update the union-find data structure */
+                                 SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+
+                                 /* move along the key-path until its end (i.e. until a crucial node is reached) */
+                                 while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
+                                 {
+                                    for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
+                                    {
+                                       if( best_result[e] != -1 )
+                                          break;
+                                    }
+
+                                    /* assert that each leaf of the ST is a terminal */
+                                    /* TODO mustn be true after vertex insertion!!) */
+                                    assert( e != EAT_LAST );
+                                    adjnode = graph->head[e];
+                                    if( !steinertree[adjnode]  )
+                                       break;
+                                    assert(scanned[adjnode]);
+                                    assert(SCIPunionfindFind(&uf, adjnode) != node);
+                                    if( debg )
+                                       printf( "unite eli pinned 1 (%d) (%d) \n ",  node, adjnode);
+                                    /* update the union-find data structure */
+                                    SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+
+                                    /* meld the heaps */
+                                    SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
+                                 }
+                              }
+                           }
+#if 0
                            /* move down the ST until a crucial or pinned node has been reached
                             * and check whether it has already been scanned */
                            for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
@@ -1301,10 +1287,13 @@ SCIP_RETCODE do_local(
                                        SCIPunionfindUnion(&uf, node, adjnode, FALSE);
                                        adjnode = graph->head[nodes[adjnode].edge];
                                     }
-                                 }
+                                 }else{
+                                    if( debg )
+				       printf( "not scanned: %d (%d) \n ",  adjnode, node);
+				 }
                               }
                            }
-
+#endif
                            edge = oldedge;
                         }
 
@@ -1388,6 +1377,15 @@ SCIP_RETCODE do_local(
                   assert(!graphmark[crucnode]);
                   //printf(" added : %d \n", added);
                   //printf("deleted %d \n", removed);
+                  if(0)
+                  {
+                     const char base[] = "X/removed";
+                     char filename [ FILENAME_MAX ];
+                     sprintf(filename, "%smove_:%d.gml", base, localmoves);
+                     SCIP_CALL( printGraph(scip, graph, filename, best_result) );
+                     //assert(++SS<10);
+                     assert(graph_sol_valid(graph, best_result));
+                  }
                }
                else
                {
@@ -1453,29 +1451,37 @@ SCIP_RETCODE do_local(
 	    /** Key-Path Exchange */
 	    if( 1 )
 	    {
+
                //printf("ST NODE: %d\n", crucnode);
                /* if the node has just been eliminated, skip Key-Path Exchange */
                if( !graphmark[crucnode] )
+	       {
+		  if( debg )
+                     printf("not marked: %d\n", crucnode);
                   continue;
-
+	       }
                /* is crucnode a crucial or pinned vertex? */
                if( (!nodeIsCrucial(graph, best_result, crucnode) && !pinned[crucnode]) )
+	       {
+		  if( debg )
+                     printf("not crucial and not pinned: %d\n", crucnode);
                   continue;
-
-	       if( Is_term(graph->term[crucnode]) )
+	       }
+	       if( Is_term(graph->term[crucnode]) || pinned[crucnode] )
 	       {
                   for( edge = graph->outbeg[crucnode]; edge != EAT_LAST; edge = graph->oeat[edge] )
                   {
 		     adjnode = graph->head[edge];
                      /* check whether edge 'edge' leads to an ancestor of terminal 'crucnode' */
-                     if( best_result[edge] == CONNECT && steinertree[adjnode] && SCIPunionfindFind(&uf, adjnode) != crucnode )
+                     if( best_result[edge] == CONNECT && steinertree[adjnode]  )
                      {
+                        assert( SCIPunionfindFind(&uf, adjnode) != crucnode);
 		        assert(scanned[adjnode]);
                         /* meld the heaps */
                         SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
 
-                        //if( debg )
-                        printf( "unite ART (%d) (%d) \n ",  crucnode, adjnode);
+                        if( debg )
+                           printf( "unite exch (%d) (%d) \n ",  crucnode, adjnode);
                         /* update the union-find data structure */
                         SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
@@ -1496,8 +1502,8 @@ SCIP_RETCODE do_local(
                               break;
                            assert(scanned[adjnode]);
 			   assert(SCIPunionfindFind(&uf, adjnode) != crucnode);
-                           //if( debg )
-                           printf( "unite ART 1 (%d) (%d) \n ",  crucnode, adjnode);
+                           if( debg )
+                              printf( "unite exch 1 (%d) (%d) \n ",  crucnode, adjnode);
                            /* update the union-find data structure */
                            SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
@@ -1513,9 +1519,7 @@ SCIP_RETCODE do_local(
                nkpnodes = 0;
 
                for( k = 0; k < nnodes; k++ )
-               {
                   assert( state[k] == CONNECT);
-               }
 
                /* find the (unique) key-path containing the parent of the current crucial node 'crucnode' */
                kptailnode = graph->head[nodes[crucnode].edge];
@@ -1545,7 +1549,6 @@ SCIP_RETCODE do_local(
                   while( blists_curr != NULL )
                   {
                      node = blists_curr->index;
-                     //printf("C-node %d \n", blists_curr->index);
                      memvbase[nresnodes] = vbase[node];
                      memdist[nresnodes] =  vnoi[node].dist;
                      meminedges[nresnodes] = vnoi[node].edge;
@@ -1556,12 +1559,6 @@ SCIP_RETCODE do_local(
                      state[node] = UNKNOWN;
                      blists_curr = blists_curr->parent;
                   }
-
-                  /* update the union-find data structure
-                     if( k != 0 )
-                     {
-                     SCIPunionfindUnion(&uf, kpnodes[0], kpnodes[k], FALSE);
-                     } */
                }
 
                edgecost = UNKNOWN;
@@ -1697,15 +1694,10 @@ SCIP_RETCODE do_local(
                   bestdiff = edgecost - kpathcost;
                   node = SCIPunionfindFind(&uf, vbase[graph->head[newedge]]);
                   obj += bestdiff;
-                  /*   const char bas[] = "X/exchange";
-                       char filenam [ FILENAME_MAX ];
-                       sprintf(filenam, "%s%d.gml", bas, i);
-
-                       SCIP_CALL( printGraph(scip, graph, filenam, best_result) ); */
 		  //if( debg )
                   printf( "ADDING NEW KEY PATH (%f )\n", bestdiff );
                   localmoves++;
-
+                  nimprovements++;
                   /* remove old keypath */
                   assert(  best_result[flipedge(nodes[crucnode].edge)] != UNKNOWN );
                   best_result[flipedge(nodes[crucnode].edge)] = UNKNOWN;
@@ -1771,7 +1763,60 @@ SCIP_RETCODE do_local(
 
 		  newpathend = vbase[graph->tail[newedge]];
 		  assert(node == vbase[graph->head[newedge]] );
-		  pinned[node] = TRUE;
+
+                  /* update union find */
+                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )//&& !pinned[node] ) //&& (!scanned[node]    )//TODO TODO TODO
+                  {
+                     for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
+                     {
+                        adjnode = graph->head[edge];
+                        /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
+                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && SCIPunionfindFind(&uf, adjnode) != node )
+                        {
+
+                           assert(scanned[adjnode]);
+                           /* meld the heaps */
+                           SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
+
+                           if( debg )
+                              printf( "unite exch pinned (%d) (%d) \n ",  node, adjnode);
+                           /* update the union-find data structure */
+                           SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+
+                           /* move along the key-path until its end (i.e. until a crucial node is reached) */
+                           while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
+                           {
+                              for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
+                              {
+                                 if( best_result[e] != -1 )
+                                    break;
+                              }
+
+                              /* assert that each leaf of the ST is a terminal */
+                              /* TODO mustn be true after vertex insertion!!) */
+                              assert( e != EAT_LAST );
+                              adjnode = graph->head[e];
+                              if( !steinertree[adjnode]  )
+                                 break;
+                              assert(scanned[adjnode]);
+                              assert(SCIPunionfindFind(&uf, adjnode) != node);
+                              if( debg )
+                                 printf( "unite exch pinned 1 (%d) (%d) \n ",  node, adjnode);
+                              /* update the union-find data structure */
+                              SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+
+                              /* meld the heaps */
+                              SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
+                           }
+                        }
+                     }
+
+                  }
+                  pinned[node] = TRUE;
+
+		  if( debg )
+                     printf("pinned node: %d \n", node);
+
 
                   /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
                   k = newpathend;
@@ -1779,7 +1824,10 @@ SCIP_RETCODE do_local(
                   if( SCIPunionfindFind(&uf, newpathend) != crucnode )
                   {
                      printf(" newpath: %d crucnode: %d \n ", newpathend, crucnode);
-                     assert(0);
+
+
+		     //TODO
+                     // assert(0);
                   }
                   while( k != crucnode )
                   {
@@ -1803,13 +1851,24 @@ SCIP_RETCODE do_local(
 			steinertree[dfstree[k]] = FALSE;
 			if( debg )
                            printf("unmarkEx %d \n", dfstree[k]);
-                        //printf("graphmark node CHILDREDN: %d = FALSE; \n", dfstree[k]);
                      }
+                  }
+
+
+                  if(0)
+                  {
+                     const char base[] = "X/exchange";
+                     char filename [ FILENAME_MAX ];
+                     sprintf(filename, "%smove_:%d.gml", base, localmoves);
+                     SCIP_CALL( printGraph(scip, graph, filename, best_result) );
+                     // assert(++SS<10);
+                     assert(graph_sol_valid(graph, best_result));
+
                   }
                }
                else
                {
-                  if( Is_term(graph->term[kptailnode]) || pinned[kptailnode] )
+                  if( 0 && (Is_term(graph->term[kptailnode]) || pinned[kptailnode]) )
                   {
                      /* update union-find data structure
                         if( nkpnodes > 0 )
@@ -1821,10 +1880,6 @@ SCIP_RETCODE do_local(
                      for( k = 0; k < nkpnodes - 1; k++ )
                      {
                         SCIPpairheapMeldheaps(scip, &boundpaths[kpnodes[k + 1]], &boundpaths[kpnodes[k]], &heapsize[kpnodes[k + 1]], &heapsize[kpnodes[k]]);
-                        //printf("1merge %d, %d \n", kpnodes[k + 1], kpnodes[k ]);
-                        /*boundpaths[kpnodes[k + 1]] = phnode_mergeheaps(scip, boundpaths[kpnodes[k + 1]], boundpaths[kpnodes[k]]);
-                          heapsize[kpnodes[k + 1]] += heapsize[kpnodes[k]];
-                          boundpaths[kpnodes[k]] = NULL;*/
 
                         /* update union-find data structure */
                         SCIPunionfindUnion(&uf, crucnode, kpnodes[k], FALSE);
@@ -1835,24 +1890,15 @@ SCIP_RETCODE do_local(
                      if( nkpnodes > 0 )
                      {
                         SCIPpairheapMeldheaps(scip, &boundpaths[kptailnode], &boundpaths[kpnodes[nkpnodes - 1]], &heapsize[kptailnode], &heapsize[kpnodes[nkpnodes - 1]]);
-                        /*boundpaths[kptailnode] = phnode_mergeheaps(scip, boundpaths[kptailnode], boundpaths[kpnodes[nkpnodes - 1]]);
-                          heapsize[kptailnode] += heapsize[kpnodes[nkpnodes - 1]];
-                          boundpaths[kpnodes[nkpnodes - 1]] = NULL;*/
-
                         SCIPunionfindUnion(&uf, crucnode, kpnodes[nkpnodes - 1], FALSE);
-                        //printf("2merge %d, %d \n", kptailnode, kpnodes[nkpnodes - 1]);
                      }
 
                      SCIPpairheapMeldheaps(scip, &boundpaths[kptailnode], &boundpaths[crucnode], &heapsize[kptailnode], &heapsize[crucnode]);
-                     /*boundpaths[kptailnode] = phnode_mergeheaps(scip, boundpaths[kptailnode], boundpaths[crucnode]);
-                       heapsize[kptailnode] += heapsize[crucnode];
-                       boundpaths[crucnode] = NULL;*/
 
                      SCIPunionfindUnion(&uf, kptailnode, crucnode, FALSE);
 		     if( debg )
                         printf("uniteB, %d, %d \n", kptailnode, crucnode);
                   }
-                  //	    printf("3merge %d, %d \n", kptailnode, crucnode);
                }
 
                /* restore the original voronoi digram */
@@ -1872,7 +1918,9 @@ SCIP_RETCODE do_local(
                   }
                }
                assert(l == nresnodes);
+
             }
+
          }
 #if 0
          /* debug! */
@@ -1904,33 +1952,6 @@ SCIP_RETCODE do_local(
          SCIPfreeBufferArray(scip, &edgemark);
          assert(0);
 #endif
-
-#if 0
-         SCIP_Bool* edgemark;
-         SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, nedges / 2) );
-         for( e = 0; e < nedges / 2; e++ ){
-            edgemark[e] = FALSE;
-         }
-#endif
-
-         /*
-           const char base[] = "X/GRAPHLL";
-           char filename [ FILENAME_MAX ];
-
-           sprintf(filename, "%s%d.gml", base, i);
-
-
-           SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-
-
-           for( e = 0; e < nedges; e++ )
-           {
-           if( best_result[e] == CONNECT )
-           printf(" EDGE: %d->%d \n", graph->tail[e], graph->head[e]);
-           }*/
-
-         /* SCIP_CALL( SCIPprobdataPrintGraph2(graph,"TESTG.gml", edgemark) );
-            SCIPfreeBufferArray(scip, &edgemark);*/
 
 
          /**********************************************************/
@@ -1971,13 +1992,7 @@ SCIP_RETCODE do_local(
 	 if( localmoves > 0 )
 	 {
 
-            /*    const char base[] = "X/chged";
-                  char filename [ FILENAME_MAX ];
 
-                  sprintf(filename, "%s%d.gml", base, i);
-
-
-                  SCIP_CALL( printGraph(scip, graph, filename, best_result) ); */
 
             for( i = 0; i < nnodes; i++ )
             {
@@ -2020,7 +2035,6 @@ SCIP_RETCODE do_local(
       SCIPfreeBufferArray(scip, &nodesmark);
       SCIPfreeBufferArray(scip, &pinned);
 
-
       SCIPfreeBufferArray(scip, &lvledges_start);
       SCIPfreeBufferArray(scip, &boundpaths);
       SCIPfreeBufferArray(scip, &blists_start);
@@ -2029,20 +2043,55 @@ SCIP_RETCODE do_local(
    }
 
    obj = 0.0;
+#if 0
+   if( 0 && nimprovements > 0 )
+   {
+
+      for( i = 0; i < nnodes; i++ )
+         steinertree[i] = FALSE;
+
+
+
+      /* create a link-cut tree representing the current Steiner tree */
+      for( e = 0; e < nedges; e++ )
+      {
+
+         if( best_result[e] != -1 )
+         {
+            steinertree[graph->tail[e]] = TRUE;
+            steinertree[graph->head[e]] = TRUE;
+         }
+      }
+
+      SCIP_CALL( do_prune(
+            scip,               /**< SCIP data structure */
+            graph,                  /**< graph structure */
+            graph->cost,               /**< edge costs */
+            0,
+            best_result,             /**< ST edges */
+            steinertree           /**< ST nodes */
+            )
+         );
+
+
+   }
+#endif
    for( e = 0; e < nedges; e++)
       obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-   /* if( 1 )
+   if( 1 )
       printf(" ObjAfterHeurLocal=%.12e\n", obj);
 
-      if(1)
-      {
+   if(0)
+   {
       const char base[] = "X/graphafterlocal";
       char filename [ FILENAME_MAX ];
-      sprintf(filename, "%s.gml", base);
+      sprintf(filename, "%s%d.gml", base, SS++);
       SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-      assert(0);
-      }*/
-
+      assert(graph_sol_valid(graph, best_result));
+      //assert(0);
+      //assert(SS < 4);
+   }
+   assert(graph_sol_valid(graph, best_result));
    SCIPfreeBufferArray(scip, &nodes);
    SCIPfreeBufferArray(scip, &steinertree);
    return SCIP_OKAY;
@@ -2204,7 +2253,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       {
          //printf("do: %f \n", xval[e]);
          results[e] = (int) xval[e] - 1;
-
       }
       /* swap costs; set a high cost if the variable is fixed to 0 */
       for( e = 0; e < graph->edges; e += 2)

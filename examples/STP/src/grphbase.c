@@ -447,8 +447,8 @@ void graph_grid_coordinates(
    }
 }
 
-/** alters the graph in such a way that each optimal STP solution of the
- * new graph corresponds to an optimal Prize Collecting solution of the original graph
+/** alters the graph in such a way that each optimal STP solution to the
+ * new graph corresponds to an optimal Prize Collecting solution to the original graph
  */
 void
 graph_prize_transform(
@@ -469,10 +469,9 @@ graph_prize_transform(
    nterms = graph->terms;
    assert(prize != NULL);
    assert(nnodes == graph->ksize);
-   assert(root >= 0);
+
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    graph_resize(graph, (graph->ksize + graph->terms + 1), (graph->esize + graph->terms * 6) , -1);
-
 
    for( k = 0; k < nterms; ++k )
    {
@@ -507,7 +506,9 @@ graph_prize_transform(
    assert((nterms + 1) == graph->terms);
 }
 
-
+/** alters the graph in such a way that each optimal STP solution to the
+ * new graph corresponds to an optimal Maximal NODE WEIGHT solution to the original graph
+ */
 void
 graph_maxweight_transform(
    GRAPH* graph,
@@ -532,10 +533,12 @@ graph_maxweight_transform(
          for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
          {
             graph->cost[e] -= maxweights[i];
+	    printf("edgecost:  %d-%d  %.8f  \n", graph->tail[e], graph->head[e], graph->cost[e]);
          }
       }
       else
       {
+	 printf("term:  %d \n", i);
 	 graph_knot_chg(graph, i, 0, -1, -1);
 	 nterms++;
       }
@@ -548,13 +551,13 @@ graph_maxweight_transform(
       {
          assert(!LT(maxweights[i], 0.0));
          graph->prize[nterms++] = maxweights[i];
+	 printf("termcost/prize:  %f \n", maxweights[i]);
       }
 
    }
    assert(nterms == graph->terms);
    graph_prize_transform(graph);
    graph->stp_type = STP_MAX_NODE_WEIGHT;
-
 }
 void graph_free(
    GRAPH* p)
@@ -1388,4 +1391,69 @@ int graph_valid(
          return((void)fprintf(stderr, fehler7, k), FALSE);
    }
    return(TRUE);
+}
+char graph_sol_valid(
+   const GRAPH* graph,
+   int* result
+
+   )
+{
+
+   SCIP_QUEUE* queue;
+
+   char* terminal;
+   int* pnode;
+   int e;
+   int i;
+   int root;
+   int nnodes;
+   int termcount;
+   assert(graph != NULL);
+   assert(result != NULL);
+   nnodes = graph->knots;
+   root = graph->source[0];
+   assert(root >= 0);
+
+   terminal = malloc((size_t)nnodes * sizeof(char));
+   for( i = 0; i < nnodes; i++ )
+      terminal[i] = FALSE;
+   /* BFS until all terminals are reached */
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2) );
+
+   SCIP_CALL( SCIPqueueInsert(queue, &root) );
+   termcount = 1;
+   terminal[root] = TRUE;
+
+   while( !SCIPqueueIsEmpty(queue) )
+   {
+      pnode = (SCIPqueueRemove(queue));
+      for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+
+         if( result[e] == CONNECT )
+         {
+            i = graph->head[e];
+            if( Is_term(graph->term[i]) )
+            {
+               assert(!terminal[i]);
+               terminal[i] = TRUE;
+               termcount++;
+            }
+            SCIP_CALL( SCIPqueueInsert(queue, &graph->head[e]) );
+         }
+      }
+
+   }
+   free(terminal);
+   SCIPqueueFree(&queue);
+   if (termcount != graph->terms)
+   {
+      for( i = 0; i < nnodes; i++ )
+         if( Is_term(graph->term[i]) && !terminal[i] )
+            printf("not reached, node: %d\n", i);
+      printf("a: %d, b: %d: \n", termcount, graph->terms);
+      assert(0);
+   }
+
+   return (termcount == graph->terms);
 }
