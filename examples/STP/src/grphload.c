@@ -884,7 +884,7 @@ GRAPH* graph_load(
 
          /* Computation of Checksum
           */
-         crc = crc32((unsigned char*)s, crc);
+         crc = STPcrc32((unsigned char*)s, crc);
 
          /* Build a keyword of form "sectionname.keyword"
           */
