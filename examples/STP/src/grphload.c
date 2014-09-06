@@ -1131,6 +1131,13 @@ GRAPH* graph_load(
                   /*has_coordinates = TRUE;
                     graph_knot_chg(g, (int)para[0].n - 1, NO_CHANGE,
                     (int)para[1].n, (int)para[2].n);*/
+		  /* in this case coordinates are not needed */
+		  if( terms > 0 )
+		  {
+		     ret        = SUCCESS;
+                     stop_input = TRUE;
+		     break;
+		  }
 		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 2, nodes);
                   break;
                case KEY_COORDINATES_DDD :
