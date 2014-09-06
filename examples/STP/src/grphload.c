@@ -543,6 +543,9 @@ static int start_section(
    {
       /* Known section ?
        */
+      if( strcmp(strlower(sectname),"comments") == 0 )
+         sectname[7] = '\0';
+
       temp.section = (struct section*)bsearch(strlower(sectname),
          &section_table[1],
          (sizeof(section_table) / sizeof(struct section)) - 1,
@@ -904,6 +907,9 @@ GRAPH* graph_load(
           */
          while((*s != '\0') && (strchr(separator, *s) != NULL))
             s++;
+
+         if( strcmp(keyword,"comments") == 0 )
+            keyword[i-1] = '\0';
 
          /* Did we know the keyword ?
           */
