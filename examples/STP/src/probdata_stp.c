@@ -1142,7 +1142,15 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 static
 SCIP_DECL_PROBTRANS(probtransStp)
 {
+   SCIP_Real timelimit;
+
    SCIPdebugPrintf("probtransStp \n");
+
+   /* adjust time limit to take into account reading time */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit -= SCIPgetReadingTime(scip);
+   timelimit = MAX(0.0,timelimit);
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
 
    /* create transform probdata */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->graph) );
@@ -1440,7 +1448,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL( probdataPrintGraph(graph, "OriginalGraph.gml", NULL) );
 
    /* presolving */
-   offset = reduce(graph, reduction);
+   offset = reduce(graph, reduction, scip);
 
    graph_path_exit(graph);
 

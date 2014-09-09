@@ -913,8 +913,10 @@ static double level3(
 }
 
 static double level4(
-   GRAPH* g)
+   GRAPH* g,
+   SCIP* scip)
 {
+   SCIP_Real timelimit;
    double fixed   = 0.0;
    int    rerun   = TRUE;
    int    i;
@@ -923,8 +925,13 @@ static double level4(
 
    degree_test(g, &fixed);
 
-   while(rerun)
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   while(rerun && !SCIPisStopped(scip))
    {
+      if( SCIPgetTotalTime(scip) > 1.05 * timelimit )
+         break;
+
       rerun = FALSE;
 
       for(i = 0; i < 6; i++)
@@ -987,7 +994,9 @@ static double level5(
 
 double reduce(
    GRAPH* g,
-   int    level)
+   int    level,
+   SCIP*  scip
+   )
 {
    double fixed = 0.0;
 
@@ -1009,7 +1018,7 @@ double reduce(
       fixed = level3(g);
 
    if (level == 4)
-      fixed = level4(g);
+      fixed = level4(g,scip);
 
    if (level == 5)
       fixed = level5(g);
