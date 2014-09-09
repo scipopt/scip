@@ -1238,11 +1238,9 @@ SCIP_DECL_HEURCOPY(heurCopyTM)
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   /* @todo copy heuristic? (probdata needs to be copied as well) */
-#if 0
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
-#endif
+
    return SCIP_OKAY;
 }
 
