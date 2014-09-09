@@ -46,6 +46,8 @@ fixed bugs:
 - fixed bug in cons_setppc, wrongly aggregating variables if dual-presolving was disabled
 - fixed bug that objective limit was not reset correctly during SCIPfreeTransform() for maximization problems
 - fixed bug in cons_sos1: locks and events were not initialized if constraint was added to transformed problem
+- fixed bug(?) in reader_mps: variables are now written in columns section even of they occur in no constraint
+  and have an objective coefficient of 0 (otherwise, CPLEX and Gurobi cannot read the file)
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
