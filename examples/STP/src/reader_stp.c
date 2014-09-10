@@ -43,7 +43,6 @@
 #define READER_DESC             "file reader for steiner tree data format"
 #define READER_EXTENSION        "stp"
 
-#define   DEFAULT_TMHEURISTIC  0
 #define   DEFAULT_COMPCENTRAL  1
 #define   DEFAULT_EMITGRAPH    FALSE
 #define   DEFAULT_REDUCTION    4
@@ -57,6 +56,20 @@
  *
  * @{
  */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyStp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderStp(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** problem reading method of the reader */
 static
@@ -137,15 +150,11 @@ SCIP_RETCODE SCIPincludeReaderStp(
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyStp) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteStp) );
 
    /* include user parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "stp/tmheuristic",
-         "Heuristic: 0 automatic, 1 TM, 2 TMPOLZIN",
-         NULL, FALSE, DEFAULT_TMHEURISTIC, 0, 2, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/compcentral",
          "Comp. Central Term: 0 disable, 1 max. degree, 2 min. dist. sum to all terminals, 3 min. max. dist., 4 min. dist to all nodes",

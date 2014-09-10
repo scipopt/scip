@@ -45,6 +45,7 @@
 #define DEFAULT_LEAFRUNS 10 /*10*/
 #define DEFAULT_ROOTRUNS 50
 #define DEFAULT_DURINGLPFREQ 10
+#define DEFAULT_TYPE  0
 #define VEL 1
 #define AUTO     0
 #define TM       1
@@ -912,7 +913,7 @@ SCIP_RETCODE do_layer(
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
 
    /* get user parameter */
-   SCIP_CALL( SCIPgetIntParam(scip, "stp/tmheuristic", &mode) );
+   SCIP_CALL( SCIPgetIntParam(scip, "heuristics/"HEUR_NAME"/type", &mode) );
    if( 1 )
       printf(" tmmode: %d ->", mode);
    assert(mode == AUTO || mode == TM || mode == TMPOLZIN);
@@ -1568,6 +1569,10 @@ SCIP_RETCODE SCIPincludeHeurTM(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/duringlpfreq",
          "frequency for calling heuristic during LP loop",
          &heurdata->duringlpfreq, FALSE, DEFAULT_DURINGLPFREQ, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/type",
+         "Heuristic: 0 automatic, 1 TM, 2 TMPOLZIN",
+         NULL, FALSE, DEFAULT_TYPE, 0, 2, NULL, NULL) );
+
 
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristc should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/timing", paramdesc,
