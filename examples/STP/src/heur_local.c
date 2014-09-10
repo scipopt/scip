@@ -1197,12 +1197,16 @@ SCIP_RETCODE do_local(
                         }
 
                         assert(!nodesmark[node] && vbase[node] == node);
-                        //assert( graph->tail[(vnoi[adjnode].edge)] == node );
+			/*printf("node: %d \n", node);
+			printf("adjnode: %d \n", adjnode);
+                        assert( graph->tail[(vnoi[adjnode].edge)] == node );*/
                         assert( graphmark[node] == TRUE );
 
                         /* is the pinned node its own component identifier? */
-                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )//   !Is_term(graph->term[node]) )//TODO TODO TODO
+                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )
                         {
+			   //TODO PROBLEM!!  assert(graphmark[graph->head[edge]] = FALSE);
+			   graphmark[graph->head[edge]] = FALSE;
                            oldedge = edge;
 			   if( debg )
                               printf("A DAY IN THE LIFE ELIMINATE\n");
@@ -1211,7 +1215,7 @@ SCIP_RETCODE do_local(
                            {
                               adjnode = graph->head[edge];
                               /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                              if( best_result[edge] == CONNECT && steinertree[adjnode]  && SCIPunionfindFind(&uf, adjnode) != node )
+                              if( best_result[edge] == CONNECT && graphmark[adjnode] && steinertree[adjnode]  && SCIPunionfindFind(&uf, adjnode) != node )
                               {
 
                                  assert(scanned[adjnode]);
@@ -1250,50 +1254,6 @@ SCIP_RETCODE do_local(
                                  }
                               }
                            }
-#if 0
-                           /* move down the ST until a crucial or pinned node has been reached
-                            * and check whether it has already been scanned */
-                           for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
-                           {
-                              /* check whether edge 'edge' leads to an ancestor of node 'node' */
-                              if( best_result[edge] == CONNECT && steinertree[adjnode = graph->head[edge]] )
-                              {
-                                 /* move along the key-path until it ends (i.e. until a crucial or pinned node has been reached) */
-                                 while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
-                                 {
-                                    for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
-                                    {
-                                       if( best_result[e] == CONNECT )
-                                          break;
-                                    }
-                                    adjnode = graph->head[e];
-                                    if( !steinertree[adjnode] )
-                                    {
-                                       adjnode = graph->tail[e];
-                                       break;
-                                    }
-                                 }
-                                 assert( adjnode != node );
-
-                                 /*  has node 'adjnode' already been scanned? */
-                                 if( scanned[adjnode] )
-                                 {
-                                    /* move up again, comcomitantly updating the data structures */
-                                    while( adjnode != node )
-                                    {
-                                       SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
-                                       if( debg )
-                                          printf( "unite 3 (%d) (%d) \n ",  node, adjnode);
-                                       SCIPunionfindUnion(&uf, node, adjnode, FALSE);
-                                       adjnode = graph->head[nodes[adjnode].edge];
-                                    }
-                                 }else{
-                                    if( debg )
-				       printf( "not scanned: %d (%d) \n ",  adjnode, node);
-				 }
-                              }
-                           }
-#endif
                            edge = oldedge;
                         }
 
@@ -1320,6 +1280,7 @@ SCIP_RETCODE do_local(
                            added += graph->cost[flipedge(vnoi[node].edge)];
 
                         }
+
                      }
                      else
                      {
@@ -1332,8 +1293,6 @@ SCIP_RETCODE do_local(
                         for( node = graph->tail[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                         {
                            graphmark[node] = FALSE;
-                           //printf("ungraphmark %d \n", node);
-                           //printf(" FINAL edge: : %d -> %d \n", graph->tail[(vnoi[node].edge)], graph->head[(vnoi[node].edge)]);
                            if( best_result[vnoi[node].edge] != CONNECT && best_result[flipedge(vnoi[node].edge)] != CONNECT )
                            {
                               if( debg )
@@ -1346,7 +1305,6 @@ SCIP_RETCODE do_local(
                         for( node = graph->head[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                         {
                            graphmark[node] = FALSE;
-                           //printf("FINAL edge: : %d -> %d \n", graph->tail[flipedge(vnoi[node].edge)], graph->head[flipedge(vnoi[node].edge)]);
                            if( 1 )//if( best_result[vnoi[node].edge] != CONNECT && best_result[flipedge(vnoi[node].edge)] != CONNECT )
                            {
                               if( debg )
@@ -1361,7 +1319,8 @@ SCIP_RETCODE do_local(
 
                   for( k = 0; k < nkpnodes; k++ )
                   {
-                     if (graphmark[kpnodes[k]] != FALSE)
+		     assert(graphmark[kpnodes[k]] == FALSE);
+                     if (0 && graphmark[kpnodes[k]] != FALSE)
 		     {
 
 		        const char base[] = "X/debugMark";
@@ -1473,7 +1432,7 @@ SCIP_RETCODE do_local(
                   {
 		     adjnode = graph->head[edge];
                      /* check whether edge 'edge' leads to an ancestor of terminal 'crucnode' */
-                     if( best_result[edge] == CONNECT && steinertree[adjnode]  )
+                     if( best_result[edge] == CONNECT && steinertree[adjnode] && graphmark[adjnode] )
                      {
                         assert( SCIPunionfindFind(&uf, adjnode) != crucnode);
 		        assert(scanned[adjnode]);
@@ -1498,7 +1457,7 @@ SCIP_RETCODE do_local(
                            /* TODO mustn be true after vertex insertion!!) */
                            assert( e != EAT_LAST );
                            adjnode = graph->head[e];
-                           if( !steinertree[adjnode]  )
+                           if( !steinertree[adjnode] || !graphmark[adjnode] )
                               break;
                            assert(scanned[adjnode]);
 			   assert(SCIPunionfindFind(&uf, adjnode) != crucnode);
@@ -1764,16 +1723,53 @@ SCIP_RETCODE do_local(
 		  newpathend = vbase[graph->tail[newedge]];
 		  assert(node == vbase[graph->head[newedge]] );
 
+
+
+		  /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
+                  k = newpathend;
+                  //printf(" root: %d \n ", graph->source[0]);
+                  if( SCIPunionfindFind(&uf, newpathend) != crucnode )
+                  {
+                     printf(" newpath: %d crucnode: %d \n ", newpathend, crucnode);
+		     //TODO
+                     assert(0);
+                  }
+                  while( k != crucnode )
+                  {
+                     //printf("k %d, \n", k);
+                     assert(graphmark[k]);
+                     assert( best_result[flipedge(nodes[k].edge)] != -1);
+                     best_result[flipedge(nodes[k].edge)] = UNKNOWN;
+
+                     best_result[nodes[k].edge] = CONNECT;
+		     if( debg )
+                        printf("flipedge:  %d->%d \n", graph->tail[nodes[k].edge ], graph->head[nodes[k].edge ]);
+                     k = graph->head[nodes[k].edge];
+                  }
+
+
+                  for( k = 0; k < i; k++ )
+                  {
+                     if( crucnode == SCIPunionfindFind(&uf, dfstree[k]) )
+                     {
+                        graphmark[dfstree[k]] = FALSE;
+			steinertree[dfstree[k]] = FALSE;
+			if( debg )
+                           printf("unmarkEx %d \n", dfstree[k]);
+                     }
+                  }
+
+
+
                   /* update union find */
-                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )//&& !pinned[node] ) //&& (!scanned[node]    )//TODO TODO TODO
+                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )
                   {
                      for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
                      {
                         adjnode = graph->head[edge];
                         /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && SCIPunionfindFind(&uf, adjnode) != node )
+                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && graphmark[adjnode] && SCIPunionfindFind(&uf, adjnode) != node )
                         {
-
                            assert(scanned[adjnode]);
                            /* meld the heaps */
                            SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
@@ -1816,16 +1812,14 @@ SCIP_RETCODE do_local(
 
 		  if( debg )
                      printf("pinned node: %d \n", node);
-
-
+#if 0
+TODO
                   /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
                   k = newpathend;
                   //printf(" root: %d \n ", graph->source[0]);
                   if( SCIPunionfindFind(&uf, newpathend) != crucnode )
                   {
                      printf(" newpath: %d crucnode: %d \n ", newpathend, crucnode);
-
-
 		     //TODO
                      // assert(0);
                   }
@@ -1853,8 +1847,7 @@ SCIP_RETCODE do_local(
                            printf("unmarkEx %d \n", dfstree[k]);
                      }
                   }
-
-
+#endif
                   if(0)
                   {
                      const char base[] = "X/exchange";

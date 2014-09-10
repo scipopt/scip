@@ -85,6 +85,7 @@ struct key
 #define KEY_TERMINALS_T          3003
 #define KEY_TERMINALS_TP         3004
 #define KEY_TERMINALS_ROOT       3005
+#define KEY_TERMINALS_ROOTP      3006
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -179,6 +180,7 @@ static const struct key keyword_table[] =
 
       {  "terminals.end",            KEY_TERMINALS_END,          NULL        },
       {  "terminals.root",           KEY_TERMINALS_ROOT,         "n"         },
+      {  "terminals.rootp",          KEY_TERMINALS_ROOTP,        "n"         },
       {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
@@ -330,7 +332,6 @@ static int sec_cmp(
 /*--- Returns  : 0 for success and < 0 for failure.                       ---*/
 /*---------------------------------------------------------------------------*/
 static int get_arguments(
-   int stp_type,
    const CURF* curf,
    const char* format,
    const char* s,
@@ -765,6 +766,7 @@ GRAPH* graph_load(
    CURF         save;
    PARA         para    [MAX_ARGUMENTS];
    double       nodeweight;
+   double*      prize = NULL;                  /* needed in prize collecting  */
    double*      maxnodeweights = NULL;
    char         buffer  [MAX_LINE_LEN];
    char         pathname[MAX_PATH_LEN];
@@ -931,7 +933,7 @@ GRAPH* graph_load(
 	    }
 
             if ((p->format == NULL)
-               || !get_arguments(stp_type, &curf, (const char*) format, s, para))
+               || !get_arguments(&curf, (const char*) format, s, para))
             {
                /* Now, what should we do ?
                 */
@@ -1008,9 +1010,10 @@ GRAPH* graph_load(
 
                      g->source[0] = -1;
 		     if( stp_type == -1 )
-		        g->stp_type = STP_UNDIRECTED;
-		     else
-		        g->stp_type = stp_type;
+		     {
+		        stp_type = STP_UNDIRECTED;
+			g->stp_type = STP_UNDIRECTED;
+		     }
                   }
 
                   if(((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) && stp_type == STP_MAX_NODE_WEIGHT)
@@ -1043,6 +1046,7 @@ GRAPH* graph_load(
                      {
                         g->maxdeg = malloc((size_t)nodes * sizeof(int));
                         g->stp_type = STP_DEG_CONS;
+			stp_type = STP_DEG_CONS;
                      }
                      g->maxdeg[degcount++] = (int)para[0].n;
 
@@ -1061,7 +1065,10 @@ GRAPH* graph_load(
 		  assert(presol != NULL);
 
 		  if( g->stp_type != STP_NODE_WEIGHTS )
+		  {
 		     g->stp_type = STP_NODE_WEIGHTS;
+
+		  }
 		  if( Is_term(g->term[nwcount]) )
                      presol->fixed += nodeweight;
 		  else
@@ -1078,7 +1085,18 @@ GRAPH* graph_load(
 		     assert(g->stp_type == STP_MAX_NODE_WEIGHT );
 		     free(maxnodeweights);
 		  }
-
+                  else if( stp_type == STP_PRIZE_COLLECTING )
+		  {
+		     assert(prize != NULL);
+                     graph_prize_transform(g, prize);
+		     free(prize);
+		  }
+                  else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
+		  {
+		     assert(prize != NULL);
+                     graph_rootprize_transform(g, prize);
+		     free(prize);
+		  }
 		  curf.section = &section_table[0];
                   break;
                case KEY_TERMINALS_TERMINALS :
@@ -1096,13 +1114,25 @@ GRAPH* graph_load(
                   assert(g != NULL);
 
                   if ((int)para[0].n <= nodes)
+		  {
                      g->source[0] = (int)para[0].n - 1;
+		  }
                   else
                   {
                      message(MSG_FATAL, &curf, err_badroot_dd,
                         (int)para[0].n, nodes);
                      ret = FAILURE;
                   }
+                  break;
+	       case KEY_TERMINALS_ROOTP :
+		  assert(g != NULL);
+		  assert(terms > 0);
+		  g->source[0] = (int)para[0].n - 1;
+		  graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+		  assert(prize == NULL);
+		  stp_type = STP_ROOTED_PRIZE_COLLECTING;
+		  prize = malloc((size_t)nodes * sizeof(double));
+		  prize[(int)para[0].n - 1] = 0;
                   break;
                case KEY_TERMINALS_T :
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
@@ -1119,13 +1149,15 @@ GRAPH* graph_load(
                   break;
 	       case KEY_TERMINALS_TP :
                   graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
-		  if( g->stp_type != STP_PRIZE_COLLECTING )
+		  if( stp_type != STP_PRIZE_COLLECTING && stp_type != STP_ROOTED_PRIZE_COLLECTING )
 		  {
-		     assert(g->prize == NULL);
-		     g->stp_type = STP_PRIZE_COLLECTING;
-		     g->prize = malloc((size_t)terms * sizeof(double));
+		     assert(prize == NULL);
+		     stp_type = STP_PRIZE_COLLECTING;
+		     prize = malloc((size_t)nodes * sizeof(double));
 		  }
-		  g->prize[termcount++] = (double)para[1].n;
+		  prize[(int)para[0].n - 1] = (double)para[1].n;
+		  //printf("prize[%d]: %f\n", (int)para[0].n , (double)para[1].n);
+		  termcount++;
                   break;
                case KEY_COORDINATES_DD :
                   /*has_coordinates = TRUE;

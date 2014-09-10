@@ -77,7 +77,6 @@ GRAPH* graph_init(
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;
    p->grid_ncoords = NULL;
-   p->prize = NULL;
 
    p->mincut_dist = NULL;
    p->mincut_head = NULL;
@@ -452,7 +451,8 @@ void graph_grid_coordinates(
  */
 void
 graph_prize_transform(
-   GRAPH* graph
+   GRAPH* graph,
+   double* prize
    )
 {
    int k;
@@ -460,12 +460,11 @@ graph_prize_transform(
    int node;
    int nnodes;
    int nterms;
-   double* prize;
+   double tmpsum = 0.0;
    assert(graph != NULL);
    assert(graph->edges == graph->esize);
    root = graph->source[0];
    nnodes = graph->knots;
-   prize = graph->prize;
    nterms = graph->terms;
    assert(prize != NULL);
    assert(nnodes == graph->ksize);
@@ -491,19 +490,81 @@ graph_prize_transform(
 
          /* the copied node */
          node = nnodes + nterms;
-
+         nterms++;
          /* switch the terminal property */
          graph->term[k] = -1;
          graph->term[node] = 0;
-
+tmpsum += prize[k];
+//printf("prize[%d] : %f \n\n", k, prize[k]);
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
-         graph_edge_add(graph, root, node, prize[nterms++], FARAWAY);
+         graph_edge_add(graph, root, node, prize[k], FARAWAY);
          graph_edge_add(graph, root, k, 0, FARAWAY);
          graph_edge_add(graph, k, node, 0, FARAWAY);
       }
    }
    graph->source[0] = root;
+   graph->stp_type = STP_PRIZE_COLLECTING;
    assert((nterms + 1) == graph->terms);
+   printf("total TP sum: %f \n\n", tmpsum);
+}
+
+
+void
+graph_rootprize_transform(
+   GRAPH* graph,
+   double* prize
+   )
+{
+   int k;
+   int root;
+   int node;
+   int nnodes;
+   int nterms;
+   double tmpsum = 0.0;
+   assert(graph != NULL);
+   assert(graph->edges == graph->esize);
+   root = graph->source[0];
+   nnodes = graph->knots;
+   nterms = graph->terms;
+   assert(prize != NULL);
+   assert(nnodes == graph->ksize);
+   assert(root >= 0);
+   /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
+   graph_resize(graph, (graph->ksize + graph->terms), (graph->esize + graph->terms * 4) , -1);
+
+   for( k = 0; k < nterms - 1; ++k )
+   {
+      /* create a new node */
+      graph_knot_add(graph, -1, -1, -1);
+   }
+   /* new root */
+
+
+   nterms = 0;
+
+   for( k = 0; k < nnodes; ++k )
+   {
+      /* is the kth node a terminal other than the root? */
+      if( Is_term(graph->term[k]) && k != root )
+      {
+
+         /* the copied node */
+         node = nnodes + nterms;
+         nterms++;
+         /* switch the terminal property */
+         graph->term[k] = -1;
+         graph->term[node] = 0;
+         tmpsum += prize[k];
+         /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
+         graph_edge_add(graph, root, node, prize[k], FARAWAY);
+         graph_edge_add(graph, k, node, 0, FARAWAY);
+      }
+   }
+   /* one for the root */
+   nterms++;
+   assert((nterms) == graph->terms);
+   printf("total TPR sum: %f \n\n", tmpsum);
+   graph->stp_type = STP_ROOTED_PRIZE_COLLECTING;
 }
 
 /** alters the graph in such a way that each optimal STP solution to the
@@ -515,6 +576,7 @@ graph_maxweight_transform(
    double* maxweights
    )
 {
+   double* prize;
    int e;
    int i;
    int nnodes;
@@ -533,30 +595,36 @@ graph_maxweight_transform(
          for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
          {
             graph->cost[e] -= maxweights[i];
-	    printf("edgecost:  %d-%d  %.8f  \n", graph->tail[e], graph->head[e], graph->cost[e]);
+	    //printf("edgecost2:  %d-%d  %.12f  \n", graph->tail[e], graph->head[e], graph->cost[e]);
          }
       }
       else
       {
-	 printf("term:  %d \n", i);
+	 //printf("term:  %d \n", i);
 	 graph_knot_chg(graph, i, 0, -1, -1);
 	 nterms++;
       }
    }
-   graph->prize = malloc((size_t)nterms * sizeof(double));
+   prize = malloc((size_t)nnodes * sizeof(double));
    nterms = 0;
    for( i = 0; i < nnodes; i++ )
    {
       if( Is_term(graph->term[i]) )
       {
          assert(!LT(maxweights[i], 0.0));
-         graph->prize[nterms++] = maxweights[i];
-	 printf("termcost/prize:  %f \n", maxweights[i]);
+         prize[i] = maxweights[i];
+	 //printf("termcost/prize2:  %.12f \n", maxweights[i]);
+	 nterms++;
       }
-
+      else
+      {
+	 assert(LT(maxweights[i], 0.0));
+	 prize[i] = 0.0;
+      }
    }
    assert(nterms == graph->terms);
-   graph_prize_transform(graph);
+   graph_prize_transform(graph, prize);
+   free(prize);
    graph->stp_type = STP_MAX_NODE_WEIGHT;
 }
 void graph_free(

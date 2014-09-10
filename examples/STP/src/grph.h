@@ -19,14 +19,15 @@
 #define GRAPH_IS_GRIDGRAPH        2
 #define GRAPH_IS_DIRECTED         4
 
-#define STP_UNDIRECTED              0
-#define STP_DIRECTED                1
-#define STP_PRIZE_COLLECTING        2
-#define STP_NODE_WEIGHTS            3
-#define STP_DEG_CONS                4
-#define STP_REVENUES_BUDGET_HOPCONS 5
-#define STP_GRID                    6
-#define STP_MAX_NODE_WEIGHT         7
+#define STP_UNDIRECTED               0
+#define STP_DIRECTED                 1
+#define STP_PRIZE_COLLECTING         2
+#define STP_ROOTED_PRIZE_COLLECTING  3
+#define STP_NODE_WEIGHTS             4
+#define STP_DEG_CONS                 5
+#define STP_REVENUES_BUDGET_HOPCONS  6
+#define STP_GRID                     7
+#define STP_MAX_NODE_WEIGHT          8
 
 #include "scip/scip.h"
 #include "misc_stp.h"
@@ -45,7 +46,6 @@ typedef struct
                    /* root of network [i], -1 if unknown          */
    int*    term;   /* Array [0..knots-1] of networknumber for     */
                    /* knot [i], -1 if [i] is never a terminal     */
-   double* prize;  /* Array [0..terms-1] of terminal prizes	  */
    int*    mark;   /* Array [0..knots-1], normaly TRUE or FALSE   */
                    /* to mark knots for inclusion in the shortest */
                    /* path / minimum spanning tree routine        */
@@ -156,7 +156,8 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 extern GRAPH *graph_init(int, int, int, int);
 extern void   graph_resize(GRAPH*, int, int, int);
 extern void   graph_free(GRAPH*);
-extern void   graph_prize_transform(GRAPH*);
+extern void   graph_prize_transform(GRAPH*, double*);
+extern void   graph_rootprize_transform(GRAPH*, double*);
 extern void   graph_maxweight_transform(GRAPH*, double*);
 extern GRAPH* graph_grid_create(int**, int, int, int);
 extern void   graph_grid_coordinates(int**, int**, int*, int, int);

@@ -1382,9 +1382,11 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create graph */
    graph = graph_load(filename, &presolinfo);
+    printf("load type :: %d \n\n", graph->stp_type);
    if( graph == NULL )
       return SCIP_READERROR;
 
+   printf("fixed: %f \n\n", presolinfo.fixed );
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
@@ -1425,15 +1427,14 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
 
+   assert(graph != NULL );
    /* init shortest path algorithm (needed for reduction) */
+
    graph_path_init(graph);
 
    /* select a root node */
-   if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG )
+   if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
       graph->source[0] = central_terminal(graph, compcentral);
-
-   if( graph->stp_type == STP_PRIZE_COLLECTING )
-      graph_prize_transform(graph);
 
    /* print the graph */
    if( print )
