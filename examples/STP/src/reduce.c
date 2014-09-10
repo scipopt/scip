@@ -929,7 +929,7 @@ static double level4(
 
    while(rerun && !SCIPisStopped(scip))
    {
-      if( SCIPgetTotalTime(scip) > 1.05 * timelimit )
+      if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
       rerun = FALSE;
