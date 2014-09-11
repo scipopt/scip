@@ -79,6 +79,7 @@ struct key
 #define KEY_GRAPH_EDGES          2002
 #define KEY_GRAPH_E              2003
 #define KEY_GRAPH_A              2004
+#define KEY_GRAPH_OBSTACLES      2005
 
 #define KEY_TERMINALS_END        3001
 #define KEY_TERMINALS_TERMINALS  3002
@@ -121,7 +122,8 @@ struct key
 
 #define KEY_MAXDEGS_MD           8000
 
-
+#define KEY_OBSTACLES_RR         9000
+#define KEY_OBSTACLES_END        9001
 static const struct key keyword_table[] =
    {
       /*
@@ -152,12 +154,16 @@ static const struct key keyword_table[] =
       {  "graph.edges",              KEY_GRAPH_EDGES,            "n"         },
       {  "graph.end",                KEY_END,                    NULL        },
       {  "graph.nodes",              KEY_GRAPH_NODES,            "n"         },
+      {  "graph.obstacles",          KEY_GRAPH_OBSTACLES,        "n"         },
 
       {  "maximumdegrees.end",       KEY_END,                    NULL        },
       {  "maximumdegrees.md",        KEY_MAXDEGS_MD,             "n"         },
 
       {  "nodeweights.end",          KEY_END,                    NULL        },
       {  "nodeweights.nw",           KEY_NODEWEIGHTS_NW,         "n"         },
+
+      {  "obstacles.end",            KEY_OBSTACLES_END,          NULL        },
+      {  "obstacles.rr",             KEY_OBSTACLES_RR,           "nnnn"      },
 
       {  "presolve.date",            KEY_PRESOLVE_DATE,          "s"         },
       {  "presolve.ea",              KEY_PRESOLVE_ED,            "nnnn"      },
@@ -214,6 +220,7 @@ static struct section section_table[] =
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
       { "maximumdegrees", "mdg", FLAG_OPTIONAL, SECTION_MISSING },
       { "nodeweights", "nwg", FLAG_OPTIONAL, SECTION_MISSING },
+      { "obstacles",   "obs", FLAG_OPTIONAL, SECTION_MISSING },
       { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
       { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
       { "terminals",   "trm", FLAG_OPTIONAL, SECTION_MISSING },
@@ -791,11 +798,13 @@ GRAPH* graph_load(
    int          degcount = 0;
    int          stp_type = -1;
    int          termcount = 0;
+   int          nobstacles = -1;
    int          scale_order;
+   int          is_gridgraph = FALSE;
    int          has_coordinates = FALSE;
-   int          is_gridgraph    = FALSE;
+   int          obstacle_counter = 0;
    int**        scaled_coordinates;
-
+   int**        obstacle_coords;
    assert(file != NULL);
 
    /* No section loaded so far.
@@ -1000,6 +1009,10 @@ GRAPH* graph_load(
                case KEY_GRAPH_NODES :
                   nodes = (int)para[0].n;
                   break;
+	       case KEY_GRAPH_OBSTACLES :
+		  nobstacles = (int)para[0].n;
+		  stp_type = STP_OBSTACLES_GRID;
+                  break;
                case KEY_GRAPH_EDGES :
                   edges = (int)para[0].n;
                   break;
@@ -1082,6 +1095,47 @@ GRAPH* graph_load(
                      for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
                         g->cost[i] += nodeweight;
 		  nwcount++;
+		  break;
+
+	       case KEY_OBSTACLES_RR :
+		  assert(nobstacles > 0);
+		  if( obstacle_coords == NULL )
+		  {
+		    assert(obstacle_counter == 0);
+		    obstacle_coords = (int**) malloc((size_t)4 * sizeof(int*));
+		    for( i = 0; i < 4; i++ )
+		       obstacle_coords[i] = (int*)malloc((size_t)nobstacles * sizeof(int));
+
+		  }
+		  for( i = 0; i < 4; i++ )
+		     obstacle_coords[i][obstacle_counter] = (int)para[i].n;
+		  obstacle_counter++;
+		  break;
+	       case KEY_OBSTACLES_END :
+		  message(MSG_INFO, &curf, "CRC [%X]", crc);
+                  curf.section = &section_table[0];
+
+		  if( obstacle_counter != nobstacles )
+		  {
+		     message(MSG_FATAL, &curf, "obstacle number does not match coordinates \n");
+                     ret = FAILURE;
+		     break;
+		  }
+
+		  int f;
+		   for( f = 0; f < nobstacles; f++ )
+		   {
+		  for( i = 0; i < 4; i++ )
+		     printf("%d ", obstacle_coords[i][f]);
+		     printf("\n");
+
+		   }
+		   assert(g == NULL);
+		   g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, scale_order);
+		   for( i = 0; i < 4; i++ )
+		       free(obstacle_coords[i]);
+		  free(obstacle_coords);
+
 		  break;
 	       case KEY_TERMINALS_END :
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
@@ -1216,7 +1270,9 @@ GRAPH* graph_load(
                      free(coordinates[i]);
 
 		  free(coordinates);
-		  g = graph_grid_create(scaled_coordinates, nodes, grid_dim, scale_order);
+
+		  if( stp_type != STP_OBSTACLES_GRID )
+		     g = graph_grid_create(scaled_coordinates, nodes, grid_dim, scale_order);
 
 		  break;
                case KEY_COORDINATES_GRID :

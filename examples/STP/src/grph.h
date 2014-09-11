@@ -27,7 +27,8 @@
 #define STP_DEG_CONS                 5
 #define STP_REVENUES_BUDGET_HOPCONS  6
 #define STP_GRID                     7
-#define STP_MAX_NODE_WEIGHT          8
+#define STP_OBSTACLES_GRID           8
+#define STP_MAX_NODE_WEIGHT          9
 
 #include "scip/scip.h"
 #include "misc_stp.h"
@@ -160,6 +161,7 @@ extern void   graph_prize_transform(GRAPH*, double*);
 extern void   graph_rootprize_transform(GRAPH*, double*);
 extern void   graph_maxweight_transform(GRAPH*, double*);
 extern GRAPH* graph_grid_create(int**, int, int, int);
+extern GRAPH* graph_obstgrid_create(int**, int**, int, int, int);
 extern void   graph_grid_coordinates(int**, int**, int*, int, int);
 extern GRAPH* graph_copy(const GRAPH*);
 extern void   graph_flags(GRAPH*, int);
@@ -190,8 +192,6 @@ extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, i
 extern SCIP_RETCODE  voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE  voronoi_extend2(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE  voronoi_extend3(SCIP*, const GRAPH*, const double*, PATH*, GNODE***, int**, int**, char*, int*, int*, int*, int, int, int);
-
-
 
 extern void   graph_path_length(const GRAPH*, const PATH*);
 

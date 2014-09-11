@@ -210,6 +210,55 @@ int getNodeNumber(
    return number;
 }
 
+/** used by graph_obstgrid_create */
+static
+void compEdgesObst(
+   int   coord,
+   int   grid_dim,
+   int   nobstacles,
+   int*  ncoords,
+   int*  currcoord,
+   int*  edgecosts,
+   int*  gridedgecount,
+   int** coords,
+   int** gridedges,
+   int** obst_coords,
+   char* inobstacle
+   )
+{
+   char inobst;
+   int i;
+   int j;
+   //int z;
+   for( i = 0; i < ncoords[coord]; i++ )
+   {
+      currcoord[coord] = i;
+      if( coord < grid_dim - 1 )
+         compEdgesObst(coord + 1, grid_dim, nobstacles, ncoords, currcoord, edgecosts, gridedgecount, coords, gridedges, obst_coords, inobstacle);
+      else
+      {
+         for( j = 0; j < grid_dim; j++ )
+         {
+            if( currcoord[j] + 1 < ncoords[j] )
+            {
+	       inobst = FALSE;
+	       //for( z = 0; z <
+	       if( inobst == TRUE )
+	       {
+                  gridedges[0][*gridedgecount] = getNodeNumber(grid_dim, -1, ncoords, currcoord);
+                  gridedges[1][*gridedgecount] = getNodeNumber(grid_dim, j, ncoords, currcoord);
+                  edgecosts[*gridedgecount] = coords[j][currcoord[j] + 1] - coords[j][currcoord[j]];
+		  (*gridedgecount)++;
+	       }
+               /*     printf("edgeXXX %d_%d %d \n ", coords[j][currcoord[j] + 1],  coords[j][currcoord[j]], gridedgecount );*/
+
+               /*   printf("edge %d_%d \n ", getNodeNumber(-1), getNodeNumber(j) );*/
+            }
+         }
+      }
+   }
+}
+
 /** used by graph_grid_create */
 static
 void compEdges(
@@ -248,6 +297,177 @@ void compEdges(
       i++;
    }
 }
+
+/** creates a graph out of a given grid */
+GRAPH* graph_obstgrid_create(
+   int** coords,
+   int** obst_coords,
+   int nterms,
+   int grid_dim,
+   int scale_order
+   )
+{
+  return NULL;
+#if 0
+   GRAPH* graph;
+   double cost;
+   int    i;
+   int    j;
+   int    k;
+   int    tmp;
+   int    shift;
+   int    nnodes = 0;
+   int    nedges;
+   double  scale_factor;
+   int    gridedgecount;
+   int*   ncoords;
+   int*   currcoord;
+   int*   edgecosts;
+   int**  termcoords;
+   int**  gridedges;
+   char*  inobstacle;
+   assert(coords != NULL);
+   assert(grid_dim > 1);
+   assert(nterms > 0);
+   assert(grid_dim == 2);
+   scale_factor = pow(10.0, (double) scale_order);
+
+   /* initalize the terminal-coordinates array */
+   termcoords = (int**) malloc(grid_dim * sizeof(int*));
+   for( i = 0; i < grid_dim; i++ )
+   {
+      termcoords[i] = (int*) malloc(nterms * sizeof(int));
+      for( j = 0; j < nterms; j++ )
+	 termcoords[i][j] = coords[i][j];
+   }
+   ncoords = (int*) malloc(grid_dim * sizeof(int));
+   currcoord = (int*) malloc(grid_dim * sizeof(int));
+
+   /* sort the coordinates and delete multiples */
+   for( i = 0; i < grid_dim; i++ )
+   {
+      ncoords[i] = 1;
+      SCIPsortInt(coords[i], nterms);
+      shift = 0;
+      for( j = 0; j < nterms - 1; j++ )
+      {
+         if( coords[i][j] == coords[i][j + 1] )
+         {
+            shift++;
+         }
+         else
+         {
+            /* printf("%d_%d %d=%d \n", j + 1 - shift, j + 1, coords[i][j+ 1 - shift],coords[i][j + 1] ); */
+            coords[i][j + 1 - shift] = coords[i][j + 1];
+            ncoords[i]++;
+         }
+      }
+      /* for( j = 0; j < nterms + 1; j++ )
+         {
+         printf(" %d ", coords[i][j]);
+         }
+         printf( "\n");*/
+   }
+
+   nnodes = 1;
+   for( i = 0; i < grid_dim; i++ )
+   {
+      nnodes = nnodes * ncoords[i];
+   }
+   tmp = 0;
+   for( i = 0; i < grid_dim; i++ )
+   {
+      tmp = tmp + nnodes / ncoords[i];
+   }
+
+   nedges = grid_dim * nnodes - tmp;
+   gridedges = (int**) malloc(2 * sizeof(int*));
+   edgecosts = (int*) malloc(nedges * sizeof(int));
+   gridedges[0] = (int*) malloc(nedges * sizeof(int));
+   gridedges[1] = (int*) malloc(nedges * sizeof(int));
+   inobstacle = (char*) malloc(nnodes * sizeof(char));
+   gridedgecount = 0;
+   for( i = 0; i < nnodes; i++ )
+     inobstacle[i] = FALSE;
+   compEdgesObst(0, grid_dim, ncoords, currcoord, edgecosts, &gridedgecount, coords, gridedges, obst_coords, inobstacle);
+
+   /* initialize empty graph with allocated slots for nodes and edges */
+   graph = graph_init(nnodes, 2 * nedges, 1, 0);
+
+   graph->grid_ncoords = (int*) malloc(grid_dim * sizeof(int));
+   for( i = 0; i < grid_dim; i++ )
+      graph->grid_ncoords[i] = ncoords[i];
+
+   graph->grid_dim = grid_dim;
+   graph->grid_coordinates = coords;
+
+   /* add nodes */
+   for( i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1, -1, -1);
+
+   /* add edges */
+   for( i = 0; i < nedges; i++ )
+   {
+      /* (re) scale edge costs */
+      cost = (double) edgecosts[i] / scale_factor;
+      graph_edge_add(graph, gridedges[0][i] - 1, gridedges[1][i] - 1, cost, cost);
+   }
+
+   /* add terminals */
+   for( i = 0; i < nterms; i++ )
+   {
+      for( j = 0; j < grid_dim; j++ )
+      {
+	 for( k = 0; k <= ncoords[j]; k++ )
+	 {
+	    if( k == ncoords[j] )
+	    {
+	       printf( "COUNTING ERROR IN graph_grid_create \n");
+	       assert(0);
+	       return NULL;
+	    }
+	    if( coords[j][k] == termcoords[j][i] )
+	    {
+               currcoord[j] = k;
+               break;
+	    }
+	 }
+      }
+      /* the position of the (future) terminal */
+      k = getNodeNumber(grid_dim, -1, ncoords, currcoord) - 1;
+      tmp = -1;
+
+      if( i == 0 )
+      {
+	 graph->source[0] = k;
+	 printf("root: (%d", termcoords[0][i]);
+	 for( j = 1; j < grid_dim; j++ )
+            printf(", %d", termcoords[j][i]);
+	 printf(")\n");
+      }
+
+      /* make a terminal out of the node */
+      graph_knot_chg(graph, k, 0, -1, -1);
+   }
+
+   graph->stp_type = STP_OBSTACLES_GRID;
+
+   for( i = 0; i < grid_dim; i++ )
+   {
+      free(termcoords[i]);
+      if( i < 2 )
+	 free(gridedges[i]);
+   }
+
+   free(termcoords);
+   free(edgecosts);
+   free(gridedges);
+   free(ncoords);
+   free(currcoord);
+   return graph;
+#endif
+}
+
 
 
 /** creates a graph out of a given grid */
@@ -412,6 +632,7 @@ GRAPH* graph_grid_create(
    free(currcoord);
    return graph;
 }
+
 
 /** computes coordinates of node 'node' */
 void graph_grid_coordinates(
@@ -1455,7 +1676,7 @@ int graph_valid(
          && ((p->inpbeg[k] != EAT_LAST) || (p->outbeg[k] != EAT_LAST)))
          return((void)fprintf(stderr, fehler6, k), FALSE);
 
-      if (!p->mark[k] && (p->grad[k] > 0))
+      if (!p->mark[k] && (p->grad[k] > 0) && p->stp_type != STP_PRIZE_COLLECTING && p->stp_type != STP_MAX_NODE_WEIGHT)
          return((void)fprintf(stderr, fehler7, k), FALSE);
    }
    return(TRUE);
