@@ -1456,7 +1456,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph_pack(graph);
 
    graph = probdata->graph;
-
+printf("load typeafter :: %d \n\n", graph->stp_type);
    /* if graph reduction solved the whole problem, NULL is returned */
    if( graph != NULL )
    {

@@ -1011,7 +1011,8 @@ GRAPH* graph_load(
                   break;
 	       case KEY_GRAPH_OBSTACLES :
 		  nobstacles = (int)para[0].n;
-		  stp_type = STP_OBSTACLES_GRID;
+		  if( nobstacles > 0 )
+		     stp_type = STP_OBSTACLES_GRID;
                   break;
                case KEY_GRAPH_EDGES :
                   edges = (int)para[0].n;
@@ -1122,16 +1123,16 @@ GRAPH* graph_load(
 		     break;
 		  }
 
-		  int f;
+		 /* int f;
 		   for( f = 0; f < nobstacles; f++ )
 		   {
 		  for( i = 0; i < 4; i++ )
 		     printf("%d ", obstacle_coords[i][f]);
 		     printf("\n");
 
-		   }
+		   }*/
 		   assert(g == NULL);
-		   g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, scale_order);
+		   g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
 		   for( i = 0; i < 4; i++ )
 		       free(obstacle_coords[i]);
 		  free(obstacle_coords);

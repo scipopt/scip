@@ -2206,7 +2206,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(graph != NULL);
 
    /* the local heuristics may not work correctly for problems other than undirected STPs */
-   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID )
+   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID )
       return SCIP_OKAY;
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */

@@ -161,7 +161,7 @@ extern void   graph_prize_transform(GRAPH*, double*);
 extern void   graph_rootprize_transform(GRAPH*, double*);
 extern void   graph_maxweight_transform(GRAPH*, double*);
 extern GRAPH* graph_grid_create(int**, int, int, int);
-extern GRAPH* graph_obstgrid_create(int**, int**, int, int, int);
+extern GRAPH* graph_obstgrid_create(int**, int**, int, int, int, int);
 extern void   graph_grid_coordinates(int**, int**, int*, int, int);
 extern GRAPH* graph_copy(const GRAPH*);
 extern void   graph_flags(GRAPH*, int);

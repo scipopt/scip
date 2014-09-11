@@ -229,7 +229,10 @@ void compEdgesObst(
    char inobst;
    int i;
    int j;
-   //int z;
+   int z;
+   int x;
+   int y;
+   int node;
    for( i = 0; i < ncoords[coord]; i++ )
    {
       currcoord[coord] = i;
@@ -237,20 +240,41 @@ void compEdgesObst(
          compEdgesObst(coord + 1, grid_dim, nobstacles, ncoords, currcoord, edgecosts, gridedgecount, coords, gridedges, obst_coords, inobstacle);
       else
       {
+	 x = coords[0][currcoord[0]];
+	 y = coords[1][currcoord[1]];
+	 // printf("curr cord (%d,%d)  \n ", x, y);
+	 inobst = FALSE;
+	 node = getNodeNumber(grid_dim, -1, ncoords, currcoord);
+	 for( z = 0; z < nobstacles; z++ )
+	       {
+
+		  /*printf("curr x1, y1 (%d,%d)  \n ", obst_coords[0][z], obst_coords[1][z]);
+	          printf("curr x2, y2(%d,%d)  \n ", obst_coords[2][z], obst_coords[3][z]);
+		  printf("  \n ");*/
+		  assert(obst_coords[0][z] < obst_coords[2][z]);
+		  assert(obst_coords[1][z] < obst_coords[3][z]);
+		 if( x > obst_coords[0][z] && x < obst_coords[2][z] &&
+		   y > obst_coords[1][z] && y < obst_coords[3][z] )
+		 {
+		    inobst = TRUE;
+		    //printf("obst node found %d, %d inobst:%d \n", x, y, node);
+		    inobstacle[node-1] = TRUE;
+		    break;
+		 }
+	       }
          for( j = 0; j < grid_dim; j++ )
          {
             if( currcoord[j] + 1 < ncoords[j] )
             {
-	       inobst = FALSE;
-	       //for( z = 0; z <
-	       if( inobst == TRUE )
+	       if( inobst == FALSE )
 	       {
-                  gridedges[0][*gridedgecount] = getNodeNumber(grid_dim, -1, ncoords, currcoord);
+                  gridedges[0][*gridedgecount] = node;
                   gridedges[1][*gridedgecount] = getNodeNumber(grid_dim, j, ncoords, currcoord);
                   edgecosts[*gridedgecount] = coords[j][currcoord[j] + 1] - coords[j][currcoord[j]];
 		  (*gridedgecount)++;
+		//  printf("edgeXXX %d_%d %d \n ", coords[j][currcoord[j] + 1],  coords[j][currcoord[j]], *gridedgecount );
 	       }
-               /*     printf("edgeXXX %d_%d %d \n ", coords[j][currcoord[j] + 1],  coords[j][currcoord[j]], gridedgecount );*/
+
 
                /*   printf("edge %d_%d \n ", getNodeNumber(-1), getNodeNumber(j) );*/
             }
@@ -304,11 +328,11 @@ GRAPH* graph_obstgrid_create(
    int** obst_coords,
    int nterms,
    int grid_dim,
+   int nobstacles,
    int scale_order
    )
 {
-  return NULL;
-#if 0
+
    GRAPH* graph;
    double cost;
    int    i;
@@ -389,8 +413,8 @@ GRAPH* graph_obstgrid_create(
    gridedgecount = 0;
    for( i = 0; i < nnodes; i++ )
      inobstacle[i] = FALSE;
-   compEdgesObst(0, grid_dim, ncoords, currcoord, edgecosts, &gridedgecount, coords, gridedges, obst_coords, inobstacle);
-
+   compEdgesObst(0, grid_dim, nobstacles, ncoords, currcoord, edgecosts, &gridedgecount, coords, gridedges, obst_coords, inobstacle);
+   nedges = gridedgecount;
    /* initialize empty graph with allocated slots for nodes and edges */
    graph = graph_init(nnodes, 2 * nedges, 1, 0);
 
@@ -404,13 +428,19 @@ GRAPH* graph_obstgrid_create(
    /* add nodes */
    for( i = 0; i < nnodes; i++ )
       graph_knot_add(graph, -1, -1, -1);
+  /*for( i = 0; i < nnodes; i++ )
+     printf("deg: %d\n", graph->grad[i] );*/
 
    /* add edges */
    for( i = 0; i < nedges; i++ )
    {
       /* (re) scale edge costs */
+      if( inobstacle[gridedges[1][i] - 1] == FALSE )
+      {
       cost = (double) edgecosts[i] / scale_factor;
       graph_edge_add(graph, gridedges[0][i] - 1, gridedges[1][i] - 1, cost, cost);
+   //    printf( "add edge %d->%d cost: %f\n", gridedges[0][i] - 1, gridedges[1][i] - 1, cost);
+      }
    }
 
    /* add terminals */
@@ -446,10 +476,12 @@ GRAPH* graph_obstgrid_create(
 	 printf(")\n");
       }
 
+
       /* make a terminal out of the node */
       graph_knot_chg(graph, k, 0, -1, -1);
    }
 
+   graph = graph_pack(graph);
    graph->stp_type = STP_OBSTACLES_GRID;
 
    for( i = 0; i < grid_dim; i++ )
@@ -458,14 +490,14 @@ GRAPH* graph_obstgrid_create(
       if( i < 2 )
 	 free(gridedges[i]);
    }
-
+   free(inobstacle);
    free(termcoords);
    free(edgecosts);
    free(gridedges);
    free(ncoords);
    free(currcoord);
    return graph;
-#endif
+
 }
 
 
@@ -603,7 +635,7 @@ GRAPH* graph_grid_create(
       k = getNodeNumber(grid_dim, -1, ncoords, currcoord) - 1;
       tmp = -1;
 
-      if( i == 0 )
+      if( 0 && i == 0 )
       {
 	 graph->source[0] = k;
 	 printf("root: (%d", termcoords[0][i]);
