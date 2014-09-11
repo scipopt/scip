@@ -218,7 +218,7 @@ extern void graph_boxcoord(GRAPH* g);
 
 /* reduce.c
  */
-extern double reduce(GRAPH*, int);
+extern double reduce(GRAPH*, int, SCIP*);
 
 /* sdtest.c
  */
