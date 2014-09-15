@@ -3831,6 +3831,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
