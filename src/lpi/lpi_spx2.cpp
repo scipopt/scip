@@ -121,7 +121,7 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
-      catch(SPxException E)                                             \
+      catch(const SPxException& E)                                      \
       {                                                                 \
          std::string s = E.what();                                      \
          SCIPmessagePrintWarning((messagehdlr), "SoPlex threw an exception: %s\n", s.c_str()); \
@@ -137,7 +137,7 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
-      catch(SPxException E)                                             \
+      catch(const SPxException& E)                                      \
       {                                                                 \
          return SCIP_LPERROR;                                           \
       }                                                                 \
@@ -157,7 +157,7 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
-      catch(SPxException E)                                             \
+      catch(const SPxException& E)                                      \
       {                                                                 \
          std::string s = E.what();                                      \
          SCIPerrorMessage("SoPlex threw an exception: %s\n", s.c_str()); \
@@ -422,7 +422,7 @@ public:
       {
          solve();
       }
-      catch(SPxException x)
+      catch(const SPxException& x)
       {
          std::string s = x.what();
          if( printwarning )
@@ -611,7 +611,7 @@ public:
       {
          getBasis(_rowStat, _colStat);
       }
-      catch(SPxException x)
+      catch(const SPxException& x)
       {
 #ifndef NDEBUG
          std::string s = x.what();
@@ -636,7 +636,7 @@ public:
       {
          setBasis(_rowStat, _colStat);
       }
-      catch(SPxException x)
+      catch(const SPxException& x)
       {
 #ifndef NDEBUG
          std::string s = x.what();
@@ -1060,7 +1060,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       /* create column vectors with coefficients and bounds */
       SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1124,7 +1124,7 @@ SCIP_RETCODE SCIPlpiAddCols(
       }
       spx->addColsReal(cols);
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1239,7 +1239,7 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
       spx->addRowsReal(rows);
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1354,7 +1354,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
          assert(lpi->spx->lowerReal(ind[i]) <= lpi->spx->upperReal(ind[i]));
       }
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1398,7 +1398,7 @@ SCIP_RETCODE SCIPlpiChgSides(
          assert(lpi->spx->lhsReal(ind[i]) <= lpi->spx->rhsReal(ind[i]));
       }
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1483,7 +1483,7 @@ SCIP_RETCODE SCIPlpiChgObj(
          lpi->spx->changeObjReal(ind[i], obj[i]);
       }
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1548,7 +1548,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
       lpi->spx->changeRowReal(row, lprow);
       assert(lpi->spx->lhsReal(row) <= lpi->spx->rhsReal(row));
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -1620,7 +1620,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
       lpi->spx->changeColReal(col, lpcol);
       assert(lpi->spx->lowerReal(col) <= lpi->spx->upperReal(col));
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -2963,7 +2963,7 @@ SCIP_RETCODE SCIPlpiGetSol(
          (void)lpi->spx->getRedCostReal(tmp);
       }
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -2991,7 +2991,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
       Vector tmp(lpi->spx->numColsReal(), ray);
       (void)lpi->spx->getPrimalRayReal(tmp);
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -3019,7 +3019,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
       (void)lpi->spx->getDualFarkasReal(tmp);
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -3545,7 +3545,7 @@ SCIP_RETCODE SCIPlpiClearState(
    {
       lpi->spx->clearBasis();
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -3966,7 +3966,7 @@ SCIP_RETCODE SCIPlpiReadLP(
       if( !lpi->spx->readFile(fname) )
          return SCIP_READERROR;
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
@@ -3993,7 +3993,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    {
       lpi->spx->writeFileReal(fname);
    }
-   catch(SPxException x)
+   catch(const SPxException& x)
    {
 #ifndef NDEBUG
       std::string s = x.what();
