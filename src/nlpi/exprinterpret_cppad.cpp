@@ -2315,6 +2315,12 @@ SCIP_RETCODE SCIPexprintEval(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+   if( n == 0 )
+   {
+      SCIP_CALL( SCIPexprtreeEval(tree, NULL, val) );
+      return SCIP_OKAY;
+   }
+
    if( data->need_retape_always || data->need_retape )
    {
       for( int i = 0; i < n; ++i )
@@ -2377,6 +2383,12 @@ SCIP_RETCODE SCIPexprintEvalInt(
    assert(SCIPexprtreeGetRoot(tree)  != NULL);
 
    int n = SCIPexprtreeGetNVars(tree);
+
+   if( n == 0 )
+   {
+      SCIP_CALL( SCIPexprtreeEvalInt(tree, infinity, NULL, val) );
+      return SCIP_OKAY;
+   }
 
    SCIPInterval::infinity = infinity;
 
@@ -2443,6 +2455,9 @@ SCIP_RETCODE SCIPexprintGrad(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+   if( n == 0 )
+      return SCIP_OKAY;
+
    vector<double> jac(data->f.Jacobian(data->x));
 
    for( int i = 0; i < n; ++i )
@@ -2486,6 +2501,9 @@ SCIP_RETCODE SCIPexprintGradInt(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+   if( n == 0 )
+      return SCIP_OKAY;
+
    vector<SCIPInterval> jac(data->int_f.Jacobian(data->int_x));
 
    for (int i = 0; i < n; ++i)
@@ -2523,6 +2541,9 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    assert(data != NULL);
 
    int n = SCIPexprtreeGetNVars(tree);
+   if( n == 0 )
+      return SCIP_OKAY;
+
    int nn = n*n;
 
    if( data->need_retape_always )
@@ -2603,6 +2624,9 @@ SCIP_RETCODE SCIPexprintHessianDense(
       *val = data->val;
 
    int n = SCIPexprtreeGetNVars(tree);
+
+   if( n == 0 )
+      return SCIP_OKAY;
 
 #if 1
    /* this one uses reverse mode */

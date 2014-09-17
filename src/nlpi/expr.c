@@ -6916,7 +6916,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
-   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    )
@@ -13135,7 +13135,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
-   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    )
