@@ -7694,6 +7694,39 @@ SCIP_RETCODE SCIPexprEvalInt(
    return SCIP_OKAY;
 }
 
+/** under-/overestimates a user expression w.r.t. to given values and bounds for children expressions */
+SCIP_RETCODE SCIPexprEstimateUser(
+   SCIP_EXPR*           expr,           /**< expression */
+   SCIP_Real            infinity,       /**< value to use for infinity */
+   SCIP_Real*           argvals,        /**< values for children */
+   SCIP_INTERVAL*       argbounds,      /**< bounds for children */
+   SCIP_Bool            overestimate,   /**< whether to overestimate the expression */
+   SCIP_Real*           coeffs,         /**< buffer to store the linear coefficients for each child expression that gives a valid under-/overestimator */
+   SCIP_Real*           constant,       /**< buffer to store the constant value of the linear under-/overestimator */
+   SCIP_Bool*           success         /**< buffer to store whether an estimator was successfully computed */
+   )
+{
+   SCIP_EXPRDATA_USER* exprdata;
+
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_USER);
+   assert(argvals != NULL || expr->nchildren == 0);
+   assert(argbounds != NULL || expr->nchildren == 0);
+
+   exprdata = (SCIP_EXPRDATA_USER*) expr->data.data;
+
+   if( exprdata->estimate != NULL )
+   {
+      SCIP_CALL( exprdata->estimate(infinity, exprdata->userdata, expr->nchildren, argvals, argbounds, overestimate, coeffs, constant, success ) );
+   }
+   else
+   {
+      *success = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** evaluates a user expression w.r.t. given values for children expressions */
 SCIP_RETCODE SCIPexprEvalUser(
    SCIP_EXPR*            expr,               /**< expression */
@@ -13075,6 +13108,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    )
@@ -13092,6 +13126,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
 
    exprdata->userdata = data;
    exprdata->eval = eval;
+   exprdata->estimate = estimate;
    exprdata->inteval = inteval;
    exprdata->curv = curv;
    exprdata->prop = prop;

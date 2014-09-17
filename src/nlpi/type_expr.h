@@ -218,6 +218,21 @@ typedef char             SCIP_EXPRBOUNDSTATUS;     /**< bitflags that indicate t
 
 typedef struct SCIP_UserExprData SCIP_USEREXPRDATA; /**< the user data of a user expression */
 
+/** signature of an user's expression under/over estimation function
+ * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
+ *
+ * - infinity      value for infinity
+ * - data          user expression data
+ * - nargs         number of arguments
+ * - argvals       values of arguments
+ * - argbounds     bounds on value of arguments
+ * - overestimate  flag indicating whether to over- or under estimate the expression
+ * - coeffs        buffer where to store resulting coeffs of arguments for the estimator
+ * - constant      buffer where to store resulting constant of the estimator
+ * - success       buffer to indicate whether under-/overestimation was successful
+ */
+#define SCIP_DECL_USEREXPRESTIMATE(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_Real* argvals, SCIP_INTERVAL* argbounds, SCIP_Bool overestimate, SCIP_Real* coeffs, SCIP_Real* constant, SCIP_Bool *success)
+
 /** signature of an user's expression (pointwise) evaluation function
  * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
  *
