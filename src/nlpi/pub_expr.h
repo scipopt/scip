@@ -253,6 +253,12 @@ SCIP_USEREXPRDATA* SCIPexprGetUserData(
    SCIP_EXPR*              expr
    );
 
+/** indicates whether a user expression has the estimator callback defined */
+EXTERN
+SCIP_Bool SCIPexprHasUserEstimator(
+   SCIP_EXPR*              expr
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -282,6 +288,7 @@ SCIP_USEREXPRDATA* SCIPexprGetUserData(
 #define SCIPexprGetMonomialChildIndices(monomial) (monomial)->childidxs
 #define SCIPexprGetMonomialExponents(monomial)    (monomial)->exponents
 #define SCIPexprGetUserData(expr)                 ((SCIP_EXPRDATA_USER*)(expr)->data.data)->userdata
+#define SCIPexprHasUserEstimator(expr)            (((SCIP_EXPRDATA_USER*)expr->data.data)->estimate != NULL)
 
 #endif
 
@@ -569,6 +576,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    );
@@ -659,19 +667,6 @@ SCIP_RETCODE SCIPexprEvalInt(
    SCIP_INTERVAL*        val                 /**< buffer to store value */
    );
 
-/** under-/overestimates a user expression w.r.t. to given values and bounds for children expressions */
-EXTERN
-SCIP_RETCODE SCIPexprEstimateUser(
-   SCIP_EXPR*           expr,           /**< expression */
-   SCIP_Real            infinity,       /**< value to use for infinity */
-   SCIP_Real*           argvals,        /**< values for children */
-   SCIP_INTERVAL*       argbounds,      /**< bounds for children */
-   SCIP_Bool            overestimate,   /**< whether to overestimate the expression */
-   SCIP_Real*           coeffs,         /**< buffer to store the linear coefficients for each child expression that gives a valid under-/overestimator */
-   SCIP_Real*           constant,       /**< buffer to store the constant value of the linear under-/overestimator */
-   SCIP_Bool*           success         /**< buffer to store whether an estimator was successfully computed */
-);
-
 /** evaluates a user expression w.r.t. given values for children expressions */
 EXTERN
 SCIP_RETCODE SCIPexprEvalUser(
@@ -703,6 +698,20 @@ SCIP_RETCODE SCIPexprCheckCurvature(
    SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
    SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression */
    );
+
+/** under-/overestimates a user expression w.r.t. to given values and bounds for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEstimateUser(
+   SCIP_EXPR*           expr,           /**< expression */
+   SCIP_Real            infinity,       /**< value to use for infinity */
+   SCIP_Real*           argvals,        /**< values for children */
+   SCIP_INTERVAL*       argbounds,      /**< bounds for children */
+   SCIP_Bool            overestimate,   /**< whether to overestimate the expression */
+   SCIP_Real*           coeffs,         /**< buffer to store the linear coefficients for each child expression that gives a valid under-/overestimator */
+   SCIP_Real*           constant,       /**< buffer to store the constant value of the linear under-/overestimator */
+   SCIP_Bool*           success         /**< buffer to store whether an estimator was successfully computed */
+);
+
 
 /** substitutes variables (SCIP_EXPR_VARIDX) by expressions
  * Note that only the children of the given expr are checked!
@@ -1164,6 +1173,12 @@ SCIP_USEREXPRDATA* SCIPexprgraphGetNodeUserData(
    SCIP_EXPRGRAPHNODE*   node
    );
 
+/** indicates whether a user expression has the estimator callback defined */
+EXTERN
+SCIP_Bool SCIPexprgraphHasNodeUserEstimator(
+   SCIP_EXPRGRAPHNODE*   node
+   );
+
 /** gets bounds of a node in an expression graph */
 EXTERN
 SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
@@ -1213,6 +1228,7 @@ SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
 #define SCIPexprgraphGetNodePolynomialNMonomials(node)   ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->nmonomials
 #define SCIPexprgraphGetNodePolynomialConstant(node)     ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->constant
 #define SCIPexprgraphGetNodeUserData(node)               ((SCIP_EXPRDATA_USER*)(node)->data.data)->userdata
+#define SCIPexprgraphHasNodeUserEstimator(node)          (((SCIP_EXPRDATA_USER*)node->data.data)->estimate != NULL)
 #define SCIPexprgraphGetNodeBounds(node)                 (node)->bounds
 #define SCIPexprgraphGetNodeVal(node)                    (node)->value
 #define SCIPexprgraphGetNodeCurvature(node)              (node)->curv

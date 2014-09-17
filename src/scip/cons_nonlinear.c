@@ -4952,9 +4952,18 @@ SCIP_RETCODE addUserEstimator(
    assert( exprtreeidx >= 0 );
    assert( exprtreeidx < consdata->nexprtrees );
    assert( consdata->exprtrees != NULL );
+   assert( success != NULL );
 
    exprtree = consdata->exprtrees[exprtreeidx];
    assert( exprtree != NULL );
+   assert( SCIPexprGetOperator(SCIPexprtreeGetRoot(exprtree)) == SCIP_EXPR_USER );
+
+   /* if user did not implement estimator callback, then we cannot do anything */
+   if( !SCIPexprHasUserEstimator(SCIPexprtreeGetRoot(exprtree)) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    params = SCIPexprtreeGetParamVals( exprtree );
    nvars = SCIPexprtreeGetNVars( exprtree );
@@ -4987,10 +4996,10 @@ SCIP_RETCODE addUserEstimator(
 
    /* varbounds not needed any longer */
    SCIPfreeBufferArray( scip, &varbounds );
-   /* Call estimator for user expressions to compute coeffs and constant for the user expressions children */
 
+   /* call estimator for user expressions to compute coeffs and constant for the user expressions children */
    SCIP_CALL( SCIPexprEstimateUser( SCIPexprtreeGetRoot( exprtree ), INTERVALINFTY, childvals, childbounds, overestimate, childcoeffs, &constant, success ) );
-   /* TODO: if user callback is not implemented success will be false, but it would be better to leave the function earlier */
+
    if( *success )
    {
       SCIP_Real* varcoeffs;
@@ -5022,6 +5031,7 @@ SCIP_RETCODE addUserEstimator(
    SCIPfreeBufferArray( scip, &childcoeffs );
    SCIPfreeBufferArray( scip, &childbounds );
    SCIPfreeBufferArray( scip, &childvals );
+
    return SCIP_OKAY;
 }
 
