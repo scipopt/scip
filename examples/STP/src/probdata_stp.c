@@ -252,7 +252,7 @@ SCIP_RETCODE probdataFree(
 {
    int e;
    int t;
-   SCIPdebugPrintf ("probdataFREE \n");
+   SCIPdebugPrintf ("probdataFree \n");
    assert(scip != NULL);
    assert(probdata != NULL);
 
@@ -422,7 +422,6 @@ SCIP_RETCODE createDegreeConstraints(
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "DegreeConstraint%d", k);
       SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->degcons[k]), consname, 0, NULL, NULL,
             -SCIPinfinity(scip), graph->maxdeg[k], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      printf("fs\n");
 
       SCIP_CALL( SCIPaddCons(scip, probdata->degcons[k]) );
    }
@@ -457,7 +456,6 @@ SCIP_RETCODE createPrizeConstraints(
    SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
          1, 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   printf("created cons \n\n");
    SCIP_CALL( SCIPaddCons(scip, probdata->prizecons) );
 
 
@@ -1385,17 +1383,18 @@ SCIP_RETCODE SCIPprobdataCreate(
    int compcentral;
    int reduction;
    char mode;
-
+   char printfs = FALSE;
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
 
    /* create graph */
    graph = graph_load(filename, &presolinfo);
+   if( printfs )
    printf("load type :: %d \n\n", graph->stp_type);
    if( graph == NULL )
       return SCIP_READERROR;
-
+   if( printfs )
    printf("fixed: %f \n\n", presolinfo.fixed );
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
@@ -1458,7 +1457,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph_pack(graph);
 
    graph = probdata->graph;
-   printf("load typeafter :: %d \n\n", graph->stp_type);
+
    /* if graph reduction solved the whole problem, NULL is returned */
    if( graph != NULL )
    {
@@ -1999,7 +1998,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          {
             if( SCIPisGT(scip, nval[e], SCIPvarGetUbGlobal(edgevars[e])) ||  SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[e]), nval[e]) )
             {
-               printf("solution violates orginal bounds \n");
+                 /*printf("solution violates orginal bounds \n");*/
                return SCIP_OKAY;
             }
          }
@@ -2009,14 +2008,14 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
-      printf("checked sol: feasible=%d\n", feasible);
+      //printf("checked sol: feasible=%d\n", feasible);
 
       /* check solution for feasibility in original problem space */
       if( !feasible )
       {
          SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
 
-         printf("checked sol: feasible=%d\n", feasible);
+         //printf("checked sol: feasible=%d\n", feasible);
 
          if( feasible )
          {

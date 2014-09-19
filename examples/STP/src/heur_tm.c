@@ -890,7 +890,7 @@ SCIP_RETCODE do_layer(
    int** node_edge;
    int* vcount;
    SCIP_PQUEUE* pqueue;
-
+   char printfs = FALSE;
 
    for( e = 0; e < graph->edges; e++)
    {
@@ -914,7 +914,7 @@ SCIP_RETCODE do_layer(
 
    /* get user parameter */
    SCIP_CALL( SCIPgetIntParam(scip, "heuristics/"HEUR_NAME"/type", &mode) );
-   if( 1 )
+   if( printfs )
       printf(" tmmode: %d ->", mode);
    assert(mode == AUTO || mode == TM || mode == TMPOLZIN);
 
@@ -926,8 +926,7 @@ SCIP_RETCODE do_layer(
       else
          mode = TM;
    }
-   if( 1 )
-      printf(" %d \n", mode);
+
    /* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     * Patch um die heuristic nach einem restruct starten zu koennen
     * XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1094,7 +1093,8 @@ SCIP_RETCODE do_layer(
 	       rootedge = rootedges_z[r];
 
             }
-	    printf("cost: %f  edge: %d", (double)costrootedges_z[r], rootedge);
+            if( printfs )
+	       printf("cost: %f  edge: %d", (double)costrootedges_z[r], rootedge);
             costrev[rootedge] = 0.0;
             graph->cost[flipedge(rootedge)] = 0.0;
             /*  printf("rootedge %d->%d \n", graph->tail[rootedge], graph->head[rootedge]); */
@@ -1133,6 +1133,7 @@ SCIP_RETCODE do_layer(
                min = obj;
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
+	       if( printfs )
                printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
 
                for( e = 0; e < nedges; e++ )
@@ -1188,6 +1189,7 @@ SCIP_RETCODE do_layer(
                min = obj;
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
+	       if( printfs )
                printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
                if( 0 && graph->stp_type == STP_PRIZE_COLLECTING )
                {
@@ -1463,7 +1465,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       }
       else
       {
-         //printf("xval[1745]: %f \n", xval[layer * nedges + 1745]);
          if( graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING )
          {
             int root = graph->source[0];

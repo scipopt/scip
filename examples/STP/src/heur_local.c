@@ -314,6 +314,8 @@ SCIP_RETCODE do_local(
    int nedges;
    int nimprovements = 0;
    char* steinertree;
+   char printfs = FALSE;
+   if( printfs )
    printf("local heuristic running \n");
    root = graph->source[0];
    nnodes = graph->knots;
@@ -799,7 +801,6 @@ SCIP_RETCODE do_local(
                               if( best_result[e] > -1 )
                               {
                                  kpcost += graph->cost[e];
-                                 //printf(" kpcost %f \n", graph->cost[e]);
                                  kpedges[nkpedges++] = e;
                                  break;
                               }
@@ -1085,7 +1086,7 @@ SCIP_RETCODE do_local(
 
                   localmoves++;
 		  nimprovements++;
-                  //if( debg )
+                  if( printfs )
                   printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
                   /* unmark the original edges spanning the supergraph */
@@ -1198,8 +1199,8 @@ SCIP_RETCODE do_local(
 
                         assert(!nodesmark[node] && vbase[node] == node);
 			/*printf("node: %d \n", node);
-			printf("adjnode: %d \n", adjnode);
-                        assert( graph->tail[(vnoi[adjnode].edge)] == node );*/
+                          printf("adjnode: %d \n", adjnode);
+                          assert( graph->tail[(vnoi[adjnode].edge)] == node );*/
                         assert( graphmark[node] == TRUE );
 
                         /* is the pinned node its own component identifier? */
@@ -1653,7 +1654,7 @@ SCIP_RETCODE do_local(
                   bestdiff = edgecost - kpathcost;
                   node = SCIPunionfindFind(&uf, vbase[graph->head[newedge]]);
                   obj += bestdiff;
-		  //if( debg )
+		  if( printfs )
                   printf( "ADDING NEW KEY PATH (%f )\n", bestdiff );
                   localmoves++;
                   nimprovements++;
@@ -1813,9 +1814,9 @@ SCIP_RETCODE do_local(
 		  if( debg )
                      printf("pinned node: %d \n", node);
 #if 0
-TODO
-                  /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
-                  k = newpathend;
+                  TODO
+                     /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
+                     k = newpathend;
                   //printf(" root: %d \n ", graph->source[0]);
                   if( SCIPunionfindFind(&uf, newpathend) != crucnode )
                   {
@@ -2071,7 +2072,7 @@ TODO
 #endif
    for( e = 0; e < nedges; e++)
       obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-   if( 1 )
+   if( printfs )
       printf(" ObjAfterHeurLocal=%.12e\n", obj);
 
    if(0)
