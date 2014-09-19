@@ -128,10 +128,9 @@
  *
  * @TODO add eigene referenz
  *
+ * A version of the lifted weight space algorithm was first mentioned in
  *
- * Further information about multi objective mixed integer programs can be found in
- *
- * Özgür Özpeynirci and Murat Köksalan,
- * An Exact Algorithm for Finding Extreme Supported Nondominated Points of Multiobjective Mixed Integer Programs.
- * _Management Science_, 56(12):2302--2315, 2010.
+ * Matthias Ehrgott, Andreas Löhne, Lizhen Shao 
+ * A dual variant of Benson’s “outer approximation algorithm” for multiple objective linear programming
+ * _Journal of Global Optimization_, Volume 52, Issue 4, pp 757-778, 2012
  */
