@@ -274,13 +274,12 @@ void Main::printRun()
 
    /* print solver_ statistics */
    std::cout  << std::setprecision(2) << std::fixed
-         << std::setw(WIDTH_DEFAULT) << solver_->getDurationLastRun()
-         << std::setw(WIDTH_DEFAULT) << solver_->getNNodesLastRun()
-         << std::setw(WIDTH_DEFAULT) << solver_->getNLPIterationsLastRun()
-         << std::setw(WIDTH_DEFAULT) << solver_->getNNewVertices()
-         << std::setw(WIDTH_DEFAULT) << solver_->getNProcessedVertices();
-
-   std::cout << std::endl;
+              << std::setw(WIDTH_DEFAULT) << solver_->getDurationLastRun()
+              << std::setw(WIDTH_DEFAULT) << solver_->getNNodesLastRun()
+              << std::setw(WIDTH_DEFAULT) << solver_->getNLPIterationsLastRun()
+              << std::setw(WIDTH_DEFAULT) << solver_->getNNewVertices()
+              << std::setw(WIDTH_DEFAULT) << solver_->getNProcessedVertices()
+              << std::endl;
 
    if( solver_->getVerbosity() > 0 )
    {

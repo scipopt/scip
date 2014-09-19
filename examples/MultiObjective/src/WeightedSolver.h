@@ -30,6 +30,7 @@
 #include <map>
 
 #include "scip/scip.h"
+#include "scip/message_default.h"
 
 /** generic weight based solver */
 class WeightedSolver
@@ -141,6 +142,7 @@ class WeightedSolver
    std::string           filename_;               /**< name of problem file */
    std::string           outfilestump_;           /**< beginning of outfile names */
    SCIP_LPI*             extremality_lpi_;        /**< lp interfaced for determining extremality */
+   SCIP_MESSAGEHDLR*     extremality_msg_;        /**< message handler dealing with extremality lp messages */
    bool                  candidate_is_extremal_;  /**< true if nondom point checked by lp is extremal */
    int                   n_written_sols_;         /**< number of solutions written to files */										    
 

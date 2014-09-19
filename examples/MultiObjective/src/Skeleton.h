@@ -173,12 +173,12 @@ class Skeleton
    bool graphIsValid() const;
 
    /** returns facet vector corresponding to point */
-   const std::vector<SCIP_Real>* costToFacet(
+   const std::vector<SCIP_Real>* createFacetFromCost(
        const std::vector<SCIP_Real>*    cost_vector    /**< cost vector of a solution */
        ) const;
 
    /** returns facet vector corresponding to an unbounded cost ray */
-   const std::vector<SCIP_Real>* rayToFacet(
+   const std::vector<SCIP_Real>* createFacetFromRay(
       const std::vector<SCIP_Real>*        cost_ray      /**< cost vector of a primal ray */
       ) const;
 

@@ -37,7 +37,15 @@ Skeleton::Skeleton(
    )
    : scip_(scip),
      graph_(),
-     vertex_map_(graph_)
+     vertex_map_(graph_),
+     last_returned_node_(lemon::INVALID),
+     n_new_nodes_(0),
+     n_proc_nodes_(0),
+     new_facet_(NULL),
+     new_vertices_(NULL),
+     unscanned_nodes_(NULL),
+     obsolete_nodes_(NULL),
+     cut_edges_(NULL)
 {
 }
 
@@ -46,6 +54,14 @@ Skeleton::~Skeleton()
 {
    for( std::vector<WeightSpaceVertex*>::iterator it = vertices_.begin();
         it != vertices_.end();
+        ++it )
+   {
+      delete *it;
+   }
+
+   for( std::vector< const std::vector<SCIP_Real>* >::iterator 
+           it = facets_.begin();
+        it != facets_.end();
         ++it )
    {
       delete *it;
@@ -110,7 +126,7 @@ void Skeleton::createInitialFacets(
    }
 
    /* create first nondom point based facet */
-   facets_.push_back(costToFacet(cost_vector));
+   facets_.push_back(createFacetFromCost(cost_vector));
 }
 
 /** create corner vertex of initial weight space polyhedron */
@@ -161,7 +177,7 @@ bool Skeleton::isExtremal(
    /* graph must be initialized */
    assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
 
-   const std::vector<SCIP_Real>* facet = costToFacet(cost_vector);
+   const std::vector<SCIP_Real>* facet = createFacetFromCost(cost_vector);
 
    bool result = isMakingObsolete(facet, vertex_map_[last_returned_node_], false);
    
@@ -188,7 +204,7 @@ bool Skeleton::isExtremalThorough(
    assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
 
    bool result = false;
-   const std::vector<SCIP_Real>* facet = costToFacet(cost_vector);
+   const std::vector<SCIP_Real>* facet = createFacetFromCost(cost_vector);
 
    last_returned_node_ = findObsoleteNode(facet);
 
@@ -219,7 +235,7 @@ void Skeleton::addPrimalRay(
    /* graph must be initialized */
    assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
 
-   const std::vector<SCIP_Real>* facet = rayToFacet(cost_ray);
+   const std::vector<SCIP_Real>* facet = createFacetFromRay(cost_ray);
    addFacet(facet);
 }
 
@@ -231,7 +247,7 @@ void Skeleton::addPrimalRayThorough(
    /* graph must be initialized */
    assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
 
-   const std::vector<SCIP_Real>* facet = rayToFacet(cost_ray);
+   const std::vector<SCIP_Real>* facet = createFacetFromRay(cost_ray);
    last_returned_node_ = findObsoleteNode(facet);
 
    if( last_returned_node_ != lemon::INVALID )
@@ -563,7 +579,7 @@ int Skeleton::getNProcessedVertices() const
 }
 
 /** returns facet vector corresponding to cost vector */
-const std::vector<SCIP_Real>* Skeleton::costToFacet(
+const std::vector<SCIP_Real>* Skeleton::createFacetFromCost(
    const std::vector<SCIP_Real>*        cost_vector    /**< cost vector of a solution */
    ) const
 {
@@ -573,7 +589,7 @@ const std::vector<SCIP_Real>* Skeleton::costToFacet(
 }
 
 /** returns facet vector corresponding to an unbounded cost ray */
-const std::vector<SCIP_Real>* Skeleton::rayToFacet(
+const std::vector<SCIP_Real>* Skeleton::createFacetFromRay(
    const std::vector<SCIP_Real>*        cost_ray      /**< cost vector of a primal ray */
    ) const
 {

@@ -22,6 +22,7 @@
 #-----------------------------------------------------------------------------
 
 SCIPDIR		=	../../
+
 SOLDIR		=	solutions
 
 # define to be able to locate library files

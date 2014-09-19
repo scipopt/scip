@@ -47,9 +47,15 @@ WeightedSolver::WeightedSolver(
      multiopt_status_(SCIP_STATUS_UNKNOWN),
      nruns_(0),
      found_new_optimum_(false),
+     nnodes_last_run_(0),
+     niterations_last_run_(0),
+     duration_last_run_(0.),
      solution_(NULL),
      weight_(NULL),
      cost_vector_(NULL),
+     extremality_lpi_(NULL),
+     extremality_msg_(NULL),
+     candidate_is_extremal_(false),
      n_written_sols_(0)
 {
    SCIPcreate(&scip_);
@@ -63,6 +69,7 @@ WeightedSolver::WeightedSolver(
    }
 
    SCIPgetRealParam(scip_, "limits/time", &timelimit_);
+   SCIPgetIntParam(scip_, "display/verblevel", &verbosity_);
 }
 
 /** destructor */
@@ -87,7 +94,18 @@ WeightedSolver::~WeightedSolver()
       delete *it;
    }
 
-   delete SCIPgetProbData(scip_)->objectives;
+   for( std::map< const std::vector<SCIP_Real>*, const char* >::iterator
+           it = cost_to_filename_.begin();
+        it != cost_to_filename_.end();
+        ++it )
+   {
+      delete[] it->second;
+   }
+   
+   SCIP_PROBDATA* probdata = SCIPgetProbData(scip_);
+
+   delete probdata->objectives;
+   free(probdata);
 
    SCIPfree(&scip_);
 }
@@ -194,13 +212,14 @@ SCIP_RETCODE WeightedSolver::writeSolution(
              << ++n_written_sols_
              << ".sol";
    std::string s_filename = s_outfile.str();
-   char* filename = new char[s_filename.size()];
+   char* filename = new char[s_filename.size()+1];
    strcpy(filename, s_filename.c_str());
    cost_to_filename_[cost_vector] = filename;
 
    /* write file */
    fsol = fopen(filename, "w");
    SCIP_CALL( SCIPprintSol(scip_, sol, fsol, FALSE) );
+   fclose(fsol);
 
    return SCIP_OKAY;
 }
@@ -233,6 +252,7 @@ SCIP_RETCODE WeightedSolver::checkAndWriteSolutions()
    }
 
    SCIP_CALL( SCIPlpiFree(&extremality_lpi_) );
+   SCIP_CALL( SCIPmessagehdlrRelease(&extremality_msg_) );
 
    return SCIP_OKAY;
 }
@@ -288,7 +308,8 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
    }
 
    /* create lp */
-   SCIP_CALL( SCIPlpiCreate(&extremality_lpi_, NULL, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
+   SCIP_CALL( SCIPcreateMessagehdlrDefault(&extremality_msg_, FALSE, NULL, FALSE) );
+   SCIP_CALL( SCIPlpiCreate(&extremality_lpi_, extremality_msg_, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
 
    SCIP_CALL( SCIPlpiLoadColLP(
       extremality_lpi_,
@@ -309,22 +330,22 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
     ) );		
 
    /* delete data structures */
-   delete obj;
-   delete lb;
-   delete ub;
-   delete lhs;
-   delete rhs;
-   delete beg;
-   delete ind;
-   delete val;
+   delete[] obj;
+   delete[] lb;
+   delete[] ub;
+   delete[] lhs;
+   delete[] rhs;
+   delete[] beg;
+   delete[] ind;
+   delete[] val;
 
    return SCIP_OKAY;
 }
 
 /** solve the extremality lp for one particular nondom point */
-SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* nondom_point, int point_index)
+SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* cost_vector, int point_index)
 {
-   int nrows = getNObjs() + 1; 
+   int nrows = getNObjs(); 
 
    SCIP_Real obj_one = 1.;
    SCIP_Real obj_zero = 0.;
@@ -335,15 +356,15 @@ SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* no
    SCIP_Real* lhs = new SCIP_Real[nrows];
    SCIP_Real* rhs = new SCIP_Real[nrows];
 
-   for( int i = 0; i < nrows - 1; ++i )
+   for( int i = 0; i < nrows; ++i )
    {
       lhs[i] = - SCIPinfinity(scip_);
-      rhs[i] = nondom_point->at(i);
+      rhs[i] = cost_vector->at(i);
       ind[i] = i;
    }
 
    SCIP_CALL( SCIPlpiChgObj(extremality_lpi_, 1, &point_index, &obj_one) );
-   SCIP_CALL( SCIPlpiChgSides(extremality_lpi_, nrows - 1, ind, lhs, rhs) );
+   SCIP_CALL( SCIPlpiChgSides(extremality_lpi_, nrows, ind, lhs, rhs) );
 
    /* solve the lp */
    SCIP_CALL( SCIPlpiSolvePrimal(extremality_lpi_) );
@@ -355,9 +376,9 @@ SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* no
 
    /* clean up */
    SCIP_CALL( SCIPlpiChgObj(extremality_lpi_, 1, &point_index, &obj_zero) );		
-   delete ind;
-   delete lhs;
-   delete rhs;
+   delete[] ind;
+   delete[] lhs;
+   delete[] rhs;
    
    return SCIP_OKAY;
 }

@@ -72,6 +72,12 @@ LiftedWeightSpaceSolver::~LiftedWeightSpaceSolver()
       delete *it;
    }
 
+   if( feasible_weight_sol_ != NULL )
+   {
+      delete[] feasible_weight_sol_;
+      feasible_weight_sol_ = NULL;
+   }
+
    delete feasible_weight_;
    delete skeleton_;
 }
@@ -155,41 +161,6 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveWeighted()
    /* optimize with weight */
    SCIP_CALL( doSCIPrun() );
 
-   /* do reopt with fixed weighted objective function if necessary */
-   if( mip_status_ == SCIP_STATUS_OPTIMAL && hasInfiniteComponent(cost_vector_) )
-   {
-      SCIP_CONS* cons = NULL;      
-
-      SCIP_CALL( objectives->setWeightedObjective(
-          scip_, 
-          feasible_weight_
-          ) );
-
-      SCIP_CALL( objectives->createObjectiveConstraint(
-          scip_,
-          &cons,
-          weight_,
-          scalar_product(*weight_, *cost_vector_)
-          ) );
-
-      SCIP_CALL( SCIPaddCons(scip_, cons) );
-
-      /* remove results from first doSCIPrun() */
-      SCIP_CALL( SCIPfreeSol(scip_, &solution_) );
-      solution_ = NULL;
-      delete cost_vector_;
-      cost_vector_ = NULL;
-
-      /* second doSCIPRun() */
-      SCIP_CALL( doSCIPrun() );
-
-      assert( mip_status_ == SCIP_STATUS_OPTIMAL );
-      assert( !hasInfiniteComponent(cost_vector_) );
-
-      SCIP_CALL( SCIPdelCons(scip_, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip_, &cons) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -228,6 +199,8 @@ SCIP_RETCODE LiftedWeightSpaceSolver::doSCIPrun()
       SCIP_CALL( copyBestOriginalSolution() );
 
       cost_vector_ = objectives->calculateCost(scip_, solution_);
+
+      assert( !hasInfiniteComponent(cost_vector_) );
    }
    else if( mip_status_ == SCIP_STATUS_UNBOUNDED )
    {
@@ -278,6 +251,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evaluateSolution()
       {
          found_new_optimum_ = skeleton_->isExtremal(cost_vector_);
       }         
+
       if( found_new_optimum_ )
       {
          nondom_points_.push_back(cost_vector_);
@@ -393,42 +367,42 @@ SCIP_RETCODE LiftedWeightSpaceSolver::createFeasibleWeightLPI()
    rhs[nobjs] = 1.;
 
    SCIP_CALL( SCIPlpiCreate( 
-       &feasible_weight_lpi_, 
-       NULL, 
-       "feasible weight",
-       SCIP_OBJSEN_MAXIMIZE
-       ) );
+         &feasible_weight_lpi_, 
+         NULL, 
+         "feasible weight",
+         SCIP_OBJSEN_MAXIMIZE
+         ) );
  
    SCIP_CALL(  SCIPlpiLoadColLP(
-       feasible_weight_lpi_,
-       SCIP_OBJSEN_MAXIMIZE,
-       ncols,
-       obj,
-       lb,
-       ub,
-       NULL,
-       nrows,
-       lhs,
-       rhs,
-       NULL,
-       nnonz,
-       beg,
-       ind,
-       val 
-       ) );
+         feasible_weight_lpi_,
+         SCIP_OBJSEN_MAXIMIZE,
+         ncols,
+         obj,
+         lb,
+         ub,
+         NULL,
+         nrows,
+         lhs,
+         rhs,
+         NULL,
+         nnonz,
+         beg,
+         ind,
+         val 
+         ) );
 
-  delete obj;
-  delete lb;
-  delete ub;
+   delete[] obj;
+   delete[] lb;
+   delete[] ub;
 
-  delete lhs;
-  delete rhs;
+   delete[] lhs;
+   delete[] rhs;
 
-  delete beg;
-  delete ind;
-  delete val;
+   delete[] beg;
+   delete[] ind;
+   delete[] val;
 
-  return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** solve feasible weight lp to get next feasible weight candidate */
@@ -443,7 +417,8 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveFeasibleWeightLPI()
       int nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
       if( feasible_weight_sol_ != NULL )
       {
-         delete feasible_weight_sol_;
+         delete[] feasible_weight_sol_;
+         feasible_weight_sol_ = NULL;
       }
 
       feasible_weight_sol_ = new SCIP_Real[nobjs + 1];
@@ -514,8 +489,8 @@ SCIP_RETCODE LiftedWeightSpaceSolver::updateFeasibleWeightLPI(const std::vector<
       val 
       ) );
 
-   delete ind;
-   delete val;
+   delete[] ind;
+   delete[] val;
 
    return SCIP_OKAY;
 }
@@ -525,23 +500,32 @@ SCIP_RETCODE LiftedWeightSpaceSolver::copyBestOriginalSolution()
 {
    assert( solution_ == NULL );
 
-   if( SCIPisTransformed(scip_) )
-   {
-      SCIP_CALL( SCIPfreeTransform(scip_) );
-   }
-
    SCIP_SOL* sol = SCIPgetBestSol(scip_);
 
-   SCIPcreateOrigSol(scip_, &solution_, NULL);
+   SCIP_SOL* finite = NULL;
+   SCIP_Bool copy_success = FALSE;
 
-   SCIP_VAR* var = NULL;
-   SCIP_Real val = 0.;
-   for( int i = 0; i < SCIPgetNVars(scip_); ++i )
+   SCIP_CALL( SCIPcreateFiniteSolCopy(scip_, &finite, sol, &copy_success) );
+
+   assert( copy_success );
+
+   int        nvars = SCIPgetNOrigVars(scip_);
+   SCIP_VAR** vars  = SCIPgetOrigVars(scip_);
+   SCIP_Real* vals  = new SCIP_Real[nvars];
+
+   SCIP_CALL( SCIPgetSolVals(scip_, finite, nvars, vars, vals) );
+
+   SCIP_CALL( SCIPfreeSol(scip_, &finite) );
+   SCIP_CALL( SCIPfreeTransform(scip_) );
+
+   SCIP_CALL( SCIPcreateOrigSol(scip_, &solution_, NULL) );
+
+   for( int i = 0; i < nvars; ++i )
    {
-      var = SCIPgetVars(scip_)[i];
-      val = SCIPgetSolVal(scip_, sol, var);
-      SCIP_CALL( SCIPsetSolVal(scip_, solution_, var, val) );
+      SCIP_CALL( SCIPsetSolVal(scip_, solution_, vars[i], vals[i]) );
    }
+
+   delete[] vals;
 
    return SCIP_OKAY;
 }
