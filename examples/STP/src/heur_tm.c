@@ -890,7 +890,7 @@ SCIP_RETCODE do_layer(
    int** node_edge;
    int* vcount;
    SCIP_PQUEUE* pqueue;
-
+   char printfs = FALSE;
 
    for( e = 0; e < graph->edges; e++)
    {
@@ -914,7 +914,7 @@ SCIP_RETCODE do_layer(
 
    /* get user parameter */
    SCIP_CALL( SCIPgetIntParam(scip, "heuristics/"HEUR_NAME"/type", &mode) );
-   if( 1 )
+   if( printfs )
       printf(" tmmode: %d ->", mode);
    assert(mode == AUTO || mode == TM || mode == TMPOLZIN);
 
@@ -926,8 +926,7 @@ SCIP_RETCODE do_layer(
       else
          mode = TM;
    }
-   if( 1 )
-      printf(" %d \n", mode);
+
    /* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     * Patch um die heuristic nach einem restruct starten zu koennen
     * XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1049,33 +1048,55 @@ SCIP_RETCODE do_layer(
       {
          int* rootedges_t;
          int* rootedges_z;
+	 SCIP_Real* costrootedges_z;
          int root;
 	 int rootedge;
+	 int runcount = 0;
+	 char getrandom = FALSE;
          root = graph->source[0];
          k = 0;
          r = 0;
 	 /* todo take all out edges rotate amongst them, allocate only once*/
          SCIP_CALL( SCIPallocBufferArray(scip, &rootedges_t, nterms - 1) );
          SCIP_CALL( SCIPallocBufferArray(scip, &rootedges_z, nterms - 1) );
+	 SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, nterms - 1) );
          for( e = graph->inpbeg[root]; e != EAT_LAST; e = graph->ieat[e] )
          {
 	    if(  Is_term(graph->term[graph->tail[e]]) )
-
                rootedges_t[k++] = e;
 	    else
 	    {
-               costrev[e] = FARAWAY;
 	       assert(graph->cost[flipedge(e)] == 0);
 	       graph->cost[flipedge(e)] = FARAWAY;
+	       costrootedges_z[r] = costrev[e];
                rootedges_z[r++] = e;
+	       costrev[e] = FARAWAY;
 	    }
          }
-
+         getrandom = TRUE;
+         //SCIPsortRealInt(costrootedges_z, rootedges_z,	nterms - 1);
          for( r = 0; r < runs; r++ )
          {
-            rootedge = rootedges_z[(ncalls + r) % (nterms - 1)];
-            costrev[rootedge] = 0;
-            graph->cost[flipedge(rootedge)] = 0;
+
+            //rootedge = rootedges_z[(ncalls + r) % (nterms - 1)];
+            if( getrandom == FALSE && SCIPisEQ(scip, costrootedges_z[r], 1.0) )
+               getrandom = TRUE;
+
+
+            if( getrandom )
+            {
+	       rootedge = rootedges_z[runcount + (ncalls + r) % (nterms - 1 - runcount)];
+            }
+            else
+            {
+	       runcount++;
+	       rootedge = rootedges_z[r];
+
+            }
+            if( printfs )
+	       printf("cost: %f  edge: %d", (double)costrootedges_z[r], rootedge);
+            costrev[rootedge] = 0.0;
+            graph->cost[flipedge(rootedge)] = 0.0;
             /*  printf("rootedge %d->%d \n", graph->tail[rootedge], graph->head[rootedge]); */
             for( e = 0; e < nedges; e++ )
                result[e] = -1;
@@ -1112,6 +1133,7 @@ SCIP_RETCODE do_layer(
                min = obj;
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
+	       if( printfs )
                printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
 
                for( e = 0; e < nedges; e++ )
@@ -1129,11 +1151,12 @@ SCIP_RETCODE do_layer(
          {
             rootedge = rootedges_z[r];
             assert(costrev[rootedge] == FARAWAY);
-            costrev[rootedge] = 0;
+            costrev[rootedge] = 0.0;
             graph->cost[flipedge(rootedge)] = 0.0;
          }
          SCIPfreeBufferArray(scip, &rootedges_t);
          SCIPfreeBufferArray(scip, &rootedges_z);
+	 SCIPfreeBufferArray(scip, &costrootedges_z);
       }
       else
       {
@@ -1166,6 +1189,7 @@ SCIP_RETCODE do_layer(
                min = obj;
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
+	       if( printfs )
                printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
                if( 0 && graph->stp_type == STP_PRIZE_COLLECTING )
                {
@@ -1441,30 +1465,72 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       }
       else
       {
-
-         /* swap costs; set a high cost if the variable is fixed to 0 */
-         for( e = 0; e < nedges; e += 2)
+         if( graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING )
          {
-            if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
+            int root = graph->source[0];
+            assert(root >= 0);
+            /* swap costs; set a high cost if the variable is fixed to 0 */
+            for( e = 0; e < nedges; e += 2)
             {
-               costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-               cost[e + 1] = 1e+10;
-            }
-            else
-            {
-               costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
-               cost[e + 1] = costrev[e];
+               if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
+               {
+                  costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                  cost[e + 1] = 1e+10;
+               }
+               else
+               {
+                  costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
+                  cost[e + 1] = costrev[e];
+               }
+
+               if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
+               {
+                  costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                  cost[e] = 1e+10;
+               }
+               else
+               {
+                  if( graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
+                  {
+                     costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) );
+                     cost[e] = costrev[e + 1];
+                  }
+                  else
+                  {
+                     //TODO: chg s.t. original zero edges are also changed
+                     costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
+                     cost[e] = costrev[e + 1];
+                  }
+               }
             }
 
-            if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
+         }
+         else
+         {
+            /* swap costs; set a high cost if the variable is fixed to 0 */
+            for( e = 0; e < nedges; e += 2)
             {
-               costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-               cost[e] = 1e+10;
-            }
-            else
-            {
-               costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
-               cost[e] = costrev[e + 1];
+               if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
+               {
+                  costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                  cost[e + 1] = 1e+10;
+               }
+               else
+               {
+                  costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
+                  cost[e + 1] = costrev[e];
+               }
+
+               if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
+               {
+                  costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                  cost[e] = 1e+10;
+               }
+               else
+               {
+                  costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
+                  cost[e] = costrev[e + 1];
+               }
             }
          }
       }

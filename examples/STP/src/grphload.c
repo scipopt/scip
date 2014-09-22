@@ -803,8 +803,8 @@ GRAPH* graph_load(
    int          is_gridgraph = FALSE;
    int          has_coordinates = FALSE;
    int          obstacle_counter = 0;
-   int**        scaled_coordinates;
-   int**        obstacle_coords;
+   int**        scaled_coordinates = NULL;
+   int**        obstacle_coords = NULL;
    assert(file != NULL);
 
    /* No section loaded so far.
@@ -1122,7 +1122,12 @@ GRAPH* graph_load(
                      ret = FAILURE;
 		     break;
 		  }
-
+                   if( scaled_coordinates == NULL )
+		  {
+		     message(MSG_FATAL, &curf, "coordinates not given \n");
+                     ret = FAILURE;
+		     break;
+		  }
 		 /* int f;
 		   for( f = 0; f < nobstacles; f++ )
 		   {
@@ -1132,11 +1137,12 @@ GRAPH* graph_load(
 
 		   }*/
 		   assert(g == NULL);
+		   printf("bef x \n");
 		   g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
 		   for( i = 0; i < 4; i++ )
 		       free(obstacle_coords[i]);
 		  free(obstacle_coords);
-
+printf("aftbef x \n");
 		  break;
 	       case KEY_TERMINALS_END :
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
