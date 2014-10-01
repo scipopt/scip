@@ -78,6 +78,56 @@ inline static int nearest(
    return(k);
 }
 
+
+/*---------------------------------------------------------------------------*/
+/*--- Name     : get NEAREST knot                                         ---*/
+/*--- Function : Holt das oberste Element vom Heap (den Knoten mit der    ---*/
+/*---            geringsten Entfernung zu den bereits Verbundenen)        ---*/
+/*--- Parameter: Derzeitige Entfernungen und benutzte Kanten              ---*/
+/*--- Returns  : Nummer des bewussten Knotens                             ---*/
+/*---------------------------------------------------------------------------*/
+inline static int nearestX(
+   int* heap,
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
+   const SCIP_Real* pathdist)
+{
+   int   k;
+   int   t;
+   int   c;
+   int   j;
+
+   /* Heap shift down
+    * (Oberstes Element runter und korrigieren)
+    */
+   k              = heap[1];
+   j              = 1;
+   c              = 2;
+   heap[1]        = heap[(*count)--];
+   state[heap[1]] = 1;
+
+   if ((*count) > 2)
+      if (LT(pathdist[heap[3]], pathdist[heap[2]]))
+         c++;
+
+   while((c <= (*count)) && GT(pathdist[heap[j]], pathdist[heap[c]]))
+   {
+      t              = heap[c];
+      heap[c]        = heap[j];
+      heap[j]        = t;
+      state[heap[j]] = j;
+      state[heap[c]] = c;
+      j              = c;
+      c             += c;
+
+      if ((c + 1) <= (*count))
+         if (LT(pathdist[heap[c + 1]], pathdist[heap[c]]))
+            c++;
+   }
+   return(k);
+}
+
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : CORRECT heap                                             ---*/
 /*--- Function : Setzt ein neues Element auf den Heap, bzw. korrigiert    ---*/
@@ -120,6 +170,62 @@ inline static void correct(
    c = j / 2;
 
    while((j > 1) && GT(path[heap[c]].dist, path[heap[j]].dist))
+   {
+      t              = heap[c];
+      heap[c]        = heap[j];
+      heap[j]        = t;
+      state[heap[j]] = j;
+      state[heap[c]] = c;
+      j              = c;
+      c              = j / 2;
+   }
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+/*--- Name     : CORRECT heap                                             ---*/
+/*--- Function : Setzt ein neues Element auf den Heap, bzw. korrigiert    ---*/
+/*---            die Position eines vorhandenen Elementes                 ---*/
+/*--- Parameter: Derzeitige Entfernungen und benutzten Kanten,            ---*/
+/*---            Neuer Knoten, Vorgaengerknoten, Kante von der man aus    ---*/
+/*---            den neuen Knoten erreicht, Kosten der Kante,             ---*/
+/*---            sowie Betriebsmodus                                      ---*/
+/*--- Returns  : Nichts                                                   ---*/
+/*---------------------------------------------------------------------------*/
+inline static void correctX(
+   int* heap,
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
+   SCIP_Real*  pathdist,
+   int*   pathedge,
+   int    l,
+   int    k,
+   int    e,
+   SCIP_Real cost
+   )
+{
+   int    t;
+   int    c;
+   int    j;
+
+   pathdist[l] = (pathdist[k] + cost);
+   pathedge[l] = e;
+
+   /* Ist der Knoten noch ganz frisch ?
+    */
+   if (state[l] == UNKNOWN)
+   {
+      heap[++(*count)] = l;
+      state[l]      = (*count);
+   }
+
+   /* Heap shift up
+    */
+   j = state[l];
+   c = j / 2;
+
+   while((j > 1) && GT(pathdist[heap[c]], pathdist[heap[j]]))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -345,6 +451,69 @@ void graph_path_exec(
 }
 
 
+/* Dijkstra's algorithm starting from node 'start' */
+void graph_path_execX(
+   SCIP* scip,
+   const GRAPH*  p,
+   int           start,
+   SCIP_Real*    cost,
+   SCIP_Real*   pathdist,
+   int*         pathedge
+   )
+{
+   int   k;
+   int   m;
+   int   i;
+   int   count;
+   int* heap;
+   int* state;
+
+   assert(p      != NULL);
+   assert(start  >= 0);
+   assert(start  <  p->knots);
+   assert(p->path_heap   != NULL);
+   assert(p->path_state  != NULL);
+   assert(pathdist   != NULL);
+   assert(pathedge   != NULL);
+   assert(cost   != NULL);
+
+   if (p->knots == 0)
+      return;
+
+   heap = p->path_heap;
+   state = p->path_state;
+
+   for( i = 0; i < p->knots; i++ )
+   {
+      state[i]     = UNKNOWN;
+      pathdist[i] = FARAWAY;
+      pathedge[i] = -1;
+   }
+
+   k            = start;
+   pathdist[k] = 0.0;
+
+   if( p->knots > 1 )
+   {
+      count       = 1;
+      heap[count] = k;
+      state[k]    = count;
+
+      while( count > 0 )
+      {
+         k = nearestX(heap, state, &count, pathdist);
+
+         state[k] = CONNECT;
+
+         for( i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i] )
+         {
+            m = p->head[i];
+            if( state[m] && p->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[i])) )
+               correctX(heap, state, &count, pathdist, pathedge, m, k, i, cost[i]);
+         }
+      }
+   }
+}
 
 
 /* Find a tree conntaining all terminals */
@@ -762,6 +931,7 @@ void voronoi(
    PATH*         path
    )
 {
+   int e;
    int k;
    int m;
    int i;
@@ -807,12 +977,10 @@ void voronoi(
       }
    }
    assert(nbases > 0);
-   int e;
 
    for( e = 0; e < g->edges; e++)
    {
       assert(SCIPisGE(scip, g->cost[e], 0));
-
    }
 
    if( g->knots > 1 )
@@ -829,18 +997,7 @@ void voronoi(
          /* iterate over all outgoing edges of vertex k */
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
-	    assert(SCIPisGE(scip, cost[i], 0));
-	    assert(SCIPisGE(scip, costrev[i], 0));
             m = g->head[i];
-            /*    if( m == 15)
-                  {
-                  printf("head node %d: %d, cost %f: \n ", k, m, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i]));
-                  printf("terminal? %d: \n ", g->term[m]);
-
-                  printf("dist: %f \n",  path[m].dist);
-                  printf("state: %d \n",  state[m]);
-                  }
-            */
             /* check whether the path (to m) including k is shorter than the so far best known */
             if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
             {

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_local.c
- * @brief  improvement heuristic for STP
+ * @brief  improvement heuristic for STPs
  * @author Daniel Rehfeldt
  */
 
@@ -34,11 +34,11 @@
 #define HEUR_NAME             "local"
 #define HEUR_DESC             "improvement heuristic for STP"
 #define HEUR_DISPCHAR         '-'
-#define HEUR_PRIORITY         0
+#define HEUR_PRIORITY         10
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           (SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_AFTERLPLOOP )
+#define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)//(SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_AFTERLPLOOP )
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_DURINGROOT    TRUE
@@ -50,7 +50,8 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   lastsolindex;       /**< index of the last solution for which local was performed */
+   int                   lastsolindex;       /**< index of the last solution for which local has been performed */
+   int*                  lastsolindices;     /**< indices of a number of best solutions already tried */
    SCIP_Bool             duringroot;         /**< should the heuristic be called during the root node? */
 };
 
@@ -316,7 +317,7 @@ SCIP_RETCODE do_local(
    char* steinertree;
    char printfs = FALSE;
    if( printfs )
-   printf("local heuristic running \n");
+      printf("local heuristic running \n");
    root = graph->source[0];
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -1087,7 +1088,7 @@ SCIP_RETCODE do_local(
                   localmoves++;
 		  nimprovements++;
                   if( printfs )
-                  printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
+                     printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
                   /* unmark the original edges spanning the supergraph */
                   for( e = 0; e < nkpedges; e++ )
@@ -1655,7 +1656,7 @@ SCIP_RETCODE do_local(
                   node = SCIPunionfindFind(&uf, vbase[graph->head[newedge]]);
                   obj += bestdiff;
 		  if( printfs )
-                  printf( "ADDING NEW KEY PATH (%f )\n", bestdiff );
+                     printf( "ADDING NEW KEY PATH (%f )\n", bestdiff );
                   localmoves++;
                   nimprovements++;
                   /* remove old keypath */
@@ -2123,6 +2124,7 @@ SCIP_DECL_HEURFREE(heurFreeLocal)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   SCIPfreeMemoryArray(scip, &(heurdata->lastsolindices));
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -2173,17 +2175,21 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    GRAPH* graph;                             /* graph structure */
    SCIP_SOL* bestsol;                        /* incumbent solution */
    SCIP_SOL* sol;                            /* new solution */
-   SCIP_VAR** vars;                          /* SCIP variables                */
+   SCIP_SOL** sols;                          /* solutions */
+   SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_Real pobj;
    SCIP_Real* cost;
    SCIP_Real* costrev;
    SCIP_Real* nval;
    SCIP_Real* xval;
+   int i;
    int e;
    int v;
+   int min;
    int nvars;
+   int nsols;                                /* number of all solutions found so far */
    int* results;
-
+   int* lastsolindices;
    assert(heur != NULL);
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -2192,13 +2198,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* we only want to process each solution once */
-   bestsol = SCIPgetBestSol(scip);
-   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
-      return SCIP_OKAY;
+   lastsolindices = heurdata->lastsolindices;
+   assert(lastsolindices != NULL);
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
@@ -2206,15 +2207,66 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* the local heuristics may not work correctly for problems other than undirected STPs */
    if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID )
       return SCIP_OKAY;
+
+   /* don't run local in a Subscip */
+   if( SCIPgetSubscipDepth(scip) > 0 )
+   {
+      //printf("no local in Sub\n");
+      return SCIP_OKAY;
+   }
+
+   /* only process each solution once */
+   bestsol = SCIPgetBestSol(scip);
+   if( bestsol == NULL )
+      return SCIP_OKAY;
+
+   nsols = SCIPgetNSols(scip);
+   sols = SCIPgetSols(scip);
+   min = MIN(3, nsols);
+   for( v = 0; v < min; v++ )
+   {
+      if( SCIPsolGetIndex(sols[v]) != lastsolindices[v] )
+      {
+	 /* shift all solution indices right of the new solution index */
+	 for( i = min - 1; i >= v + 1; i-- )
+	 {
+	    lastsolindices[i] = lastsolindices[i - 1];
+	    if( lastsolindices[i] != - 1 )
+	    {
+               if( lastsolindices[i] != SCIPsolGetIndex(sols[i]) )
+               {
+                  //printf("%d neq %d \n", lastsolindices[i], SCIPsolGetIndex(sols[i]) );
+                  //assert(0);
+               }
+	    }
+	 }
+	 break;
+      }
+   }
+
+   /* no new solution available? */
+   if( v == min )
+      return SCIP_OKAY;
+
+   bestsol = sols[v];
+   lastsolindices[v] = SCIPsolGetIndex(bestsol);
+
+   /* has the new solution been found by this very heuristic? */
+   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
+      return SCIP_OKAY;
+
+   //printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-   heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
+   //heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
    *result = SCIP_DIDNOTFIND;
 
    nvars = SCIPprobdataGetNVars(scip);
@@ -2312,6 +2364,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
  * primal heuristic specific interface methods
  */
 
+
 /** creates the local primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2319,10 +2372,15 @@ SCIP_RETCODE SCIPincludeHeurLocal(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
+   int i;
 
    /* create Local primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    heurdata->lastsolindex = -1;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), 3) );
+
+   for( i = 0; i < 3; i++ )
+      heurdata->lastsolindices[i] = -1;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

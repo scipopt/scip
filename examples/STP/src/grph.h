@@ -175,8 +175,9 @@ extern void   graph_edge_del(GRAPH*, int);
 extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_uncover(GRAPH*);
 extern GRAPH* graph_pack(GRAPH*);
-extern void   graph_trail(const GRAPH*, int i);
+extern void   graph_trail(const GRAPH*, int);
 extern int    graph_valid(const GRAPH*);
+extern char    graph_valid2(SCIP*, const GRAPH*, SCIP_Real*);
 extern char    graph_sol_valid(const GRAPH*, int*);
 
 /* grphpath.c
@@ -184,6 +185,7 @@ extern char    graph_sol_valid(const GRAPH*, int*);
 extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
+extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   heap_add(int*, int*, int*, int, PATH*);

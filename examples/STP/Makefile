@@ -46,6 +46,7 @@ CMAINOBJ	=	cmain.o \
                         grphsave.o \
 			heur_tm.o \
 			heur_local.o \
+			heur_rec.o \
 			heur_rs.o \
 			misc_stp.o \
 			probdata_stp.o \

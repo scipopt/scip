@@ -113,8 +113,8 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/sepa_oddcycle.h ../../src/scip/sepa_rapidlearning.h \
  ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
  ../../src/nlpi/nlpi_ipopt.h src/reader_stp.h src/cons_stp.h src/grph.h \
- src/heur_tm.h src/heur_local.h src/heur_rs.h src/pricer_stp.h \
- src/probdata_stp.h
+ src/misc_stp.h src/heur_tm.h src/heur_local.h src/heur_rs.h \
+ src/pricer_stp.h src/probdata_stp.h
 $(OBJDIR)/cons_stp.o: src/cons_stp.c src/cons_stp.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -163,68 +163,20 @@ $(OBJDIR)/cons_stp.o: src/cons_stp.c src/cons_stp.h ../../src/scip/scip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/grph.h src/heur_tm.h \
+ ../../src/scip/struct_event.h src/grph.h src/misc_stp.h \
  src/probdata_stp.h src/portab.h
 $(OBJDIR)/crc32.o: src/crc32.c src/crc32.h
-$(OBJDIR)/grphbase.o: src/grphbase.c src/portab.h src/grph.h src/heur_tm.h \
- ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
- ../../src/scip/type_result.h ../../src/scip/type_clock.h \
- ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
- ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
- ../../src/scip/type_event.h ../../src/scip/type_lp.h \
- ../../src/scip/type_nlp.h ../../src/scip/type_var.h \
- ../../src/scip/type_prob.h ../../src/scip/type_tree.h \
- ../../src/scip/type_branch.h ../../src/scip/type_conflict.h \
- ../../src/scip/type_cons.h ../../src/scip/type_sol.h \
- ../../src/scip/type_dialog.h ../../src/scip/type_disp.h \
- ../../src/scip/type_heur.h ../../src/scip/type_history.h \
- ../../src/scip/type_nodesel.h ../../src/scip/type_presol.h \
- ../../src/scip/type_pricer.h ../../src/scip/type_reader.h \
- ../../src/scip/type_relax.h ../../src/scip/type_sepa.h \
- ../../src/scip/type_prop.h ../../src/nlpi/type_nlpi.h \
- ../../src/nlpi/type_expr.h ../../src/scip/pub_branch.h \
- ../../src/scip/pub_conflict.h ../../src/scip/pub_cons.h \
- ../../src/scip/struct_cons.h ../../src/scip/pub_cutpool.h \
- ../../src/scip/type_cutpool.h ../../src/scip/pub_dialog.h \
- ../../src/scip/pub_disp.h ../../src/scip/pub_event.h \
- ../../src/scip/pub_fileio.h ../../src/scip/pub_heur.h \
- ../../src/scip/pub_history.h ../../src/scip/struct_history.h \
- ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
- ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
- ../../src/scip/type_set.h ../../src/scip/type_stat.h \
- ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
- ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
- ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
- ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
- ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
- ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
- ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
- ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
- ../../src/scip/struct_var.h ../../src/scip/implics.h \
- ../../src/scip/history.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
- ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
- ../../src/nlpi/struct_expr.h ../../src/scip/presolve.h \
- ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
- ../../src/scip/type_mem.h ../../src/scip/type_primal.h \
- ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
- ../../src/scip/set.h ../../src/scip/buffer.h \
- ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
- ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
- ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h
-$(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/crc32.h src/grph.h \
- src/heur_tm.h ../../src/scip/scip.h ../../src/scip/def.h \
+$(OBJDIR)/grphbase.o: src/grphbase.c ../../src/scip/misc.h ../../src/scip/def.h \
  ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
  ../../src/scip/type_message.h ../../src/scip/struct_message.h \
- ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
- ../../src/scip/type_clock.h ../../src/scip/type_misc.h \
- ../../src/scip/type_timing.h ../../src/scip/type_scip.h \
- ../../src/scip/type_paramset.h ../../src/scip/type_event.h \
- ../../src/scip/type_lp.h ../../src/scip/type_nlp.h \
- ../../src/scip/type_var.h ../../src/scip/type_prob.h \
+ ../../src/blockmemshell/memory.h ../../src/scip/type_set.h \
+ ../../src/scip/type_misc.h ../../src/scip/pub_misc.h \
+ ../../src/scip/type_var.h ../../src/scip/struct_misc.h src/portab.h \
+ src/grph.h ../../src/scip/scip.h ../../src/scip/type_result.h \
+ ../../src/scip/type_clock.h ../../src/scip/type_timing.h \
+ ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
+ ../../src/scip/type_event.h ../../src/scip/type_lp.h \
+ ../../src/scip/type_nlp.h ../../src/scip/type_prob.h \
  ../../src/scip/type_tree.h ../../src/scip/type_branch.h \
  ../../src/scip/type_conflict.h ../../src/scip/type_cons.h \
  ../../src/scip/type_sol.h ../../src/scip/type_dialog.h \
@@ -242,29 +194,27 @@ $(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/crc32.h src/grph.h \
  ../../src/scip/pub_heur.h ../../src/scip/pub_history.h \
  ../../src/scip/struct_history.h ../../src/scip/pub_implics.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
- ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
- ../../src/scip/type_stat.h ../../src/lpi/type_lpi.h \
- ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
- ../../src/scip/pub_misc.h ../../src/scip/struct_misc.h \
- ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
- ../../src/scip/pub_presol.h ../../src/scip/pub_pricer.h \
- ../../src/scip/pub_reader.h ../../src/scip/pub_relax.h \
- ../../src/scip/pub_sepa.h ../../src/scip/pub_prop.h \
- ../../src/scip/pub_sol.h ../../src/scip/struct_sol.h \
- ../../src/scip/pub_tree.h ../../src/scip/struct_tree.h \
- ../../src/scip/pub_var.h ../../src/scip/struct_var.h \
- ../../src/scip/implics.h ../../src/scip/history.h ../../src/lpi/lpi.h \
- ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
- ../../src/nlpi/type_exprinterpret.h ../../src/nlpi/struct_expr.h \
- ../../src/scip/presolve.h ../../src/scip/struct_scip.h \
- ../../src/scip/type_interrupt.h ../../src/scip/type_mem.h \
- ../../src/scip/type_primal.h ../../src/scip/type_pricestore.h \
- ../../src/scip/type_sepastore.h ../../src/scip/set.h \
- ../../src/scip/buffer.h ../../src/scip/type_buffer.h \
- ../../src/scip/struct_set.h ../../src/scip/message.h \
- ../../src/scip/tree.h ../../src/scip/misc.h ../../src/scip/var.h \
- ../../src/scip/event.h ../../src/scip/struct_event.h
-$(OBJDIR)/grphmcut.o: src/grphmcut.c src/portab.h src/grph.h src/heur_tm.h \
+ ../../src/scip/pub_lp.h ../../src/scip/type_stat.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_nodesel.h \
+ ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
+ ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
+ ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
+ ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
+ ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
+ ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
+ ../../src/scip/struct_var.h ../../src/scip/implics.h \
+ ../../src/scip/history.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
+ ../../src/nlpi/struct_expr.h ../../src/scip/presolve.h \
+ ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
+ ../../src/scip/type_mem.h ../../src/scip/type_primal.h \
+ ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
+ ../../src/scip/set.h ../../src/scip/buffer.h \
+ ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
+ ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/var.h \
+ ../../src/scip/event.h ../../src/scip/struct_event.h src/misc_stp.h
+$(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/crc32.h src/grph.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
@@ -312,9 +262,9 @@ $(OBJDIR)/grphmcut.o: src/grphmcut.c src/portab.h src/grph.h src/heur_tm.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h
-$(OBJDIR)/grphpath.o: src/grphpath.c src/portab.h src/grph.h src/heur_tm.h \
- ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
+ ../../src/scip/struct_event.h src/misc_stp.h
+$(OBJDIR)/grphmcut.o: src/grphmcut.c src/portab.h src/grph.h ../../src/scip/scip.h \
+ ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
@@ -361,9 +311,9 @@ $(OBJDIR)/grphpath.o: src/grphpath.c src/portab.h src/grph.h src/heur_tm.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h
-$(OBJDIR)/grphsave.o: src/grphsave.c src/portab.h src/grph.h src/heur_tm.h \
- ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
+ ../../src/scip/struct_event.h src/misc_stp.h
+$(OBJDIR)/grphpath.o: src/grphpath.c src/portab.h src/grph.h ../../src/scip/scip.h \
+ ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
@@ -410,7 +360,56 @@ $(OBJDIR)/grphsave.o: src/grphsave.c src/portab.h src/grph.h src/heur_tm.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h
+ ../../src/scip/struct_event.h src/misc_stp.h
+$(OBJDIR)/grphsave.o: src/grphsave.c src/portab.h src/grph.h ../../src/scip/scip.h \
+ ../../src/scip/def.h ../../src/scip/type_retcode.h \
+ ../../src/scip/pub_message.h ../../src/scip/type_message.h \
+ ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_result.h ../../src/scip/type_clock.h \
+ ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
+ ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
+ ../../src/scip/type_event.h ../../src/scip/type_lp.h \
+ ../../src/scip/type_nlp.h ../../src/scip/type_var.h \
+ ../../src/scip/type_prob.h ../../src/scip/type_tree.h \
+ ../../src/scip/type_branch.h ../../src/scip/type_conflict.h \
+ ../../src/scip/type_cons.h ../../src/scip/type_sol.h \
+ ../../src/scip/type_dialog.h ../../src/scip/type_disp.h \
+ ../../src/scip/type_heur.h ../../src/scip/type_history.h \
+ ../../src/scip/type_nodesel.h ../../src/scip/type_presol.h \
+ ../../src/scip/type_pricer.h ../../src/scip/type_reader.h \
+ ../../src/scip/type_relax.h ../../src/scip/type_sepa.h \
+ ../../src/scip/type_prop.h ../../src/nlpi/type_nlpi.h \
+ ../../src/nlpi/type_expr.h ../../src/scip/pub_branch.h \
+ ../../src/scip/pub_conflict.h ../../src/scip/pub_cons.h \
+ ../../src/scip/struct_cons.h ../../src/scip/pub_cutpool.h \
+ ../../src/scip/type_cutpool.h ../../src/scip/pub_dialog.h \
+ ../../src/scip/pub_disp.h ../../src/scip/pub_event.h \
+ ../../src/scip/pub_fileio.h ../../src/scip/pub_heur.h \
+ ../../src/scip/pub_history.h ../../src/scip/struct_history.h \
+ ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
+ ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
+ ../../src/scip/type_set.h ../../src/scip/type_stat.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
+ ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
+ ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
+ ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
+ ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
+ ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
+ ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
+ ../../src/scip/struct_var.h ../../src/scip/implics.h \
+ ../../src/scip/history.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
+ ../../src/nlpi/struct_expr.h ../../src/scip/presolve.h \
+ ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
+ ../../src/scip/type_mem.h ../../src/scip/type_primal.h \
+ ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
+ ../../src/scip/set.h ../../src/scip/buffer.h \
+ ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
+ ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
+ ../../src/scip/var.h ../../src/scip/event.h \
+ ../../src/scip/struct_event.h src/misc_stp.h
 $(OBJDIR)/heur_tm.o: src/heur_tm.c src/heur_tm.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -459,7 +458,8 @@ $(OBJDIR)/heur_tm.o: src/heur_tm.c src/heur_tm.h ../../src/scip/scip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/probdata_stp.h src/grph.h src/portab.h
+ ../../src/scip/struct_event.h src/grph.h src/misc_stp.h \
+ src/probdata_stp.h src/portab.h
 $(OBJDIR)/heur_local.o: src/heur_local.c src/heur_local.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -509,7 +509,7 @@ $(OBJDIR)/heur_local.o: src/heur_local.c src/heur_local.h ../../src/scip/scip.h 
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
  ../../src/scip/struct_event.h src/probdata_stp.h src/grph.h \
- src/heur_tm.h
+ src/misc_stp.h
 $(OBJDIR)/heur_rs.o: src/heur_rs.c src/heur_rs.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -559,7 +559,57 @@ $(OBJDIR)/heur_rs.o: src/heur_rs.c src/heur_rs.h ../../src/scip/scip.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
  ../../src/scip/struct_event.h src/probdata_stp.h src/grph.h \
- src/heur_tm.h src/portab.h
+ src/misc_stp.h src/portab.h
+$(OBJDIR)/misc_stp.o: src/misc_stp.c src/heur_tm.h ../../src/scip/scip.h \
+ ../../src/scip/def.h ../../src/scip/type_retcode.h \
+ ../../src/scip/pub_message.h ../../src/scip/type_message.h \
+ ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_result.h ../../src/scip/type_clock.h \
+ ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
+ ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
+ ../../src/scip/type_event.h ../../src/scip/type_lp.h \
+ ../../src/scip/type_nlp.h ../../src/scip/type_var.h \
+ ../../src/scip/type_prob.h ../../src/scip/type_tree.h \
+ ../../src/scip/type_branch.h ../../src/scip/type_conflict.h \
+ ../../src/scip/type_cons.h ../../src/scip/type_sol.h \
+ ../../src/scip/type_dialog.h ../../src/scip/type_disp.h \
+ ../../src/scip/type_heur.h ../../src/scip/type_history.h \
+ ../../src/scip/type_nodesel.h ../../src/scip/type_presol.h \
+ ../../src/scip/type_pricer.h ../../src/scip/type_reader.h \
+ ../../src/scip/type_relax.h ../../src/scip/type_sepa.h \
+ ../../src/scip/type_prop.h ../../src/nlpi/type_nlpi.h \
+ ../../src/nlpi/type_expr.h ../../src/scip/pub_branch.h \
+ ../../src/scip/pub_conflict.h ../../src/scip/pub_cons.h \
+ ../../src/scip/struct_cons.h ../../src/scip/pub_cutpool.h \
+ ../../src/scip/type_cutpool.h ../../src/scip/pub_dialog.h \
+ ../../src/scip/pub_disp.h ../../src/scip/pub_event.h \
+ ../../src/scip/pub_fileio.h ../../src/scip/pub_heur.h \
+ ../../src/scip/pub_history.h ../../src/scip/struct_history.h \
+ ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
+ ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
+ ../../src/scip/type_set.h ../../src/scip/type_stat.h \
+ ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
+ ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
+ ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
+ ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
+ ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
+ ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
+ ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
+ ../../src/scip/struct_var.h ../../src/scip/implics.h \
+ ../../src/scip/history.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
+ ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
+ ../../src/nlpi/struct_expr.h ../../src/scip/presolve.h \
+ ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
+ ../../src/scip/type_mem.h ../../src/scip/type_primal.h \
+ ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
+ ../../src/scip/set.h ../../src/scip/buffer.h \
+ ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
+ ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
+ ../../src/scip/var.h ../../src/scip/event.h \
+ ../../src/scip/struct_event.h src/grph.h src/misc_stp.h \
+ src/probdata_stp.h src/portab.h
 $(OBJDIR)/probdata_stp.o: src/probdata_stp.c src/probdata_stp.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -608,7 +658,7 @@ $(OBJDIR)/probdata_stp.o: src/probdata_stp.c src/probdata_stp.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/grph.h src/heur_tm.h src/cons_stp.h \
+ ../../src/scip/struct_event.h src/grph.h src/misc_stp.h src/cons_stp.h \
  src/portab.h ../../src/scip/cons_linear.h
 $(OBJDIR)/reader_stp.o: src/reader_stp.c src/probdata_stp.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -658,7 +708,7 @@ $(OBJDIR)/reader_stp.o: src/reader_stp.c src/probdata_stp.h ../../src/scip/scip.
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/grph.h src/heur_tm.h src/reader_stp.h
+ ../../src/scip/struct_event.h src/grph.h src/misc_stp.h src/reader_stp.h
 $(OBJDIR)/pricer_stp.o: src/pricer_stp.c ../../src/scip/cons_linear.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -708,8 +758,8 @@ $(OBJDIR)/pricer_stp.o: src/pricer_stp.c ../../src/scip/cons_linear.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
  ../../src/scip/struct_event.h src/pricer_stp.h src/probdata_stp.h \
- src/grph.h src/heur_tm.h
-$(OBJDIR)/reduce.o: src/reduce.c src/grph.h src/heur_tm.h ../../src/scip/scip.h \
+ src/grph.h src/misc_stp.h
+$(OBJDIR)/reduce.o: src/reduce.c src/grph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
@@ -757,8 +807,8 @@ $(OBJDIR)/reduce.o: src/reduce.c src/grph.h src/heur_tm.h ../../src/scip/scip.h 
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/portab.h
-$(OBJDIR)/sdtest.o: src/sdtest.c src/grph.h src/heur_tm.h ../../src/scip/scip.h \
+ ../../src/scip/struct_event.h src/misc_stp.h src/portab.h
+$(OBJDIR)/sdtest.o: src/sdtest.c src/grph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
@@ -806,8 +856,8 @@ $(OBJDIR)/sdtest.o: src/sdtest.c src/grph.h src/heur_tm.h ../../src/scip/scip.h 
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/portab.h
-$(OBJDIR)/validate.o: src/validate.c src/grph.h src/heur_tm.h ../../src/scip/scip.h \
+ ../../src/scip/struct_event.h src/misc_stp.h src/portab.h
+$(OBJDIR)/validate.o: src/validate.c src/grph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
@@ -855,4 +905,4 @@ $(OBJDIR)/validate.o: src/validate.c src/grph.h src/heur_tm.h ../../src/scip/sci
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/scip/var.h ../../src/scip/event.h \
- ../../src/scip/struct_event.h src/portab.h
+ ../../src/scip/struct_event.h src/misc_stp.h src/portab.h

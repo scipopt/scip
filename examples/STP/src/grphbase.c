@@ -741,7 +741,6 @@ graph_prize_transform(
       /* is the kth node a terminal other than the root? */
       if( Is_term(graph->term[k]) )
       {
-
          /* the copied node */
          node = nnodes + nterms;
          nterms++;
@@ -751,8 +750,8 @@ graph_prize_transform(
          tmpsum += prize[k];
          //printf("prize[%d] : %f \n\n", k, prize[k]);
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
-         graph_edge_add(graph, root, node, prize[k], FARAWAY);
-         graph_edge_add(graph, root, k, 0, FARAWAY);
+	 graph_edge_add(graph, root, k, 0, FARAWAY);
+	 graph_edge_add(graph, root, node, prize[k], FARAWAY);
          graph_edge_add(graph, k, node, 0, FARAWAY);
       }
    }
@@ -878,6 +877,12 @@ graph_maxweight_transform(
    }
    assert(nterms == graph->terms);
    graph_prize_transform(graph, prize);
+#if 0
+   int root = graph->source[0];
+   for( e = 0; e < graph->edges; e++ )
+      if( Is_term(graph->term[graph->head[e]]) && Is_term(graph->term[graph->tail[e]])  && (graph->head[e]!= root && graph->tail[e] != root) )
+         printf("found a new 0 edge: %d, cost: %f \n", e, graph->cost[e] );
+#endif
    free(prize);
    graph->stp_type = STP_MAX_NODE_WEIGHT;
 }
@@ -1767,6 +1772,82 @@ char graph_sol_valid(
 
    }
    free(terminal);
+   SCIPqueueFree(&queue);
+   if (termcount != graph->terms)
+   {
+      for( i = 0; i < nnodes; i++ )
+         if( Is_term(graph->term[i]) && !terminal[i] )
+            printf("not reached, node: %d\n", i);
+      printf("a: %d, b: %d: \n", termcount, graph->terms);
+      assert(0);
+   }
+
+   return (termcount == graph->terms);
+}
+
+
+char graph_valid2(
+   SCIP* scip,
+   const GRAPH* graph,
+   SCIP_Real* cost
+
+   )
+{
+
+   SCIP_QUEUE* queue;
+
+   char* terminal;
+   char* reached;
+   int* pnode;
+   int e;
+   int i;
+   int root;
+   int nnodes;
+   int termcount;
+   assert(graph != NULL);
+   assert(cost != NULL);
+   nnodes = graph->knots;
+   root = graph->source[0];
+   assert(root >= 0);
+
+   terminal = malloc((size_t)nnodes * sizeof(char));
+   reached = malloc((size_t)nnodes * sizeof(char));
+   for( i = 0; i < nnodes; i++ )
+   {
+      terminal[i] = FALSE;
+      reached[i] = FALSE;
+   }
+   /* BFS until all terminals are reached */
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2) );
+
+   SCIP_CALL( SCIPqueueInsert(queue, &root) );
+   termcount = 1;
+   terminal[root] = TRUE;
+   reached[root] = TRUE;
+   while( !SCIPqueueIsEmpty(queue) )
+   {
+      pnode = (SCIPqueueRemove(queue));
+      for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+
+         if( SCIPisLT(scip, cost[e], 1e+10 - 10 ) && !reached[graph->head[e]] )
+         {
+            i = graph->head[e];
+	    reached[i] = TRUE;
+            if( Is_term(graph->term[i]) )
+            {
+               assert(  !terminal[i]   );
+               terminal[i] = TRUE;
+               termcount++;
+
+            }
+            SCIP_CALL( SCIPqueueInsert(queue, &graph->head[e]) );
+         }
+      }
+
+   }
+   free(terminal);
+   free(reached);
    SCIPqueueFree(&queue);
    if (termcount != graph->terms)
    {
