@@ -237,6 +237,18 @@ BEGIN {
    absgap = 0.0;
    feasible = 1;
 }
+/^Barrier - Optimal:/ {
+   db = $NF;
+   pb = $NF;
+   absgap = 0.0;
+   feasible = 1;
+}
+/^Dual objective/ {
+   db = $NF;
+}
+/^Duality gap/ {
+   absgap = $NF;
+}
 /^Integer / {
    if ($2 == "infeasible." || $2 == "infeasible") {
       db = +infty;
