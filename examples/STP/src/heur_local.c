@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "heur_local.h"
+#include "heur_tm.h"
 #include "probdata_stp.h"
 #include "grph.h"
 
@@ -2037,9 +2038,16 @@ SCIP_RETCODE do_local(
       /******/
    }
 
-   obj = 0.0;
+
 #if 0
-   if( 0 && nimprovements > 0 )
+   obj = 0.0;
+   for( e = 0; e < nedges; e++)
+      obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
+
+   printf(" ObjLocalBEFPRUNE=%.12e\n", obj);
+
+
+   if( nimprovements > 0 )
    {
 
       for( i = 0; i < nnodes; i++ )
@@ -2057,7 +2065,8 @@ SCIP_RETCODE do_local(
             steinertree[graph->head[e]] = TRUE;
          }
       }
-
+      for( e = 0; e < nedges; e++ )
+         best_result[e] = -1 ;
       SCIP_CALL( do_prune(
             scip,               /**< SCIP data structure */
             graph,                  /**< graph structure */
@@ -2071,8 +2080,15 @@ SCIP_RETCODE do_local(
 
    }
 #endif
+
+
+
+   obj = 0.0;
    for( e = 0; e < nedges; e++)
       obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
+
+   //printf(" ObjLocalAFTPRUNE=%.12e\n", obj);
+
    if( printfs )
       printf(" ObjAfterHeurLocal=%.12e\n", obj);
 
@@ -2260,7 +2276,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
       return SCIP_OKAY;
 
-   //printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
+//   printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */
    if( SCIPgetNNodes(scip) > 1 )

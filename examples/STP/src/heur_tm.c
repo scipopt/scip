@@ -1244,8 +1244,8 @@ SCIP_RETCODE do_layer(
                }
                k = graph->tail[rootedge + 2];
 #if TMX
-	        pathdist[k][root] = 0.0;
-                pathedge[k][root] = rootedge;
+               pathdist[k][root] = 0.0;
+               pathedge[k][root] = rootedge;
 #else
                path[k][root].dist = 0.0;
                path[k][root].edge = rootedge;
@@ -1254,9 +1254,9 @@ SCIP_RETCODE do_layer(
             }
             if( mode == TM )
 #if TMX
-	      SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, root, result, pathedge, connected) );
+               SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, root, result, pathedge, connected) );
 #else
-               SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, root, result, connected) );
+            SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, root, result, connected) );
 #endif
             else
                SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, node_dist, root, result, vcount,
@@ -1274,7 +1274,7 @@ SCIP_RETCODE do_layer(
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
 	       if( printfs )
-               printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
+                  printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
 
                for( e = 0; e < nedges; e++ )
                {
@@ -1303,15 +1303,15 @@ SCIP_RETCODE do_layer(
 
             if( graph->stp_type == STP_DEG_CONS )
             {
-	      #if !TMX
+#if !TMX
                SCIP_CALL( do_tm_degcons(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
-	       #endif
+#endif
             }
             else if( mode == TM )
 #if TMX
-	      SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], result, pathedge, connected) );
+               SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], result, pathedge, connected) );
 #else
-              SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
+            SCIP_CALL( do_tm(scip, graph, path, cost, costrev, layer, start[r], result, connected) );
 #endif
             else
                SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, layer, node_dist, start[r], result, vcount,
@@ -1324,9 +1324,9 @@ SCIP_RETCODE do_layer(
             for( e = 0; e < nedges; e++)
 	    {
                objt += (result[e] > -1) ? cost[e] : 0.0;
-	       if( printfs )
-	       if( (result[e] > -1) && SCIPisGE(scip, cost[e], 1e+10 - 10) )
-		 printf("high cost edge: %d->%d, %f \n", graph->tail[e], graph->head[e], cost[e]);
+	       //if( printfs )
+               /*  if( (result[e] > -1) && SCIPisGE(scip, cost[e], 1e+10 - 10) )
+                   printf("high cost edge: %d->%d, %f \n", graph->tail[e], graph->head[e], cost[e]);*/
 
 	    }
             SCIPdebugMessage(" Obj=%.12e\n", obj);
@@ -1337,16 +1337,16 @@ SCIP_RETCODE do_layer(
                *best_start = start[r];
                SCIPdebugMessage(" Objt=%.12e    ", objt);
 	       if( printfs )
-               printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
+                  printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) ncalls, obj);
 	       if( printfs )
-	       printf(" Objt: %.12e\n", objt);
+                  printf(" Objt: %.12e\n", objt);
 
-                  for( e = 0; e < nedges; e++ )
-                  {
-                     best_result[e] = result[e];
-                     /* if( best_result[e] != - 1)
-                        printf("%d->%d %d\n", graph->tail[e], graph->head[e], best_result[e]); */
-                  }
+               for( e = 0; e < nedges; e++ )
+               {
+                  best_result[e] = result[e];
+                  /* if( best_result[e] != - 1)
+                     printf("%d->%d %d\n", graph->tail[e], graph->head[e], best_result[e]); */
+               }
             }
          }
       }
@@ -1469,34 +1469,34 @@ SCIP_DECL_HEURINIT(heurInitTM)
       int k = 0;
       int r = 0;
       SCIP_Real* costrootedges_z;
-       SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_t), graph->terms - 1) );
-       SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_z), graph->terms - 1) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_t), graph->terms - 1) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_z), graph->terms - 1) );
 
-       SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, graph->terms - 1) );
-         for( e = graph->inpbeg[graph->source[0]]; e != EAT_LAST; e = graph->ieat[e] )
+      SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, graph->terms - 1) );
+      for( e = graph->inpbeg[graph->source[0]]; e != EAT_LAST; e = graph->ieat[e] )
+      {
+         if(  Is_term(graph->term[graph->tail[e]]) )
          {
-	    if(  Is_term(graph->term[graph->tail[e]]) )
-	    {
-               heurdata->rootedges_t[k++] = e;
-	    }
-	    else
-	    {
-	       costrootedges_z[r] = -graph->cost[flipedge(e + 2)];
-	       if (graph->head[e+2] != graph->source[0])
-		  printf("ARGGG \n");
-	      /* if( e + 2 != heurdata->rootedges_t[k-1] )
-	          printf("NEQ! \n");
-	       else
-		 printf("cost: %f \n", costrootedges_z[r]);*/
-
-               heurdata->rootedges_z[r++] = e;
-
-	    }
+            heurdata->rootedges_t[k++] = e;
          }
-         SCIPsortRealInt(costrootedges_z, heurdata->rootedges_z, graph->terms - 1);
-       /*   printf("cost0: %f \n", costrootedges_z[0]);
-	            printf("cost1: %f \n", costrootedges_z[1]);*/
-         SCIPfreeBufferArray(scip, &costrootedges_z);
+         else
+         {
+            costrootedges_z[r] = -graph->cost[flipedge(e + 2)];
+            if (graph->head[e+2] != graph->source[0])
+               printf("ARGGG \n");
+            /* if( e + 2 != heurdata->rootedges_t[k-1] )
+               printf("NEQ! \n");
+	       else
+               printf("cost: %f \n", costrootedges_z[r]);*/
+
+            heurdata->rootedges_z[r++] = e;
+
+         }
+      }
+      SCIPsortRealInt(costrootedges_z, heurdata->rootedges_z, graph->terms - 1);
+      /*   printf("cost0: %f \n", costrootedges_z[0]);
+           printf("cost1: %f \n", costrootedges_z[1]);*/
+      SCIPfreeBufferArray(scip, &costrootedges_z);
    }
    else
    {
@@ -1661,35 +1661,36 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    {
       if( xval == NULL )
       {
-         BMScopyMemoryArray(cost, graph->cost, nedges);
-	// printf("xval == NULLL nvars: %d depth:%d \n\n",nvars,  SCIPgetSubscipDepth(scip));
 	 int fixed = 0;
+         BMScopyMemoryArray(cost, graph->cost, nedges);
+         // printf("xval == NULLL nvars: %d depth:%d \n\n",nvars,  SCIPgetSubscipDepth(scip));
+
          /* TODO chg. for asymmetric graphs */
          for( e = 0; e < nedges; e += 2)
+         {
+            if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )
             {
-               if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )
-               {
-                  costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e + 1] = 1e+10;
-		  fixed++;
-               }
-               else
-               {
-                  costrev[e] = cost[e + 1];
-                  costrev[e + 1] = cost[e];
-               }
+               costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+               cost[e + 1] = 1e+10;
+               fixed++;
+            }
+            else
+            {
+               costrev[e] = cost[e + 1];
+               costrev[e + 1] = cost[e];
+            }
 
-               if( SCIPvarGetUbGlobal(vars[layer * nedges + e]) < 0.5 )
-               {
-		  fixed++;
-                  costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e] = 1e+10;
-               }
-               else
-	       {
-                  costrev[e] = cost[e + 1];
-                  costrev[e + 1] = cost[e];
-	       }
+            if( SCIPvarGetUbGlobal(vars[layer * nedges + e]) < 0.5 )
+            {
+               fixed++;
+               costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+               cost[e] = 1e+10;
+            }
+            else
+            {
+               costrev[e] = cost[e + 1];
+               costrev[e + 1] = cost[e];
+            }
          }
          //printf("nvars: %d fixed: %d \n", nvars,  fixed);
       }

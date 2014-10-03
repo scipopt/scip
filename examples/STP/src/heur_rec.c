@@ -47,8 +47,9 @@
 #define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes            */
 #define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
 #define DEFAULT_LPLIMFAC      2.0            /* factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_NUSEDSOLS     5              /* number of solutions that will be taken into account                   */
+#define DEFAULT_NUSEDSOLS     7              /* number of solutions that will be taken into account                   */
 #define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait        */
+#define DEFAULT_TIMELIMIT     -1             /* time limit for the sub problem to be solved, if -1, running time till first call of rec is chosen */
 #define DEFAULT_NWAITINGSOLS  5              /* minimum number of new solutions before executing the heuristic again  */
 #define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
 #define DEFAULT_USELPROWS     FALSE          /* should subproblem be created out of the rows in the LP rows,
@@ -93,6 +94,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Rec should at least improve the incumbent   */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
+   SCIP_Real             timelimit;          /**< time limit for the subproblem                                     */
    SCIP_Bool             dontwaitatroot;     /**< should the nwaitingnodes parameter be ignored at the root node?   */
    unsigned int          randseed;           /**< seed value for random number generator                            */
    SCIP_HASHTABLE*       hashtable;          /**< hashtable used to store the solution tuples already used          */
@@ -417,13 +419,13 @@ SCIP_RETCODE setupSubproblem(
    selection[nselectedsols++] = 0;
    solselected[0] = TRUE;
    //printf("solution: %d, found by: %s \n", SCIPsolGetIndex(sols[0]), SCIPheurGetName(SCIPsolGetHeur(sols[0])));
-   for( i = 1; i < nsols && nselectedsols < nusedsols - 2; i++ )
+   for( i = 1; i < nsols && nselectedsols < nusedsols - nusedsols / 2; i++ )
    {
       if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[i - 1])), "local") != 0 )
       {
          selection[nselectedsols++] = i;
 	 solselected[i] = TRUE;
-         // printf("solution: %d, found by: %s \n", SCIPsolGetIndex(sols[i]), SCIPheurGetName(SCIPsolGetHeur(sols[i])));
+         //printf("solution: %d, found by: %s \n", SCIPsolGetIndex(sols[i]), SCIPheurGetName(SCIPsolGetHeur(sols[i])));
       }
    }
 
@@ -443,18 +445,18 @@ SCIP_RETCODE setupSubproblem(
       {
          selection[nselectedsols++] = j;
          solselected[j] = TRUE;
-         //   printf("solution(phase min): %d found by: %s \n", SCIPsolGetIndex(sols[j]), SCIPheurGetName(SCIPsolGetHeur(sols[j])));
+         //  printf("solution(phase min): %d found by: %s \n", SCIPsolGetIndex(sols[j]), SCIPheurGetName(SCIPsolGetHeur(sols[j])));
       }
    }
 
    for( i = 0; i < nsols && nselectedsols < nusedsols; i++ )
    {
       j = (i + ncalls + nusedsols) % nsols;
-      if( solselected[j] == FALSE && strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[j - 1])), "local") != 0 )
+      if( solselected[j] == FALSE )
       {
          selection[nselectedsols++] = j;
          solselected[j] = TRUE;
-         //    printf("solution(phase 2): %d found by: %s \n", j, SCIPheurGetName(SCIPsolGetHeur(sols[j])));
+         //         printf("solution(phase 2): %d found by: %s \n", j, SCIPheurGetName(SCIPsolGetHeur(sols[j])));
       }
    }
    heurdata->nselectedsols = nselectedsols;
@@ -688,7 +690,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_SOL** sols;
 
    SCIP_Real memorylimit;                    /* memory limit for the subproblem                     */
-   SCIP_Real timelimit;                      /* time limit for the subproblem                       */
+   SCIP_Real timelimit;                      /* time limit for the problem                           */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real upperbound;
    SCIP_Bool success;
@@ -713,7 +715,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    nusedsols = heurdata->nusedsols;
 
    *result = SCIP_DELAYED;
-   //printf("nsols: %d\n", (int) SCIPgetNSolsFound(scip));
+   //printf("nsols: %d\n ", (int) SCIPgetNSolsFound(scip) );
    nsols = SCIPgetNSolsFound(scip);
 
    /* only call heuristic, if sufficiently many solutions are available */
@@ -724,18 +726,21 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    sols = SCIPgetSols(scip);
    assert(sols != NULL);
-
+#if 0
    /* if a best solution has been found, the heuristic should not be additonally delayed */
    if( sols[0] != heurdata->prevbestsol )
       heurdata->nfailures = 0;
+#endif
 
-
-   if( SCIPisLT(scip, nsols, heurdata->nlastsols + heurdata->nwaitingsols + heurdata->nfailures) && heurdata->ncalls > 0 )
+   if( SCIPisLT(scip, nsols, heurdata->nlastsols + heurdata->nwaitingsols + 2 * heurdata->nfailures) && heurdata->ncalls > 0 )
    {
       //printf("Recombination suspending\n");
       return SCIP_OKAY;
    }
-
+   /* set time limit before the first execution of rec*/
+   if( heurdata->ncalls == 0 )
+      if( SCIPisLE(scip, heurdata->timelimit, 0.0) )
+         heurdata->timelimit = (SCIP_Real) MAX(SCIPgetSolvingTime(scip), 1.0);
    heurdata->ncalls++;
 
    if( SCIPgetNNodes(scip) > 1 )
@@ -858,6 +863,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* choose a time limit */
+   if( SCIPisGT(scip, timelimit, heurdata->timelimit) )
+      timelimit = heurdata->timelimit;
+
+   // printf("choosen time limit: %f sec \n", timelimit);
    /* set limits for the subproblem */
    heurdata->nodelimit = nstallnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
@@ -1027,6 +1037,15 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       /* if solution is not better then incumbent or could not be added to problem => run is counted as a failure */
       if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          heurdata->nfailures++;
+      if( solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
+      {
+	 //printf("found solution (rec) is NOT optimal \n \n");
+      }
+      else
+      {
+         heurdata->nfailures = 0;
+	 //printf("found solution (rec) is optimal \n \n");
+      }
    }
    else
    {
@@ -1113,6 +1132,11 @@ SCIP_RETCODE SCIPincludeHeurRec(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lplimfac",
          "factor by which the limit on the number of LP depends on the node limit",
          &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/timelimit",
+         "time limit for the sub problem to be solved, problem specifically chosen on default",
+         &heurdata->timelimit, TRUE, DEFAULT_TIMELIMIT, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/dontwaitatroot",
          "should the nwaitingnodes parameter be ignored at the root node?",
