@@ -189,7 +189,7 @@ else
     fi
 fi
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME"_"$THREADS.$BINID.$QUEUE.$SETNAME.eval
+EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 echo > $EVALFILE
 
 # counter to define file names for a test set uniquely
@@ -277,10 +277,12 @@ do
       echo format \"memlimit %g\" \$treememorylimit >> $TMPFILE
       echo format \"percentmemtofile %g\" \$treememorysavingtarget >> $TMPFILE
 
+      echo crossover 0                        >> $TMPFILE
+
       echo readprob $SCIPPATH/$i              >> $TMPFILE
-      echo time mipoptimize                   >> $TMPFILE
-      echo echo simplexiter:                  >> $TMPFILE
-      echo simplexiter                        >> $TMPFILE
+      echo time lpoptimize -b                 >> $TMPFILE
+      echo echo bariter:                      >> $TMPFILE
+      echo bariter                            >> $TMPFILE
       echo quit                               >> $TMPFILE
 
       # additional environment variables needed by run.sh

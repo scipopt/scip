@@ -163,6 +163,11 @@ BEGIN {
    tottime = $6;
    aborted = 0;
 }
+/^Barrier solved model in/ {
+   iters = $5;
+   tottime = $8;
+   aborted = 0;
+}
 /^Optimal objective/ {
    pb = $3;
    db = $3;

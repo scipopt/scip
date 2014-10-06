@@ -194,6 +194,17 @@ BEGIN {
 }
 }
 
+/^bariter/{
+   bariterline = 1;
+   next;
+}
+// {if( bariterline )
+{
+   iters = $1;
+   bariterline = 0;
+}
+}
+
 #
 # evaluation
 #
