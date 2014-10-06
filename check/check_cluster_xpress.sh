@@ -225,7 +225,7 @@ do
       SHORTFILENAME=`basename $SHORTFILENAME .lp`
       SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-      FILENAME=$USER.$TSTNAME"_"$THREADS.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME
+      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME
       BASENAME=$SCIPPATH/results/$FILENAME
 
       TMPFILE=$BASENAME.tmp
@@ -277,10 +277,10 @@ do
       echo format \"memlimit %g\" \$treememorylimit >> $TMPFILE
       echo format \"percentmemtofile %g\" \$treememorysavingtarget >> $TMPFILE
 
-      echo crossover 0                        >> $TMPFILE
+      echo crossover = 0                      >> $TMPFILE
 
       echo readprob $SCIPPATH/$i              >> $TMPFILE
-      echo time lpoptimize -b                 >> $TMPFILE
+      echo time [lpoptimize -b]               >> $TMPFILE
       echo echo bariter:                      >> $TMPFILE
       echo bariter                            >> $TMPFILE
       echo quit                               >> $TMPFILE
