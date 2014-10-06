@@ -168,6 +168,12 @@ BEGIN {
    tottime = $8;
    aborted = 0;
 }
+/^Barrier performed/ {
+   iters = $3;
+   tottime = $6;
+   aborted = 1;
+}
+
 /^Optimal objective/ {
    pb = $3;
    db = $3;
