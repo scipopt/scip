@@ -893,10 +893,14 @@ public:
          verbosity = Param::verbose();
          Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
          SCIPdebugMessage("simplifying LP\n");
+#ifdef WITH_BOUNDFLIPPING
+         result = simplifier->simplify(*this, epsilon(), feastol(), opttol(), true);
+#else
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
 #else
          result = simplifier->simplify(*this, epsilon(), delta());
+#endif
 #endif
          SCIPdebugMessage("simplifier ended with status %u (0: OKAY, 1: INFEASIBLE, 2: DUAL_INFEASIBLE, 3: UNBOUNDED, 4: VANISHED)\n", result);
 
