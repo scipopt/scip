@@ -44,7 +44,8 @@ BEGIN {
    infty = +1e+20;
    headerprinted = 0;
    namelength = 18;             # maximal length of instance names (can be increased)
-   simplexiterline = 0;
+   simplexiterline = 0; # only used as flag to read next line once
+   timeline = 0;        # only used as flag to read next line once
 
    nprobs   = 0;
    sbab     = 0;
@@ -175,9 +176,30 @@ BEGIN {
    pb = -infty;
    feasible = 0;
 }
+/^Optimal solution found/ {
+   aborted = 0;
+   feasible = 1;
+}
+/^Barrier solved problem/ {
+   aborted = 0;
+   feasible = 1;
+   timeline = 1;
+   next;
+}
+// {if( timeline )
+{
+   tottime = substr($5,0,length($5)-1) * 1.0;
+   timeline = 0;
+}
+}
+/^Final objective/ {
+   pb = $4;
+   db = $4;
+}
 # this is not "per simplex iteration" but "per Xpress iteration"
 / microseconds per iteration/ {
-   tottime   = $1 / 1000000;
+   if( tottime == 0.0 )
+      tottime = $1 / 1000000;
 }
 /^ \*\*\* Search completed \*\*\*     Time:/ {
    bbnodes   = $8;
