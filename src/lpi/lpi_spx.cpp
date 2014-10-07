@@ -102,6 +102,7 @@
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
+#define WITH_BOUNDFLIPPING
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
 #endif
