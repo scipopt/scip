@@ -167,7 +167,7 @@ else
     fi
 fi
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"_"$THREADS.eval
 echo > $EVALFILE
 
 # counter to define file names for a test set uniquely
@@ -203,7 +203,7 @@ do
       SHORTFILENAME=`basename $SHORTFILENAME .lp`
       SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME
+      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME"_"$THREADS
       BASENAME=$SCIPPATH/results/$FILENAME
 
       TMPFILE=$BASENAME.tmp
