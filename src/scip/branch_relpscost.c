@@ -53,7 +53,9 @@
                                          *   branching (only with propagation)? */
 #define DEFAULT_ERRORBASEDRELIABLITY FALSE /**< should reliability be based on relative errors? */
 #define DEFAULT_RELERRORTOLERANCE 0.1 /**< tolerance for relative errors to be reliable */
-
+#define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
+#define DEFAULT_USESBCUTOFFINFO FALSE    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
+#define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -77,6 +79,9 @@ struct SCIP_BranchruleData
                                               *   branching (only with propagation)? */
    SCIP_Bool             errorbasedreliability; /**< should reliability be based on relative errors? */
    SCIP_Real             relerrortolerance;  /**< tolerance for relative errors to be reliable */
+   SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
+   SCIP_Bool             usesbcutoffinfo;    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
+   SCIP_Bool             uselowerconfipscost; /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
 };
 
 
@@ -266,17 +271,25 @@ static
 SCIP_Real varCalcPscostConfidenceBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable in question */
-   SCIP_BRANCHDIR        dir                 /**< the branching direction for the confidence bound */
+   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
+   SCIP_Bool             onlycurrentrun      /**< should only the current run be taken into account */
    )
 {
    SCIP_Real confidencebound;
 
-   confidencebound = SCIPgetVarPseudocostVariance(scip, var, dir, TRUE);
+   confidencebound = SCIPgetVarPseudocostVariance(scip, var, dir, onlycurrentrun);
    if( SCIPisFeasPositive(scip, confidencebound) )
    {
-      assert(SCIPgetVarPseudocostCountCurrentRun(scip, var, dir) > 1.9);
-
-      confidencebound = confidencebound / SCIPgetVarPseudocostCountCurrentRun(scip, var, dir);
+      if( onlycurrentrun )
+      {
+         assert(SCIPgetVarPseudocostCountCurrentRun(scip, var, dir) > 1.9 );
+         confidencebound = confidencebound / SCIPgetVarPseudocostCountCurrentRun(scip, var, dir);
+      }
+      else
+      {
+         assert(SCIPgetVarPseudocostCount(scip, var, dir) > 1.9 );
+         confidencebound = confidencebound / SCIPgetVarPseudocostCount(scip, var, dir);
+      }
       confidencebound = sqrt(confidencebound);
 
       /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
@@ -329,7 +342,7 @@ SCIP_Bool isVarPscostRelerrorReliable(
    {
       SCIP_Real normval;
 
-      relerrordown = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+      relerrordown = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_DOWNWARDS, TRUE);
       normval = MAX(1.0, SCIPgetVarPseudocostValCurrentRun(scip, var, -1.0));
 
       relerrordown /= normval;
@@ -341,7 +354,7 @@ SCIP_Bool isVarPscostRelerrorReliable(
    {
       SCIP_Real normval;
 
-      relerrorup = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_UPWARDS);
+      relerrorup = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_UPWARDS, TRUE);
       normval = MAX(1.0, SCIPgetVarPseudocostValCurrentRun(scip, var, +1.0));
 
       relerrorup /= normval;
@@ -353,6 +366,34 @@ SCIP_Bool isVarPscostRelerrorReliable(
    relerror = MAX(relerrorup, relerrordown);
 
    return (relerror <= threshold);
+}
+
+/** determine current pseudo cost score that optionally take pseudo cost confidence intervals into account */
+static
+SCIP_Real getPseudoCostScore(
+   SCIP*                scip,               /**< SCIP data structure */
+   SCIP_VAR*            var,                /**< candidate variable */
+   SCIP_Real            varsol,             /**< current solution value */
+   SCIP_Bool            useconfidence       /**< should confidence intervals be used? */
+   )
+{
+   /* use pessimistic lower confidence interval bounds instead of average pseudo costs */
+   if( useconfidence )
+   {
+      SCIP_Real pscostup;
+      SCIP_Real pscostdown;
+
+      pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0) - varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_UPWARDS, FALSE);
+      pscostup = MAX(0.0, pscostup);
+
+      pscostdown = SCIPgetVarPseudocostVal(scip, var, -1.0) - varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_DOWNWARDS, FALSE);
+      pscostdown = MAX(0.0, pscostdown);
+
+      return SCIPgetBranchScore(scip, var, pscostdown * (varsol - SCIPfloor(scip, varsol)), pscostup * (SCIPceil(scip, varsol) - varsol));
+   }
+   else
+      /* return normal pseudo cost*/
+      return SCIPgetVarPseudocostScore(scip, var, varsol);
 }
 
 
@@ -555,7 +596,7 @@ SCIP_RETCODE execRelpscost(
          conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
-         pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
+         pscostscore = getPseudoCostScore(scip, branchcands[c], branchcandssol[c], branchruledata->uselowerconfipscost);
          usesb = FALSE;
 
          /* don't use strong branching on variables that have already been initialized at the current node;
@@ -814,12 +855,18 @@ SCIP_RETCODE execRelpscost(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
-         /* @todo: store pseudo cost only for valid bounds? and also if the other sb child was infeasible? */
-         if( !downinf && !upinf )
+         /* @todo: store pseudo cost only for valid bounds?
+          * depending on the user parameter choice of storesemiinitcosts, pseudo costs are also updated in single directions,
+          * if the node in the other direction was infeasible or cut off
+          */
+         if( !downinf && (!upinf || branchruledata->storesemiinitcosts) )
          {
             /* update pseudo cost values */
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0-branchcandsfrac[c], downgain, 1.0) );
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0-branchcandsfrac[c], upgain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, 1.0) );
+         }
+         if( !upinf && (!downinf || branchruledata->storesemiinitcosts)  )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, 1.0) );
          }
 
          /* the minimal lower bound of both children is a proved lower bound of the current subtree */
@@ -917,7 +964,7 @@ SCIP_RETCODE execRelpscost(
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
             inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
-            cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            cutoffscore = branchruledata->usesbcutoffinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
                inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
@@ -1260,6 +1307,21 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/relerrortolerance", "relative error tolerance for reliability",
          &branchruledata->relerrortolerance, TRUE, DEFAULT_RELERRORTOLERANCE, 0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
+         "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
+         &branchruledata->storesemiinitcosts, TRUE, DEFAULT_STORESEMIINITCOSTS,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesbcutoffinfo",
+         "should the scoring function disregard cutoffs for variable if sb-lookahead was feasible?",
+         &branchruledata->usesbcutoffinfo, TRUE, DEFAULT_USESBCUTOFFINFO,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/uselowerconfipscost",
+         "should lower confidence interval bound be used for pseudo costs of variables with no sb?",
+         &branchruledata->uselowerconfipscost, TRUE, DEFAULT_USELOWERCONFIPSCOST,
+         NULL, NULL) );
 
    return SCIP_OKAY;
 }
