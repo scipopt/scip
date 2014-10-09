@@ -421,7 +421,8 @@ SCIP_Real SCIPhistoryGetPseudocostVariance(
    dir = (direction == SCIP_BRANCHDIR_UPWARDS ? 1 : 0);
    correctionfactor = history->pscostcount[dir] - 1.0;
 
-   if( correctionfactor >= 1.0 )
+   /* TODO what to do in case of noninteger weights? */
+   if( correctionfactor > 0.9 )
    {
       SCIP_Real totalvariance;
 

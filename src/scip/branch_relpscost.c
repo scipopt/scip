@@ -251,6 +251,111 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
+/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
+ *
+ *  The confidence bound \f$ \alpha \geq 0\f$ denotes the interval borders \f$ [X - \alpha, \ X + \alpha]\f$, which contains
+ *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
+ *  of 95 %.
+ *
+ *  @note Current implementation always underestimates the confidence interval, which should be only relevant, if very
+ *        little pseudo cost information is available.
+ *
+ *  @return value of confidence bound for this variable
+ */
+static
+SCIP_Real varCalcPscostConfidenceBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_BRANCHDIR        dir                 /**< the branching direction for the confidence bound */
+   )
+{
+   SCIP_Real confidencebound;
+
+   confidencebound = SCIPgetVarPseudocostVariance(scip, var, dir, TRUE);
+   if( SCIPisFeasPositive(scip, confidencebound) )
+   {
+      assert(SCIPgetVarPseudocostCountCurrentRun(scip, var, dir) > 1.9);
+
+      confidencebound = confidencebound / SCIPgetVarPseudocostCountCurrentRun(scip, var, dir);
+      confidencebound = sqrt(confidencebound);
+
+      /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
+       * the number of pseudo cost evaluations of this variable in the respective direction. With the number
+       * of ps cost evaluations approaching infinity, the student-T-distribution converges towards a standard normal
+       * distribution, of which the factor 1.96 represents the 0.95-percentile.
+       * the obtained bound is therefore non-conservative and might underestimate the true confidence bounds for
+       * very small pseudo cost counts
+       */
+      confidencebound *= 1.96;
+   }
+   else
+      confidencebound = 0.0;
+
+   return confidencebound;
+}
+
+/** check if the current pseudo cost relative error in a direction violates the given threshold */
+static
+SCIP_Bool isVarPscostRelerrorReliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_Real             threshold           /**< threshold for relative errors to be considered reliable (enough) */
+   )
+{
+   SCIP_Real downsize;
+   SCIP_Real upsize;
+   SCIP_Real size;
+   SCIP_Real relerrorup;
+   SCIP_Real relerrordown;
+   SCIP_Real relerror;
+
+   /* check, if the pseudo cost score of the variable is reliable */
+   downsize = SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+   upsize = SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS);
+   size = MIN(downsize, upsize);
+
+   relerrordown = 0.0;
+   relerrorup = 0.0;
+
+   /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
+   if( size < 1.5 )
+      return FALSE;
+
+   /* use the relative error between the current mean pseudo cost value of the candidate and its upper
+    * confidence interval bound at confidence level of 95% for individual variable reliability.
+    * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
+    */
+   if( downsize >= 2.0 )
+   {
+      SCIP_Real normval;
+
+      relerrordown = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+      normval = MAX(1.0, SCIPgetVarPseudocostValCurrentRun(scip, var, -1.0));
+
+      relerrordown /= normval;
+   }
+   else
+      relerrordown = 0.0;
+
+   if( upsize >= 2.0 )
+   {
+      SCIP_Real normval;
+
+      relerrorup = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_UPWARDS);
+      normval = MAX(1.0, SCIPgetVarPseudocostValCurrentRun(scip, var, +1.0));
+
+      relerrorup /= normval;
+   }
+   else
+      relerrorup = 0.0;
+
+   /* consider the relative error threshold violated, if it is violated in at least one branching direction */
+   relerror = MAX(relerrorup, relerrordown);
+
+   return (relerror <= threshold);
+}
+
+
 /** execute reliability pseudo cost branching */
 static
 SCIP_RETCODE execRelpscost(
@@ -479,56 +584,17 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real downsize;
             SCIP_Real upsize;
             SCIP_Real size;
-            SCIP_Real relerrorup;
-            SCIP_Real relerrordown;
-            SCIP_Real relerror;
 
             /* check, if the pseudo cost score of the variable is reliable */
             downsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS);
             upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
-            relerrordown = 0.0;
-            relerrorup = 0.0;
-
-            /* use the relative error between the current mean pseudo cost value of the candidate and its upper
-             * confidence interval bound at confidence level of 95% for individual variable reliability.
-             * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
-             *
-             * the factor 1.96 comes from the 95% confidence interval
-             */
-            if( downsize >= 2.0 )
-            {
-               relerrordown = SCIPgetVarPseudocostVariance(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS, TRUE);
-               if( SCIPisFeasPositive(scip, relerrordown) )
-               {
-                  relerrordown = relerrordown / downsize;
-                  relerrordown = sqrt(relerrordown);
-                  relerrordown *= 1.96;
-                  assert(SCIPisFeasPositive(scip, SCIPgetVarPseudocostValCurrentRun(scip, branchcands[c], -1.0)));
-                  relerrordown /= SCIPgetVarPseudocostValCurrentRun(scip, branchcands[c], -1.0);
-               }
-               else
-                  relerrordown = 0.0;
-            }
-            if( upsize >= 2.0 )
-            {
-               relerrorup = SCIPgetVarPseudocostVariance(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS, TRUE);
-               if( SCIPisFeasPositive(scip, relerrorup) )
-               {
-                  relerrorup = relerrorup / downsize;
-                  relerrorup = sqrt(relerrorup);
-                  relerrorup *= 1.96;
-                  assert(SCIPisFeasPositive(scip, SCIPgetVarPseudocostValCurrentRun(scip, branchcands[c], +1.0)));
-                  relerrorup /= SCIPgetVarPseudocostVal(scip, branchcands[c], +1.0);
-               }
-               else
-                  relerrorup = 0.0;
-            }
-
-            relerror = MAX(relerrorup, relerrordown);
-            /* use strong branching on variables with unreliable pseudo cost scores */
-            usesb = (size < reliable || (branchruledata->errorbasedreliability && relerror > branchruledata->relerrortolerance));
+            /* use strong branching on variables with unreliable pseudo cost scores or optionally if the relative error
+             * of the pseudo costs is too high */
+            usesb = (size < reliable
+                  || (branchruledata->errorbasedreliability
+                        && !isVarPscostRelerrorReliable(scip, branchcands[c], branchruledata->errorbasedreliability)));
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
