@@ -149,7 +149,7 @@ static const struct key keyword_table[] =
       {  "coordinates.end",          KEY_COORDINATES_END,        NULL        },
       {  "coordinates.grid",         KEY_COORDINATES_GRID,       NULL        },
 
-      {  "graph.a",                  KEY_GRAPH_A,                "nnnn"      },
+      {  "graph.a",                  KEY_GRAPH_A,                "nnn"       },
       {  "graph.e",                  KEY_GRAPH_E,                "nnn"       },
       {  "graph.edges",              KEY_GRAPH_EDGES,            "n"         },
       {  "graph.end",                KEY_END,                    NULL        },
@@ -1031,12 +1031,20 @@ GRAPH* graph_load(
                      g->source[0] = -1;
 		     if( stp_type == -1 )
 		     {
-		        stp_type = STP_UNDIRECTED;
-			g->stp_type = STP_UNDIRECTED;
+                        if( p->sw_code == KEY_GRAPH_E )
+                        {
+                           stp_type = STP_UNDIRECTED;
+                           g->stp_type = STP_UNDIRECTED;
+                        }
+                        else
+                        {
+                           stp_type = STP_DIRECTED;
+                           g->stp_type = STP_DIRECTED;
+                        }
 		     }
                   }
 
-                  if(((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) && stp_type == STP_MAX_NODE_WEIGHT)
+                  if(((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) && stp_type == STP_MAX_NODE_WEIGHT )
 		  {
 		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
 		  }
@@ -1046,7 +1054,7 @@ GRAPH* graph_load(
                         (double)para[2].n,
                         (p->sw_code == KEY_GRAPH_E)
                         ? (double)para[2].n
-                        : (double)para[3].n);
+                        : FARAWAY /* (double)para[3].n ??????????????? */ );
                   }
                   else
                   {
