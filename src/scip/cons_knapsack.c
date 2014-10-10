@@ -2183,17 +2183,17 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
             /* greedily fill up the clique */
             for( j = i + 1; j < nvarsused; ++j )
             {
-	       /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-	       if( cliquepartition[varseq[j]] == -1 && SCIPvarIsActive(tmpvars[varseq[j]]) )
+               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+               if( cliquepartition[varseq[j]] == -1 && SCIPvarIsActive(tmpvars[varseq[j]]) )
                {
                   int k;
 
                   /* check if every variable in the actual clique is in clique with the new variable */
-		  for( k = ncliquevars - 1; k >= 0; --k )
+                  for( k = ncliquevars - 1; k >= 0; --k )
                   {
                      if( !SCIPvarsHaveCommonClique(tmpvars[varseq[j]], tmpvalues[varseq[j]], cliquevars[k],
                            cliquevalues[k], TRUE) )
-                         break;
+                        break;
                   }
 
                   if( k == -1 )
@@ -2217,7 +2217,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
       if( i * nvars > maxncliquevarscomp )
          break;
    }
-   /* if we had to much variables fill up the cliquepartition and put each variable in a separate clique */
+   /* if we had too many variables fill up the cliquepartition and put each variable in a separate clique */
    for( ; i < nvars; ++i )
    {
       if( cliquepartition[varseq[i]] == -1 )
@@ -2238,7 +2238,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    return SCIP_OKAY;
 }
 
-/** constructs sophisticated partion of knapsack variables into nonoverlapping GUBs; current partion uses trivial GUBs */
+/** constructs sophisticated partition of knapsack variables into non-overlapping GUBs; current partition uses trivial GUBs */
 static
 SCIP_RETCODE GUBsetGetCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2291,7 +2291,7 @@ SCIP_RETCODE GUBsetGetCliquePartition(
       if( gubfirstvar[cliqueidx] == -1 )
       {
          /* corresponding GUB constraint in GUB set data structure was already constructed (as initial trivial GUB);
-          * note: no assert for gubconssidx, because it can changed due to deleting emtpy GUBs in GUBsetMoveVar()
+          * note: no assert for gubconssidx, because it can changed due to deleting empty GUBs in GUBsetMoveVar()
           */
          assert(gubset->gubvarsidx[i] == 0);
          assert(gubset->gubconss[gubset->gubconssidx[i]]->gubvars[gubset->gubvarsidx[i]] == i);
@@ -2302,7 +2302,7 @@ SCIP_RETCODE GUBsetGetCliquePartition(
       /* variable is additional element of GUB constraint defined by clique partition */
       else
       {
-	 assert(gubfirstvar[cliqueidx] >= 0 && gubfirstvar[cliqueidx] < i);
+         assert(gubfirstvar[cliqueidx] >= 0 && gubfirstvar[cliqueidx] < i);
 
          /* move variable to GUB constraint defined by clique partition; index of this GUB constraint is given by the
           * first variable of this GUB constraint
