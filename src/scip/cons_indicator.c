@@ -238,6 +238,8 @@
 #define CONFLICTHDLR_DESC          "replace slack variables and generate logicor constraints"
 #define CONFLICTHDLR_PRIORITY      200000
 
+/* upgrade properties */
+#define LINCONSUPGD_PRIORITY      +100000     /**< priority of the constraint handler for upgrading of linear constraints */
 
 /* default values for parameters */
 #define DEFAULT_BRANCHINDICATORS    FALSE    /**< Branch on indicator constraints in enforcing? */
@@ -250,6 +252,7 @@
 #define DEFAULT_SEPACOUPLINGVALUE     1e4    /**< maximum coefficient for binary variable in separated coupling constraint */
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
 #define DEFAULT_TRYSOLFROMCOVER     FALSE    /**< Try to construct a feasible solution from a cover? */
+#define DEFAULT_UPGRADELINEAR       FALSE    /**< Try to upgrade linear constraints to indicator constraints? */
 #define DEFAULT_USEOTHERCONSS       FALSE    /**< Collect other constraints to alternative LP? */
 #define DEFAULT_USEOBJECTIVECUT     FALSE    /**< Use objective cut with current best solution to alternative LP? */
 #define DEFAULT_UPDATEBOUNDS        FALSE    /**< Update bounds of original variables for separation? */
@@ -348,6 +351,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             useotherconss;      /**< Collect other constraints to alternative LP? */
    SCIP_Bool             useobjectivecut;    /**< Use objective cut with current best solution to alternative LP? */
    SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
+   SCIP_Bool             upgradelinear;      /**< Try to upgrade linear constraints to indicator constraints? */
    char                  normtype;           /**< norm type for cut computation */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
@@ -4334,6 +4338,241 @@ void initConshdlrData(
 }
 
 
+/* ---------------------------- upgrading methods -----------------------------------*/
+
+/** tries to upgrade a linear constraint into an indicator constraint
+ *
+ *  For some linear constraint of the form \f$a^T x + \alpha\, y \geq \beta\f$ with \f$y \in \{0,1\}\f$, we can upgrade
+ *  it to an indicator constraint if for the residual value \f$a^T x \geq \gamma\f$, we have \f$\alpha + \gamma \geq
+ *  \beta\f$: in this case, the constraint is always satisfied if \f$y = 1\f$.
+ *
+ *  Similarly, for a linear constraint in the form \f$a^T x + \alpha\, y \leq \beta\f$ with \f$y \in \{0,1\}\f$, we can
+ *  upgrade it to an indicator constraint if for the residual value \f$a^T x \leq \gamma\f$, we have \f$\alpha + \gamma
+ *  \leq \beta\f$.
+ */
+static
+SCIP_DECL_LINCONSUPGD(linconsUpgdIndicator)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_Real minactivity = 0.0;
+   SCIP_Real maxactivity = 0.0;
+   SCIP_Real maxabsval = -1.0;
+   SCIP_Real secabsval = -1.0;
+   int maxabsvalidx = -1;
+   int j;
+
+   assert( scip != NULL );
+   assert( upgdcons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
+   assert( ! SCIPconsIsModifiable(cons) );
+
+   /* do not upgrade if there are at most 2 variables (2 variables should be upgraded to a varbound constraint) */
+   if ( nvars <= 2 )
+      return SCIP_OKAY;
+
+   /* cannot currently ranged constraints, since we can only return one constraint (and we would need one for each side each) */
+   if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
+      return SCIP_OKAY;
+
+   /* check whether upgrading is turned on */
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   assert( conshdlr != NULL );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( ! conshdlrdata->upgradelinear )
+      return SCIP_OKAY;
+
+   /* calculate activities */
+   for (j = 0; j < nvars; ++j)
+   {
+      SCIP_VAR* var;
+      SCIP_Real val;
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      val = vals[j];
+      assert( ! SCIPisZero(scip, val) );
+
+      var = vars[j];
+      assert( var != NULL );
+
+      /* store maximal (and second to largest) value of coefficients */
+      if ( SCIPisGE(scip, REALABS(val), maxabsval) )
+      {
+         secabsval = maxabsval;
+         maxabsval = REALABS(val);
+         maxabsvalidx = j;
+      }
+
+      if ( val > 0 )
+      {
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+      }
+      else
+      {
+         ub = SCIPvarGetLbGlobal(var);
+         lb = SCIPvarGetUbGlobal(var);
+      }
+
+      /* compute minimal activity */
+      if ( SCIPisInfinity(scip, -lb) )
+         minactivity = -SCIPinfinity(scip);
+      else
+      {
+         if ( ! SCIPisInfinity(scip, -minactivity) )
+            minactivity += val * lb;
+      }
+
+      /* compute maximal activity */
+      if ( SCIPisInfinity(scip, ub) )
+         maxactivity = SCIPinfinity(scip);
+      else
+      {
+         if ( ! SCIPisInfinity(scip, maxactivity) )
+            maxactivity += val * ub;
+      }
+   }
+   assert( maxabsval >= 0.0 );
+   assert( 0 <= maxabsvalidx && maxabsvalidx < nvars );
+
+   /* exit if largest coefficient does not belong to binary variable */
+   if ( ! SCIPvarIsBinary(vars[maxabsvalidx]) )
+      return SCIP_OKAY;
+
+   /* exit if the second largest coefficient is as large as largest */
+   if ( SCIPisEQ(scip, secabsval, maxabsval) )
+      return SCIP_OKAY;
+
+   /* cannot upgrade if all activities are infinity */
+   if ( SCIPisInfinity(scip, -minactivity) && SCIPisInfinity(scip, maxactivity) )
+      return SCIP_OKAY;
+
+   /* check each variable as indicator variable */
+   for (j = 0; j < nvars; ++j)
+   {
+      SCIP_VAR** indconsvars;
+      SCIP_Real* indconsvals;
+      SCIP_Bool upgdlhs = FALSE;
+      SCIP_Bool upgdrhs = FALSE;
+      SCIP_Bool indneglhs = FALSE;
+      SCIP_Bool indnegrhs = FALSE;
+      SCIP_VAR* indvar;
+      SCIP_Real indval;
+      int l;
+
+      indvar = vars[j];
+      indval = vals[j];
+      assert( ! SCIPisZero(scip, indval) );
+
+      if ( ! SCIPvarIsBinary(indvar) )
+         continue;
+
+      /* check for upgrading of lhs */
+      if ( ! SCIPisInfinity(scip, -minactivity) && ! SCIPisInfinity(scip, -lhs) )
+      {
+         /* upgrading is possible with binary variable */
+         if ( SCIPisGE(scip, minactivity, lhs) )
+            upgdlhs = TRUE;
+
+         /* upgrading is possible with negated binary variable */
+         if ( SCIPisGE(scip, minactivity + indval, lhs) )
+         {
+            upgdlhs = TRUE;
+            indneglhs = TRUE;
+         }
+      }
+
+      /* check for upgrading of rhs */
+      if ( ! SCIPisInfinity(scip, maxactivity) && ! SCIPisInfinity(scip, rhs) )
+      {
+         /* upgrading is possible with binary variable */
+         if ( SCIPisLE(scip, maxactivity, rhs) )
+         {
+            upgdrhs = TRUE;
+            indnegrhs = TRUE;
+         }
+
+         /* upgrading is possible with negated binary variable */
+         if ( SCIPisLE(scip, maxactivity - indval, rhs) )
+            upgdrhs = TRUE;
+      }
+
+      /* upgrade constraint */
+      if ( upgdlhs || upgdrhs )
+      {
+         SCIP_VAR* indvar2;
+         SCIP_Real bnd;
+         int cnt = 0;
+
+         assert( ! upgdlhs || ! upgdrhs ); /* cannot treat ranged rows */
+         SCIPdebugMessage("upgrading constraint <%s> to an indicator constraint.\n", SCIPconsGetName(cons));
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &indconsvars, nvars - 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &indconsvals, nvars - 1) );
+
+         /* create constraint */
+         for (l = 0; l < nvars; ++l)
+         {
+            if ( vars[l] == indvar )
+               continue;
+            indconsvars[cnt] = vars[l];
+            if ( upgdlhs )
+               indconsvals[cnt] = -vals[l];
+            else
+               indconsvals[cnt] = vals[l];
+            ++cnt;
+         }
+
+         if ( indneglhs || indnegrhs )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, indvar, &indvar2) );
+         }
+         else
+            indvar2 = indvar;
+
+         if ( upgdlhs )
+         {
+            bnd = -lhs;
+            if ( ! indneglhs )
+               bnd -= indval;
+            SCIP_CALL( SCIPcreateConsIndicator(scip, upgdcons, SCIPconsGetName(cons), indvar2, nvars-1, indconsvars, indconsvals, bnd,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                  SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         }
+         else
+         {
+            bnd = rhs;
+            if ( ! indnegrhs )
+               bnd -= indval;
+            SCIP_CALL( SCIPcreateConsIndicator(scip, upgdcons, SCIPconsGetName(cons), indvar2, nvars-1, indconsvars, indconsvals, bnd,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                  SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         }
+
+#ifdef SCIP_DEBUG
+         SCIPinfoMessage(scip, NULL, "upgrade: \n");
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         SCIP_CALL( SCIPprintCons(scip, *upgdcons, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         SCIP_CALL( SCIPprintCons(scip, SCIPgetLinearConsIndicator(*upgdcons), NULL) );
+         SCIPinfoMessage(scip, NULL, "  (minact: %f, maxact: %f)\n", minactivity, maxactivity);
+#endif
+
+         SCIPfreeBufferArray(scip, &indconsvars);
+         SCIPfreeBufferArray(scip, &indconsvals);
+
+         return SCIP_OKAY;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------------------- constraint handler callback methods ----------------------*/
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -6233,6 +6472,13 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransIndicator) );
 
+   /* add upgrading method */
+   if ( SCIPfindConshdlr(scip, "linear") != NULL )
+   {
+      /* include the linear constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdIndicator, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+
    /* create conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
    conflicthdlrdata->conshdlrdata = conshdlrdata;
@@ -6365,6 +6611,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/trysolfromcover",
          "Try to construct a feasible solution from a cover?",
          &conshdlrdata->trysolfromcover, TRUE, DEFAULT_TRYSOLFROMCOVER, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/upgradelinear",
+         "Try to upgrade linear constraints to indicator constraints?",
+         &conshdlrdata->upgradelinear, TRUE, DEFAULT_UPGRADELINEAR, NULL, NULL) );
 
    /* parameters that should not be changed after problem stage: */
    SCIP_CALL( SCIPaddBoolParam(scip,
