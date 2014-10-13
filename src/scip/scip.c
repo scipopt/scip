@@ -19,6 +19,7 @@
  * @author Timo Berthold
  * @author Gerald Gamrath
  * @author Stefan Heinz
+ * @author Gregor Hendel
  * @author Thorsten Koch
  * @author Alexander Martin
  * @author Marc Pfetsch
@@ -1655,7 +1656,7 @@ SCIP_RETCODE SCIPcopyOrigProb(
 }
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
- *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
+ *  it is just returned as target variable; otherwise a new variable will be created and added to the target SCIP; this
  *  created variable is added to the variable hash map and returned as target variable
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
@@ -1733,7 +1734,7 @@ SCIP_RETCODE SCIPgetVarCopy(
 
    /* if the target SCIP is already in solving stage we currently are not copying the variable!
     * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search
-    * space. 
+    * space.
     * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior
     * computations
     */
@@ -1761,7 +1762,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    else
       localconsmap = consmap;
 
-   /* if variable does not exists yet in target SCIP, create it */
+   /* if variable does not exist yet in target SCIP, create it */
    switch( SCIPvarGetStatus(sourcevar) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1807,7 +1808,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, targetaggrvar, -aggrcoef) );
 
       SCIP_CALL( SCIPaddCons(targetscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );               
+      SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
       break;
    }
@@ -1853,7 +1854,7 @@ SCIP_RETCODE SCIPgetVarCopy(
             -constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, var, -1.0) );
       SCIP_CALL( SCIPaddCons(targetscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );               
+      SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
       SCIPfreeBufferArray(targetscip, &targetaggrvars);
 
@@ -1869,7 +1870,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       assert(sourcenegatedvar != NULL);
       assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
 
-      /* get copy of negated source variable */         
+      /* get copy of negated source variable */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, localvarmap, localconsmap, global, success) );
       assert(*success);
       assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -1935,7 +1936,7 @@ SCIP_RETCODE copyVars(
    SCIP_HASHMAP* localconsmap;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
-   int nsourcevars;   
+   int nsourcevars;
    int i;
 
    assert(sourcescip != NULL);
@@ -1973,7 +1974,7 @@ SCIP_RETCODE copyVars(
 
    /* create the variables of the target SCIP */
    for( i = 0; i < nsourcevars; ++i )
-   {          
+   {
       SCIP_Bool success;
       SCIP_VAR* targetvar;
 
@@ -2159,6 +2160,45 @@ SCIP_RETCODE SCIPcopyOrigVars(
    SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, TRUE, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** merges the histories of variables from a source SCIP into a target SCIP. The two data structures should point to
+ *  different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+SCIP_RETCODE SCIPmergeVariableStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   int                   nvars               /**< number of variables in both variable arrays */
+   )
+{
+   int i;
+
+   /* check if target scip has been set to allow merging variable statistics */
+   if( !targetscip->set->history_allowmerge )
+      return SCIP_OKAY;
+
+   assert(nvars == 0 || (sourcevars != NULL && targetvars != NULL));
+   assert(sourcescip != targetscip);
+
+   /* we do not want to copy statistics from a scip that has not really started solving */
+   if( SCIPgetStage(sourcescip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* merge histories of the targetSCIP-variables to the SCIP variables. */
+   for( i = 0; i < nvars; ++i )
+   {
+      assert(sourcevars[i]->scip == sourcescip);
+      assert(targetvars[i]->scip == targetscip);
+
+      SCIPvarMergeHistories(targetvars[i], sourcevars[i], targetscip->stat);
+   }
 
    return SCIP_OKAY;
 }

@@ -755,6 +755,22 @@ SCIP_RETCODE SCIPcopyOrigVars(
                                               *   target constraints, or NULL */
    );
 
+/** merges the histories of variables from a source SCIP into a target SCIP. The two data structures should point to
+ *  different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+
+EXTERN
+SCIP_RETCODE SCIPmergeVariableStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   int                   nvars               /**< number of variables in both variable arrays */
+   );
+
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
  *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
  *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of

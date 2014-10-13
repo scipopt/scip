@@ -619,19 +619,20 @@ SCIP_RETCODE SCIPapplyRens(
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-      if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
+      if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
       {
-         cutoff = (1-minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
+         cutoff = (1 - minimprove) * SCIPgetUpperbound(scip)
+               + minimprove * SCIPgetLowerbound(scip);
       }
       else
       {
-         if( SCIPgetUpperbound ( scip ) >= 0 )
-            cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
+         if( SCIPgetUpperbound(scip) >= 0 )
+            cutoff = (1 - minimprove) * SCIPgetUpperbound(scip);
          else
-            cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );
+            cutoff = (1 + minimprove) * SCIPgetUpperbound(scip);
       }
       cutoff = MIN(upperbound, cutoff);
-      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+      SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
    }
 
    /* presolve the subproblem */
@@ -698,6 +699,11 @@ SCIP_RETCODE SCIPapplyRens(
          SCIP_CALL( retcode );
 #endif
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      }
+      else
+      {
+         /* transfer variable statistics from sub-SCIP */
+         SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
       }
 
       /* print solving statistics of subproblem if we are in SCIP's debug mode */

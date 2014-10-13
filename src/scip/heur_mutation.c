@@ -571,17 +571,18 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
    if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
    {
-      cutoff = (1-heurdata->minimprove) * SCIPgetUpperbound(scip) + heurdata->minimprove * SCIPgetLowerbound(scip);
+      cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip)
+            + heurdata->minimprove * SCIPgetLowerbound(scip);
    }
    else
    {
-      if( SCIPgetUpperbound ( scip ) >= 0 )
-         cutoff = ( 1 - heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+      if( SCIPgetUpperbound(scip) >= 0 )
+         cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip);
       else
-         cutoff = ( 1 + heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+         cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
    }
-   cutoff = MIN(upperbound, cutoff );
-   SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+   cutoff = MIN(upperbound, cutoff);
+   SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
 
    /* solve the subproblem */
    SCIPdebugMessage("Solve Mutation subMIP\n");
@@ -596,6 +597,11 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       SCIP_CALL( retcode );
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in Mutation heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+   }
+   else
+   {
+      /* transfer variable statistics from sub-SCIP */
+      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
    }
 
    heurdata->usednodes += SCIPgetNNodes(subscip);

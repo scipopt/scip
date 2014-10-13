@@ -1250,6 +1250,22 @@ SCIP_RETCODE SCIPvarAddToRow(
    SCIP_Real             val                 /**< value of coefficient */
    );
 
+
+/** merge two variable histories together; a typical use case is that \p othervar is an image of the target variable
+ *  in a SCIP copy. Method should be applied with care, especially because no internal checks are performed whether
+ *  the history merge is reasonable
+ *
+ *  @note Do not use this method if the two variables originate from two SCIP's with different objective functions, since
+ *        this corrupts the variable pseudo costs
+ *  @note Apply with care; no internal checks are performed if the two variables should be merged
+ */
+extern
+void SCIPvarMergeHistories(
+   SCIP_VAR*             targetvar,          /**< the variable that should contain both histories afterwards */
+   SCIP_VAR*             othervar,           /**< the variable whose history is to be merged with that of the target variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */

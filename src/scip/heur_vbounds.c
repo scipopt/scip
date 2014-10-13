@@ -243,7 +243,7 @@ SCIP_RETCODE depthFirstSearch(
    return SCIP_OKAY;
 }
 
-/** create a topological sorted variable array of the given variables and stores if (needed) the involved variables into
+/** create a topologically sorted variable array of the given variables and stores if (needed) the involved variables into
  *  the corresponding variable array and hash map
  *
  * @note: for all arrays and the hash map (if requested) you need to allocate enough memory before calling this method
@@ -256,8 +256,8 @@ SCIP_RETCODE createTopoSortedVars(
    SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */
    SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
    int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
-   SCIP_VAR**            topovars,           /**< array where the topological sorted variables are stored */
-   int*                  ntopovars,          /**< pointer to store the number of topological sorted variables */
+   SCIP_VAR**            topovars,           /**< array where the topologically sorted variables are stored */
+   int*                  ntopovars,          /**< pointer to store the number of topologically sorted variables */
    SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
    )
 {
@@ -323,7 +323,7 @@ SCIP_RETCODE createTopoSortedVars(
       }
    }
 
-   /* loop over all "connected" variable and find for each connected component a "almost" topological sorted version */
+   /* loop over all "connected" variable and find for each connected component an "almost" topologically sorted version */
    for( v = 0; v < nvars; ++v )
    {
       if( SCIPhashtableExists(connected, vars[v]) )
@@ -332,7 +332,7 @@ SCIP_RETCODE createTopoSortedVars(
 
          SCIPdebugMessage("start depth-first-search with variable <%s>\n", SCIPvarGetName(vars[v]));
 
-         /* use depth first search to get a "almost" topological sorted variables for the connected component which
+         /* use depth first search to get an "almost" topologically sorted variables for the connected component which
           * includes vars[v]
           */
          nsortedvars = 0;
@@ -350,7 +350,7 @@ SCIP_RETCODE createTopoSortedVars(
    }
 
    assert(*ntopovars <= nvars);
-   SCIPdebugMessage("topological sorted array contains %d of %d variables (variable %s bound)\n",
+   SCIPdebugMessage("topologically sorted array contains %d of %d variables (variable %s bound)\n",
       *ntopovars, nvars, lowerbound ? "lower" : "upper");
 
    /* free hash table */
@@ -526,7 +526,7 @@ SCIP_RETCODE applyVboundsFixings(
       }
       else
       {
-         /* fix variable to lower bound */
+         /* fix variable to upper bound */
          SCIP_CALL( SCIPfixVarProbing(scip, vars[v], SCIPvarGetUbLocal(vars[v])) );
          SCIPdebugMessage("fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), SCIPgetNPseudoBranchCands(scip));

@@ -4157,6 +4157,27 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    return SCIP_OKAY;
 }
 
+/** merge two variable histories together; a typical use case is that \p othervar is an image of the target variable
+ *  in a SCIP copy. Method should be applied with care, especially because no internal checks are performed whether
+ *  the history merge is reasonable
+ *
+ *  @note Do not use this method if the two variables originate from two SCIP's with different objective functions, since
+ *        this corrupts the variable pseudo costs
+ *  @note Apply with care; no internal checks are performed if the two variables should be merged
+ */
+void SCIPvarMergeHistories(
+   SCIP_VAR*             targetvar,          /**< the variable that should contain both histories afterwards */
+   SCIP_VAR*             othervar,           /**< the variable whose history is to be merged with that of the target variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   SCIPhistoryUnite(targetvar->history, othervar->history, FALSE);
+   SCIPhistoryUnite(targetvar->historycrun, othervar->history, FALSE);
+   SCIPhistoryUnite(stat->glbhistory, othervar->history, FALSE);
+   SCIPhistoryUnite(stat->glbhistorycrun, othervar->history, FALSE);
+}
+
+
 
 /** tightens the bounds of both variables in aggregation x = a*y + c */
 static

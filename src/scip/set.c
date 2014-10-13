@@ -140,6 +140,7 @@
 /* History */
 
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
+#define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 
 /* Heuristics */
 
@@ -1126,6 +1127,12 @@ SCIP_RETCODE SCIPsetCreate(
          "history/valuebased",
          "should statistics be collected for variable domain value pairs?",
          &(*set)->history_valuebased, FALSE, SCIP_DEFAULT_HISTORY_VALUEBASED,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "history/allowmerge",
+         "should variable histories be merged from sub-SCIPs whenever possible?",
+         &(*set)->history_allowmerge, FALSE, SCIP_DEFAULT_HISTORY_ALLOWMERGE,
          NULL, NULL) );
 
    /* heuristic parameters */

@@ -2310,6 +2310,11 @@ SCIP_RETCODE solveSubproblem(
       *validsolved = *validsolved && i == 1;
    }
 
+   if( *validsolved )
+   {
+      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
+   }
+
    /* free variable mapping hash map, array of subproblem variables, and subproblem */
    SCIPhashmapFree(&varmap);
    SCIPfreeBufferArray(scip, &subvars);
