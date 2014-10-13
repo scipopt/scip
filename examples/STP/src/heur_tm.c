@@ -1271,7 +1271,6 @@ SCIP_RETCODE do_layer(
 	    }
             if( SCIPisLT(scip, obj, min) )
             {
-	       printf("lt !!!! \n ");
                min = obj;
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
