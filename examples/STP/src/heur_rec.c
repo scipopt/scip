@@ -27,6 +27,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "heur_rec.h"
+#include "grph.h"
 #include "scip/pub_misc.h"
 #include "probdata_stp.h"
 
@@ -684,7 +685,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP* subscip;                            /* the subproblem created by rec                 */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
-
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
    SCIP_VAR** vars;                          /* original problem variables                        */
    SCIP_VAR** subvars;                       /* subproblem variables                              */
    SCIP_SOL** sols;
@@ -715,6 +717,24 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    nusedsols = heurdata->nusedsols;
 
    *result = SCIP_DELAYED;
+
+
+
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* the local heuristics may not work correctly for problems other than undirected STPs */
+   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID )
+      return SCIP_OKAY;
+
+
+
    //printf("nsols: %d\n ", (int) SCIPgetNSolsFound(scip) );
    nsols = SCIPgetNSolsFound(scip);
 
@@ -745,7 +765,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
-   //printf("rec nfailures:  %d\n", heurdata->nfailures);
+   // printf("rec nfailures:  %d\n", heurdata->nfailures);
 
    nstallnodes = heurdata->maxnodes;
 

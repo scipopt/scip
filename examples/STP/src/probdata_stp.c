@@ -454,8 +454,8 @@ SCIP_RETCODE createPrizeConstraints(
 
    (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeConstraint");
    SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
-         1, 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
+         -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+ // TODO SET TO 1 DISABLE WARNING OUTPUT FOR
    SCIP_CALL( SCIPaddCons(scip, probdata->prizecons) );
 
 

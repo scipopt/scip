@@ -886,6 +886,136 @@ graph_maxweight_transform(
    free(prize);
    graph->stp_type = STP_MAX_NODE_WEIGHT;
 }
+
+
+#if 0
+
+/** transform the graph to enabls solving of group Steiner problems */
+double graph_group_convert(
+   GRAPH* g)
+{
+   double  max_cost = 0.0;
+   double  fixed    = 0.0;
+   int     real_knots;
+   int     pseudo;
+   int     i;
+
+   assert(g != NULL);
+
+   if (g->groups < 2)
+      return 0.0;
+
+   assert(graph_valid(g));
+
+   graph_resize(g, g->knots + g->groups, g->edges + 2 * g->terms,
+      NO_CHANGE, NO_CHANGE);
+
+   assert(g != NULL);
+
+   real_knots = g->knots;
+
+   for(i = 0; i < g->edges; i++)
+      if (g->cost[i] > max_cost)
+         max_cost = g->cost[i];
+
+   /* So hoch muss man wohl sein, um bei den Reduktionen keinen Probleme
+    * zu bekommen.
+    */
+   max_cost += 1.0;
+
+   for(i = 0; i < g->groups; i++)
+      graph_knot_add(g, 0, 0, 0, 0);
+
+   for(i = 0; i < real_knots; i++)
+   {
+      if (!Is_term(g->term[i]))
+         continue;
+
+      assert(g->group[i] >= 0);
+
+      pseudo = real_knots + g->group[i];
+
+      graph_edge_add(g, i, pseudo, max_cost, max_cost);
+      graph_knot_chg(g, i, -1, -1, NO_CHANGE, NO_CHANGE);
+
+      /* Das ist noch nicht richtig toll.
+       */
+      graph_knot_chg(g, pseudo, NO_CHANGE, NO_CHANGE,
+         g->xpos[i] + 1, g->ypos[i] + 1);
+   }
+   g->source[0] = real_knots;
+
+   fixed = max_cost * g->groups;
+
+   printf("Group converter: Added %d knots, cost: %g\n",
+      g->groups, fixed);
+
+   return -fixed;
+}
+
+
+
+void graph_group_compsdcost(
+   const GRAPH* g,
+   double*      cost)
+{
+   PATH*  path;
+   double max_dist;
+   int    i;
+   int    k;
+   int    j;
+
+   assert(g    != NULL);
+   assert(cost != NULL);
+
+   if (g->groups < 2)
+      return;
+
+   path = malloc(g->knots * sizeof(*path));
+
+   assert(path != NULL);
+
+   for(i = 0; i < g->knots; i++)
+      g->mark[i] = TRUE;
+
+   for(k = 0; k < g->edges; k++)
+      cost[k] = g->cost[k];
+
+   for(i = 0; i < g->knots; i++)
+   {
+      /* Wir gehen die Gruppen anhand der Pseudoterminal durch.
+       */
+      if (!Is_term(g->term[i]))
+         continue;
+
+      for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
+      {
+         graph_path_exec(g, FSP_MODE, g->head[k], g->cost, path);
+
+         max_dist = 0.0;
+
+         for(j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j])
+            if (path[g->head[j]].dist > max_dist)
+               max_dist = path[g->head[j]].dist;
+
+         printf("Term %d max_dist: %g\n", g->head[k], max_dist);
+
+         /* Entweder ist sonst niemand in der Gruppe, dann ist
+          * die Distanz 0 oder es sind noch welche da, dann ist da
+          * auch eine positive Distanz.
+          */
+         assert(((g->grad[i] == 1) && EQ(max_dist, 0.0)) || GT(max_dist, 0.0));
+         assert(g->head[k] == g->tail[Edge_anti(k)]);
+
+         cost[k]            = max_dist + 1.0;
+         cost[Edge_anti(k)] = max_dist + 1.0;
+      }
+   }
+   free(path);
+}
+
+
+#endif
 void graph_free(
    GRAPH* p)
 {

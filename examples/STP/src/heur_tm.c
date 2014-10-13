@@ -1181,7 +1181,7 @@ SCIP_RETCODE do_layer(
       assert(graph->layers == 1);
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
       {
-	 SCIP_Real* costrootedges_z;
+	// SCIP_Real* costrootedges_z;
          int root = graph->source[0];
 	 int rootedge;
 	 int runcount = 0;
@@ -1191,14 +1191,14 @@ SCIP_RETCODE do_layer(
          k = 0;
          r = 0;
 
-	 SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, nterms - 1) );
+	// SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, nterms - 1) );
          for( e = graph->inpbeg[graph->source[0]]; e != EAT_LAST; e = graph->ieat[e] )
          {
 	    if( !Is_term(graph->term[graph->tail[e]]) )
 	    {
 	       assert(SCIPisEQ(scip, graph->cost[flipedge(e)], 0.0));
-	       graph->cost[flipedge(e)] = FARAWAY;
-	       costrootedges_z[r] = costrev[e];
+	       cost[flipedge(e)] = FARAWAY;
+	       //costrootedges_z[r] = costrev[e];
 	       costrev[e] = FARAWAY;
 	    }
 	 }
@@ -1206,10 +1206,9 @@ SCIP_RETCODE do_layer(
          //SCIPsortRealInt(costrootedges_z, rootedges_z,	nterms - 1);
          for( r = 0; r < runs; r++ )
          {
-
             //rootedge = rootedges_z[(ncalls + r) % (nterms - 1)];
-            if( getrandom == FALSE && SCIPisEQ(scip, costrootedges_z[r], 1.0) )
-               getrandom = TRUE;
+           // if( getrandom == FALSE && SCIPisEQ(scip, costrootedges_z[r], 1.0) )
+             //  getrandom = TRUE;
 
 
             if( getrandom )
@@ -1220,12 +1219,11 @@ SCIP_RETCODE do_layer(
             {
 	       runcount++;
 	       rootedge = rootedges_z[r];
-
             }
 
             costrev[rootedge] = 0.0;
-            graph->cost[flipedge(rootedge)] = 0.0;
-            /*  printf("rootedge %d->%d \n", graph->tail[rootedge], graph->head[rootedge]); */
+            cost[flipedge(rootedge)] = 0.0;
+            //printf("rootedge %d->%d \n", graph->tail[rootedge], graph->head[rootedge]);
             for( e = 0; e < nedges; e++ )
                result[e] = -1;
 
@@ -1235,10 +1233,10 @@ SCIP_RETCODE do_layer(
                {
                   e = rootedges_t[k];
 #if TMX
-		  pathdist[graph->tail[e]][root] = graph->cost[flipedge(e)];
+		  pathdist[graph->tail[e]][root] = cost[flipedge(e)];
                   pathedge[graph->tail[e]][root] = e;
 #else
-                  path[graph->tail[e]][root].dist = graph->cost[flipedge(e)];
+                  path[graph->tail[e]][root].dist = cost[flipedge(e)];
                   path[graph->tail[e]][root].edge = e;
 #endif
                }
@@ -1266,10 +1264,14 @@ SCIP_RETCODE do_layer(
 
             /* here another measure than in the do_(...) heuristics is being used*/
             for( e = 0; e < nedges; e++)
+	    {
                obj += (result[e] > -1) ? graph->cost[e] : 0.0;
 
+	     //  printf("obj: %f \n ", obj);
+	    }
             if( SCIPisLT(scip, obj, min) )
             {
+	       printf("lt !!!! \n ");
                min = obj;
 
                SCIPdebugMessage(" Objt=%.12e    ", objt);
@@ -1281,7 +1283,7 @@ SCIP_RETCODE do_layer(
                   best_result[e] = result[e];
                }
             }
-            graph->cost[flipedge(rootedge)] = FARAWAY;
+            cost[flipedge(rootedge)] = FARAWAY;
             costrev[rootedge] = FARAWAY;
          }
 
@@ -1290,9 +1292,9 @@ SCIP_RETCODE do_layer(
             rootedge = rootedges_z[r];
             assert(costrev[rootedge] == FARAWAY);
             costrev[rootedge] = 0.0;
-            graph->cost[flipedge(rootedge)] = 0.0;
+            cost[flipedge(rootedge)] = 0.0;
          }
-	 SCIPfreeBufferArray(scip, &costrootedges_z);
+	 //SCIPfreeBufferArray(scip, &costrootedges_z);
       }
       else
       {
@@ -1468,11 +1470,11 @@ SCIP_DECL_HEURINIT(heurInitTM)
       int e;
       int k = 0;
       int r = 0;
-      SCIP_Real* costrootedges_z;
+     // SCIP_Real* costrootedges_z;
       SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_t), graph->terms - 1) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_z), graph->terms - 1) );
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, graph->terms - 1) );
+printf("init prize \n");
+     // SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, graph->terms - 1) );
       for( e = graph->inpbeg[graph->source[0]]; e != EAT_LAST; e = graph->ieat[e] )
       {
          if(  Is_term(graph->term[graph->tail[e]]) )
@@ -1481,7 +1483,7 @@ SCIP_DECL_HEURINIT(heurInitTM)
          }
          else
          {
-            costrootedges_z[r] = -graph->cost[flipedge(e + 2)];
+          //  costrootedges_z[r] = -graph->cost[flipedge(e + 2)];
             if (graph->head[e+2] != graph->source[0])
                printf("ARGGG \n");
             /* if( e + 2 != heurdata->rootedges_t[k-1] )
@@ -1493,10 +1495,10 @@ SCIP_DECL_HEURINIT(heurInitTM)
 
          }
       }
-      SCIPsortRealInt(costrootedges_z, heurdata->rootedges_z, graph->terms - 1);
+     // SCIPsortRealInt(costrootedges_z, heurdata->rootedges_z, graph->terms - 1);
       /*   printf("cost0: %f \n", costrootedges_z[0]);
            printf("cost1: %f \n", costrootedges_z[1]);*/
-      SCIPfreeBufferArray(scip, &costrootedges_z);
+      //SCIPfreeBufferArray(scip, &costrootedges_z);
    }
    else
    {
@@ -1692,11 +1694,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                costrev[e + 1] = cost[e];
             }
          }
-         //printf("nvars: %d fixed: %d \n", nvars,  fixed);
+         printf("nvars: %d fixed: %d \n", nvars,  fixed);
       }
       else
       {
-         if( graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING )
+         if( 0 && (graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING) )
          {
             int root = graph->source[0];
             assert(root >= 0);
@@ -1721,9 +1723,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                }
                else
                {
-                  if( graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
+                  if( 0 && graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
                   {
-                     costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) );
+                     costrev[e + 1] = ((1.0 - xval[layer * nedges + e]));
                      cost[e] = costrev[e + 1];
                   }
                   else
@@ -1769,7 +1771,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          assert(SCIPisGE(scip, cost[e], 0));
       /* can we connect the network */
       SCIP_CALL( do_layer(scip, graph, layer, &best_start, results, runs, cost, costrev, heurdata) );
-
+#if 0
       /* take the path */
       if( graph->layers > 1 )
       {
@@ -1779,11 +1781,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                graph_edge_hide(graph, e);
          }
       }
+#endif
    }
-
+#if 0
    if( graph->layers > 1 )
       graph_uncover(graph);
-
+#endif
    for( v = 0; v < nvars; v++ )
       nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
