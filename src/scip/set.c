@@ -1053,6 +1053,10 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal time in seconds to run",
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
+
+   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
+   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
+
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
@@ -4274,6 +4278,8 @@ void SCIPsetSetLimitChanged(
    )
 {
    set->limitchanged = TRUE;
+
+   set->istimelimitfinite = !SCIPsetIsInfinity(set, set->limit_time);
 }
 
 /** returns the maximal number of variables priced into the LP per round */

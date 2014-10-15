@@ -91,7 +91,7 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
    }
-   else if( !SCIPsetIsInfinity(set, set->limit_time) )
+   else if( set->istimelimitfinite )
    {
       if( SCIPclockGetNCalls(stat->solvingtime) < 100 || stat->nclockestimates > stat->limnclockestimates )
       {/* only measure the clock if the time limit could have been significantly approached */
