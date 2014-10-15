@@ -91,8 +91,24 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
    }
-   else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
-      stat->status = SCIP_STATUS_TIMELIMIT;
+   else if( !SCIPsetIsInfinity(set, set->limit_time) )
+   {
+      if( SCIPclockGetNCalls(stat->solvingtime) < 100 || stat->nclockestimates > stat->limnclockestimates )
+      {/* only measure the clock if the time limit could have been significantly approached */
+         if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
+            stat->status = SCIP_STATUS_TIMELIMIT;
+         stat->nclockestimates = 0;
+      }
+      else
+      {
+         SCIP_Real avgtime = SCIPclockGetAvgTimeInterval(stat->solvingtime);
+
+         ++stat->nclockestimates;
+         if( SCIPsetIsPositive(set, avgtime) )
+            stat->limnclockestimates = MIN3(2 * stat->limnclockestimates, 256, (int)((set->limit_time - SCIPclockGetLastTime(stat->solvingtime))/ avgtime));
+      }
+   }
+
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - set->mem_externestim )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )

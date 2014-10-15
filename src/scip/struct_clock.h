@@ -59,10 +59,12 @@ struct SCIP_Clock
       SCIP_WALLCLOCK     wallclock;          /**< wall clock counter */
    } data;
    SCIP_Real             lasttime;           /**< last validated time of clock */
+   SCIP_Real             starttime;          /**< the time this clock was started */
    int                   nruns;              /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
    SCIP_CLOCKTYPE        clocktype;          /**< current type of clock used */
    SCIP_Bool             usedefault;         /**< should the clock's type be overruled by the default clock type? */
    SCIP_Bool             enabled;            /**< should the clock be used? */
+   SCIP_Longint          ncalls;             /**< the number of calls to this clock */
 };
 
 #ifdef __cplusplus

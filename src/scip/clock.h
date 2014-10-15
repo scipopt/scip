@@ -110,6 +110,18 @@ SCIP_Real SCIPclockGetLastTime(
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 
+/** gets the average time interval between two calls to this clock */
+extern
+SCIP_Real SCIPclockGetAvgTimeInterval(
+   SCIP_CLOCK*           clck                /**< clock timer */
+   );
+
+/** gets the number of calls to this clocks's getTime method */
+extern
+SCIP_Real SCIPclockGetNCalls(
+   SCIP_CLOCK*           clck                /**< clock timer */
+   );
+
 /** sets the used time of this clock in seconds */
 extern
 void SCIPclockSetTime(

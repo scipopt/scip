@@ -268,6 +268,8 @@ void SCIPstatReset(
    stat->firstlptime = 0.0;
    stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
+   stat->nclockestimates = 0;
+   stat->limnclockestimates = 1;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

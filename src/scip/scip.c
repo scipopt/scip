@@ -8679,7 +8679,7 @@ SCIP_RETCODE SCIPreadProb(
    char* tmpfilename;
    char* fileextension;
 
-   assert(scip != NULL);  
+   assert(scip != NULL);
    assert(filename != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );

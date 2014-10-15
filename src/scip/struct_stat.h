@@ -203,6 +203,8 @@ struct SCIP_Stat
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
+   int                   nclockestimates;    /**< the number of times that the solving time clock has been estimated since the last evaluation */
+   int                   limnclockestimates; /**< the limit for the number of estimations before solving time is reevaluated */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */
