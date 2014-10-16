@@ -166,6 +166,9 @@ do
       elif test  "$SOLVER" = "xpress"
       then
 	  awk -f check_xpress.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
+      elif test  "$SOLVER" = "mosek"
+      then
+	  awk -f check_mosek.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
       elif test  "$SOLVER" = "cbc"
       then
 	  awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE

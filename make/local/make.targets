@@ -45,6 +45,13 @@ testclusterxpress:
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
+.PHONY: testclustermosek
+testclustermosek:
+		cd check; \
+		$(SHELL) ./check_cluster_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testgamscluster
 testgamscluster:
