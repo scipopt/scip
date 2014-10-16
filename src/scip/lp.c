@@ -13360,17 +13360,21 @@ SCIP_RETCODE lpAlgorithm(
    assert(lp->flushed);
    assert(lperror != NULL);
 
-   lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
-   success = FALSE;
-   if( lptimelimit > 0.0 )
-      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
-
-   if( lptimelimit <= 0.0 || !success )
+   /* check if a time limit is set, and set time limit for LP solver accordingly */
+   if( set->istimelimitfinite )
    {
-      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
-      *timelimit = TRUE;
-      return SCIP_OKAY;
+      lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      success = FALSE;
+      if( lptimelimit > 0.0 )
+         SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+
+      if( lptimelimit <= 0.0 || !success )
+      {
+         SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
+         *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
+         *timelimit = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);

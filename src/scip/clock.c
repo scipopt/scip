@@ -192,8 +192,6 @@ void SCIPclockInit(
    SCIPdebugMessage("initializing clock %p of type %d\n", (void*)clck, clocktype);
    clck->enabled = TRUE;
    clck->lasttime = 0.0;
-   clck->starttime = 0.0;
-   clck->ncalls = 0.0;
    SCIPclockSetType(clck, clocktype);
 }
 
@@ -328,8 +326,6 @@ void SCIPclockStart(
             SCIPerrorMessage("invalid clock type\n");
             SCIPABORT();
          }
-
-         clck->starttime = clck->lasttime;
       }
 
       clck->nruns++;
@@ -467,7 +463,6 @@ SCIP_Real SCIPclockGetTime(
 #else
          (void)times(&now);
          result = cputime2sec(clck->data.cpuclock.user + now.tms_utime);
-         ++clck->ncalls;
 #endif
          break;
       case SCIP_CLOCKTYPE_WALL:
@@ -475,7 +470,6 @@ SCIP_Real SCIPclockGetTime(
          result = walltime2sec(clck->data.wallclock.sec + time(NULL), 0);
 #else
          gettimeofday(&tp, NULL);
-         ++clck->ncalls;
          if( tp.tv_usec + clck->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
             result = walltime2sec(clck->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
                (clck->data.wallclock.usec - 1000000) + tp.tv_usec); /*lint !e115 !e40*/
@@ -504,26 +498,6 @@ SCIP_Real SCIPclockGetLastTime(
    assert(clck != NULL);
 
    return clck->lasttime;
-}
-
-/** gets the average time interval between two calls to this clock */
-SCIP_Real SCIPclockGetAvgTimeInterval(
-   SCIP_CLOCK*           clck                /**< clock timer */
-   )
-{
-   assert(clck != NULL);
-
-   return clck->ncalls > 0 ? (clck->lasttime - clck->starttime) / clck->ncalls : 0.0;
-}
-
-/** gets the number of calls to this clocks's getTime method */
-SCIP_Real SCIPclockGetNCalls(
-   SCIP_CLOCK*           clck                /**< clock timer */
-   )
-{
-   assert(clck != NULL);
-
-   return clck->ncalls;
 }
 
 /** sets the used time of this clock in seconds */

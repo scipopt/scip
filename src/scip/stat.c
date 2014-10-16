@@ -240,6 +240,7 @@ void SCIPstatReset(
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
+   stat->nisstoppedcalls = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
    stat->nsbdivinglps = 0;
@@ -268,8 +269,8 @@ void SCIPstatReset(
    stat->firstlptime = 0.0;
    stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
-   stat->nclockestimates = 0;
-   stat->limnclockestimates = 1;
+   stat->nclockskipsleft = 0;
+   stat->nclockskips = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
