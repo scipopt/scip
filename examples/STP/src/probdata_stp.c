@@ -1442,7 +1442,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph_path_init(graph);
 
    /* select a root node */
-   if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+   if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING
+      && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS )
       graph->source[0] = central_terminal(graph, compcentral);
 
    /* print the graph */

@@ -29,6 +29,7 @@
 #define STP_GRID                     7
 #define STP_OBSTACLES_GRID           8
 #define STP_MAX_NODE_WEIGHT          9
+#define STP_HOP_CONS                 10
 
 #include "scip/scip.h"
 #include "misc_stp.h"

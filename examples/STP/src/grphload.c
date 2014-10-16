@@ -80,6 +80,7 @@ struct key
 #define KEY_GRAPH_E              2003
 #define KEY_GRAPH_A              2004
 #define KEY_GRAPH_OBSTACLES      2005
+#define KEY_GRAPH_HOPLIMIT       2006
 
 #define KEY_TERMINALS_END        3001
 #define KEY_TERMINALS_TERMINALS  3002
@@ -124,6 +125,9 @@ struct key
 
 #define KEY_OBSTACLES_RR         9000
 #define KEY_OBSTACLES_END        9001
+
+
+
 static const struct key keyword_table[] =
    {
       /*
@@ -153,6 +157,7 @@ static const struct key keyword_table[] =
       {  "graph.e",                  KEY_GRAPH_E,                "nnn"       },
       {  "graph.edges",              KEY_GRAPH_EDGES,            "n"         },
       {  "graph.end",                KEY_END,                    NULL        },
+      {  "graph.hoplimit",           KEY_GRAPH_HOPLIMIT,         "n"         },
       {  "graph.nodes",              KEY_GRAPH_NODES,            "n"         },
       {  "graph.obstacles",          KEY_GRAPH_OBSTACLES,        "n"         },
 
@@ -790,6 +795,8 @@ GRAPH* graph_load(
    struct key*  p;
    double**     coordinates = NULL;
    int          i;
+   int          head;
+   int          tail;
    int          grid_dim = -1;
    int          terms = 0;
    int          nodes = 0;
@@ -920,7 +927,7 @@ GRAPH* graph_load(
             s++;
 
          if( strcmp(keyword,"comments") == 0 )
-            keyword[i-1] = '\0';
+            keyword[i - 1] = '\0';
 
          /* Did we know the keyword ?
           */
@@ -1014,57 +1021,82 @@ GRAPH* graph_load(
 		  if( nobstacles > 0 )
 		     stp_type = STP_OBSTACLES_GRID;
                   break;
+	       case KEY_GRAPH_HOPLIMIT :
+		  printf("HOP PROBLEM \n");
+		  stp_type = STP_HOP_CONS;
+		  break;
                case KEY_GRAPH_EDGES :
                   edges = (int)para[0].n;
                   break;
                case KEY_GRAPH_A :
                case KEY_GRAPH_E :
-                  if (g == NULL)
+		  if( (int)para[0].n > nodes || (int)para[1].n > nodes )
+                  {
+                     message(MSG_FATAL, &curf, err_badedge_ddd,
+                        (int)para[0].n, (int)para[1].n, nodes);
+                     ret = FAILURE;
+		     break;
+                  }
+
+                  if( g == NULL )
                   {
                      g = graph_init(nodes, edges * 2, 1, 0);
 
                      assert(g != NULL);
-
-                     for(i = 0; i < nodes; i++)
+                     assert(g->source[0] ==  UNKNOWN);
+                     for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1, 0, 0);
 
-                     g->source[0] = -1;
-		     if( stp_type == -1 )
-		     {
-                        if( p->sw_code == KEY_GRAPH_E )
-                        {
-                           stp_type = STP_UNDIRECTED;
-                           g->stp_type = STP_UNDIRECTED;
-                        }
-                        else
-                        {
-                           stp_type = STP_DIRECTED;
-                           g->stp_type = STP_DIRECTED;
-                        }
-		     }
+
+		     /*
+                       if( stp_type == -1 )
+                       {
+                       if( p->sw_code == KEY_GRAPH_E )
+                       {
+                       stp_type = STP_UNDIRECTED;
+                       //g->stp_type = STP_UNDIRECTED;
+                       }
+                       else
+                       {
+                       stp_type = STP_DIRECTED;
+                       //g->stp_type = STP_DIRECTED;
+                       }
+                       }
+		     */
                   }
 
-                  if(((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) && stp_type == STP_MAX_NODE_WEIGHT )
+                  if( stp_type == STP_HOP_CONS )
+		  {
+		     tail = (int)para[0].n - 1;
+		     head = (int)para[1].n - 1;
+		     /* check whether the anti-parallel arc has already been added */
+		     for( i = g->inpbeg[head]; i != EAT_LAST; i = g->ieat[i] )
+		        if( g->tail[i] == tail )
+			   break;
+		     if( i == EAT_LAST )
+		        graph_edge_add(g, tail, head, (double)para[2].n, FARAWAY);
+		     else
+		        g->cost[i] = (double)para[2].n;
+
+		  }
+                  else if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
 		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
 		  }
-                  else if (((int)para[0].n <= nodes) && ((int)para[1].n <= nodes) )
+                  else
                   {
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1,
                         (double)para[2].n,
                         (p->sw_code == KEY_GRAPH_E)
                         ? (double)para[2].n
-                        : FARAWAY /* (double)para[3].n ??????????????? */ );
+                        : (double)para[3].n);
                   }
-                  else
-                  {
-                     message(MSG_FATAL, &curf, err_badedge_ddd,
-                        (int)para[0].n, (int)para[1].n, nodes);
-                     ret = FAILURE;
-                  }
+
+
+
                   break;
 	       case KEY_MAXDEGS_MD :
-                  printf("MAX DEGS number  %d : ", degcount);
+                  //printf("MAX DEGS number  %d : ", degcount);
 		  assert(g != NULL);
 		  assert((int)para[0].n >= 0);
 
@@ -1073,12 +1105,12 @@ GRAPH* graph_load(
                      if( g->maxdeg == NULL )
                      {
                         g->maxdeg = malloc((size_t)nodes * sizeof(int));
-                        g->stp_type = STP_DEG_CONS;
+                        printf("mode: DEG CONS \n");
 			stp_type = STP_DEG_CONS;
                      }
                      g->maxdeg[degcount++] = (int)para[0].n;
 
-                     printf(", deg:  %d : \n", g->maxdeg[degcount - 1]);
+                     //printf(", deg:  %d : \n", g->maxdeg[degcount - 1]);
                      break;
 		  }
 		  else
@@ -1092,11 +1124,9 @@ GRAPH* graph_load(
 		  assert(g != NULL);
 		  assert(presol != NULL);
 
-		  if( g->stp_type != STP_NODE_WEIGHTS )
-		  {
-		     g->stp_type = STP_NODE_WEIGHTS;
+		  if( stp_type != STP_NODE_WEIGHTS )
+		     stp_type = STP_NODE_WEIGHTS;
 
-		  }
 		  if( Is_term(g->term[nwcount]) )
                      presol->fixed += nodeweight;
 		  else
@@ -1110,10 +1140,10 @@ GRAPH* graph_load(
 		  assert(nobstacles > 0);
 		  if( obstacle_coords == NULL )
 		  {
-		    assert(obstacle_counter == 0);
-		    obstacle_coords = (int**) malloc((size_t)4 * sizeof(int*));
-		    for( i = 0; i < 4; i++ )
-		       obstacle_coords[i] = (int*)malloc((size_t)nobstacles * sizeof(int));
+                     assert(obstacle_counter == 0);
+                     obstacle_coords = (int**) malloc((size_t)4 * sizeof(int*));
+                     for( i = 0; i < 4; i++ )
+                        obstacle_coords[i] = (int*)malloc((size_t)nobstacles * sizeof(int));
 
 		  }
 		  for( i = 0; i < 4; i++ )
@@ -1130,34 +1160,31 @@ GRAPH* graph_load(
                      ret = FAILURE;
 		     break;
 		  }
-                   if( scaled_coordinates == NULL )
+                  if( scaled_coordinates == NULL )
 		  {
 		     message(MSG_FATAL, &curf, "coordinates not given \n");
                      ret = FAILURE;
 		     break;
 		  }
-		 /* int f;
-		   for( f = 0; f < nobstacles; f++ )
-		   {
-		  for( i = 0; i < 4; i++ )
+                  /* int f;
+                     for( f = 0; f < nobstacles; f++ )
+                     {
+                     for( i = 0; i < 4; i++ )
 		     printf("%d ", obstacle_coords[i][f]);
 		     printf("\n");
 
-		   }*/
-		   assert(g == NULL);
-		   printf("bef x \n");
-		   g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
-		   for( i = 0; i < 4; i++ )
-		       free(obstacle_coords[i]);
+                     }*/
+                  assert(g == NULL);
+                  g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
+                  for( i = 0; i < 4; i++ )
+                     free(obstacle_coords[i]);
 		  free(obstacle_coords);
-printf("aftbef x \n");
 		  break;
 	       case KEY_TERMINALS_END :
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
 		     assert(nodes == termcount);
 		     graph_maxweight_transform(g, maxnodeweights);
-		     assert(g->stp_type == STP_MAX_NODE_WEIGHT );
 		     free(maxnodeweights);
 		  }
                   else if( stp_type == STP_PRIZE_COLLECTING )
@@ -1191,6 +1218,7 @@ printf("aftbef x \n");
                   if ((int)para[0].n <= nodes)
 		  {
                      g->source[0] = (int)para[0].n - 1;
+		     graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
 		  }
                   else
                   {
@@ -1235,9 +1263,6 @@ printf("aftbef x \n");
 		  termcount++;
                   break;
                case KEY_COORDINATES_DD :
-                  /*has_coordinates = TRUE;
-                    graph_knot_chg(g, (int)para[0].n - 1, NO_CHANGE,
-                    (int)para[1].n, (int)para[2].n);*/
 		  /* in this case coordinates are not needed */
 		  if( terms > 0 )
 		  {
@@ -1346,16 +1371,19 @@ printf("aftbef x \n");
    {
       assert(g != NULL);
 
-      if (g->source[0] == -1)
+      if( g->source[0] == UNKNOWN )
       {
          for(i = 0; i < g->knots; i++)
             if ((g->term[i] == 0)
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
                g->source[0] = i;
       }
-      else if( stp_type == -1 )
+      if( g->stp_type == UNKNOWN )
       {
-         g->stp_type = STP_DIRECTED;
+	 if( stp_type != UNKNOWN )
+	    g->stp_type = stp_type;
+	 else
+            g->stp_type = STP_UNDIRECTED;
       }
       graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
          | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));
