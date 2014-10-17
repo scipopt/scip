@@ -1423,7 +1423,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* only use reduction for undirected STP's in graphs */
    if( graph->stp_type != STP_UNDIRECTED )/*&& graph->stp_type != STP_GRID )*/
-      reduction = 0;
+      reduction *= -1;
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, filename) );

@@ -170,6 +170,7 @@ extern void   graph_ident(const GRAPH*);
 extern void   graph_knot_add(GRAPH*, int, int, int);
 extern void   graph_knot_chg(GRAPH*, int, int, int, int);
 extern void   graph_knot_contract(GRAPH*, int, int);
+extern void   graph_knot_contract_dir(GRAPH*, int, int);
 extern void   graph_edge_add(GRAPH*, int, int, double, double);
 extern void   graph_edge_del(GRAPH*, int);
 extern void   graph_edge_hide(GRAPH*, int);
@@ -227,6 +228,10 @@ extern double reduce(GRAPH*, int, SCIP*);
 extern int    sd_reduction(GRAPH*);
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(GRAPH*, double*);
+
+/* dirreduce.c
+ */
+extern int degree_test_dir(GRAPH*, double*);
 
 /* validate.c
  */
