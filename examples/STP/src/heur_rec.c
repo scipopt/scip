@@ -728,12 +728,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    assert(graph != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
+#if 1
    /* the local heuristics may not work correctly for problems other than undirected STPs */
-   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID )
+   if( graph->stp_type != STP_HOP_CONS && graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID )
       return SCIP_OKAY;
-
-
+#endif
 
    //printf("nsols: %d\n ", (int) SCIPgetNSolsFound(scip) );
    nsols = SCIPgetNSolsFound(scip);
