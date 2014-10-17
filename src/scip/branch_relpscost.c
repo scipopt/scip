@@ -52,7 +52,7 @@
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
 #define DEFAULT_ERRORBASEDRELIABLITY FALSE /**< should reliability be based on relative errors? */
-#define DEFAULT_RELERRORTOLERANCE 0.1 /**< tolerance for relative errors to be reliable */
+#define DEFAULT_RELERRORTOLERANCE 0.05 /**< tolerance for relative errors to be reliable */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBCUTOFFINFO FALSE    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
 #define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
@@ -491,6 +491,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real reliable;
       SCIP_Real maxlookahead;
       SCIP_Real lookahead;
+      SCIP_Real relerrorthreshold;
       SCIP_Bool initstrongbranching;
       SCIP_Bool propagate;
       SCIP_Bool probingbounds;
@@ -572,6 +573,12 @@ SCIP_RETCODE execRelpscost(
       prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
+      /* depending on the strong branching priority, alter the error based reliability as rel / prio, such that
+       * rel -> infty for prio -> 0
+       */
+      assert(0 <= prio);
+      relerrorthreshold = branchruledata->relerrortolerance / (prio + 1e-5);
+
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
       nuninitcands = 0;
       bestpscand = -1;
@@ -635,7 +642,7 @@ SCIP_RETCODE execRelpscost(
              * of the pseudo costs is too high */
             usesb = (size < reliable
                   || (branchruledata->errorbasedreliability
-                        && !isVarPscostRelerrorReliable(scip, branchcands[c], branchruledata->errorbasedreliability)));
+                        && !isVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold)));
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
