@@ -2191,13 +2191,35 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    if( SCIPgetStage(sourcescip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   /* if the transformation of the source was subject to scaling, the history information cannot be just copied */
+   if( !SCIPsetIsEQ(targetscip->set, 1.0, SCIPgetOrigObjscale(sourcescip))
+         || !SCIPsetIsEQ(targetscip->set, 0.0, SCIPgetOrigObjoffset(sourcescip)) )
+      return SCIP_OKAY;
+
    /* merge histories of the targetSCIP-variables to the SCIP variables. */
    for( i = 0; i < nvars; ++i )
    {
+      SCIP_VARSTATUS sourcevarstatus;
+
       assert(sourcevars[i]->scip == sourcescip);
       assert(targetvars[i]->scip == targetscip);
 
-      SCIPvarMergeHistories(targetvars[i], sourcevars[i], targetscip->stat);
+      sourcevarstatus = SCIPvarGetStatus(sourcevars[i]);
+
+      /* depending on the variable status, we use either the transformed variable history or the history of the col itself */
+      switch( sourcevarstatus )
+      {
+         case SCIP_VARSTATUS_ORIGINAL:
+            assert(NULL != SCIPvarGetTransVar(sourcevars[i]));
+            SCIPvarMergeHistories(targetvars[i], SCIPvarGetTransVar(sourcevars[i]), targetscip->stat);
+            break;
+         case SCIP_VARSTATUS_COLUMN:
+            SCIPvarMergeHistories(targetvars[i], sourcevars[i], targetscip->stat);
+            break;
+         default:
+            /* other variable status are currently not supported for the merging */
+         break;
+      }
    }
 
    return SCIP_OKAY;
