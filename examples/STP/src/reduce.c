@@ -956,6 +956,55 @@ static double level4(
    return(fixed);
 }
 
+static double levelm4(
+   GRAPH* g,
+   SCIP* scip)
+{
+   SCIP_Real timelimit;
+   double fixed   = 0.0;
+   int    rerun   = TRUE;
+   int    i;
+
+   assert(g != NULL);
+
+   degree_test_dir(g, &fixed);
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   while(rerun && !SCIPisStopped(scip))
+   {
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      rerun = FALSE;
+
+      for(i = 0; i < 6; i++)
+      {
+         if (sd_reduction(g))
+            rerun = TRUE;
+      }
+
+      if (degree_test_dir(g, &fixed) > 0)
+         rerun = TRUE;
+
+      //if (nsv_reduction(g, &fixed))
+      //{
+         //printf("Success NSV: %d\n", fixed);
+         //rerun = TRUE;
+      //}
+
+      //if (bd3_reduction(g))
+         //rerun = TRUE;
+
+      //if (degree_test_dir(g, &fixed) > 0)
+         //rerun = TRUE;
+   }
+   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n",
+      fixed);
+
+   return(fixed);
+}
+
 static double level5(
    GRAPH* g)
 {
@@ -1000,8 +1049,10 @@ double reduce(
 {
    double fixed = 0.0;
 
+   printf("level: %d\n", level);
+
    assert(g      != NULL);
-   assert(level  >= 0);
+   assert(level  >= 0 || level == -4);
 
    if (g->layers != 1)
       return(0);
@@ -1022,6 +1073,9 @@ double reduce(
 
    if (level == 5)
       fixed = level5(g);
+
+   if (level == -4)
+      fixed = levelm4(g, scip);
 
    return(fixed);
 }

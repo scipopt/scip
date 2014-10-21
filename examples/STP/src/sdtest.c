@@ -315,6 +315,10 @@ int sd_reduction(
       if (g->grad[i] == 0)
          continue;
 
+      /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
+      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && g->source[i] > 0)
+         continue;
+
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
       {
          assert(g->mark[g->head[e]] == 1);
@@ -327,7 +331,7 @@ int sd_reduction(
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
       {
          assert(g->mark[g->head[e]] == 2);
-         assert(sd[g->head[e]].dist < FARAWAY);
+         /* assert(sd[g->head[e]].dist < FARAWAY); */
 
          g->mark[g->head[e]] = 1;
       }
@@ -338,7 +342,7 @@ int sd_reduction(
 
          j = g->oeat[e];
 
-         if (LT(sd[g->head[e]].dist, cost[e]))
+         if (LT(cost[e], FARAWAY) && LT(sd[g->head[e]].dist, cost[e]))
          {
             graph_edge_del(g, e);
 

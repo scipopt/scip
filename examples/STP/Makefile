@@ -53,6 +53,7 @@ CMAINOBJ	=	cmain.o \
 			reader_stp.o \
 			pricer_stp.o \
 			reduce.o \
+			dirreduce.o \
 			sdtest.o \
 			validate.o
 CXXMAINOBJ	=
