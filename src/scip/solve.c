@@ -108,14 +108,16 @@ SCIP_Bool SCIPsolveIsStopped(
          /* use the measured time to update the average time interval between two calls to this method */
          if( stat->nisstoppedcalls >= NINITCALLS )
          {
-            stat->avgisstoppedfreq = currtime / stat->nisstoppedcalls;
-            stat->nclockskips = MIN(2 * (stat->nclockskips + 1), MAXNCLOCKSKIPS);
+            SCIP_Real avgisstoppedfreq;
+            int nclockskips = MAXNCLOCKSKIPS;
+
+            avgisstoppedfreq = currtime / stat->nisstoppedcalls;
 
             /* if we are approaching the time limit, reset the number of clock skips to 0 */
-            if( (SAFETYFACTOR * (set->limit_time - currtime) / (stat->avgisstoppedfreq + 1e-6)) < stat->nclockskips )
-               stat->nclockskips = 0;
+            if( (SAFETYFACTOR * (set->limit_time - currtime) / (avgisstoppedfreq + 1e-6)) < nclockskips )
+               nclockskips = 0;
 
-            stat->nclockskipsleft = stat->nclockskips;
+            stat->nclockskipsleft = nclockskips;
          }
 
          /* set the status if the time limit was hit */

@@ -111,7 +111,6 @@ struct SCIP_Stat
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
-   SCIP_Real             avgisstoppedfreq;   /**< the average elapsed time between two calls to SCIPsolveIsStopped() */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
@@ -206,8 +205,6 @@ struct SCIP_Stat
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
    int                   nclockskipsleft;    /**< how many times the timing should be skipped in SCIPsolveIsStopped() */
-   int                   nclockskips;        /**< a safe number of calls to SCIPsolveIsStopped() which can be
-                                               *< assumed not to violate the time limit */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

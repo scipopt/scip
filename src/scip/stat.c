@@ -270,7 +270,6 @@ void SCIPstatReset(
    stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
    stat->nclockskipsleft = 0;
-   stat->nclockskips = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
