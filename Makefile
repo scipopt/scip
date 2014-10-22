@@ -385,6 +385,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
+			scip/presol_redvub.o \
 			scip/presol_trivial.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
