@@ -50,7 +50,6 @@ SCIP_RETCODE isVubCons(
    )
 {
    int* rowpnt;
-   SCIP_Real* valpnt;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -65,23 +64,17 @@ SCIP_RETCODE isVubCons(
       SCIP_VARTYPE type2;
       int idx1;
       int idx2;
-      SCIP_Real val1;
-      SCIP_Real val2;
       SCIP_VAR* var1;
       SCIP_VAR* var2;
       SCIP_Real lhs;
       SCIP_Real rhs;
 
       rowpnt = SCIPmatrixGetRowIdxPtr(matrix,row);
-      valpnt = SCIPmatrixGetRowValPtr(matrix,row);;
       idx1 = *rowpnt;
-      val1 = *valpnt;
       var1 = SCIPmatrixGetVar(matrix,idx1);
       type1 = SCIPvarGetType(var1);
       rowpnt++;
-      valpnt++;
       idx2 = *rowpnt;
-      val2 = *valpnt;
       var2 = SCIPmatrixGetVar(matrix,idx2);
       type2 = SCIPvarGetType(var2);
       lhs = SCIPmatrixGetRowLhs(matrix,row);

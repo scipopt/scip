@@ -301,8 +301,6 @@ void calcColActResidualCommon(
    SCIP_Real*            mincolresact        /**< minimal column residual activity */
    )
 {
-   SCIP_VAR* var;
-
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(lbdual[0] != NULL);
@@ -319,9 +317,7 @@ void calcColActResidualCommon(
    assert(mincolactinf != NULL);
    assert(mincolresact != NULL);
 
-   var = SCIPmatrixGetVar(matrix,col);
-
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(SCIPmatrixGetVar(matrix,col)) == SCIP_VARTYPE_CONTINUOUS);
 
    if( !SCIPmatrixIsRowRhsInfinity(matrix,row) && part == 1 )
       val = -val;
