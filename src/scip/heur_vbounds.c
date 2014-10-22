@@ -739,6 +739,9 @@ SCIP_RETCODE applyVbounds(
          goto TERMINATE;
       }
 
+      /* disable statistic timing inside sub SCIP */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );

@@ -375,6 +375,9 @@ SCIP_RETCODE copyAndSolveComponent(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    if( nbinvars + nintvars > 0 )
    {
       /* set node limit */
