@@ -756,6 +756,17 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
    return conflicthdlr->initialized;
 }
 
+/** enables or disables all clocks of \p conflicthdlr, depending on the value of the flag */
+void SCIPconflicthdlrEnableOrDisableClocks(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< the conflict handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   SCIPclockEnableOrDisable(conflicthdlr->setuptime, enable);
+   SCIPclockEnableOrDisable(conflicthdlr->conflicttime, enable);
+}
 
 /** gets time in seconds used in this conflict handler for setting up for next stages */
 SCIP_Real SCIPconflicthdlrGetSetupTime(

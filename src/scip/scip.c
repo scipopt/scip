@@ -37400,6 +37400,51 @@ SCIP_RETCODE SCIPstopClock(
    return SCIP_OKAY;
 }
 
+/** enables or disables all statistic clocks of SCIP concerning plugin statistics,
+ *  LP execution time, strong branching time, etc.
+ *
+ *  Method reads the value of the parameter timing/statistictiming. In order to disable statistic timing,
+ *  set the parameter to FALSE.
+ *
+ *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
+ *         are not affected by this method
+ *
+ *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPenableOrDisableStatisticTiming(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPenableOrDisableStatisticTiming", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIPsetEnableOrDisablePluginClocks(scip->set, scip->set->time_statistictiming);
+
+   if( scip->set->stage > SCIP_STAGE_INIT )
+   {
+      assert(scip->stat != NULL);
+      SCIPstatEnableOrDisableStatClocks(scip->stat, scip->set->time_statistictiming);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** starts the current solving time
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

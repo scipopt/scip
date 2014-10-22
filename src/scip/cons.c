@@ -4287,6 +4287,25 @@ int SCIPconshdlrGetNEnabledConss(
    return conshdlr->nenabledconss;
 }
 
+/** enables or disables all clocks of \p conshdlr, depending on the value of the flag */
+void SCIPconshdlrEnableOrDisableClocks(
+   SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the constraint handler be enabled? */
+   )
+{
+   assert(conshdlr != NULL);
+
+   SCIPclockEnableOrDisable(conshdlr->setuptime, enable);
+   SCIPclockEnableOrDisable(conshdlr->checktime, enable);
+   SCIPclockEnableOrDisable(conshdlr->enfolptime, enable);
+   SCIPclockEnableOrDisable(conshdlr->enfopstime, enable);
+   SCIPclockEnableOrDisable(conshdlr->presoltime, enable);
+   SCIPclockEnableOrDisable(conshdlr->proptime, enable);
+   SCIPclockEnableOrDisable(conshdlr->resproptime, enable);
+   SCIPclockEnableOrDisable(conshdlr->sbproptime, enable);
+   SCIPclockEnableOrDisable(conshdlr->sepatime, enable);
+}
+
 /** gets time in seconds used for setting up this constraint handler for new stages */
 SCIP_Real SCIPconshdlrGetSetupTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */

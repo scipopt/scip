@@ -753,6 +753,18 @@ SCIP_Bool SCIPheurIsInitialized(
    return heur->initialized;
 }
 
+/** enables or disables all clocks of \p heur, depending on the value of the flag */
+void SCIPheurEnableOrDisableClocks(
+   SCIP_HEUR*            heur,               /**< the heuristic for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the heuristic be enabled? */
+   )
+{
+   assert(heur != NULL);
+
+   SCIPclockEnableOrDisable(heur->setuptime, enable);
+   SCIPclockEnableOrDisable(heur->heurclock, enable);
+}
+
 /** gets time in seconds used in this heuristic for setting up for next stages */
 SCIP_Real SCIPheurGetSetupTime(
    SCIP_HEUR*            heur                /**< primal heuristic */

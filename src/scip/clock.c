@@ -246,6 +246,20 @@ void SCIPclockDisable(
    SCIPclockReset(clck);
 }
 
+/** enables or disables \p clck, depending on the value of the flag */
+void SCIPclockEnableOrDisable(
+   SCIP_CLOCK*           clck,               /**< the clock to be disabled/enabled */
+   SCIP_Bool             enable              /**< should the clock be enabled? */
+   )
+{
+   assert(clck != NULL);
+
+   if( enable )
+      SCIPclockEnable(clck);
+   else
+      SCIPclockDisable(clck);
+}
+
 /** sets the type of the clock, overriding the default clock type, and resets the clock */
 void SCIPclockSetType(
    SCIP_CLOCK*           clck,               /**< clock timer */

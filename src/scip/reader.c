@@ -566,6 +566,17 @@ SCIP_Real SCIPreaderGetReadingTime(
    return SCIPclockGetTime(reader->readingtime);
 }
 
+/** enables or disables all clocks of \p reader, depending on the value of the flag */
+void SCIPreaderEnableOrDisableClocks(
+   SCIP_READER*          reader,             /**< the reader for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks be enabled? */
+   )
+{
+   assert(reader != NULL);
+
+   SCIPclockEnableOrDisable(reader->readingtime, enable);
+}
+
 /** resets reading time of reader */
 SCIP_RETCODE SCIPreaderResetReadingTime(
    SCIP_READER*          reader              /**< reader */

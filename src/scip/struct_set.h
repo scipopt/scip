@@ -398,6 +398,8 @@ struct SCIP_Set
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
+   SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
+   SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
 
    /* VBC tool settings */
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */

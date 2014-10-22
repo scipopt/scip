@@ -142,6 +142,19 @@ void SCIPstatUpdateMemsaveMode(
    SCIP_MEM*             mem                 /**< block memory pools */
    );
 
+/** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
+ *
+ *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
+ *         are not affected by this method
+ *
+ *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
+ */
+extern
+void SCIPstatEnableOrDisableStatClocks(
+   SCIP_STAT*          stat,             /**< SCIP statistics */
+   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   );
+
 #ifdef __cplusplus
 }
 #endif

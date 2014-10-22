@@ -101,12 +101,12 @@ SCIP_Bool SCIPsolveIsStopped(
    else if( set->istimelimitfinite )
    {
       /* check if we have already called this function sufficiently often for a valid estimation of its average call interval */
-      if( stat->nisstoppedcalls < NINITCALLS || stat->nclockskipsleft <= 0 )
+      if( stat->nclockskipsleft <= 0 || stat->nisstoppedcalls < NINITCALLS )
       {
          SCIP_Real currtime = SCIPclockGetTime(stat->solvingtime);
 
          /* use the measured time to update the average time interval between two calls to this method */
-         if( stat->nisstoppedcalls >= NINITCALLS )
+         if( set->time_rareclockcheck && stat->nisstoppedcalls >= NINITCALLS )
          {
             SCIP_Real avgisstoppedfreq;
             int nclockskips = MAXNCLOCKSKIPS;
@@ -119,6 +119,8 @@ SCIP_Bool SCIPsolveIsStopped(
 
             stat->nclockskipsleft = nclockskips;
          }
+         else
+            stat->nclockskipsleft = 0;
 
          /* set the status if the time limit was hit */
          if( currtime >= set->limit_time )

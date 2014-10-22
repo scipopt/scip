@@ -170,6 +170,13 @@ void SCIPconflicthdlrSetExitsol(
    SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
    );
 
+/** enables or disables all clocks of \p conflicthdlr, depending on the value of the flag */
+extern
+void SCIPconflicthdlrEnableOrDisableClocks(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< the conflict handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
+   );
+
 /*
  * Conflict Analysis
  */
