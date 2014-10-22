@@ -37441,6 +37441,11 @@ SCIP_RETCODE SCIPenableOrDisableStatisticTiming(
       assert(scip->stat != NULL);
       SCIPstatEnableOrDisableStatClocks(scip->stat, scip->set->time_statistictiming);
    }
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMING )
+   {
+      assert(scip->conflict != NULL);
+      SCIPconflictEnableOrDisableClocks(scip->conflict, scip->set->time_statistictiming);
+   }
 
    return SCIP_OKAY;
 }

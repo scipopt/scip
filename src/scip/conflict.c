@@ -2540,6 +2540,10 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+
+   /* enable or disable timing depending on the parameter statistic timing */
+   SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
+
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
@@ -6960,3 +6964,20 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
 
    return conflict->npseudoreconvliterals;
 }
+
+/** enables or disables all clocks of \p conflict, depending on the value of the flag */
+void SCIPconflictEnableOrDisableClocks(
+   SCIP_CONFLICT*        conflict,            /**< the conflict analysis data for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
+   )
+{
+   assert(conflict != NULL);
+
+   SCIPclockEnableOrDisable(conflict->boundlpanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->dIBclock, enable);
+   SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
+}
+
