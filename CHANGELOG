@@ -52,8 +52,10 @@ fixed bugs:
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
 - improved memory management of proximity heuristic
+- disabled statistic timing in all subscips via new parameter timing/statistictiming
 
 features:
+- use clock average to reduce number of system calls via timing/rareclockcheck parameter
 - added copy mechanism for conjunction constraints
 - added Makefile support for cygwin 64 Bit
 - added revised lpi_xprs for using XPRESS as LP solver
@@ -71,6 +73,10 @@ interface:
 - AMPL interface now returns dual multipliers if problem is an LP and presolving was turned off
 
 parameters:
+- new parameter timing/rareclockcheck to call the system time less frequently, based on the current average time interval
+  between two calls to SCIPsolveIsStopped(); the default value is FALSE
+- new parameter timing/statistictiming to enable/disable all timers for statistic output of SCIP;
+  the default value is TRUE
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
 - changed default value of parameter heuristics/proximity/usefinallp to FALSE
 
