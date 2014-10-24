@@ -2,6 +2,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
 - fixed bug in proximity heuristic which attempted to enter diving mode even at nodes without a constructed LP
 - fixed wrong pseudo cost updates during diving heuristic execution after backtracking
 - fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now

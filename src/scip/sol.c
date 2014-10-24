@@ -987,6 +987,7 @@ SCIP_RETCODE SCIPsolSetVal(
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(var != NULL);
+   assert(!isnan(val));
 
    SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
 
