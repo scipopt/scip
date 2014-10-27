@@ -21308,6 +21308,7 @@ void SCIPdisableVarHistory(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
+static int counter = 0;
 SCIP_RETCODE SCIPupdateVarPseudocost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -21323,6 +21324,22 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
       if( scip->set->branch_divingpscost || (!scip->lp->diving && !SCIPtreeProbing(scip->tree)) )
       {
          SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight) );
+
+#ifdef SCIP_HISTORYTOFILE
+         {
+            FILE* f;
+            char filename[256];
+
+            sprintf(filename, "/OPTI/bzfhende/pseudocosts/%s.pse", SCIPgetProbName(scip));
+            f = fopen(filename, "a");
+            assert(NULL != f);
+            fprintf(f, "%d %s \t %lld \t %d %15.9f %.3f\n", ++counter,
+                  SCIPvarGetName(var), scip->stat->nnodes, SCIPgetDepth(scip), objdelta, solvaldelta);
+
+            fclose(f);
+
+         }
+#endif
       }
    }
 
