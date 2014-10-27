@@ -46,6 +46,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
+#include "scip/solve.h"
 #include "scip/event.h"
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
@@ -14284,7 +14285,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
    assert(lp->flushed);
 
-   if( !lp->solved )
+   /* if the time limit was reached in the last call and the LP did not change, lp->solved is set to TRUE, but we want
+    * to run again anyway, since there seems to be some time left / the time limit was increased
+    */
+   if( !lp->solved || (lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT && stat->status != SCIP_STATUS_TIMELIMIT) )
    {
       SCIP_Bool* primalfeaspointer;
       SCIP_Bool* dualfeaspointer;
@@ -14731,6 +14735,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIPdebugMessage(" -> LP time limit exceeded\n");
+
+         if( !SCIPsolveIsStopped(set, stat, FALSE) )
+         {
+            SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
+               "you might consider switching the clock type of SCIP\n");
+            stat->status = SCIP_STATUS_TIMELIMIT;
+         }
          break;
 
       case SCIP_LPSOLSTAT_ERROR:

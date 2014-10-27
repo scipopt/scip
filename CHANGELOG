@@ -49,6 +49,8 @@ fixed bugs:
 - fixed bug in cons_sos1: locks and events were not initialized if constraint was added to transformed problem
 - fixed bug(?) in reader_mps: variables are now written in columns section even of they occur in no constraint
   and have an objective coefficient of 0 (otherwise, CPLEX and Gurobi cannot read the file)
+- fixed bug that hitting the time limit while solving a pure LP and then continuing the solving process lead to
+  not solving the LP, but always creating a single child node until maximum depth is reached
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
