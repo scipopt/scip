@@ -164,6 +164,15 @@ SCIP_Bool SCIPreoptIsObjCoefNegated(
    );
 
 /*
+ * returns the coefficent of variable with index @param idx in run @param run
+ */
+SCIP_Real SCIPreoptGetObjCoef(
+   SCIP_REOPT*           reopt,
+   int                   run,
+   int                   idx
+   );
+
+/*
  * returns if a variable enters or leaves the objective function.
  */
 extern

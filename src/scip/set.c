@@ -294,7 +294,7 @@
 #define SCIP_DEFAULT_REOPT_OBJSIMSOL        0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 #define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     1.0 /**< similarity of two sequential objective function to disable solving the root LP. */
-#define SCIP_DEFAULT_REOPT_DELAY            0.0 /**< start reoptimzing the search if the new objective function has similarity of
+#define SCIP_DEFAULT_REOPT_DELAY           -1.0 /**< start reoptimzing the search if the new objective function has similarity of
                                                      at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
 
@@ -1679,7 +1679,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/delay",
          "start reoptimizing the search tree if the current and previous objective have this similarity.",
-         &(*set)->reopt_delay, TRUE, SCIP_DEFAULT_REOPT_DELAY, 0, 1,
+         &(*set)->reopt_delay, TRUE, SCIP_DEFAULT_REOPT_DELAY, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/commontimelimit",

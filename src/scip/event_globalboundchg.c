@@ -79,7 +79,10 @@ SCIP_DECL_EVENTINITSOL(eventInitsolGlobalboundchg)
    {
       for(varnr = 0; varnr < SCIPgetNVars(scip); ++varnr)
       {
-         SCIP_CALL(SCIPcatchVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL));
+         if( SCIPvarGetType(vars[varnr]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL(SCIPcatchVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL));
+         }
       }
    }
 
@@ -107,7 +110,10 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolGlobalboundchg)
    {
       for(varnr = 0; varnr < SCIPgetNVars(scip); ++varnr)
       {
-         SCIP_CALL(SCIPdropVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED , eventhdlr, NULL, -1));
+         if( SCIPvarGetType(vars[varnr]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL(SCIPdropVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED , eventhdlr, NULL, -1));
+         }
       }
    }
    return SCIP_OKAY;
@@ -133,7 +139,7 @@ SCIP_DECL_EVENTINIT(eventInitGlobalboundchg)
       int maxsavednodes;
 
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &eventhdlrdata->reopt) );
-      if( eventhdlrdata->reopt && SCIPgetNImplVars(scip) + SCIPgetNIntVars(scip) > 0 )
+      if( eventhdlrdata->reopt && SCIPgetNIntVars(scip) > 0 )
          eventhdlrdata->reopt = FALSE;
 
       SCIP_CALL( SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &maxsavednodes) );
@@ -164,6 +170,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalboundchg)
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY);
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);

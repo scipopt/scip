@@ -4328,7 +4328,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
       assert(eventthrown == FALSE);
 
-      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) )
+      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) && set->stage == SCIP_STAGE_SOLVING )
       {
          SCIP_CALL( SCIPbranchruledataNodereoptLPTimeStart(set->scip) );
       }
@@ -4341,7 +4341,7 @@ SCIP_RETCODE SCIPsolveCIP(
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
       assert(SCIPtreeGetFocusNode(tree) == focusnode);
 
-      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) )
+      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) && set->stage == SCIP_STAGE_SOLVING )
       {
          SCIP_CALL( SCIPbranchruledataNodereoptLPTimeStop(set->scip) );
       }

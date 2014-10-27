@@ -175,6 +175,14 @@ int SCIPbranchruleNodereoptGetNAddedConss(
    SCIP_NODE*            node
    );
 
+/*
+ * save unexplored nodes
+ */
+extern
+SCIP_RETCODE SCIPbranchruleNodereoptSaveOpenNodes(
+   SCIP*                 scip
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -12092,6 +12092,7 @@ SCIP_RETCODE SCIPtransformProb(
    if( scip->set->reopt_enable && scip->stat->reopt_nruns >= 1 )
    {
       SCIP_CALL( SCIPreoptUpdateSols(scip, scip->reopt, scip->set->reopt_savesols, scip->set->reopt_objsimsol, scip->set->reopt_sepabestsol) );
+      printf("UpdateSols\n");
    }
    else
    {
@@ -13803,6 +13804,7 @@ SCIP_RETCODE SCIPsolve(
             || scip->stat->status == SCIP_STATUS_INFEASIBLE
             || scip->stat->status == SCIP_STATUS_UNBOUNDED
             || scip->stat->status == SCIP_STATUS_INFORUNBD);
+
          break;
 
       default:
@@ -13812,6 +13814,12 @@ SCIP_RETCODE SCIPsolve(
    }
    while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE)
       && (scip->set->limit_restarts == -1 || scip->stat->nruns <= scip->set->limit_restarts ) );
+
+   if( scip->set->reopt_enable && scip->set->stage != SCIP_STAGE_PRESOLVING
+    && SCIPsolveIsStopped(scip->set, scip->stat, TRUE) && SCIPgetNNodesLeft(scip) > 0 )
+   {
+      SCIP_CALL( SCIPbranchruleNodereoptSaveOpenNodes(scip) );
+   }
 
    /* release the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )
@@ -13826,7 +13834,7 @@ SCIP_RETCODE SCIPsolve(
       /* start clock */
       SCIP_CALL( SCIPstartSaveTime(scip) );
 
-      nsols = scip->set->reopt_savesols == -1 ? INT_MAX : scip->set->reopt_savesols;
+      nsols = scip->set->reopt_savesols == -1 ? INT_MAX : MAX(scip->set->reopt_savesols, 1);
       nsols = MIN(scip->primal->nsols, nsols);
 
       for( s = 0; s < nsols; s++ )
@@ -13872,11 +13880,7 @@ SCIP_RETCODE SCIPsolve(
          }
       }
 
-#ifdef SCIP_DEBUG
-      {
-         printf(">> saved %d solution.\n", nsols);
-      }
-#endif
+      SCIPdebugMessage("-> saved %d solution.\n", nsols);
 
       /* stop clock */
       SCIP_CALL( SCIPstopSaveTime(scip) );
@@ -14595,7 +14599,7 @@ SCIP_RETCODE SCIPparseVarName(
 
    SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPstrCopySection(str, '<', '>', varname, SCIP_MAXSTRLEN, endptr); 
+   SCIPstrCopySection(str, '<', '>', varname, SCIP_MAXSTRLEN, endptr);
    assert(*endptr != NULL);
 
    if( *varname == '\0' )
@@ -31333,6 +31337,63 @@ SCIP_RETCODE SCIPcreateSolCopy(
    return SCIP_OKAY;
 }
 
+/** creates a copy of a origprimal solution; note that a copy of a linked solution is also linked and needs to be unlinked
+ *  if it should stay unaffected from changes in the LP or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcreateSolCopyOrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopyOrig", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE) );
+
+   /* check if we want to copy the current solution, which is the same as creating a current solution */
+   if( sourcesol == NULL )
+   {
+      SCIP_CALL( SCIPcreateCurrentSol(scip, sol, NULL) );
+   }
+   else
+   {
+      switch( scip->set->stage )
+      {
+      case SCIP_STAGE_PROBLEM:
+      case SCIP_STAGE_FREETRANS:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_TRANSFORMING:
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+         SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
+         break;
+      default:
+         assert(FALSE);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a copy of a primal solution, thereby replacing infinite fixings of variables by finite values;
  *  the copy is always defined in the original variable space;
  *  success indicates whether the objective value of the solution was changed by removing infinite values
@@ -37372,8 +37433,8 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d\n", MAX(0,firstrestart));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d\n", MAX(0,lastrestart));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Heuristics         :     #Calls   #Success       Time     avg. k\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  largest subtree  : %10d %10d %10.2f %10.2f\n", liscalls, lissuccess, listime, ((SCIP_Real)lisk)/lissuccess);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  lazy compression : %10d %10d %10.2f %10.2f\n", lccalls, lcsuccess, lctime, ((SCIP_Real)lck)/lcsuccess);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  largest repr.    : %10d %10d %10.2f %10.2f\n", liscalls, lissuccess, listime, ((SCIP_Real)lisk)/lissuccess);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  weak compression : %10d %10d %10.2f %10.2f\n", lccalls, lcsuccess, lctime, ((SCIP_Real)lck)/lcsuccess);
 
 
    return SCIP_OKAY;

@@ -486,79 +486,88 @@ SCIP_RETCODE soltreeAddSol(
    (*added) = FALSE;
    hamdist = 0.0;
 
-   /** either all variables are delete or the given minimal Hamming-Distance is at most
-    *  1/SCIPgetNVars(scip), which is the minimum possible Hamming-Distance.
-    */
-   if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist == 1 || set->reopt_minavghamdist < (SCIP_Real)1/(SCIPgetNBinVars(scip)*reopt->soltree->nsols) )
+   if( set->reopt_savesols > 0 )
    {
-      hamdist = 1;
-   }
-   else
-   {
-      hamdist = soltreeGetHammingDist(scip, reopt, set, stat, sol);
-   }
-
-   /* add the solution iff the solution differs in at least one variable
-    * to all saved solution and the avarage Hamming-Distance is greater or
-    * equal to reopt_minavghamdist */
-   for(varid = 0; varid < nvars && hamdist >= set->reopt_minavghamdist; varid++)
-   {
-      if( SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY
-       || SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_INTEGER
-       || SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_IMPLINT )
+      /** either all variables are delete or the given minimal Hamming-Distance is at most
+       *  1/SCIPgetNVars(scip), which is the minimum possible Hamming-Distance.
+       */
+      if( SCIPgetNVars(scip) == 0 || set->reopt_minavghamdist == 1 || set->reopt_minavghamdist < (SCIP_Real)1/(SCIPgetNBinVars(scip)*reopt->soltree->nsols) )
       {
-         SCIP_Real objval;
-
-         objval = SCIPsolGetVal(sol, set, stat, vars[varid]);
-         if( SCIPsetIsFeasEQ(set, objval, 0) )
-         {
-            if( cursolnode->rchild == NULL )
-            {
-               SCIP_CALL( soltreeAddNode(reopt, cursolnode, TRUE, FALSE, objval) );
-               assert(cursolnode->rchild != NULL);
-               (*added) = TRUE;
-            }
-            cursolnode = cursolnode->rchild;
-         }
-         else
-         {
-            assert(SCIPsetIsFeasEQ(set, objval, 1));
-            if( cursolnode->lchild == NULL )
-            {
-               SCIP_CALL( soltreeAddNode(reopt, cursolnode, FALSE, TRUE, objval) );
-               assert(cursolnode->lchild != NULL);
-               (*added) = TRUE;
-            }
-            cursolnode = cursolnode->lchild;
-         }
-      }
-   }
-
-   /* the solution was added */
-   if( *added || hamdist >= set->reopt_minavghamdist )
-   {
-      SCIP_SOL* copysol;
-
-      assert(cursolnode->lchild == NULL && cursolnode->rchild == NULL);
-
-      if( *added )
-      {
-         SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
-         SCIPsolSetHeur(sol, NULL);
-         SCIPsolSetNodenum(sol, 0);
-         cursolnode->sol = copysol;
-         reopt->soltree->nsols++;
+         hamdist = 1;
       }
       else
-         /* this is a pseudo add; we do not want to save this solution
-          * more than once, but we will link this solution to the solution
-          * storage of this round */
-         (*added) = TRUE;
+      {
+         hamdist = soltreeGetHammingDist(scip, reopt, set, stat, sol);
+      }
 
-      if( bestsol )
-         reopt->lastbestsol = cursolnode->sol;
+      /* add the solution iff the solution differs in at least one variable
+       * to all saved solution and the avarage Hamming-Distance is greater or
+       * equal to reopt_minavghamdist */
+      for(varid = 0; varid < nvars && hamdist >= set->reopt_minavghamdist; varid++)
+      {
+         if( SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY
+          || SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_INTEGER
+          || SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_IMPLINT )
+         {
+            SCIP_Real objval;
 
-      (*solnode) = cursolnode;
+            objval = SCIPsolGetVal(sol, set, stat, vars[varid]);
+            if( SCIPsetIsFeasEQ(set, objval, 0) )
+            {
+               if( cursolnode->rchild == NULL )
+               {
+                  SCIP_CALL( soltreeAddNode(reopt, cursolnode, TRUE, FALSE, objval) );
+                  assert(cursolnode->rchild != NULL);
+                  (*added) = TRUE;
+               }
+               cursolnode = cursolnode->rchild;
+            }
+            else
+            {
+               assert(SCIPsetIsFeasEQ(set, objval, 1));
+               if( cursolnode->lchild == NULL )
+               {
+                  SCIP_CALL( soltreeAddNode(reopt, cursolnode, FALSE, TRUE, objval) );
+                  assert(cursolnode->lchild != NULL);
+                  (*added) = TRUE;
+               }
+               cursolnode = cursolnode->lchild;
+            }
+         }
+      }
+
+      /* the solution was added */
+      if( *added || hamdist >= set->reopt_minavghamdist )
+      {
+         SCIP_SOL* copysol;
+
+         assert(cursolnode->lchild == NULL && cursolnode->rchild == NULL);
+
+         if( *added )
+         {
+            SCIP_CALL( SCIPcreateSolCopyOrig(scip, &copysol, sol) );
+            SCIPsolSetHeur(sol, NULL);
+            SCIPsolSetNodenum(sol, 0);
+            cursolnode->sol = copysol;
+            reopt->soltree->nsols++;
+         }
+         else
+            /* this is a pseudo add; we do not want to save this solution
+             * more than once, but we will link this solution to the solution
+             * storage of this round */
+            (*added) = TRUE;
+
+         if( bestsol )
+            reopt->lastbestsol = cursolnode->sol;
+
+         (*solnode) = cursolnode;
+      }
+   }
+   else if( bestsol )
+   {
+      SCIP_SOL* copysol;
+      SCIP_CALL( SCIPcreateSolCopy(scip, &copysol, sol) );
+      reopt->lastbestsol = copysol;
    }
 
 #ifdef SCIP_DEBUG
@@ -729,7 +738,7 @@ SCIP_RETCODE SCIPreoptAddSol(
 
    solnode = NULL;
 
-   /** ad solution to solution tree */
+   /** add solution to solution tree */
    SCIP_CALL( soltreeAddSol(scip, reopt, set, stat, SCIPgetOrigVars(scip), sol, &solnode, SCIPgetNOrigVars(scip), bestsol, added) );
 
    if( (*added) )
@@ -941,6 +950,7 @@ SCIP_RETCODE SCIPreoptSaveObj(
       reopt->simtolastobj = reoptSimilarity(reopt, SCIPgetNOrigVars(scip), run, run-1);
 
       SCIPdebugMessage("new objective has similarity of %.4f/%.4f compared to first/previous.\n", reopt->simtofirstobj, reopt->simtolastobj);
+      printf("new objective has similarity of %.4f/%.4f compared to first/previous.\n", reopt->simtofirstobj, reopt->simtolastobj);
    }
 
    SCIPdebugMessage("saved obj for run %d.\n", run);
@@ -962,12 +972,12 @@ SCIP_Bool SCIPreoptCheckRestart(
 
    (*sim) = 0.0;
 
-   if( reopt->run > 0 && set->reopt_delay > 0.0 )
+   if( reopt->run > 0 && set->reopt_delay > -1.0 )
    {
       (*sim) = reopt->simtolastobj;
    }
 
-   if( (*sim) >= set->reopt_delay )
+   if( (*sim) > set->reopt_delay )
       return FALSE;
    else
       return TRUE;
@@ -1027,6 +1037,21 @@ SCIP_Bool SCIPreoptIsObjCoefNegated(
    }
 
    return FALSE;
+}
+
+/*
+ * returns the coefficient of variable with index @param idx in run @param run
+ */
+SCIP_Real SCIPreoptGetObjCoef(
+   SCIP_REOPT*           reopt,
+   int                   run,
+   int                   idx
+)
+{
+   assert(reopt != NULL);
+   assert(0 <= run && run <= reopt->run);
+
+   return reopt->objs[run][idx];
 }
 
 /*

@@ -26,6 +26,7 @@
 #include "scip/event_nodereopt.h"
 #include "scip/type_reopt.h"
 #include "scip/pub_event.h"
+#include "scip/struct_scip.h"
 #include "scip/tree.h"
 #include <string.h>
 
@@ -422,7 +423,7 @@ SCIP_DECL_EVENTINIT(eventInitNodereopt)
       int maxsavednodes;
 
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &eventhdlrdata->reopt) );
-      if( eventhdlrdata->reopt && SCIPgetNImplVars(scip) + SCIPgetNIntVars(scip) > 0 )
+      if( eventhdlrdata->reopt && SCIPgetNIntVars(scip) > 0 )
          eventhdlrdata->reopt = FALSE;
 
       SCIP_CALL( SCIPgetIntParam(scip, "reoptimization/maxsavednodes", &maxsavednodes) );
@@ -482,7 +483,7 @@ SCIP_DECL_EVENTEXIT(eventExitNodereopt)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL );
 
-   if(eventhdlrdata->init && eventhdlrdata->reopt)
+   if(eventhdlrdata->init && eventhdlrdata->reopt && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE))
    {
       SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEINFEASIBLE | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEBRANCHED, eventhdlr, NULL, -1));
    }
@@ -503,7 +504,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolNodereopt)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL );
 
-   if(eventhdlrdata->init && eventhdlrdata->reopt)
+   if(eventhdlrdata->init && eventhdlrdata->reopt && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE))
    {
       SCIP_CALL( Reset(scip, eventhdlrdata) );
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEINFEASIBLE | SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEBRANCHED, eventhdlr, NULL, NULL) );

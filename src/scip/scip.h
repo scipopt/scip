@@ -869,7 +869,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    );
@@ -4299,7 +4299,7 @@ EXTERN
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< problem file name */
-   const char*           extension           /**< extension of the desired file reader, 
+   const char*           extension           /**< extension of the desired file reader,
                                               *   or NULL if file extension should be used */
    );
 
@@ -4326,7 +4326,7 @@ EXTERN
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< extension of the desired file reader, 
+   const char*           extension,          /**< extension of the desired file reader,
                                               *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< use generic variable and constraint names? */
    );
@@ -4354,7 +4354,7 @@ EXTERN
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< extension of the desired file reader, 
+   const char*           extension,          /**< extension of the desired file reader,
                                               *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
@@ -5231,7 +5231,7 @@ int SCIPgetNTotalVars(
 
 /** gets variables of the original or transformed problem along with the numbers of different variable types;
  *  the returned problem space (original or transformed) corresponds to the given solution;
- *  data may become invalid after calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and 
+ *  data may become invalid after calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and
  *  SCIPmultiaggregateVar()
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -6268,7 +6268,7 @@ SCIP_RETCODE SCIPparseVar(
    );
 
 /** parses the given string for a variable name and stores the variable in the corresponding pointer if such a variable
- *  exits and returns the position where the parsing stopped 
+ *  exits and returns the position where the parsing stopped
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6670,7 +6670,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP_Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
    );
 
-/** gets binary variables that are equal to the given binary variables, and which are either active, fixed, or 
+/** gets binary variables that are equal to the given binary variables, and which are either active, fixed, or
  *  multi-aggregated, or the negated variables of active, fixed, or multi-aggregated variables
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -6919,7 +6919,7 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
 /** sets the value of the given variable in the global relaxation solution;
  *  this solution can be filled by the relaxation handlers  and can be used by heuristics and for separation;
  *  You can use SCIPclearRelaxSolVals() to set all values to zero, initially;
- *  after setting all solution values, you have to call SCIPmarkRelaxSolValid() 
+ *  after setting all solution values, you have to call SCIPmarkRelaxSolValid()
  *  to inform SCIP that the stored solution is valid
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -6955,7 +6955,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP_Real*            vals                /**< array with solution values of variables */
    );
 
-/** sets the values of the variables in the global relaxation solution to the values 
+/** sets the values of the variables in the global relaxation solution to the values
  *  in the given primal solution; the relaxation solution can be filled by the relaxation hanlders
  *  and might be used by heuristics and for separation
  *
@@ -6969,7 +6969,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal relaxation solution */ 
+   SCIP_SOL*             sol                 /**< primal relaxation solution */
    );
 
 /** returns whether the relaxation solution is valid
@@ -9090,7 +9090,7 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    );
 
 /** initializes the upwards and downwards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
- *  of a variable to the given values 
+ *  of a variable to the given values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9664,7 +9664,7 @@ SCIP_RETCODE SCIPcreateCons(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -9715,7 +9715,7 @@ SCIP_RETCODE SCIPparseCons(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -11216,10 +11216,10 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
-   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,  
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
    int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
@@ -14403,7 +14403,7 @@ SCIP_RETCODE SCIPgetExternBranchCands(
    int*                  nprioexterncands,   /**< pointer to store the number of candidates with maximal priority, or NULL */
    int*                  nprioexternbins,    /**< pointer to store the number of binary candidates with maximal priority, or NULL */
    int*                  nprioexternints,    /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority, 
+   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority,
                                               *   or NULL */
    );
 
@@ -14435,7 +14435,7 @@ int SCIPgetNPrioExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of binary external branching candidates with maximal branch priority 
+/** gets number of binary external branching candidates with maximal branch priority
  *
  *  @return the number of binary external branching candidates with maximal branch priority.
  *
@@ -14781,7 +14781,7 @@ SCIP_RETCODE SCIPbranchVarHole(
    SCIP_NODE**           upchild             /**< pointer to return the right child (x >= right), or NULL */
    );
 
-/** branches on a variable x using a given value x'; 
+/** branches on a variable x using a given value x';
  *  for continuous variables with relative domain width larger epsilon, x' must not be one of the bounds;
  *  two child nodes (x <= x', x >= x') are created;
  *  for integer variables, if solution value x' is fractional, two child nodes are created
@@ -15069,6 +15069,32 @@ SCIP_RETCODE SCIPcreateOrigSol(
  */
 EXTERN
 SCIP_RETCODE SCIPcreateSolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
+   );
+
+/** creates a copy of a origprimal solution; note that a copy of a linked solution is also linked and needs to be unlinked
+ *  if it should stay unaffected from changes in the LP or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateSolCopyOrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
@@ -19173,17 +19199,17 @@ SCIP_Bool SCIPisUpdateUnreliable(
  */
 
 #define SCIPinfinity(scip)                        SCIPsetInfinity((scip)->set)
-#define SCIPisInfinity(scip, val)                 SCIPsetIsInfinity((scip)->set, val)        
+#define SCIPisInfinity(scip, val)                 SCIPsetIsInfinity((scip)->set, val)
 #define SCIPisHugeValue(scip, val)                SCIPsetIsHugeValue((scip)->set, val)
 #define SCIPgetHugeValue(scip)                    SCIPsetGetHugeValue((scip)->set)
-#define SCIPisEQ(scip, val1, val2)                SCIPsetIsEQ((scip)->set, val1, val2)       
-#define SCIPisLT(scip, val1, val2)                SCIPsetIsLT((scip)->set, val1, val2)       
-#define SCIPisLE(scip, val1, val2)                SCIPsetIsLE((scip)->set, val1, val2)       
-#define SCIPisGT(scip, val1, val2)                SCIPsetIsGT((scip)->set, val1, val2)       
-#define SCIPisGE(scip, val1, val2)                SCIPsetIsGE((scip)->set, val1, val2)       
-#define SCIPisZero(scip, val)                     SCIPsetIsZero((scip)->set, val)            
-#define SCIPisPositive(scip, val)                 SCIPsetIsPositive((scip)->set, val)        
-#define SCIPisNegative(scip, val)                 SCIPsetIsNegative((scip)->set, val)        
+#define SCIPisEQ(scip, val1, val2)                SCIPsetIsEQ((scip)->set, val1, val2)
+#define SCIPisLT(scip, val1, val2)                SCIPsetIsLT((scip)->set, val1, val2)
+#define SCIPisLE(scip, val1, val2)                SCIPsetIsLE((scip)->set, val1, val2)
+#define SCIPisGT(scip, val1, val2)                SCIPsetIsGT((scip)->set, val1, val2)
+#define SCIPisGE(scip, val1, val2)                SCIPsetIsGE((scip)->set, val1, val2)
+#define SCIPisZero(scip, val)                     SCIPsetIsZero((scip)->set, val)
+#define SCIPisPositive(scip, val)                 SCIPsetIsPositive((scip)->set, val)
+#define SCIPisNegative(scip, val)                 SCIPsetIsNegative((scip)->set, val)
 #define SCIPisIntegral(scip, val)                 SCIPsetIsIntegral((scip)->set, val)
 #define SCIPisScalingIntegral(scip, val, scalar)  SCIPsetIsScalingIntegral((scip)->set, val, scalar)
 #define SCIPisFracIntegral(scip, val)             SCIPsetIsFracIntegral((scip)->set, val)
@@ -19192,23 +19218,23 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPround(scip, val)                      SCIPsetRound((scip)->set, val)
 #define SCIPfrac(scip, val)                       SCIPsetFrac((scip)->set, val)
 
-#define SCIPisSumEQ(scip, val1, val2)             SCIPsetIsSumEQ((scip)->set, val1, val2)    
-#define SCIPisSumLT(scip, val1, val2)             SCIPsetIsSumLT((scip)->set, val1, val2)    
-#define SCIPisSumLE(scip, val1, val2)             SCIPsetIsSumLE((scip)->set, val1, val2)    
-#define SCIPisSumGT(scip, val1, val2)             SCIPsetIsSumGT((scip)->set, val1, val2)    
-#define SCIPisSumGE(scip, val1, val2)             SCIPsetIsSumGE((scip)->set, val1, val2)    
-#define SCIPisSumZero(scip, val)                  SCIPsetIsSumZero((scip)->set, val)         
-#define SCIPisSumPositive(scip, val)              SCIPsetIsSumPositive((scip)->set, val)     
-#define SCIPisSumNegative(scip, val)              SCIPsetIsSumNegative((scip)->set, val)     
+#define SCIPisSumEQ(scip, val1, val2)             SCIPsetIsSumEQ((scip)->set, val1, val2)
+#define SCIPisSumLT(scip, val1, val2)             SCIPsetIsSumLT((scip)->set, val1, val2)
+#define SCIPisSumLE(scip, val1, val2)             SCIPsetIsSumLE((scip)->set, val1, val2)
+#define SCIPisSumGT(scip, val1, val2)             SCIPsetIsSumGT((scip)->set, val1, val2)
+#define SCIPisSumGE(scip, val1, val2)             SCIPsetIsSumGE((scip)->set, val1, val2)
+#define SCIPisSumZero(scip, val)                  SCIPsetIsSumZero((scip)->set, val)
+#define SCIPisSumPositive(scip, val)              SCIPsetIsSumPositive((scip)->set, val)
+#define SCIPisSumNegative(scip, val)              SCIPsetIsSumNegative((scip)->set, val)
 
-#define SCIPisFeasEQ(scip, val1, val2)            SCIPsetIsFeasEQ((scip)->set, val1, val2)   
-#define SCIPisFeasLT(scip, val1, val2)            SCIPsetIsFeasLT((scip)->set, val1, val2)   
-#define SCIPisFeasLE(scip, val1, val2)            SCIPsetIsFeasLE((scip)->set, val1, val2)   
-#define SCIPisFeasGT(scip, val1, val2)            SCIPsetIsFeasGT((scip)->set, val1, val2)   
-#define SCIPisFeasGE(scip, val1, val2)            SCIPsetIsFeasGE((scip)->set, val1, val2)   
-#define SCIPisFeasZero(scip, val)                 SCIPsetIsFeasZero((scip)->set, val)        
-#define SCIPisFeasPositive(scip, val)             SCIPsetIsFeasPositive((scip)->set, val)    
-#define SCIPisFeasNegative(scip, val)             SCIPsetIsFeasNegative((scip)->set, val)    
+#define SCIPisFeasEQ(scip, val1, val2)            SCIPsetIsFeasEQ((scip)->set, val1, val2)
+#define SCIPisFeasLT(scip, val1, val2)            SCIPsetIsFeasLT((scip)->set, val1, val2)
+#define SCIPisFeasLE(scip, val1, val2)            SCIPsetIsFeasLE((scip)->set, val1, val2)
+#define SCIPisFeasGT(scip, val1, val2)            SCIPsetIsFeasGT((scip)->set, val1, val2)
+#define SCIPisFeasGE(scip, val1, val2)            SCIPsetIsFeasGE((scip)->set, val1, val2)
+#define SCIPisFeasZero(scip, val)                 SCIPsetIsFeasZero((scip)->set, val)
+#define SCIPisFeasPositive(scip, val)             SCIPsetIsFeasPositive((scip)->set, val)
+#define SCIPisFeasNegative(scip, val)             SCIPsetIsFeasNegative((scip)->set, val)
 #define SCIPisFeasIntegral(scip, val)             SCIPsetIsFeasIntegral((scip)->set, val)
 #define SCIPisFeasFracIntegral(scip, val)         SCIPsetIsFeasFracIntegral((scip)->set, val)
 #define SCIPfeasFloor(scip, val)                  SCIPsetFeasFloor((scip)->set, val)
@@ -19234,17 +19260,17 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPisLbBetter(scip, newlb, oldlb, oldub) SCIPsetIsLbBetter(scip->set, newlb, oldlb, oldub)
 #define SCIPisUbBetter(scip, newub, oldlb, oldub) SCIPsetIsUbBetter(scip->set, newub, oldlb, oldub)
 
-#define SCIPisRelEQ(scip, val1, val2)             SCIPsetIsRelEQ((scip)->set, val1, val2)    
-#define SCIPisRelLT(scip, val1, val2)             SCIPsetIsRelLT((scip)->set, val1, val2)    
-#define SCIPisRelLE(scip, val1, val2)             SCIPsetIsRelLE((scip)->set, val1, val2)    
-#define SCIPisRelGT(scip, val1, val2)             SCIPsetIsRelGT((scip)->set, val1, val2)    
-#define SCIPisRelGE(scip, val1, val2)             SCIPsetIsRelGE((scip)->set, val1, val2)    
+#define SCIPisRelEQ(scip, val1, val2)             SCIPsetIsRelEQ((scip)->set, val1, val2)
+#define SCIPisRelLT(scip, val1, val2)             SCIPsetIsRelLT((scip)->set, val1, val2)
+#define SCIPisRelLE(scip, val1, val2)             SCIPsetIsRelLE((scip)->set, val1, val2)
+#define SCIPisRelGT(scip, val1, val2)             SCIPsetIsRelGT((scip)->set, val1, val2)
+#define SCIPisRelGE(scip, val1, val2)             SCIPsetIsRelGE((scip)->set, val1, val2)
 
-#define SCIPisSumRelEQ(scip, val1, val2)          SCIPsetIsSumRelEQ((scip)->set, val1, val2) 
-#define SCIPisSumRelLT(scip, val1, val2)          SCIPsetIsSumRelLT((scip)->set, val1, val2) 
-#define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 
-#define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2) 
-#define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
+#define SCIPisSumRelEQ(scip, val1, val2)          SCIPsetIsSumRelEQ((scip)->set, val1, val2)
+#define SCIPisSumRelLT(scip, val1, val2)          SCIPsetIsSumRelLT((scip)->set, val1, val2)
+#define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2)
+#define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2)
+#define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2)
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 #endif

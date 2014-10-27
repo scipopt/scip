@@ -599,7 +599,7 @@ SCIP_RETCODE primalAddSol(
          stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
    }
 
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n", 
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
 
    /* update the solution value sums in variables */

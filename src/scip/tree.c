@@ -3393,8 +3393,8 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 
    if( tree->focuslpistate != NULL )
    {
-      SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->focuslpistate,
-            tree->focuslpstatefork->data.fork->lpwasprimfeas, tree->focuslpstatefork->data.fork->lpwasdualfeas) );
+      SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->focuslpistate, FALSE, TRUE) );
+//            tree->focuslpstatefork->data.fork->lpwasprimfeas, tree->focuslpstatefork->data.fork->lpwasdualfeas) );
 
       return SCIP_OKAY;
    }
@@ -7038,13 +7038,16 @@ void SCIPnodeGetPseudoBranchings(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-            && boundchgs[i].data.inferencedata.reason.cons == NULL)
-       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-             && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
-         (*npseudobranchvars)++;
-      else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-         break;
+      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+      {
+         if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+               && boundchgs[i].data.inferencedata.reason.cons == NULL)
+          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+                && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
+            (*npseudobranchvars)++;
+         else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+            break;
+      }
    }
 
    /* if the arrays have enough space store the branching decisions */
@@ -7055,14 +7058,17 @@ void SCIPnodeGetPseudoBranchings(
       for( i = i+1; i < nboundchgs; i++)
       {
          assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
-         if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-               && boundchgs[i].data.inferencedata.reason.cons == NULL)
-          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-               && boundchgs[i].data.inferencedata.reason.prop == NULL) )
+         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
          {
-            pseudobranchvars[j] = boundchgs[i].var;
-            pseudobranchbounds[j] = boundchgs[i].newbound;
-            j++;
+            if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+                  && boundchgs[i].data.inferencedata.reason.cons == NULL)
+             || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+                  && boundchgs[i].data.inferencedata.reason.prop == NULL) )
+            {
+               pseudobranchvars[j] = boundchgs[i].var;
+               pseudobranchbounds[j] = boundchgs[i].newbound;
+               j++;
+            }
          }
       }
    }

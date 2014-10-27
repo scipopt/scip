@@ -289,6 +289,7 @@ SCIP_RETCODE SCIPbranchrulePseudoGenerateCons(
       {
          branchruledata->exIDtoinID[externID] = 0;
          SCIP_CALL( SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t) nodeID) );
+         //branchruledata->nrpseudobranchednodes--;
       }
    }
 
@@ -383,6 +384,7 @@ SCIP_RETCODE SCIPbranchrulePseudoAddPseudoVar(
    SCIP_Real constant;
 
    assert(scip != NULL);
+   assert(var == NULL || SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
 
@@ -662,6 +664,7 @@ SCIP_RETCODE SCIPbranchrulePseudoDelInformation(
    {
       branchruledata->exIDtoinID[externID] = 0;
       SCIP_CALL( SCIPqueueInsert(branchruledata->openIDs, (void*) (size_t) internID) );
+      //branchruledata->nrpseudobranchednodes--;
    }
 
    return SCIP_OKAY;
