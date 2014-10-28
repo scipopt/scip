@@ -3471,6 +3471,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       break;
 
    case SCIP_PARAMEMPHASIS_COUNTER:
+      /* TODO: should constraints/linear/detectlowerbound and detectcutoffbound be set to FALSE? */
       /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/logicor", FALSE, quiet) );
 
@@ -3497,14 +3498,14 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/maxroundsroot", -1, quiet) );
 
       /* adjust conflict analysis for depth first search */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );        
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "conflict/dynamic", FALSE, quiet) );
 
       /* prefer binary variables for branching */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/preferbinary", TRUE, quiet) );
 
       /* turn on aggressive constraint aging */ 
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );       
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off components presolver since we are currently not able to handle that in case of counting */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
