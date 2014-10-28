@@ -169,8 +169,9 @@ SCIP_RETCODE detectParallelVubs(
       for( j = i+1; j < nvubs; j++ )
       {
          /* currently we only treat the case with the same coef on y and lhs=0 */
-         if( SCIPisEQ(scip,scaledy[i],scaledy[j]) && SCIPisEQ(scip,scaledc[i],scaledc[j]) &&
-            SCIPisEQ(scip,scaledc[i],0) &&
+         if( SCIPisEQ(scip,scaledy[i],scaledy[j]) &&
+             SCIPisEQ(scip,scaledc[i],scaledc[j]) &&
+             SCIPisEQ(scip,scaledc[i],0) &&
             ((SCIPisLT(scip,scale[i],0) && SCIPisLT(scip,scale[j],0)) || (SCIPisGT(scip,scale[i],0) && SCIPisGT(scip,scale[j],0))) )
          {
             parallelvubs[j] = parallelvubs[i];
@@ -194,7 +195,7 @@ SCIP_RETCODE substitutevar(
    int*                  parallelvubs,       /**< parallel vub's concerning the same continuous variable */
    int                   fill,               /**< number of parallel vub's */
    int*                  nvarsub,            /**< number of substituted variables */
-   SCIP_Bool*            isvartosub,         /**< flag array if variable could be substituted */
+   SCIP_Bool*            isvartosub,         /**< flags indicating if variable could be substituted */
    SCIP_VAR**            subvars,            /**< pointers to the variables by which the substitution should be done */
    int*                  ndeletecons,        /**< number of deleteable constraints */
    SCIP_Bool*            deletecons          /**< flags which constraints could be deleted */
@@ -202,6 +203,7 @@ SCIP_RETCODE substitutevar(
 {
    int i;
    int holdcol;
+   int holdrow;
    int* substitute;
    int maxsupport;
    int* rowpnt;
@@ -212,6 +214,7 @@ SCIP_RETCODE substitutevar(
       substitute[i] = -1;
 
    holdcol = -1;
+   holdrow = -1;
 
    /* detect binary variable which should not be substituted */
    maxsupport = 0;
@@ -237,6 +240,7 @@ SCIP_RETCODE substitutevar(
             {
                maxsupport = SCIPmatrixGetColNNonzs(matrix,col);
                holdcol = col;
+               holdrow = parallelvubs[i];
             }
          }
       }
@@ -245,23 +249,41 @@ SCIP_RETCODE substitutevar(
    /* substitute all binary variables by the hold binary variable
     * and delete the corresponding vub
     */
-   assert(holdcol > -1);
-   for( i = 0; i < fill; i++ )
+   if( holdcol > -1 && holdrow > -1 )
    {
-      assert(substitute[i] > -1);
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("Hold variable: %s\n",
+         SCIPvarGetName(SCIPmatrixGetVar(matrix,holdcol)));
+      SCIPdebugMessage("Hold constraint:\n");
+      SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix,holdrow), NULL));
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
-      if( substitute[i] != holdcol &&
-         SCIPmatrixGetColNDownlocks(matrix,substitute[i]) == 1 &&
-         SCIPisGE(scip,SCIPvarGetObj(SCIPmatrixGetVar(matrix,substitute[i])),0) )
+      for( i = 0; i < fill; i++ )
       {
-         assert(isvartosub[substitute[i]] == FALSE);
-         isvartosub[substitute[i]] = TRUE;
-         subvars[substitute[i]] = SCIPmatrixGetVar(matrix,holdcol);
-         (*nvarsub)++;
+         assert(substitute[i] > -1);
 
-         assert(deletecons[parallelvubs[i]] == FALSE);
-         deletecons[parallelvubs[i]] = TRUE;
-         (*ndeletecons)++;
+         if( substitute[i] != holdcol &&
+            SCIPmatrixGetColNDownlocks(matrix,substitute[i]) == 1 &&
+            SCIPisGE(scip,SCIPvarGetObj(SCIPmatrixGetVar(matrix,substitute[i])),0) )
+         {
+            assert(isvartosub[substitute[i]] == FALSE);
+            isvartosub[substitute[i]] = TRUE;
+            subvars[substitute[i]] = SCIPmatrixGetVar(matrix,holdcol);
+            (*nvarsub)++;
+
+            assert(deletecons[parallelvubs[i]] == FALSE);
+            deletecons[parallelvubs[i]] = TRUE;
+            (*ndeletecons)++;
+
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("Replace redundant variable: %s\n",
+               SCIPvarGetName(SCIPmatrixGetVar(matrix,substitute[i])));
+            SCIPdebugMessage("Delete redundant constraint:\n");
+            SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix,parallelvubs[i]), NULL));
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+         }
       }
    }
 
@@ -279,7 +301,7 @@ SCIP_RETCODE getSubDelcons(
    SCIP_Bool*            isvartosub,         /**< flags indicating which variables could be substituted */
    SCIP_VAR**            subvars,            /**< pointers to the variables by which the substitution should be done */
    int*                  ndeletecons,        /**< number of redundant constraints */
-   SCIP_Bool*            deletecons          /**< flags which constraints could be deleted */
+   SCIP_Bool*            deletecons          /**< flags indicating which constraints could be deleted */
    )
 {
    int c;
@@ -378,6 +400,9 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
       return SCIP_OKAY;
 
    if( SCIPgetNVars(scip) == 0 || SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   if( SCIPgetNContVars(scip)==0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
