@@ -56,6 +56,8 @@
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBCUTOFFINFO FALSE    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
 #define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
+#define DEFAULT_USECURRENTINFERENCE FALSE /**< should domain reductions of current strong branch with propagation be used for scoring? */
+
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -82,6 +84,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
    SCIP_Bool             usesbcutoffinfo;    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             uselowerconfipscost; /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
+   SCIP_Bool             usecurrentinference; /**< should domain reductions of current strong branch with propagation be used for scoring? */
 };
 
 
@@ -742,6 +745,8 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real upgain;
          SCIP_Bool downvalid;
          SCIP_Bool upvalid;
+         SCIP_Longint ndomredsdown;
+         SCIP_Longint ndomredsup;
          SCIP_Bool lperror;
          SCIP_Bool downinf;
          SCIP_Bool upinf;
@@ -777,7 +782,7 @@ SCIP_RETCODE execRelpscost(
          {
             /* apply strong branching */
             SCIP_CALL( SCIPgetVarStrongbranchWithPropagation(scip, branchcands[c], branchcandssol[c], lpobjval, inititer,
-                  branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
+                  branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &ndomredsdown, &ndomredsup, &downinf, &upinf,
                   &downconflict, &upconflict, &lperror, newlbs, newubs) );
          }
          else
@@ -785,6 +790,8 @@ SCIP_RETCODE execRelpscost(
             /* apply strong branching */
             SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer,
                   &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+
+            ndomredsdown = ndomredsup = 0;
          }
 
          /* check for an error in strong branching */
@@ -970,7 +977,8 @@ SCIP_RETCODE execRelpscost(
             /* check for a better score */
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
-            inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
+            inferencescore = branchruledata->usecurrentinference ? SCIPgetBranchScore(scip, branchcands[c], ndomredsdown, ndomredsup)
+                  : SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = branchruledata->usesbcutoffinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
@@ -1328,6 +1336,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/uselowerconfipscost",
          "should lower confidence interval bound be used for pseudo costs of variables with no sb?",
          &branchruledata->uselowerconfipscost, TRUE, DEFAULT_USELOWERCONFIPSCOST,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usecurrentinference",
+         "should domain reductions of current strong branch with propagation be used for scoring?",
+         &branchruledata->usecurrentinference, TRUE, DEFAULT_USECURRENTINFERENCE,
          NULL, NULL) );
 
    return SCIP_OKAY;

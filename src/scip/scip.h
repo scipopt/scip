@@ -7163,6 +7163,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
+   SCIP_Longint*         ndomredsdown,       /**< pointer to store the number of domain reductions down, or NULL */
+   SCIP_Longint*         ndomredsup,         /**< pointer to store the number of domain reductions up, or NULL */
    SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an

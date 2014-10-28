@@ -16641,6 +16641,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
    SCIP_Real*            value,              /**< stores dual bound for strong branching child */
    SCIP_Bool*            valid,              /**< stores whether the returned value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
+   SCIP_Longint*         ndomreductions,     /**< pointer to store the number of domain reductions found, or NULL */
    SCIP_Bool*            conflict,           /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible strong branching child, or NULL */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
@@ -16742,6 +16743,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          scip->stat->nsbdowndomchgs += ndomreds;
       else
          scip->stat->nsbupdomchgs += ndomreds;
+
+      if( ndomreductions != NULL )
+         *ndomreductions = ndomreds;
 
       /* stop time measuring */
       SCIPclockStop(scip->stat->strongpropclock, scip->set);
@@ -16983,6 +16987,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
+   SCIP_Longint*         ndomredsdown,       /**< pointer to store the number of domain reductions down, or NULL */
+   SCIP_Longint*         ndomredsup,         /**< pointer to store the number of domain reductions up, or NULL */
    SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
@@ -17043,6 +17049,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       *downconflict = FALSE;
    if( upconflict != NULL )
       *upconflict = FALSE;
+   if( ndomredsdown != NULL )
+      *ndomredsdown = 0;
+   if( ndomredsup != NULL )
+      *ndomredsup = 0;
+
    *lperror = FALSE;
 
    vars = SCIPgetVars(scip);
@@ -17157,7 +17168,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       if( downchild )
       {
          SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild, propagate, newub, itlim, maxproprounds,
-               down, &downvalidlocal, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
+               down, &downvalidlocal, ndomredsdown, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
 
          /* check whether a new solutions rendered the previous child infeasible */
          if( foundsol && !firstchild )
@@ -17191,7 +17202,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       else
       {
          SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild, propagate, newlb, itlim, maxproprounds,
-               up, &upvalidlocal, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
+               up, &upvalidlocal, ndomredsup, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
 
          /* check whether a new solutions rendered the previous child infeasible */
          if( foundsol && !firstchild )
