@@ -36,6 +36,8 @@
  * @todo Check whether solisbasic is correctly used.
  *
  * @todo Try quad-precision and concurrent runs.
+ *
+ * @todo Make this lpi thread safe.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1682,7 +1684,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_CALL( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, lpi->indarray, lpi->valarray) );
 
    /* scale row coefficients */
-   for(  i = 0; i < nnonz; ++i )
+   for ( i = 0; i < nnonz; ++i )
    {
       SCIP_CALL( SCIPlpiChgCoef(lpi, row, lpi->indarray[i], lpi->valarray[i] * scaleval) );
    }
@@ -1878,8 +1880,8 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert(val != NULL);
 
       /* get matrix entries */
-      CHECK_ZERO( lpi->messagehdlr, GRBgetvars(lpi->grbmodel, nnonz, beg, ind, val, firstcol, lastcol-firstcol+1) )
-         }
+      CHECK_ZERO( lpi->messagehdlr, GRBgetvars(lpi->grbmodel, nnonz, beg, ind, val, firstcol, lastcol-firstcol+1) );
+   }
    else
    {
       assert(beg == NULL);
