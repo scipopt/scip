@@ -50,6 +50,7 @@ CMAINOBJ	=	cmain.o \
 			heur_rs.o \
 			misc_stp.o \
 			probdata_stp.o \
+			event_bestsol.o \
 			reader_stp.o \
 			pricer_stp.o \
 			reduce.o \

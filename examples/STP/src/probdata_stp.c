@@ -80,6 +80,7 @@ struct SCIP_ProbData
    int                   stp_type;           /**< STP type */
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
+   FILE*                 logfile;            /**< logfile for DIMACS challenge */
 };
 
 /**@name Local methods
@@ -239,6 +240,7 @@ SCIP_RETCODE probdataCreate(
    if( graph != NULL )
       (*probdata)->stp_type = graph->stp_type;
    (*probdata)->copy = FALSE;
+   (*probdata)->logfile = NULL;
 
    return SCIP_OKAY;
 }
@@ -1130,6 +1132,18 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
       graph_free((*probdata)->graph);
    }
 
+   if( (*probdata)->logfile != NULL )
+   {
+      int success;
+
+      success = fclose((*probdata)->logfile);
+      if( success != 0 )
+      {
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", (*probdata)->logfile);
+         return SCIP_FILECREATEERROR;
+      }
+   }
+
    /* free the (original) probdata */
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -1163,7 +1177,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->nvars = sourcedata->nvars;
    (*targetdata)->mode = sourcedata->mode;
    (*targetdata)->bigt = sourcedata->bigt;
-
+   (*targetdata)->logfile = sourcedata->logfile;
 
    if( sourcedata->nedges > 0 )
    {
@@ -1341,6 +1355,25 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
          free(nodecoords);
       }
    }
+
+   SCIPprobdataWriteLogLine(scip, "End\n");
+   SCIPprobdataWriteLogLine(scip, "\n");
+   SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+   SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+   SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+   SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", SCIPgetDualbound(scip));
+   SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPgetPrimalbound(scip));
+   SCIPprobdataWriteLogLine(scip, "End\n");
+
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIPprobdataWriteLogLine(scip, "\n");
+      SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+
+      SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+      SCIPprobdataWriteLogLine(scip, "End\n");
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1384,6 +1417,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    int reduction;
    char mode;
    char printfs = FALSE;
+   char* logfilename;
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1406,6 +1440,44 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/emitgraph", &(probdata->emitgraph)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/bigt", &(probdata->bigt)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/printGraph", &print) );
+   SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
+
+   if( logfilename != NULL && logfilename[0] != '\0' )
+   {
+      probdata->logfile = fopen(logfilename, "w");
+
+      if( probdata->logfile == NULL )
+      {
+         SCIPerrorMessage("cannot create file <%s> for writing\n", logfilename);
+         SCIPprintSysError(logfilename);
+         return SCIP_FILECREATEERROR;
+      }
+   }
+
+   /* create a problem in SCIP and add non-NULL callbacks via setter functions */
+   SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
+   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
+   SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
+   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
+   SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolStp) );
+   SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
+
+   /* set objective sense */
+   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
+
+   /* set user problem data */
+   SCIP_CALL( SCIPsetProbData(scip, probdata) );
+
+   SCIPprobdataWriteLogLine(scip, "SECTION Comment\n");
+   SCIPprobdataWriteLogLine(scip, "Name %s\n", filename);
+   SCIPprobdataWriteLogLine(scip, "Problem %s\n", "stp");
+   SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
+   SCIPprobdataWriteLogLine(scip, "Version 0.1\n");
+   SCIPprobdataWriteLogLine(scip, "End\n");
+
+   SCIPprobdataWriteLogLine(scip, "\n");
+   SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
+
 
    /* set solving mode */
    if( mode == 'f' )
@@ -1424,17 +1496,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* only use reduction for undirected STP's in graphs */
    if( graph->stp_type != STP_UNDIRECTED )/*&& graph->stp_type != STP_GRID )*/
       reduction *= -1;
-
-   /* create a problem in SCIP and add non-NULL callbacks via setter functions */
-   SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
-   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
-   SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
-   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
-   SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolStp) );
-   SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
-
-   /* set objective sense */
-   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
 
    assert(graph != NULL );
    /* init shortest path algorithm (needed for reduction) */
@@ -1541,9 +1602,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create and add initial variables */
    SCIP_CALL( createVariables(scip, probdata, probdata->offset ) );
-
-   /* set user problem data */
-   SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
    return SCIP_OKAY;
 }
@@ -1848,6 +1906,36 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
    }
 
    return SCIP_OKAY;
+}
+
+/** writes the best solution to a file */
+SCIP_RETCODE SCIPprobdataWriteSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< file to write best solution to; or NULL, to write to stdout */
+   )
+{
+   return SCIP_OKAY;
+}
+
+
+/** writes a line to the log file */
+void SCIPprobdataWriteLogLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   SCIP_PROBDATA* probdata;
+   va_list ap;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   va_start(ap, formatstr); /*lint !e826*/
+   SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->logfile, formatstr, ap);
+   va_end(ap);
 }
 
 /** add new solution */

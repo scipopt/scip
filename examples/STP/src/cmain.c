@@ -81,6 +81,9 @@ SCIP_RETCODE runShell(
    /* include recombination heuristic */
    SCIP_CALL( SCIPincludeHeurRec(scip) );
 
+   /* include event handler for printing primal solution development */
+   SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
 

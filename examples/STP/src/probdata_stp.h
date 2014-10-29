@@ -30,146 +30,161 @@ extern "C" {
 #endif
 
 
-   /** sets up the problem data */
-   extern
-   SCIP_RETCODE SCIPprobdataCreate(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const char*           filename           /**< file name */
-      );
+/** sets up the problem data */
+extern
+SCIP_RETCODE SCIPprobdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename           /**< file name */
+   );
 
-   /** returns the graph */
-   extern
-   GRAPH* SCIPprobdataGetGraph(
-      SCIP_PROBDATA*        probdata            /**< problem data */
-      );
+/** returns the graph */
+extern
+GRAPH* SCIPprobdataGetGraph(
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   );
 
-   /** returns the array with all variables */
-   extern
-   SCIP_VAR** SCIPprobdataGetVars(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** returns the array with all variables */
+extern
+SCIP_VAR** SCIPprobdataGetVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
-   /** returns the array with all edge variables */
-   extern
-   SCIP_VAR** SCIPprobdataGetEdgeVars(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** returns the array with all edge variables */
+extern
+SCIP_VAR** SCIPprobdataGetEdgeVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
-   /** returns the array with all terminals (without the root) */
-   extern
-   int* SCIPprobdataGetRTerms(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-
-   /** returns the number of layers */
-   extern
-   int SCIPprobdataGetNLayers(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** returns the array with all terminals (without the root) */
+extern
+int* SCIPprobdataGetRTerms(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 
-   /** returns the number of vars */
-   extern
-   int SCIPprobdataGetNVars(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** returns the number of layers */
+extern
+int SCIPprobdataGetNLayers(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 
-   /** returns the number of terminals */
-   extern
-   int SCIPprobdataGetNTerms(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** returns the number of terminals without the root node  */
-   extern
-   int SCIPprobdataGetRNTerms(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** returns root */
-   extern
-   int SCIPprobdataGetRoot(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** returns the number of edges */
-   extern
-   int SCIPprobdataGetNEdges(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** returns the offset */
-   extern
-   SCIP_Real SCIPprobdataGetOffset(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** returns the edge variable for a given index */
-   extern
-   SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
-      SCIP*                 scip,               /**< SCIP data structure */
-      int                   idx
-      );
-
-   /** returns the LP solution values */
-   extern
-   SCIP_Real* SCIPprobdataGetXval(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_SOL*             sol
-      );
-   /** returns all edge constraints */
-   extern
-   SCIP_CONS** SCIPprobdataGetEdgeConstraints(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** returns all path constraints */
-   extern
-   SCIP_CONS** SCIPprobdataGetPathConstraints(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-
-   /** print (undirected) graph */
-   extern
-   SCIP_RETCODE SCIPprobdataPrintGraph(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const char*           filename,           /**< Name of the output file */
-      SCIP_SOL*             sol,                /**< solution to be printed; or NULL for LP solution */
-      SCIP_Bool             printsol            /**< should solution be highlighted? */
-      );
-
-   extern
-   SCIP_RETCODE SCIPprobdataPrintGraph2(
-      const GRAPH*          graph,              /**< Graph to be printed */
-      const char*           filename,           /**< Name of the output file */
-      SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
-      );
-
-   /** returns if 'T' model is being used */
-   extern
-   SCIP_Bool SCIPprobdataIsBigt(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** returns the number of vars */
+extern
+int SCIPprobdataGetNVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 
-   /** add new solution */
-   extern
-   SCIP_RETCODE SCIPprobdataAddNewSol(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_Real*            nval,               /**< array [0..nvars], nval[v] = 1 if node v is in the solution, nval[v] = 0 if not */
-      SCIP_SOL*             sol,                /**< the new solution */
-      SCIP_HEUR*            heur,               /**< heuristic data */
-      SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
-      );
+/** returns the number of terminals */
+extern
+int SCIPprobdataGetNTerms(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of terminals without the root node  */
+extern
+int SCIPprobdataGetRNTerms(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns root */
+extern
+int SCIPprobdataGetRoot(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of edges */
+extern
+int SCIPprobdataGetNEdges(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the offset */
+extern
+SCIP_Real SCIPprobdataGetOffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the edge variable for a given index */
+extern
+SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   idx
+   );
+
+/** returns the LP solution values */
+extern
+SCIP_Real* SCIPprobdataGetXval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol
+   );
+/** returns all edge constraints */
+extern
+SCIP_CONS** SCIPprobdataGetEdgeConstraints(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns all path constraints */
+extern
+SCIP_CONS** SCIPprobdataGetPathConstraints(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** print (undirected) graph */
+extern
+SCIP_RETCODE SCIPprobdataPrintGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< Name of the output file */
+   SCIP_SOL*             sol,                /**< solution to be printed; or NULL for LP solution */
+   SCIP_Bool             printsol            /**< should solution be highlighted? */
+   );
+
+extern
+SCIP_RETCODE SCIPprobdataPrintGraph2(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           filename,           /**< Name of the output file */
+   SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
+   );
+
+/** returns if 'T' model is being used */
+extern
+SCIP_Bool SCIPprobdataIsBigt(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** writes the best solution to a file */
+extern
+SCIP_RETCODE SCIPprobdataWriteSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< file to write best solution to; or NULL, to write to stdout */
+   );
+
+/** writes a line to the log file */
+extern
+void SCIPprobdataWriteLogLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** add new solution */
+extern
+SCIP_RETCODE SCIPprobdataAddNewSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            nval,               /**< array [0..nvars], nval[v] = 1 if node v is in the solution, nval[v] = 0 if not */
+   SCIP_SOL*             sol,                /**< the new solution */
+   SCIP_HEUR*            heur,               /**< heuristic data */
+   SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
+   );
+
 #if 0
-   /** print (undirected) graph and highlight current solution */
-   extern
-   SCIP_RETCODE SCIPprobdataPrintSolGraph(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const char*           filename           /**< Name of the output file */
-      );
+/** print (undirected) graph and highlight current solution */
+extern
+SCIP_RETCODE SCIPprobdataPrintSolGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename           /**< Name of the output file */
+   );
 
 #endif
 #ifdef __cplusplus
