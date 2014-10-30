@@ -52,12 +52,10 @@
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
 #define DEFAULT_ERRORBASEDRELIABLITY FALSE /**< should reliability be based on relative errors? */
-#define DEFAULT_RELERRORTOLERANCE 0.05 /**< tolerance for relative errors to be reliable */
+#define DEFAULT_RELERRORTOLERANCE 0.05  /**< tolerance for relative errors to be reliable */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
-#define DEFAULT_USESBCUTOFFINFO FALSE    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
+#define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
 #define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
-#define DEFAULT_USECURRENTINFERENCE FALSE /**< should domain reductions of current strong branch with propagation be used for scoring? */
-
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -82,9 +80,8 @@ struct SCIP_BranchruleData
    SCIP_Bool             errorbasedreliability; /**< should reliability be based on relative errors? */
    SCIP_Real             relerrortolerance;  /**< tolerance for relative errors to be reliable */
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
-   SCIP_Bool             usesbcutoffinfo;    /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
+   SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             uselowerconfipscost; /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
-   SCIP_Bool             usecurrentinference; /**< should domain reductions of current strong branch with propagation be used for scoring? */
 };
 
 
@@ -579,7 +576,7 @@ SCIP_RETCODE execRelpscost(
       /* depending on the strong branching priority, alter the error based reliability as rel / prio, such that
        * rel -> infty for prio -> 0
        */
-      assert(0 <= prio);
+      assert(0 <= prio || maxninitcands == 0);
       relerrorthreshold = branchruledata->relerrortolerance / (prio + 1e-5);
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
@@ -977,9 +974,13 @@ SCIP_RETCODE execRelpscost(
             /* check for a better score */
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
-            inferencescore = branchruledata->usecurrentinference ? SCIPgetBranchScore(scip, branchcands[c], ndomredsdown, ndomredsup)
+
+            /* optionally, use only local information obtained via strong branching for this candidate, i.e., local
+             * domain reductions and no cutoff score
+             */
+            inferencescore = branchruledata->usesblocalinfo ? SCIPgetBranchScore(scip, branchcands[c], ndomredsdown, ndomredsup)
                   : SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
-            cutoffscore = branchruledata->usesbcutoffinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
                inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
@@ -1328,19 +1329,14 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->storesemiinitcosts, TRUE, DEFAULT_STORESEMIINITCOSTS,
          NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesbcutoffinfo",
-         "should the scoring function disregard cutoffs for variable if sb-lookahead was feasible?",
-         &branchruledata->usesbcutoffinfo, TRUE, DEFAULT_USESBCUTOFFINFO,
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesblocalinfo",
+         "should the scoring function use only local cutoff and inference information obtained for strong branching candidates?",
+         &branchruledata->usesblocalinfo, TRUE, DEFAULT_USESBLOCALINFO,
          NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/uselowerconfipscost",
          "should lower confidence interval bound be used for pseudo costs of variables with no sb?",
          &branchruledata->uselowerconfipscost, TRUE, DEFAULT_USELOWERCONFIPSCOST,
-         NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usecurrentinference",
-         "should domain reductions of current strong branch with propagation be used for scoring?",
-         &branchruledata->usecurrentinference, TRUE, DEFAULT_USECURRENTINFERENCE,
          NULL, NULL) );
 
    return SCIP_OKAY;
