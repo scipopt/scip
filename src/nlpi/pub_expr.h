@@ -571,11 +571,11 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
-   SCIP_USEREXPRDATA*    data,               /**< user data for expression */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
-   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
-   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
@@ -1292,7 +1292,7 @@ EXTERN
 SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
-   SCIP_USEREXPRDATA*    data,               /**< user data for expression */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */

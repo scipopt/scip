@@ -38,6 +38,11 @@
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 
+/* enable the following define to enable recognition of curvature suffix
+ * functions of constraints for which this suffix is set are then handled via user-expressions
+ */
+/* #define CHECKCURVSUFFIX */
+
 /* we need the ABS define from ASL later */
 #undef ABS
 
@@ -67,14 +72,191 @@ struct SCIP_ProbData
 
    SCIP_VAR**            vars;
    int                   nvars;
+
+   SCIP_Real*            fullx;              /**< scratch memory to store full point during evaluation of AMPL userexpr */
 };
 
+/** user expression data */
+struct SCIP_UserExprData
+{
+   SCIP_PROBDATA*        probdata;
+   int                   considx;
+   SCIP_EXPRCURV         curvature;
+};
 
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
+
+static
+SCIP_DECL_USEREXPREVAL( SCIPuserexprEvalAmpl )
+{
+   ASL* asl;
+   fint nerror = 0;
+   cgrad* cg;
+   int i;
+
+   assert(data != NULL);
+   assert(data->probdata->fullx != NULL);
+   assert(funcvalue != NULL);
+
+   asl = data->probdata->asl;
+
+   xunknown();
+
+   i = 0;
+   for( cg = Cgrad[data->considx]; cg != NULL; cg = cg->next )
+      data->probdata->fullx[cg->varno] = argvals[i++];
+
+   /* function value */
+   *funcvalue = conival(data->considx, data->probdata->fullx, &nerror);
+   if( nerror != 0 )
+   {
+      *funcvalue = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   /* gradient */
+   if( gradient != NULL )
+   {
+      congrd(data->considx, data->probdata->fullx, gradient, &nerror);
+
+      if( nerror != 0 )
+      {
+         *funcvalue = SCIP_INVALID;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* FIXME implement Hessian, or a way to communicate that we don't have Hessians */
+   assert(hessian == NULL);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_USEREXPRINTEVAL( SCIPuserexprIntEvalAmpl )
+{
+   ASL* asl;
+   cgrad* cg;
+   int i;
+   int p;
+   SCIP_Real extrval;
+
+   assert(data != NULL);
+   assert(data->probdata->fullx != NULL);
+   assert(funcvalue != NULL);
+
+   asl = data->probdata->asl;
+
+   SCIPintervalSetEntire(infinity, funcvalue);
+
+   if( gradient != NULL )
+   {
+      for( i = 0; i < nargs; ++i )
+         SCIPintervalSetEntire(infinity, &gradient[i]);
+   }
+
+   if( hessian != NULL )
+   {
+      for( i = 0; i < nargs * nargs; ++i )
+         SCIPintervalSetEntire(infinity, &hessian[i]);
+      for( i = 0; i < nargs; ++i )
+      {
+         if( data->curvature == SCIP_EXPRCURV_CONVEX )
+            SCIPintervalSetBounds(&gradient[i*nargs+i], 0.0, infinity);
+         else
+            SCIPintervalSetBounds(&gradient[i*nargs+i], -infinity, 0.0);
+      }
+   }
+
+   if( nargs > 10 )
+      return SCIP_OKAY;
+
+   /* we evaluate all corner points and look for
+    * a maximal value for a convex function and
+    * a minimal value for a concave function
+    */
+   if( data->curvature == SCIP_EXPRCURV_CONVEX )
+      extrval = -infinity;
+   else
+      extrval =  infinity;
+
+   for( p = 0; p < (1<<nargs); ++p )
+   {
+      SCIP_Real cornerval;
+      fint nerror = 0;
+      int q = p;
+      for( cg = Cgrad[data->considx]; cg != NULL; cg = cg->next )
+      {
+         /* if bound at infinity, then we cannot evaluate, so stop */
+         if( argvals->inf <= -infinity || argvals->sup >= infinity )
+            break;
+         data->probdata->fullx[cg->varno] = (q % 2 ? argvals->inf : argvals->sup);
+         q = q >> 1;
+      }
+      /* if found variable at infinity, then stop */
+      if( cg != NULL )
+         break;
+
+      cornerval = conival(data->considx, data->probdata->fullx, &nerror);
+
+      /* if cannot evaluate, then stop */
+      if( nerror != 0 )
+         break;
+
+      if( data->curvature == SCIP_EXPRCURV_CONVEX )
+      {
+         if( cornerval > extrval )
+            extrval = cornerval;
+      }
+      else
+      {
+         if( cornerval < extrval )
+            extrval = cornerval;
+      }
+   }
+   if( p == (1<<nargs) )
+   {
+      /* all points could be evaluated, so can update funcvalue interval
+       * as we have used floating point arithmetic, add a small safety margin
+       */
+      if( data->curvature == SCIP_EXPRCURV_CONVEX )
+         funcvalue->sup = extrval + 1e-9 * fabs(extrval);
+      else
+         funcvalue->inf = extrval - 1e-9 * fabs(extrval);
+   }
+
+   /* TODO find other extreme value by solving a convex box-constrained optimization problem
+    * in 1D, could also use bisection
+    */
+
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_USEREXPRCURV( SCIPuserexprCurvAmpl )
+{
+   *result = data->curvature;
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_USEREXPRCOPYDATA( SCIPuserexprCopyAmpl )
+{
+   SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, datatarget, datasource) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_USEREXPRFREEDATA( SCIPuserexprFreeAmpl )
+{
+   BMSfreeBlockMemory(blkmem, &data);
+}
 
 static
 SCIP_RETCODE setupVariables(
@@ -792,7 +974,6 @@ SCIP_RETCODE setupObjective(
    return SCIP_OKAY;
 }
 
-
 static
 SCIP_RETCODE setupConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -811,6 +992,9 @@ SCIP_RETCODE setupConstraints(
    int nqpterms;
    struct cgrad* cg;
    int c;
+   SufDesc* suf_curv = NULL;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
 
    assert(scip != NULL);
    assert(probdata != NULL);
@@ -823,18 +1007,34 @@ SCIP_RETCODE setupConstraints(
    asl = probdata->asl;
    assert(n_con >= 0);
 
+#ifdef CHECKCURVSUFFIX
+   suf_curv = suf_get("curvature", ASL_Sufkind_con);
+   if( suf_curv != NULL && suf_curv->u.i != NULL )
+   {
+      SCIPinfoMessage(scip, NULL, "Found curvature suffix for %d constraints in .nl file.\n", (&asl->i.n_var_)[ASL_Sufkind_con & ASL_Sufkind_mask]);
+   }
+#endif
+
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridx, probdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, probdata->nvars) );
 
    for( c = 0; c < n_con && *success; ++c )
    {
+      lhs = LUrhs[2*c];
+      if( SCIPisInfinity(scip, -lhs) )
+         lhs = -SCIPinfinity(scip);
+
+      rhs = LUrhs[2*c+1];
+      if( SCIPisInfinity(scip, rhs) )
+         rhs = SCIPinfinity(scip);
+
       nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
       if( nqpterms == 0 )
       {
          /* linear */
          SCIPdebugMessage("constraint %d (%s) is linear\n", c, con_name(c));  /*lint !e534*/
 
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
 
          /* add linear coefficients */
          for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -843,6 +1043,56 @@ SCIP_RETCODE setupConstraints(
                SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->vars[cg->varno], cg->coef) );
             }
 
+      }
+      else if( suf_curv != NULL && suf_curv->u.i != NULL && suf_curv->u.i[c] > 0 )
+      {
+         SCIP_USEREXPRDATA* userexprdata;
+         SCIP_EXPRTREE* exprtree;
+         SCIP_EXPR** childexprs;
+         SCIP_EXPR* consexpr;
+         int i;
+
+         SCIPdebugMessage("constraint %d (%s) has suffix %d, handle as nonlinear userexpr\n", c, con_name(c), suf_curv->u.i[c]);  /*lint !e534*/
+         assert(suf_curv->u.i[c] == 1 || suf_curv->u.i[c] == 2);
+
+         /* TODO would be good to treat linear variables separately */
+         nexprvars = 0;
+         for( cg = Cgrad[c]; cg != NULL; cg = cg->next )
+            exprvars[nexprvars++] = probdata->vars[cg->varno];
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &childexprs, nexprvars) );
+         for( i = 0; i < nexprvars; ++i )
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &childexprs[i], SCIP_EXPR_VARIDX, i) );
+         }
+
+         SCIP_CALL( SCIPallocBlockMemory(scip, &userexprdata) );
+         userexprdata->probdata = probdata;
+         userexprdata->considx = c;
+         userexprdata->curvature = (suf_curv->u.i[c] == 1 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE);
+
+         SCIP_CALL( SCIPexprCreateUser(SCIPblkmem(scip), &consexpr, nexprvars, childexprs, userexprdata,
+            SCIPuserexprEvalAmpl, SCIPuserexprIntEvalAmpl,
+            SCIPuserexprCurvAmpl, NULL, NULL,
+            SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl) );
+
+         SCIPfreeBufferArray(scip, &childexprs);
+
+         /* create expression tree */
+         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, consexpr, nexprvars, 0, NULL) );
+         SCIP_CALL( SCIPexprtreeSetVars(exprtree, nexprvars, exprvars) );
+
+         /* create nonlinear constraint */
+         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs) );
+
+         /* constraint has copy of tree, so free */
+         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+         if( probdata->fullx == NULL )
+         {
+            /* alloc scratch memory for userexpr function evaluations */
+            SCIP_CALL( SCIPallocClearMemoryArray(scip, &probdata->fullx, probdata->nvars) );
+         }
       }
       else if( nqpterms > 0 )
       {
@@ -856,7 +1106,7 @@ SCIP_RETCODE setupConstraints(
 
          SCIPdebugMessage("constraint %d (%s) is quadratic\n", c, con_name(c));  /*lint !e534*/
 
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, lhs, rhs) );
 
          /* add quadratic coefficients of constraint */
          for( i = 0; i < n_var; ++i )
@@ -913,7 +1163,7 @@ SCIP_RETCODE setupConstraints(
          /* expression trees without variables raise assertions in CppAD, workaround here for now */
          if( nexprvars > 0 )
          {
-            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs) );
 
             /* add linear part of constraint */
             for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -925,20 +1175,14 @@ SCIP_RETCODE setupConstraints(
          else
          {
             SCIP_Real val;
-            SCIP_Real lhs;
-            SCIP_Real rhs;
 
             SCIP_CALL( SCIPexprtreeEval(exprtree, NULL, &val) );
 
-            if( !SCIPisInfinity(scip, -LUrhs[2*c]) )
-               lhs = LUrhs[2*c] - val;
-            else
-               lhs = -SCIPinfinity(scip);
+            if( !SCIPisInfinity(scip, -lhs) )
+               lhs -= val;
 
-            if( !SCIPisInfinity(scip, LUrhs[2*c+1]) )
-               rhs = LUrhs[2*c+1] - val;
-            else
-               rhs = SCIPinfinity(scip);
+            if( !SCIPisInfinity(scip,  rhs) )
+               rhs -= val;
 
             SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
 
@@ -1070,6 +1314,8 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
    }
    SCIPfreeMemoryArrayNull(scip, &(*probdata)->vars);
 
+   SCIPfreeMemoryArrayNull(scip, &(*probdata)->fullx);
+
    SCIPfreeMemory(scip, probdata);
 
    return SCIP_OKAY;
@@ -1101,7 +1347,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    const char* filebasename;
    FILE* nl;
    ASL* asl;
-   SufDecl suftable[5];
+   SufDecl suftable[6];
 
    assert(scip != NULL);
    assert(reader != NULL);
@@ -1134,7 +1380,12 @@ SCIP_DECL_READERREAD(readerReadNl)
    suftable[4].kind = ASL_Sufkind_var;
    suftable[4].nextra = 0;
 
-   suf_declare(suftable, 5);
+   /* make ASL aware of curvature suffix */
+   suftable[5].name = (char*)"curvature";
+   suftable[5].kind = ASL_Sufkind_con;
+   suftable[5].nextra = 0;
+
+   suf_declare(suftable, 6);
 
    /* let ASL read .nl file
     * jac0dim will do exit(1) if the file is not found
@@ -1189,6 +1440,26 @@ SCIP_DECL_READERREAD(readerReadNl)
       return SCIP_READERROR;
 
    *result = SCIP_SUCCESS;
+
+   if( probdata->fullx != NULL )
+   {
+      /* If fullx is allocated, then we have a user expression, so we need function values and gradients from ASL.
+       * When reading the .nl file with qp_read(), we cannot call function/gradient evaluations.
+       * A call to qp_opify() is supposed to restore this behavior, but doesn't seem to do this for quadratic constraints (functionvalue=0).
+       * Thus, we reread the .nl file again with fg_read().
+       * Note: To get Hessians, we would need to use pfgh_read().
+       * Alternatively, we could try forbidding user expressions for quadratic constraints (doesn't seem useful).
+       */
+      ASL_free(&probdata->asl);
+
+      asl = ASL_alloc(ASL_read_fg);
+      probdata->asl = asl;
+      nl = jac0dim((char*)filename, (fint)strlen(filename));
+
+      want_derivs = 1; /* we want derivatives */
+      asl->i.congrd_mode = 1; /* ask for compact gradient */
+      (void) fg_read(nl, ASL_return_read_err);
+   }
 
    return SCIP_OKAY;
 }

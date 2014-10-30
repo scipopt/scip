@@ -6911,11 +6911,11 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
-   SCIP_USEREXPRDATA*    data,               /**< user data for expression */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
-   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
-   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
@@ -6929,6 +6929,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    assert(expr != NULL);
    assert(children != NULL || nchildren == 0);
    assert(eval != NULL);
+   assert(curv != NULL);
    assert(copydata != NULL || data == NULL);
    assert(freedata != NULL || data == NULL);
 
@@ -7724,6 +7725,7 @@ SCIP_RETCODE SCIPexprEvalUser(
    assert(argvals != NULL || expr->nchildren == 0);
 
    exprdata = (SCIP_EXPRDATA_USER*) expr->data.data;
+   assert(exprdata->eval != NULL);
 
    SCIP_CALL( exprdata->eval(exprdata->userdata, expr->nchildren, argvals, val, gradient, hessian) );
 
@@ -7748,7 +7750,17 @@ SCIP_RETCODE SCIPexprEvalIntUser(
 
    exprdata = (SCIP_EXPRDATA_USER*) expr->data.data;
 
-   SCIP_CALL( exprdata->inteval(infinity, exprdata->userdata, expr->nchildren, argvals, val, gradient, hessian) );
+   if( exprdata->inteval == NULL )
+   {
+      int i;
+
+      for( i = 0; i < expr->nchildren; ++i )
+         SCIPintervalSetEntire(infinity, &argvals[i]);
+   }
+   else
+   {
+      SCIP_CALL( exprdata->inteval(infinity, exprdata->userdata, expr->nchildren, argvals, val, gradient, hessian) );
+   }
 
    return SCIP_OKAY;
 }
@@ -11568,12 +11580,20 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_USER:
    {
       SCIP_EXPRDATA_USER* exprdata;
+      SCIP_USEREXPRDATA* userdata;
 
       exprdata = (SCIP_EXPRDATA_USER*)node->data.data;
       assert(exprdata != NULL);
 
+      if( exprdata->copydata != NULL )
+      {
+         SCIP_CALL( exprdata->copydata(exprgraph->blkmem, node->nchildren, exprdata->userdata, &userdata) );
+      }
+      else
+         userdata = exprdata->userdata;
+
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
-         exprdata->userdata, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
+         userdata, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
 
       break;
    }
@@ -13130,7 +13150,7 @@ SCIP_RETCODE SCIPexprgraphNodePolynomialAddMonomials(
 SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
-   SCIP_USEREXPRDATA*    data,               /**< user data for expression */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
