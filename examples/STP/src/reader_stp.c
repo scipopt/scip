@@ -178,10 +178,17 @@ SCIP_RETCODE SCIPincludeReaderStp(
          "stp/printGraph",
          "print the graph before and after the presolving", NULL, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam( scip,
+   SCIP_CALL( SCIPaddCharParam(scip,
 	 "stp/mode",
          "Solving mode: 'c'ut, 'f'low ,'p'rice",
          NULL, FALSE, 'c', STP_MODES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip,
+         "stp/logfile",
+         "log file in DIMACS challenge format",
+         NULL, FALSE, "",
+         NULL, NULL) );
+
 
 
    return SCIP_OKAY;
