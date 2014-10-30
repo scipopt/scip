@@ -74,6 +74,9 @@ GRAPH* graph_init(
    p->xpos  = malloc((size_t)ksize * sizeof(int));
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
+   p->ctrctknot = malloc((size_t)ksize * sizeof(int));
+   p->ctrctedge = malloc((size_t)esize * sizeof(int));
+
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;
    p->grid_ncoords = NULL;
@@ -148,6 +151,7 @@ void graph_resize(
       p->outbeg = realloc(p->outbeg, (size_t)ksize * sizeof(int));
       p->xpos   = realloc(p->xpos,   (size_t)ksize * sizeof(int));
       p->ypos   = realloc(p->ypos,   (size_t)ksize * sizeof(int));
+      p->ctrctknot = realloc(p->ctrctknot, (size_t)ksize * sizeof(int));
    }
    if ((esize > 0) && (esize != p->esize))
    {
@@ -158,6 +162,7 @@ void graph_resize(
 
       p->ieat  = realloc(p->ieat, (size_t)esize * sizeof(int));
       p->oeat  = realloc(p->oeat, (size_t)esize * sizeof(int));
+      p->ctrctedge = realloc(p->ctrctedge, (size_t)esize * sizeof(int));
    }
    if( p->stp_type == STP_GRID )
    {
@@ -178,6 +183,8 @@ void graph_resize(
    assert(p->oeat   != NULL);
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
+   assert(p->ctrctknot != NULL);
+   assert(p->ctrctedge != NULL);
 }
 
 
@@ -1035,6 +1042,8 @@ void graph_free(
    free(p->oeat);
    free(p->xpos);
    free(p->ypos);
+   free(p->ctrctknot);
+   free(p->ctrctedge);
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
    else if(p->stp_type == STP_GRID )
@@ -1071,6 +1080,8 @@ GRAPH* graph_copy(
    assert(g->head   != NULL);
    assert(g->ieat   != NULL);
    assert(g->oeat   != NULL);
+   assert(g->ctrctknot != NULL);
+   assert(g->ctrctedge != NULL);
 
    g->knots = p->knots;
    g->terms = p->terms;
@@ -1093,6 +1104,9 @@ GRAPH* graph_copy(
 
    memcpy(g->xpos,   p->xpos,   p->ksize  * sizeof(*p->xpos));
    memcpy(g->ypos,   p->ypos,   p->ksize  * sizeof(*p->ypos));
+
+   memcpy(g->ctrctknot,   p->ctrctknot,   p->ksize  * sizeof(*p->ctrctknot));
+   memcpy(g->ctrctedge,   p->ctrctedge,   p->esize  * sizeof(*p->ctrctedge));
 
    if( g->stp_type == STP_DEG_CONS )
    {
@@ -1255,6 +1269,7 @@ void graph_knot_contract(
    int    i;
    int    et;
    int    es;
+   int    cedgeout;
    int    head;
    int    tail;
 
@@ -1302,6 +1317,8 @@ void graph_knot_contract(
 
          assert(slc < p->grad[s]);
       }
+      else
+         cedgeout = Edge_anti(es); /* The edge out of t and into s. */
    }
    assert(slc == p->grad[s] - 1);
 
@@ -1336,6 +1353,7 @@ void graph_knot_contract(
             p->cost[Edge_anti(et)] = slp[i].incost;
       }
    }
+
    /* Einzufuegenden Kanten einfuegen
     */
    for(i = 0; i < slc; i++)
@@ -1378,6 +1396,10 @@ void graph_knot_contract(
    while(p->outbeg[s] != EAT_LAST)
       graph_edge_del(p, p->outbeg[s]);
 
+   p->ctrctedge[cedgeout] = p->ctrctknot[s];
+   p->ctrctknot[t] = cedgeout;
+
+
    free(slp);
 
    assert(p->grad[s]   == 0);
@@ -1410,24 +1432,28 @@ void graph_edge_add(
 
    p->grad[head]++;
    p->grad[tail]++;
+   p->ctrctknot[head]   = EAT_LAST;
+   p->ctrctknot[tail]   = EAT_LAST;
 
-   p->cost[e]      = cost1;
-   p->tail[e]      = tail;
-   p->head[e]      = head;
-   p->ieat[e]      = p->inpbeg[head];
-   p->oeat[e]      = p->outbeg[tail];
-   p->inpbeg[head] = e;
-   p->outbeg[tail] = e;
+   p->cost[e]           = cost1;
+   p->tail[e]           = tail;
+   p->head[e]           = head;
+   p->ieat[e]           = p->inpbeg[head];
+   p->oeat[e]           = p->outbeg[tail];
+   p->inpbeg[head]      = e;
+   p->outbeg[tail]      = e;
+   p->ctrctedge[e]      = EAT_LAST;
 
    e++;
 
-   p->cost[e]      = cost2;
-   p->tail[e]      = head;
-   p->head[e]      = tail;
-   p->ieat[e]      = p->inpbeg[tail];
-   p->oeat[e]      = p->outbeg[head];
-   p->inpbeg[tail] = e;
-   p->outbeg[head] = e;
+   p->cost[e]           = cost2;
+   p->tail[e]           = head;
+   p->head[e]           = tail;
+   p->ieat[e]           = p->inpbeg[tail];
+   p->oeat[e]           = p->outbeg[head];
+   p->inpbeg[tail]      = e;
+   p->outbeg[head]      = e;
+   p->ctrctedge[e]      = EAT_LAST;
 
    p->edges += 2;
 }
