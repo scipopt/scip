@@ -80,6 +80,12 @@ typedef struct
    int*    ypos;   /* Array [0..knots-1] with Y Coordinates of    */
                    /* Knot [i]                                    */
 
+   /* Contraction Data
+    */
+   int*    ctrctknot; /* Array [0..knots-1] with the starting slot*/
+                      /* of the contracted edges, -1 if not used  */
+   int*    ctrctedge; /* Array [0..edges-1] contracted edge       */
+                      /* allocation table.                        */
    /* data for min cut computation
     */
    int*    mincut_dist;    /* dist[i] : Distance-label of Knot i          */
