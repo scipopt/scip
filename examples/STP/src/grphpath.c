@@ -646,6 +646,7 @@ void graph_path_exec2(
 }
 
 
+
 /* extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend(
    SCIP* scip,
@@ -1005,6 +1006,210 @@ void voronoi(
                correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]), FSP_MODE);
                vbase[m] = vbase[k];
             }
+         }
+      }
+   }
+}
+#if 0
+/*** build the voronoi regions for a directed graph. This calculates the inward and outward voronoi regions ***/
+void voronoi_inout(
+   const GRAPH*   g
+      )
+{
+   int   e;
+   int   i;
+   int   j;
+   int   k;
+   int*  heap;
+   int*  state;
+   int*  inpred;
+   int*  outpred;
+   int*  terms;
+   int* minArc1;
+   int* minArc2;
+   PATH* inpath;
+   PATH* outpath;
+
+   inpath = malloc((size_t)g->knots * sizeof(PATH));
+   outpath = malloc((size_t)g->knots * sizeof(PATH));
+   inpred = malloc((size_t)g->knots * sizeof(int));
+   outpred = malloc((size_t)g->knots * sizeof(int));
+   terms = malloc((size_t)g->terms * sizeof(int));
+   minArc1 = malloc((size_t)g->knots * sizeof(int));
+   minArc2 = malloc((size_t)g->knots * sizeof(int));
+   heap  = malloc((size_t)g->knots * sizeof(int));
+   state = malloc((size_t)g->knots * sizeof(int));
+
+   voronoi_term(g, g->cost, inpath, heap, state, inpred, 1);
+   voronoi_term(g, g->cost, outpath, heap, state, outpred, 0);
+
+   k = 0;
+   for( i = 0; i < g->knots; i++ )
+   {
+      printf("Node %d - In region: %d, Out region: %d\n", i, g->in_vregion[i], g->out_vregion[i]);
+      printf("Node %d - In path dist: %g, Out path dist: %g\n", i, inpath[i].dist, outpath[i].dist);
+      printf("Node %d - In pred: %d, Out pred: %d\n", i, inpred[i], outpred[i]);
+      if( Is_term(g->term[i]) )
+         terms[k++] = i;
+
+      minArc1[i] = -1;
+      minArc2[i] = -1;
+   }
+
+   for( e = 0; e < g->edges; e++ )
+   {
+      i = g->head[e];
+      j = g->tail[e];
+      if( g->in_vregion[i] != g->in_vregion[j] )
+      {
+         if( minArc1[g->in_vregion[i]] < 0 )
+            minArc1[g->in_vregion[i]] = e;
+         else if( g->cost[e] < g->cost[minArc1[g->in_vregion[i]]] )
+         {
+            minArc2[g->in_vregion[i]] = minArc1[g->in_vregion[i]];
+            minArc1[g->in_vregion[i]] = e;
+         }
+      }
+   }
+
+   for( i = 0; i < g->terms; i++ )
+      printf("Shortest Distance [%d]: %g %g %g\n", i, g->cost[minArc1[terms[i]]], g->cost[minArc2[terms[i]]],
+            outpath[g->tail[minArc1[terms[i]]]].dist + g->cost[minArc1[terms[i]]] + inpath[g->head[minArc1[terms[i]]]].dist);
+
+   free(state);
+   free(heap);
+   free(minArc2);
+   free(minArc1);
+   free(terms);
+   free(outpred);
+   free(inpred);
+   free(outpath);
+   free(inpath);
+}
+#endif
+
+/*** build a voronoi region, w.r.t. shortest paths, for all terminals ***/
+void voronoi_term(
+   const GRAPH*   g,
+   double*        cost,
+   PATH*          path,
+   int*           vregion,
+   int*           heap,
+   int*           state,
+   int*           predecessor,
+   int            inward
+   )
+{
+   int e;
+   int k;
+   int m;
+   int i;
+   int curr_edge;
+   int nv;
+   int nvedge;
+   int count = 0;
+   int nbases = 0;
+
+   assert(g      != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+   assert(vregion != NULL);
+   assert(heap   != NULL);
+   assert(state  != NULL);
+   assert(predecessor != NULL);
+   if( g->knots == 0 )
+      return;
+
+
+   /* initialize */
+   for( i = 0; i < g->knots; i++ )
+   {
+      /* set the base of vertex i */
+      if( g->term[i] >= 0 )
+      {
+         nbases++;
+         if( g->knots > 1 )
+            heap[++count] = i;
+         vregion[i] = i;
+         path[i].dist = 0.0;
+         path[i].edge = UNKNOWN;
+         state[i] = count;
+         predecessor[i] = UNKNOWN;
+      }
+      else
+      {
+         vregion[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i]     = UNKNOWN;
+         predecessor[i] = UNKNOWN;
+      }
+   }
+   assert(nbases > 0);
+
+   for( e = 0; e < g->edges; e++)
+   {
+      assert(GE(g->cost[e], 0));
+   }
+
+   if( g->knots > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+         //printf("get node %d \n ", k);
+         /* iterate over all ingoing edges of vertex k.
+          * working in reverse from the terminal nodes.
+          * For the undirected case this does not make any difference,
+          * for the directed case, this finds the voronoi region for paths
+          * entering a terminal.
+          */
+         if( inward > 0 )
+            nvedge = g->inpbeg[k];
+         else
+            nvedge = g->outbeg[k];
+         for( i = g->inpbeg[k]; i != EAT_LAST; i = g->ieat[i] )
+         {
+            m = g->tail[i];
+            if( inward > 0 )
+               curr_edge = i;
+            else
+               curr_edge = Edge_anti(i);
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) && GT(path[m].dist, path[k].dist + cost[curr_edge]) )
+            {
+               assert(g->term[m] < 0);
+               correct(heap, state, &count, path, m, k, curr_edge, cost[curr_edge], FSP_MODE);
+               vregion[m] = vregion[k];
+               predecessor[m] = predecessor[k];
+            }
+
+            if( g->term[k] >= 0 )
+            {
+               if( (state[m]) && GT(cost[nvedge], cost[curr_edge]) )
+                  nvedge = curr_edge;
+            }
+         }
+
+         if( g->term[k] >= 0 && nvedge != EAT_LAST )
+         {
+            if( inward > 0 )
+            {
+               assert(k == g->head[nvedge]);
+               nv = g->tail[nvedge];
+            }
+            else
+            {
+               assert(k == g->tail[nvedge]);
+               nv = g->head[nvedge];
+            }
+            predecessor[nv] = k;
          }
       }
    }

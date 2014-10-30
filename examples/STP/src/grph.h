@@ -79,6 +79,7 @@ typedef struct
                    /* Knot [i]                                    */
    int*    ypos;   /* Array [0..knots-1] with Y Coordinates of    */
                    /* Knot [i]                                    */
+
    /* data for min cut computation
     */
    int*    mincut_dist;    /* dist[i] : Distance-label of Knot i          */
@@ -190,6 +191,8 @@ extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
+extern void   voronoi_inout(const GRAPH*);
+extern void   voronoi_term(const GRAPH*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   heap_add(int*, int*, int*, int, PATH*);
 extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, char*, UF*, PATH*);
@@ -229,6 +232,7 @@ extern double reduce(GRAPH*, int, SCIP*);
 extern int    sd_reduction(GRAPH*);
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(GRAPH*, double*);
+extern int    nv_reduction_optimal(GRAPH*, double*);
 
 /* dirreduce.c
  */

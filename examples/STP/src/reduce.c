@@ -964,8 +964,11 @@ static double levelm4(
    double fixed   = 0.0;
    int    rerun   = TRUE;
    int    i;
+   int    numelim;
 
    assert(g != NULL);
+
+   //voronoi_inout(g);
 
    degree_test_dir(g, &fixed);
 
@@ -978,20 +981,28 @@ static double levelm4(
 
       rerun = FALSE;
 
-      for(i = 0; i < 6; i++)
+      for(i = 0; i < 2; i++)
       {
-         if (sd_reduction(g))
+         numelim = sd_reduction(g);
+         printf("SD Reduction %d: %d\n", i, numelim);
+         if (numelim > 50)
             rerun = TRUE;
+         else
+            break;
       }
 
       if (degree_test_dir(g, &fixed) > 0)
          rerun = TRUE;
 
-      //if (nsv_reduction(g, &fixed))
-      //{
-         //printf("Success NSV: %d\n", fixed);
-         //rerun = TRUE;
-      //}
+      for (i = 0; i < 4; i++)
+      {
+         numelim = nv_reduction_optimal(g, &fixed);
+         printf("NV Reduction %d: %d\n", i, numelim);
+         if (numelim)
+            rerun = TRUE;
+         else
+            break;
+      }
 
       //if (bd3_reduction(g))
          //rerun = TRUE;

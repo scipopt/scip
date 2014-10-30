@@ -91,9 +91,9 @@ int degree_test_dir(
             continue;
          }
 
-         // Note on costs in the directed graph
-         // g->outbeg[i] is the outgoing directed edge
-         // g->inpbeg[i] is the incoming directed edge
+         /* Note on costs in the directed graph
+          * g->outbeg[i] is the outgoing directed edge
+          * g->inpbeg[i] is the incoming directed edge */
          if (g->grad[i] == 2)
          {
             e1 = g->outbeg[i];

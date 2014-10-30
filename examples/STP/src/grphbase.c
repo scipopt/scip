@@ -1336,6 +1336,7 @@ void graph_knot_contract(
             p->cost[Edge_anti(et)] = slp[i].incost;
       }
    }
+
    /* Einzufuegenden Kanten einfuegen
     */
    for(i = 0; i < slc; i++)
@@ -1411,23 +1412,23 @@ void graph_edge_add(
    p->grad[head]++;
    p->grad[tail]++;
 
-   p->cost[e]      = cost1;
-   p->tail[e]      = tail;
-   p->head[e]      = head;
-   p->ieat[e]      = p->inpbeg[head];
-   p->oeat[e]      = p->outbeg[tail];
-   p->inpbeg[head] = e;
-   p->outbeg[tail] = e;
+   p->cost[e]           = cost1;
+   p->tail[e]           = tail;
+   p->head[e]           = head;
+   p->ieat[e]           = p->inpbeg[head];
+   p->oeat[e]           = p->outbeg[tail];
+   p->inpbeg[head]      = e;
+   p->outbeg[tail]      = e;
 
    e++;
 
-   p->cost[e]      = cost2;
-   p->tail[e]      = head;
-   p->head[e]      = tail;
-   p->ieat[e]      = p->inpbeg[tail];
-   p->oeat[e]      = p->outbeg[head];
-   p->inpbeg[tail] = e;
-   p->outbeg[head] = e;
+   p->cost[e]           = cost2;
+   p->tail[e]           = head;
+   p->head[e]           = tail;
+   p->ieat[e]           = p->inpbeg[tail];
+   p->oeat[e]           = p->outbeg[head];
+   p->inpbeg[tail]      = e;
+   p->outbeg[head]      = e;
 
    p->edges += 2;
 }

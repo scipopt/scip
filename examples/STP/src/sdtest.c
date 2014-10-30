@@ -244,6 +244,11 @@ static void compute_sd(
                /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
                 *    Wenn ja, dann muss die Entferung kuerzer sein.
                 */
+               /* The special distance is the length of the longest path between two terminals (elementary path)
+                * contained in the path between knots i and j.
+                * - tran measures the distance between two terminals.
+                * - dist stores the current longest elementary path.
+                */
                tran = Is_term(p->term[m]) ? 0.0 : path[k].tran + cost[i];
                dist = Max(path[k].dist, path[k].tran + cost[i]);
 
@@ -316,7 +321,7 @@ int sd_reduction(
          continue;
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
-      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && g->source[i] > 0)
+      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && g->source[i] >= 0)
          continue;
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
@@ -551,6 +556,8 @@ int bd3_reduction(
    return(elimins);
 }
 
+
+/* computes the shortest path from each terminal to every other vertex */
 static void calculate_distances(
    const GRAPH* g,
    PATH** path)
@@ -643,6 +650,8 @@ int nsv_reduction(
 
    assert(cost != NULL);
 
+   /* Check this cost setting. It may need to be changed for the directed case.
+    */
    for(i = 0; i < g->edges; i++)
       cost[i] = g->cost[i];
 
@@ -753,6 +762,208 @@ int nsv_reduction(
    free(mst2);
    free(path);
    free(cost);
+
+   assert(graph_valid(g));
+
+   SCIPdebugMessage(" %d Knots deleted\n", elimins);
+
+   return(elimins);
+}
+
+
+
+/* C. W. Duin and A. Volganant
+ *
+ * "Reduction Tests for the Steiner Problem in Graphs"
+ *
+ * Networks, Volume 19 (1989), 549-567
+ *
+ * Nearest Special Vertex 3 Test
+ *
+ * Taken from:
+ *
+ * Maculan et. al.
+ *
+ * "An approach for the Steiner problem in directed graphs"
+ *
+ * Annals of Operations Research, Volume 33 (1991), 471-480
+ *
+ * Nearest Vertex Test (for optimal arcs)
+ *
+ * and
+ *
+ * T. Polzin
+ *
+ * "Algorithms for the Steiner problem in networks"
+ *
+ * Section 3.3.3 pp. 54-55
+ *
+ * This is only called for the directed Steiner tree problem
+ */
+int nv_reduction_optimal(
+   GRAPH*  g,
+   double* fixed)
+{
+   PATH**  path;
+   PATH*   pathfromterm;
+   PATH*   pathfromsource;
+   int*    vregion;
+   int*    heap;
+   int*    state;
+   int*    pred;
+   int*    minArc1;
+   int*    minArc2;
+   int*    terms;
+   int     termcount;
+   int     i;
+   int     j;
+   int     k;
+   int     e;
+   double  min1;
+   double  min2;
+   int     shortarc1;
+   int     elimins = 0;
+
+   SCIPdebugMessage("NSV-Reduction: ");
+   fflush(stdout);
+/*
+   graph_show(g);
+*/
+   path = malloc((size_t)g->knots * sizeof(PATH*));
+
+   assert(path != NULL);
+
+   pathfromterm = malloc((size_t)g->knots * sizeof(PATH));
+   pathfromsource = malloc((size_t)g->knots * sizeof(PATH));
+
+   assert(pathfromterm != NULL);
+   assert(pathfromsource != NULL);
+
+   vregion = malloc((size_t)g->knots * sizeof(int));
+
+   assert(vregion != NULL);
+
+   heap  = malloc((size_t)g->knots * sizeof(int));
+   state = malloc((size_t)g->knots * sizeof(int));
+
+   assert(heap != NULL);
+   assert(state != NULL);
+
+   pred = malloc((size_t)g->knots * sizeof(int));
+   minArc1 = malloc((size_t)g->knots * sizeof(int));
+   minArc2 = malloc((size_t)g->knots * sizeof(int));
+   terms = malloc((size_t)g->terms * sizeof(int));
+
+   termcount = 0;
+   for(i = 0; i < g->knots; i++)
+   {
+      if( Is_term(g->term[i]) )
+      {
+         terms[termcount] = i;
+         termcount++;
+      }
+      g->mark[i] = (g->grad[i] > 0);
+      minArc1[i] = -1;
+      minArc2[i] = -1;
+      path[i] = NULL;
+   }
+
+   assert(g->source[0] >= 0);
+
+   /* computing the voronoi regions inward to a node */
+   voronoi_term(g, g->cost, pathfromterm, vregion, heap, state, pred, 1);
+
+   /* computing the shortest paths from the source node */
+   graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+
+   /* computing the shortest paths from each terminal to every other node */
+   //calculate_distances(g, path);
+
+   for(i = 0; i < g->knots; i++)
+   {
+      /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
+      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && g->source[i] >= 0)
+         continue;
+
+      if (Is_term(g->term[i]) && g->grad[i] >= 3)
+      {
+
+         min1  = FARAWAY;
+         min2  = FARAWAY;
+         shortarc1 = -1;
+         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         {
+            if (g->cost[e] < min1)
+            {
+               shortarc1 = g->tail[e];
+
+               min2 = min1;
+               min1 = g->cost[e];
+            }
+         }
+
+         if (LT(min1, FARAWAY) && LE(pathfromsource[shortarc1].dist + min1, min2))
+         {
+            *fixed += g->cost[e];
+
+            graph_knot_contract(g, shortarc1, i);
+
+            elimins++;
+
+            /* computing the shortest paths from the source node */
+            graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+            //calculate_distances(g, path);
+         }
+      }
+      /* The knot is not a terminal so we can perform the short link test */
+      else
+      {
+         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         {
+            j = g->tail[e];
+            if( vregion[i] != vregion[j] )
+            {
+               if( minArc1[vregion[i]] < 0 )
+                  minArc1[vregion[i]] = e;
+               else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
+               {
+                  minArc2[vregion[i]] = minArc1[vregion[i]];
+                  minArc1[vregion[i]] = e;
+               }
+            }
+         }
+      }
+   }
+
+   for( k = 0; k < termcount; k++ )
+   {
+      assert(terms[k] >= 0 && terms[k] < g->knots);
+
+      if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
+            + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
+      {
+         printf("Short link test %d\n", k);
+         e = minArc1[terms[k]];
+         i = g->head[e];
+         j = g->tail[e];
+
+         if( Is_term(g->term[i]) )
+            *fixed += g->cost[e];
+
+         graph_knot_contract(g, j, i);
+
+         elimins++;
+      }
+   }
+
+   free(terms);
+   free(minArc2);
+   free(minArc1);
+   free(pred);
+   free(vregion);
+   free(pathfromsource);
+   free(pathfromterm);
+   free(path);
 
    assert(graph_valid(g));
 
