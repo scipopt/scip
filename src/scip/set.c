@@ -141,7 +141,7 @@
 
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
-
+#define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 /* Heuristics */
 
 #define SCIP_DEFAULT_HEUR_DIVESTARTFRAC         0.15 /**< start percentage of diving candidates that should be fixed before LP resolve */
@@ -1135,6 +1135,13 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->history_allowmerge, FALSE, SCIP_DEFAULT_HISTORY_ALLOWMERGE,
          NULL, NULL) );
 
+#define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "history/allowtransfer",
+         "should variable histories be transferred to initialize SCIP copies?",
+         &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
+         NULL, NULL) );
    /* heuristic parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divestartfrac",
          "start percentage of diving candidates that should be fixed before LP resolve",

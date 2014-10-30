@@ -2137,6 +2137,12 @@ SCIP_RETCODE SCIPvarCopy(
       assert(targetdata == NULL || result == SCIP_SUCCESS);
    }
 
+   /* we initialize histories of the variables by copying the source variable-information */
+   if( set->history_allowtransfer )
+   {
+      SCIPvarMergeHistories((*var), sourcevar, stat);
+   }
+
    /* in case the copying was successfully, add the created variable data to the variable as well as all callback
     * methods 
     */
@@ -3311,6 +3317,11 @@ SCIP_RETCODE SCIPvarTransform(
       (*transvar)->lazylb = origvar->lazylb;
       (*transvar)->lazyub = origvar->lazyub;
 
+      /* transfer eventual variable statistics; do not update global statistics, because this has been done
+       * when original variable was created
+       */
+      SCIPhistoryUnite((*transvar)->history, origvar->history, FALSE);
+
       /* transform user data */
       if( origvar->vartrans != NULL )
       {
@@ -4171,10 +4182,11 @@ void SCIPvarMergeHistories(
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
-   SCIPhistoryUnite(targetvar->history, othervar->history, FALSE);
-   SCIPhistoryUnite(targetvar->historycrun, othervar->history, FALSE);
-   SCIPhistoryUnite(stat->glbhistory, othervar->history, FALSE);
-   SCIPhistoryUnite(stat->glbhistorycrun, othervar->history, FALSE);
+   /* merge only the history of the current run into the target history */
+   SCIPhistoryUnite(targetvar->history, othervar->historycrun, FALSE);
+
+   /* apply the changes also to the global history */
+   SCIPhistoryUnite(stat->glbhistory, othervar->historycrun, FALSE);
 }
 
 
