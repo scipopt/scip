@@ -1229,7 +1229,7 @@ void SCIPcliqueDelVar(
    assert(clique != NULL);
    assert(SCIPvarIsBinary(var));
 
-   SCIPdebugMessage("deleting variable <%s> == %u from clique %u\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("marking variable <%s> == %u from clique %u for deletion\n", SCIPvarGetName(var), value, clique->id);
 
    /* find variable in clique */
    pos = SCIPcliqueSearchVar(clique, var, value);
@@ -1788,7 +1788,7 @@ SCIP_RETCODE mergeClique(
 
    assert(nclqvars != NULL);
 
-   SCIPdebugMessage("starting merging %d variables in clique\n", *nclqvars);
+   SCIPdebugMessage("starting merging %d variables in clique %d\n", *nclqvars, clique == NULL ? -1 : clique->id);
 
    if( *nclqvars == 0 )
       return SCIP_OKAY;
@@ -1872,6 +1872,7 @@ SCIP_RETCODE mergeClique(
    if( *infeasible )
       return SCIP_OKAY;
 
+   *nbdchgs += nlocalbdchgs;
    /* we terminate early by identifying two variables negated to each other in one clique */
    if( v > 0 )
    {
@@ -2303,9 +2304,10 @@ SCIP_RETCODE cliqueCleanup(
 
       assert(clique->ncleanupvars <= clique->nvars - clique->startcleanup);
 
-      w = clique->startcleanup;
+/* @TODO start w,v from clique->startcleanup again */
+      w = 0;
       /* exchange inactive by active variables */
-      for( v = clique->startcleanup; v < clique->nvars; ++v )
+      for( v = 0; v < clique->nvars; ++v )
       {
          if( SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_AGGREGATED
             || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_NEGATED
@@ -2520,7 +2522,7 @@ SCIP_RETCODE cliqueCleanup(
    return SCIP_OKAY;
 }
 
-#if !defined(NDEBUG) && defined(SCIP_MORE_DEBUG)
+#ifdef SCIP_MORE_DEBUG
 /** checks whether clique appears in all clique lists of the involved variables */
 static
 SCIP_Bool checkNEntries(
@@ -2576,6 +2578,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
+
+
 
    i = cliquetable->ncliques - 1;
    while( i >= 0 && !(*infeasible) )
