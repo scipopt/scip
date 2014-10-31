@@ -3043,6 +3043,40 @@ SCIP_RETCODE lpSetConditionLimit(
    return SCIP_OKAY;
 }
 
+/** sets the type of timer of the LP solver */
+static
+SCIP_RETCODE lpSetTiming(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLOCKTYPE        timing,             /**< new timing value */
+   SCIP_Bool             enabled,            /**< is timing enabled? */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   int lptiming;
+
+   assert(lp != NULL);
+   assert(success != NULL);
+   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2);
+
+   SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_TIMING, lp->lpitiming) );
+
+   if( !enabled )
+      lptiming = 0;
+   else
+      lptiming = (int) timing;
+
+   if( lptiming != lp->lpitiming )  /*lint !e777*/
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_TIMING, lptiming, success) );
+      if( *success )
+         lp->lpitiming = lptiming;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Column methods
@@ -8659,6 +8693,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
+   (*lp)->lpitiming = set->time_clocktype;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -8719,6 +8754,13 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: presolving not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_TIMING, (*lp)->lpitiming, &success) );
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: clock type cannot be set\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim, &success) );
@@ -13501,6 +13543,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetThreads(lp, set->lp_threads, &success) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
+   SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 

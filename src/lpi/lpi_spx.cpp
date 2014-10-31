@@ -4744,6 +4744,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_SCALING:
       *ival = lpi->spx->getScaling();
       break;
+#if SOPLEX_VERSION >= 201
+   case SCIP_LPPAR_TIMING:
+      *ival = (int) lpi->spx->getTiming();
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4812,6 +4817,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       lpi->spx->setScaling(bool(ival));
       break;
+#if SOPLEX_VERSION >= 201
+   case SCIP_LPPAR_TIMING:
+      assert(ival >= 0 && ival < 3);
+      lpi->spx->setTiming((Timer::TYPE) ival);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
