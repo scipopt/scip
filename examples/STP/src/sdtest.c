@@ -321,7 +321,7 @@ int sd_reduction(
          continue;
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
-      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && g->source[i] >= 0)
+      if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
@@ -882,7 +882,7 @@ int nv_reduction_optimal(
    for(i = 0; i < g->knots; i++)
    {
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
-      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && g->source[i] >= 0)
+      if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
 
       if (Is_term(g->term[i]) && g->grad[i] >= 3)
