@@ -105,15 +105,15 @@ SCIP_Real getMinColActWithoutRow(
    assert(lbdualbounds[1] != NULL);
    assert(ubdualbounds[1] != NULL);
 
-   var = SCIPmatrixGetVar(matrix,col);
+   var = SCIPmatrixGetVar(matrix, col);
 
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    mincolactivity = 0;
 
-   colpnt = SCIPmatrixGetColIdxPtr(matrix,col);
-   colend = colpnt + SCIPmatrixGetColNNonzs(matrix,col);
-   valpnt = SCIPmatrixGetColValPtr(matrix,col);
+   colpnt = SCIPmatrixGetColIdxPtr(matrix, col);
+   colend = colpnt + SCIPmatrixGetColNNonzs(matrix, col);
+   valpnt = SCIPmatrixGetColValPtr(matrix, col);
 
    for( ; colpnt < colend; colpnt++, valpnt++ )
    {
@@ -122,7 +122,7 @@ SCIP_Real getMinColActWithoutRow(
 
       if( row == withoutrow )
       {
-         if( SCIPmatrixIsRowRhsInfinity(matrix,row) )
+         if( SCIPmatrixIsRowRhsInfinity(matrix, row) )
          {
             continue;
          }
@@ -172,18 +172,18 @@ SCIP_Real getMinColActWithoutRow(
             val = -val;
             p++;
 
-         } while ( !SCIPmatrixIsRowRhsInfinity(matrix,row) && p < 2 );
+         } while ( !SCIPmatrixIsRowRhsInfinity(matrix, row) && p < 2 );
       }
    }
 
    /* consider variable bounds */
-   if( !SCIPisInfinity(scip,SCIPvarGetUbGlobal(var)) )
+   if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
    {
       /* upper bound */
       assert(!SCIPisInfinity(scip, ubdualbounds[0][col]));
       mincolactivity += -ubdualbounds[0][col];
    }
-   if( !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(var)) )
+   if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
    {
       /* lower bound */
       assert(!SCIPisInfinity(scip, -lbdualbounds[1][col]));
@@ -227,16 +227,16 @@ SCIP_Real getMinColActWithoutBound(
    assert(lbdualbounds[1] != NULL);
    assert(ubdualbounds[1] != NULL);
 
-   var = SCIPmatrixGetVar(matrix,col);
+   var = SCIPmatrixGetVar(matrix, col);
 
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-   assert((explicitub && !explicitlb)||(!explicitub && explicitlb));
+   assert((explicitub && !explicitlb) || (!explicitub && explicitlb));
 
    mincolactivity = 0;
 
-   colpnt = SCIPmatrixGetColIdxPtr(matrix,col);
-   colend = colpnt + SCIPmatrixGetColNNonzs(matrix,col);
-   valpnt = SCIPmatrixGetColValPtr(matrix,col);
+   colpnt = SCIPmatrixGetColIdxPtr(matrix, col);
+   colend = colpnt + SCIPmatrixGetColNNonzs(matrix, col);
+   valpnt = SCIPmatrixGetColValPtr(matrix, col);
 
    for(; (colpnt < colend); colpnt++, valpnt++ )
    {
@@ -261,17 +261,17 @@ SCIP_Real getMinColActWithoutBound(
          val = -val;
          p++;
 
-      } while ( !SCIPmatrixIsRowRhsInfinity(matrix,row) && p < 2 );
+      } while ( !SCIPmatrixIsRowRhsInfinity(matrix, row) && p < 2 );
    }
 
    /* consider variable bounds */
-   if( !explicitub && !SCIPisInfinity(scip,SCIPvarGetUbGlobal(var)) )
+   if( !explicitub && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
    {
       /* upper bound */
       assert(!SCIPisInfinity(scip, ubdualbounds[0][col]));
       mincolactivity += -ubdualbounds[0][col];
    }
-   if( !explicitlb && !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(var)) )
+   if( !explicitlb && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
    {
       /* lower bound */
       assert(!SCIPisInfinity(scip, -lbdualbounds[1][col]));
@@ -317,9 +317,9 @@ void calcColActResidualCommon(
    assert(mincolactinf != NULL);
    assert(mincolresact != NULL);
 
-   assert(SCIPvarGetType(SCIPmatrixGetVar(matrix,col)) == SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS);
 
-   if( !SCIPmatrixIsRowRhsInfinity(matrix,row) && part == 1 )
+   if( !SCIPmatrixIsRowRhsInfinity(matrix, row) && part == 1 )
       val = -val;
 
    if( val > 0.0 )
@@ -395,14 +395,14 @@ void calcColActResidualExplicitBound(
    assert(mincolactinf != NULL);
    assert(mincolresact != NULL);
 
-   var = SCIPmatrixGetVar(matrix,col);
+   var = SCIPmatrixGetVar(matrix, col);
 
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-   assert((explicitub && !explicitlb)||(!explicitub && explicitlb));
+   assert((explicitub && !explicitlb) || (!explicitub && explicitlb));
 
    if( explicitub )
    {
-      if( !SCIPisInfinity(scip,SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
       {
          /* -1.0 * x >= -ub */
          if( SCIPisInfinity(scip, ubdualbounds[0][col]) )
@@ -426,7 +426,7 @@ void calcColActResidualExplicitBound(
    }
    else
    {
-      if( !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
       {
          /* 1.0 * y >= lb */
          if( SCIPisInfinity(scip, -lbdualbounds[1][col]) )
@@ -498,10 +498,10 @@ void calcColActivity(
       maxcolactinf[c] = 0;
       mincolactinf[c] = 0;
 
-      colpnt = SCIPmatrixGetColIdxPtr(matrix,c);
-      colend = colpnt + SCIPmatrixGetColNNonzs(matrix,c);
-      valpnt = SCIPmatrixGetColValPtr(matrix,c);
-      var = SCIPmatrixGetVar(matrix,c);
+      colpnt = SCIPmatrixGetColIdxPtr(matrix, c);
+      colend = colpnt + SCIPmatrixGetColNNonzs(matrix, c);
+      valpnt = SCIPmatrixGetColValPtr(matrix, c);
+      var = SCIPmatrixGetVar(matrix, c);
 
       /* calculate column activities */
       for( ; colpnt < colend; colpnt++, valpnt++ )
@@ -540,13 +540,13 @@ void calcColActivity(
             val = -val;
             part++;
 
-         } while( !SCIPmatrixIsRowRhsInfinity(matrix,row) && part < 2 );
+         } while( !SCIPmatrixIsRowRhsInfinity(matrix, row) && part < 2 );
       }
 
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          /* consider variable bounds */
-         if( !SCIPisInfinity(scip,SCIPvarGetUbGlobal(var)) )
+         if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
          {
             /* upper bound */
             if(SCIPisInfinity(scip, -lbdualbounds[0][c]))
@@ -560,7 +560,7 @@ void calcColActivity(
                mincolact[c] += -ubdualbounds[0][c];
          }
 
-         if( !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(var)) )
+         if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
          {
             /* lower bound */
 
@@ -615,7 +615,7 @@ void updateDualBounds(
 
    *updateinfcnt = FALSE;
 
-   if( !SCIPmatrixIsRowRhsInfinity(matrix,row) && part == 1 )
+   if( !SCIPmatrixIsRowRhsInfinity(matrix, row) && part == 1 )
       val = -val;
 
    if( val > 0 )
@@ -679,14 +679,14 @@ void updateDualBoundsExplicit(
    assert(boundchanges != NULL);
    assert(updateinfcnt != NULL);
 
-   assert((explicitub && !explicitlb)||(!explicitub && explicitlb));
+   assert((explicitub && !explicitlb) || (!explicitub && explicitlb));
 
-   var = SCIPmatrixGetVar(matrix,col);
+   var = SCIPmatrixGetVar(matrix, col);
    *updateinfcnt = FALSE;
 
    if( explicitlb )
    {
-      if( !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
       {
          if( !SCIPisInfinity(scip, mincolresact) && !SCIPisInfinity(scip, -mincolresact) )
          {
@@ -704,7 +704,7 @@ void updateDualBoundsExplicit(
    }
    else
    {
-      if( !SCIPisInfinity(scip,SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
       {
          if( !SCIPisInfinity(scip, mincolresact) && !SCIPisInfinity(scip, -mincolresact) )
          {
@@ -761,11 +761,11 @@ void infCntUpdate(
    assert(maxcolactinf != NULL);
    assert(mincolactinf != NULL);
 
-   rowpnt = SCIPmatrixGetRowIdxPtr(matrix,row);
-   rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix,row);
-   valpnt = SCIPmatrixGetRowValPtr(matrix,row);
+   rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
+   rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
+   valpnt = SCIPmatrixGetRowValPtr(matrix, row);
 
-   if( !SCIPmatrixIsRowRhsInfinity(matrix,row) && part == 1 )
+   if( !SCIPmatrixIsRowRhsInfinity(matrix, row) && part == 1 )
       val = -val;
 
    /* look at all columns entries present within row and update the corresponding infinity counters.
@@ -869,13 +869,13 @@ void infCntUpdateExplicit(
    assert(maxcolactinf != NULL);
    assert(mincolactinf != NULL);
 
-   assert((explicitub && !explicitlb)||(!explicitub && explicitlb));
+   assert((explicitub && !explicitlb) || (!explicitub && explicitlb));
 
-   var = SCIPmatrixGetVar(matrix,col);
+   var = SCIPmatrixGetVar(matrix, col);
 
    if( explicitlb )
    {
-      if( !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
       {
          /* finite upper bound change */
          assert(maxcolactinf[col] > 0);
@@ -889,7 +889,7 @@ void infCntUpdateExplicit(
    }
    else
    {
-      if( !SCIPisInfinity(scip,SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
       {
          /* finite lower bound change */
          assert(maxcolactinf[col] > 0);
@@ -995,16 +995,16 @@ SCIP_RETCODE dualBoundStrengthening(
          SCIP_Bool updateinfcnt;
          SCIP_VAR* var;
 
-         var = SCIPmatrixGetVar(matrix,c);
+         var = SCIPmatrixGetVar(matrix, c);
 
          /* consider only continuous variables for dual bounds */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
             continue;
 
          objval = SCIPvarGetObj(var);
-         colpnt = SCIPmatrixGetColIdxPtr(matrix,c);
-         colend = colpnt + SCIPmatrixGetColNNonzs(matrix,c);
-         valpnt = SCIPmatrixGetColValPtr(matrix,c);
+         colpnt = SCIPmatrixGetColIdxPtr(matrix, c);
+         colend = colpnt + SCIPmatrixGetColNNonzs(matrix, c);
+         valpnt = SCIPmatrixGetColValPtr(matrix, c);
 
          for( ; colpnt < colend; colpnt++, valpnt++ )
          {
@@ -1036,7 +1036,7 @@ SCIP_RETCODE dualBoundStrengthening(
 
                part++;
 
-            } while( !SCIPmatrixIsRowRhsInfinity(matrix,row) && part < 2 );
+            } while( !SCIPmatrixIsRowRhsInfinity(matrix, row) && part < 2 );
          }
 
          calcColActResidualExplicitBound(scip, matrix, c,
@@ -1076,7 +1076,7 @@ SCIP_RETCODE dualBoundStrengthening(
       SCIP_Real objval;
       SCIP_VAR* var;
 
-      var = SCIPmatrixGetVar(matrix,c);
+      var = SCIPmatrixGetVar(matrix, c);
       objval = SCIPvarGetObj(var);
 
       /* positive reduced costs: c_j - sup{(A_{.j})^T} > 0 => x_j = 0 */
@@ -1090,7 +1090,7 @@ SCIP_RETCODE dualBoundStrengthening(
    for( r = 0; r < nrows; r++ )
    {
       /* implied equality: y_i > 0 =>  A_{.i}x - b_i = 0 */
-      if( SCIPmatrixIsRowRhsInfinity(matrix,r) )
+      if( SCIPmatrixIsRowRhsInfinity(matrix, r) )
       {
          if( SCIPisGT(scip, lbdual[0][r], 0.0) )
          {
@@ -1100,8 +1100,8 @@ SCIP_RETCODE dualBoundStrengthening(
       }
       else
       {
-         if( !SCIPmatrixIsRowRhsInfinity(matrix,r) &&
-            !SCIPisEQ(scip,SCIPmatrixGetRowLhs(matrix,r),SCIPmatrixGetRowRhs(matrix,r)) )
+         if( !SCIPmatrixIsRowRhsInfinity(matrix, r) &&
+            !SCIPisEQ(scip,SCIPmatrixGetRowLhs(matrix, r),SCIPmatrixGetRowRhs(matrix, r)) )
          {
             if( SCIPisGT(scip, lbdual[0][r], 0.0) )
             {
@@ -1166,7 +1166,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPgetNContVars(scip)==0 )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   if( SCIPgetNContVars(scip)==0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -1175,7 +1178,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
 
    if( !complete )
-      SCIPdebugMessage("Warning: milp matrix incomplete!\n");
+   {
+      SCIPwarningMessage(scip, "down-/uplocks of scip and milp matrix differ!\n");
+      return SCIP_OKAY;
+   }
 
    if( initialized )
    {
@@ -1222,37 +1228,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
             {
                SCIP_Real lb;
 
-               var = SCIPmatrixGetVar(matrix,i);
+               var = SCIPmatrixGetVar(matrix, i);
                lb = SCIPvarGetLbLocal(var);
 
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
-               if( infeasible )
-               {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
-                  *result = SCIP_CUTOFF;
-                  break;
-               }
-               assert(fixed);
-               (*nfixedvars)++;
-               *result = SCIP_SUCCESS;
-
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-                  nconvarsfixed++;
-               else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-                  nbinvarsfixed++;
-               else
-                  nintvarsfixed++;
-            }
-            else if( varstofix[i] == FIXATUB )
-            {
-               SCIP_Real ub;
-
-               var = SCIPmatrixGetVar(matrix,i);
-               ub = SCIPvarGetUbLocal(var);
-
-               /* fix at upper bound */
-               SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
                if( infeasible )
                {
                   SCIPdebugMessage(" -> infeasible fixing\n");
@@ -1298,29 +1278,29 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
                lhs = SCIPgetLhsLinear(scip, cons);
                rhs = SCIPgetRhsLinear(scip, cons);
-               matrixlhs = SCIPmatrixGetRowLhs(matrix,i);
-               matrixrhs = SCIPmatrixGetRowRhs(matrix,i);
+               matrixlhs = SCIPmatrixGetRowLhs(matrix, i);
+               matrixrhs = SCIPmatrixGetRowRhs(matrix, i);
 
                if( sidestochange[i] == RHSTOLHS )
                {
-                  assert(!SCIPisEQ(scip,matrixlhs,matrixrhs));
+                  assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
 
-                  if( SCIPisEQ(scip,matrixlhs,lhs) )
-                     SCIP_CALL( SCIPchgRhsLinear(scip,cons,matrixlhs) );
+                  if( SCIPisEQ(scip, matrixlhs, lhs) )
+                     SCIP_CALL( SCIPchgRhsLinear(scip, cons, matrixlhs) );
                   else
-                     SCIP_CALL( SCIPchgLhsLinear(scip,cons,-matrixlhs) );
+                     SCIP_CALL( SCIPchgLhsLinear(scip, cons, -matrixlhs) );
 
                   nsideschanged++;
                   (*nchgsides)++;
                }
                else
                {
-                  assert(!SCIPisEQ(scip,matrixlhs,matrixrhs));
+                  assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
 
-                  if( SCIPisEQ(scip,matrixrhs,rhs) )
-                     SCIP_CALL( SCIPchgLhsLinear(scip,cons,matrixrhs) );
+                  if( SCIPisEQ(scip, matrixrhs, rhs) )
+                     SCIP_CALL( SCIPchgLhsLinear(scip, cons, matrixrhs) );
                   else
-                     SCIP_CALL( SCIPchgRhsLinear(scip,cons,-matrixrhs) );
+                     SCIP_CALL( SCIPchgRhsLinear(scip, cons, -matrixrhs) );
 
                   nsideschanged++;
                   (*nchgsides)++;
