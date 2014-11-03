@@ -658,12 +658,12 @@ SCIP_RETCODE collectSolution(
 
       if( sol == NULL )
       {
-         lbvalues[v] = (SCIP_Longint)(SCIPvarGetLbLocal(var) + 0.5);
-         ubvalues[v] = (SCIP_Longint)(SCIPvarGetUbLocal(var) + 0.5);
+         lbvalues[v] = SCIPconvertRealToLongint(scip, SCIPvarGetLbLocal(var));
+         ubvalues[v] = SCIPconvertRealToLongint(scip, SCIPvarGetUbLocal(var));
       }
       else
       {
-         lbvalues[v] = (SCIP_Longint)(SCIPgetSolVal(scip, sol, var) + 0.5);
+         lbvalues[v] = SCIPconvertRealToLongint(scip, SCIPgetSolVal(scip, sol, var));
          ubvalues[v] = lbvalues[v];
       }
 
@@ -2201,7 +2201,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 
          if( requiredsize > buffersize )
          {
-	    buffersize = requiredsize;
+            buffersize = requiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
          }
@@ -2285,9 +2285,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                   SCIP_CALL( retcode );
                }
 
-               /* sort original variables array and the corresponding transformed variables w.r.t. the problem index
-                * TODO: Previously, variables were sorted down? pending bugzilla entry to ask Stefan when he is back */
-               SCIPsortPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
+               /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
+               SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
                SCIPdialogMessage(scip, NULL, "saving %"SCIP_LONGINT_FORMAT" (%d) feasible solutions\n", nsols, nsparsesols);
 

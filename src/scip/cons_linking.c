@@ -423,8 +423,8 @@ SCIP_RETCODE consdataCreateBinvars(
    SCIPdebugMessage("create binary variables for integer variable <%s>\n", SCIPvarGetName(consdata->intvar));
 
    intvar = consdata->intvar;
-   lb = (int)(SCIPvarGetLbGlobal(intvar) + 0.5);
-   ub = (int)(SCIPvarGetUbGlobal(intvar) + 0.5);
+   lb = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(intvar));
+   ub = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(intvar));
    nbinvars = ub-lb+1;
    assert(nbinvars > 0);
 
@@ -772,8 +772,8 @@ SCIP_RETCODE processIntegerBoundChg(
    binvars = consdata->binvars;
    vals = consdata->vals;
 
-   lblocal = (int)(SCIPvarGetLbLocal(intvar) + 0.5);
-   ublocal = (int)(SCIPvarGetUbLocal(intvar) + 0.5);
+   lblocal = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(intvar));
+   ublocal = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(intvar));
    assert(lblocal <= ublocal);
 
 #ifndef NDEBUG
@@ -1517,7 +1517,7 @@ SCIP_RETCODE aggregateVariables(
                 * integral
                 */
                assert(SCIPisIntegral(scip, aggrconst));
-               shift = (int)(aggrconst + 0.5);
+               shift = SCIPconvertRealToInt(scip, aggrconst);
 
                offset = consdata->offset;
                binvars = consdata->binvars;
@@ -2748,7 +2748,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get propagated lower bound */
-      lb = (int)(SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE) + 0.5);
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE));
 
       for( b = 0;  b < nbinvars; ++b )
       {
@@ -2777,7 +2777,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get old and new upper bound */
-      ub = (int)(SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE) + 0.5);
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE));
 
       /* resolve tightening of upper bound of the integer variable by binary variables */
       for( b = nbinvars - 1; b >= 0; --b )
@@ -2810,8 +2810,8 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(infervar == intvar);
       assert(inferinfo >= 0);
       assert(inferinfo < consdata->nbinvars);
-      assert(consdata->vals[inferinfo] == (int)(SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE) + 0.5)
-         || consdata->vals[inferinfo] == (int)(SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE) + 0.5));
+      assert(consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE))
+         || consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE)));
 
       assert(SCIPvarGetLbAtIndex(consdata->binvars[inferinfo], bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[inferinfo]) );
@@ -3044,10 +3044,7 @@ SCIP_DECL_CONSPARSE(consParseLinking)
             /* check that the coefficients is integral */
             *success = *success && SCIPisIntegral(scip, vals[v]);
 
-            if( vals[v] < 0 )
-               intvals[v] = (int)(vals[v] - 0.5);
-            else
-               intvals[v] = (int)(vals[v] + 0.5);
+            intvals[v] = SCIPconvertRealToInt(scip, vals[v]);
          }
       }
 

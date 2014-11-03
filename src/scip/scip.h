@@ -19015,6 +19015,24 @@ SCIP_Bool SCIPisSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** converts the given real number representing an integer to an int; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+EXTERN
+int SCIPconvertRealToInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   );
+
+/** converts the given real number representing an integer to a long integer; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+EXTERN
+SCIP_Longint SCIPconvertRealToLongint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   );
+
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
@@ -19112,6 +19130,8 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 
 #define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2) 
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
+#define SCIPconvertRealToInt(scip, real)          ((int)(real < 0 ? (real - 0.5) : (real + 0.5)))
+#define SCIPconvertRealToLongint(scip, real)      ((SCIP_Longint)(real < 0 ? (real - 0.5) : (real + 0.5)))
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 #endif

@@ -38194,6 +38194,8 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisSumRelLE
 #undef SCIPisSumRelGT
 #undef SCIPisSumRelGE
+#undef SCIPconvertRealToInt
+#undef SCIPconvertRealToLongint
 #undef SCIPisUpdateUnreliable
 #undef SCIPisHugeValue
 #undef SCIPgetHugeValue
@@ -39246,6 +39248,38 @@ SCIP_Bool SCIPisSumRelGE(
       || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
+}
+
+/** converts the given real number representing an integer to an int; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+int SCIPconvertRealToInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   )
+{
+   assert(SCIPisFeasIntegral(scip, real));
+   assert(SCIPisFeasEQ(scip, real, (SCIP_Real)(int)(real < 0 ? real - 0.5 : real + 0.5)));
+   assert(real < INT_MAX);
+   assert(real > INT_MIN);
+
+   return (int)(real < 0 ? (real - 0.5) : (real + 0.5));
+}
+
+/** converts the given real number representing an integer to a long integer; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+SCIP_Longint SCIPconvertRealToLongint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   )
+{
+   assert(SCIPisFeasIntegral(scip, real));
+   assert(SCIPisFeasEQ(scip, real, (SCIP_Real)(SCIP_Longint)(real < 0 ? real - 0.5 : real + 0.5)));
+   assert(real < SCIP_LONGINT_MAX);
+   assert(real > SCIP_LONGINT_MIN);
+
+   return (SCIP_Longint)(real < 0 ? (real - 0.5) : (real + 0.5));
 }
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
