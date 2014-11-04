@@ -406,12 +406,12 @@ SCIP_RETCODE setupSubproblem(
 
    /* get solution data */
    nsols = SCIPgetNSols(scip);
-   sols = SCIPgetSols(scip);
    ncalls = heurdata->ncalls;
    nusedsols = heurdata->nusedsols;
    assert(nusedsols > 1);
    assert(nsols >= nusedsols);
 
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solselected, nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &soltimes, nsols) );
    for( i = 0; i < nsols; i++ )
@@ -464,6 +464,8 @@ SCIP_RETCODE setupSubproblem(
 
 
    SCIPfreeBufferArray(scip, &solselected);
+   SCIPfreeBufferArray(scip, &sols);
+
    SCIP_CALL( createSolTuple(scip, &elem, selection, nselectedsols, heurdata) );
 
    *success = !SCIPhashtableExists(heurdata->hashtable, elem);
