@@ -122,6 +122,10 @@ BEGIN {
 
 /^MOSEK Version/ { version = $3; }
 
+/^Reading par file/ {
+   n = split ($5, a, ".");
+   settings = a[n-1];
+}
 #
 # problem size
 #
