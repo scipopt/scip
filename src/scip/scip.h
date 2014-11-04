@@ -19130,8 +19130,8 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 
 #define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2) 
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
-#define SCIPconvertRealToInt(scip, real)          ((int)(real < 0 ? (real - 0.5) : (real + 0.5)))
-#define SCIPconvertRealToLongint(scip, real)      ((SCIP_Longint)(real < 0 ? (real - 0.5) : (real + 0.5)))
+#define SCIPconvertRealToInt(scip, real)          ((int)((real) < 0 ? ((real) - 0.5) : ((real) + 0.5)))
+#define SCIPconvertRealToLongint(scip, real)      ((SCIP_Longint)((real) < 0 ? ((real) - 0.5) : ((real) + 0.5)))
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 #endif
