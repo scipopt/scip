@@ -35,6 +35,7 @@
 #include "heur_rec.h"
 #include "heur_rs.h"
 #include "pricer_stp.h"
+#include "event_bestsol.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
