@@ -1036,59 +1036,11 @@ SCIP_RETCODE splitProblem(
       compvarsstart = v;
       compconssstart = c;
 
-      /* single variable without constraint */
-      if( ncompconss == 0 )
-      {
-         SCIP_Bool infeasible;
-         SCIP_Bool fixed;
+      /* the dual fixing presolver will take care of the case ncompconss == 0 */
+      assert(ncompconss > 0 || ncompvars == 1);
 
-         /* there is no constraint to connect variables, so there should be only one variable in the component */
-         assert(ncompvars == 1);
-
-         /* is the variable still locked? */
-         if( SCIPvarGetNLocksUp(compvars[0]) == 0 && SCIPvarGetNLocksDown(compvars[0]) == 0 )
-         {
-            /* fix variable to its best bound (or 0.0, if objective is 0) */
-            if( SCIPisPositive(scip, SCIPvarGetObj(compvars[0])) )
-               compfixvals[0] = SCIPvarGetLbGlobal(compvars[0]);
-            else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
-               compfixvals[0] = SCIPvarGetUbGlobal(compvars[0]);
-            else
-            {
-               compfixvals[0] = 0.0;
-               compfixvals[0] = MIN(compfixvals[0], SCIPvarGetUbGlobal(compvars[0])); /*lint !e666*/
-               compfixvals[0] = MAX(compfixvals[0], SCIPvarGetLbGlobal(compvars[0])); /*lint !e666*/
-            }
-
-#ifdef SCIP_MORE_DEBUG
-            SCIPinfoMessage(scip, NULL, "presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
-               SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
-               SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
-#else
-            SCIPdebugMessage("presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
-               SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
-               SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
-#endif
-
-            SCIP_CALL( SCIPfixVar(scip, compvars[0], compfixvals[0], &infeasible, &fixed) );
-            assert(!infeasible);
-            assert(fixed);
-            ++(*ndeletedvars);
-            ++(*nsolvedprobs);
-
-            /* update statistics */
-            SCIPstatistic( updateStatisticsSingleVar(presoldata) );
-         }
-         else
-         {
-            /* variable is still locked */
-            SCIPdebugMessage("strange?! components with single variable variable <%s>[%g,%g] (locks [%d, %d]) that won't be fixed due to locks\n",
-               SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
-               SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]));
-         }
-      }
       /* we do not want to solve the component, if it is the last unsolved one */
-      else if( ncompvars < SCIPgetNVars(scip) )
+      if( ncompconss > 0 && ncompvars < SCIPgetNVars(scip) )
       {
          SCIP_RESULT subscipresult;
 

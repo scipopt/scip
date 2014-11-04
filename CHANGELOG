@@ -54,6 +54,8 @@ fixed bugs:
   not solving the LP, but always creating a single child node until maximum depth is reached
 - fixed bug in reader_lp which created two indicator constraints with the same name to trigger an equality
 - fixed bug leading to an incorrect dual bound when solving probing LPs within a DURINGPRICINGLOOP heuristic
+- fixed bug in components presolver with handling of dual fixable variables: unboundedness was not detected,
+  better handle components with single variables by dual fixing propagator
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
