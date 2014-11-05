@@ -19,7 +19,7 @@
  * @author  Dieter Weninger
  *
  * This presolver exploits dual informations on continuous variables for
- * fixings and side changes.
+ * fixings of integer/continuous variables and side changes.
  *
  */
 
@@ -408,7 +408,7 @@ void calcColActResidualExplicitBound(
          if( SCIPisInfinity(scip, ubdualbounds[0][col]) )
          {
             assert(mincolactinf[col] >= 1);
- 
+
             if( mincolactinf[col] == 1 )
                *mincolresact = getMinColActWithoutBound(scip, matrix, col,
                   lbdual, ubdual, lbdualbounds, ubdualbounds, explicitub, explicitlb);
