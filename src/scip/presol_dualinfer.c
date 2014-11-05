@@ -1180,6 +1180,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( !complete )
    {
       SCIPwarningMessage(scip, "down-/uplocks of scip and milp matrix differ!\n");
+      SCIPmatrixFree(scip, &matrix);
       return SCIP_OKAY;
    }
 
