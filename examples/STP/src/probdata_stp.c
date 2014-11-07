@@ -81,6 +81,7 @@ struct SCIP_ProbData
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
+   FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
 };
 
 /**@name Local methods
@@ -241,6 +242,7 @@ SCIP_RETCODE probdataCreate(
       (*probdata)->stp_type = graph->stp_type;
    (*probdata)->copy = FALSE;
    (*probdata)->logfile = NULL;
+   (*probdata)->origlogfile = NULL;
 
    return SCIP_OKAY;
 }
@@ -1136,12 +1138,23 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
    {
       int success;
 
+      SCIPprobdataWriteLogLine(scip, "End\n");
+      SCIPprobdataWriteLogLine(scip, "\n");
+      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", -SCIPinfinity(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPinfinity(scip));
+      SCIPprobdataWriteLogLine(scip, "End\n");
+
       success = fclose((*probdata)->logfile);
       if( success != 0 )
       {
          SCIPerrorMessage("An error occurred while closing file <%s>\n", (*probdata)->logfile);
          return SCIP_FILECREATEERROR;
       }
+
+      (*probdata)->logfile = NULL;
    }
 
    /* free the (original) probdata */
@@ -1178,6 +1191,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->mode = sourcedata->mode;
    (*targetdata)->bigt = sourcedata->bigt;
    (*targetdata)->logfile = sourcedata->logfile;
+   (*targetdata)->origlogfile = &(sourcedata->logfile);
 
    if( sourcedata->nedges > 0 )
    {
@@ -1356,22 +1370,37 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       }
    }
 
-   SCIPprobdataWriteLogLine(scip, "End\n");
-   SCIPprobdataWriteLogLine(scip, "\n");
-   SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-   SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-   SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-   SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", SCIPgetDualbound(scip));
-   SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPgetPrimalbound(scip));
-   SCIPprobdataWriteLogLine(scip, "End\n");
-
-   if( SCIPgetNSols(scip) > 0 )
+   if( probd->logfile != NULL )
    {
-      SCIPprobdataWriteLogLine(scip, "\n");
-      SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+      int success;
 
-      SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
       SCIPprobdataWriteLogLine(scip, "End\n");
+      SCIPprobdataWriteLogLine(scip, "\n");
+      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", SCIPgetDualbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPgetPrimalbound(scip));
+      SCIPprobdataWriteLogLine(scip, "End\n");
+
+      if( SCIPgetNSols(scip) > 0 )
+      {
+         SCIPprobdataWriteLogLine(scip, "\n");
+         SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+
+         SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+         SCIPprobdataWriteLogLine(scip, "End\n");
+      }
+
+      success = fclose(probd->logfile);
+      if( success != 0 )
+      {
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", probd->logfile);
+         return SCIP_FILECREATEERROR;
+      }
+
+      probd->logfile = NULL;
+      *(probd->origlogfile) = NULL;
    }
 
    return SCIP_OKAY;
@@ -1932,6 +1961,9 @@ void SCIPprobdataWriteLogLine(
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
+
+   if( probdata->logfile == NULL )
+      return;
 
    va_start(ap, formatstr); /*lint !e826*/
    SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->logfile, formatstr, ap);
