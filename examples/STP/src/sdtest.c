@@ -49,6 +49,21 @@ static int compare(
 
    return(LT(path[a].tran, path[b].tran) ? -1 : 1);
 }
+
+static int issmaller(
+   const SDPTH* path,
+   int          a,
+   int          b)
+{
+   return (LT(path[a].dist, path[b].dist) || (!GT(path[a].dist, path[b].dist) && LT(path[a].tran, path[b].tran)));
+}
+static int islarger(
+   const SDPTH* path,
+   int          a,
+   int          b)
+{
+   return (GT(path[a].dist, path[b].dist) || (!LT(path[a].dist, path[b].dist) && GT(path[a].tran, path[b].tran)));
+}
 /*---------------------------------------------------------------------------*/
 /*--- Name     : get NEAREST knot                                         ---*/
 /*--- Function : Holt das oberste Element vom Heap (den Knoten mit der    ---*/
@@ -77,10 +92,10 @@ inline static int nearest(
    state[heap[1]] = 1;
 
    if ((*count) > 2)
-      if (compare(path, heap[3], heap[2]) < 0)
+      if (islarger(path, heap[2], heap[3]))
          c++;
 
-   while((c <= (*count)) && (compare(path, heap[j], heap[c]) > 0))
+   while((c <= (*count)) && islarger(path, heap[j], heap[c]))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -91,7 +106,7 @@ inline static int nearest(
       c             += c;
 
       if ((c + 1) <= (*count))
-         if (compare(path, heap[c + 1], heap[c]) < 0)
+         if (issmaller(path, heap[c + 1], heap[c]))
             c++;
    }
    return(k);
@@ -130,7 +145,7 @@ inline static void correct(
    j = state[l];
    c = j / 2;
 
-   while((j > 1) && (compare(path, heap[c], heap[j]) > 0))
+   while((j > 1) && (islarger(path, heap[c], heap[j])))
    {
       t              = heap[c];
       heap[c]        = heap[j];
