@@ -1493,10 +1493,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    else
       probdata->mode = MODE_CUT;
 
-   /* only use reduction for undirected STP's in graphs */
-   if( graph->stp_type != STP_UNDIRECTED )/*&& graph->stp_type != STP_GRID )*/
-      reduction *= -1;
-
    assert(graph != NULL );
    /* init shortest path algorithm (needed for reduction) */
 

@@ -37,17 +37,18 @@ typedef struct sd_path
 
 
 static int compare(
-   const SDPTH* path,
+   const double* pathdist,
+   const double* pathtran,
    int          a,
    int          b)
 {
-   if (NE(path[a].dist, path[b].dist))
-      return(LT(path[a].dist, path[b].dist) ? -1 : 1);
+   if (NE(pathdist[a], pathdist[b]))
+      return(LT(pathdist[a], pathdist[b]) ? -1 : 1);
 
-   if (EQ(path[a].tran, path[b].tran))
+   if (EQ(pathtran[a], pathtran[b]))
       return(0);
 
-   return(LT(path[a].tran, path[b].tran) ? -1 : 1);
+   return(LT(pathtran[a], pathtran[b]) ? -1 : 1);
 }
 /*---------------------------------------------------------------------------*/
 /*--- Name     : get NEAREST knot                                         ---*/
@@ -60,7 +61,8 @@ inline static int nearest(
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
-   const SDPTH* path)
+   const double* pathdist,
+   const double* pathtran)
 {
    int   k;
    int   t;
@@ -77,10 +79,10 @@ inline static int nearest(
    state[heap[1]] = 1;
 
    if ((*count) > 2)
-      if (compare(path, heap[3], heap[2]) < 0)
+      if (compare(pathdist, pathtran, heap[3], heap[2]) < 0)
          c++;
 
-   while((c <= (*count)) && (compare(path, heap[j], heap[c]) > 0))
+   while((c <= (*count)) && (compare(pathdist, pathtran, heap[j], heap[c]) > 0))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -91,7 +93,7 @@ inline static int nearest(
       c             += c;
 
       if ((c + 1) <= (*count))
-         if (compare(path, heap[c + 1], heap[c]) < 0)
+         if (compare(pathdist, pathtran, heap[c + 1], heap[c]) < 0)
             c++;
    }
    return(k);
@@ -110,7 +112,8 @@ inline static void correct(
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
-   SDPTH* path,
+   double* pathdist,
+   double* pathtran,
    int    l)
 {
    int   t;
@@ -130,7 +133,7 @@ inline static void correct(
    j = state[l];
    c = j / 2;
 
-   while((j > 1) && (compare(path, heap[c], heap[j]) > 0))
+   while((j > 1) && (compare(pathdist, pathtran, heap[c], heap[j]) > 0))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -161,7 +164,8 @@ static void compute_sd(
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
-   SDPTH*        path)
+   double* pathdist,
+   double* pathtran)
 {
    int    k;
    int    m;
@@ -175,7 +179,8 @@ static void compute_sd(
    assert(start  <  p->knots);
    assert(heap   != NULL);
    assert(state  != NULL);
-   assert(path   != NULL);
+   assert(pathdist   != NULL);
+   assert(pathtran   != NULL);
    assert(cost   != NULL);
    assert(count != NULL);
    assert(*count >= 0);
@@ -192,14 +197,14 @@ static void compute_sd(
    for(i = 0; i < p->knots; i++)
    {
       state[i]     = UNKNOWN;
-      path[i].dist = FARAWAY;
-      path[i].tran = FARAWAY;
+      pathdist[i] = FARAWAY;
+      pathtran[i] = FARAWAY;
    }
    /* Startknoten in den Heap
     */
    k            = start;
-   path[k].dist = 0.0;
-   path[k].tran = 0.0;
+   pathdist[k] = 0.0;
+   pathtran[k] = 0.0;
 
    /* Wenn nur ein Knoten drin ist funktioniert der Heap nicht sehr gut,
     * weil dann fuer genau 0 Elemente Platz ist.
@@ -217,7 +222,7 @@ static void compute_sd(
       {
          /* Na, wer ist der Naechste ?
           */
-         k = nearest(heap, state, count, path);
+         k = nearest(heap, state, count, pathdist, pathtran);
 
          /* Wieder einen erledigt
           */
@@ -249,16 +254,16 @@ static void compute_sd(
                 * - tran measures the distance between two terminals.
                 * - dist stores the current longest elementary path.
                 */
-               tran = Is_term(p->term[m]) ? 0.0 : path[k].tran + cost[i];
-               dist = Max(path[k].dist, path[k].tran + cost[i]);
+               tran = Is_term(p->term[m]) ? 0.0 : pathtran[k] + cost[i];
+               dist = Max(pathdist[k], pathtran[k] + cost[i]);
 
-               if (LT(dist, path[m].dist)
-                || (EQ(dist, path[m].dist) && LT(tran, path[m].tran)))
+               if (LT(dist, pathdist[m])
+                || (EQ(dist, pathdist[m]) && LT(tran, pathtran[m])))
                {
-                  path[m].dist = dist;
-                  path[m].tran = tran;
+                  pathdist[m] = dist;
+                  pathtran[m] = tran;
 
-                  correct(heap, state, count, path, m);
+                  correct(heap, state, count, pathdist, pathtran, m);
                }
             }
          }
@@ -275,12 +280,14 @@ static void compute_sd(
  * Special Distance Test
  */
 int sd_reduction(
-   GRAPH* g)
+   GRAPH* g,
+   double*  sddist,
+   double*  sdtrans,
+   double* cost,
+   int*    heap,
+   int*    state
+)
 {
-   SDPTH*  sd;
-   double* cost;
-   int*    heap;
-   int*    state;
    int     count = 0;
    int     i;
    int     e;
@@ -289,19 +296,20 @@ int sd_reduction(
 
    SCIPdebugMessage("SD-Reduktion: ");
    fflush(stdout);
-
+/*
    heap  = malloc((size_t)g->knots * sizeof(int));
    state = malloc((size_t)g->knots * sizeof(int));
-
+*/
    assert(heap  != NULL);
    assert(state != NULL);
-
+/*
    sd = malloc((size_t)g->knots * sizeof(SDPTH));
-
-   assert(sd != NULL);
-
+*/
+   assert(sddist != NULL);
+   assert(sdtrans != NULL);
+/*
    cost  = malloc((size_t)g->edges * sizeof(double));
-
+*/
    assert(cost != NULL);
 
    for(i = 0; i < g->knots; i++)
@@ -331,7 +339,7 @@ int sd_reduction(
          g->mark[g->head[e]] = 2;
       }
 
-      compute_sd(g, i, cost, heap, state, &count, sd);
+      compute_sd(g, i, cost, heap, state, &count, sddist, sdtrans);
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
       {
@@ -347,7 +355,7 @@ int sd_reduction(
 
          j = g->oeat[e];
 
-         if (LT(cost[e], FARAWAY) && LT(sd[g->head[e]].dist, cost[e]))
+         if (LT(cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e]))
          {
             graph_edge_del(g, e);
 
@@ -355,6 +363,7 @@ int sd_reduction(
          }
       }
    }
+#if 0
    free(heap);
    free(state);
 
@@ -363,7 +372,7 @@ int sd_reduction(
 
    free(sd);
    free(cost);
-
+#endif
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
@@ -438,8 +447,10 @@ static void redirect_edge(
 int bd3_reduction(
    GRAPH* g)
 {
-   SDPTH* path1;
-   SDPTH* path2;
+   double* pathdist1;
+   double* pathdist2;
+   double* pathtran1;
+   double* pathtran2;
    int*    heap;
    int*    state;
    int     count = 0;
@@ -465,11 +476,10 @@ int bd3_reduction(
    assert(heap  != NULL);
    assert(state != NULL);
 
-   path1 = malloc((size_t)g->knots * sizeof(SDPTH));
-   path2 = malloc((size_t)g->knots * sizeof(SDPTH));
-
-   assert(path1 != NULL);
-   assert(path2 != NULL);
+   pathdist1 = malloc((size_t)g->knots * sizeof(double));
+   pathdist2 = malloc((size_t)g->knots * sizeof(double));
+   pathtran1 = malloc((size_t)g->knots * sizeof(double));
+   pathtran2 = malloc((size_t)g->knots * sizeof(double));
 
    for(i = 0; i < g->knots; i++)
       g->mark[i] = (g->grad[i] > 0);
@@ -508,32 +518,32 @@ int bd3_reduction(
 
       assert(g->oeat[e3] == EAT_LAST);
 
-      compute_sd(g, k1, g->cost, heap, state, &count, path1);
-      compute_sd(g, k2, g->cost, heap, state, &count, path2);
+      compute_sd(g, k1, g->cost, heap, state, &count, pathdist1, pathtran1);
+      compute_sd(g, k2, g->cost, heap, state, &count, pathdist2, pathtran2);
 #if 0
       graph_path_exec(g, FSP_MODE, k1, g->cost, path1);
       graph_path_exec(g, FSP_MODE, k2, g->cost, path2);
 #endif
       c123 = c1 + c2 + c3;
 
-      if (GT(path1[k2].dist + path1[k3].dist, c123)
-       && GT(path1[k2].dist + path2[k3].dist, c123)
-       && GT(path1[k3].dist + path2[k3].dist, c123))
+      if (GT(pathdist1[k2] + pathdist1[k3], c123)
+       && GT(pathdist1[k2] + pathdist2[k3], c123)
+       && GT(pathdist1[k3] + pathdist2[k3], c123))
          continue;
 
       elimins++;
 
-      if (LT(path1[k2].dist, c1 + c2))
+      if (LT(pathdist1[k2], c1 + c2))
          graph_edge_del(g, e1);
       else
          redirect_edge(g, e1, k1, k2, c1 + c2);
 
-      if (LT(path2[k3].dist, c2 + c3))
+      if (LT(pathdist2[k3], c2 + c3))
          graph_edge_del(g, e2);
       else
          redirect_edge(g, e2, k2, k3, c2 + c3);
 
-      if (LT(path1[k3].dist, c1 + c3))
+      if (LT(pathdist1[k3], c1 + c3))
          graph_edge_del(g, e3);
       else
          redirect_edge(g, e3, k3, k1, c3 + c1);
@@ -546,9 +556,10 @@ int bd3_reduction(
    heap  = NULL;
    state = NULL;
 
-   free(path1);
-   free(path2);
-
+   free(pathdist1);
+   free(pathdist2);
+free(pathtran1);
+   free(pathtran2);
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Knots deleted\n", elimins);

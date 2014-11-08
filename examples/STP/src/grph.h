@@ -197,6 +197,7 @@ extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
+extern void   voronoi_radius(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   heap_add(int*, int*, int*, int, PATH*);
@@ -235,7 +236,7 @@ extern double reduce(GRAPH*, int, SCIP*);
 
 /* sdtest.c
  */
-extern int    sd_reduction(GRAPH*);
+extern int    sd_reduction(GRAPH*, double*, double*, double*, int*, int*);
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(GRAPH*, double*);
 extern int    nv_reduction_optimal(GRAPH*, double*);

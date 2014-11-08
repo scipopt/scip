@@ -613,7 +613,7 @@ SCIP_RETCODE do_local(
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
       }
 
-      assert(graph_sol_valid(graph, best_result));
+      //assert(graph_sol_valid(graph, best_result));
       if( debg )
          printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
       graphmark = graph->mark;

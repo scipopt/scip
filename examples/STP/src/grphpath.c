@@ -1010,6 +1010,111 @@ void voronoi(
       }
    }
 }
+
+
+
+/*** build a voronoi region, w.r.t. shortest paths, for a given set of bases and compute the radii ***/
+void voronoi_radius(
+   SCIP* scip,
+   const GRAPH*  g,
+   SCIP_Real*    rad,
+   SCIP_Real*    cost,
+   SCIP_Real*    costrev,
+   char*         base,
+   int*          vbase,
+   PATH*         path
+   )
+{
+   int e;
+   int k;
+   int m;
+   int i;
+   int* heap;
+   int* state;
+   int count = 0;
+   int root;
+   int nbases = 0;
+
+   assert(g != NULL);
+   assert(g->path_heap   != NULL);
+   assert(g->path_state  != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+   assert(costrev   != NULL);
+   assert(rad != NULL);
+   if( g->knots == 0 )
+      return;
+
+   root = g->source[0];
+   heap = g->path_heap;
+   state = g->path_state;
+
+   /* initialize */
+   for( i = 0; i < g->knots; i++ )
+   {
+      rad[i] = FARAWAY;
+
+      /* set the base of vertex i */
+      if( base[i] )
+      {
+         nbases++;
+         if( g->knots > 1 )
+            heap[++count] = i;
+         vbase[i] = i;
+         path[i].dist = 0.0;
+         path[i].edge = UNKNOWN;
+         state[i] = count;
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i]     = UNKNOWN;
+      }
+   }
+   assert(nbases > 0);
+
+   for( e = 0; e < g->edges; e++)
+   {
+      assert(SCIPisGE(scip, g->cost[e], 0));
+   }
+
+   if( g->knots > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+         //printf("get node %d \n ", k);
+
+         /* iterate over all outgoing edges of vertex k */
+         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         {
+            m = g->head[i];
+	    if( state[m] == CONNECT && vbase[m] != vbase[k] )
+	    {
+	      if( SCIPisGT(scip, rad[vbase[k]], path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+	         rad[vbase[k]] = path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i]);
+	      if( SCIPisGT(scip, rad[vbase[m]], path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i])) )
+	         rad[vbase[m]] = path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i]);
+	    }
+	      /* check whether the path (to m) including k is shorter than the so far best known */
+	    if( state[m] && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+            {
+	       assert(!base[m]);
+               correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]), FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+}
+
 #if 0
 /*** build the voronoi regions for a directed graph. This calculates the inward and outward voronoi regions ***/
 void voronoi_inout(

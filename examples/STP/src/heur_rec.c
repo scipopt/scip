@@ -48,10 +48,10 @@
 #define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes            */
 #define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
 #define DEFAULT_LPLIMFAC      2.0            /* factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_NUSEDSOLS     7              /* number of solutions that will be taken into account                   */
+#define DEFAULT_NUSEDSOLS     5              /* number of solutions that will be taken into account                   */
 #define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait        */
 #define DEFAULT_TIMELIMIT     -1             /* time limit for the sub problem to be solved, if -1, running time till first call of rec is chosen */
-#define DEFAULT_NWAITINGSOLS  5              /* minimum number of new solutions before executing the heuristic again  */
+#define DEFAULT_NWAITINGSOLS  5              /* minimum number of new solutions to be available before executing the heuristic again  */
 #define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
 #define DEFAULT_USELPROWS     FALSE          /* should subproblem be created out of the rows in the LP rows,
                                               * otherwise, the copy constructors of the constraints handlers are used */

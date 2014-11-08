@@ -16,6 +16,7 @@
 #include <string.h>
 #include <assert.h>
 #include "grph.h"
+#include "heur_tm.h"
 #include "portab.h"
 #include "scip/scip.h"
 
@@ -363,6 +364,126 @@ static int tt_deletion(
 
    return(count);
 }
+
+static
+int bound_test(
+   SCIP*  scip,
+   GRAPH* graph
+       )
+{
+   //SCIP_Real** pathdist;
+   SCIP_Real dist;
+   SCIP_Real obj;
+   SCIP_Real* rad;
+   PATH* vnoi;
+   PATH** path;
+
+   int k;
+   int r;
+   int i;
+   int e;
+   int nnodes;
+   //int** pathedge;
+
+   int* vbase;
+   int* result;
+   char* base;
+
+    assert(scip != NULL);
+   assert(graph != NULL);
+   nnodes = graph->knots;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &result, graph->edges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rad, nnodes) );
+    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
+    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
+    SCIP_CALL( SCIPallocBufferArray(scip, &base, nnodes) );
+   /*SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
+   BMSclearMemoryArray(pathdist, nnodes);
+   BMSclearMemoryArray(pathedge, nnodes);*/
+    for( k = nnodes - 1; k >= 0; k-- )
+    {
+      if( Is_term(graph->term[k]) )
+	 base[k] = TRUE;
+      else
+	 base[k] = FALSE;
+    }
+
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
+         BMSclearMemoryArray(path, nnodes);
+
+   SCIP_CALL( SCIPtmHeur(scip, graph, path, graph->cost, graph->cost, result) );
+
+   obj = 0.0;
+
+   for( e = 0; e < graph->edges; e++ )
+         if( result[e] == CONNECT )
+            obj += graph->cost[e];
+
+   voronoi_radius(scip, graph, rad, graph->cost, graph->cost, base, vbase, vnoi);
+SCIPsortReal(rad, nnodes);
+   /* test each node k */
+   for( k = 0; k < nnodes; k++ )
+   {
+      dist = FARAWAY;
+      r = UNKNOWN;
+      for( i = 0; i < nnodes; i++ )
+      {
+	 if( Is_term(graph->term[i]) && SCIPisLT(scip, path[i][k].dist, dist ) )
+	 {
+	    r = i;
+	    dist = path[i][k].dist;
+	 }
+      }
+      i = k;
+      while(i != r)
+      {
+	 if( i == vbase[k] )
+	   break;
+         e = path[r][i].edge;
+         i = graph->tail[e];
+      }
+      if( i != r )
+	continue;
+      for( i = 0; i < graph->terms - 2; i++ )
+	 dist += rad[i];
+      if( SCIPisGT(scip, dist + path[vbase[k]][k].dist, obj) )
+	 printf("node to eliminate!! \n");
+
+
+   }
+
+
+
+    for( k = graph->edges - 1; k >= 0; k-- )
+      if( result[k] == 0 )
+       printf("%d->%d \n", graph->tail[k] + 1, graph->head[k] + 1);
+    for( k = 0; k < nnodes; k++ )
+    {
+      printf("vbase[%d] = %d \n", k+1, vbase[k] + 1);
+      printf("RAD: %f \n", rad[k] );
+
+    }
+     for( k = nnodes - 1; k >= 0; k-- )
+      {
+
+	 assert(path[k] == NULL || graph->term[k] == 0);
+         SCIPfreeBufferArrayNull(scip, &(path[k]));
+
+      }
+      SCIPfreeBufferArray(scip, &path);
+
+     SCIPfreeBufferArray(scip, &base);
+      SCIPfreeBufferArray(scip, &vbase);
+       SCIPfreeBufferArray(scip, &vnoi);
+    SCIPfreeBufferArray(scip, &result);
+    SCIPfreeBufferArray(scip, &rad);
+    assert(0);
+    return 1;
+}
+
 
 /* P. Winter and J. MacGregor Smith
  *
@@ -858,10 +979,10 @@ static double level2(
 
       while(czv_reduction(g, &fixed))
          rerun = TRUE;
-
+/*
       while(sd_reduction(g))
          ;
-
+*/
       if (le_reduction(g) > 0)
          rerun = TRUE;
 
@@ -890,7 +1011,7 @@ static double level3(
 
    degree_test(g, &fixed);
 
-   sd_reduction(g);
+  // sd_reduction(g);
 
    degree_test(g, &fixed);
 #if 0
@@ -898,11 +1019,11 @@ static double level3(
 #else
    bd3_reduction(g);
 #endif
-   sd_reduction(g);
+  // sd_reduction(g);
 
    degree_test(g, &fixed);
 
-   sd_reduction(g);
+   //sd_reduction(g);
 
    degree_test(g, &fixed);
 
@@ -920,12 +1041,23 @@ static double level4(
    double fixed   = 0.0;
    int    rerun   = TRUE;
    int    i;
+   double*  sddist;
+   double*  sdtrans;
+   double* cost;
+   int*    heap;
+   int*    state;
 
    assert(g != NULL);
-
+   //bound_test(scip, g);
    degree_test(g, &fixed);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   heap  = malloc((size_t)g->knots * sizeof(int));
+   state = malloc((size_t)g->knots * sizeof(int));
+   sddist = malloc((size_t)g->knots * sizeof(double));
+   sdtrans = malloc((size_t)g->knots * sizeof(double));
+   cost  = malloc((size_t)g->edges * sizeof(double));
 
    while(rerun && !SCIPisStopped(scip))
    {
@@ -934,11 +1066,11 @@ static double level4(
 
       rerun = FALSE;
 
-      for(i = 0; i < 6; i++)
-         if (sd_reduction(g))
+      for(i = 0; i < 3; i++) //TODO 6
+         if( sd_reduction(g, sddist, sdtrans,cost, heap, state) )
             rerun = TRUE;
 
-      if (degree_test(g, &fixed) > 0)
+      if (degree_test(g, &fixed) > 10) //TODO 0
          rerun = TRUE;
 
       if (nsv_reduction(g, &fixed))
@@ -947,11 +1079,16 @@ static double level4(
       if (bd3_reduction(g))
          rerun = TRUE;
 
-      if (degree_test(g, &fixed) > 0)
-         rerun = TRUE;
+     /* if (degree_test(g, &fixed) > 0) TODO
+         rerun = TRUE;*/
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n",
       fixed);
+   free(sddist);
+   free(sdtrans);
+   free(heap);
+   free(state);
+   free(cost);
 
    return(fixed);
 }
@@ -965,8 +1102,19 @@ static double levelm4(
    int    rerun   = TRUE;
    int    i;
    int    numelim;
+   double*  sddist;
+   double*  sdtrans;
+   double* cost;
+   int*    heap;
+   int*    state;
 
    assert(g != NULL);
+
+   heap  = malloc((size_t)g->knots * sizeof(int));
+   state = malloc((size_t)g->knots * sizeof(int));
+   sddist = malloc((size_t)g->knots * sizeof(double));
+   sdtrans = malloc((size_t)g->knots * sizeof(double));
+   cost  = malloc((size_t)g->edges * sizeof(double));
 
    //voronoi_inout(g);
 
@@ -983,9 +1131,9 @@ static double levelm4(
 
       for(i = 0; i < 2; i++)
       {
-         numelim = sd_reduction(g);
+         numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
          printf("SD Reduction %d: %d\n", i, numelim);
-         if (numelim > 50)
+         if (numelim > 10)
             rerun = TRUE;
          else
             break;
@@ -1010,8 +1158,13 @@ static double levelm4(
       //if (degree_test_dir(g, &fixed) > 0)
          //rerun = TRUE;
    }
-   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n",
-      fixed);
+   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
+
+   free(sddist);
+   free(sdtrans);
+   free(heap);
+   free(state);
+   free(cost);
 
    return(fixed);
 }
@@ -1034,9 +1187,9 @@ static double level5(
       rerun = FALSE;
 
       for(i = 0; i < 4; i++)
-         if (sd_reduction(g))
+        /* if (sd_reduction(g))
             rerun = TRUE;
-
+*/
       if (degree_test(g, &fixed) > 0)
          rerun = TRUE;
 
@@ -1051,6 +1204,7 @@ static double level5(
 
    return(fixed);
 }
+
 
 double reduce(
    GRAPH* g,
@@ -1068,6 +1222,13 @@ double reduce(
    if (g->layers != 1)
       return(0);
 
+   /* only use reduction for undirected STP's in graphs */
+   printf("type: %d\n", g->stp_type );
+   if( g->stp_type != STP_UNDIRECTED )/*&& graph->stp_type != STP_GRID )*/
+      level = -4;
+
+   if( g->stp_type == STP_GRID )
+      return fixed;
    assert(g->layers == 1);
 
    if (level == 1)

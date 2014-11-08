@@ -244,14 +244,16 @@ SCIP_RETCODE do_prune(
 
 }
 
+
+
 /* pure TM heuristic */
 static
 SCIP_RETCODE do_tm(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    PATH**                path,
-   SCIP_Real*      cost,
-   SCIP_Real*      costrev,
+   SCIP_Real*            cost,
+   SCIP_Real*            costrev,
    int                   layer,
    int                   start,
    int*                  result,
@@ -321,7 +323,6 @@ SCIP_RETCODE do_tm(
          for( k = 0; k < csize; k++ )
          {
             j = cluster[k];
-
             assert(i != j);
             assert(connected[j]);
             if (LT(path[i][j].dist, min))
@@ -1002,6 +1003,34 @@ SCIP_RETCODE do_tm_polzin(
 }
 
 
+SCIP_RETCODE SCIPtmHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,                  /**< graph structure */
+   PATH**                path,
+   SCIP_Real*            cost,
+   SCIP_Real*            costrev,
+   //SCIP_Real**           pathdist,
+   int*                  result
+   //int**                 pathedge
+   )
+{
+   int e;
+   int nnodes;
+   char* connected;
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(cost != NULL);
+   assert(costrev != NULL);
+   nnodes = graph->knots;
+   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
+
+    for( e = 0; e < graph->edges; e++ )
+               result[e] = UNKNOWN;
+   SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, graph->source[0], result, connected) );
+   SCIPfreeBufferArray(scip, &connected);
+   return SCIP_OKAY;
+}
+
 
 static
 SCIP_RETCODE do_layer(
@@ -1011,8 +1040,8 @@ SCIP_RETCODE do_layer(
    int*          best_start,
    int*          best_result,
    int           runs,
-   SCIP_Real* cost,
-   SCIP_Real* costrev,
+   SCIP_Real*    cost,
+   SCIP_Real*    costrev,
    SCIP_HEURDATA* heurdata
    )
 {
@@ -1484,7 +1513,7 @@ printf("init prize \n");
          {
           //  costrootedges_z[r] = -graph->cost[flipedge(e + 2)];
             if (graph->head[e+2] != graph->source[0])
-               printf("ARGGG \n");
+               printf("PC root edge missing \n");
             /* if( e + 2 != heurdata->rootedges_t[k-1] )
                printf("NEQ! \n");
 	       else
@@ -1693,7 +1722,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                costrev[e + 1] = cost[e];
             }
          }
-         printf("nvars: %d fixed: %d \n", nvars,  fixed);
+         //printf("nvars: %d fixed: %d \n", nvars,  fixed);
       }
       else
       {
