@@ -406,36 +406,38 @@ SCIP_RETCODE setupSubproblem(
 
    /* get solution data */
    nsols = SCIPgetNSols(scip);
-   sols = SCIPgetSols(scip);
    ncalls = heurdata->ncalls;
    nusedsols = heurdata->nusedsols;
    assert(nusedsols > 1);
    assert(nsols >= nusedsols);
 
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solselected, nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &soltimes, nsols) );
+
    for( i = 0; i < nsols; i++ )
+   {
+      soltimes[i] = SCIPsolGetTime(sols[i]);
       solselected[i] = FALSE;
+   }
+
+   SCIPsortRealIntPtr(soltimes, solselected, (void**) sols,  nsols);
+
+   SCIPfreeBufferArray(scip, &soltimes);
 
    selection[nselectedsols++] = 0;
    solselected[0] = TRUE;
+
    //printf("solution: %d, found by: %s \n", SCIPsolGetIndex(sols[0]), SCIPheurGetName(SCIPsolGetHeur(sols[0])));
    for( i = 1; i < nsols && nselectedsols < nusedsols - nusedsols / 2; i++ )
    {
-      if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[i - 1])), "local") != 0 )
+      if( SCIPsolGetHeur(sols[i - 1]) == NULL || strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[i - 1])), "local") != 0 )
       {
          selection[nselectedsols++] = i;
 	 solselected[i] = TRUE;
          //printf("solution: %d, found by: %s \n", SCIPsolGetIndex(sols[i]), SCIPheurGetName(SCIPsolGetHeur(sols[i])));
       }
    }
-
-   for( i = 0; i < nsols; i++ )
-      soltimes[i] = SCIPsolGetTime(sols[i]);
-
-   SCIPsortRealIntPtr(soltimes, solselected, (void**) sols,  nsols);
-
-   SCIPfreeBufferArray(scip, &soltimes);
 
    min = MIN(nusedsols, heurdata->nwaitingsols);
 
@@ -462,8 +464,9 @@ SCIP_RETCODE setupSubproblem(
    }
    heurdata->nselectedsols = nselectedsols;
 
-
    SCIPfreeBufferArray(scip, &solselected);
+   SCIPfreeBufferArray(scip, &sols);
+
    SCIP_CALL( createSolTuple(scip, &elem, selection, nselectedsols, heurdata) );
 
    *success = !SCIPhashtableExists(heurdata->hashtable, elem);

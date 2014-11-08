@@ -1501,7 +1501,7 @@ SCIP_DECL_HEURINIT(heurInitTM)
      // SCIP_Real* costrootedges_z;
       SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_t), graph->terms - 1) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->rootedges_z), graph->terms - 1) );
-printf("init prize \n");
+      printf("init prize \n");
      // SCIP_CALL( SCIPallocBufferArray(scip, &costrootedges_z, graph->terms - 1) );
       for( e = graph->inpbeg[graph->source[0]]; e != EAT_LAST; e = graph->ieat[e] )
       {

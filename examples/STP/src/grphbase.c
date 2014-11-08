@@ -1086,6 +1086,7 @@ GRAPH* graph_copy(
    g->knots = p->knots;
    g->terms = p->terms;
    g->edges = p->edges;
+   g->grid_dim = p->grid_dim;
    g->stp_type = p->stp_type;
 
    memcpy(g->locals, p->locals, p->layers * sizeof(*p->locals));
@@ -1254,7 +1255,8 @@ void graph_knot_chg(
 void graph_knot_contract(
    GRAPH* p,
    int    t,
-   int    s)
+   int    s
+   )
 {
    typedef struct save_list
    {
@@ -1298,7 +1300,7 @@ void graph_knot_contract(
 
    assert(slp != NULL);
 
-   /* Liste mit Kanten des aufzuloesenden Kontens merken
+   /* Liste mit Kanten des aufzuloesenden Knotens merken
     */
    for(es = p->outbeg[s]; es != EAT_LAST; es = p->oeat[es])
    {

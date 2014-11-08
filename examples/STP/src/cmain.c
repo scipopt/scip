@@ -14,9 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cmain.c
- * @brief  Main file for binpacking pricing example
- * @author Timo Berthold
- * @author Stefan Heinz
+ * @brief  Main file for SCIP-Jack
+ * @author Gerald Gamrath
  *
  *  This the file contains the \ref main() main function of the projects. This includes all the default plugins of
  *  \SCIP and the once which belong to that projects. After that is starts the interactive shell of \SCIP or processes
@@ -35,6 +34,7 @@
 #include "heur_rec.h"
 #include "heur_rs.h"
 #include "pricer_stp.h"
+#include "event_bestsol.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
