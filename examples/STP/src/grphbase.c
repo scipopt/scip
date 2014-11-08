@@ -1931,8 +1931,7 @@ char graph_sol_valid(
       }
 
    }
-   free(terminal);
-   SCIPqueueFree(&queue);
+
    if (termcount != graph->terms)
    {
       for( i = 0; i < nnodes; i++ )
@@ -1941,6 +1940,9 @@ char graph_sol_valid(
       printf("a: %d, b: %d: \n", termcount, graph->terms);
       assert(0);
    }
+
+   free(terminal);
+   SCIPqueueFree(&queue);
 
    return (termcount == graph->terms);
 }

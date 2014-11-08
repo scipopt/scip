@@ -1490,7 +1490,10 @@ SCIP_DECL_HEURINIT(heurInitTM)
 
    graph = SCIPprobdataGetGraph(probdata);
    if( graph == NULL )
+   {
+      heurdata->stp_type = STP_UNDIRECTED;
       return SCIP_OKAY;
+   }
    heurdata->stp_type = graph->stp_type;
 
    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )

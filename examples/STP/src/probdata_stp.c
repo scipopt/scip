@@ -240,6 +240,8 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->lastlpiters = -1;
    if( graph != NULL )
       (*probdata)->stp_type = graph->stp_type;
+   else
+      (*probdata)->stp_type = STP_UNDIRECTED;
    (*probdata)->copy = FALSE;
    (*probdata)->logfile = NULL;
    (*probdata)->origlogfile = NULL;
