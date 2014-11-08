@@ -1225,7 +1225,8 @@ double reduce(
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type );
    if( g->stp_type != STP_UNDIRECTED )/*&& graph->stp_type != STP_GRID )*/
-      level = -4;
+     return fixed;
+     // level = -4;
 
    if( g->stp_type == STP_GRID )
       return fixed;
