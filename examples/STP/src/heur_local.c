@@ -2273,7 +2273,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    lastsolindices[v] = SCIPsolGetIndex(bestsol);
 
    /* has the new solution been found by this very heuristic? */
-   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
+   if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
       return SCIP_OKAY;
 
 //   printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));

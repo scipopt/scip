@@ -1086,6 +1086,7 @@ GRAPH* graph_copy(
    g->knots = p->knots;
    g->terms = p->terms;
    g->edges = p->edges;
+   g->grid_dim = p->grid_dim;
    g->stp_type = p->stp_type;
 
    memcpy(g->locals, p->locals, p->layers * sizeof(*p->locals));

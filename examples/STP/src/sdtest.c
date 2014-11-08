@@ -919,7 +919,7 @@ int nv_reduction_optimal(
 
          if (LT(min1, FARAWAY) && LE(pathfromsource[shortarc1].dist + min1, min2))
          {
-            *fixed += g->cost[e];
+            *fixed += g->cost[shortarc1]; /* ????? this was e, but should probably be shortarc1 */
 
             graph_knot_contract(g, shortarc1, i);
 
