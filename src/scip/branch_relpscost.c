@@ -56,7 +56,7 @@
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
 #define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
-
+#define DEFAULT_USEVARIABLETTESTSFORSB FALSE /**< should the strong branching decision be based on a hypothesis test? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -82,8 +82,43 @@ struct SCIP_BranchruleData
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             uselowerconfipscost; /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
+   SCIP_Bool             usevariablettestsforsb; /**< should the strong branching decision be based on a hypothesis test? */
 };
 
+/**< the ts array contains all quartiles for a one sided two sample t-test up to 30 degrees of freedom */
+#define TS_QUARTILE 1.282 /**< the t-quartile for 90 percent in the limit */
+#define TS_SIZE 30
+static const SCIP_Real ts_quartiles[] = {
+   3.078,
+   1.886,
+   1.638,
+   1.533,
+   1.476,
+   1.440,
+   1.415,
+   1.397,
+   1.383,
+   1.372,
+   1.363,
+   1.356,
+   1.350,
+   1.345,
+   1.341,
+   1.337,
+   1.333,
+   1.330,
+   1.328,
+   1.325,
+   1.323,
+   1.321,
+   1.319,
+   1.318,
+   1.316,
+   1.315,
+   1.314,
+   1.313,
+   1.311,
+   1.310};
 
 /*
  * local methods
@@ -368,6 +403,87 @@ SCIP_Bool isVarPscostRelerrorReliable(
    return (relerror <= threshold);
 }
 
+/**< compute a t-value for the hypothesis that x and y are from the same population */
+static
+SCIP_Real computeSampleTTestValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             meanx,              /**< the mean of the first distribution */
+   SCIP_Real             meany,              /**< the mean of the second distribution */
+   SCIP_Real             variancex,          /**< the variance of the x-distribution */
+   SCIP_Real             variancey,          /**< the variance of the y-distribution */
+   SCIP_Real             countx,
+   SCIP_Real             county
+   )
+{
+   SCIP_Real pooledvariance;
+   SCIP_Real tresult;
+
+   if( countx < 1.9 || county < 1.9 )
+      return SCIP_INVALID;
+
+   pooledvariance = (countx - 1) * variancex + (county - 1) * variancey;
+   pooledvariance /= (countx + county - 2);
+
+   /* if there is no variance, the means are taken from a constant distribution */
+   if( SCIPisFeasEQ(scip, pooledvariance, 0.0) )
+      return !SCIPisFeasEQ(scip, meanx, meany);
+
+   /* t result is the value of the underlying t distribution */
+   tresult = (meanx - meany) / pooledvariance;
+   tresult *= SQRT(countx * county / (countx + county));
+
+   return tresult;
+}
+
+/** compute a 2-sample t-test given the variables mean and variance */
+static
+SCIP_Bool isVarMeanSignificantlyDifferent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             varx,               /**< variable x */
+   SCIP_Real             fracx,              /**< the fractionality of variable x */
+   SCIP_VAR*             vary,               /**< variable y */
+   SCIP_Real             fracy,              /**< the fractionality of variable y */
+   SCIP_BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   SCIP_Real meanx;
+   SCIP_Real meany;
+   SCIP_Real variancex;
+   SCIP_Real variancey;
+   SCIP_Real countx;
+   SCIP_Real county;
+   SCIP_Real tresult;
+
+
+   if( varx == vary )
+      return FALSE;
+
+   countx = SCIPgetVarPseudocostCount(scip, varx, dir);
+   county = SCIPgetVarPseudocostCount(scip, vary, dir);
+
+   /* if not at least 2 measurements were taken, return FALSE */
+   if( countx < 1.9 || county < 1.9 )
+      return FALSE;
+
+   meanx = fracx * SCIPgetVarPseudocost(scip, varx, dir);
+   meany = fracy * SCIPgetVarPseudocost(scip, vary, dir);
+
+   variancex = SQR(fracx) * SCIPgetVarPseudocostVariance(scip, varx, dir, FALSE);
+   variancey = SQR(fracy) * SCIPgetVarPseudocostVariance(scip, vary, dir, FALSE);
+
+   /* if there is no variance, the means are taken from a constant distribution */
+   if( SCIPisFeasEQ(scip, variancex + variancey, 0.0) )
+      return !SCIPisFeasEQ(scip, meanx, meany);
+
+   tresult = computeSampleTTestValue(scip, meanx, meany, variancex, variancey, countx, county);
+
+   if( TS_SIZE <= countx + county - 2 )
+      return tresult >= TS_QUARTILE;
+   else
+      return tresult >= ts_quartiles[(int)(countx + county - 2)];
+
+}
+
 /** determine current pseudo cost score that optionally take pseudo cost confidence intervals into account */
 static
 SCIP_Real getPseudoCostScore(
@@ -395,7 +511,6 @@ SCIP_Real getPseudoCostScore(
       /* return normal pseudo cost*/
       return SCIPgetVarPseudocostScore(scip, var, varsol);
 }
-
 
 /** execute reliability pseudo cost branching */
 static
@@ -585,6 +700,47 @@ SCIP_RETCODE execRelpscost(
       bestpsscore = -SCIPinfinity(scip);
       bestpsfracscore = -SCIPinfinity(scip);
       bestpsdomainscore = -SCIPinfinity(scip);
+
+      /* search for the best candidate first */
+      for( c = 0; branchruledata->usevariablettestsforsb && c < nbranchcands; ++c )
+      {
+         SCIP_Real conflictscore;
+         SCIP_Real conflengthscore;
+         SCIP_Real inferencescore;
+         SCIP_Real cutoffscore;
+         SCIP_Real pscostscore;
+         SCIP_Real score;
+
+         conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
+         conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
+         inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
+         cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+         pscostscore = getPseudoCostScore(scip, branchcands[c], branchcandssol[c], branchruledata->uselowerconfipscost);
+
+         score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
+            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
+
+         /* check for better score of candidate */
+         if( SCIPisSumGE(scip, score, bestpsscore) )
+         {
+            SCIP_Real fracscore;
+            SCIP_Real domainscore;
+
+            fracscore = MIN(branchcandsfrac[c], 1.0 - branchcandsfrac[c]);
+            domainscore = -(SCIPvarGetUbLocal(branchcands[c]) - SCIPvarGetLbLocal(branchcands[c]));
+            if( SCIPisSumGT(scip, score, bestpsscore)
+                  || SCIPisSumGT(scip, fracscore, bestpsfracscore)
+                  || (SCIPisSumGE(scip, fracscore, bestpsfracscore) && domainscore > bestpsdomainscore) )
+            {
+               bestpscand = c;
+               bestpsscore = score;
+               bestpsfracscore = fracscore;
+               bestpsdomainscore = domainscore;
+            }
+         }
+
+      }
+
       for( c = 0; c < nbranchcands; ++c )
       {
          SCIP_Real conflictscore;
@@ -640,16 +796,20 @@ SCIP_RETCODE execRelpscost(
 
             /* use strong branching on variables with unreliable pseudo cost scores or optionally if the relative error
              * of the pseudo costs is too high */
+            assert(!branchruledata->usevariablettestsforsb || bestpscand >= 0);
             usesb = (size < reliable
                   || (branchruledata->errorbasedreliability
-                        && !isVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold)));
+                        && !isVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold))
+                  || (branchruledata->usevariablettestsforsb &&
+                  (!isVarMeanSignificantlyDifferent(scip, branchcands[bestpscand], branchcandsfrac[bestpscand], branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS)
+                        && !isVarMeanSignificantlyDifferent(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand], branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS))));
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
                nuninitcands++;
          }
 
-         /* combine the four score values */
+         /* combine the five score values */
          score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
             inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
 
@@ -668,7 +828,7 @@ SCIP_RETCODE execRelpscost(
             ninitcands++;
             ninitcands = MIN(ninitcands, maxninitcands);
          }
-         else
+         else if( !branchruledata->usevariablettestsforsb )
          {
             /* variable will keep it's pseudo cost value: check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
@@ -689,6 +849,13 @@ SCIP_RETCODE execRelpscost(
                }
             }
          }
+      }
+
+      /* in the special case that only the best pseudo candidate was selected for strong branching, skip the strong branching */
+      if( branchruledata->usevariablettestsforsb && ninitcands == 1 )
+      {
+         ninitcands = 0;
+         SCIPdebugMessage("Only one single candidate for initialization-->Skipping strong branching\n");
       }
 
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
@@ -1337,6 +1504,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/uselowerconfipscost",
          "should lower confidence interval bound be used for pseudo costs of variables with no sb?",
          &branchruledata->uselowerconfipscost, TRUE, DEFAULT_USELOWERCONFIPSCOST,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usevariablettestsforsb",
+         "should the strong branching decision be based on a hypothesis test?",
+         &branchruledata->usevariablettestsforsb, TRUE, DEFAULT_USEVARIABLETTESTSFORSB,
          NULL, NULL) );
 
    return SCIP_OKAY;
