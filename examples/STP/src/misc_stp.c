@@ -48,6 +48,52 @@ int GNODECmpByDist(void *first_arg, void *second_arg )
 }
 
 
+IDX* SCIPindexListNodeInsert(
+      IDX* node,
+      int   index
+	)
+{
+   IDX* curr;
+   //printf("add element\n!");
+   curr = malloc((size_t)sizeof(IDX));
+   curr->index = index;
+   curr->parent = (node);
+   return curr;
+}
+
+
+void SCIPindexListNodeAppend(
+      IDX* tar,
+      IDX* app
+	)
+{
+   IDX* curr;
+
+   if( tar == NULL )
+      return app;
+   curr = tar;
+   while( curr->parent != NULL )
+     curr = curr->parent;
+
+   curr->parent = app;
+}
+
+
+void SCIPindexListNodeFree(
+   IDX* node
+     )
+{
+   IDX* curr;
+   curr = node;
+   while( curr != NULL )
+   {
+      node = curr->parent;
+      free(curr);
+      curr = node;
+   }
+
+}
+
 /*
  * Linear Link Cut Tree
  */

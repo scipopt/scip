@@ -1133,7 +1133,7 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
       graph_path_exit((*probdata)->graph);
 
-      graph_free((*probdata)->graph);
+      graph_free((*probdata)->graph, TRUE);
    }
 
    if( (*probdata)->logfile != NULL )
@@ -1461,6 +1461,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       return SCIP_READERROR;
    if( printfs )
       printf("fixed: %f \n\n", presolinfo.fixed );
+
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
@@ -1941,6 +1942,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    FILE*                 file                /**< file to write best solution to; or NULL, to write to stdout */
    )
 {
+
    return SCIP_OKAY;
 }
 

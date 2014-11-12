@@ -40,6 +40,7 @@ typedef struct
    int     flags;  /* To store attributes                         */
    int     ksize;  /* Count of allocated knot slots               */
    int     knots;  /* Count of knots in graph                     */
+   int     orgknots;
    int     terms;  /* Count of terminals                          */
    int     layers; /* Count of different networks                 */
    int*    locals; /* Array [0..layers-1] of count of terminals   */
@@ -61,13 +62,18 @@ typedef struct
                       Constraint STPs)                            */
    /* Edges
     */
+   IDX*    fixedges;
+   IDX**   ancestors;
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
+   int     orgedges;
    SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs    */
    int*    tail;   /* Array [0..edges-1] of knot-number of tail   */
                    /* of edge [i]                                 */
    int*    head;   /* Array [0..edges-1] of knot-number of head   */
                    /* of edge [i]                                 */
+   int*    orgtail;
+   int*    orghead;
    /* Knots/Edges
     */
    int*    ieat;   /* Array [0..edges-1], incomming edge          */
@@ -162,9 +168,10 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
 /* grphbase.c
  */
-extern GRAPH *graph_init(int, int, int, int);
+extern GRAPH* graph_init(int, int, int, int);
+extern void   graph_init_history(GRAPH*);
 extern void   graph_resize(GRAPH*, int, int, int);
-extern void   graph_free(GRAPH*);
+extern void   graph_free(GRAPH*, char);
 extern void   graph_prize_transform(GRAPH*, double*);
 extern void   graph_rootprize_transform(GRAPH*, double*);
 extern void   graph_maxweight_transform(GRAPH*, double*);

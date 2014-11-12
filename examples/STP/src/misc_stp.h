@@ -24,7 +24,6 @@
 #define __SCIP_MISC_STP_H__
 
 #include "scip/scip.h"
-#include "grph.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,9 +77,26 @@ extern "C" {
 
    }PHNODE;
 
+   extern
+   IDX* SCIPindexListNodeInsert(
+      IDX* node,
+      int   index
+	);
+
+   extern
+   void SCIPindexListNodeFree(
+      IDX* node
+	);
+
+   extern
+   void SCIPindexListNodeAppend(
+      IDX* tar,
+      IDX* app
+	);
 
    /***  ***/
-   extern int GNODECmpByDist(
+   extern
+   int GNODECmpByDist(
       void *first_arg,
       void *second_arg
       );

@@ -1378,6 +1378,7 @@ GRAPH* graph_load(
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
                g->source[0] = i;
       }
+
       if( g->stp_type == UNKNOWN )
       {
 	 if( stp_type != UNKNOWN )

@@ -1370,7 +1370,7 @@ SCIP_RETCODE do_local(
 
                /* free the supergraph and the MST data structure */
                graph_path_exit(supergraph);
-               graph_free(supergraph);
+               graph_free(supergraph, TRUE);
                SCIPfreeBufferArray(scip, &mst);
 
                /* unmark the descendant supervertices */
