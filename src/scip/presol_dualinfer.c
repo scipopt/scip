@@ -1177,14 +1177,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
 
-   if( !complete )
-   {
-      SCIPwarningMessage(scip, "down-/uplocks of scip and milp matrix differ!\n");
-      SCIPmatrixFree(scip, &matrix);
-      return SCIP_OKAY;
-   }
-
-   if( initialized )
+   if( initialized && complete )
    {
       FIXINGDIRECTION* varstofix;
       int npossiblefixings;

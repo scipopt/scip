@@ -63,9 +63,7 @@ struct SCIPmilpMatrix
    int*                  rowmatind;          /**< column indexed in row major format */
    int*                  rowmatbeg;          /**< row storage offset */
    int*                  rowmatcnt;          /**< number of column entries per row */
-#ifdef SCIP_DEBUG
-   const char**          rowname;            /**< name of row */
-#endif
+
    int                   nrows;              /**< complete number of rows */
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */

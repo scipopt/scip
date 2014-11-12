@@ -16,6 +16,15 @@
 /**@file   presol_redvub.c
  * @brief  remove redundant variable upper bound constraints
  * @author Dieter Weninger
+ *
+ * This presolver looks for dominating variable bound constraints
+ * on the same continuous variable and discards them. For example let x be a
+ * continuous variable and y, y' are binary variables. In addition, let two variable
+ * upper bound constraints ax - by <= e and cx - dy' <= f are given. If
+ * ax - by <= e implies cx - dy' <= f, then we can remove the second constraint
+ * and substitute/aggregate y' := y. The same can be done with variable lower
+ * bound constraints.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,35 +39,44 @@
 #include "presol_redvub.h"
 
 #define PRESOL_NAME            "redvub"
-#define PRESOL_DESC            "remove redundant vubs"
+#define PRESOL_DESC            "detect redundant variable bound constraints"
 #define PRESOL_PRIORITY         24000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
 
+#define MAXPAIRCOMP                 1000     /**< maximal number of pairwise comparisons */
 
 /*
  * Local methods
  */
 
-/** is the constraint a vub? */
+/** verify if the constraint is a variable upper bound constraint */
 static
-SCIP_RETCODE isVubCons(
+SCIP_Bool isVub(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIPMILPMATRIX*       matrix,             /**< matrix instance */
    int                   row,                /**< row index */
-   SCIP_Bool*            isvub               /**< flag indicating if constraint is a vub */
+   SCIP_Real*            lowthreshold,       /**< low switching threshold */
+   SCIP_Real*            highthreshold,      /**< high switching threshold */
+   int*                  conidx,             /**< variable index of continuous variable */
+   int*                  binidx              /**< variable index of binary variable */
    )
 {
+   SCIP_Real* valpnt;
    int* rowpnt;
+   SCIP_Bool isvub;
 
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(0 <= row && row < SCIPmatrixGetNRows(matrix));
-   assert(isvub != NULL);
+   assert(lowthreshold != NULL);
+   assert(highthreshold != NULL);
+   assert(conidx != NULL);
+   assert(binidx != NULL);
 
-   *isvub = FALSE;
+   isvub = FALSE;
 
-   if( SCIPmatrixGetRowNNonzs(matrix,row) == 2 )
+   if( SCIPmatrixGetRowNNonzs(matrix, row) == 2 && SCIPmatrixIsRowRhsInfinity(matrix, row) )
    {
       SCIP_VARTYPE type1;
       SCIP_VARTYPE type2;
@@ -66,240 +84,419 @@ SCIP_RETCODE isVubCons(
       int idx2;
       SCIP_VAR* var1;
       SCIP_VAR* var2;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
+      SCIP_Real val1;
+      SCIP_Real val2;
 
-      rowpnt = SCIPmatrixGetRowIdxPtr(matrix,row);
+      rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
+      valpnt = SCIPmatrixGetRowValPtr(matrix, row);
+
       idx1 = *rowpnt;
-      var1 = SCIPmatrixGetVar(matrix,idx1);
+      val1 = *valpnt;
+      var1 = SCIPmatrixGetVar(matrix, idx1);
       type1 = SCIPvarGetType(var1);
-      rowpnt++;
-      idx2 = *rowpnt;
-      var2 = SCIPmatrixGetVar(matrix,idx2);
-      type2 = SCIPvarGetType(var2);
-      lhs = SCIPmatrixGetRowLhs(matrix,row);
-      rhs = SCIPmatrixGetRowRhs(matrix,row);
 
-      if( ((type1 == SCIP_VARTYPE_CONTINUOUS && type2 == SCIP_VARTYPE_BINARY) ||
-            (type2 == SCIP_VARTYPE_CONTINUOUS && type1 == SCIP_VARTYPE_BINARY)) &&
-         (SCIPisInfinity(scip,-lhs) || SCIPisInfinity(scip,rhs)) )
+      rowpnt++;
+      valpnt++;
+
+      idx2 = *rowpnt;
+      val2 = *valpnt;
+      var2 = SCIPmatrixGetVar(matrix, idx2);
+      type2 = SCIPvarGetType(var2);
+
+      /* we claim that the vub has the structure ax + cy >= b
+       * with a<0, c>0, x continuous, x>=0, y binary and obj(y)>=0
+       */
+      if( (type1 == SCIP_VARTYPE_CONTINUOUS && type2 == SCIP_VARTYPE_BINARY)
+         && val1 < 0.0 && val2 > 0.0 && SCIPisGE(scip, SCIPvarGetLbGlobal(var1), 0.0)
+         && SCIPisGE(scip, SCIPvarGetObj(var2), 0.0) )
       {
-         *isvub = TRUE;
+         *lowthreshold = SCIPmatrixGetRowLhs(matrix, row) / val1;
+         *highthreshold = (SCIPmatrixGetRowLhs(matrix, row) - val2) / val1;
+         *conidx = idx1;
+         *binidx = idx2;
+         isvub = TRUE;
+      }
+      else if( (type1 == SCIP_VARTYPE_BINARY && type2 == SCIP_VARTYPE_CONTINUOUS)
+         && val1 > 0.0 && val2 < 0.0 && SCIPisGE(scip, SCIPvarGetLbGlobal(var2), 0.0)
+         && SCIPisGE(scip, SCIPvarGetObj(var1), 0.0) )
+      {
+         *lowthreshold = SCIPmatrixGetRowLhs(matrix, row) / val2;
+         *highthreshold = (SCIPmatrixGetRowLhs(matrix, row) - val1) / val2;
+         *conidx = idx2;
+         *binidx = idx1;
+         isvub = TRUE;
       }
    }
 
-   return SCIP_OKAY;
+   return isvub;
 }
 
-/**< detect vub's on the same continuous variable */
+/** verify if the constraint is a variable lower bound constraint */
 static
-SCIP_RETCODE detectParallelVubs(
+SCIP_Bool isVlb(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
-   int                   nvubs,              /**< number of vub's */
-   int*                  vubs,               /**< row indices of the vub's */
-   int*                  parallelvubs        /**< parallel vub's concerning the continuous variable */
+   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   int                   row,                /**< row index */
+   SCIP_Real*            lowthreshold,       /**< low switching threshold */
+   SCIP_Real*            highthreshold,      /**< high switching threshold */
+   int*                  conidx,             /**< variable index of continuous variable */
+   int*                  binidx              /**< variable index of binary variable */
    )
 {
-   int i;
-   int j;
-   int* rowpnt;
-   int* rowend;
    SCIP_Real* valpnt;
-   SCIP_Real* scale;
-   SCIP_Real* scaledx;
-   SCIP_Real* scaledy;
-   SCIP_Real* scaledc;
+   int* rowpnt;
+   SCIP_Bool isvlb;
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(vubs != NULL);
-   assert(parallelvubs != NULL);
+   assert(0 <= row && row < SCIPmatrixGetNRows(matrix));
+   assert(lowthreshold != NULL);
+   assert(highthreshold != NULL);
+   assert(conidx != NULL);
+   assert(binidx != NULL);
 
-   /* we assume the following form: c <= ax + by <= inf */
+   isvlb = FALSE;
 
-   assert(nvubs >= 2);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &scale, nvubs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &scaledx, nvubs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &scaledy, nvubs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &scaledc, nvubs) );
-
-   for( i = 0; i < nvubs; i++ )
+   if( SCIPmatrixGetRowNNonzs(matrix, row) == 2 && SCIPmatrixIsRowRhsInfinity(matrix, row) )
    {
-      assert(SCIPmatrixGetRowNNonzs(matrix,vubs[i]) == 2);
+      SCIP_VARTYPE type1;
+      SCIP_VARTYPE type2;
+      int idx1;
+      int idx2;
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+      SCIP_Real val1;
+      SCIP_Real val2;
 
-      rowpnt = SCIPmatrixGetRowIdxPtr(matrix,vubs[i]);
-      rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix,vubs[i]);
-      valpnt = SCIPmatrixGetRowValPtr(matrix,vubs[i]);
+      rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
+      valpnt = SCIPmatrixGetRowValPtr(matrix, row);
 
-      for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
+      idx1 = *rowpnt;
+      val1 = *valpnt;
+      var1 = SCIPmatrixGetVar(matrix, idx1);
+      type1 = SCIPvarGetType(var1);
+
+      rowpnt++;
+      valpnt++;
+
+      idx2 = *rowpnt;
+      val2 = *valpnt;
+      var2 = SCIPmatrixGetVar(matrix, idx2);
+      type2 = SCIPvarGetType(var2);
+
+      /* we claim that the vlb has the structure ax + cy >= b
+       * with a>0, c<0, x continuous, x>=0, y binary and obj(y)>=0
+       */
+      if( (type1 == SCIP_VARTYPE_CONTINUOUS && type2 == SCIP_VARTYPE_BINARY)
+         && val1 > 0.0 && val2 < 0.0 && SCIPisGE(scip, SCIPvarGetLbGlobal(var1), 0.0)
+         && SCIPisGE(scip, SCIPvarGetObj(var2), 0.0) )
       {
-         int col;
-         SCIP_VAR* var;
-
-         col = *rowpnt;
-         var = SCIPmatrixGetVar(matrix,col);
-
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            scale[i] = *valpnt;
-            scaledx[i] = 1.0;
-         }
-         else
-         {
-            scaledy[i] = *valpnt;
-         }
+         *lowthreshold = SCIPmatrixGetRowLhs(matrix, row) / val1;
+         *highthreshold = (SCIPmatrixGetRowLhs(matrix, row) - val2) / val1;
+         *conidx = idx1;
+         *binidx = idx2;
+         isvlb = TRUE;
       }
-
-      scaledc[i] = SCIPmatrixGetRowLhs(matrix,vubs[i]);
-   }
-
-   for( i = 0; i < nvubs; i++ )
-   {
-      scaledy[i] /= scale[i];
-      scaledc[i] /= scale[i];
-   }
-
-   for( i = 0; i < nvubs; i++ )
-      parallelvubs[i] = i;
-
-   for( i = 0; i < nvubs; i++ )
-   {
-      for( j = i+1; j < nvubs; j++ )
+      else if( (type1 == SCIP_VARTYPE_BINARY && type2 == SCIP_VARTYPE_CONTINUOUS)
+         && val1 < 0.0 && val2 > 0.0 && SCIPisGE(scip, SCIPvarGetLbGlobal(var2), 0.0)
+         && SCIPisGE(scip, SCIPvarGetObj(var1), 0.0) )
       {
-         /* currently we only treat the case with the same coef on y and lhs=0 */
-         if( SCIPisEQ(scip,scaledy[i],scaledy[j]) &&
-             SCIPisEQ(scip,scaledc[i],scaledc[j]) &&
-             SCIPisEQ(scip,scaledc[i],0) &&
-            ((SCIPisLT(scip,scale[i],0) && SCIPisLT(scip,scale[j],0)) || (SCIPisGT(scip,scale[i],0) && SCIPisGT(scip,scale[j],0))) )
-         {
-            parallelvubs[j] = parallelvubs[i];
-         }
+         *lowthreshold = SCIPmatrixGetRowLhs(matrix, row) / val2;
+         *highthreshold = (SCIPmatrixGetRowLhs(matrix, row) - val1) / val2;
+         *conidx = idx2;
+         *binidx = idx1;
+         isvlb = TRUE;
       }
    }
 
-   SCIPfreeBufferArray(scip, &scaledc);
-   SCIPfreeBufferArray(scip, &scaledy);
-   SCIPfreeBufferArray(scip, &scaledx);
-   SCIPfreeBufferArray(scip, &scale);
-
-   return SCIP_OKAY;
+   return isvlb;
 }
 
-/**< detect variables which should be substituted by other ones */
+
+/**< find out which variable upper bound constraints on the same continuous variable dominate another */
 static
-SCIP_RETCODE substitutevar(
+SCIP_RETCODE detectDominatingVubs(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
-   int*                  parallelvubs,       /**< parallel vub's concerning the same continuous variable */
-   int                   fill,               /**< number of parallel vub's */
-   int*                  nvarsub,            /**< number of substituted variables */
-   SCIP_Bool*            isvartosub,         /**< flags indicating if variable could be substituted */
-   SCIP_VAR**            subvars,            /**< pointers to the variables by which the substitution should be done */
+   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   int                   nvubs,              /**< number of vubs */
+   int*                  vubs,               /**< row indices of the vubs */
+   SCIP_Real*            lowthresholds,      /**< low switching thresholds */
+   SCIP_Real*            highthresholds,     /**< high switching thresholds */
+   int*                  conidxs,            /**< variable indexes of continuous variable */
+   int*                  binidxs,            /**< variable indexes of binary variable */
+   int*                  nvaragg,            /**< number of variable for aggregation */
+   SCIP_Bool*            isvartoagg,         /**< flags indicating if variable could be aggregated */
+   SCIP_VAR**            aggvars,            /**< pointers to the variables by which the aggregation should be done */
    int*                  ndeletecons,        /**< number of deleteable constraints */
    SCIP_Bool*            deletecons          /**< flags which constraints could be deleted */
    )
 {
    int i;
-   int holdcol;
-   int holdrow;
-   int* substitute;
-   int maxsupport;
-   int* rowpnt;
-   int* rowend;
+   int j;
+   SCIP_Bool uselinearscan;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &substitute, fill) );
-   for( i = 0; i < fill; i++ )
-      substitute[i] = -1;
+   assert(scip != NULL);
+   assert(matrix != NULL);
+   assert(vubs != NULL);
+   assert(nvubs >= 2);
+   assert(lowthresholds != NULL);
+   assert(highthresholds != NULL);
+   assert(conidxs != NULL);
+   assert(binidxs != NULL);
+   assert(nvaragg != NULL);
+   assert(isvartoagg != NULL);
+   assert(aggvars != NULL);
+   assert(ndeletecons != NULL);
+   assert(deletecons != NULL);
 
-   holdcol = -1;
-   holdrow = -1;
+   if( nvubs >= MAXPAIRCOMP )
+      uselinearscan = TRUE;
+   else
+      uselinearscan = FALSE;
 
-   /* detect binary variable which should not be substituted */
-   maxsupport = 0;
-   for( i = 0; i < fill; i++ )
+   for( i = 0; i < nvubs; i++ )
    {
-      rowpnt = SCIPmatrixGetRowIdxPtr(matrix,parallelvubs[i]);
-      rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix,parallelvubs[i]);
-
-      for( ; (rowpnt < rowend); rowpnt++ )
+      for( j = i+1; j < nvubs; j++ )
       {
-         int col;
-         SCIP_VAR* var;
+         if( !SCIPisEQ(scip, lowthresholds[i], lowthresholds[j]) )
+            continue;
 
-         col = *rowpnt;
-         var = SCIPmatrixGetVar(matrix,col);
-
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( SCIPisEQ(scip, highthresholds[i], highthresholds[j]) )
          {
-            substitute[i] = col;
-            if( SCIPmatrixGetColNNonzs(matrix,col) > maxsupport &&
-               SCIPmatrixGetColNDownlocks(matrix,col) == 1 &&
-               SCIPisGE(scip,SCIPvarGetObj(var),0) )
+            if( SCIPmatrixGetColNDownlocks(matrix, binidxs[j]) <= 1 )
             {
-               maxsupport = SCIPmatrixGetColNNonzs(matrix,col);
-               holdcol = col;
-               holdrow = parallelvubs[i];
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
+               SCIPdebugMessage("Delete variable upper bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[j]] = TRUE;
+               aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
+               (*nvaragg)++;
+
+               deletecons[vubs[j]] = TRUE;
+               (*ndeletecons)++;
+            }
+            else if( SCIPmatrixGetColNDownlocks(matrix, binidxs[i]) <= 1 )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])));
+               SCIPdebugMessage("Delete variable upper bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[i]] = TRUE;
+               aggvars[binidxs[i]] = SCIPmatrixGetVar(matrix, binidxs[j]);
+               (*nvaragg)++;
+
+               deletecons[vubs[i]] = TRUE;
+               (*ndeletecons)++;
             }
          }
-      }
-   }
-
-   /* substitute all binary variables by the hold binary variable
-    * and delete the corresponding vub
-    */
-   if( holdcol > -1 && holdrow > -1 )
-   {
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("Hold variable: %s\n",
-         SCIPvarGetName(SCIPmatrixGetVar(matrix,holdcol)));
-      SCIPdebugMessage("Hold constraint:\n");
-      SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix,holdrow), NULL));
-      SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-      for( i = 0; i < fill; i++ )
-      {
-         assert(substitute[i] > -1);
-
-         if( substitute[i] != holdcol &&
-            SCIPmatrixGetColNDownlocks(matrix,substitute[i]) == 1 &&
-            SCIPisGE(scip,SCIPvarGetObj(SCIPmatrixGetVar(matrix,substitute[i])),0) )
+         else
          {
-            assert(isvartosub[substitute[i]] == FALSE);
-            isvartosub[substitute[i]] = TRUE;
-            subvars[substitute[i]] = SCIPmatrixGetVar(matrix,holdcol);
-            (*nvarsub)++;
-
-            assert(deletecons[parallelvubs[i]] == FALSE);
-            deletecons[parallelvubs[i]] = TRUE;
-            (*ndeletecons)++;
-
+            if( SCIPisGT(scip, highthresholds[i], highthresholds[j]) &&
+               SCIPmatrixGetColNDownlocks(matrix, binidxs[i]) <= 1 )
+            {
 #ifdef SCIP_DEBUG
-            SCIPdebugMessage("Replace redundant variable: %s\n",
-               SCIPvarGetName(SCIPmatrixGetVar(matrix,substitute[i])));
-            SCIPdebugMessage("Delete redundant constraint:\n");
-            SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix,parallelvubs[i]), NULL));
-            SCIPinfoMessage(scip, NULL, "\n");
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])));
+               SCIPdebugMessage("Delete variable upper bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
 #endif
+
+               isvartoagg[binidxs[i]] = TRUE;
+               aggvars[binidxs[i]] = SCIPmatrixGetVar(matrix, binidxs[j]);
+               (*nvaragg)++;
+
+               deletecons[vubs[i]] = TRUE;
+               (*ndeletecons)++;
+            }
+            else if( SCIPisGT(scip, highthresholds[j], highthresholds[i]) &&
+               SCIPmatrixGetColNDownlocks(matrix, binidxs[j]) <= 1 )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
+               SCIPdebugMessage("Delete variable upper bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[j]] = TRUE;
+               aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
+               (*nvaragg)++;
+
+               deletecons[vubs[j]] = TRUE;
+               (*ndeletecons)++;
+            }
          }
+
+         if( uselinearscan )
+            break;
       }
    }
-
-   SCIPfreeBufferArray(scip, &substitute);
 
    return SCIP_OKAY;
 }
 
-/**< get substitutable variables and redundant constraints */
+
+/**< find out which variable lower bound constraints on the same continuous variable dominate another */
 static
-SCIP_RETCODE getSubDelcons(
+SCIP_RETCODE detectDominatingVlbs(
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   int                   nvlbs,              /**< number of vlbs */
+   int*                  vlbs,               /**< row indices of the vlbs */
+   SCIP_Real*            lowthresholds,      /**< low switching thresholds */
+   SCIP_Real*            highthresholds,     /**< high switching thresholds */
+   int*                  conidxs,            /**< variable indexes of continuous variable */
+   int*                  binidxs,            /**< variable indexes of binary variable */
+   int*                  nvaragg,            /**< number of variable for aggregation */
+   SCIP_Bool*            isvartoagg,         /**< flags indicating if variable could be aggregated */
+   SCIP_VAR**            aggvars,            /**< pointers to the variables by which the aggregation should be done */
+   int*                  ndeletecons,        /**< number of deleteable constraints */
+   SCIP_Bool*            deletecons          /**< flags which constraints could be deleted */
+
+   )
+{
+   int i;
+   int j;
+   SCIP_Bool uselinearscan;
+
+   assert(scip != NULL);
+   assert(matrix != NULL);
+   assert(vlbs != NULL);
+   assert(nvlbs >= 2);
+   assert(lowthresholds != NULL);
+   assert(highthresholds != NULL);
+   assert(conidxs != NULL);
+   assert(binidxs != NULL);
+   assert(nvaragg != NULL);
+   assert(isvartoagg != NULL);
+   assert(aggvars != NULL);
+   assert(ndeletecons != NULL);
+   assert(deletecons != NULL);
+
+   if( nvlbs >= MAXPAIRCOMP )
+      uselinearscan = TRUE;
+   else
+      uselinearscan = FALSE;
+
+   for( i = 0; i < nvlbs; i++ )
+   {
+      for( j = i+1; j < nvlbs; j++ )
+      {
+         if( !SCIPisEQ(scip, lowthresholds[i], lowthresholds[j]) )
+            continue;
+
+         if( SCIPisEQ(scip, highthresholds[i], highthresholds[j]) )
+         {
+            if( SCIPmatrixGetColNUplocks(matrix, binidxs[j]) <= 1 )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
+               SCIPdebugMessage("Delete variable lower bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[j]] = TRUE;
+               aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
+               (*nvaragg)++;
+
+               deletecons[vlbs[j]] = TRUE;
+               (*ndeletecons)++;
+            }
+            else if( SCIPmatrixGetColNUplocks(matrix, binidxs[i]) <= 1 )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])));
+               SCIPdebugMessage("Delete variable lower bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[i]] = TRUE;
+               aggvars[binidxs[i]] = SCIPmatrixGetVar(matrix, binidxs[j]);
+               (*nvaragg)++;
+
+               deletecons[vlbs[i]] = TRUE;
+               (*ndeletecons)++;
+            }
+         }
+         else
+         {
+            if( SCIPisLT(scip, highthresholds[i], highthresholds[j]) &&
+               SCIPmatrixGetColNUplocks(matrix, binidxs[i]) <= 1 )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])));
+               SCIPdebugMessage("Delete variable lower bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[i]] = TRUE;
+               aggvars[binidxs[i]] = SCIPmatrixGetVar(matrix, binidxs[j]);
+               (*nvaragg)++;
+
+               deletecons[vlbs[i]] = TRUE;
+               (*ndeletecons)++;
+            }
+            else if( SCIPisLT(scip, highthresholds[j], highthresholds[i]) &&
+               SCIPmatrixGetColNUplocks(matrix, binidxs[j]) <= 1 )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Aggregate variable %s by %s\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
+               SCIPdebugMessage("Delete variable lower bound constraint:\n");
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL));
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               isvartoagg[binidxs[j]] = TRUE;
+               aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
+               (*nvaragg)++;
+
+               deletecons[vlbs[j]] = TRUE;
+               (*ndeletecons)++;
+            }
+         }
+
+         if( uselinearscan )
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/**< find variable aggregations and redundant variable bound constraints */
+static
+SCIP_RETCODE findVarAggrRedVbcons(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
-   int*                  nvarsub,            /**< number of redundant variables */
-   SCIP_Bool*            isvartosub,         /**< flags indicating which variables could be substituted */
-   SCIP_VAR**            subvars,            /**< pointers to the variables by which the substitution should be done */
+   int*                  nvaragg,            /**< number of redundant variables */
+   SCIP_Bool*            isvartoagg,         /**< flags indicating which variables could be substituted/aggregated */
+   SCIP_VAR**            aggvars,            /**< pointers to the variables by which the aggregation should be done */
    int*                  ndeletecons,        /**< number of redundant constraints */
    SCIP_Bool*            deletecons          /**< flags indicating which constraints could be deleted */
    )
@@ -307,22 +504,23 @@ SCIP_RETCODE getSubDelcons(
    int c;
    int* colpnt;
    int* colend;
-   int* vubcons;
-   int nvubcons;
-   int* pclass;
-   int pc;
-   int pclassstart;
-   int fill;
-   int* pcons;
+   int* vbcons;
+   int nvbcons;
    int ncols;
    int nrows;
+   SCIP_Real* lowthresholds;
+   SCIP_Real* highthresholds;
+   int* conidxs;
+   int* binidxs;
 
    ncols = SCIPmatrixGetNColumns(matrix);
    nrows = SCIPmatrixGetNRows(matrix);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vubcons, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pclass, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pcons, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binidxs, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &conidxs, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lowthresholds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &highthresholds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbcons, nrows) );
 
    for( c = 0; c < ncols; c++ )
    {
@@ -334,47 +532,67 @@ SCIP_RETCODE getSubDelcons(
          continue;
 
       /* search vubs per variable */
-      nvubcons = 0;
-      colpnt = SCIPmatrixGetColIdxPtr(matrix,c);
-      colend = colpnt + SCIPmatrixGetColNNonzs(matrix,c);
+      nvbcons = 0;
+      colpnt = SCIPmatrixGetColIdxPtr(matrix, c);
+      colend = colpnt + SCIPmatrixGetColNNonzs(matrix, c);
       for( ; (colpnt < colend); colpnt++ )
       {
-         SCIP_Bool isvub;
+         SCIP_Real lowthreshold;
+         SCIP_Real highthreshold;
+         int conidx;
+         int binidx;
 
-         SCIP_CALL( isVubCons(scip,matrix,*colpnt,&isvub) );
-         if( isvub )
-            vubcons[nvubcons++] = *colpnt;
+         if( isVub(scip, matrix, *colpnt, &lowthreshold, &highthreshold, &conidx, &binidx) )
+         {
+            vbcons[nvbcons] = *colpnt;
+            lowthresholds[nvbcons] = lowthreshold;
+            highthresholds[nvbcons] = highthreshold;
+            conidxs[nvbcons] = conidx;
+            binidxs[nvbcons] = binidx;
+            nvbcons++;
+         }
+      }
+      if( nvbcons >= 2 )
+      {
+         SCIP_CALL(detectDominatingVubs(scip, matrix, nvbcons, vbcons,
+               lowthresholds, highthresholds, conidxs, binidxs,
+               nvaragg, isvartoagg, aggvars, ndeletecons, deletecons) );
       }
 
-      if( nvubcons < 2 )
-         continue;
-
-      /* detect vubs working on the same continuous variable */
-      SCIP_CALL( detectParallelVubs(scip,matrix,nvubcons,vubcons,pclass) );
-      SCIPsortIntInt(pclass, vubcons, nvubcons);
-
-      pc = 0;
-      while( pc < nvubcons )
+      /* search vlbs per variable */
+      nvbcons = 0;
+      colpnt = SCIPmatrixGetColIdxPtr(matrix, c);
+      colend = colpnt + SCIPmatrixGetColNNonzs(matrix, c);
+      for( ; (colpnt < colend); colpnt++ )
       {
-         fill = 0;
-         pclassstart = pclass[pc];
-         while( pc < nvubcons && pclassstart == pclass[pc] )
-         {
-            pcons[fill++] = vubcons[pc];
-            pc++;
-         }
+         SCIP_Real lowthreshold;
+         SCIP_Real highthreshold;
+         int conidx;
+         int binidx;
 
-         if( fill > 1 )
+         if( isVlb(scip, matrix, *colpnt, &lowthreshold, &highthreshold, &conidx, &binidx) )
          {
-            SCIP_CALL( substitutevar(scip,matrix,pcons,
-                  fill,nvarsub,isvartosub,subvars,ndeletecons,deletecons) );
+            vbcons[nvbcons] = *colpnt;
+            lowthresholds[nvbcons] = lowthreshold;
+            highthresholds[nvbcons] = highthreshold;
+            conidxs[nvbcons] = conidx;
+            binidxs[nvbcons] = binidx;
+            nvbcons++;
          }
+      }
+      if( nvbcons >= 2 )
+      {
+         SCIP_CALL(detectDominatingVlbs(scip, matrix, nvbcons, vbcons,
+               lowthresholds, highthresholds, conidxs, binidxs,
+               nvaragg, isvartoagg, aggvars, ndeletecons, deletecons) );
       }
    }
 
-   SCIPfreeBufferArray(scip, &pcons);
-   SCIPfreeBufferArray(scip, &pclass);
-   SCIPfreeBufferArray(scip, &vubcons);
+   SCIPfreeBufferArray(scip, &vbcons);
+   SCIPfreeBufferArray(scip, &highthresholds);
+   SCIPfreeBufferArray(scip, &lowthresholds);
+   SCIPfreeBufferArray(scip, &conidxs);
+   SCIPfreeBufferArray(scip, &binidxs);
 
    return SCIP_OKAY;
 }
@@ -410,47 +628,45 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
 
-   if( !complete )
-      SCIPdebugMessage("Warning: milp matrix incomplete!\n");
-
-   if( initialized )
+   if( initialized && complete )
    {
-      int nvarsub;
-      SCIP_Bool* isvartosub;
+      int nvaragg;
+      SCIP_Bool* isvartoagg;
       int ndeletecons;
       SCIP_Bool* deletecons;
-      SCIP_VAR** subvars;
+      SCIP_VAR** aggvars;
       int ncols;
       int nrows;
 
       ncols = SCIPmatrixGetNColumns(matrix);
       nrows = SCIPmatrixGetNRows(matrix);
-      nvarsub = 0;
+
+      nvaragg = 0;
       ndeletecons = 0;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &isvartosub, ncols) );
-      BMSclearMemoryArray(isvartosub, ncols);
+      SCIP_CALL( SCIPallocBufferArray(scip, &isvartoagg, ncols) );
+      BMSclearMemoryArray(isvartoagg, ncols);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &deletecons, ncols) );
       BMSclearMemoryArray(deletecons, ncols);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, ncols) );
 
-      SCIP_CALL( getSubDelcons(scip,matrix,&nvarsub,isvartosub,subvars,&ndeletecons,deletecons) );
+      SCIP_CALL( findVarAggrRedVbcons(scip, matrix, &nvaragg, isvartoagg, aggvars, &ndeletecons, deletecons) );
 
-      if( nvarsub > 0 )
+      if( nvaragg > 0 )
       {
          int v;
          for( v = 0; v < ncols; v++ )
          {
-            if( isvartosub[v] )
+            if( isvartoagg[v] )
             {
                SCIP_Bool infeasible;
                SCIP_Bool redundant;
                SCIP_Bool aggregated;
 
-               /* substitute/aggregate variable */
-               SCIP_CALL( SCIPaggregateVars(scip, SCIPmatrixGetVar(matrix,v), subvars[v], 1.0, -1.0,
+               /* substitute/aggregate binary variable */
+               SCIP_CALL( SCIPaggregateVars(scip, SCIPmatrixGetVar(matrix,v), aggvars[v], 1.0, -1.0,
                      0, &infeasible, &redundant, &aggregated) );
 
                if( infeasible )
@@ -474,8 +690,8 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
             {
                SCIP_CONS* cons;
 
-               /* remove redundant constraint */
-               cons = SCIPmatrixGetCons(matrix,r);
+               /* remove redundant variable bound constraint */
+               cons = SCIPmatrixGetCons(matrix, r);
                SCIP_CALL( SCIPdelCons(scip, cons) );
 
                (*ndelconss)++;
@@ -483,9 +699,9 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
          }
       }
 
-      SCIPfreeBufferArray(scip, &subvars);
+      SCIPfreeBufferArray(scip, &aggvars);
       SCIPfreeBufferArray(scip, &deletecons);
-      SCIPfreeBufferArray(scip, &isvartosub);
+      SCIPfreeBufferArray(scip, &isvartoagg);
    }
 
    SCIPmatrixFree(scip, &matrix);
