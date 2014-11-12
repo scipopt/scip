@@ -37,7 +37,7 @@ GRAPH* graph_init(
 
    assert(ksize > 0);
    assert(ksize < INT_MAX);
-   assert(esize > 0);
+   assert(esize >= 0);
    assert(esize < INT_MAX);
    assert(layers > 0);
    assert(layers < SHRT_MAX);
@@ -134,32 +134,34 @@ GRAPH* graph_init(
 
 /* initialize data structures required to keep track of reductions */
 void graph_init_history(
-   GRAPH* graph
+   GRAPH* graph,
+   int** orgtail,
+   int** orghead,
+   IDX*** ancestors
      )
 {
-   IDX** ancestors;
+   //IDX** ancestors;
    int e;
    int nedges;
    assert(graph != NULL);
 
    nedges = graph->edges;
-   ancestors = graph->ancestors;
-   graph->orgtail  = malloc((size_t)nedges * sizeof(int));
-   graph->orghead  = malloc((size_t)nedges * sizeof(int));
+   //ancestors = graph->ancestors;
+   (*orgtail)  = malloc((size_t)nedges * sizeof(int));
+   (*orghead)  = malloc((size_t)nedges * sizeof(int));
 
    for( e = 0; e < nedges; e++ )
    {
-      graph->orgtail[e] = graph->tail[e];
-      graph->orghead[e] = graph->head[e];
+      (*orgtail)[e] = graph->tail[e];
+      (*orghead)[e] = graph->head[e];
    }
 
-
-   ancestors = malloc((size_t)(nedges) * sizeof(IDX*));
+   *ancestors = malloc((size_t)(nedges) * sizeof(IDX*));
    for( e = 0; e < nedges; e++ )
    {
-      ancestors[e] = malloc((size_t)sizeof(IDX));
-      (ancestors[e])->index = e;
-      (ancestors[e])->parent = NULL;
+      (*ancestors)[e] = malloc((size_t)sizeof(IDX));
+      (*ancestors)[e]->index = e;
+      (*ancestors)[e]->parent = NULL;
    }
 }
 void graph_resize(
@@ -1119,9 +1121,10 @@ void graph_free(
 GRAPH* graph_copy(
    const GRAPH* p)
 {
+   int e;
    GRAPH* g;
    assert(p != NULL);
-   assert(0);
+
    g = graph_init(p->ksize, p->esize, p->layers, p->flags);
 
    assert(g         != NULL);
@@ -1136,8 +1139,6 @@ GRAPH* graph_copy(
    assert(g->outbeg != NULL);
    assert(g->cost   != NULL);
    assert(g->tail   != NULL);
-   assert(g->orghead   != NULL);
-   assert(g->orgtail   != NULL);
    assert(g->head   != NULL);
    assert(g->ieat   != NULL);
    assert(g->oeat   != NULL);
@@ -1151,26 +1152,45 @@ GRAPH* graph_copy(
    g->orgknots = p->orgknots;
    g->grid_dim = p->grid_dim;
    g->stp_type = p->stp_type;
+   /*
    if( p->fixedges != NULL )
    {
-#if 0
-      int i;
       IDX* curr;
+      IDX* tmp = NULL;
       curr = p->fixedges;
       while( curr != NULL )
       {
-         memcpy(g->fixedges, p->fixedges, sizeof(*p->fixedges));
-         blists_curr = blists_curr->parent;
+         memcpy(g->fixedges, curr, sizeof(*curr));
+	 if( tmp != NULL )
+	    tmp->parent = g->fixedges;
+	 tmp = g->fixedges;
+         curr = curr->parent;
       }
-      memcpy(g->fixedges,   p->fixedges, sizeof(*p->fixedges));
-#endif
    }
    else
    {
       g->fixedges = NULL;
    }
 
-   memcpy(g->ancestors,   p->ancestors,   p->esize  * sizeof(*p->ancestors));
+
+
+   memcpy(g->ancestors,   p->ancestors,   p->edges  * sizeof(*p->ancestors));
+   for( e = 0; e < p->orgedges; p++ )
+   {
+      IDX* curr;
+      IDX* tmp = NULL;
+      curr = p->ancestors[e];
+      while( curr != NULL )
+      {
+         memcpy(g->ancestors[e], curr, sizeof(*curr));
+	 if( tmp != NULL )
+	    tmp->parent = g->ancestors[e];
+	 tmp = g->ancestors[e];
+         curr = curr->parent;
+      }
+   }
+   */
+
 
    memcpy(g->locals, p->locals, p->layers * sizeof(*p->locals));
    memcpy(g->source, p->source, p->layers * sizeof(*p->source));
@@ -1183,8 +1203,8 @@ GRAPH* graph_copy(
    memcpy(g->cost,   p->cost,   p->esize  * sizeof(*p->cost));
    memcpy(g->tail,   p->tail,   p->esize  * sizeof(*p->tail));
    memcpy(g->head,   p->head,   p->esize  * sizeof(*p->head));
-   memcpy(g->orgtail,   p->orgtail,   p->esize  * sizeof(*p->orgtail));
-   memcpy(g->orghead,   p->orghead,   p->esize  * sizeof(*p->orghead));
+  // memcpy(g->orgtail,   p->orgtail,   p->esize  * sizeof(*p->orgtail));
+  // memcpy(g->orghead,   p->orghead,   p->esize  * sizeof(*p->orghead));
    memcpy(g->ieat,   p->ieat,   p->esize  * sizeof(*p->ieat));
    memcpy(g->oeat,   p->oeat,   p->esize  * sizeof(*p->oeat));
 
@@ -1953,11 +1973,12 @@ GRAPH *graph_pack(
    if (knots == 0)
    {
       free(new);
-      graph_free(p, FALSE); //TODO!!
+      new = NULL;
+      //graph_free(p, FALSE); //TODO!!
 
       printf(" Graph vanished!\n");
-
-      return(NULL);
+      knots = 1;
+      //return(NULL);
    }
 
    /* Kanten zaehlen
@@ -1978,7 +1999,19 @@ GRAPH *graph_pack(
    q->ancestors = p->ancestors;
    q->orgknots = p->knots;
    q->orgedges = p->edges;
+   q->stp_type = p->stp_type;
+   q->maxdeg = p->maxdeg;
+   q->grid_dim = p->grid_dim;
+   q->grid_ncoords = p->grid_ncoords;
+   q->grid_coordinates = p->grid_coordinates;
 
+   if( new == NULL )
+   {
+      graph_free(p, FALSE);
+      graph_knot_add(q, 0, -1, -1);
+      q->source[0] = 0;
+      return q;
+   }
 
    /* Knoten umladen
     */
@@ -2032,12 +2065,6 @@ GRAPH *graph_pack(
       assert(q->term[new[p->source[l]]] == l);
       q->source[l] = new[p->source[l]];
    }
-   q->stp_type = p->stp_type;
-   q->maxdeg = p->maxdeg;
-   q->grid_dim = p->grid_dim;
-   q->grid_ncoords = p->grid_ncoords;
-   q->grid_coordinates = p->grid_coordinates;
-  // q->orghead =
 
    free(new);
 

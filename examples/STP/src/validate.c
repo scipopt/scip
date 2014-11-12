@@ -129,9 +129,10 @@ int validate(
    int   layer;
 
    assert(g         != NULL);
-   assert(xval      != NULL);
    assert(connected != NULL);
-
+   if( g->knots == 1 )
+      return TRUE;
+   assert(xval      != NULL);
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
 #if 0

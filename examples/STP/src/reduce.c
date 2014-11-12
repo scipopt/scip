@@ -1084,21 +1084,17 @@ static double level4(
    SCIP_Real timelimit;
    double fixed   = 0.0;
    char    rerun   = TRUE;
-   char    rerundeg  = TRUE;
    int    i;
    double*  sddist;
    double*  sdtrans;
    double* cost;
    int*    heap;
    int*    state;
-   int     deg = 1;
    assert(g != NULL);
    //bound_test(scip, g);
-   while( deg > 0 )
-   {
-      deg = degree_test(g, &fixed);
-      printf("0DEGREE TEST! %d \n", deg);
-   }
+
+   degree_test(g, &fixed);
+
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    heap  = malloc((size_t)g->knots * sizeof(int));
@@ -1115,29 +1111,20 @@ static double level4(
       rerun = FALSE;
 
       for(i = 0; i < 3; i++) //TODO 6
-         if( sd_reduction(g, sddist, sdtrans,cost, heap, state) )
+         if( sd_reduction(g, sddist, sdtrans,cost, heap, state) > 10 )
             rerun = TRUE;
-      deg = degree_test(g, &fixed);
-      while( deg > 0 )
-      {
-	 printf("1DEGREE TEST! %d \n", deg);
-         deg = degree_test(g, &fixed);
-	 if( deg > 2 )
-         rerun = TRUE;
-      }
 
-      if (nsv_reduction(g, &fixed))
+      if( degree_test(g, &fixed) > 10 )
+           rerun = TRUE;
+
+      if( nsv_reduction(g, &fixed) > 10 )
          rerun = TRUE;
 
-      if (bd3_reduction(g))
+     /* if( bd3_reduction(g) > 5 )
          rerun = TRUE;
-      deg = degree_test(g, &fixed);
-      if ( deg > 0 )
-      {
-	 printf("2DEGREE TEST! %d \n", deg);
-	 if( deg > 2 )
+*/
+      if( degree_test(g, &fixed) > 10 )
          rerun = TRUE;
-      }
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n",
       fixed);
@@ -1279,8 +1266,8 @@ double reduce(
    if( g->layers != 1 )
       return(0);
    assert(g->fixedges == NULL);
-
-   init_ancestors(g, &g->ancestors);
+   graph_init_history(g, &(g->orgtail), &(g->orghead), &(g->ancestors));
+   //init_ancestors(g, &g->ancestors);
      /*
       IDX** ancestors;
       ancestors = g->ancestors;
@@ -1300,10 +1287,8 @@ double reduce(
 
    assert(0);
    */
-   for( i = 0; i < 3 ; i++ )
-      printf("edge: %d \n", g->ancestors[i]->index);
 
-   //assert(0);
+
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type );
    if( g->stp_type != STP_UNDIRECTED ) /*&& graph->stp_type != STP_GRID )*/
@@ -1338,6 +1323,6 @@ IDX* curr;
                      printf("%d->%d \n", g->tail[curr->index], g->head[curr->index]);
                      curr = curr->parent;
                   }
-   assert(0);
+
    return(fixed);
 }

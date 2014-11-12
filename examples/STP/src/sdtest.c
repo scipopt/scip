@@ -394,7 +394,7 @@ int sd_reduction(
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
-
+   printf("%d SD: Edges deleted\n", elimins * 2);
    return(elimins);
 }
 
@@ -795,6 +795,7 @@ int nsv_reduction(
    assert(graph_valid(g));
 
    SCIPdebugMessage(" %d Knots deleted\n", elimins);
+   printf("nsv_reduction: %d Knots deleted\n", elimins);
 
    return(elimins);
 }

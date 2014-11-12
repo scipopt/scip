@@ -169,7 +169,7 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 /* grphbase.c
  */
 extern GRAPH* graph_init(int, int, int, int);
-extern void   graph_init_history(GRAPH*);
+extern void   graph_init_history(GRAPH*, int**,int**, IDX***);
 extern void   graph_resize(GRAPH*, int, int, int);
 extern void   graph_free(GRAPH*, char);
 extern void   graph_prize_transform(GRAPH*, double*);
