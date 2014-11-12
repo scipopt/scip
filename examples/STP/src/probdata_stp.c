@@ -1942,6 +1942,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    FILE*                 file                /**< file to write best solution to; or NULL, to write to stdout */
    )
 {
+   //SCIPinfoMessage();
+
 
    return SCIP_OKAY;
 }
