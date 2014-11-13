@@ -33,6 +33,7 @@
 
 #include "scip/scip.h"
 #include "misc_stp.h"
+
 typedef struct
 {
    /* Knots
@@ -85,13 +86,14 @@ typedef struct
                    /* Knot [i]                                    */
    int*    ypos;   /* Array [0..knots-1] with Y Coordinates of    */
                    /* Knot [i]                                    */
-
+#if 0
    /* Contraction Data
     */
    int*    ctrctknot; /* Array [0..knots-1] with the starting slot*/
                       /* of the contracted edges, -1 if not used  */
    int*    ctrctedge; /* Array [0..edges-1] contracted edge       */
                       /* allocation table.                        */
+#endif
    /* data for min cut computation
     */
    int*    mincut_dist;    /* dist[i] : Distance-label of Knot i          */

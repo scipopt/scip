@@ -78,6 +78,12 @@ extern "C" {
    }PHNODE;
 
    extern
+   IDX* SCIPindexListNodeAppend(
+      IDX* tar,
+      IDX* app
+	);
+
+   extern
    IDX* SCIPindexListNodeInsert(
       IDX* node,
       int   index
@@ -88,11 +94,7 @@ extern "C" {
       IDX* node
 	);
 
-   extern
-   void SCIPindexListNodeAppend(
-      IDX* tar,
-      IDX* app
-	);
+
 
    /***  ***/
    extern

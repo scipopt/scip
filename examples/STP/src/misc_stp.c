@@ -62,20 +62,28 @@ IDX* SCIPindexListNodeInsert(
 }
 
 
-void SCIPindexListNodeAppend(
+IDX* SCIPindexListNodeAppend(
       IDX* tar,
       IDX* app
 	)
 {
    IDX* curr;
-
+   int i;
    if( tar == NULL )
+   {
       return app;
+   }
    curr = tar;
    while( curr->parent != NULL )
+   {
+     printf("index %d\n", curr->index);
+
+        assert(i++ < 5);
      curr = curr->parent;
+   }
 
    curr->parent = app;
+   return tar;
 }
 
 
@@ -91,7 +99,6 @@ void SCIPindexListNodeFree(
       free(curr);
       curr = node;
    }
-
 }
 
 /*

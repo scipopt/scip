@@ -62,7 +62,6 @@ static int degree_test(
 
          if (g->grad[i] == 1)
          {
-	//    printf("g1 \n");
             e1  = g->outbeg[i];
             i1  = g->head[e1];
 
@@ -74,12 +73,9 @@ static int degree_test(
             if( Is_term(g->term[i]) )
 	    {
                *fixed += g->cost[e1];
-               /*curr = malloc((size_t)sizeof(IDX));
-               curr->index = e1;
-               curr->parent = g->fixedges;
-               g->fixedges = curr;*/
-	       printf("con1 \n");
-	       g->fixedges = SCIPindexListNodeInsert(g->fixedges, e1);
+	       printf("con1 %d, %d\n", i1, i);
+	       g->fixedges = SCIPindexListNodeAppend(g->fixedges, g->ancestors[e1]);
+	       printf("con1aft \n");
 	    }
             graph_knot_contract(g, i1, i);
 
@@ -113,13 +109,13 @@ static int degree_test(
             {
                done = TRUE;
 
-               if (!Is_term(g->term[i]))
+               if( !Is_term(g->term[i]) )
                {
                   assert(EQ(g->cost[e2], g->cost[Edge_anti(e2)]));
 
                   g->cost[e1]            += g->cost[e2];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
-//printf("con1 \n");
+                  printf("con0 %d, %d\n", i2, i);
                   graph_knot_contract(g, i2, i);
 
                   count++;
@@ -132,21 +128,17 @@ static int degree_test(
                {
                   if (LT(g->cost[e1], g->cost[e2]))
                   {
-		    printf("con2 \n");
+		    printf("con2 %d, %d\n", i1, i);
                      *fixed += g->cost[e1];
                      graph_knot_contract(g, i1, i);
-		     g->fixedges = SCIPindexListNodeInsert((g->fixedges), e1);
+		     g->fixedges = SCIPindexListNodeAppend(g->fixedges, g->ancestors[e1]);
                   }
                   else
                   {
 		    printf("con3 \n");
                      *fixed += g->cost[e2];
                      graph_knot_contract(g, i2, i);
-		    /* curr = malloc((size_t)sizeof(IDX));
-                     curr->index = e2;
-                     curr->parent = g->fixedges;
-                     g->fixedges = curr;*/
-                     g->fixedges = SCIPindexListNodeInsert(g->fixedges, e2);
+                     g->fixedges = SCIPindexListNodeAppend(g->fixedges, g->ancestors[e2]);
                   }
                   count++;
 
@@ -157,11 +149,7 @@ static int degree_test(
 		  printf("con4 \n");
                   *fixed += g->cost[e1];
                   graph_knot_contract(g, i1, i);
-                  /*curr = malloc((size_t)sizeof(IDX));
-                  curr->index = e1;
-                  curr->parent = g->fixedges;
-                  g->fixedges = curr;*/
-		  g->fixedges = SCIPindexListNodeInsert(g->fixedges, e1);
+		  g->fixedges = SCIPindexListNodeAppend(g->fixedges, g->ancestors[e1]);
                   count++;
 
                   break;
@@ -171,12 +159,7 @@ static int degree_test(
 		 printf("con5 \n");
                   *fixed += g->cost[e2];
                   graph_knot_contract(g, i2, i);
-                  /*curr = malloc((size_t)sizeof(IDX));
-                  curr->index = e2;
-                  curr->parent = g->fixedges;
-                  g->fixedges = curr;
-		  */
-		  g->fixedges = SCIPindexListNodeInsert(g->fixedges, e2);
+		  g->fixedges = SCIPindexListNodeAppend(g->fixedges, g->ancestors[e2]);
                   count++;
 
                   break;
@@ -957,22 +940,6 @@ static int hops_test(
 }
 #endif
 
-static
-void init_ancestors(
-   GRAPH* graph,
-   IDX*** ancestors
-     )
-{
-   int e;
-   (*ancestors) = malloc((size_t)(graph->edges) * sizeof(IDX*));
-   for( e = 0; e < graph->edges; e++ )
-   {
-      (*ancestors)[e] = malloc((size_t)sizeof(IDX));
-      (*ancestors)[e]->index = e;
-      (*ancestors)[e]->parent = NULL;
-   }
-}
-
 static double level1(
    GRAPH* g)
 {
@@ -1091,7 +1058,7 @@ static double level4(
    int*    heap;
    int*    state;
    assert(g != NULL);
-   //bound_test(scip, g);
+   //bound_test(scip, g); TODO
 
    degree_test(g, &fixed);
 
@@ -1103,7 +1070,7 @@ static double level4(
    sdtrans = malloc((size_t)g->knots * sizeof(double));
    cost  = malloc((size_t)g->edges * sizeof(double));
 
-   while(rerun && !SCIPisStopped(scip))
+   while(0 && rerun && !SCIPisStopped(scip) )
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1183,14 +1150,14 @@ static double levelm4(
             break;
       }
 
-      if (degree_test_dir(g, &fixed) > 0)
+      if (degree_test_dir(g, &fixed) > 10)
          rerun = TRUE;
 
       for (i = 0; i < 4; i++)
       {
          numelim = nv_reduction_optimal(g, &fixed);
          printf("NV Reduction %d: %d\n", i, numelim);
-         if (numelim)
+         if(numelim > 10)
             rerun = TRUE;
          else
             break;
@@ -1199,8 +1166,8 @@ static double levelm4(
       //if (bd3_reduction(g))
          //rerun = TRUE;
 
-      //if (degree_test_dir(g, &fixed) > 0)
-         //rerun = TRUE;
+      if (degree_test_dir(g, &fixed) > 10)
+         rerun = TRUE;
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
 
@@ -1267,31 +1234,10 @@ double reduce(
       return(0);
    assert(g->fixedges == NULL);
    graph_init_history(g, &(g->orgtail), &(g->orghead), &(g->ancestors));
-   //init_ancestors(g, &g->ancestors);
-     /*
-      IDX** ancestors;
-      ancestors = g->ancestors;
-
-   ancestors[1] = SCIPindexListNodeInsert(ancestors[1], 99);
-   ancestors[1] = SCIPindexListNodeInsert(ancestors[1], 17);
-   SCIPindexListNodeAppend(  ancestors[1],ancestors[2]);
-   while( ancestors[1] != NULL )
-   {
-      printf("index: %d \n", ancestors[1]->index);
-      ancestors[1] = ancestors[1]->parent;
-   }
-   SCIPindexListNodeFree(ancestors[1]);
-   if( ancestors[1] == NULL )
-     printf("NULL!!!\n");
-
-
-   assert(0);
-   */
-
 
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type );
-   if( g->stp_type != STP_UNDIRECTED ) /*&& graph->stp_type != STP_GRID )*/
+   if( 1 ||  g->stp_type != STP_UNDIRECTED )
      return fixed;
      // level = -4;
 
@@ -1316,13 +1262,6 @@ double reduce(
 
    if (level == -4)
       fixed = levelm4(g, scip);
-IDX* curr;
-    curr = g->fixedges;
-                  while( curr != NULL )
-                  {
-                     printf("%d->%d \n", g->tail[curr->index], g->head[curr->index]);
-                     curr = curr->parent;
-                  }
 
    return(fixed);
 }
