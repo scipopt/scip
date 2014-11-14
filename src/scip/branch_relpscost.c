@@ -57,6 +57,7 @@
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
 #define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
 #define DEFAULT_USEVARIABLETTESTSFORSB FALSE /**< should the strong branching decision be based on a hypothesis test? */
+#define DEFAULT_USEDYNAMICERRORTHRESHOLD FALSE /**< should the error threshold be adjusted dynamically? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -83,6 +84,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             uselowerconfipscost; /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
    SCIP_Bool             usevariablettestsforsb; /**< should the strong branching decision be based on a hypothesis test? */
+   SCIP_Bool             usedynamicerrorthreshold; /**< should the error threshold be adjusted dynamically? */
 };
 
 /**< the ts array contains all quartiles for a one sided two sample t-test up to 30 degrees of freedom */
@@ -688,11 +690,15 @@ SCIP_RETCODE execRelpscost(
       prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
-      /* depending on the strong branching priority, alter the error based reliability as rel / prio, such that
+      /* depending on the strong branching priority, optionally alter the error based reliability as rel / prio, such that
        * rel -> infty for prio -> 0
        */
-      assert(0 <= prio || maxninitcands == 0);
-      relerrorthreshold = branchruledata->relerrortolerance / (prio + 1e-5);
+      relerrorthreshold = branchruledata->relerrortolerance;
+      if( branchruledata->usedynamicerrorthreshold )
+      {
+         assert(0 <= prio || maxninitcands == 0);
+         relerrorthreshold /= (prio + 1e-5);
+      }
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
       nuninitcands = 0;
@@ -1509,6 +1515,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usevariablettestsforsb",
          "should the strong branching decision be based on a hypothesis test?",
          &branchruledata->usevariablettestsforsb, TRUE, DEFAULT_USEVARIABLETTESTSFORSB,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usedynamicerrorthreshold",
+         "should the error threshold be adjusted dynamically?",
+         &branchruledata->usedynamicerrorthreshold, TRUE, DEFAULT_USEDYNAMICERRORTHRESHOLD,
          NULL, NULL) );
 
    return SCIP_OKAY;
