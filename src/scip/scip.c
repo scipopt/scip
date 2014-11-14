@@ -36663,7 +36663,7 @@ void printSolutionStatistics(
 
    objlimitreached = FALSE;
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-      && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+      && !SCIPisInfinity(scip, primalbound)  )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
@@ -36679,7 +36679,7 @@ void printSolutionStatistics(
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
-         if( scip->primal->nsols == 0 )
+         if( scip->primal->nlimsolsfound == 0 )
          {
             if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
             {
@@ -36707,7 +36707,7 @@ void printSolutionStatistics(
    }
    else
    {
-      if( scip->primal->nsols == 0 )
+      if( scip->primal->nlimsolsfound == 0 )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
