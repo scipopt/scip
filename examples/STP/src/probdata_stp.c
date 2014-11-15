@@ -2205,22 +2205,34 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
             while( curr != NULL )
             {
 	       assert(graph->head[curr->index] != root);
-	       if( graph->term[graph->head[curr->index]] != -2 && ( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?  1 : graph->tail[curr->index] != root )  )
+	       if( graph->term[graph->head[curr->index]] != -2 )
 	       {
-                  if( orgedges[curr->index] == FALSE )
+                  if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
                   {
-                     orgedges[curr->index] = TRUE;
-                     nsoledges++;
+                     if( orgedges[curr->index] == FALSE )
+                     {
+                        orgedges[curr->index] = TRUE;
+                        nsoledges++;
+                     }
+                     if( orgnodes[graph->orgtail[curr->index]] == FALSE )
+                     {
+                        orgnodes[graph->orgtail[curr->index]] = TRUE;
+                        nsolnodes++;
+                     }
+                     if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                     {
+                        orgnodes[graph->orghead[curr->index]] = TRUE;
+                        nsolnodes++;
+                     }
                   }
-                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
+                  else
                   {
-                     orgnodes[graph->orgtail[curr->index]] = TRUE;
-                     nsolnodes++;
-                  }
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                  {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
+                     assert(graph->tail[curr->index] == root);
+                     if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                     {
+                        orgnodes[graph->orghead[curr->index]] = TRUE;
+                        nsolnodes++;
+                     }
                   }
 	       }
                curr = curr->parent;
@@ -2228,14 +2240,16 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 }
       }
 
-      for( e = 0; e < norgnodes; e++ )
-         if( orgnodes[e] == FALSE && Is_term(graph->term[e]) )
-	    nsolnodes++;
-
+      if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING && orgnodes[root] == FALSE )
+      {
+	 orgnodes[root] = TRUE;
+	 assert(nsolnodes == 0);
+	 nsolnodes = 1;
+      }
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
       for( e = 0; e < norgnodes; e++ )
-         if( orgnodes[e] == TRUE || (Is_term(graph->term[e]) && ((graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1: e != root) ) )
+         if( orgnodes[e] == TRUE )
 	    SCIPinfoMessage(scip, file, "V %d\n", e + 1);
 
 
