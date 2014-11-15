@@ -544,7 +544,7 @@ SCIP_RETCODE removeFixedVariables(
          {
             /* replace var_i by constant in expression tree */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &substexpr[i], SCIP_EXPR_CONST, constant) );
-            vars[0] = NULL;
+            vars[i] = NULL;
          }
          else if( coef == 1.0 && constant == 0.0 )
          {
@@ -595,6 +595,7 @@ SCIP_RETCODE removeFixedVariables(
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );  /*lint !e826*/
       SCIP_CALL( SCIPaddCons(scip, nlcons) );
+      SCIPdebugMessage("upgraded to"); SCIPdebugPrintCons(scip, nlcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &nlcons) );
 
       *isupgraded = TRUE;
@@ -4783,7 +4784,7 @@ SCIP_RETCODE separatePoint(
          }
          else
          {
-            SCIPdebugMessage("abandon cut since efficacy %g is too small\n", efficacy);
+            SCIPdebugMessage("abandon cut since efficacy %g is too small or not applicable\n", efficacy);
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
