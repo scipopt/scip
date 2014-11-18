@@ -1369,12 +1369,16 @@ void graph_knot_contract(
    } SLIST;
 
    SLIST* slp;
+   IDX**   ancestors;
+   IDX**   revancestors;
+   IDX*   tsancestors = NULL;
+   IDX*   stancestors = NULL;
    int    slc = 0;
    int    i;
    int    et;
    int    anti;
    int    es;
-   int    cedgeout;
+   int    cedgeout = UNKNOWN;
    int    head;
    int    tail;
 
@@ -1400,16 +1404,21 @@ void graph_knot_contract(
       p->source[0] = t;
 
    slp = malloc((size_t)p->grad[s] * sizeof(SLIST));
-
+   ancestors = malloc((size_t)p->grad[s] * sizeof(IDX*));
+   revancestors = malloc((size_t)p->grad[s] * sizeof(IDX*));
    assert(slp != NULL);
 
    /* Liste mit Kanten des aufzuloesenden Knotens merken
     */
-   for(es = p->outbeg[s]; es != EAT_LAST; es = p->oeat[es])
+   for( es = p->outbeg[s]; es != EAT_LAST; es = p->oeat[es] )
    {
       assert(p->tail[es] == s);
 
-      if (p->head[es] != t)
+      ancestors[slc] = NULL;
+      SCIPindexListNodeAppendCopy(&(ancestors[slc]), p->ancestors[es]);
+      revancestors[slc] = NULL;
+      SCIPindexListNodeAppendCopy(&(revancestors[slc]), p->ancestors[Edge_anti(es)]);
+      if( p->head[es] != t )
       {
          /*
            assert(EQ(p->cost[es], p->cost[Edge_anti(es)]));
@@ -1424,7 +1433,11 @@ void graph_knot_contract(
          assert(slc < p->grad[s]);
       }
       else
+      {
          cedgeout = Edge_anti(es); /* The edge out of t and into s. */
+	 SCIPindexListNodeAppendCopy(&stancestors, p->ancestors[es]);
+	 SCIPindexListNodeAppendCopy(&tsancestors, p->ancestors[cedgeout]);
+      }
    }
    assert(slc == p->grad[s] - 1);
 
@@ -1435,13 +1448,16 @@ void graph_knot_contract(
       /* Hat t schon eine Kante mit diesem Ziel ?
        */
       for(et = p->outbeg[t]; et != EAT_LAST; et = p->oeat[et])
-         if (p->head[et] == slp[i].knot)
+         if( p->head[et] == slp[i].knot )
             break;
 
       /* Keine gefunden, Kante aus der Liste muss eingefuegt werden.
        */
       if (et == EAT_LAST)
+      {
          slp[i].mark = TRUE;
+	 //printf("edge %d->%d not found \n ", p->tail[slp[i].edge], p->head[slp[i].edge]);
+      }
       else
       {
          /* Ja ist vorhanden !
@@ -1452,22 +1468,23 @@ void graph_knot_contract(
           * This is for nodes with edges to s and t.
           * Need to adjust the out and in costs of the edge
           */
-         if (GT(p->cost[et], slp[i].outcost))
+         if( GT(p->cost[et], slp[i].outcost) )
 	 {
-	   printf("DELETE \n\n");
-	    SCIPindexListNodeFree((p->ancestors)[et]);
-	    (p->ancestors)[et] = SCIPindexListNodeAppend((p->ancestors)[et], p->ancestors[slp[i].edge]);
-	    (p->ancestors)[et] = SCIPindexListNodeAppend((p->ancestors)[et], p->ancestors[cedgeout]);
+	    SCIPindexListNodeFree(&((p->ancestors)[et]));
+	    assert(p->ancestors[et] == NULL);
+	    SCIPindexListNodeAppendCopy(&((p->ancestors)[et]), ancestors[i]);
+	    SCIPindexListNodeAppendCopy(&((p->ancestors)[et]), tsancestors);
             p->cost[et] = slp[i].outcost;
 	 }
 
-         if (GT(p->cost[Edge_anti(et)], slp[i].incost))
+         if( GT(p->cost[Edge_anti(et)], slp[i].incost) )
 	 {
 	    anti = Edge_anti(et);
-	    printf("DELETE \n\n");
-	    SCIPindexListNodeFree(p->ancestors[anti]);
-	    (p->ancestors)[anti] = SCIPindexListNodeAppend((p->ancestors)[anti], p->ancestors[Edge_anti(slp[i].edge)]);
-            (p->ancestors)[anti] = SCIPindexListNodeAppend((p->ancestors)[anti], p->ancestors[Edge_anti(cedgeout)]);
+	    SCIPindexListNodeFree(&(p->ancestors[anti]));
+	    assert(p->ancestors[anti] == NULL);
+	    SCIPindexListNodeAppendCopy(&((p->ancestors)[anti]), revancestors[i]);
+	    //SCIPindexListNodeAppendCopy(&((p->ancestors)[anti]), p->ancestors[Edge_anti(slp[i].edge)]);
+            SCIPindexListNodeAppendCopy(&((p->ancestors)[anti]), stancestors);
             p->cost[anti] = slp[i].incost;
 	 }
       }
@@ -1475,15 +1492,34 @@ void graph_knot_contract(
 
    /* Einzufuegenden Kanten einfuegen
     */
-   for(i = 0; i < slc; i++)
+   for( i = 0; i < slc; i++ )
    {
-      if (slp[i].mark)
+      if( slp[i].mark )
       {
          es = p->outbeg[s];
 
          assert(es != EAT_LAST);
-         //SCIPindexListNodeFree(p->ancestors[es]);
-	 //SCIPindexListNodeFree(p->ancestors[Edge_anti(es)]);
+	 assert(ancestors[i] != NULL);
+	 assert(revancestors[i] != NULL);
+
+         SCIPindexListNodeFree(&(p->ancestors[es]));
+	 SCIPindexListNodeAppendCopy(&(p->ancestors[es]), ancestors[i]);
+	 /*
+         printf("edge: %d->%d, %d \n", p->tail[slp[i].edge], p->head[slp[i].edge], slp[i].edge);
+	 printf("XXX1 add edge: %d %d \n", p->tail[slp[i].edge], p->head[slp[i].edge]);
+	 printf("XXX add edge: %d %d \n", p->tail[cedgeout], p->head[cedgeout]);
+	 */
+	 SCIPindexListNodeAppendCopy(&(p->ancestors[es]), tsancestors);
+	 /*
+	 IDX* curr;
+                    curr = p->ancestors[es];
+		    while( curr != NULL )
+		    {
+		      printf("inside %d->%d ancestor: %d->%d \n", p->orgtail[es], p->orghead[es], p->orgtail[curr->index], p->orghead[curr->index] );
+		      curr = curr->parent;
+		    }
+	 */
+
          graph_edge_del(p, es);
 
          head = slp[i].knot;
@@ -1499,9 +1535,12 @@ void graph_knot_contract(
          p->oeat[es]     = p->outbeg[tail];
          p->inpbeg[head] = es;
          p->outbeg[tail] = es;
-	 p->ancestors[es] = SCIPindexListNodeAppend(p->ancestors[es], p->ancestors[cedgeout]);
 
-         es = Edge_anti(es);
+	 es = Edge_anti(es);
+         SCIPindexListNodeFree(&(p->ancestors[es]));
+
+	 SCIPindexListNodeAppendCopy(&(p->ancestors[es]), revancestors[i]);
+	 SCIPindexListNodeAppendCopy(&(p->ancestors[es]), stancestors);
 
          p->cost[es]     = slp[i].incost;
          p->tail[es]     = head;
@@ -1510,8 +1549,6 @@ void graph_knot_contract(
          p->oeat[es]     = p->outbeg[head];
          p->inpbeg[tail] = es;
          p->outbeg[head] = es;
-
-	 p->ancestors[es] = SCIPindexListNodeAppend(p->ancestors[es], p->ancestors[Edge_anti(cedgeout)]);
       }
    }
    /* Alle uebrigen Kanten Loeschen.
@@ -1519,9 +1556,16 @@ void graph_knot_contract(
    while(p->outbeg[s] != EAT_LAST)
       graph_edge_del(p, p->outbeg[s]);
 
+//TODO free ancestors?
   /* p->ctrctedge[cedgeout] = p->ctrctknot[s];
    p->ctrctknot[t] = cedgeout;*/
-
+  /* SCIPindexListNodeFree(&stancestors);
+   SCIPindexListNodeFree(&tsancestors);*/
+   for( i = 0; i < slc; i++ )
+   {
+      SCIPindexListNodeFree(&(ancestors[i]));
+      SCIPindexListNodeFree(&(revancestors[i]));
+   }
    free(slp);
 
    assert(p->grad[s]   == 0);
@@ -1783,11 +1827,9 @@ GRAPH *graph_pack(
    {
       free(new);
       new = NULL;
-      //graph_free(p, FALSE); //TODO!!
 
       printf(" Graph vanished!\n");
       knots = 1;
-      //return(NULL);
    }
 
    /* Kanten zaehlen
@@ -1804,8 +1846,6 @@ GRAPH *graph_pack(
    q = graph_init(knots, edges, p->layers, p->flags);
    q->orgtail = p->orgtail;
    q->orghead = p->orghead;
-   q->fixedges = p->fixedges;
-   q->ancestors = p->ancestors;
    q->orgknots = p->knots;
    q->orgedges = p->edges;
    q->stp_type = p->stp_type;
@@ -1813,14 +1853,20 @@ GRAPH *graph_pack(
    q->grid_dim = p->grid_dim;
    q->grid_ncoords = p->grid_ncoords;
    q->grid_coordinates = p->grid_coordinates;
-
+   q->fixedges = p->fixedges;
    if( new == NULL )
    {
+
+      q->ancestors = p->ancestors;
       graph_free(p, FALSE);
       graph_knot_add(q, 0, -1, -1);
       q->source[0] = 0;
       return q;
    }
+
+   q->ancestors = malloc((size_t)(edges) * sizeof(IDX*));
+   for( i = 0; i < edges; i++ )
+      q->ancestors[i] = NULL;
 
    /* Knoten umladen
     */
@@ -1834,13 +1880,13 @@ GRAPH *graph_pack(
          (void)fflush(stdout);
       }
 #endif
-      if (p->grad[i] > 0)
+      if( p->grad[i] > 0 )
          graph_knot_add(q, p->term[i], p->xpos[i], p->ypos[i]);
    }
 
    /* Kanten umladen
     */
-   for(i = 0; i < p->edges; i += 2)
+   for( i = 0; i < p->edges; i += 2 )
    {
 #if 0
       if ((i % 1000) == 0)
@@ -1854,6 +1900,8 @@ GRAPH *graph_pack(
          assert(p->oeat[i]     == EAT_FREE);
          assert(p->ieat[i + 1] == EAT_FREE);
          assert(p->oeat[i + 1] == EAT_FREE);
+	 SCIPindexListNodeFree(&(p->ancestors[i]));
+         SCIPindexListNodeFree(&(p->ancestors[i + 1]));
          continue;
       }
       assert(p->ieat[i]      != EAT_FREE);
@@ -1863,8 +1911,13 @@ GRAPH *graph_pack(
       assert(new[p->tail[i]] >= 0);
       assert(new[p->head[i]] >= 0);
 
+      SCIPindexListNodeAppendCopy(&(q->ancestors[q->edges]), p->ancestors[i]);
+      SCIPindexListNodeAppendCopy(&(q->ancestors[q->edges + 1]), p->ancestors[i + 1]);
       graph_edge_add(q, new[p->tail[i]], new[p->head[i]],
          p->cost[i], p->cost[Edge_anti(i)]);
+
+      SCIPindexListNodeFree(&(p->ancestors[i]));
+      SCIPindexListNodeFree(&(p->ancestors[i + 1]));
    }
 
    /* Wurzeln umladen

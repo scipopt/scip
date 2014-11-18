@@ -376,7 +376,6 @@ int sd_reduction(
          if (LT(cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e]))
          {
             graph_edge_del(g, e);
-
             elimins++;
          }
       }
@@ -767,7 +766,7 @@ int nsv_reduction(
            e, i, k, min1, min2, cost1, cost2);
          */
          *fixed += g->cost[e];
-
+         SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
          graph_knot_contract(g, i, k);
 
          elimins++;

@@ -48,57 +48,66 @@ int GNODECmpByDist(void *first_arg, void *second_arg )
 }
 
 
-IDX* SCIPindexListNodeInsert(
-      IDX* node,
+void SCIPindexListNodeInsert(
+      IDX** node,
       int   index
 	)
 {
    IDX* curr;
+   curr = *node;
    //printf("add element\n!");
-   curr = malloc((size_t)sizeof(IDX));
-   curr->index = index;
-   curr->parent = (node);
-   return curr;
+   *node = malloc((size_t)sizeof(IDX));
+   (*node)->index = index;
+
+   (*node)->parent = (curr);
+
 }
 
 
-IDX* SCIPindexListNodeAppend(
-      IDX* tar,
-      IDX* app
+void SCIPindexListNodeAppendCopy(
+      IDX** node1,
+      IDX* node2
 	)
 {
-   IDX* curr;
-   int i;
-   if( tar == NULL )
-   {
-      return app;
-   }
-   curr = tar;
-   while( curr->parent != NULL )
-   {
-     printf("index %d\n", curr->index);
+   IDX* curr1;
+   IDX* curr2;
+   IDX* new = NULL;
 
-        assert(i++ < 5);
-     curr = curr->parent;
-   }
+   curr1 = *node1;
+   if( curr1 != NULL )
+   while( curr1->parent != NULL )
+      curr1 = curr1->parent;
 
-   curr->parent = app;
-   return tar;
+   curr2 = node2;
+   while( curr2 != NULL )
+   {
+      new = malloc((size_t)sizeof(IDX));
+      new->index = curr2->index;
+      if( curr1 != NULL )
+         curr1->parent = new;
+      else
+	 *node1 = new;
+      curr1 = new;
+      curr2 = curr2->parent;
+   }
+   if( new != NULL )
+      new->parent = NULL;
 }
 
 
 void SCIPindexListNodeFree(
-   IDX* node
+   IDX** node
      )
 {
    IDX* curr;
-   curr = node;
+   curr = *node;
    while( curr != NULL )
    {
-      node = curr->parent;
+      *node = curr->parent;
       free(curr);
-      curr = node;
+      curr = *node;
    }
+   assert(*node == NULL);
 }
 
 /*

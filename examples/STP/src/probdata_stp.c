@@ -2038,7 +2038,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 {
 	    orgedges[curr->index] = TRUE;
 	    nsoledges++;
-	    printf("fixededge\n");
+
 	 }
 
 	 //printf("indexorgtail: %d max: %d \n", graph->orgtail[curr->index], norgnodes);
@@ -2068,7 +2068,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                {
                   orgedges[curr->index] = TRUE;
                   nsoledges++;
-		  printf("ancestoredge\n");
                }
                if( orgnodes[graph->orgtail[curr->index]] == FALSE )
                {
@@ -2085,8 +2084,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 }
       }
 
-      printf("norgnodes: %d \n", norgnodes);
-      printf("norgedges: %d \n", norgedges);
+     // printf("norgnodes: %d \n", norgnodes);
+      //printf("norgedges: %d \n", norgedges);
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
