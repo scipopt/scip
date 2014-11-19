@@ -1199,6 +1199,9 @@ static double levelm4(
    int*    heap;
    int*    state;
    int*     outterms;
+   char    sd = TRUE;
+   char    nsv = TRUE;
+
 
    assert(g != NULL);
 
@@ -1238,23 +1241,29 @@ static double levelm4(
          break;
 
       rerun = FALSE;
-
+      if( sd )
+      {
       for(i = 0; i < 2; i++)
       {
+	 sd = FALSE;
          if( g->stp_type == STP_HOP_CONS )
             numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
          else
             numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
          printf("SD Reduction %d: %d\n", i, numelim);
          if (numelim > 10)
+	 {
             rerun = TRUE;
-         else
-            break;
-      }
+	    sd = TRUE;
+         }
 
+      }
+      }
       if (degree_test_dir(g, &fixed) > 10)
          rerun = TRUE;
-
+      if( nsv )
+      {
+      nsv = FALSE;
       if( g->stp_type != STP_HOP_CONS )
       {
          for (i = 0; i < 4; i++)
@@ -1262,10 +1271,16 @@ static double levelm4(
             numelim = nv_reduction_optimal(g, &fixed);
             printf("NV Reduction %d: %d\n", i, numelim);
             if(numelim > 10)
+	    {
                rerun = TRUE;
+	       nsv = TRUE;
+	    }
             else
+	    {
                break;
+	    }
          }
+      }
       }
 
       //if (bd3_reduction(g))
@@ -1362,14 +1377,17 @@ double reduce(
 #endif
 
    /* only use reduction for undirected STP's in graphs */
-   printf("type: %d\n", g->stp_type );
-   if( 1 ||  g->stp_type != STP_UNDIRECTED )
+   printf("type: %d\n", g->stp_type);
+   if( g->stp_type != STP_UNDIRECTED )
       return fixed;
-   //if( g->stp_type != STP_UNDIRECTED )
-     //level = -4;
 
    if( g->stp_type == STP_GRID )
       return fixed;
+
+   if( g->stp_type != STP_UNDIRECTED )
+       level = -4;
+
+
    assert(g->layers == 1);
 
    if (level == 1)
