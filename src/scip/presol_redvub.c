@@ -261,49 +261,31 @@ SCIP_RETCODE detectDominatingVubs(
          if( !SCIPisEQ(scip, lowthresholds[i], lowthresholds[j]) )
             continue;
 
+         if( SCIPmatrixGetColNDownlocks(matrix, binidxs[j]) != 1 ||
+            SCIPmatrixGetColNDownlocks(matrix, binidxs[i]) != 1 )
+            continue;
+
          if( SCIPisEQ(scip, highthresholds[i], highthresholds[j]) )
          {
-            if( SCIPmatrixGetColNDownlocks(matrix, binidxs[j]) <= 1 )
-            {
 #ifdef SCIP_DEBUG
-               SCIPdebugMessage("Aggregate variable %s by %s\n",
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
-               SCIPdebugMessage("Delete variable upper bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL));
-               SCIPinfoMessage(scip, NULL, "\n");
+            SCIPdebugMessage("Aggregate variable %s by %s\n",
+               SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
+               SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
+            SCIPdebugMessage("Delete variable upper bound constraint:\n");
+            SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL));
+            SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-               isvartoagg[binidxs[j]] = TRUE;
-               aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
-               (*nvaragg)++;
+            isvartoagg[binidxs[j]] = TRUE;
+            aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
+            (*nvaragg)++;
 
-               deletecons[vubs[j]] = TRUE;
-               (*ndeletecons)++;
-            }
-            else if( SCIPmatrixGetColNDownlocks(matrix, binidxs[i]) <= 1 )
-            {
-#ifdef SCIP_DEBUG
-               SCIPdebugMessage("Aggregate variable %s by %s\n",
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])),
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])));
-               SCIPdebugMessage("Delete variable upper bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL));
-               SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-               isvartoagg[binidxs[i]] = TRUE;
-               aggvars[binidxs[i]] = SCIPmatrixGetVar(matrix, binidxs[j]);
-               (*nvaragg)++;
-
-               deletecons[vubs[i]] = TRUE;
-               (*ndeletecons)++;
-            }
+            deletecons[vubs[j]] = TRUE;
+            (*ndeletecons)++;
          }
          else
          {
-            if( SCIPisGT(scip, highthresholds[i], highthresholds[j]) &&
-               SCIPmatrixGetColNDownlocks(matrix, binidxs[i]) <= 1 )
+            if( SCIPisGT(scip, highthresholds[i], highthresholds[j]) )
             {
 #ifdef SCIP_DEBUG
                SCIPdebugMessage("Aggregate variable %s by %s\n",
@@ -321,8 +303,7 @@ SCIP_RETCODE detectDominatingVubs(
                deletecons[vubs[i]] = TRUE;
                (*ndeletecons)++;
             }
-            else if( SCIPisGT(scip, highthresholds[j], highthresholds[i]) &&
-               SCIPmatrixGetColNDownlocks(matrix, binidxs[j]) <= 1 )
+            else
             {
 #ifdef SCIP_DEBUG
                SCIPdebugMessage("Aggregate variable %s by %s\n",
@@ -400,49 +381,31 @@ SCIP_RETCODE detectDominatingVlbs(
          if( !SCIPisEQ(scip, lowthresholds[i], lowthresholds[j]) )
             continue;
 
+         if( SCIPmatrixGetColNUplocks(matrix, binidxs[j]) != 1 ||
+            SCIPmatrixGetColNUplocks(matrix, binidxs[i]) != 1 )
+            continue;
+
          if( SCIPisEQ(scip, highthresholds[i], highthresholds[j]) )
          {
-            if( SCIPmatrixGetColNUplocks(matrix, binidxs[j]) <= 1 )
-            {
 #ifdef SCIP_DEBUG
-               SCIPdebugMessage("Aggregate variable %s by %s\n",
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
-               SCIPdebugMessage("Delete variable lower bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL));
-               SCIPinfoMessage(scip, NULL, "\n");
+            SCIPdebugMessage("Aggregate variable %s by %s\n",
+               SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])),
+               SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])));
+            SCIPdebugMessage("Delete variable lower bound constraint:\n");
+            SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL));
+            SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-               isvartoagg[binidxs[j]] = TRUE;
-               aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
-               (*nvaragg)++;
+            isvartoagg[binidxs[j]] = TRUE;
+            aggvars[binidxs[j]] = SCIPmatrixGetVar(matrix, binidxs[i]);
+            (*nvaragg)++;
 
-               deletecons[vlbs[j]] = TRUE;
-               (*ndeletecons)++;
-            }
-            else if( SCIPmatrixGetColNUplocks(matrix, binidxs[i]) <= 1 )
-            {
-#ifdef SCIP_DEBUG
-               SCIPdebugMessage("Aggregate variable %s by %s\n",
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[i])),
-                  SCIPvarGetName(SCIPmatrixGetVar(matrix, binidxs[j])));
-               SCIPdebugMessage("Delete variable lower bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL));
-               SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-               isvartoagg[binidxs[i]] = TRUE;
-               aggvars[binidxs[i]] = SCIPmatrixGetVar(matrix, binidxs[j]);
-               (*nvaragg)++;
-
-               deletecons[vlbs[i]] = TRUE;
-               (*ndeletecons)++;
-            }
+            deletecons[vlbs[j]] = TRUE;
+            (*ndeletecons)++;
          }
          else
          {
-            if( SCIPisLT(scip, highthresholds[i], highthresholds[j]) &&
-               SCIPmatrixGetColNUplocks(matrix, binidxs[i]) <= 1 )
+            if( SCIPisLT(scip, highthresholds[i], highthresholds[j]) )
             {
 #ifdef SCIP_DEBUG
                SCIPdebugMessage("Aggregate variable %s by %s\n",
@@ -460,8 +423,7 @@ SCIP_RETCODE detectDominatingVlbs(
                deletecons[vlbs[i]] = TRUE;
                (*ndeletecons)++;
             }
-            else if( SCIPisLT(scip, highthresholds[j], highthresholds[i]) &&
-               SCIPmatrixGetColNUplocks(matrix, binidxs[j]) <= 1 )
+            else
             {
 #ifdef SCIP_DEBUG
                SCIPdebugMessage("Aggregate variable %s by %s\n",
@@ -647,10 +609,11 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
       SCIP_CALL( SCIPallocBufferArray(scip, &isvartoagg, ncols) );
       BMSclearMemoryArray(isvartoagg, ncols);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &deletecons, ncols) );
-      BMSclearMemoryArray(deletecons, ncols);
+      SCIP_CALL( SCIPallocBufferArray(scip, &deletecons, nrows) );
+      BMSclearMemoryArray(deletecons, nrows);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, ncols) );
+      BMSclearMemoryArray(aggvars, ncols);
 
       SCIP_CALL( findVarAggrRedVbcons(scip, matrix, &nvaragg, isvartoagg, aggvars, &ndeletecons, deletecons) );
 
@@ -666,6 +629,7 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
                SCIP_Bool aggregated;
 
                /* substitute/aggregate binary variable */
+               assert(aggvars[v] != NULL);
                SCIP_CALL( SCIPaggregateVars(scip, SCIPmatrixGetVar(matrix,v), aggvars[v], 1.0, -1.0,
                      0, &infeasible, &redundant, &aggregated) );
 
