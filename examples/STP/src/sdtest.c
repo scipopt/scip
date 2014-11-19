@@ -289,6 +289,123 @@ static void compute_sd(
    }
 }
 
+/* Function to compute the inward or outward special distance for directed graphs */
+static void compute_sd_dir(
+   const GRAPH*  p,
+   int           start,
+   const double* cost,
+   int*          heap,
+   int*          state,
+   int*          count, /* pointer to store number of elements of heap */
+   double*       pathdist,
+   double*       pathtran,
+   char          inward)
+{
+   int    k;
+   int    m;
+   int    i;
+   int    curr_edge;
+   int    done = 0;
+   double tran;
+   double dist;
+
+   assert(p          != NULL);
+   assert(start      >= 0);
+   assert(start      <  p->knots);
+   assert(heap       != NULL);
+   assert(state      != NULL);
+   assert(pathdist   != NULL);
+   assert(pathtran   != NULL);
+   assert(cost       != NULL);
+   assert(count      != NULL);
+   assert(*count     >= 0);
+
+   /* Kein Baum ohne Knoten
+    */
+   if (p->knots == 0)
+      return;
+
+   (*count) = 0;
+
+   /* Erstmal alles auf null, unbekannt und weit weg
+    */
+   for(i = 0; i < p->knots; i++)
+   {
+      state[i]     = UNKNOWN;
+      pathdist[i] = FARAWAY;
+      pathtran[i] = FARAWAY;
+   }
+   /* Startknoten in den Heap
+    */
+   k            = start;
+   pathdist[k] = 0.0;
+   pathtran[k] = 0.0;
+
+   /* Wenn nur ein Knoten drin ist funktioniert der Heap nicht sehr gut,
+    * weil dann fuer genau 0 Elemente Platz ist.
+    */
+   if (p->knots > 1)
+   {
+      (*count)       = 1;
+      heap[(*count)] = k;
+      state[k]    = (*count);
+
+      /* Wenn nichts mehr auf dem Heap ist, sind wir fertig
+       * und jetzt erstmal Hula Loop
+       */
+      while((*count) > 0)
+      {
+         /* Na, wer ist der Naechste ?
+          */
+         k = nearest(heap, state, count, pathdist, pathtran);
+
+         /* Wieder einen erledigt
+          */
+         state[k] = CONNECT;
+
+         /* Verbunden Knoten berichtigen ...
+          *
+          * Wenn ein Knoten noch nicht erledigt ist
+          * werden wir dann auf diesem Wege besser ?
+          */
+         for(i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i])
+         {
+            m = p->head[i];
+            if( inward )
+               curr_edge = Edge_anti(i);
+            else
+               curr_edge = i;
+
+            /* 1. Ist der Knoten noch nicht festgelegt ?
+             *    Ist der wohlmoeglich tabu ?
+             */
+            if ((state[m]) && (p->mark[m]))
+            {
+               /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
+                *    Wenn ja, dann muss die Entferung kuerzer sein.
+                */
+               /* The special distance is the length of the longest path between two terminals (elementary path)
+                * contained in the path between knots i and j.
+                * - tran measures the distance between two terminals.
+                * - dist stores the current longest elementary path.
+                */
+               tran = Is_term(p->term[m]) ? 0.0 : pathtran[k] + cost[curr_edge];
+               dist = Max(pathdist[k], pathtran[k] + cost[curr_edge]);
+
+               if (LT(dist, pathdist[m])
+                || (EQ(dist, pathdist[m]) && LT(tran, pathtran[m])))
+               {
+                  pathdist[m] = dist;
+                  pathtran[m] = tran;
+
+                  correct(heap, state, count, pathdist, pathtran, m);
+               }
+            }
+         }
+      }
+   }
+}
+
 /* C. W. Duin and A. Volganant
  *
  * "An Edge Elimination Test for the Steiner Problem in Graphs"
@@ -394,6 +511,172 @@ int sd_reduction(
 
    SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
    printf("%d SD: Edges deleted\n", elimins * 2);
+   return(elimins);
+}
+
+/* C. W. Duin and A. Volganant
+ *
+ * "An Edge Elimination Test for the Steiner Problem in Graphs"
+ *
+ * Operations Research Letters 8, (1989), 79-83
+ *
+ * Special Distance Test for directed graphs
+ */
+int sd_reduction_dir(
+   GRAPH*   g,
+   double** sd_indist,
+   double** sd_intran,
+   double** sd_outdist,
+   double** sd_outtran,
+   double*  cost,
+   int*     heap,
+   int*     state,
+   int*     outterms
+   )
+{
+   int     outtermcount = 0;
+   int     count = 0;
+   int     i;
+   int     e;
+   int     j;
+   int     k;
+   int     l;
+   int     m;
+   int     elimins = 0;
+   double  tempsd;
+   double  specialdist;
+
+   assert(sd_indist  != NULL);
+   assert(sd_intran  != NULL);
+   assert(sd_outdist != NULL);
+   assert(sd_outtran != NULL);
+   assert(cost       != NULL);
+   assert(heap       != NULL);
+   assert(state      != NULL);
+
+   SCIPdebugMessage("SD-Reduktion: ");
+   fflush(stdout);
+
+   assert(outterms != NULL);
+
+   for(i = 0; i < g->knots; i++)
+   {
+      assert(sd_indist[i]  != NULL);
+      assert(sd_intran[i]  != NULL);
+      assert(sd_outdist[i] != NULL);
+      assert(sd_outtran[i] != NULL);
+
+      if( Is_term(g->term[i]) )
+      {
+         for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
+         {
+            if( Is_term(g->term[i]) && LT(g->cost[e], FARAWAY) )
+            {
+               printf("Outgoing edge for terminal %d: %d\n", i, e);
+               outterms[outtermcount] = i;
+               outtermcount++;
+
+               break;
+            }
+         }
+      }
+      g->mark[i] = (g->grad[i] > 0);
+   }
+
+   for(i = 0; i < g->edges; i++)
+      cost[i] = g->cost[i] * 1000.0 + (double)(rand() % 512);
+
+   for( i = 0; i < outtermcount; i++ )
+   {
+      compute_sd_dir(g, outterms[i], cost, heap, state, &count, sd_indist[i], sd_intran[i], TRUE);
+      compute_sd_dir(g, outterms[i], cost, heap, state, &count, sd_outdist[i], sd_outtran[i], FALSE);
+   }
+
+   for(i = 0; i < g->knots; i++)
+   {
+      if (!(i % 100))
+      {
+         SCIPdebug(fputc('.', stdout));
+         SCIPdebug(fflush(stdout));
+      }
+
+      if (g->grad[i] == 0)
+         continue;
+
+      /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
+      if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
+         continue;
+
+
+      for(e = g->outbeg[i]; e != EAT_LAST; e = j)
+      {
+         assert(g->tail[e] == i);
+         l = g->head[e];
+         //printf("Special Distance between %d and %d: %g\n", i, g->head[e], sd[g->head[e]].dist);
+
+         j = g->oeat[e];
+
+         specialdist = FARAWAY;
+         for( k = 0; k < outtermcount; k++ )
+         {
+            assert(l >= 0 && l < g->knots);
+            tempsd = FARAWAY;
+            if( outterms[k] == g->source[0] )
+            {
+               if( (LT(sd_indist[k][i], FARAWAY) || LT(sd_outdist[k][i], FARAWAY)) && LT(sd_outdist[k][l], FARAWAY) )
+               {
+                  //printf("Distances: %g %g %g", sd_in[k][i].dist, sd_out[k][i].dist, sd_out[k][l].dist);
+                  if( !LT(sd_indist[k][i], FARAWAY) )
+                     tempsd = sd_outdist[k][i];
+                  else if( !LT(sd_outdist[k][i], FARAWAY) )
+                     tempsd = sd_indist[k][i];
+                  else if( GT(sd_indist[k][i], sd_outdist[k][i]) )
+                     tempsd = sd_indist[k][i];
+                  else
+                     tempsd = sd_outdist[k][i];
+
+
+                  if( GT(sd_outdist[k][l], tempsd) )
+                     tempsd = sd_outdist[k][l];
+               }
+            }
+            else
+            {
+               if( LT(sd_indist[k][i], FARAWAY) && LT(sd_outdist[k][l], FARAWAY) )
+               {
+                  //printf("Distances: %g %g %g", sd_in[k][i].dist, sd_out[k][i].dist, sd_out[k][l].dist);
+                  tempsd = sd_indist[k][i];
+
+                  if( GT(sd_outdist[k][l], tempsd) )
+                     tempsd = sd_outdist[k][l];
+               }
+            }
+
+            if( LT(tempsd, specialdist) )
+               specialdist = tempsd;
+         }
+         //printf("SD Test Knot %d %d %g %g\n", i, l, specialdist, cost[e]);
+
+         if (LT(cost[e], FARAWAY) && LT(specialdist, cost[e]))
+         {
+            graph_edge_del(g, e);
+
+            elimins++;
+
+            //for( m = 0; m < outtermcount; m++ )
+            //{
+               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
+               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
+            //}
+         }
+      }
+   }
+
+
+   assert(graph_valid(g));
+
+   SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
+
    return(elimins);
 }
 
@@ -969,12 +1252,15 @@ int nv_reduction_optimal(
       assert(terms[k] >= 0 && terms[k] < g->knots);
 
       if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
-         + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
+            + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
       {
          printf("Short link test %d\n", k);
          e = minArc1[terms[k]];
          i = g->head[e];
          j = g->tail[e];
+
+         if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
+         continue;
 
          if( Is_term(g->term[i]) )
             *fixed += g->cost[e];
