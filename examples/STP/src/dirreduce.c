@@ -116,6 +116,7 @@ int degree_test_dir(
                   g->cost[e1]            += g->cost[Edge_anti(e2)];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
 
+                  //printf("con0 %d, %d\n", i2, i);
                   graph_knot_contract(g, i2, i);
 
                   count++;

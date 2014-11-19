@@ -1190,17 +1190,40 @@ static double levelm4(
    int    numelim;
    double*  sddist;
    double*  sdtrans;
+   double** sd_indist;
+   double** sd_intran;
+   double** sd_outdist;
+   double** sd_outtran;
    double* cost;
    int*    heap;
    int*    state;
+   int*     outterms;
 
    assert(g != NULL);
 
-   heap  = malloc((size_t)g->knots * sizeof(int));
-   state = malloc((size_t)g->knots * sizeof(int));
-   sddist = malloc((size_t)g->knots * sizeof(double));
-   sdtrans = malloc((size_t)g->knots * sizeof(double));
-   cost  = malloc((size_t)g->edges * sizeof(double));
+   heap        = malloc((size_t)g->knots * sizeof(int));
+   state       = malloc((size_t)g->knots * sizeof(int));
+   sddist      = malloc((size_t)g->knots * sizeof(double));
+   sdtrans     = malloc((size_t)g->knots * sizeof(double));
+   sd_indist   = malloc((size_t)g->knots * sizeof(double*));
+   sd_intran   = malloc((size_t)g->knots * sizeof(double*));
+   sd_outdist  = malloc((size_t)g->knots * sizeof(double*));
+   sd_outtran  = malloc((size_t)g->knots * sizeof(double*));
+   cost        = malloc((size_t)g->edges * sizeof(double));
+   outterms    = malloc((size_t)g->knots * sizeof(int));
+
+   assert(sd_indist  != NULL);
+   assert(sd_intran  != NULL);
+   assert(sd_outdist != NULL);
+   assert(sd_outtran != NULL);
+
+   for( i = 0; i < g->knots; i++ )
+   {
+      sd_indist[i]   = malloc((size_t)g->knots * sizeof(double));
+      sd_intran[i]   = malloc((size_t)g->knots * sizeof(double));
+      sd_outdist[i]  = malloc((size_t)g->knots * sizeof(double));
+      sd_outtran[i]  = malloc((size_t)g->knots * sizeof(double));
+   }
 
    //voronoi_inout(g);
 
@@ -1217,7 +1240,10 @@ static double levelm4(
 
       for(i = 0; i < 2; i++)
       {
-         numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
+         if( g->stp_type == STP_HOP_CONS )
+            numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
+         else
+            numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
          printf("SD Reduction %d: %d\n", i, numelim);
          if (numelim > 10)
             rerun = TRUE;
@@ -1228,14 +1254,17 @@ static double levelm4(
       if (degree_test_dir(g, &fixed) > 10)
          rerun = TRUE;
 
-      for (i = 0; i < 4; i++)
+      if( g->stp_type != STP_HOP_CONS )
       {
-         numelim = nv_reduction_optimal(g, &fixed);
-         printf("NV Reduction %d: %d\n", i, numelim);
-         if(numelim > 10)
-            rerun = TRUE;
-         else
-            break;
+         for (i = 0; i < 4; i++)
+         {
+            numelim = nv_reduction_optimal(g, &fixed);
+            printf("NV Reduction %d: %d\n", i, numelim);
+            if(numelim > 10)
+               rerun = TRUE;
+            else
+               break;
+         }
       }
 
       //if (bd3_reduction(g))
@@ -1246,11 +1275,25 @@ static double levelm4(
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
 
+   for( i = 0; i < g->knots; i++ )
+   {
+      free(sd_indist[i]);
+      free(sd_intran[i]);
+      free(sd_outdist[i]);
+      free(sd_outtran[i]);
+   }
+
+
    free(sddist);
    free(sdtrans);
+   free(sd_indist);
+   free(sd_intran);
+   free(sd_outdist);
+   free(sd_outtran);
    free(heap);
    free(state);
    free(cost);
+   free(outterms);
 
    return(fixed);
 }
@@ -1319,9 +1362,10 @@ double reduce(
 
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type );
-   if( g->stp_type != STP_UNDIRECTED )
+   if( 1 ||  g->stp_type != STP_UNDIRECTED )
       return fixed;
-   // level = -4;
+   //if( g->stp_type != STP_UNDIRECTED )
+     //level = -4;
 
    if( g->stp_type == STP_GRID )
       return fixed;

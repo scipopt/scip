@@ -246,6 +246,7 @@ extern double reduce(GRAPH*, int, SCIP*);
 /* sdtest.c
  */
 extern int    sd_reduction(GRAPH*, double*, double*, double*, int*, int*);
+extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*);
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(GRAPH*, double*);
 extern int    nv_reduction_optimal(GRAPH*, double*);
