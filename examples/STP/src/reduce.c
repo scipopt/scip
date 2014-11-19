@@ -1144,8 +1144,9 @@ static double level4(
          rerun = TRUE;
       if( nsv )
       {
-         if( nsv && nsv_reduction(g, &fixed) > 10 )
-            rerun = TRUE;
+         if( !(nsv_reduction(g, &fixed) > 10) )
+            nsv = FALSE;
+	 rerun = (nsv || rerun);
       }
 
       /* if( bd3_reduction(g) > 5 )

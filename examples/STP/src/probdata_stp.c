@@ -424,7 +424,6 @@ SCIP_RETCODE createDegreeConstraints(
 
    for( k = 0; k < nnodes; ++k )
    {
-      printf("max %d \n",graph->maxdeg[k]);
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "DegreeConstraint%d", k);
       SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->degcons[k]), consname, 0, NULL, NULL,
             -SCIPinfinity(scip), graph->maxdeg[k], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1283,8 +1282,12 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 {
 
    SCIP_PROBDATA* probd;
+   GRAPH* graph;
+
    assert(scip != NULL);
    probd = SCIPgetProbData(scip);
+   graph = probd->graph;
+   assert(graph != NULL);
 
 #if 0
    SCIP_SOL* sol;
@@ -1384,8 +1387,8 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
       SCIPprobdataWriteLogLine(scip, "Threads 1\n");
       SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", SCIPgetDualbound(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPgetPrimalbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetDualbound(scip) :  SCIPgetDualbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetPrimalbound(scip) :  SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
 
       if( SCIPgetNSols(scip) > 0 )
@@ -2038,7 +2041,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 {
 	    orgedges[curr->index] = TRUE;
 	    nsoledges++;
-
 	 }
 
 	 //printf("indexorgtail: %d max: %d \n", graph->orgtail[curr->index], norgnodes);
@@ -2088,7 +2090,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       //printf("norgedges: %d \n", norgedges);
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
-
 
       for( e = 0; e < norgnodes; e++ )
          if( orgnodes[e] == TRUE )
