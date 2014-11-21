@@ -156,10 +156,7 @@ SCIP_RETCODE SCIPincludeDialogStp(
 
    /* root menu */
    root = SCIPgetRootDialog(scip);
-   if( root == NULL )
-   {
-      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
-   }
+   assert(root != NULL);
 
    /* write */
    assert(SCIPdialogHasEntry(root, "write"));
