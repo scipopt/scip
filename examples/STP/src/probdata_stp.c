@@ -1438,6 +1438,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    char probname[16];
    char printfs = FALSE;
    char* logfilename;
+   char* tmpfilename;
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1474,6 +1475,12 @@ SCIP_RETCODE SCIPprobdataCreate(
          return SCIP_FILECREATEERROR;
       }
    }
+
+   /* copy filename */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
+
+   SCIPsplitFilename(tmpfilename, NULL, NULL, &filename, NULL);
+
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
@@ -2620,8 +2627,6 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-
-   printf("writing log end: %p\n", (void*)probdata->logfile);
 
    if( probdata->logfile != NULL )
    {
