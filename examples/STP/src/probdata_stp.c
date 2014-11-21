@@ -1138,14 +1138,18 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
    if( (*probdata)->logfile != NULL )
    {
       int success;
+      SCIP_Real factor = 1.0;
+
+      if( (*probdata)->stp_type ==  STP_MAX_NODE_WEIGHT )
+         factor = -1.0;
 
       SCIPprobdataWriteLogLine(scip, "End\n");
       SCIPprobdataWriteLogLine(scip, "\n");
       SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
       SCIPprobdataWriteLogLine(scip, "Threads 1\n");
       SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", -SCIPinfinity(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPinfinity(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", -factor * SCIPinfinity(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPinfinity(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
 
       success = fclose((*probdata)->logfile);
@@ -1378,17 +1382,22 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       }
    }
 #endif
+
    if( probd->logfile != NULL )
    {
       int success;
+      SCIP_Real factor = 1.0;
+
+      if( probd->stp_type ==  STP_MAX_NODE_WEIGHT )
+         factor = -1.0;
 
       SCIPprobdataWriteLogLine(scip, "End\n");
       SCIPprobdataWriteLogLine(scip, "\n");
       SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
       SCIPprobdataWriteLogLine(scip, "Threads 1\n");
       SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetDualbound(scip) :  SCIPgetDualbound(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetPrimalbound(scip) :  SCIPgetPrimalbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
 
       if( SCIPgetNSols(scip) > 0 )
@@ -2610,4 +2619,19 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
    SCIPgmlWriteClosing(file);
 
    return SCIP_OKAY;
+}
+
+/** returns problem type */
+int SCIPprobdataGetType(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->stp_type;
 }

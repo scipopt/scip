@@ -187,6 +187,13 @@ SCIP_RETCODE SCIPprobdataPrintSolGraph(
    );
 
 #endif
+
+/** returns problem type */
+extern
+int SCIPprobdataGetType(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif
