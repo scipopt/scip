@@ -35,7 +35,7 @@ GITHASHFILE="check/results/githashorder"
 GITHASH=0
 
 # test run variables
-MEM=6544
+MEM=14000
 TIME=3600
 LOCK=false
 CONTINUE=false
