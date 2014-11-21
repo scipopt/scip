@@ -1480,7 +1480,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
 
-   SCIPsplitFilename(tmpfilename, NULL, NULL, &probname, NULL);
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
