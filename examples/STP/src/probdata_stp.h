@@ -194,6 +194,12 @@ int SCIPprobdataGetType(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** writes end of log file */
+extern
+SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -191,7 +191,7 @@ int validate(
    const GRAPH*  g,
    const double* xval)
 {
-   char* connected = calloc((size_t)g->knots * sizeof(char));
+   char* connected = calloc((size_t)g->knots, sizeof(char));
    int   ret       = TRUE;
    int   i;
    int   layer;
