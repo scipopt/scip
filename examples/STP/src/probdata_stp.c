@@ -1435,10 +1435,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    int compcentral;
    int reduction;
    char mode;
-   char probname[16];
+   char probtype[16];
    char printfs = FALSE;
    char* logfilename;
    char* tmpfilename;
+   char* probname;
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1479,11 +1480,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
 
-   SCIPsplitFilename(tmpfilename, NULL, NULL, &filename, NULL);
+   SCIPsplitFilename(tmpfilename, NULL, NULL, &probname, NULL);
 
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
-   SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
+   SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
@@ -1502,41 +1503,41 @@ SCIP_RETCODE SCIPprobdataCreate(
    switch( graph->stp_type )
    {
    case STP_UNDIRECTED:
-      strcpy(probname, "SPG");
+      strcpy(probtype, "SPG");
       break;
 
    case STP_PRIZE_COLLECTING:
-      strcpy(probname, "PCSPG");
+      strcpy(probtype, "PCSPG");
       break;
 
    case STP_ROOTED_PRIZE_COLLECTING:
-      strcpy(probname, "RPCST");
+      strcpy(probtype, "RPCST");
       break;
 
    case STP_NODE_WEIGHTS:
-      strcpy(probname, "NWSPG");
+      strcpy(probtype, "NWSPG");
       break;
 
    case STP_DEG_CONS:
-      strcpy(probname, "DCST");
+      strcpy(probtype, "DCST");
       break;
 
    case STP_GRID:
-      strcpy(probname, "RSMT");
+      strcpy(probtype, "RSMT");
       break;
 
    case STP_OBSTACLES_GRID:
-      strcpy(probname, "OARSMT");
+      strcpy(probtype, "OARSMT");
       break;
 
    case STP_MAX_NODE_WEIGHT:
-      strcpy(probname, "MWCS");
+      strcpy(probtype, "MWCS");
       break;
 
    default:
-      strcpy(probname, "UNKNOWN");
+      strcpy(probtype, "UNKNOWN");
    }
-   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probname);
+   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
    SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
    SCIPprobdataWriteLogLine(scip, "Version 0.1\n");
    SCIPprobdataWriteLogLine(scip, "End\n");
