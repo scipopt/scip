@@ -1041,12 +1041,10 @@ GRAPH* graph_load(
                   if( g == NULL )
                   {
                      g = graph_init(nodes, edges * 2, 1, 0);
-
                      assert(g != NULL);
-                     assert(g->source[0] ==  UNKNOWN);
+                     assert(g->source[0] == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1, 0, 0);
-
 
 		     /*
                        if( stp_type == -1 )

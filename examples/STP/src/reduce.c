@@ -1106,16 +1106,25 @@ static double level4(
    double fixed   = 0.0;
    char    rerun   = TRUE;
    int    i;
+   int    edgebound;
+   int    nodebound;
    double*  sddist;
    double*  sdtrans;
    double* cost;
    int*    heap;
    int*    state;
    char    sd = TRUE;
+   char    bd3 = FALSE;
    char    nsv = TRUE;
    assert(g != NULL);
    //bound_test(scip, g); TODO
 
+   /* define the miimial number of edge/node eleminations for a reduction test to be continued */
+   edgebound = MAX(g->edges / 100, 5 );
+   nodebound = MAX(g->knots / 100, 5 );
+   printf("edgebound: %d \n", edgebound );
+   printf("nodebound: %d \n", nodebound );
+   nodebound = 10;
    degree_test(g, &fixed);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1136,23 +1145,28 @@ static double level4(
       if( sd )
       {
          for( i = 0; i < 4; i++ ) //TODO 6
-            if( sd_reduction(g, sddist, sdtrans, cost, heap, state) > 10 )
+            if( sd_reduction(g, sddist, sdtrans, cost, heap, state) > nodebound )
                rerun = TRUE;
          sd = rerun;
       }
-      if( degree_test(g, &fixed) > 10 )
+      if( degree_test(g, &fixed) > nodebound )
          rerun = TRUE;
       if( nsv )
       {
-         if( !(nsv_reduction(g, &fixed) > 10) )
+         if( !(nsv_reduction(g, &fixed) > nodebound) )
             nsv = FALSE;
-	 rerun = (nsv || rerun);
+	 else
+	    rerun = TRUE;
+      }
+      if( bd3 )
+      {
+         if( !(bd3_reduction(g) > nodebound) )
+            bd3 = FALSE;
+	 else
+	    rerun = TRUE;
       }
 
-      /* if( bd3_reduction(g) > 5 )
-         rerun = TRUE;
-      */
-      if( degree_test(g, &fixed) > 10 )
+      if( degree_test(g, &fixed) > nodebound )
          rerun = TRUE;
    }
    /*
@@ -1189,6 +1203,7 @@ static double levelm4(
    int    rerun   = TRUE;
    int    i;
    int    numelim;
+   int    redbound = 10;
    double*  sddist;
    double*  sdtrans;
    double** sd_indist;
@@ -1201,7 +1216,6 @@ static double levelm4(
    int*     outterms;
    char    sd = TRUE;
    char    nsv = TRUE;
-
 
    assert(g != NULL);
 
@@ -1243,44 +1257,44 @@ static double levelm4(
       rerun = FALSE;
       if( sd )
       {
-      for(i = 0; i < 2; i++)
-      {
-	 sd = FALSE;
-         if( g->stp_type == STP_HOP_CONS )
-            numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
-         else
-            numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
-         printf("SD Reduction %d: %d\n", i, numelim);
-         if (numelim > 10)
-	 {
-            rerun = TRUE;
-	    sd = TRUE;
-         }
+         for(i = 0; i < 2; i++)
+         {
+            sd = FALSE;
+            if( g->stp_type == STP_HOP_CONS )
+               numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
+            else
+               numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
+            //printf("SD Reduction %d: %d\n", i, numelim);
+            if( numelim > redbound )
+            {
+               rerun = TRUE;
+               sd = TRUE;
+            }
 
+         }
       }
-      }
-      if (degree_test_dir(g, &fixed) > 10)
+      if( degree_test_dir(g, &fixed) > redbound )
          rerun = TRUE;
       if( nsv )
       {
-      nsv = FALSE;
-      if( g->stp_type != STP_HOP_CONS )
-      {
-         for (i = 0; i < 4; i++)
+         nsv = FALSE;
+         if( g->stp_type != STP_HOP_CONS )
          {
-            numelim = nv_reduction_optimal(g, &fixed);
-            printf("NV Reduction %d: %d\n", i, numelim);
-            if(numelim > 10)
-	    {
-               rerun = TRUE;
-	       nsv = TRUE;
-	    }
-            else
-	    {
-               break;
-	    }
+            for (i = 0; i < 4; i++)
+            {
+               numelim = nv_reduction_optimal(g, &fixed);
+               printf("NV Reduction %d: %d\n", i, numelim);
+               if( numelim > redbound )
+               {
+                  rerun = TRUE;
+                  nsv = TRUE;
+               }
+               else
+               {
+                  break;
+               }
+            }
          }
-      }
       }
 
       //if (bd3_reduction(g))
@@ -1378,14 +1392,14 @@ double reduce(
 
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type);
-   if( g->stp_type != STP_UNDIRECTED )
+   if( 0 && g->stp_type != STP_UNDIRECTED )
       return fixed;
 
    if( g->stp_type == STP_GRID )
       return fixed;
 
    if( g->stp_type != STP_UNDIRECTED )
-       level = -4;
+      level = -4;
 
 
    assert(g->layers == 1);

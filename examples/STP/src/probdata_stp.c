@@ -1998,7 +1998,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    IDX* curr;
    SCIP_PROBDATA* probdata;
    int  e;
-   int  k;
    int  norgedges;
    int  norgnodes;
    int  nsolnodes;
@@ -2019,6 +2018,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    nsoledges = 0;
    norgedges = graph->orgedges;
    norgnodes = graph->orgknots;
+   assert(norgedges >= 0);
+   assert(norgnodes >= 1);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orgedges, norgedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orgnodes, norgnodes) );
@@ -2031,7 +2032,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DEG_CONS
       || graph->stp_type == STP_NODE_WEIGHTS )
    {
-
       //printf("in: %d \n", norgnodes);
       curr = graph->fixedges;
       while( curr != NULL )
@@ -2180,10 +2180,10 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       int root;
       root = graph->source[0];
       assert(root >= 0);
-      assert(norgedges = graph->edges); //TODO delete
-      assert(norgnodes = graph->knots);
+
       /* switch the terminal property (back to its original state), and mark the old terminals */
-      for( k = 0; k < norgnodes; k++ )
+      /*
+      for( k = 0; k < graph->knots; k++ )
       {
 	 if( Is_term(graph->term[k]) && k != root )
 	 {
@@ -2196,19 +2196,27 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 }
       }
 
-      for( e = 0; e < norgedges; e++ )
+       printf("norgmodeledges: %d \n", graph->norgmodeledges);
+       printf("norgmodelknots: %d \n", graph->norgmodelknots);
+       */
+      for( e = 0; e <= graph->edges; e++ )
       {
-	 if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
+	 if( e == graph->edges || !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
 	 {
-	    /* iterate through the list of ancestors */
-            curr = ancestors[e];
+	    /* iterate through the list of ancestors/fixed edged*/
+	    if( e < graph->edges )
+               curr = ancestors[e];
+	    else
+	       curr = graph->fixedges;
             while( curr != NULL )
             {
-	       assert(graph->head[curr->index] != root);
-	       if( graph->term[graph->head[curr->index]] != -2 )
+//	       assert(graph->head[curr->index] != root);
+          //     if( curr->index] == root )
+	//	  printf("rootedge: %d->%d \n",
+	       if( curr->index < graph->norgmodeledges ) //if( graph->term[graph->head[curr->index]] != -2 )
 	       {
-                  if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
-                  {
+                 // if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
+                  //{
                      if( orgedges[curr->index] == FALSE )
                      {
                         orgedges[curr->index] = TRUE;
@@ -2224,7 +2232,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                         orgnodes[graph->orghead[curr->index]] = TRUE;
                         nsolnodes++;
                      }
-                  }
+               /*   }
                   else
                   {
                      assert(graph->tail[curr->index] == root);
@@ -2233,7 +2241,15 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                         orgnodes[graph->orghead[curr->index]] = TRUE;
                         nsolnodes++;
                      }
-                  }
+                  } */
+	       }
+	       else if( graph->orghead[curr->index] < graph->norgmodelknots )
+	       {
+		   if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                   {
+                        orgnodes[graph->orghead[curr->index]] = TRUE;
+                        nsolnodes++;
+                   }
 	       }
                curr = curr->parent;
             }

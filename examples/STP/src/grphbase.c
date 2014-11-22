@@ -49,6 +49,8 @@ GRAPH* graph_init(
    p->fixedges = NULL;
    p->ancestors = NULL;
 
+   p->norgmodelknots = 0;
+   p->norgmodeledges = 0;
    p->ksize  = ksize;
    p->orgknots = 0;
    p->orgedges = 0;
@@ -86,7 +88,7 @@ GRAPH* graph_init(
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
    //p->ctrctknot = malloc((size_t)ksize * sizeof(int));
-  // p->ctrctedge = malloc((size_t)esize * sizeof(int));
+   // p->ctrctedge = malloc((size_t)esize * sizeof(int));
 
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;
@@ -134,7 +136,7 @@ void graph_init_history(
    int** orgtail,
    int** orghead,
    IDX*** ancestors
-     )
+   )
 {
    int e;
    int nedges;
@@ -193,7 +195,7 @@ void graph_resize(
       p->outbeg = realloc(p->outbeg, (size_t)ksize * sizeof(int));
       p->xpos   = realloc(p->xpos,   (size_t)ksize * sizeof(int));
       p->ypos   = realloc(p->ypos,   (size_t)ksize * sizeof(int));
-     // p->ctrctknot = realloc(p->ctrctknot, (size_t)ksize * sizeof(int));
+      // p->ctrctknot = realloc(p->ctrctknot, (size_t)ksize * sizeof(int));
    }
    if ((esize > 0) && (esize != p->esize))
    {
@@ -202,11 +204,11 @@ void graph_resize(
       p->tail  = realloc(p->tail, (size_t)esize * sizeof(int));
       p->head  = realloc(p->head, (size_t)esize * sizeof(int));
       /*p->orgtail  = realloc(p->tail, (size_t)esize * sizeof(int));
-      p->orghead  = realloc(p->head, (size_t)esize * sizeof(int));
+        p->orghead  = realloc(p->head, (size_t)esize * sizeof(int));
       */
       p->ieat  = realloc(p->ieat, (size_t)esize * sizeof(int));
       p->oeat  = realloc(p->oeat, (size_t)esize * sizeof(int));
-     // p->ctrctedge = realloc(p->ctrctedge, (size_t)esize * sizeof(int));
+      // p->ctrctedge = realloc(p->ctrctedge, (size_t)esize * sizeof(int));
    }
    if( p->stp_type == STP_GRID )
    {
@@ -227,8 +229,8 @@ void graph_resize(
    assert(p->oeat   != NULL);
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
- //  assert(p->ctrctknot != NULL);
- //  assert(p->ctrctedge != NULL);
+   //  assert(p->ctrctknot != NULL);
+   //  assert(p->ctrctedge != NULL);
 }
 
 
@@ -773,6 +775,8 @@ graph_prize_transform(
    nterms = graph->terms;
    assert(prize != NULL);
    assert(nnodes == graph->ksize);
+   graph->norgmodeledges = graph->edges;
+   graph->norgmodelknots = nnodes;
 
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    graph_resize(graph, (graph->ksize + graph->terms + 1), (graph->esize + graph->terms * 6) , -1);
@@ -782,6 +786,8 @@ graph_prize_transform(
       /* create a new node */
       graph_knot_add(graph, -1, -1, -1);
    }
+
+
    /* new root */
    root = graph->knots;
    graph_knot_add(graph, 0, -1, -1);
@@ -833,6 +839,8 @@ graph_rootprize_transform(
    assert(prize != NULL);
    assert(nnodes == graph->ksize);
    assert(root >= 0);
+   graph->norgmodeledges = graph->edges;
+   graph->norgmodelknots = nnodes;
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    graph_resize(graph, (graph->ksize + graph->terms), (graph->esize + graph->terms * 4) , -1);
 
@@ -1070,7 +1078,7 @@ void graph_group_compsdcost(
 void graph_free(
    GRAPH* p,
    char   final
-)
+   )
 {
    assert(p != NULL);
 
@@ -1098,8 +1106,8 @@ void graph_free(
    free(p->oeat);
    free(p->xpos);
    free(p->ypos);
- //  free(p->ctrctknot);
-  // free(p->ctrctedge);
+   //  free(p->ctrctknot);
+   // free(p->ctrctedge);
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
    else if(p->stp_type == STP_GRID )
@@ -1137,9 +1145,11 @@ GRAPH* graph_copy(
    assert(g->head   != NULL);
    assert(g->ieat   != NULL);
    assert(g->oeat   != NULL);
-//   assert(g->ctrctknot != NULL);
-  // assert(g->ctrctedge != NULL);
+   //   assert(g->ctrctknot != NULL);
+   // assert(g->ctrctedge != NULL);
 
+   g->norgmodeledges = p->norgmodeledges;
+   g->norgmodelknots = p->norgmodelknots;
    g->knots = p->knots;
    g->terms = p->terms;
    g->edges = p->edges;
@@ -1148,42 +1158,42 @@ GRAPH* graph_copy(
    g->grid_dim = p->grid_dim;
    g->stp_type = p->stp_type;
    /*
-   if( p->fixedges != NULL )
-   {
-      IDX* curr;
-      IDX* tmp = NULL;
-      curr = p->fixedges;
-      while( curr != NULL )
-      {
-         memcpy(g->fixedges, curr, sizeof(*curr));
-	 if( tmp != NULL )
-	    tmp->parent = g->fixedges;
-	 tmp = g->fixedges;
-         curr = curr->parent;
-      }
-   }
-   else
-   {
-      g->fixedges = NULL;
-   }
+     if( p->fixedges != NULL )
+     {
+     IDX* curr;
+     IDX* tmp = NULL;
+     curr = p->fixedges;
+     while( curr != NULL )
+     {
+     memcpy(g->fixedges, curr, sizeof(*curr));
+     if( tmp != NULL )
+     tmp->parent = g->fixedges;
+     tmp = g->fixedges;
+     curr = curr->parent;
+     }
+     }
+     else
+     {
+     g->fixedges = NULL;
+     }
 
 
 
-   memcpy(g->ancestors,   p->ancestors,   p->edges  * sizeof(*p->ancestors));
-   for( e = 0; e < p->orgedges; p++ )
-   {
-      IDX* curr;
-      IDX* tmp = NULL;
-      curr = p->ancestors[e];
-      while( curr != NULL )
-      {
-         memcpy(g->ancestors[e], curr, sizeof(*curr));
-	 if( tmp != NULL )
-	    tmp->parent = g->ancestors[e];
-	 tmp = g->ancestors[e];
-         curr = curr->parent;
-      }
-   }
+     memcpy(g->ancestors,   p->ancestors,   p->edges  * sizeof(*p->ancestors));
+     for( e = 0; e < p->orgedges; p++ )
+     {
+     IDX* curr;
+     IDX* tmp = NULL;
+     curr = p->ancestors[e];
+     while( curr != NULL )
+     {
+     memcpy(g->ancestors[e], curr, sizeof(*curr));
+     if( tmp != NULL )
+     tmp->parent = g->ancestors[e];
+     tmp = g->ancestors[e];
+     curr = curr->parent;
+     }
+     }
    */
 
 
@@ -1198,16 +1208,16 @@ GRAPH* graph_copy(
    memcpy(g->cost,   p->cost,   p->esize  * sizeof(*p->cost));
    memcpy(g->tail,   p->tail,   p->esize  * sizeof(*p->tail));
    memcpy(g->head,   p->head,   p->esize  * sizeof(*p->head));
-  // memcpy(g->orgtail,   p->orgtail,   p->esize  * sizeof(*p->orgtail));
-  // memcpy(g->orghead,   p->orghead,   p->esize  * sizeof(*p->orghead));
+   // memcpy(g->orgtail,   p->orgtail,   p->esize  * sizeof(*p->orgtail));
+   // memcpy(g->orghead,   p->orghead,   p->esize  * sizeof(*p->orghead));
    memcpy(g->ieat,   p->ieat,   p->esize  * sizeof(*p->ieat));
    memcpy(g->oeat,   p->oeat,   p->esize  * sizeof(*p->oeat));
 
    memcpy(g->xpos,   p->xpos,   p->ksize  * sizeof(*p->xpos));
    memcpy(g->ypos,   p->ypos,   p->ksize  * sizeof(*p->ypos));
 
- //  memcpy(g->ctrctknot,   p->ctrctknot,   p->ksize  * sizeof(*p->ctrctknot));
- //  memcpy(g->ctrctedge,   p->ctrctedge,   p->esize  * sizeof(*p->ctrctedge));
+   //  memcpy(g->ctrctknot,   p->ctrctknot,   p->ksize  * sizeof(*p->ctrctknot));
+   //  memcpy(g->ctrctedge,   p->ctrctedge,   p->esize  * sizeof(*p->ctrctedge));
 
    if( g->stp_type == STP_DEG_CONS )
    {
@@ -1441,7 +1451,7 @@ void graph_knot_contract(
    }
    assert(slc == p->grad[s] - 1);
 
-  /* Kantenliste durchgehen
+   /* Kantenliste durchgehen
     */
    for(i = 0; i < slc; i++)
    {
@@ -1483,7 +1493,6 @@ void graph_knot_contract(
 	    SCIPindexListNodeFree(&(p->ancestors[anti]));
 	    assert(p->ancestors[anti] == NULL);
 	    SCIPindexListNodeAppendCopy(&((p->ancestors)[anti]), revancestors[i]);
-	    //SCIPindexListNodeAppendCopy(&((p->ancestors)[anti]), p->ancestors[Edge_anti(slp[i].edge)]);
             SCIPindexListNodeAppendCopy(&((p->ancestors)[anti]), stancestors);
             p->cost[anti] = slp[i].incost;
 	 }
@@ -1505,19 +1514,19 @@ void graph_knot_contract(
          SCIPindexListNodeFree(&(p->ancestors[es]));
 	 SCIPindexListNodeAppendCopy(&(p->ancestors[es]), ancestors[i]);
 	 /*
-         printf("edge: %d->%d, %d \n", p->tail[slp[i].edge], p->head[slp[i].edge], slp[i].edge);
-	 printf("XXX1 add edge: %d %d \n", p->tail[slp[i].edge], p->head[slp[i].edge]);
-	 printf("XXX add edge: %d %d \n", p->tail[cedgeout], p->head[cedgeout]);
+           printf("edge: %d->%d, %d \n", p->tail[slp[i].edge], p->head[slp[i].edge], slp[i].edge);
+           printf("XXX1 add edge: %d %d \n", p->tail[slp[i].edge], p->head[slp[i].edge]);
+           printf("XXX add edge: %d %d \n", p->tail[cedgeout], p->head[cedgeout]);
 	 */
 	 SCIPindexListNodeAppendCopy(&(p->ancestors[es]), tsancestors);
 	 /*
-	 IDX* curr;
-                    curr = p->ancestors[es];
-		    while( curr != NULL )
-		    {
-		      printf("inside %d->%d ancestor: %d->%d \n", p->orgtail[es], p->orghead[es], p->orgtail[curr->index], p->orghead[curr->index] );
-		      curr = curr->parent;
-		    }
+           IDX* curr;
+           curr = p->ancestors[es];
+           while( curr != NULL )
+           {
+           printf("inside %d->%d ancestor: %d->%d \n", p->orgtail[es], p->orghead[es], p->orgtail[curr->index], p->orghead[curr->index] );
+           curr = curr->parent;
+           }
 	 */
 
          graph_edge_del(p, es);
@@ -1554,18 +1563,26 @@ void graph_knot_contract(
    /* Alle uebrigen Kanten Loeschen.
     */
    while(p->outbeg[s] != EAT_LAST)
-      graph_edge_del(p, p->outbeg[s]);
+   {
+      es = p->outbeg[s];
+      SCIPindexListNodeFree(&(p->ancestors[es]));
+      p->ancestors[es] = NULL;
+      graph_edge_del(p, es);
+   }
 
-//TODO free ancestors?
-  /* p->ctrctedge[cedgeout] = p->ctrctknot[s];
-   p->ctrctknot[t] = cedgeout;*/
-  /* SCIPindexListNodeFree(&stancestors);
-   SCIPindexListNodeFree(&tsancestors);*/
+   //TODO free ancestors?
+   /* p->ctrctedge[cedgeout] = p->ctrctknot[s];
+      p->ctrctknot[t] = cedgeout;*/
+   /* SCIPindexListNodeFree(&stancestors);
+      SCIPindexListNodeFree(&tsancestors);*/
    for( i = 0; i < slc; i++ )
    {
       SCIPindexListNodeFree(&(ancestors[i]));
       SCIPindexListNodeFree(&(revancestors[i]));
    }
+
+   free(ancestors);
+   free(revancestors);
    free(slp);
 
    assert(p->grad[s]   == 0);
@@ -1599,8 +1616,8 @@ void graph_edge_add(
 
    p->grad[head]++;
    p->grad[tail]++;
- //  p->ctrctknot[head]   = EAT_LAST;
- //  p->ctrctknot[tail]   = EAT_LAST;
+   //  p->ctrctknot[head]   = EAT_LAST;
+   //  p->ctrctknot[tail]   = EAT_LAST;
 
    p->cost[e]           = cost1;
    p->tail[e]           = tail;
@@ -1609,7 +1626,7 @@ void graph_edge_add(
    p->oeat[e]           = p->outbeg[tail];
    p->inpbeg[head]      = e;
    p->outbeg[tail]      = e;
-  // p->ctrctedge[e]      = EAT_LAST;
+   // p->ctrctedge[e]      = EAT_LAST;
 
    e++;
 
@@ -1620,7 +1637,7 @@ void graph_edge_add(
    p->oeat[e]           = p->outbeg[head];
    p->inpbeg[tail]      = e;
    p->outbeg[head]      = e;
-  // p->ctrctedge[e]      = EAT_LAST;
+   // p->ctrctedge[e]      = EAT_LAST;
 
    p->edges += 2;
 }
@@ -1844,6 +1861,8 @@ GRAPH *graph_pack(
    }
 
    q = graph_init(knots, edges, p->layers, p->flags);
+   q->norgmodelknots = p->norgmodelknots;
+   q->norgmodeledges = p->norgmodeledges;
    q->orgtail = p->orgtail;
    q->orghead = p->orghead;
    q->orgknots = p->knots;

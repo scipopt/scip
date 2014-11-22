@@ -1621,6 +1621,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    *result = SCIP_DELAYED;
    *result = SCIP_DIDNOTRUN;
 
+
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1632,6 +1633,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    assert(graph != NULL);
    nedges = graph->edges;
    assert(nedges >= 0);
+   if( graph->stp_type == STP_HOP_CONS )
+      return SCIP_OKAY;
+
    runs = 0;
 
    if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
