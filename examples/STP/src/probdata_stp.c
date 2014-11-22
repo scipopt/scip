@@ -1482,6 +1482,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
+   SCIPfreeBufferArray(scip, &tmpfilename);
+
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
