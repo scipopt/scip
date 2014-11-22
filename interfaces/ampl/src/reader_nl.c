@@ -830,6 +830,9 @@ SCIP_RETCODE setupConstraints(
 
    for( c = 0; c < n_con && *success; ++c )
    {
+      /* Attention: nqpcheck may modify LUrhs, so do before */
+      nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
+
       lhs = LUrhs[2*c];
       if( SCIPisInfinity(scip, -lhs) )
          lhs = -SCIPinfinity(scip);
@@ -838,7 +841,6 @@ SCIP_RETCODE setupConstraints(
       if( SCIPisInfinity(scip, rhs) )
          rhs = SCIPinfinity(scip);
 
-      nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
       if( nqpterms == 0 )
       {
          /* linear */
