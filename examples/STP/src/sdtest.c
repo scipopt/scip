@@ -665,7 +665,13 @@ int sd_reduction_dir(
 
          if (LT(cost[e], FARAWAY) && LT(specialdist, cost[e]))
          {
-            graph_edge_del(g, e);
+            if( LT(g->cost[Edge_anti(e)], FARAWAY) )
+            {
+               g->cost[e] = FARAWAY;
+               cost[e] = FARAWAY;
+            }
+            else
+               graph_edge_del(g, e);
 
             elimins++;
 
