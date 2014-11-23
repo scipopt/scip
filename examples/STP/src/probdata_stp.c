@@ -1135,29 +1135,6 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
       graph_free((*probdata)->graph, TRUE);
    }
 
-   if( (*probdata)->logfile != NULL )
-   {
-      int success;
-
-      SCIPprobdataWriteLogLine(scip, "End\n");
-      SCIPprobdataWriteLogLine(scip, "\n");
-      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", -SCIPinfinity(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPinfinity(scip));
-      SCIPprobdataWriteLogLine(scip, "End\n");
-
-      success = fclose((*probdata)->logfile);
-      if( success != 0 )
-      {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", (*probdata)->logfile);
-         return SCIP_FILECREATEERROR;
-      }
-
-      (*probdata)->logfile = NULL;
-   }
-
    /* free the (original) probdata */
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -1378,27 +1355,32 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       }
    }
 #endif
+
    if( probd->logfile != NULL )
    {
       int success;
+      // SCIP_Real factor = 1.0;
 
-      SCIPprobdataWriteLogLine(scip, "End\n");
-      SCIPprobdataWriteLogLine(scip, "\n");
-      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetDualbound(scip) :  SCIPgetDualbound(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetPrimalbound(scip) :  SCIPgetPrimalbound(scip));
-      SCIPprobdataWriteLogLine(scip, "End\n");
+      // if( probd->stp_type ==  STP_MAX_NODE_WEIGHT )
+      //    factor = -1.0;
 
-      if( SCIPgetNSols(scip) > 0 )
-      {
-         SCIPprobdataWriteLogLine(scip, "\n");
-         SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+      // SCIPprobdataWriteLogLine(scip, "End\n");
+      // SCIPprobdataWriteLogLine(scip, "\n");
+      // SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      // SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      // SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      // SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      // SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
+      // SCIPprobdataWriteLogLine(scip, "End\n");
 
-         SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
-         SCIPprobdataWriteLogLine(scip, "End\n");
-      }
+      // if( SCIPgetNSols(scip) > 0 )
+      // {
+      //    SCIPprobdataWriteLogLine(scip, "\n");
+      //    SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+
+      //    SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+      //    SCIPprobdataWriteLogLine(scip, "End\n");
+      // }
 
       success = fclose(probd->logfile);
       if( success != 0 )
@@ -1453,9 +1435,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    int compcentral;
    int reduction;
    char mode;
-   char probname[16];
+   char probtype[16];
    char printfs = FALSE;
    char* logfilename;
+   char* tmpfilename;
+   char* probname;
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1493,8 +1477,16 @@ SCIP_RETCODE SCIPprobdataCreate(
       }
    }
 
+   /* copy filename */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
+
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
+
+   SCIPfreeBufferArray(scip, &tmpfilename);
+
+
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
-   SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
+   SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
@@ -1513,41 +1505,41 @@ SCIP_RETCODE SCIPprobdataCreate(
    switch( graph->stp_type )
    {
    case STP_UNDIRECTED:
-      strcpy(probname, "SPG");
+      strcpy(probtype, "SPG");
       break;
 
    case STP_PRIZE_COLLECTING:
-      strcpy(probname, "PCSPG");
+      strcpy(probtype, "PCSPG");
       break;
 
    case STP_ROOTED_PRIZE_COLLECTING:
-      strcpy(probname, "RPCST");
+      strcpy(probtype, "RPCST");
       break;
 
    case STP_NODE_WEIGHTS:
-      strcpy(probname, "NWSPG");
+      strcpy(probtype, "NWSPG");
       break;
 
    case STP_DEG_CONS:
-      strcpy(probname, "DCST");
+      strcpy(probtype, "DCST");
       break;
 
    case STP_GRID:
-      strcpy(probname, "RSMT");
+      strcpy(probtype, "RSMT");
       break;
 
    case STP_OBSTACLES_GRID:
-      strcpy(probname, "OARSMT");
+      strcpy(probtype, "OARSMT");
       break;
 
    case STP_MAX_NODE_WEIGHT:
-      strcpy(probname, "MWCS");
+      strcpy(probtype, "MWCS");
       break;
 
    default:
-      strcpy(probname, "UNKNOWN");
+      strcpy(probtype, "UNKNOWN");
    }
-   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probname);
+   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
    SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
    SCIPprobdataWriteLogLine(scip, "Version 0.1\n");
    SCIPprobdataWriteLogLine(scip, "End\n");
@@ -2624,6 +2616,73 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
 
    /* write GML format closing */
    SCIPgmlWriteClosing(file);
+
+   return SCIP_OKAY;
+}
+
+/** returns problem type */
+int SCIPprobdataGetType(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->stp_type;
+}
+
+/** writes end of log file */
+SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   if( probdata->logfile != NULL )
+   {
+      int success;
+      SCIP_Real factor = 1.0;
+
+      if( probdata->stp_type ==  STP_MAX_NODE_WEIGHT )
+         factor = -1.0;
+
+      SCIPprobdataWriteLogLine(scip, "End\n");
+      SCIPprobdataWriteLogLine(scip, "\n");
+      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
+      SCIPprobdataWriteLogLine(scip, "End\n");
+
+      if( SCIPgetNSols(scip) > 0 )
+      {
+         SCIPprobdataWriteLogLine(scip, "\n");
+         SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+
+         SCIP_CALL( SCIPprobdataWriteSolution(scip, probdata->logfile) );
+         SCIPprobdataWriteLogLine(scip, "End\n");
+      }
+
+      success = fclose(probdata->logfile);
+      if( success != 0 )
+      {
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->logfile);
+         return SCIP_FILECREATEERROR;
+      }
+
+      probdata->logfile = NULL;
+   }
+
 
    return SCIP_OKAY;
 }

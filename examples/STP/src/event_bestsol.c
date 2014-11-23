@@ -78,6 +78,10 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 {  /*lint --e{715}*/
    SCIP_SOL* bestsol;
    SCIP_Real solvalue;
+   SCIP_Real factor = 1.0;
+
+   if( SCIPprobdataGetType(scip) ==  STP_MAX_NODE_WEIGHT )
+      factor = -1.0;
 
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -89,7 +93,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 
    bestsol = SCIPgetBestSol(scip);
    assert(bestsol != NULL);
-   solvalue = SCIPgetSolOrigObj(scip, bestsol);
+   solvalue = factor * SCIPgetSolOrigObj(scip, bestsol);
 
    SCIPprobdataWriteLogLine(scip, "Solution %.1f %16.9g\n", SCIPgetTotalTime(scip), solvalue);
 

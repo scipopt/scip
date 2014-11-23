@@ -35,6 +35,7 @@
 #include "heur_rs.h"
 #include "pricer_stp.h"
 #include "event_bestsol.h"
+#include "probdata_stp.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
@@ -63,6 +64,9 @@ SCIP_RETCODE runShell(
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   /* include STP dialog */
+   SCIP_CALL( SCIPincludeDialogStp(scip) );
 
    /* include steiner tree constraint handler */
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
