@@ -1140,8 +1140,10 @@ int nv_reduction_optimal(
    int     e;
    double  min1;
    double  min2;
-   int     shortarc1;
+   int     shortarc;
+   int     shortarctail;
    int     elimins = 0;
+   char    antiedgeexists;
 
    SCIPdebugMessage("NSV-Reduction: ");
    fflush(stdout);
@@ -1209,25 +1211,55 @@ int nv_reduction_optimal(
 
          min1  = FARAWAY;
          min2  = FARAWAY;
-         shortarc1 = -1;
+         shortarctail = -1;
+         antiedgeexists = FALSE;
          for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
          {
             if (g->cost[e] < min1)
             {
-               shortarc1 = g->tail[e];
+               shortarc = e;
+               shortarctail = g->tail[e];
 
                min2 = min1;
                min1 = g->cost[e];
             }
+
+            if( LT(g->cost[Edge_anti(e)], FARAWAY) )
+               antiedgeexists = TRUE;
          }
 
-         if (LT(min1, FARAWAY) && LE(pathfromsource[shortarc1].dist + min1, min2))
+         if (LT(min1, FARAWAY) && LE(pathfromsource[shortarctail].dist + min1, min2))
          {
-            *fixed += g->cost[shortarc1]; /* ????? this was e, but should probably be shortarc1 */
-            SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc1]);
-            graph_knot_contract(g, shortarc1, i);
+            if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && shortarctail == g->source[0] )
+               continue;
 
-            elimins++;
+            if( antiedgeexists == TRUE )
+            {
+               if( LT(min2, FARAWAY) )
+               {
+                  for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+                  {
+                     if( e != shortarc )
+                     {
+                        if( LT(g->cost[Edge_anti(e)], FARAWAY) )
+                           g->cost[e] = FARAWAY;
+                        else
+                           graph_edge_del(g, e);
+
+                     }
+                  }
+                  elimins++;
+               }
+            }
+            else
+            {
+               *fixed += min1;
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
+                                                                                           shortarc instead of shortarctail */
+               graph_knot_contract(g, shortarctail, i);
+
+               elimins++;
+            }
 
             /* computing the shortest paths from the source node */
             graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
@@ -1235,49 +1267,49 @@ int nv_reduction_optimal(
          }
       }
       /* The knot is not a terminal so we can perform the short link test */
-      else
-      {
-         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
-         {
-            j = g->tail[e];
-            if( vregion[i] != vregion[j] )
-            {
-               if( minArc1[vregion[i]] < 0 )
-                  minArc1[vregion[i]] = e;
-               else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
-               {
-                  minArc2[vregion[i]] = minArc1[vregion[i]];
-                  minArc1[vregion[i]] = e;
-               }
-            }
-         }
-      }
+      //else
+      //{
+         //for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         //{
+            //j = g->tail[e];
+            //if( vregion[i] != vregion[j] )
+            //{
+               //if( minArc1[vregion[i]] < 0 )
+                  //minArc1[vregion[i]] = e;
+               //else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
+               //{
+                  //minArc2[vregion[i]] = minArc1[vregion[i]];
+                  //minArc1[vregion[i]] = e;
+               //}
+            //}
+         //}
+      //}
    }
 
-   for( k = 0; k < termcount; k++ )
-   {
-      assert(terms[k] >= 0 && terms[k] < g->knots);
+   //for( k = 0; k < termcount; k++ )
+   //{
+      //assert(terms[k] >= 0 && terms[k] < g->knots);
 
-      if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
-         + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
-      {
-         e = minArc1[terms[k]];
-         i = g->head[e];
-         j = g->tail[e];
+      //if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
+         //+ g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
+      //{
+         //e = minArc1[terms[k]];
+         //i = g->head[e];
+         //j = g->tail[e];
 
-         if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
-            continue;
+         //if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
+            //continue;
 
-         if( Is_term(g->term[i]) )
-	 {
-	    SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
-            *fixed += g->cost[e];
-	 }
-         graph_knot_contract(g, j, i);
+         //if( Is_term(g->term[i]) )
+	 //{
+	    //SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+            //*fixed += g->cost[e];
+	 //}
+         //graph_knot_contract(g, j, i);
 
-         elimins++;
-      }
-   }
+         //elimins++;
+      //}
+   //}
 
    free(terms);
    free(minArc2);
