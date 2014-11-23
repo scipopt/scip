@@ -612,9 +612,13 @@ int sd_reduction_dir(
       {
          assert(g->tail[e] == i);
          l = g->head[e];
+
          //printf("Special Distance between %d and %d: %g\n", i, g->head[e], sd[g->head[e]].dist);
 
          j = g->oeat[e];
+
+         if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && l == g->source[0] )
+            continue;
 
          specialdist = FARAWAY;
          for( k = 0; k < outtermcount; k++ )
