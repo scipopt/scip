@@ -36,6 +36,7 @@
 #include "pricer_stp.h"
 #include "event_bestsol.h"
 #include "probdata_stp.h"
+#include "dialog_stp.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
