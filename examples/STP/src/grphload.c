@@ -803,6 +803,7 @@ GRAPH* graph_load(
    int          edges = 0;
    int          nwcount = 0;
    int          degcount = 0;
+   int          hoplimit = UNKNOWN;
    int          stp_type = -1;
    int          termcount = 0;
    int          nobstacles = -1;
@@ -1023,6 +1024,7 @@ GRAPH* graph_load(
                   break;
 	       case KEY_GRAPH_HOPLIMIT :
 		  printf("HOP PROBLEM \n");
+		  hoplimit = (int)para[0].n;
 		  stp_type = STP_HOP_CONS;
 		  break;
                case KEY_GRAPH_EDGES :
@@ -1061,6 +1063,11 @@ GRAPH* graph_load(
                        }
                        }
 		     */
+		     if( stp_type == STP_HOP_CONS )
+		     {
+		        assert(hoplimit != UNKNOWN);
+			g->hoplimit = hoplimit;
+		     }
                   }
 
                   if( stp_type == STP_HOP_CONS )

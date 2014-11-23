@@ -64,6 +64,7 @@ struct SCIP_ProbData
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
+   SCIP_CONS*            hopcons;            /**< hop constraint */
    SCIP_CONS*            prizecons;          /**< prize constraint */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
    SCIP_VAR**            flowvars;           /**< array of edge variables (needed only in the Flow mode) */
@@ -400,6 +401,33 @@ SCIP_RETCODE probdataPrintGraph(
    return SCIP_OKAY;
 }
 
+/** create (edge-) HOP constraint (Cut Mode only) */
+static
+SCIP_RETCODE createHopConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+
+{
+   GRAPH* graph;
+   int rhs;
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
+   SCIPdebugPrintf("createHopeConstraint \n");
+   graph = probdata->graph;
+   assert(graph != NULL);
+   rhs = graph->hoplimit;
+   /* TODO: when presolving is enabled: set rhs = rhs - (number of fixed edges) */
+
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
+            -SCIPinfinity(scip), rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, probdata->hopcons) );
+
+   return SCIP_OKAY;
+}
+
 /** create (node-) degree constraints (Cut Mode only) */
 static
 SCIP_RETCODE createDegreeConstraints(
@@ -649,6 +677,8 @@ SCIP_RETCODE createVariables(
       int nnodes = graph->knots;
       SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
+      assert(nedges = graph->edges);
+
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->xval, nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->edgevars, nvars) );
 
@@ -679,6 +709,19 @@ SCIP_RETCODE createVariables(
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->edgevars[e+1], 1.0) );
          }
 #endif
+         /* Hop-Constrained STP? */
+         if( graph->stp_type == STP_HOP_CONS )
+	 {
+	    int hopfactor;
+	    for( e = 0; e < nedges; ++k )
+            {
+	      /* TODO: When presolving is used: MODIFY */
+	          hopfactor = 1;
+		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
+		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[flipedge(e)], hopfactor) );
+	    }
+	 }
+
          /* Degree-Constrained STP? */
          if( graph->stp_type == STP_DEG_CONS )
 	 {
@@ -1259,14 +1302,16 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 {
 
    SCIP_PROBDATA* probd;
-   GRAPH* graph;
+
 
    assert(scip != NULL);
    probd = SCIPgetProbData(scip);
+#if 0
+      GRAPH* graph;
    graph = probd->graph;
    assert(graph != NULL);
 
-#if 0
+
    SCIP_SOL* sol;
    SCIP_VAR** edgevars;
    GRAPH* graph;
@@ -1372,16 +1417,16 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       // SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
       // SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       // SCIPprobdataWriteLogLine(scip, "End\n");
+/*
+       if( SCIPgetNSols(scip) > 0 )
+       {
+          SCIPprobdataWriteLogLine(scip, "\n");
+          SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
 
-      // if( SCIPgetNSols(scip) > 0 )
-      // {
-      //    SCIPprobdataWriteLogLine(scip, "\n");
-      //    SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
-
-      //    SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
-      //    SCIPprobdataWriteLogLine(scip, "End\n");
-      // }
-
+          SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+          SCIPprobdataWriteLogLine(scip, "End\n");
+       }
+*/
       success = fclose(probd->logfile);
       if( success != 0 )
       {
@@ -1546,7 +1591,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIPprobdataWriteLogLine(scip, "\n");
    SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
 
-
    /* set solving mode */
    if( mode == 'f' )
    {
@@ -1630,6 +1674,10 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIP_CALL( SCIPcreateConsStp(scip, &cons, "stpcons", probdata->graph) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+	  /* if the problem is a HOP-Constrained-STP, an additional constraint is required */
+	 if( graph->stp_type == STP_HOP_CONS )
+	    SCIP_CALL( createHopConstraint(scip, probdata) );
 
 	 /* if the problem is a Degree-Constrained-STP, additional constraints are required */
 	 if( graph->stp_type == STP_DEG_CONS )

@@ -1106,7 +1106,7 @@ static double level4(
    double fixed   = 0.0;
    char    rerun   = TRUE;
    int    i;
-   int    edgebound;
+   //int    edgebound;
    int    nodebound;
    double*  sddist;
    double*  sdtrans;
@@ -1120,11 +1120,11 @@ static double level4(
    //bound_test(scip, g); TODO
 
    /* define the miimial number of edge/node eleminations for a reduction test to be continued */
-   edgebound = MAX(g->edges / 100, 5 );
-   nodebound = MAX(g->knots / 100, 5 );
-   printf("edgebound: %d \n", edgebound );
+   //edgebound = MAX(g->edges / 100, 5 );
+   nodebound = MAX(g->knots / 500, 10 );
+   //printf("edgebound: %d \n", edgebound );
    printf("nodebound: %d \n", nodebound );
-   nodebound = 10;
+
    degree_test(g, &fixed);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1149,7 +1149,7 @@ static double level4(
                rerun = TRUE;
          sd = rerun;
       }
-      if( degree_test(g, &fixed) > nodebound )
+      if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
       if( nsv )
       {
@@ -1166,7 +1166,7 @@ static double level4(
 	    rerun = TRUE;
       }
 
-      if( degree_test(g, &fixed) > nodebound )
+      if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
    }
    /*
@@ -1203,7 +1203,7 @@ static double levelm4(
    int    rerun   = TRUE;
    int    i;
    int    numelim;
-   int    redbound = 10;
+   int    redbound;
    double*  sddist;
    double*  sdtrans;
    double** sd_indist;
@@ -1218,7 +1218,8 @@ static double levelm4(
    char    nsv = TRUE;
 
    assert(g != NULL);
-
+   redbound = MAX(g->knots / 500, 10);
+   printf("redbound: %d \n", redbound );
    heap        = malloc((size_t)g->knots * sizeof(int));
    state       = malloc((size_t)g->knots * sizeof(int));
    sddist      = malloc((size_t)g->knots * sizeof(double));
@@ -1264,7 +1265,7 @@ static double levelm4(
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
                numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
-            //printf("SD Reduction %d: %d\n", i, numelim);
+            printf("SD Reduction %d: %d\n", i, numelim);
             if( numelim > redbound )
             {
                rerun = TRUE;
@@ -1273,7 +1274,7 @@ static double levelm4(
 
          }
       }
-      if( degree_test_dir(g, &fixed) > redbound )
+      if( degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;
       if( nsv )
       {
@@ -1282,7 +1283,7 @@ static double levelm4(
          {
             for (i = 0; i < 4; i++)
             {
-               numelim = nv_reduction_optimal(g, &fixed);
+               numelim = 0; //nv_reduction_optimal(g, &fixed);
                printf("NV Reduction %d: %d\n", i, numelim);
                if( numelim > redbound )
                {
@@ -1300,7 +1301,7 @@ static double levelm4(
       //if (bd3_reduction(g))
       //rerun = TRUE;
 
-      if (degree_test_dir(g, &fixed) > 10)
+      if (degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);

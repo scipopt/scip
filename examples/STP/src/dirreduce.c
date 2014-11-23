@@ -58,7 +58,6 @@ int degree_test_dir(
       {
          assert(g->grad[i] >= 0);
 
-
          if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY)
          {
             e1  = g->inpbeg[i];

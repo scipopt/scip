@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+// /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*   Type....: Functions                                                     */
 /*   File....: grphbase.c                                                    */
@@ -59,6 +59,7 @@ GRAPH* graph_init(
    p->stp_type = UNKNOWN;
    p->flags  = flags;
    p->layers = layers;
+   p->hoplimit = UNKNOWN;
    p->locals = malloc((size_t)layers * sizeof(int));
    p->source = malloc((size_t)layers * sizeof(int));
 
@@ -1157,6 +1158,7 @@ GRAPH* graph_copy(
    g->orgknots = p->orgknots;
    g->grid_dim = p->grid_dim;
    g->stp_type = p->stp_type;
+   g->hoplimit = p->hoplimit;
    /*
      if( p->fixedges != NULL )
      {
@@ -1873,6 +1875,7 @@ GRAPH *graph_pack(
    q->grid_ncoords = p->grid_ncoords;
    q->grid_coordinates = p->grid_coordinates;
    q->fixedges = p->fixedges;
+   q->hoplimit = p->hoplimit;
    if( new == NULL )
    {
 
