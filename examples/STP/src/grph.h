@@ -38,6 +38,7 @@ typedef struct
 {
    /* Knots
     */
+   int     norgmodelknots;
    int     flags;  /* To store attributes                         */
    int     ksize;  /* Count of allocated knot slots               */
    int     knots;  /* Count of knots in graph                     */
@@ -63,8 +64,11 @@ typedef struct
                       Constraint STPs)                            */
    /* Edges
     */
-   IDX*    fixedges;
-   IDX**   ancestors;
+   IDX*    fixedges;  /* list of fixed edges*/
+   IDX**   ancestors; /* list of ancestor edges to each edge (required to keep track of reductions) */
+   int     norgmodeledges;
+   int     hoplimit;  /* maximal number of edges allowed for a solution to be feasible
+                      (only for problem type STP_HOP_CONS) */
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
    int     orgedges;

@@ -17,4 +17,4 @@ then
 fi
 
 
-bash -c  "$BINARY -c 'set load $SETTINGS set stp logfile $OUTPUTFILE set limit time $TIME read $FILENAME o disp stat q'"
+bash -c  "$BINARY -c 'set load $SETTINGS set stp logfile $OUTPUTFILE set limit time $TIME read $FILENAME o write stpsol disp stat q'"

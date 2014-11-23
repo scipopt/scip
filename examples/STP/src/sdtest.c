@@ -393,7 +393,7 @@ static void compute_sd_dir(
                dist = Max(pathdist[k], pathtran[k] + cost[curr_edge]);
 
                if (LT(dist, pathdist[m])
-                || (EQ(dist, pathdist[m]) && LT(tran, pathtran[m])))
+                  || (EQ(dist, pathdist[m]) && LT(tran, pathtran[m])))
                {
                   pathdist[m] = dist;
                   pathtran[m] = tran;
@@ -492,6 +492,8 @@ int sd_reduction(
 
          if (LT(cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e]))
          {
+	    SCIPindexListNodeFree(&((g->ancestors)[e]));
+	    assert(g->ancestors[e] == NULL);
             graph_edge_del(g, e);
             elimins++;
          }
@@ -669,8 +671,8 @@ int sd_reduction_dir(
 
             //for( m = 0; m < outtermcount; m++ )
             //{
-               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
-               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
+            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
+            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
             //}
          }
       }
@@ -866,6 +868,7 @@ int bd3_reduction(
    free(pathtran2);
    assert(graph_valid(g));
 
+   printf("bd3: Knots deleted %d\n", elimins);
    SCIPdebugMessage("%d Knots deleted\n", elimins);
 
    return(elimins);
@@ -1221,7 +1224,7 @@ int nv_reduction_optimal(
          if (LT(min1, FARAWAY) && LE(pathfromsource[shortarc1].dist + min1, min2))
          {
             *fixed += g->cost[shortarc1]; /* ????? this was e, but should probably be shortarc1 */
-
+            SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc1]);
             graph_knot_contract(g, shortarc1, i);
 
             elimins++;
@@ -1256,19 +1259,20 @@ int nv_reduction_optimal(
       assert(terms[k] >= 0 && terms[k] < g->knots);
 
       if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
-            + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
+         + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
       {
-         printf("Short link test %d\n", k);
          e = minArc1[terms[k]];
          i = g->head[e];
          j = g->tail[e];
 
          if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
-         continue;
+            continue;
 
          if( Is_term(g->term[i]) )
+	 {
+	    SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
             *fixed += g->cost[e];
-
+	 }
          graph_knot_contract(g, j, i);
 
          elimins++;
@@ -1285,7 +1289,6 @@ int nv_reduction_optimal(
    free(path);
 
    assert(graph_valid(g));
-
    SCIPdebugMessage(" %d Knots deleted\n", elimins);
 
    return(elimins);

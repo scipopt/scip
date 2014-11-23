@@ -64,6 +64,7 @@ struct SCIP_ProbData
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
+   SCIP_CONS*            hopcons;            /**< hop constraint */
    SCIP_CONS*            prizecons;          /**< prize constraint */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
    SCIP_VAR**            flowvars;           /**< array of edge variables (needed only in the Flow mode) */
@@ -400,6 +401,33 @@ SCIP_RETCODE probdataPrintGraph(
    return SCIP_OKAY;
 }
 
+/** create (edge-) HOP constraint (Cut Mode only) */
+static
+SCIP_RETCODE createHopConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+
+{
+   GRAPH* graph;
+   int rhs;
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
+   SCIPdebugPrintf("createHopeConstraint \n");
+   graph = probdata->graph;
+   assert(graph != NULL);
+   rhs = graph->hoplimit;
+   /* TODO: when presolving is enabled: set rhs = rhs - (number of fixed edges) */
+
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
+            -SCIPinfinity(scip), rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, probdata->hopcons) );
+
+   return SCIP_OKAY;
+}
+
 /** create (node-) degree constraints (Cut Mode only) */
 static
 SCIP_RETCODE createDegreeConstraints(
@@ -649,6 +677,8 @@ SCIP_RETCODE createVariables(
       int nnodes = graph->knots;
       SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
+      assert(nedges = graph->edges);
+
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->xval, nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->edgevars, nvars) );
 
@@ -679,6 +709,19 @@ SCIP_RETCODE createVariables(
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->edgevars[e+1], 1.0) );
          }
 #endif
+         /* Hop-Constrained STP? */
+         if( graph->stp_type == STP_HOP_CONS )
+	 {
+	    int hopfactor;
+	    for( e = 0; e < nedges; ++k )
+            {
+	      /* TODO: When presolving is used: MODIFY */
+	          hopfactor = 1;
+		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
+		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[flipedge(e)], hopfactor) );
+	    }
+	 }
+
          /* Degree-Constrained STP? */
          if( graph->stp_type == STP_DEG_CONS )
 	 {
@@ -1135,29 +1178,6 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
       graph_free((*probdata)->graph, TRUE);
    }
 
-   if( (*probdata)->logfile != NULL )
-   {
-      int success;
-
-      SCIPprobdataWriteLogLine(scip, "End\n");
-      SCIPprobdataWriteLogLine(scip, "\n");
-      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", -SCIPinfinity(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", SCIPinfinity(scip));
-      SCIPprobdataWriteLogLine(scip, "End\n");
-
-      success = fclose((*probdata)->logfile);
-      if( success != 0 )
-      {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", (*probdata)->logfile);
-         return SCIP_FILECREATEERROR;
-      }
-
-      (*probdata)->logfile = NULL;
-   }
-
    /* free the (original) probdata */
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -1282,14 +1302,16 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 {
 
    SCIP_PROBDATA* probd;
-   GRAPH* graph;
+
 
    assert(scip != NULL);
    probd = SCIPgetProbData(scip);
+#if 0
+      GRAPH* graph;
    graph = probd->graph;
    assert(graph != NULL);
 
-#if 0
+
    SCIP_SOL* sol;
    SCIP_VAR** edgevars;
    GRAPH* graph;
@@ -1378,28 +1400,33 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       }
    }
 #endif
+
    if( probd->logfile != NULL )
    {
       int success;
+      // SCIP_Real factor = 1.0;
 
-      SCIPprobdataWriteLogLine(scip, "End\n");
-      SCIPprobdataWriteLogLine(scip, "\n");
-      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetDualbound(scip) :  SCIPgetDualbound(scip));
-      SCIPprobdataWriteLogLine(scip, "Primal %.1f\n", (graph->stp_type == STP_MAX_NODE_WEIGHT)? -SCIPgetPrimalbound(scip) :  SCIPgetPrimalbound(scip));
-      SCIPprobdataWriteLogLine(scip, "End\n");
+      // if( probd->stp_type ==  STP_MAX_NODE_WEIGHT )
+      //    factor = -1.0;
 
-      if( SCIPgetNSols(scip) > 0 )
-      {
-         SCIPprobdataWriteLogLine(scip, "\n");
-         SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+      // SCIPprobdataWriteLogLine(scip, "End\n");
+      // SCIPprobdataWriteLogLine(scip, "\n");
+      // SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      // SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      // SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      // SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      // SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
+      // SCIPprobdataWriteLogLine(scip, "End\n");
+/*
+       if( SCIPgetNSols(scip) > 0 )
+       {
+          SCIPprobdataWriteLogLine(scip, "\n");
+          SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
 
-         SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
-         SCIPprobdataWriteLogLine(scip, "End\n");
-      }
-
+          SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+          SCIPprobdataWriteLogLine(scip, "End\n");
+       }
+*/
       success = fclose(probd->logfile);
       if( success != 0 )
       {
@@ -1453,9 +1480,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    int compcentral;
    int reduction;
    char mode;
-   char probname[16];
+   char probtype[16];
    char printfs = FALSE;
    char* logfilename;
+   char* tmpfilename;
+   char* probname;
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1493,8 +1522,16 @@ SCIP_RETCODE SCIPprobdataCreate(
       }
    }
 
+   /* copy filename */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
+
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
+
+   SCIPfreeBufferArray(scip, &tmpfilename);
+
+
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
-   SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
+   SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
@@ -1513,47 +1550,46 @@ SCIP_RETCODE SCIPprobdataCreate(
    switch( graph->stp_type )
    {
    case STP_UNDIRECTED:
-      strcpy(probname, "SPG");
+      strcpy(probtype, "SPG");
       break;
 
    case STP_PRIZE_COLLECTING:
-      strcpy(probname, "PCSPG");
+      strcpy(probtype, "PCSPG");
       break;
 
    case STP_ROOTED_PRIZE_COLLECTING:
-      strcpy(probname, "RPCST");
+      strcpy(probtype, "RPCST");
       break;
 
    case STP_NODE_WEIGHTS:
-      strcpy(probname, "NWSPG");
+      strcpy(probtype, "NWSPG");
       break;
 
    case STP_DEG_CONS:
-      strcpy(probname, "DCST");
+      strcpy(probtype, "DCST");
       break;
 
    case STP_GRID:
-      strcpy(probname, "RSMT");
+      strcpy(probtype, "RSMT");
       break;
 
    case STP_OBSTACLES_GRID:
-      strcpy(probname, "OARSMT");
+      strcpy(probtype, "OARSMT");
       break;
 
    case STP_MAX_NODE_WEIGHT:
-      strcpy(probname, "MWCS");
+      strcpy(probtype, "MWCS");
       break;
 
    default:
-      strcpy(probname, "UNKNOWN");
+      strcpy(probtype, "UNKNOWN");
    }
-   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probname);
+   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
    SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
    SCIPprobdataWriteLogLine(scip, "Version 0.1\n");
    SCIPprobdataWriteLogLine(scip, "End\n");
    SCIPprobdataWriteLogLine(scip, "\n");
    SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
-
 
    /* set solving mode */
    if( mode == 'f' )
@@ -1638,6 +1674,10 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIP_CALL( SCIPcreateConsStp(scip, &cons, "stpcons", probdata->graph) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+	  /* if the problem is a HOP-Constrained-STP, an additional constraint is required */
+	 if( graph->stp_type == STP_HOP_CONS )
+	    SCIP_CALL( createHopConstraint(scip, probdata) );
 
 	 /* if the problem is a Degree-Constrained-STP, additional constraints are required */
 	 if( graph->stp_type == STP_DEG_CONS )
@@ -1998,7 +2038,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    IDX* curr;
    SCIP_PROBDATA* probdata;
    int  e;
-   int  k;
    int  norgedges;
    int  norgnodes;
    int  nsolnodes;
@@ -2019,6 +2058,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    nsoledges = 0;
    norgedges = graph->orgedges;
    norgnodes = graph->orgknots;
+   assert(norgedges >= 0);
+   assert(norgnodes >= 1);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orgedges, norgedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orgnodes, norgnodes) );
@@ -2031,7 +2072,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DEG_CONS
       || graph->stp_type == STP_NODE_WEIGHTS )
    {
-
       //printf("in: %d \n", norgnodes);
       curr = graph->fixedges;
       while( curr != NULL )
@@ -2180,10 +2220,10 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       int root;
       root = graph->source[0];
       assert(root >= 0);
-      assert(norgedges = graph->edges); //TODO delete
-      assert(norgnodes = graph->knots);
+
       /* switch the terminal property (back to its original state), and mark the old terminals */
-      for( k = 0; k < norgnodes; k++ )
+      /*
+      for( k = 0; k < graph->knots; k++ )
       {
 	 if( Is_term(graph->term[k]) && k != root )
 	 {
@@ -2196,19 +2236,27 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 }
       }
 
-      for( e = 0; e < norgedges; e++ )
+       printf("norgmodeledges: %d \n", graph->norgmodeledges);
+       printf("norgmodelknots: %d \n", graph->norgmodelknots);
+       */
+      for( e = 0; e <= graph->edges; e++ )
       {
-	 if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
+	 if( e == graph->edges || !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
 	 {
-	    /* iterate through the list of ancestors */
-            curr = ancestors[e];
+	    /* iterate through the list of ancestors/fixed edged*/
+	    if( e < graph->edges )
+               curr = ancestors[e];
+	    else
+	       curr = graph->fixedges;
             while( curr != NULL )
             {
-	       assert(graph->head[curr->index] != root);
-	       if( graph->term[graph->head[curr->index]] != -2 )
+//	       assert(graph->head[curr->index] != root);
+          //     if( curr->index] == root )
+	//	  printf("rootedge: %d->%d \n",
+	       if( curr->index < graph->norgmodeledges ) //if( graph->term[graph->head[curr->index]] != -2 )
 	       {
-                  if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
-                  {
+                 // if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
+                  //{
                      if( orgedges[curr->index] == FALSE )
                      {
                         orgedges[curr->index] = TRUE;
@@ -2224,7 +2272,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                         orgnodes[graph->orghead[curr->index]] = TRUE;
                         nsolnodes++;
                      }
-                  }
+               /*   }
                   else
                   {
                      assert(graph->tail[curr->index] == root);
@@ -2233,7 +2281,15 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                         orgnodes[graph->orghead[curr->index]] = TRUE;
                         nsolnodes++;
                      }
-                  }
+                  } */
+	       }
+	       else if( graph->orghead[curr->index] < graph->norgmodelknots )
+	       {
+		   if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                   {
+                        orgnodes[graph->orghead[curr->index]] = TRUE;
+                        nsolnodes++;
+                   }
 	       }
                curr = curr->parent;
             }
@@ -2608,6 +2664,73 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
 
    /* write GML format closing */
    SCIPgmlWriteClosing(file);
+
+   return SCIP_OKAY;
+}
+
+/** returns problem type */
+int SCIPprobdataGetType(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->stp_type;
+}
+
+/** writes end of log file */
+SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   if( probdata->logfile != NULL )
+   {
+      int success;
+      SCIP_Real factor = 1.0;
+
+      if( probdata->stp_type ==  STP_MAX_NODE_WEIGHT )
+         factor = -1.0;
+
+      SCIPprobdataWriteLogLine(scip, "End\n");
+      SCIPprobdataWriteLogLine(scip, "\n");
+      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
+      SCIPprobdataWriteLogLine(scip, "End\n");
+
+      if( SCIPgetNSols(scip) > 0 )
+      {
+         SCIPprobdataWriteLogLine(scip, "\n");
+         SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+
+         SCIP_CALL( SCIPprobdataWriteSolution(scip, probdata->logfile) );
+         SCIPprobdataWriteLogLine(scip, "End\n");
+      }
+
+      success = fclose(probdata->logfile);
+      if( success != 0 )
+      {
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->logfile);
+         return SCIP_FILECREATEERROR;
+      }
+
+      probdata->logfile = NULL;
+   }
+
 
    return SCIP_OKAY;
 }

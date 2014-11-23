@@ -78,7 +78,7 @@ static int nail(
    }
    return(TRUE);
 }
-
+#if 1
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Trail                                                    ---*/
 /*--- Function : Durchlaeuft einen Graphen entsprechend einer Loesung und ---*/
@@ -111,6 +111,74 @@ static void trail(
       }
    }
 }
+#endif
+/*---------------------------------------------------------------------------*/
+/*--- Name     : Trail                                                    ---*/
+/*--- Function : Durchlaeuft einen Graphen entsprechend einer Loesung und ---*/
+/*---            stellt fest ob er bei allen Knoten vorbeikommt           ---*/
+/*--- Parameter: Startknoten, Loesung, Herkunft, Schongewesenliste        ---*/
+/*--- Returns  : Nichts                                                   ---*/
+/*---------------------------------------------------------------------------*/
+static void trail2(
+   const GRAPH*  g,
+   int           layer,
+   const double* xval,
+   char*         connected,
+   int           max_hops)
+{
+   int* stackstart = malloc((size_t)g->knots * sizeof(int));
+   int* stackedge = malloc((size_t)g->knots * sizeof(int));
+   int* stacktail = malloc((size_t)g->knots * sizeof(int));
+   int k;
+   int i = g->source[layer];
+   int stacksize = 1;
+
+   stackstart[0] = i;
+   stackedge[0] = g->outbeg[i];
+   stacktail[0] = -1;
+
+   while( stacksize > 0 )
+   {
+      k = stackedge[stacksize-1];
+
+      printf("stacksize: %d, edge %d: %d --> %d\n", stacksize, k, g->tail[k], g->head[k]);
+
+      if ( k == EAT_LAST )
+      {
+         --stacksize;
+      }
+      else if ((g->head[k] != stacktail[stacksize-1]) && (xval[k] + EPSILON > 1.0))
+      {
+         assert(connected[g->head[k]] >= 0);
+         if( connected[g->head[k]] < 2 )
+         {
+            ++(connected[g->head[k]]);
+
+            if ((connected[i] < 2) && (stacksize < max_hops + 1))
+            {
+               stackstart[stacksize] = g->head[k];
+               stackedge[stacksize] = g->outbeg[g->head[k]];
+               stacktail[stacksize] = stackstart[stacksize-1];
+
+               printf("stack: size=%d start[%d]=%d, edge[%d]=%d, tail[%d]=%d\n",
+                  stacksize+1, stacksize, stackstart[stacksize], stacksize, stackedge[stacksize],
+                  stacksize, stacktail[stacksize]);
+
+               ++stacksize;
+               continue;
+            }
+         }
+      }
+      if (stacksize > 0)
+         stackedge[stacksize-1] = g->oeat[k];
+   }
+
+   free(stacktail);
+   free(stackedge);
+   free(stackstart);
+
+   printf("done\n");
+}
 
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Validate Solution                                        ---*/
@@ -123,7 +191,7 @@ int validate(
    const GRAPH*  g,
    const double* xval)
 {
-   char* connected = malloc((size_t)g->knots * sizeof(char));
+   char* connected = calloc((size_t)g->knots, sizeof(char));
    int   ret       = TRUE;
    int   i;
    int   layer;
@@ -135,15 +203,21 @@ int validate(
    assert(xval      != NULL);
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
+      if (layer > 0)
+         memset(connected, 0, (size_t)g->knots * sizeof(char));
 #if 0
       trail(g, g->source[layer], xval + layer * g->edges, -1,
          memset(connected, 0, (size_t)g->knots * sizeof(char)),
          0, param_get("MAX_HOPS")->i);
 #endif
-      trail(g, g->source[layer], xval + layer * g->edges, -1,
-         memset(connected, 0, (size_t)g->knots * sizeof(char)),
-         0, 1000000000);
 
+#if 1
+      trail(g, g->source[layer], xval + layer * g->edges, -1,
+         connected,
+         0, 1000000000);
+#else
+      trail2(g, layer, xval + layer * g->edges, connected, 1000000000);
+#endif
       for(i = 0; i < g->knots; i++)
       {
          /* Etwa ein Kreis ?

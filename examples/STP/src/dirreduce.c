@@ -58,7 +58,6 @@ int degree_test_dir(
       {
          assert(g->grad[i] >= 0);
 
-
          if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY)
          {
             e1  = g->inpbeg[i];
@@ -70,7 +69,10 @@ int degree_test_dir(
             assert(g->oeat[g->outbeg[i]] == EAT_LAST);
 
             if (Is_term(g->term[i]))
+	    {
+	       SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
                *fixed += g->cost[e1];
+	    }
 
             graph_knot_contract(g, i1, i);
 
@@ -116,7 +118,6 @@ int degree_test_dir(
                   g->cost[e1]            += g->cost[Edge_anti(e2)];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
 
-                  //printf("con0 %d, %d\n", i2, i);
                   graph_knot_contract(g, i2, i);
 
                   count++;
@@ -134,11 +135,13 @@ int degree_test_dir(
                {
                   if (LT(g->cost[e1], g->cost[e2]))
                   {
+		     SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
                      *fixed += g->cost[e1];
                      graph_knot_contract(g, i1, i);
                   }
                   else
                   {
+		     SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e2]);
                      *fixed += g->cost[e2];
                      graph_knot_contract(g, i2, i);
                   }
@@ -148,6 +151,7 @@ int degree_test_dir(
                }
                if (Is_term(g->term[i1]) && !Is_term(g->term[i2]) && LE(g->cost[e1], g->cost[e2]))
                {
+		  SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
                   *fixed += g->cost[e1];
                   graph_knot_contract(g, i1, i);
 
@@ -157,6 +161,7 @@ int degree_test_dir(
                }
                if (Is_term(g->term[i2]) && !Is_term(g->term[i1]) && LE(g->cost[e2], g->cost[e1]))
                {
+		  SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e2]);
                   *fixed += g->cost[e2];
                   graph_knot_contract(g, i2, i);
 
@@ -179,7 +184,7 @@ int degree_test_dir(
       }
    }
    SCIPdebugMessage(" %d Knots deleted\n", count);
-
+   printf("dirdeg %d Knots deleted\n", count);
    assert(graph_valid(g));
 
    return(count);
