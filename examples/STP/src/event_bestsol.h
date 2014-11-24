@@ -24,8 +24,16 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** includes event handler for best solution found */
 extern
 SCIP_RETCODE SCIPincludeEventHdlrBestsol(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif

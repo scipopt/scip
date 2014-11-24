@@ -1258,9 +1258,9 @@ static double levelm4(
       rerun = FALSE;
       if( sd )
       {
+         sd = FALSE;
          for(i = 0; i < 2; i++)
          {
-            sd = FALSE;
             if( g->stp_type == STP_HOP_CONS )
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
@@ -1279,7 +1279,7 @@ static double levelm4(
       if( nsv )
       {
          nsv = FALSE;
-         if( g->stp_type != STP_HOP_CONS )
+         if( 1 || g->stp_type != STP_HOP_CONS )
          {
             for (i = 0; i < 4; i++)
             {

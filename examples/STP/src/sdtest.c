@@ -675,8 +675,8 @@ int sd_reduction_dir(
 
             //for( m = 0; m < outtermcount; m++ )
             //{
-            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
-            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
+               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
+               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
             //}
          }
       }
@@ -1214,6 +1214,7 @@ int nv_reduction_optimal(
          min1  = FARAWAY;
          min2  = FARAWAY;
          shortarctail = -1;
+         shortarc = -1;
          antiedgeexists = FALSE;
          for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
          {
@@ -1257,7 +1258,7 @@ int nv_reduction_optimal(
             {
                *fixed += min1;
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
-                                                                                           shortarc instead of shortarctail */
+                                                                                       shortarc instead of shortarctail */
                graph_knot_contract(g, shortarctail, i);
 
                elimins++;
