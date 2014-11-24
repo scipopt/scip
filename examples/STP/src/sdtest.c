@@ -450,7 +450,7 @@ int sd_reduction(
       g->mark[i] = (g->grad[i] > 0);
 
    for(i = 0; i < g->edges; i++)
-      cost[i] = g->cost[i] * 1000.0 + (double)(rand() % 512);
+      cost[i] = g->cost[i] * 1000.0;// + (double)(rand() % 512);
 
    for(i = 0; i < g->knots; i++)
    {
@@ -463,7 +463,8 @@ int sd_reduction(
          continue;
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
-      if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
+      if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
+               || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
@@ -489,7 +490,7 @@ int sd_reduction(
 
          j = g->oeat[e];
 
-         if (LT(cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e]))
+         if (LT(g->cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e]))
          {
 	    SCIPindexListNodeFree(&((g->ancestors)[e]));
 	    assert(g->ancestors[e] == NULL);
