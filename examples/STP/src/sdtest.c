@@ -690,7 +690,7 @@ int sd_reduction_dir(
    return(elimins);
 }
 
-static void redirect_edge(
+static int redirect_edge(
    GRAPH* g,
    int    eki,
    int    k,
@@ -743,7 +743,9 @@ static void redirect_edge(
       g->oeat[e]   = g->outbeg[j];
       g->inpbeg[k] = e;
       g->outbeg[j] = e;
+      return eki;
    }
+   return e;
 }
 
 /* C. W. Duin and A. Volganant
@@ -757,6 +759,8 @@ static void redirect_edge(
 int bd3_reduction(
    GRAPH* g)
 {
+   IDX** ancestors;
+   IDX** revancestors;
    double* pathdist1;
    double* pathdist2;
    double* pathtran1;
@@ -779,7 +783,8 @@ int bd3_reduction(
 
    SCIPdebugMessage("BD3-Reduction: ");
    fflush(stdout);
-
+   ancestors = malloc((size_t)(3) * sizeof(IDX*));
+   revancestors = malloc((size_t)(3) * sizeof(IDX*));
    heap  = malloc((size_t)g->knots * sizeof(int));
    state = malloc((size_t)g->knots * sizeof(int));
 
@@ -790,7 +795,11 @@ int bd3_reduction(
    pathdist2 = malloc((size_t)g->knots * sizeof(double));
    pathtran1 = malloc((size_t)g->knots * sizeof(double));
    pathtran2 = malloc((size_t)g->knots * sizeof(double));
-
+   for(i = 0; i < 3; i++)
+   {
+      ancestors[i] = NULL;
+      revancestors[i] = NULL;
+   }
    for(i = 0; i < g->knots; i++)
       g->mark[i] = (g->grad[i] > 0);
 
@@ -808,19 +817,24 @@ int bd3_reduction(
          continue;
 
       e1 = g->outbeg[i];
+      SCIPindexListNodeAppendCopy(&(ancestors[0]), g->ancestors[e1]);
+      SCIPindexListNodeAppendCopy(&(revancestors[0]), g->ancestors[Edge_anti(e1)]);
 
       assert(e1 != EAT_LAST);
 
       k1 = g->head[e1];
       c1 = g->cost[e1];
       e2 = g->oeat[e1];
+      SCIPindexListNodeAppendCopy(&(ancestors[1]), g->ancestors[e2]);
+      SCIPindexListNodeAppendCopy(&(revancestors[1]), g->ancestors[Edge_anti(e2)]);
 
       assert(e2 != EAT_LAST);
 
       k2 = g->head[e2];
       c2 = g->cost[e2];
       e3 = g->oeat[e2];
-
+      SCIPindexListNodeAppendCopy(&(ancestors[2]), g->ancestors[e3]);
+      SCIPindexListNodeAppendCopy(&(revancestors[2]), g->ancestors[Edge_anti(e3)]);
       assert(e3 != EAT_LAST);
 
       k3 = g->head[e3];
@@ -844,22 +858,70 @@ int bd3_reduction(
       elimins++;
 
       if (LT(pathdist1[k2], c1 + c2))
+      {
+	 SCIPindexListNodeFree(&((g->ancestors)[e1]));
+	 SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e1)]));
          graph_edge_del(g, e1);
+      }
       else
-         redirect_edge(g, e1, k1, k2, c1 + c2);
+      {
+	 e1 = redirect_edge(g, e1, k1, k2, c1 + c2);
+	 SCIPindexListNodeFree(&(g->ancestors[e1]));
+	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(e1)]));
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[e1]), revancestors[0]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[e1]), ancestors[1]);
+
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e1)]), ancestors[0]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e1)]), revancestors[1]);
+
+      }
 
       if (LT(pathdist2[k3], c2 + c3))
+      {
+	 SCIPindexListNodeFree(&((g->ancestors)[e2]));
          graph_edge_del(g, e2);
+      }
       else
-         redirect_edge(g, e2, k2, k3, c2 + c3);
+      {
+	 e2 = redirect_edge(g, e2, k2, k3, c2 + c3);
+	 SCIPindexListNodeFree(&(g->ancestors[e2]));
+	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(e2)]));
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[e2]), revancestors[1]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[e2]), ancestors[2]);
+
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e2)]), ancestors[1]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e2)]), revancestors[2]);
+
+      }
 
       if (LT(pathdist1[k3], c1 + c3))
+      {
+	 SCIPindexListNodeFree(&((g->ancestors)[e3]));
          graph_edge_del(g, e3);
+      }
       else
-         redirect_edge(g, e3, k3, k1, c3 + c1);
+      {
+         e3 = redirect_edge(g, e3, k3, k1, c3 + c1);
+	 SCIPindexListNodeFree(&(g->ancestors[e3]));
+	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(e3)]));
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[e3]), revancestors[2]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[e3]), ancestors[0]);
 
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e3)]), ancestors[2]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e3)]), revancestors[0]);
+      }
+
+      for(i = 0; i < 3; i++)
+      {
+	 SCIPindexListNodeFree(&(ancestors[i]));
+	 SCIPindexListNodeFree(&(revancestors[i]));
+         assert(ancestors[i] == NULL);
+         assert(revancestors[i] == NULL);
+      }
       assert(g->grad[i] == 0);
    }
+   free(ancestors);
+   free(revancestors);
    free(heap);
    free(state);
 

@@ -1418,7 +1418,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       // SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
       // SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       // SCIPprobdataWriteLogLine(scip, "End\n");
-/*
+
        if( SCIPgetNSols(scip) > 0 )
        {
           SCIPprobdataWriteLogLine(scip, "\n");
@@ -1427,7 +1427,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
           SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
           SCIPprobdataWriteLogLine(scip, "End\n");
        }
-*/
+
       success = fclose(probd->logfile);
       if( success != 0 )
       {
@@ -2712,7 +2712,7 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
       SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
       SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
-
+/*
       if( SCIPgetNSols(scip) > 0 )
       {
          SCIPprobdataWriteLogLine(scip, "\n");
@@ -2721,7 +2721,7 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
          SCIP_CALL( SCIPprobdataWriteSolution(scip, probdata->logfile) );
          SCIPprobdataWriteLogLine(scip, "End\n");
       }
-
+*/
       success = fclose(probdata->logfile);
       if( success != 0 )
       {
