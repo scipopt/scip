@@ -305,7 +305,6 @@ static void compute_sd_dir(
    int    m;
    int    i;
    int    curr_edge;
-   int    done = 0;
    double tran;
    double dist;
 
@@ -543,7 +542,6 @@ int sd_reduction_dir(
    int     j;
    int     k;
    int     l;
-   int     m;
    int     elimins = 0;
    double  tempsd;
    double  specialdist;
@@ -1141,8 +1139,6 @@ int nv_reduction_optimal(
    int*    terms;
    int     termcount;
    int     i;
-   int     j;
-   int     k;
    int     e;
    double  min1;
    double  min2;
@@ -1218,6 +1214,7 @@ int nv_reduction_optimal(
          min1  = FARAWAY;
          min2  = FARAWAY;
          shortarctail = -1;
+         shortarc = -1;
          antiedgeexists = FALSE;
          for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
          {
