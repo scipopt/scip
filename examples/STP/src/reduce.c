@@ -1121,7 +1121,7 @@ static double level4(
 
    /* define the miimial number of edge/node eleminations for a reduction test to be continued */
    //edgebound = MAX(g->edges / 100, 5 );
-   nodebound = MAX(g->knots / 500, 10 );
+   nodebound = MAX(g->knots / 500, 10);
    //printf("edgebound: %d \n", edgebound );
    printf("nodebound: %d \n", nodebound );
 
@@ -1218,7 +1218,7 @@ static double levelm4(
    char    nsv = TRUE;
 
    assert(g != NULL);
-   redbound = MAX(g->knots / 500, 10);
+   redbound = MAX(g->knots / 500, 8);
    printf("redbound: %d \n", redbound );
    heap        = malloc((size_t)g->knots * sizeof(int));
    state       = malloc((size_t)g->knots * sizeof(int));
@@ -1283,7 +1283,7 @@ static double levelm4(
          {
             for (i = 0; i < 4; i++)
             {
-               numelim = 0; //nv_reduction_optimal(g, &fixed);
+               numelim = nv_reduction_optimal(g, &fixed);
                printf("NV Reduction %d: %d\n", i, numelim);
                if( numelim > redbound )
                {
@@ -1372,7 +1372,6 @@ double reduce(
    SCIP*  scip
    )
 {
-   int i;
    double fixed = 0.0;
    printf("Level: %d\n", level);
 
@@ -1398,10 +1397,14 @@ double reduce(
 
    if( g->stp_type == STP_GRID )
       return fixed;
+   if( g->stp_type == STP_HOP_CONS )
+      return fixed;
+
+   if( g->stp_type == STP_DEG_CONS )
+      return fixed;
 
    if( g->stp_type != STP_UNDIRECTED )
       level = -4;
-
 
    assert(g->layers == 1);
 

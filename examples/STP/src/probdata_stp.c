@@ -410,7 +410,7 @@ SCIP_RETCODE createHopConstraint(
 
 {
    GRAPH* graph;
-   int rhs;
+   SCIP_Real rhs;
    assert(scip != NULL);
    assert(probdata != NULL);
 
@@ -713,8 +713,9 @@ SCIP_RETCODE createVariables(
          if( graph->stp_type == STP_HOP_CONS )
 	 {
 	    int hopfactor;
-	    for( e = 0; e < nedges; ++k )
+	    for( e = 0; e < nedges; ++e )
             {
+	       //printf("add to cons %d   ", k);
 	      /* TODO: When presolving is used: MODIFY */
 	          hopfactor = 1;
 		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
