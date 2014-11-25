@@ -1709,7 +1709,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real* costrev;
    SCIP_Real* nval;
    SCIP_Real* xval;
-   SCIP_Real maxcost;
+   SCIP_Real maxcost = 0;
    int* results;
    SCIP_Real pobj;
    int best_start = -1;
@@ -1928,7 +1928,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
          }
       }
-      printf("maxcost: %f \n", maxcost);
+      //printf("maxcost: %f \n", maxcost);
       if( graph->stp_type == STP_HOP_CONS )
       {
          for( e = 0; e < nedges; e++ )

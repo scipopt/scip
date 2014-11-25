@@ -794,6 +794,8 @@ int bd3_reduction(
    int*    state;
    int     count = 0;
    int    i;
+   int    k;
+   int    n1;
    int    k1;
    int    k2;
    int    k3;
@@ -891,14 +893,14 @@ int bd3_reduction(
       }
       else
       {
-	 e1 = redirect_edge(g, e1, k1, k2, c1 + c2);
-	 SCIPindexListNodeFree(&(g->ancestors[e1]));
-	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(e1)]));
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[e1]), revancestors[0]);
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[e1]), ancestors[1]);
+	 n1 = redirect_edge(g, e1, k1, k2, c1 + c2);
+	 SCIPindexListNodeFree(&(g->ancestors[n1]));
+	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[0]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), ancestors[1]);
 
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e1)]), ancestors[0]);
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e1)]), revancestors[1]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), ancestors[0]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), revancestors[1]);
 
       }
 
@@ -909,14 +911,14 @@ int bd3_reduction(
       }
       else
       {
-	 e2 = redirect_edge(g, e2, k2, k3, c2 + c3);
-	 SCIPindexListNodeFree(&(g->ancestors[e2]));
-	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(e2)]));
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[e2]), revancestors[1]);
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[e2]), ancestors[2]);
+	 n1 = redirect_edge(g, e2, k2, k3, c2 + c3);
+	 SCIPindexListNodeFree(&(g->ancestors[n1]));
+	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[1]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), ancestors[2]);
 
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e2)]), ancestors[1]);
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e2)]), revancestors[2]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), ancestors[1]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), revancestors[2]);
 
       }
 
@@ -927,22 +929,22 @@ int bd3_reduction(
       }
       else
       {
-         e3 = redirect_edge(g, e3, k3, k1, c3 + c1);
-	 SCIPindexListNodeFree(&(g->ancestors[e3]));
-	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(e3)]));
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[e3]), revancestors[2]);
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[e3]), ancestors[0]);
+        n1 = redirect_edge(g, e3, k3, k1, c3 + c1);
+	 SCIPindexListNodeFree(&(g->ancestors[n1]));
+	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[2]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), ancestors[0]);
 
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e3)]), ancestors[2]);
-	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(e3)]), revancestors[0]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), ancestors[2]);
+	 SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), revancestors[0]);
       }
 
-      for(i = 0; i < 3; i++)
+      for(k = 0; k < 3; k++)
       {
-	 SCIPindexListNodeFree(&(ancestors[i]));
-	 SCIPindexListNodeFree(&(revancestors[i]));
-         assert(ancestors[i] == NULL);
-         assert(revancestors[i] == NULL);
+	 SCIPindexListNodeFree(&(ancestors[k]));
+	 SCIPindexListNodeFree(&(revancestors[k]));
+         assert(ancestors[k] == NULL);
+         assert(revancestors[k] == NULL);
       }
       assert(g->grad[i] == 0);
    }
