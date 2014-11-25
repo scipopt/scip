@@ -1132,6 +1132,56 @@ SCIP_RETCODE SCIPtmHeur(
    return SCIP_OKAY;
 }
 
+static
+void do_prizecoll_trivial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*  graph,
+   int*          best_result
+   )
+{
+   double maxcost = -1;
+   int e;
+   int i = -1;
+   int maxedge = UNKNOWN;
+   int maxterm;
+   int root;
+   assert(graph != NULL);
+   assert(best_result != NULL);
+   root = graph->source[0];
+
+   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      if( Is_term(graph->term[graph->head[e]]) )
+      {
+	 best_result[e] = CONNECT;
+         if( SCIPisLT(scip, maxcost, graph->cost[e]) )
+	 {
+	    maxcost = graph->cost[e];
+	    maxedge = e;
+	 }
+      }
+   }
+
+   assert(maxedge >= 0);
+   maxterm = graph->head[maxedge];
+   for( e = graph->inpbeg[maxterm]; e != EAT_LAST; e = graph->ieat[e] )
+   {
+      if( graph->tail[e] != root )
+      {
+	 best_result[e] = CONNECT;
+	 i = graph->tail[e];
+	 break;
+      }
+   }
+   assert(i >= 0);
+   for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+      if( graph->tail[e] == root )
+	 break;
+   assert(e != EAT_LAST);
+   best_result[maxedge] = UNKNOWN;
+   best_result[e] = CONNECT;
+}
+
 
 static
 SCIP_RETCODE do_layer(
@@ -1719,7 +1769,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    int runs;
    int e;
    int v;
-
+   int pctrivialbound = 100000;
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -1740,8 +1790,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    assert(graph != NULL);
    nedges = graph->edges;
    assert(nedges >= 0);
-   if( graph->stp_type == STP_HOP_CONS )
+   if( graph->stp_type == STP_PRIZE_COLLECTING && graph->knots > pctrivialbound && !(heurtiming & SCIP_HEURTIMING_BEFORENODE) )
+   {
+      printf("skipping tm\n");
       return SCIP_OKAY;
+   }
 
    runs = 0;
 
@@ -1801,161 +1854,169 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    for( e = 0; e < nedges; e++ )
       results[e] = -1;
 
-   for( layer = 0; layer < graph->layers; layer++ )
+   if( graph->stp_type == STP_PRIZE_COLLECTING && graph->edges > pctrivialbound )
    {
-      if( xval == NULL )
+      printf("tm trivial\n");
+      do_prizecoll_trivial(scip, graph, results);
+   }
+   else
+   {
+      for( layer = 0; layer < graph->layers; layer++ )
       {
-	 int fixed = 0;
-	 maxcost = 0;
-         BMScopyMemoryArray(cost, graph->cost, nedges);
-         // printf("xval == NULLL nvars: %d depth:%d \n\n",nvars,  SCIPgetSubscipDepth(scip));
-
-	 if( graph->stp_type == STP_HOP_CONS )
-	 {
-	    for( e = 0; e < nedges; e++)
-            {
-               if( SCIPvarGetUbGlobal(vars[layer * nedges + e] ) < 0.5 )
-               {
-                  cost[e] = 1e+10;
-               }
-               if( SCIPisLT(scip, graph->cost[e], 1e+5 ) && SCIPisGT(scip, graph->cost[e], maxcost) )
-                  maxcost = graph->cost[e];
-
-            }
-            for( e = 0; e < nedges; e++)
-               costrev[e] = cost[flipedge(e)];
-	 }
-	 else
-	 {
-            /* TODO chg. for asymmetric graphs */
-            for( e = 0; e < nedges; e += 2)
-            {
-               if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )
-               {
-                  costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e + 1] = 1e+10;
-                  fixed++;
-               }
-               else
-               {
-                  costrev[e] = cost[e + 1];
-                  costrev[e + 1] = cost[e];
-               }
-
-               if( SCIPvarGetUbGlobal(vars[layer * nedges + e]) < 0.5 )
-               {
-                  fixed++;
-                  costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e] = 1e+10;
-               }
-               else
-               {
-                  costrev[e] = cost[e + 1];
-                  costrev[e + 1] = cost[e];
-               }
-            }
-	 }
-         //printf("nvars: %d fixed: %d \n", nvars,  fixed);
-      }
-      else
-      {
-         if( 0 && (graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING) )
+         if( xval == NULL )
          {
-            int root = graph->source[0];
-            assert(root >= 0);
-            /* swap costs; set a high cost if the variable is fixed to 0 */
-            for( e = 0; e < nedges; e += 2)
-            {
-               if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
-               {
-                  costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e + 1] = 1e+10;
-               }
-               else
-               {
-                  costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
-                  cost[e + 1] = costrev[e];
-               }
+            int fixed = 0;
+            maxcost = 0;
+            BMScopyMemoryArray(cost, graph->cost, nedges);
+            // printf("xval == NULLL nvars: %d depth:%d \n\n",nvars,  SCIPgetSubscipDepth(scip));
 
-               if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
+            if( graph->stp_type == STP_HOP_CONS )
+            {
+               for( e = 0; e < nedges; e++)
                {
-                  costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e] = 1e+10;
-               }
-               else
-               {
-                  if( 0 && graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
+                  if( SCIPvarGetUbGlobal(vars[layer * nedges + e] ) < 0.5 )
                   {
-                     costrev[e + 1] = ((1.0 - xval[layer * nedges + e]));
-                     cost[e] = costrev[e + 1];
+                     cost[e] = 1e+10;
+                  }
+                  if( SCIPisLT(scip, graph->cost[e], 1e+5 ) && SCIPisGT(scip, graph->cost[e], maxcost) )
+                     maxcost = graph->cost[e];
+
+               }
+               for( e = 0; e < nedges; e++)
+                  costrev[e] = cost[flipedge(e)];
+            }
+            else
+            {
+               /* TODO chg. for asymmetric graphs */
+               for( e = 0; e < nedges; e += 2)
+               {
+                  if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )
+                  {
+                     costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     cost[e + 1] = 1e+10;
+                     fixed++;
                   }
                   else
                   {
-                     //TODO: chg s.t. original zero edges are also changed
+                     costrev[e] = cost[e + 1];
+                     costrev[e + 1] = cost[e];
+                  }
+
+                  if( SCIPvarGetUbGlobal(vars[layer * nedges + e]) < 0.5 )
+                  {
+                     fixed++;
+                     costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     cost[e] = 1e+10;
+                  }
+                  else
+                  {
+                     costrev[e] = cost[e + 1];
+                     costrev[e + 1] = cost[e];
+                  }
+               }
+            }
+            //printf("nvars: %d fixed: %d \n", nvars,  fixed);
+         }
+         else
+         {
+            if( 0 && (graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING) )
+            {
+               int root = graph->source[0];
+               assert(root >= 0);
+               /* swap costs; set a high cost if the variable is fixed to 0 */
+               for( e = 0; e < nedges; e += 2)
+               {
+                  if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
+                  {
+                     costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     cost[e + 1] = 1e+10;
+                  }
+                  else
+                  {
+                     costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
+                     cost[e + 1] = costrev[e];
+                  }
+
+                  if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
+                  {
+                     costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     cost[e] = 1e+10;
+                  }
+                  else
+                  {
+                     if( 0 && graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
+                     {
+                        costrev[e + 1] = ((1.0 - xval[layer * nedges + e]));
+                        cost[e] = costrev[e + 1];
+                     }
+                     else
+                     {
+                        //TODO: chg s.t. original zero edges are also changed
+                        costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
+                        cost[e] = costrev[e + 1];
+                     }
+                  }
+               }
+
+            }
+            else
+            {
+               /* swap costs; set a high cost if the variable is fixed to 0 */
+               for( e = 0; e < nedges; e += 2)
+               {
+                  if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
+                  {
+                     costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     cost[e + 1] = 1e+10;
+                  }
+                  else
+                  {
+                     costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
+                     cost[e + 1] = costrev[e];
+                  }
+
+                  if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
+                  {
+                     costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     cost[e] = 1e+10;
+                  }
+                  else
+                  {
                      costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
                      cost[e] = costrev[e + 1];
                   }
                }
             }
-
          }
-         else
+         //printf("maxcost: %f \n", maxcost);
+         if( graph->stp_type == STP_HOP_CONS )
          {
-            /* swap costs; set a high cost if the variable is fixed to 0 */
-            for( e = 0; e < nedges; e += 2)
+            for( e = 0; e < nedges; e++ )
             {
-               if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
-               {
-                  costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e + 1] = 1e+10;
-               }
-               else
-               {
-                  costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
-                  cost[e + 1] = costrev[e];
-               }
-
-               if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
-               {
-                  costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                  cost[e] = 1e+10;
-               }
-               else
-               {
-                  costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
-                  cost[e] = costrev[e + 1];
-               }
+               cost[e] = 1 + cost[e] / maxcost;
+               costrev[e] = 1 + costrev[e] / maxcost;
             }
          }
-      }
-      //printf("maxcost: %f \n", maxcost);
-      if( graph->stp_type == STP_HOP_CONS )
-      {
-         for( e = 0; e < nedges; e++ )
-         {
-            cost[e] = 1 + cost[e] / maxcost;
-            costrev[e] = 1 + costrev[e] / maxcost;
-         }
-      }
-      assert(SCIPisGE(scip, cost[e], 0));
-      /* can we connect the network */
-      SCIP_CALL( do_layer(scip, graph, layer, &best_start, results, runs, cost, costrev, heurdata) );
+         assert(SCIPisGE(scip, cost[e], 0));
+         /* can we connect the network */
+         SCIP_CALL( do_layer(scip, graph, layer, &best_start, results, runs, cost, costrev, heurdata) );
 #if 0
-      /* take the path */
-      if( graph->layers > 1 )
-      {
-         for( e = 0; e < nedges; e += 2)
+         /* take the path */
+         if( graph->layers > 1 )
          {
-            if( (results[e] == layer) || (results[e + 1] == layer) )
-               graph_edge_hide(graph, e);
+            for( e = 0; e < nedges; e += 2)
+            {
+               if( (results[e] == layer) || (results[e + 1] == layer) )
+                  graph_edge_hide(graph, e);
+            }
          }
+#endif
       }
+#if 0
+      if( graph->layers > 1 )
+         graph_uncover(graph);
 #endif
    }
-#if 0
-   if( graph->layers > 1 )
-      graph_uncover(graph);
-#endif
    for( v = 0; v < nvars; v++ )
       nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
@@ -2052,7 +2113,7 @@ SCIP_RETCODE SCIPincludeHeurTM(
 
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristc should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/timing", paramdesc,
-	 (int*) &heurdata->timing, TRUE, (int) HEUR_TIMING, (int) SCIP_HEURTIMING_BEFORENODE, 2 * (int) SCIP_HEURTIMING_AFTERNODE - 1, NULL, NULL) ); /*lint !e713*/
+         (int*) &heurdata->timing, TRUE, (int) HEUR_TIMING, (int) SCIP_HEURTIMING_BEFORENODE, 2 * (int) SCIP_HEURTIMING_AFTERNODE - 1, NULL, NULL) ); /*lint !e713*/
 
    return SCIP_OKAY;
 }

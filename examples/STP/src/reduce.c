@@ -1116,7 +1116,7 @@ static double level4(
    int*    heap;
    int*    state;
    char    sd = TRUE;
-   char    bd3 = FALSE;
+   char    bd3 = TRUE;
    char    nsv = TRUE;
    assert(g != NULL);
    //bound_test(scip, g); TODO
@@ -1404,7 +1404,7 @@ double reduce(
 
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type);
-   if( 0 && g->stp_type != STP_UNDIRECTED )
+   if( 1 && g->stp_type != STP_UNDIRECTED )
       return fixed;
 
    if( g->stp_type == STP_GRID )

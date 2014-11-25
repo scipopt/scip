@@ -816,7 +816,7 @@ graph_prize_transform(
    graph->source[0] = root;
    graph->stp_type = STP_PRIZE_COLLECTING;
    assert((nterms + 1) == graph->terms);
-   printf("total TP sum: %f \n\n", tmpsum);
+   //printf("total TP sum: %f \n\n", tmpsum);
 }
 
 
