@@ -1997,7 +1997,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                costrev[e] = 1 + costrev[e] / maxcost;
             }
          }
-         assert(SCIPisGE(scip, cost[e], 0));
+         //assert(SCIPisGE(scip, cost[e], 0));
          /* can we connect the network */
          SCIP_CALL( do_layer(scip, graph, layer, &best_start, results, runs, cost, costrev, heurdata) );
 #if 0
