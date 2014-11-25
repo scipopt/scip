@@ -1405,19 +1405,19 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
    if( probd->logfile != NULL )
    {
       int success;
-      // SCIP_Real factor = 1.0;
+      SCIP_Real factor = 1.0;
 
-      // if( probd->stp_type ==  STP_MAX_NODE_WEIGHT )
-      //    factor = -1.0;
+      if( probd->stp_type ==  STP_MAX_NODE_WEIGHT )
+         factor = -1.0;
 
-      // SCIPprobdataWriteLogLine(scip, "End\n");
-      // SCIPprobdataWriteLogLine(scip, "\n");
-      // SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      // SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      // SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      // SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
-      // SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
-      // SCIPprobdataWriteLogLine(scip, "End\n");
+      SCIPprobdataWriteLogLine(scip, "End\n");
+      SCIPprobdataWriteLogLine(scip, "\n");
+      SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
+      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
+      SCIPprobdataWriteLogLine(scip, "End\n");
 
        if( SCIPgetNSols(scip) > 0 )
        {
@@ -2712,7 +2712,7 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
       SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
       SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
-/*
+
       if( SCIPgetNSols(scip) > 0 )
       {
          SCIPprobdataWriteLogLine(scip, "\n");
@@ -2721,7 +2721,7 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
          SCIP_CALL( SCIPprobdataWriteSolution(scip, probdata->logfile) );
          SCIPprobdataWriteLogLine(scip, "End\n");
       }
-*/
+
       success = fclose(probdata->logfile);
       if( success != 0 )
       {
