@@ -178,6 +178,20 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
    );
 
+/** set dual bound by ug */
+extern
+void SCIPprobdataSetDualBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             dual
+   );
+
+/** set the number of solvers */
+extern
+void SCIPprobdataSetNSolvers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nSolvers            /**< the number of solvers */
+   );
+
 #if 0
 /** print (undirected) graph and highlight current solution */
 extern

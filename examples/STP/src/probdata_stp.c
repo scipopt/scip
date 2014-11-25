@@ -83,6 +83,11 @@ struct SCIP_ProbData
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
    FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
+
+   /** for FiberSCIP **/
+   SCIP_Bool             ug;                 /**< inidicat if this ug dual bound is set or not */
+   int                   nSolvers;           /**< the number of solvers */
+   SCIP_Real             ugDual;             /**< dual bound set by ug */
 };
 
 /**@name Local methods
@@ -246,6 +251,10 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->copy = FALSE;
    (*probdata)->logfile = NULL;
    (*probdata)->origlogfile = NULL;
+
+   (*probdata)->ug = FALSE;
+   (*probdata)->nSolvers =0;
+   (*probdata)->ugDual = 0.0;
 
    return SCIP_OKAY;
 }
@@ -1413,9 +1422,18 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       SCIPprobdataWriteLogLine(scip, "End\n");
       SCIPprobdataWriteLogLine(scip, "\n");
       SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      if( probd->ug )
+      {
+         SCIPprobdataWriteLogLine(scip, "Threads %d\n", probd->nSolvers);
+         SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * probd->ugDual);
+      }
+      else
+      {
+         SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+         SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      }
       SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
 
@@ -2707,9 +2725,18 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
       SCIPprobdataWriteLogLine(scip, "End\n");
       SCIPprobdataWriteLogLine(scip, "\n");
       SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      SCIPprobdataWriteLogLine(scip, "Threads 1\n");
-      SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-      SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      if( probdata->ug )
+      {
+         SCIPprobdataWriteLogLine(scip, "Threads %d\n", probdata->nSolvers);
+         SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * probdata->ugDual);
+      }
+      else
+      {
+         SCIPprobdataWriteLogLine(scip, "Threads 1\n");
+         SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
+         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
+      }
       SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
 
@@ -2735,3 +2762,33 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
 
    return SCIP_OKAY;
 }
+
+/** writes end of log file */
+void SCIPprobdataSetDualBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             dual                /**< dual bound */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   probdata->ug = TRUE;
+   probdata->ugDual = dual;
+}
+
+/** writes end of log file */
+void SCIPprobdataSetNSolvers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nSolvers            /**< the number of solvers */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   probdata->nSolvers = nSolvers;
+}
+
