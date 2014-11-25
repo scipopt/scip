@@ -1116,7 +1116,7 @@ static double level4(
    int*    heap;
    int*    state;
    char    sd = TRUE;
-   char    bd3 = TRUE;
+   char    bd3 = !TRUE;
    char    nsv = TRUE;
    assert(g != NULL);
    //bound_test(scip, g); TODO
