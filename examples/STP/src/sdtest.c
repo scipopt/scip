@@ -179,11 +179,13 @@ static void compute_sd(
    const GRAPH*  p,
    int           start,
    const double* cost,
+   const double* random,
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
    double* pathdist,
-   double* pathtran)
+   double* pathtran,
+   double* pathrand)
 {
    int    k;
    int    m;
@@ -191,6 +193,7 @@ static void compute_sd(
    int    done = 0;
    double tran;
    double dist;
+   double temprand;
 
    assert(p      != NULL);
    assert(start  >= 0);
@@ -223,6 +226,7 @@ static void compute_sd(
    k            = start;
    pathdist[k] = 0.0;
    pathtran[k] = 0.0;
+   pathrand[k] = 0.0;
 
    /* Wenn nur ein Knoten drin ist funktioniert der Heap nicht sehr gut,
     * weil dann fuer genau 0 Elemente Platz ist.
@@ -272,7 +276,19 @@ static void compute_sd(
                 * - tran measures the distance between two terminals.
                 * - dist stores the current longest elementary path.
                 */
-               tran = Is_term(p->term[m]) ? 0.0 : pathtran[k] + cost[i];
+               //tran = Is_term(p->term[m]) ? 0.0 : pathtran[k] + cost[i];
+               if( Is_term(p->term[m]) )
+               {
+                  tran = 0.0;
+                  temprand = 0.0;
+               }
+               else
+               {
+                  tran = pathtran[k] + cost[i];
+                  temprand = pathrand[k] + random[i];
+               }
+
+
                dist = Max(pathdist[k], pathtran[k] + cost[i]);
 
                if (LT(dist, pathdist[m])
@@ -280,6 +296,7 @@ static void compute_sd(
                {
                   pathdist[m] = dist;
                   pathtran[m] = tran;
+                  pathrand[m] = temprand;
 
                   correct(heap, state, count, pathdist, pathtran, m);
                }
@@ -417,7 +434,9 @@ int sd_reduction(
    GRAPH* g,
    double*  sddist,
    double*  sdtrans,
+   double*  sdrand,
    double* cost,
+   double* random,
    int*    heap,
    int*    state
    )
@@ -450,7 +469,10 @@ int sd_reduction(
       g->mark[i] = (g->grad[i] > 0);
 
    for(i = 0; i < g->edges; i++)
-      cost[i] = g->cost[i] * 1000.0;// + (double)(rand() % 512);
+   {
+      random[i] = (double)(rand() % 512);
+      cost[i] = g->cost[i] * 1000.0 + random[i];
+   }
 
    for(i = 0; i < g->knots; i++)
    {
@@ -474,7 +496,7 @@ int sd_reduction(
          g->mark[g->head[e]] = 2;
       }
 
-      compute_sd(g, i, cost, heap, state, &count, sddist, sdtrans);
+      compute_sd(g, i, cost, random, heap, state, &count, sddist, sdtrans, sdrand);
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
       {
@@ -490,7 +512,8 @@ int sd_reduction(
 
          j = g->oeat[e];
 
-         if (LT(g->cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e]))
+         if (LT(g->cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e])
+               && LT(sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]))
          {
 	    SCIPindexListNodeFree(&((g->ancestors)[e]));
 	    assert(g->ancestors[e] == NULL);
@@ -766,6 +789,7 @@ int bd3_reduction(
    double* pathdist2;
    double* pathtran1;
    double* pathtran2;
+   double* pathrand;
    int*    heap;
    int*    state;
    int     count = 0;
@@ -796,6 +820,7 @@ int bd3_reduction(
    pathdist2 = malloc((size_t)g->knots * sizeof(double));
    pathtran1 = malloc((size_t)g->knots * sizeof(double));
    pathtran2 = malloc((size_t)g->knots * sizeof(double));
+   pathrand  = malloc((size_t)g->knots * sizeof(double));
    for(i = 0; i < 3; i++)
    {
       ancestors[i] = NULL;
@@ -843,8 +868,8 @@ int bd3_reduction(
 
       assert(g->oeat[e3] == EAT_LAST);
 
-      compute_sd(g, k1, g->cost, heap, state, &count, pathdist1, pathtran1);
-      compute_sd(g, k2, g->cost, heap, state, &count, pathdist2, pathtran2);
+      compute_sd(g, k1, g->cost, g->cost, heap, state, &count, pathdist1, pathtran1, pathrand);
+      compute_sd(g, k2, g->cost, g->cost, heap, state, &count, pathdist2, pathtran2, pathrand);
 #if 0
       graph_path_exec(g, FSP_MODE, k1, g->cost, path1);
       graph_path_exec(g, FSP_MODE, k2, g->cost, path2);

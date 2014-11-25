@@ -1110,7 +1110,9 @@ static double level4(
    int    nodebound;
    double*  sddist;
    double*  sdtrans;
+   double*  sdrand;
    double* cost;
+   double* random;
    int*    heap;
    int*    state;
    char    sd = TRUE;
@@ -1133,7 +1135,9 @@ static double level4(
    state = malloc((size_t)g->knots * sizeof(int));
    sddist = malloc((size_t)g->knots * sizeof(double));
    sdtrans = malloc((size_t)g->knots * sizeof(double));
+   sdrand = malloc((size_t)g->knots * sizeof(double));
    cost  = malloc((size_t)g->edges * sizeof(double));
+   random  = malloc((size_t)g->edges * sizeof(double));
 
    while(rerun && !SCIPisStopped(scip) )
    {
@@ -1145,7 +1149,7 @@ static double level4(
       if( sd )
       {
          for( i = 0; i < 4; i++ ) //TODO 6
-            if( sd_reduction(g, sddist, sdtrans, cost, heap, state) > nodebound )
+            if( sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
                rerun = TRUE;
          sd = rerun;
       }
@@ -1186,9 +1190,11 @@ static double level4(
       fixed);
    free(sddist);
    free(sdtrans);
+   free(sdrand);
    free(heap);
    free(state);
    free(cost);
+   free(random);
 
    return(fixed);
 }
@@ -1206,11 +1212,13 @@ static double levelm4(
    int    redbound;
    double*  sddist;
    double*  sdtrans;
+   double*  sdrand;
    double** sd_indist;
    double** sd_intran;
    double** sd_outdist;
    double** sd_outtran;
    double* cost;
+   double* random;
    int*    heap;
    int*    state;
    int*     outterms;
@@ -1224,11 +1232,13 @@ static double levelm4(
    state       = malloc((size_t)g->knots * sizeof(int));
    sddist      = malloc((size_t)g->knots * sizeof(double));
    sdtrans     = malloc((size_t)g->knots * sizeof(double));
+   sdrand      = malloc((size_t)g->knots * sizeof(double));
    sd_indist   = malloc((size_t)g->knots * sizeof(double*));
    sd_intran   = malloc((size_t)g->knots * sizeof(double*));
    sd_outdist  = malloc((size_t)g->knots * sizeof(double*));
    sd_outtran  = malloc((size_t)g->knots * sizeof(double*));
    cost        = malloc((size_t)g->edges * sizeof(double));
+   random        = malloc((size_t)g->edges * sizeof(double));
    outterms    = malloc((size_t)g->knots * sizeof(int));
 
    assert(sd_indist  != NULL);
@@ -1264,7 +1274,7 @@ static double levelm4(
             if( g->stp_type == STP_HOP_CONS )
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
-               numelim = sd_reduction(g, sddist, sdtrans,cost, heap, state);
+               numelim = sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state);
             printf("SD Reduction %d: %d\n", i, numelim);
             if( numelim > redbound )
             {
@@ -1317,6 +1327,7 @@ static double levelm4(
 
    free(sddist);
    free(sdtrans);
+   free(sdrand);
    free(sd_indist);
    free(sd_intran);
    free(sd_outdist);
@@ -1324,6 +1335,7 @@ static double levelm4(
    free(heap);
    free(state);
    free(cost);
+   free(random);
    free(outterms);
 
    return(fixed);
