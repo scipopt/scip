@@ -1614,12 +1614,6 @@ SCIP_DECL_HEURFREE(heurFreeTM)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   if( heurdata->stp_type == STP_MAX_NODE_WEIGHT ||  heurdata->stp_type == STP_PRIZE_COLLECTING )
-   {
-      SCIPfreeMemoryArrayNull(scip, &(heurdata->rootedges_t));
-      SCIPfreeMemoryArrayNull(scip, &(heurdata->rootedges_z));
-   }
-
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -1702,18 +1696,26 @@ SCIP_DECL_HEURINIT(heurInitTM)
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_HEUREXIT(heurExitTM)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of TM primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   if( heurdata->stp_type == STP_MAX_NODE_WEIGHT ||  heurdata->stp_type == STP_PRIZE_COLLECTING )
+   {
+      SCIPfreeMemoryArrayNull(scip, &(heurdata->rootedges_t));
+      SCIPfreeMemoryArrayNull(scip, &(heurdata->rootedges_z));
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define heurExitTM NULL
-#endif
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
