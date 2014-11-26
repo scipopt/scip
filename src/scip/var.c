@@ -13804,6 +13804,184 @@ SCIP_Real SCIPvarGetPseudocostVariance(
    }
 }
 
+/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
+ *
+ *  The confidence bound \f$ \theta \geq 0\f$ denotes the interval borders \f$ [X - \theta, \ X + \theta]\f$, which contains
+ *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
+ *  of 2 * clevel - 1.
+ *
+ *  @return value of confidence bound for this variable
+ */
+SCIP_Real SCIPvarCalcPscostConfidenceBound(
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
+   SCIP_Bool             onlycurrentrun,     /**< should only the current run be taken into account */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for the interval */
+   )
+{
+   SCIP_Real confidencebound;
+
+   confidencebound = SCIPvarGetPseudocostVariance(var, dir, onlycurrentrun);
+   if( SCIPsetIsFeasPositive(set, confidencebound) )
+   {
+      SCIP_Real count;
+
+      if( onlycurrentrun )
+         count = SCIPvarGetPseudocostCountCurrentRun(var, dir);
+      else
+         count = SCIPvarGetPseudocostCount(var, dir);
+      /* assertion is valid because variance is positive */
+      assert(count > 1.9);
+
+      confidencebound /= count;
+      confidencebound = sqrt(confidencebound);
+
+      /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
+       * the number of pseudo cost evaluations of this variable in the respective direction. */
+      confidencebound *= SCIPstudentTGetCriticalValue(clevel, (int)count);
+   }
+   else
+      confidencebound = 0.0;
+
+   return confidencebound;
+}
+
+/** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
+ *  Error is calculated at a specific confidence level
+ */
+SCIP_Bool SCIPvarIsPscostRelerrorReliable(
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             threshold,          /**< threshold for relative errors to be considered reliable (enough) */
+   SCIP_CONFIDENCELEVEL  clevel              /**< a given confidence level */
+   )
+{
+   SCIP_Real downsize;
+   SCIP_Real upsize;
+   SCIP_Real size;
+   SCIP_Real relerrorup;
+   SCIP_Real relerrordown;
+   SCIP_Real relerror;
+
+   /* check, if the pseudo cost score of the variable is reliable */
+   downsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
+   upsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
+   size = MIN(downsize, upsize);
+
+   relerrordown = 0.0;
+   relerrorup = 0.0;
+
+   /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
+   if( size < 1.5 )
+      return FALSE;
+
+   /* use the relative error between the current mean pseudo cost value of the candidate and its upper
+    * confidence interval bound at confidence level of 95% for individual variable reliability.
+    * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
+    */
+   if( downsize >= 2.0 )
+   {
+      SCIP_Real normval;
+
+      relerrordown = SCIPvarCalcPscostConfidenceBound(var, set, SCIP_BRANCHDIR_DOWNWARDS, TRUE, clevel);
+      normval = MAX(1.0, SCIPvarGetPseudocostCurrentRun(var, stat, -1.0));
+
+      relerrordown /= normval;
+   }
+   else
+      relerrordown = 0.0;
+
+   if( upsize >= 2.0 )
+   {
+      SCIP_Real normval;
+
+      relerrorup = SCIPvarCalcPscostConfidenceBound(var, set, SCIP_BRANCHDIR_UPWARDS, TRUE, clevel);
+      normval = MAX(1.0, SCIPvarGetPseudocostCurrentRun(var, stat, +1.0));
+
+      relerrorup /= normval;
+   }
+   else
+      relerrorup = 0.0;
+
+   /* consider the relative error threshold violated, if it is violated in at least one branching direction */
+   relerror = MAX(relerrorup, relerrordown);
+
+   return (relerror <= threshold);
+}
+
+/** check if variable pseudo-costs have a significant difference in location. The significance depends on
+ *  the choice of \p clevel and on the kind of tested hypothesis. The one-sided hypothesis, which
+ *  should be rejected, is that fracy * mu_y >= fracx * mu_x, where mu_y and mu_x denote the
+ *  unknown location means of the underlying pseudo-cost distributions of x and y.
+ *
+ *  This method is applied best if variable x has a better pseudo-cost score than y. The method hypothesizes that y were actually
+ *  better than x (despite the current information), meaning that y can be expected to yield branching
+ *  decisions as least as good as x in the long run. If the method returns TRUE, the current history information is
+ *  sufficient to safely rely on the alternative hypothesis that x yields indeed a better branching score (on average)
+ *  than y.
+ *
+ *  @note The order of x and y matters for the one-sided hypothesis
+ *
+ *  @note set \p onesided to FALSE if you are not sure which variable is better. The hypothesis tested then reads
+ *        fracy * mu_y == fracx * mu_x vs the alternative hypothesis fracy * mu_y != fracx * mu_x.
+ *
+ *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
+ */
+SCIP_Bool SCIPvarSignificantPscostDifference(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             varx,               /**< variable x */
+   SCIP_Real             fracx,              /**< the fractionality of variable x */
+   SCIP_VAR*             vary,               /**< variable y */
+   SCIP_Real             fracy,              /**< the fractionality of variable y */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level for rejecting hypothesis */
+   SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
+   )
+{
+   SCIP_Real meanx;
+   SCIP_Real meany;
+   SCIP_Real variancex;
+   SCIP_Real variancey;
+   SCIP_Real countx;
+   SCIP_Real county;
+   SCIP_Real tresult;
+   SCIP_Real realdirection;
+
+
+   if( varx == vary )
+      return FALSE;
+
+   countx = SCIPvarGetPseudocostCount(varx, dir);
+   county = SCIPvarGetPseudocostCount(vary, dir);
+
+   /* if not at least 2 measurements were taken, return FALSE */
+   if( countx < 1.5 || county < 1.5 )
+      return FALSE;
+
+   realdirection = dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0;
+
+   meanx = fracx * SCIPvarGetPseudocost(varx, stat, realdirection);
+   meany = fracy * SCIPvarGetPseudocost(vary, stat, realdirection);
+
+   variancex = SQR(fracx) * SCIPvarGetPseudocostVariance(varx, dir, FALSE);
+   variancey = SQR(fracy) * SCIPvarGetPseudocostVariance(vary, dir, FALSE);
+
+   /* if there is no variance, the means are taken from a constant distribution */
+   if( SCIPsetIsFeasEQ(set, variancex + variancey, 0.0) )
+      return !SCIPsetIsFeasEQ(set, meanx, meany);
+
+   tresult = SCIPcomputeTwoSampleTTestValue(meanx, meany, variancex, variancey, countx, county);
+
+   /* for the two-sided hypothesis, just take the absolute of t */
+   if( !onesided )
+      tresult = REALABS(tresult);
+
+   return (tresult >= SCIPstudentTGetCriticalValue(clevel, (int)(countx + county - 2)));
+}
+
 /** find the corresponding history entry if already existing, otherwise create new entry */
 static
 SCIP_RETCODE findValuehistoryEntry(

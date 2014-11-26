@@ -53,6 +53,40 @@ extern "C" {
 #endif
 
 /*
+ * methods for statistical tests
+ */
+
+/**@defgroup STATISTICALTESTS Methods for statistical tests
+ *
+ * @{
+ */
+
+/** get critical value of a Student-T distribution for a given number of degrees of freedom at a confidence level */
+EXTERN
+SCIP_Real SCIPstudentTGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel,             /**< (one-sided) confidence level */
+   int                   df                  /**< degrees of freedom */
+   );
+
+/** compute a t-value for the hypothesis that x and y are from the same population; Assuming that
+ *  x and y represent normally distributed random samples with equal variance, the returned value
+ *  comes from a Student-T distribution with countx + county - 2 degrees of freedom; this
+ *  value can be compared with a critical value (see also SCIPstudentTGetCriticalValue()) at
+ *  a predefined confidence level for checking if x and y significantly differ in location
+ */
+EXTERN
+SCIP_Real SCIPcomputeTwoSampleTTestValue(
+   SCIP_Real             meanx,              /**< the mean of the first distribution */
+   SCIP_Real             meany,              /**< the mean of the second distribution */
+   SCIP_Real             variancex,          /**< the variance of the x-distribution */
+   SCIP_Real             variancey,          /**< the variance of the y-distribution */
+   SCIP_Real             countx,             /**< number of samples of x */
+   SCIP_Real             county              /**< number of samples of y */
+   );
+
+/**@} */
+
+/*
  * GML graphical printing methods
  * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  */
@@ -61,6 +95,7 @@ extern "C" {
  *
  * @{
  */
+
 
 /** writes a node section to the given graph file */
 EXTERN

@@ -41,6 +41,98 @@
 #include "scip/struct_misc.h"
 #endif
 
+/**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
+ *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
+ *   a certain confidence level;
+ *
+ *   access through method SCIPstudentTGetCriticalValue()
+ *
+ *  source: German Wikipedia
+ *
+ *  for confidence levels
+ *  c =
+ *  0.75    0.875     0.90      0.95      0.975 (one-sided)
+ *  0.50    0.750     0.80      0.90      0.950 (two-sided)
+ *
+ */
+static const SCIP_Real studentt_quartiles[] = {      /* df:*/
+   1.000,    2.414,    3.078,    6.314,    12.706,   /*  1 */
+   0.816,    1.604,    1.886,    2.920,    4.303,    /*  2 */
+   0.765,    1.423,    1.638,    2.353,    3.182,    /*  3 */
+   0.741,    1.344,    1.533,    2.132,    2.776,    /*  4 */
+   0.727,    1.301,    1.476,    2.015,    2.571,    /*  5 */
+   0.718,    1.273,    1.440,    1.943,    2.447,    /*  6 */
+   0.711,    1.254,    1.415,    1.895,    2.365,    /*  7 */
+   0.706,    1.240,    1.397,    1.860,    2.306,    /*  8 */
+   0.703,    1.230,    1.383,    1.833,    2.262,    /*  9 */
+   0.700,    1.221,    1.372,    1.812,    2.228,    /* 10 */
+   0.697,    1.214,    1.363,    1.796,    2.201,    /* 11 */
+   0.695,    1.209,    1.356,    1.782,    2.179,    /* 12 */
+   0.694,    1.204,    1.350,    1.771,    2.160,    /* 13 */
+   0.692,    1.200,    1.345,    1.761,    2.145,    /* 14 */
+   0.691,    1.197,    1.341,    1.753,    2.131     /* 15 */
+};
+
+/**< critical values for higher degrees of freedom of Student-T distribution for the same error probabilities; infact,
+ *   these are critical values of the standard normal distribution with mean 0 and variance 1
+ */
+static const SCIP_Real studentt_quartilesabove[] = {
+   0.674,    1.150,    1.282,    1.645,    1.960
+};
+
+/** the maximum degrees of freedom represented before switching to normal approximation */
+static const int studentt_maxdf = sizeof(studentt_quartiles)/5 * sizeof(SCIP_Real);
+
+/** get critical value of a Student-T distribution for a given number of degrees of freedom at a confidence level */
+SCIP_Real SCIPstudentTGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel,             /**< (one-sided) confidence level */
+   int                   df                  /**< degrees of freedom */
+   )
+{
+   if( df >= studentt_maxdf )
+      return studentt_quartilesabove[(int)clevel];
+   else
+      return studentt_quartiles[(int)clevel + 5 * (df - 1)];
+}
+
+/** compute a t-value for the hypothesis that x and y are from the same population; Assuming that
+ *  x and y represent normally distributed random samples with equal variance, the returned value
+ *  comes from a Student-T distribution with countx + county - 2 degrees of freedom; this
+ *  value can be compared with a critical value (see also SCIPstudentTGetCriticalValue()) at
+ *  a predefined confidence level for checking if x and y significantly differ in location
+ */
+SCIP_Real SCIPcomputeTwoSampleTTestValue(
+   SCIP_Real             meanx,              /**< the mean of the first distribution */
+   SCIP_Real             meany,              /**< the mean of the second distribution */
+   SCIP_Real             variancex,          /**< the variance of the x-distribution */
+   SCIP_Real             variancey,          /**< the variance of the y-distribution */
+   SCIP_Real             countx,             /**< number of samples of x */
+   SCIP_Real             county              /**< number of samples of y */
+   )
+{
+   SCIP_Real pooledvariance;
+   SCIP_Real tresult;
+
+   /* two few samples */
+   if( countx < 1.9 || county < 1.9 )
+      return SCIP_INVALID;
+
+   /* pooled variance is the weighted average of the two variances */
+   pooledvariance = (countx - 1) * variancex + (county - 1) * variancey;
+   pooledvariance /= (countx + county - 2);
+
+   /* a variance close to zero means the distributions are basically constant */
+   pooledvariance = MAX(pooledvariance, 1e-9);
+
+   /* tresult can be understood as realization of a Student-T distributed variable with
+    * countx + county - 2 degrees of freedom
+    */
+   tresult = (meanx - meany) / pooledvariance;
+   tresult *= SQRT(countx * county / (countx + county));
+
+   return tresult;
+}
+
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
 static
 int calcGrowSize(

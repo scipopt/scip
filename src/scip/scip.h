@@ -8913,6 +8913,66 @@ SCIP_Real SCIPgetVarPseudocostVariance(
    SCIP_Bool             onlycurrentrun      /**< only for pseudo costs of current branch and bound run */
    );
 
+/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
+ *
+ *  The confidence bound \f$ \theta \geq 0\f$ denotes the interval borders \f$ [X - \theta, \ X + \theta]\f$, which contains
+ *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
+ *  of 2 * clevel - 1.
+ *
+ *  @return value of confidence bound for this variable
+ */
+EXTERN
+SCIP_Real SCIPcalculatePscostConfidenceBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
+   SCIP_Bool             onlycurrentrun,     /**< should only the current run be taken into account */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for the interval */
+   );
+
+/** check if variable pseudo-costs have a significant difference in location. The significance depends on
+ *  the choice of \p clevel and on the kind of tested hypothesis. The one-sided hypothesis, which
+ *  should be rejected, is that fracy * mu_y >= fracx * mu_x, where mu_y and mu_x denote the
+ *  unknown location means of the underlying pseudo-cost distributions of x and y.
+ *
+ *  This method is applied best if variable x has a better pseudo-cost score than y. The method hypothesizes that y were actually
+ *  better than x (despite the current information), meaning that y can be expected to yield branching
+ *  decisions as least as good as x in the long run. If the method returns TRUE, the current history information is
+ *  sufficient to safely rely on the alternative hypothesis that x yields indeed a better branching score (on average)
+ *  than y.
+ *
+ *  @note The order of x and y matters for the one-sided hypothesis
+ *
+ *  @note set \p onesided to FALSE if you are not sure which variable is better. The hypothesis tested then reads
+ *        fracy * mu_y == fracx * mu_x vs the alternative hypothesis fracy * mu_y != fracx * mu_x.
+ *
+ *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
+ */
+EXTERN
+SCIP_Bool SCIPsignificantVarPscostDifference(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             varx,               /**< variable x */
+   SCIP_Real             fracx,              /**< the fractionality of variable x */
+   SCIP_VAR*             vary,               /**< variable y */
+   SCIP_Real             fracy,              /**< the fractionality of variable y */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level for rejecting hypothesis */
+   SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
+   );
+
+/** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
+ *  Error is calculated at a specific confidence level
+ *
+ *  @return TRUE if relative error in variable pseudo costs is smaller than \p threshold
+ */
+EXTERN
+SCIP_Bool SCIPisVarPscostRelerrorReliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_Real             threshold,          /**< threshold for relative errors to be considered reliable (enough) */
+   SCIP_CONFIDENCELEVEL  clevel              /**< a given confidence level */
+   );
+
 /** gets the variable's pseudo cost score value for the given LP solution value
  *
  *  @return the variable's pseudo cost score value for the given LP solution value

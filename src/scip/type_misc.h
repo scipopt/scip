@@ -30,6 +30,20 @@
 extern "C" {
 #endif
 
+/** represents different confidence levels for (one-sided) hypothesis testing; in order to obtain two-sided confidence
+ *  levels, calculate 2 * c - 1, i.e., if the one-sided confidence level is 90 %, the two-sided level is 80 %
+ */
+enum SCIP_Confidencelevel
+{
+   SCIP_CONFIDENCELEVEL_75  = 0,    /**< (one-sided) confidence level 75 % */
+   SCIP_CONFIDENCELEVEL_875 = 1,    /**< (one-sided) confidence level 87.5 % */
+   SCIP_CONFIDENCELEVEL_90  = 2,    /**< (one-sided) confidence level 90 % */
+   SCIP_CONFIDENCELEVEL_95  = 3,    /**< (one-sided) confidence level 95 % */
+   SCIP_CONFIDENCELEVEL_975 = 4     /**< (one-sided) confidence level 97.5 % */
+};
+typedef enum SCIP_Confidencelevel SCIP_CONFIDENCELEVEL;
+
+
 /** Sparse solution data structure
  *
  *  - \ref SparseSol "List of all available methods"

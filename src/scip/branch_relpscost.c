@@ -55,7 +55,6 @@
 #define DEFAULT_RELERRORTOLERANCE 0.05  /**< tolerance for relative errors to be reliable */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
-#define DEFAULT_USELOWERCONFIPSCOST FALSE /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
 #define DEFAULT_USEVARIABLETTESTSFORSB FALSE /**< should the strong branching decision be based on a hypothesis test? */
 #define DEFAULT_USEDYNAMICERRORTHRESHOLD FALSE /**< should the error threshold be adjusted dynamically? */
 /** branching rule data */
@@ -82,45 +81,9 @@ struct SCIP_BranchruleData
    SCIP_Real             relerrortolerance;  /**< tolerance for relative errors to be reliable */
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
-   SCIP_Bool             uselowerconfipscost; /**< should lower confidence interval bound be used for pseudo costs of variables with no sb? */
    SCIP_Bool             usevariablettestsforsb; /**< should the strong branching decision be based on a hypothesis test? */
    SCIP_Bool             usedynamicerrorthreshold; /**< should the error threshold be adjusted dynamically? */
 };
-
-/**< the ts array contains all quartiles for a one sided two sample t-test up to 30 degrees of freedom */
-#define TS_QUARTILE 1.282 /**< the t-quartile for 90 percent in the limit */
-#define TS_SIZE 30
-static const SCIP_Real ts_quartiles[] = {
-   3.078,
-   1.886,
-   1.638,
-   1.533,
-   1.476,
-   1.440,
-   1.415,
-   1.397,
-   1.383,
-   1.372,
-   1.363,
-   1.356,
-   1.350,
-   1.345,
-   1.341,
-   1.337,
-   1.333,
-   1.330,
-   1.328,
-   1.325,
-   1.323,
-   1.321,
-   1.319,
-   1.318,
-   1.316,
-   1.315,
-   1.314,
-   1.313,
-   1.311,
-   1.310};
 
 /*
  * local methods
@@ -291,227 +254,6 @@ SCIP_RETCODE applyBdchgs(
    }
 
    return SCIP_OKAY;
-}
-
-/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
- *
- *  The confidence bound \f$ \alpha \geq 0\f$ denotes the interval borders \f$ [X - \alpha, \ X + \alpha]\f$, which contains
- *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
- *  of 95 %.
- *
- *  @note Current implementation always underestimates the confidence interval, which should be only relevant, if very
- *        little pseudo cost information is available.
- *
- *  @return value of confidence bound for this variable
- */
-static
-SCIP_Real varCalcPscostConfidenceBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable in question */
-   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
-   SCIP_Bool             onlycurrentrun      /**< should only the current run be taken into account */
-   )
-{
-   SCIP_Real confidencebound;
-
-   confidencebound = SCIPgetVarPseudocostVariance(scip, var, dir, onlycurrentrun);
-   if( SCIPisFeasPositive(scip, confidencebound) )
-   {
-      if( onlycurrentrun )
-      {
-         assert(SCIPgetVarPseudocostCountCurrentRun(scip, var, dir) > 1.9 );
-         confidencebound = confidencebound / SCIPgetVarPseudocostCountCurrentRun(scip, var, dir);
-      }
-      else
-      {
-         assert(SCIPgetVarPseudocostCount(scip, var, dir) > 1.9 );
-         confidencebound = confidencebound / SCIPgetVarPseudocostCount(scip, var, dir);
-      }
-      confidencebound = sqrt(confidencebound);
-
-      /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
-       * the number of pseudo cost evaluations of this variable in the respective direction. With the number
-       * of ps cost evaluations approaching infinity, the student-T-distribution converges towards a standard normal
-       * distribution, of which the factor 1.96 represents the 0.95-percentile.
-       * the obtained bound is therefore non-conservative and might underestimate the true confidence bounds for
-       * very small pseudo cost counts
-       */
-      confidencebound *= 1.96;
-   }
-   else
-      confidencebound = 0.0;
-
-   return confidencebound;
-}
-
-/** check if the current pseudo cost relative error in a direction violates the given threshold */
-static
-SCIP_Bool isVarPscostRelerrorReliable(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable in question */
-   SCIP_Real             threshold           /**< threshold for relative errors to be considered reliable (enough) */
-   )
-{
-   SCIP_Real downsize;
-   SCIP_Real upsize;
-   SCIP_Real size;
-   SCIP_Real relerrorup;
-   SCIP_Real relerrordown;
-   SCIP_Real relerror;
-
-   /* check, if the pseudo cost score of the variable is reliable */
-   downsize = SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
-   upsize = SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS);
-   size = MIN(downsize, upsize);
-
-   relerrordown = 0.0;
-   relerrorup = 0.0;
-
-   /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
-   if( size < 1.5 )
-      return FALSE;
-
-   /* use the relative error between the current mean pseudo cost value of the candidate and its upper
-    * confidence interval bound at confidence level of 95% for individual variable reliability.
-    * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
-    */
-   if( downsize >= 2.0 )
-   {
-      SCIP_Real normval;
-
-      relerrordown = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_DOWNWARDS, TRUE);
-      normval = MAX(1.0, SCIPgetVarPseudocostValCurrentRun(scip, var, -1.0));
-
-      relerrordown /= normval;
-   }
-   else
-      relerrordown = 0.0;
-
-   if( upsize >= 2.0 )
-   {
-      SCIP_Real normval;
-
-      relerrorup = varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_UPWARDS, TRUE);
-      normval = MAX(1.0, SCIPgetVarPseudocostValCurrentRun(scip, var, +1.0));
-
-      relerrorup /= normval;
-   }
-   else
-      relerrorup = 0.0;
-
-   /* consider the relative error threshold violated, if it is violated in at least one branching direction */
-   relerror = MAX(relerrorup, relerrordown);
-
-   return (relerror <= threshold);
-}
-
-/**< compute a t-value for the hypothesis that x and y are from the same population */
-static
-SCIP_Real computeSampleTTestValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             meanx,              /**< the mean of the first distribution */
-   SCIP_Real             meany,              /**< the mean of the second distribution */
-   SCIP_Real             variancex,          /**< the variance of the x-distribution */
-   SCIP_Real             variancey,          /**< the variance of the y-distribution */
-   SCIP_Real             countx,
-   SCIP_Real             county
-   )
-{
-   SCIP_Real pooledvariance;
-   SCIP_Real tresult;
-
-   if( countx < 1.9 || county < 1.9 )
-      return SCIP_INVALID;
-
-   pooledvariance = (countx - 1) * variancex + (county - 1) * variancey;
-   pooledvariance /= (countx + county - 2);
-
-   /* if there is no variance, the means are taken from a constant distribution */
-   if( SCIPisFeasEQ(scip, pooledvariance, 0.0) )
-      return !SCIPisFeasEQ(scip, meanx, meany);
-
-   /* t result is the value of the underlying t distribution */
-   tresult = (meanx - meany) / pooledvariance;
-   tresult *= SQRT(countx * county / (countx + county));
-
-   return tresult;
-}
-
-/** compute a 2-sample t-test given the variables mean and variance */
-static
-SCIP_Bool isVarMeanSignificantlyDifferent(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             varx,               /**< variable x */
-   SCIP_Real             fracx,              /**< the fractionality of variable x */
-   SCIP_VAR*             vary,               /**< variable y */
-   SCIP_Real             fracy,              /**< the fractionality of variable y */
-   SCIP_BRANCHDIR        dir                 /**< branching direction */
-   )
-{
-   SCIP_Real meanx;
-   SCIP_Real meany;
-   SCIP_Real variancex;
-   SCIP_Real variancey;
-   SCIP_Real countx;
-   SCIP_Real county;
-   SCIP_Real tresult;
-
-
-   if( varx == vary )
-      return FALSE;
-
-   countx = SCIPgetVarPseudocostCount(scip, varx, dir);
-   county = SCIPgetVarPseudocostCount(scip, vary, dir);
-
-   /* if not at least 2 measurements were taken, return FALSE */
-   if( countx < 1.9 || county < 1.9 )
-      return FALSE;
-
-   meanx = fracx * SCIPgetVarPseudocost(scip, varx, dir);
-   meany = fracy * SCIPgetVarPseudocost(scip, vary, dir);
-
-   variancex = SQR(fracx) * SCIPgetVarPseudocostVariance(scip, varx, dir, FALSE);
-   variancey = SQR(fracy) * SCIPgetVarPseudocostVariance(scip, vary, dir, FALSE);
-
-   /* if there is no variance, the means are taken from a constant distribution */
-   if( SCIPisFeasEQ(scip, variancex + variancey, 0.0) )
-      return !SCIPisFeasEQ(scip, meanx, meany);
-
-   tresult = computeSampleTTestValue(scip, meanx, meany, variancex, variancey, countx, county);
-
-   if( TS_SIZE <= countx + county - 2 )
-      return tresult >= TS_QUARTILE;
-   else
-      return tresult >= ts_quartiles[(int)(countx + county - 2)];
-
-}
-
-/** determine current pseudo cost score that optionally take pseudo cost confidence intervals into account */
-static
-SCIP_Real getPseudoCostScore(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_VAR*            var,                /**< candidate variable */
-   SCIP_Real            varsol,             /**< current solution value */
-   SCIP_Bool            useconfidence       /**< should confidence intervals be used? */
-   )
-{
-   /* use pessimistic lower confidence interval bounds instead of average pseudo costs */
-   if( useconfidence )
-   {
-      SCIP_Real pscostup;
-      SCIP_Real pscostdown;
-
-      pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0) - varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_UPWARDS, FALSE);
-      pscostup = MAX(0.0, pscostup);
-
-      pscostdown = SCIPgetVarPseudocostVal(scip, var, -1.0) - varCalcPscostConfidenceBound(scip, var, SCIP_BRANCHDIR_DOWNWARDS, FALSE);
-      pscostdown = MAX(0.0, pscostdown);
-
-      return SCIPgetBranchScore(scip, var, pscostdown * (varsol - SCIPfloor(scip, varsol)), pscostup * (SCIPceil(scip, varsol) - varsol));
-   }
-   else
-      /* return normal pseudo cost*/
-      return SCIPgetVarPseudocostScore(scip, var, varsol);
 }
 
 /** execute reliability pseudo cost branching */
@@ -721,7 +463,7 @@ SCIP_RETCODE execRelpscost(
          conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
-         pscostscore = getPseudoCostScore(scip, branchcands[c], branchcandssol[c], branchruledata->uselowerconfipscost);
+         pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
 
          score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
             inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
@@ -744,7 +486,6 @@ SCIP_RETCODE execRelpscost(
                bestpsdomainscore = domainscore;
             }
          }
-
       }
 
       for( c = 0; c < nbranchcands; ++c )
@@ -765,7 +506,7 @@ SCIP_RETCODE execRelpscost(
          conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
-         pscostscore = getPseudoCostScore(scip, branchcands[c], branchcandssol[c], branchruledata->uselowerconfipscost);
+         pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
          usesb = FALSE;
 
          /* don't use strong branching on variables that have already been initialized at the current node;
@@ -803,12 +544,24 @@ SCIP_RETCODE execRelpscost(
             /* use strong branching on variables with unreliable pseudo cost scores or optionally if the relative error
              * of the pseudo costs is too high */
             assert(!branchruledata->usevariablettestsforsb || bestpscand >= 0);
-            usesb = (size < reliable
-                  || (branchruledata->errorbasedreliability
-                        && !isVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold))
-                  || (branchruledata->usevariablettestsforsb &&
-                  (!isVarMeanSignificantlyDifferent(scip, branchcands[bestpscand], branchcandsfrac[bestpscand], branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS)
-                        && !isVarMeanSignificantlyDifferent(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand], branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS))));
+
+            usesb = FALSE;
+
+            /* determine if variable is considered reliable based on the current reliability setting */
+            /* check fixed number threshold (aka original) reliability first */
+            if( size < reliable )
+               usesb = TRUE;
+            /* check if relative error is tolerable */
+            else if( branchruledata->errorbasedreliability &&
+                  SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, SCIP_CONFIDENCELEVEL_90))
+               usesb = TRUE;
+            /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
+            else if( branchruledata->usevariablettestsforsb &&
+                  !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
+                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, SCIP_CONFIDENCELEVEL_90, TRUE) &&
+                  !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
+                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, SCIP_CONFIDENCELEVEL_90, TRUE))
+               usesb = TRUE;
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
@@ -1505,11 +1258,6 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesblocalinfo",
          "should the scoring function use only local cutoff and inference information obtained for strong branching candidates?",
          &branchruledata->usesblocalinfo, TRUE, DEFAULT_USESBLOCALINFO,
-         NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/uselowerconfipscost",
-         "should lower confidence interval bound be used for pseudo costs of variables with no sb?",
-         &branchruledata->uselowerconfipscost, TRUE, DEFAULT_USELOWERCONFIPSCOST,
          NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usevariablettestsforsb",
