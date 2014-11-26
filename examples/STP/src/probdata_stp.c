@@ -68,6 +68,7 @@ struct SCIP_ProbData
    SCIP_CONS*            prizecons;          /**< prize constraint */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
    SCIP_VAR**            flowvars;           /**< array of edge variables (needed only in the Flow mode) */
+   SCIP_VAR*             offsetvar;          /**< variable to model the objective offset */
    SCIP_Real             offset;             /**< offset of the problem, computed during the presolving */
    SCIP_Real*            xval;               /**< values of the edge variables */
    int* 	         realterms;          /**< array of all terminals except the root */
@@ -278,6 +279,11 @@ SCIP_RETCODE probdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->edgevars[e]) );
    }
    SCIPfreeMemoryArrayNull(scip, &(*probdata)->edgevars);
+
+   if( (*probdata)->offsetvar != NULL )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->offsetvar) );
+   }
 
    /* Degree-Constrained STP? */
    if( (*probdata)->stp_type == STP_DEG_CONS )
@@ -661,7 +667,6 @@ SCIP_RETCODE createVariables(
    )
 {
    GRAPH* graph;
-   SCIP_VAR* offsetvar;
    char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real* edgecost;
@@ -902,9 +907,8 @@ SCIP_RETCODE createVariables(
 
    /* add offset */
    (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "OFFSET");
-   SCIP_CALL( SCIPcreateVarBasic(scip, &offsetvar, varname, 1.0, 1.0, offset, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, offsetvar) );
-   SCIP_CALL( SCIPreleaseVar(scip, &offsetvar) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->offsetvar, varname, 1.0, 1.0, offset, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, probdata->offsetvar) );
 
    return SCIP_OKAY;
 }
@@ -944,6 +948,17 @@ SCIP_DECL_PROBCOPY(probcopyStp)
    (*targetdata)->emitgraph = sourcedata->emitgraph;
    (*targetdata)->nvars = sourcedata->nvars;
    (*targetdata)->copy = TRUE;
+   (*targetdata)->offsetvar = NULL;
+
+   if( sourcedata->offsetvar != NULL && SCIPvarIsActive(sourcedata->offsetvar) )
+   {
+      SCIP_Bool success;
+
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcedata->offsetvar, &((*targetdata)->offsetvar), varmap, consmap, global, &success) );
+      assert(success);
+
+      SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->offsetvar) );
+   }
 
    if( sourcedata->nedges > 0 )
    {
@@ -1223,6 +1238,11 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->logfile = sourcedata->logfile;
    (*targetdata)->origlogfile = &(sourcedata->logfile);
 
+   if( sourcedata->offsetvar != NULL )
+   {
+      SCIP_CALL( SCIPtransformVar(scip, sourcedata->offsetvar, &(*targetdata)->offsetvar) );
+   }
+
    if( sourcedata->nedges > 0 )
    {
       int i;
@@ -1325,7 +1345,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
    SCIP_VAR** edgevars;
    GRAPH* graph;
    graph = probd->graph;
-   if( 0 && graph != NULL && graph->stp_type == STP_GRID )
+   if( graph != NULL && graph->stp_type == STP_GRID )
    {
       sol = SCIPgetBestSol(scip);
 
@@ -2561,16 +2581,21 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       /* store the new solution value */
       SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, edgevars, nval) );
 
+      if( 0 && probdata->offsetvar != NULL && SCIPvarIsActive(probdata->offsetvar) )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, sol, probdata->offsetvar, 1.0) );
+      }
+
       SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
-      //      printf("checked sol: feasible=%d\n", feasible);
+      /* printf("checked sol: feasible=%d\n", feasible); */
 
       /* check solution for feasibility in original problem space */
       if( !feasible )
       {
          SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
 
-         //       printf("checked sol org: feasible=%d\n", feasible);
+         /* printf("checked sol org: feasible=%d\n", feasible); */
 
          if( feasible )
          {
