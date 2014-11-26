@@ -1242,6 +1242,8 @@ SCIP_DECL_PROBTRANS(probtransStp)
    {
       SCIP_CALL( SCIPtransformVar(scip, sourcedata->offsetvar, &(*targetdata)->offsetvar) );
    }
+   else
+      (*targetdata)->offsetvar = NULL;
 
    if( sourcedata->nedges > 0 )
    {
