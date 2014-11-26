@@ -427,6 +427,7 @@ SCIP_RETCODE createHopConstraint(
    graph = probdata->graph;
    assert(graph != NULL);
    rhs = graph->hoplimit;
+   printf("Hop limit: %f \n ", rhs);
    /* TODO: when presolving is enabled: set rhs = rhs - (number of fixed edges) */
 
       SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
@@ -718,21 +719,19 @@ SCIP_RETCODE createVariables(
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->edgevars[e+1], 1.0) );
          }
 #endif
-         /* Hop-Constrained STP? */
+         /* Hop-Constrained STP */
          if( graph->stp_type == STP_HOP_CONS )
 	 {
 	    int hopfactor;
 	    for( e = 0; e < nedges; ++e )
             {
-	       //printf("add to cons %d   ", k);
 	      /* TODO: When presolving is used: MODIFY */
 	          hopfactor = 1;
 		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
-		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[flipedge(e)], hopfactor) );
 	    }
 	 }
 
-         /* Degree-Constrained STP? */
+         /* Degree-Constrained STP */
          if( graph->stp_type == STP_DEG_CONS )
 	 {
 	    for( k = 0; k < nnodes; ++k )
@@ -744,7 +743,7 @@ SCIP_RETCODE createVariables(
 	       }
 	    }
 	 }
-	 /* PRIZECOLLECTING STP? */
+	 /* PRIZECOLLECTING STP */
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
 	 {
 	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -2327,15 +2326,11 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          if( orgnodes[e] == TRUE )
 	    SCIPinfoMessage(scip, file, "V %d\n", e + 1);
 
-
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
       for( e = 0; e < norgedges; e += 2 )
 	 if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
 	    SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
    }
-
-
-
 
    SCIPfreeBufferArray(scip, &orgnodes);
    SCIPfreeBufferArray(scip, &orgedges);

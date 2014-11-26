@@ -1116,10 +1116,10 @@ static double level4(
    int*    heap;
    int*    state;
    char    sd = TRUE;
-   char    bd3 = !TRUE;
+   char    bd3 = FALSE;
    char    nsv = TRUE;
    assert(g != NULL);
-   //bound_test(scip, g); TODO
+   //bound_test(scip, g);
 
    /* define the miimial number of edge/node eleminations for a reduction test to be continued */
    //edgebound = MAX(g->edges / 100, 5 );
