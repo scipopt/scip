@@ -2146,8 +2146,8 @@ SCIP_RETCODE SCIPincludeHeurTM(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTM) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTM) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTM) );
-#if 0
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitTM) );
+#if 0
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolTM) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolTM) );
 #endif
