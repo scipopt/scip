@@ -57,8 +57,8 @@ int degree_test_dir(
       for(i = 0; i < g->knots; i++)
       {
          assert(g->grad[i] >= 0);
-
-         if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY)
+         assert( g->grad[450]  > 1);
+         if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY )
          {
             e1  = g->inpbeg[i];
             i1  = g->tail[e1];
@@ -110,18 +110,19 @@ int degree_test_dir(
             {
                done = TRUE;
 
-               if (!Is_term(g->term[i]))
+               if (!Is_term(g->term[i]) )
                {
                   /* both the edges are outgoing from node i
                    * need to ensure that the flow of the edge costs is correct
                    * Edge_anti(e2) -> e1 and Edge_anti(e1) -> e2  */
-                  g->cost[e1]            += g->cost[Edge_anti(e2)];
-                  g->cost[Edge_anti(e1)] += g->cost[e2];
+		  if( !Is_term(g->term[i2]) )
+		  {
+                     g->cost[e1]            += g->cost[Edge_anti(e2)];
+                     g->cost[Edge_anti(e1)] += g->cost[e2];
+                     graph_knot_contract(g, i2, i);
 
-                  graph_knot_contract(g, i2, i);
-
-                  count++;
-
+                     count++;
+		  }
                   break;
                }
                assert(Is_term(g->term[i]));
@@ -177,8 +178,8 @@ int degree_test_dir(
             /*lint -restore */
 
             if (done
-                  && (((i1 < i) && (g->grad[i1] < 3))
-                     || ((i2 < i) && (g->grad[i2] < 3))))
+               && !Is_term(g->term[i2]) && (((i1 < i) && (g->grad[i1] < 3))
+                  || ((i2 < i) && (g->grad[i2] < 3))))
                rerun = TRUE;
          }
       }
