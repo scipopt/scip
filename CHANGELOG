@@ -2,6 +2,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug in cons_quadratic which leads to wrong min/max activities
 - fixed wrong conversion of reals representing negative integer values
 - in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
 - fixed bug in proximity heuristic which attempted to enter diving mode even at nodes without a constructed LP
