@@ -2581,7 +2581,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       /* store the new solution value */
       SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, edgevars, nval) );
 
-      if( 0 && probdata->offsetvar != NULL && SCIPvarIsActive(probdata->offsetvar) )
+      if( probdata->offsetvar != NULL && SCIPvarIsActive(probdata->offsetvar) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, sol, probdata->offsetvar, 1.0) );
       }
