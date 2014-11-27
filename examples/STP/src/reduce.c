@@ -1476,7 +1476,7 @@ double reduce(
 
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type);
-   if( 1 && g->stp_type != STP_UNDIRECTED )
+   if( 0 && g->stp_type != STP_UNDIRECTED )
       return fixed;
 
    if( g->stp_type == STP_GRID )
