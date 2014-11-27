@@ -1213,10 +1213,15 @@ static double levelm4(
    double*  sddist;
    double*  sdtrans;
    double*  sdrand;
+#if 0
+   /* These are only used for the sd_reduction_dir.
+    * Since the HOP constrained problems are not being solved, then this function is currently redundant.
+    */
    double** sd_indist;
    double** sd_intran;
    double** sd_outdist;
    double** sd_outtran;
+#endif
    double* cost;
    double* random;
    int*    heap;
@@ -1233,14 +1238,17 @@ static double levelm4(
    sddist      = malloc((size_t)g->knots * sizeof(double));
    sdtrans     = malloc((size_t)g->knots * sizeof(double));
    sdrand      = malloc((size_t)g->knots * sizeof(double));
+#if 0
    sd_indist   = malloc((size_t)g->knots * sizeof(double*));
    sd_intran   = malloc((size_t)g->knots * sizeof(double*));
    sd_outdist  = malloc((size_t)g->knots * sizeof(double*));
    sd_outtran  = malloc((size_t)g->knots * sizeof(double*));
+#endif
    cost        = malloc((size_t)g->edges * sizeof(double));
    random        = malloc((size_t)g->edges * sizeof(double));
    outterms    = malloc((size_t)g->knots * sizeof(int));
 
+#if 0
    assert(sd_indist  != NULL);
    assert(sd_intran  != NULL);
    assert(sd_outdist != NULL);
@@ -1253,6 +1261,7 @@ static double levelm4(
       sd_outdist[i]  = malloc((size_t)g->knots * sizeof(double));
       sd_outtran[i]  = malloc((size_t)g->knots * sizeof(double));
    }
+#endif
 
    //voronoi_inout(g);
 
@@ -1271,9 +1280,11 @@ static double levelm4(
          sd = FALSE;
          for(i = 0; i < 2; i++)
          {
+#if 0
             if( g->stp_type == STP_HOP_CONS )
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
+#endif
                numelim = sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state);
             printf("SD Reduction %d: %d\n", i, numelim);
             if( numelim > redbound )
@@ -1316,6 +1327,7 @@ static double levelm4(
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
 
+#if 0
    for( i = 0; i < g->knots; i++ )
    {
       free(sd_indist[i]);
@@ -1323,15 +1335,18 @@ static double levelm4(
       free(sd_outdist[i]);
       free(sd_outtran[i]);
    }
+#endif
 
 
    free(sddist);
    free(sdtrans);
    free(sdrand);
+#if 0
    free(sd_indist);
    free(sd_intran);
    free(sd_outdist);
    free(sd_outtran);
+#endif
    free(heap);
    free(state);
    free(cost);
