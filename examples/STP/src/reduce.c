@@ -1027,6 +1027,7 @@ static double level1(
 }
 
 static double level2(
+   SCIP*  scip,
    GRAPH* g)
 {
    double fixed   = 0.0;
@@ -1056,7 +1057,7 @@ static double level2(
       if (degree_test(g, &fixed) > 0)
          rerun = TRUE;
 
-      if (nsv_reduction(g, &fixed))
+      if (nsv_reduction(scip, g, &fixed))
          rerun = TRUE;
 
    }
@@ -1152,7 +1153,7 @@ static double level4(
       {
          for( i = 0; i < 4; i++ ) //TODO 6
          {
-            if( sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
+            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
                rerun = TRUE;
 
             if( SCIPgetTotalTime(scip) > timelimit )
@@ -1175,7 +1176,7 @@ static double level4(
 
       if( nsv )
       {
-         if( !(nsv_reduction(g, &fixed) > nodebound) )
+         if( !(nsv_reduction(scip, g, &fixed) > nodebound) )
             nsv = FALSE;
          else
             rerun = TRUE;
@@ -1311,7 +1312,7 @@ static double levelm4(
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
 #endif
-               numelim = sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state);
+               numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state);
             printf("SD Reduction %d: %d\n", i, numelim);
             if( numelim > redbound )
             {
@@ -1487,7 +1488,7 @@ double reduce(
       fixed = level1(scip, g);
 
    if (level == 2)
-      fixed = level1(scip, g) + level2(g);
+      fixed = level1(scip, g) + level2(scip, g);
 
    if (level == 3)
       fixed = level3(g);

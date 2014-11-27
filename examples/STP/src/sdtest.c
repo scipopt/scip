@@ -431,6 +431,7 @@ static void compute_sd_dir(
  * Special Distance Test
  */
 int sd_reduction(
+   SCIP* scip,
    GRAPH* g,
    double*  sddist,
    double*  sdtrans,
@@ -441,6 +442,7 @@ int sd_reduction(
    int*    state
    )
 {
+   SCIP_Real timelimit;
    int     count = 0;
    int     i;
    int     e;
@@ -465,6 +467,8 @@ int sd_reduction(
    */
    assert(cost != NULL);
 
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
    for(i = 0; i < g->knots; i++)
       g->mark[i] = (g->grad[i] > 0);
 
@@ -476,6 +480,9 @@ int sd_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
       if (!(i % 100))
       {
          SCIPdebug(fputc('.', stdout));
@@ -1026,9 +1033,11 @@ inline static double mst_cost(
  * Nearest Special Vertex 3 Test
  */
 int nsv_reduction(
+   SCIP*   scip,
    GRAPH*  g,
    double* fixed)
 {
+   SCIP_Real timelimit;
    PATH**  path;
    PATH*   mst1;
    PATH*   mst2;
@@ -1062,6 +1071,8 @@ int nsv_reduction(
 
    assert(cost != NULL);
 
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
    /* Check this cost setting. It may need to be changed for the directed case.
     */
    for(i = 0; i < g->edges; i++)
@@ -1077,6 +1088,9 @@ int nsv_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
       if (!(i % 100))
       {
          SCIPdebug(fputc('.', stdout));
