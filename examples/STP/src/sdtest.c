@@ -442,7 +442,9 @@ int sd_reduction(
    int*    state
    )
 {
+   SCIP_Real redstarttime;
    SCIP_Real timelimit;
+   SCIP_Real stalltime;
    int     count = 0;
    int     i;
    int     e;
@@ -467,7 +469,9 @@ int sd_reduction(
    */
    assert(cost != NULL);
 
+   redstarttime = SCIPgetTotalTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   stalltime = timelimit*0.1; /* this should be set as a parameter */
 
    for(i = 0; i < g->knots; i++)
       g->mark[i] = (g->grad[i] > 0);
@@ -481,6 +485,9 @@ int sd_reduction(
    for(i = 0; i < g->knots; i++)
    {
       if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
       if (!(i % 100))
