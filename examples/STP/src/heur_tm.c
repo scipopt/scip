@@ -628,7 +628,7 @@ SCIP_RETCODE do_tm_degcons(
             assert(i != j);
             assert(connected[j]);
 
-            if( SCIPisLT(scip, pathdist[i][j], min) && degs[j] < maxdegs[j])
+            if( SCIPisLT(scip, pathdist[i][j], min) && degs[j] < maxdegs[j] )
             {
 	       u = j;
 	       degcount = 0;
@@ -636,9 +636,14 @@ SCIP_RETCODE do_tm_degcons(
 	       {
 	          u = g->tail[pathedge[i][u]];
 		  if( !connected[u] )
-		     degcount += MIN(g->grad[u] - 1, maxdegs[u] - 1);
+		  {
+                     if( u == i )
+                        degcount += MIN(g->grad[u] - 1, maxdegs[u] - 1);
+                     else
+                        degcount += MIN(g->grad[u] - 2, maxdegs[u] - 2);
+		  }
 	       }
-	       if( degcount >= degmax || degcount > 2 )
+	       if( degcount >= degmax || degcount >= 2 )
 	       {
 		  degmax = degcount;
                   min = pathdist[i][j];
@@ -684,12 +689,12 @@ SCIP_RETCODE do_tm_degcons(
 	    result[flipedge(e)] = CONNECT;
             result[e] = CONNECT;
 	    degs[u]++;
+	    degs[k]++;
             connected[k] = TRUE;
             cluster[csize++] = k;
          }
       }
-      assert(degs[newval] == 0);
-      degs[newval] = 1;
+      assert(degs[newval] == 1);
    }
 
    SCIPdebug(fputc('M', stdout));
@@ -706,7 +711,7 @@ SCIP_RETCODE do_tm_degcons(
          i = g->source[0];
       if( !connected[i] )
       {
-         //printf("fail! \n");
+         //printf("terminal not connected: fail! \n");
          *solfound = FALSE;
          break;
 
@@ -1226,7 +1231,7 @@ SCIP_RETCODE do_layer(
    int** node_edge;
    int** pathedge;
 
-   char printfs = FALSE;
+   char printfs = !FALSE;
    char* connected;
 
    for( e = 0; e < graph->edges; e++)
@@ -1289,8 +1294,21 @@ SCIP_RETCODE do_layer(
       else if( runs < nnodes )
       {
          int* realterms = SCIPprobdataGetRTerms(scip);
-         int nrealterms = SCIPprobdataGetRNTerms(scip);
+	 int nrealterms = SCIPprobdataGetRNTerms(scip);
+         /* assert(realterms != NULL);
+            if( graph->stp_type == STP_DEG_CONS && graph->maxdeg[realterms[0]] == 1 )
+            {
+            start[0] = realterms[(ncalls) % (nrealterms)];
+            for( r = 1; r < runs; r++ )
+            {
+            start[r] = (ncalls + r + 22) % nnodes;
+            }
+            }*/
          int z;
+         if( graph->stp_type == STP_DEG_CONS  )
+            if( graph->maxdeg[realterms[0]] == 1 )
+               nrealterms = 2;
+         printf("nrealterms: %d\n", nrealterms);
 	 if( ncalls % 3 == 0 || best == -1 )
 	    best = graph->source[0];
 
@@ -1318,6 +1336,7 @@ SCIP_RETCODE do_layer(
          /* no, we still have to */
          if( r == runs )
             start[ncalls % runs] = best;
+
       }
       else
       {
@@ -1485,8 +1504,8 @@ SCIP_RETCODE do_layer(
 	       heurdata->hopfactor = hopfactor;
                for( e = 0; e < nedges; e++ )
                {
-                  if( Is_term(graph->term[graph->tail[e]]) && graph->tail[e] != graph->source[0] && (SCIPisLT(scip, graph->cost[e], 1e+9 )) )
-                     printf("ougoing edge !!!! : %f \n\n", graph->cost[e]);
+                  /*if( Is_term(graph->term[graph->tail[e]]) && graph->tail[e] != graph->source[0] && (SCIPisLT(scip, graph->cost[e], 1e+9 )) )
+                    printf("ougoing edge !!!! : %f \n\n", graph->cost[e]);*/
                   if( (SCIPisLT(scip, cost[e], 1e+8 )) )
                      cost[e] = 1 + cost[e] / (hopfactor * maxcost);
                   if( (SCIPisLT(scip, costrev[e], 1e+8 )) )
@@ -1498,10 +1517,10 @@ SCIP_RETCODE do_layer(
             {
 #if TMX
                SCIP_CALL( do_tm_degcons(scip, graph, cost, costrev, pathdist, start[r], result, pathedge, connected, &solfound) );
-	       /*if( solfound )
-                 printf("=) yeah");
-                 else
-                 printf("oh noo \n");*/
+               /*   if( solfound )
+                    printf(" =) yeah ");
+                    else
+                    printf(" oh noo ");*/
 #endif
             }
             else if( mode == TM )

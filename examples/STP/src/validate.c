@@ -24,7 +24,6 @@ static void show(
    double* xval)
 {
    int i;
-
    for(i = 0; i < vars; i++)
    {
       if (xval[i] > 1e-6)
@@ -195,7 +194,8 @@ int validate(
    int   ret       = TRUE;
    int   i;
    int   layer;
-
+   int   deg;
+   int   e;
    assert(g         != NULL);
    assert(connected != NULL);
    if( g->knots == 1 )
@@ -220,6 +220,21 @@ int validate(
 #endif
       for(i = 0; i < g->knots; i++)
       {
+	if( g->stp_type == STP_DEG_CONS )
+	{
+	   deg = 0;
+	   for( e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )
+                  if( EQ(xval[e], 1.0) || EQ(xval[flipedge(e)], 1.0) )
+                     deg++;
+
+               if( deg > g->maxdeg[i] )
+	       {
+		  ret = FALSE;
+		  printf("deg condition violated \n");
+                   break;
+	       }
+
+	}
          /* Etwa ein Kreis ?
           */
          if (connected[i] >= 2)
