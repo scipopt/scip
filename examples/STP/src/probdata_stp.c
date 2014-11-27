@@ -1621,6 +1621,10 @@ SCIP_RETCODE SCIPprobdataCreate(
       strcpy(probtype, "MWCS");
       break;
 
+   case STP_HOP_CONS:
+      strcpy(probtype, "HCDST");
+      break;
+
    default:
       strcpy(probtype, "UNKNOWN");
    }
@@ -2110,7 +2114,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       orgnodes[e] = FALSE;
    ancestors = graph->ancestors;
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DEG_CONS
-      || graph->stp_type == STP_NODE_WEIGHTS )
+      || graph->stp_type == STP_NODE_WEIGHTS || graph->stp_type == STP_HOP_CONS )
    {
       //printf("in: %d \n", norgnodes);
       curr = graph->fixedges;
