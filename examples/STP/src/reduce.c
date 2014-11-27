@@ -1118,6 +1118,7 @@ static double level4(
    char    sd = TRUE;
    char    bd3 = FALSE;
    char    nsv = TRUE;
+   char    timebreak = FALSE;
    assert(g != NULL);
    //bound_test(scip, g);
 
@@ -1143,31 +1144,55 @@ static double level4(
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
+
       printf("new presolving run \n");
       rerun = FALSE;
 
       if( sd )
       {
          for( i = 0; i < 4; i++ ) //TODO 6
+         {
             if( sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
                rerun = TRUE;
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+            {
+               timebreak = TRUE;
+               break;
+            }
+         }
          sd = rerun;
       }
+
+      if( timebreak )
+         break;
+
       if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
       if( nsv )
       {
          if( !(nsv_reduction(g, &fixed) > nodebound) )
             nsv = FALSE;
-	 else
-	    rerun = TRUE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
       }
+
       if( bd3 )
       {
          if( !(bd3_reduction(g) > nodebound) )
             bd3 = FALSE;
-	 else
-	    rerun = TRUE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
       }
 
       if( degree_test(g, &fixed) > 0.5 * nodebound )
@@ -1229,6 +1254,7 @@ static double levelm4(
    int*     outterms;
    char    sd = TRUE;
    char    nsv = TRUE;
+   char    timebreak = FALSE;
 
    assert(g != NULL);
    redbound = MAX(g->knots / 500, 8);
@@ -1293,10 +1319,23 @@ static double levelm4(
                sd = TRUE;
             }
 
+            if( SCIPgetTotalTime(scip) > timelimit )
+            {
+               timebreak = TRUE;
+               break;
+            }
          }
       }
+
+      if( timebreak )
+         break;
+
       if( degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
       if( nsv )
       {
          nsv = FALSE;
@@ -1306,18 +1345,26 @@ static double levelm4(
             {
                numelim = nv_reduction_optimal(g, &fixed);
                printf("NV Reduction %d: %d\n", i, numelim);
+
+               if( SCIPgetTotalTime(scip) > timelimit )
+               {
+                  timebreak = TRUE;
+                  break;
+               }
+
                if( numelim > redbound )
                {
                   rerun = TRUE;
                   nsv = TRUE;
                }
                else
-               {
                   break;
-               }
             }
          }
       }
+
+      if( timebreak )
+         break;
 
       //if (bd3_reduction(g))
       //rerun = TRUE;
