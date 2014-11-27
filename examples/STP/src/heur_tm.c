@@ -1231,7 +1231,7 @@ SCIP_RETCODE do_layer(
    int** node_edge;
    int** pathedge;
 
-   char printfs = !FALSE;
+   char printfs = FALSE;
    char* connected;
 
    for( e = 0; e < graph->edges; e++)
@@ -1266,7 +1266,7 @@ SCIP_RETCODE do_layer(
    if( mode == AUTO )
    {
       /* are there enough terminals for the TM Polzin variant to (expectably) be advantageous? */
-      if( SCIPisGE(scip, ((double) nterms) / ((double) nnodes ), 0.1) )
+      if( SCIPisGE(scip, ((double) nterms) / ((double) nnodes ), 0.07) )
          mode = TMPOLZIN;
       else
          mode = TM;

@@ -1225,6 +1225,15 @@ static double level4(
    return(fixed);
 }
 
+static double levelm1(
+   SCIP* scip,
+   GRAPH* g
+   )
+{
+   double fixed = 0.0;
+   degree_test_dir(g, &fixed);
+   return fixed;
+}
 static double levelm4(
    SCIP* scip,
    GRAPH* g
@@ -1467,7 +1476,7 @@ double reduce(
 
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type);
-   if( 0 && g->stp_type != STP_UNDIRECTED )
+   if( 1 && g->stp_type != STP_UNDIRECTED )
       return fixed;
 
    if( g->stp_type == STP_GRID )
@@ -1480,7 +1489,7 @@ double reduce(
       return fixed;
 
    if( g->stp_type != STP_UNDIRECTED )
-      level = -4;
+      level = level * (-1);
 
    assert(g->layers == 1);
 
@@ -1501,6 +1510,9 @@ double reduce(
 
    if (level == -4)
       fixed = levelm4(scip, g);
+
+   if (level == -1)
+      fixed = levelm1(scip, g);
 
    return(fixed);
 }
