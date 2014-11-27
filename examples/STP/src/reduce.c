@@ -1027,6 +1027,7 @@ static double level1(
 }
 
 static double level2(
+   SCIP*  scip,
    GRAPH* g)
 {
    double fixed   = 0.0;
@@ -1056,7 +1057,7 @@ static double level2(
       if (degree_test(g, &fixed) > 0)
          rerun = TRUE;
 
-      if (nsv_reduction(g, &fixed))
+      if (nsv_reduction(scip, g, &fixed))
          rerun = TRUE;
 
    }
@@ -1118,6 +1119,7 @@ static double level4(
    char    sd = TRUE;
    char    bd3 = FALSE;
    char    nsv = TRUE;
+   char    timebreak = FALSE;
    assert(g != NULL);
    //bound_test(scip, g);
 
@@ -1143,31 +1145,55 @@ static double level4(
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
+
       printf("new presolving run \n");
       rerun = FALSE;
 
       if( sd )
       {
          for( i = 0; i < 4; i++ ) //TODO 6
-            if( sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
+         {
+            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
                rerun = TRUE;
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+            {
+               timebreak = TRUE;
+               break;
+            }
+         }
          sd = rerun;
       }
+
+      if( timebreak )
+         break;
+
       if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
       if( nsv )
       {
-         if( !(nsv_reduction(g, &fixed) > nodebound) )
+         if( !(nsv_reduction(scip, g, &fixed) > nodebound) )
             nsv = FALSE;
-	 else
-	    rerun = TRUE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
       }
+
       if( bd3 )
       {
          if( !(bd3_reduction(g) > nodebound) )
             bd3 = FALSE;
-	 else
-	    rerun = TRUE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
       }
 
       if( degree_test(g, &fixed) > 0.5 * nodebound )
@@ -1213,10 +1239,15 @@ static double levelm4(
    double*  sddist;
    double*  sdtrans;
    double*  sdrand;
+#if 0
+   /* These are only used for the sd_reduction_dir.
+    * Since the HOP constrained problems are not being solved, then this function is currently redundant.
+    */
    double** sd_indist;
    double** sd_intran;
    double** sd_outdist;
    double** sd_outtran;
+#endif
    double* cost;
    double* random;
    int*    heap;
@@ -1224,6 +1255,7 @@ static double levelm4(
    int*     outterms;
    char    sd = TRUE;
    char    nsv = TRUE;
+   char    timebreak = FALSE;
 
    assert(g != NULL);
    redbound = MAX(g->knots / 500, 8);
@@ -1233,14 +1265,17 @@ static double levelm4(
    sddist      = malloc((size_t)g->knots * sizeof(double));
    sdtrans     = malloc((size_t)g->knots * sizeof(double));
    sdrand      = malloc((size_t)g->knots * sizeof(double));
+#if 0
    sd_indist   = malloc((size_t)g->knots * sizeof(double*));
    sd_intran   = malloc((size_t)g->knots * sizeof(double*));
    sd_outdist  = malloc((size_t)g->knots * sizeof(double*));
    sd_outtran  = malloc((size_t)g->knots * sizeof(double*));
+#endif
    cost        = malloc((size_t)g->edges * sizeof(double));
    random        = malloc((size_t)g->edges * sizeof(double));
    outterms    = malloc((size_t)g->knots * sizeof(int));
 
+#if 0
    assert(sd_indist  != NULL);
    assert(sd_intran  != NULL);
    assert(sd_outdist != NULL);
@@ -1253,6 +1288,7 @@ static double levelm4(
       sd_outdist[i]  = malloc((size_t)g->knots * sizeof(double));
       sd_outtran[i]  = malloc((size_t)g->knots * sizeof(double));
    }
+#endif
 
    //voronoi_inout(g);
 
@@ -1271,10 +1307,12 @@ static double levelm4(
          sd = FALSE;
          for(i = 0; i < 2; i++)
          {
+#if 0
             if( g->stp_type == STP_HOP_CONS )
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
-               numelim = sd_reduction(g, sddist, sdtrans, sdrand, cost, random, heap, state);
+#endif
+               numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state);
             printf("SD Reduction %d: %d\n", i, numelim);
             if( numelim > redbound )
             {
@@ -1282,10 +1320,23 @@ static double levelm4(
                sd = TRUE;
             }
 
+            if( SCIPgetTotalTime(scip) > timelimit )
+            {
+               timebreak = TRUE;
+               break;
+            }
          }
       }
+
+      if( timebreak )
+         break;
+
       if( degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
       if( nsv )
       {
          nsv = FALSE;
@@ -1295,18 +1346,26 @@ static double levelm4(
             {
                numelim = nv_reduction_optimal(g, &fixed);
                printf("NV Reduction %d: %d\n", i, numelim);
+
+               if( SCIPgetTotalTime(scip) > timelimit )
+               {
+                  timebreak = TRUE;
+                  break;
+               }
+
                if( numelim > redbound )
                {
                   rerun = TRUE;
                   nsv = TRUE;
                }
                else
-               {
                   break;
-               }
             }
          }
       }
+
+      if( timebreak )
+         break;
 
       //if (bd3_reduction(g))
       //rerun = TRUE;
@@ -1316,6 +1375,7 @@ static double levelm4(
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
 
+#if 0
    for( i = 0; i < g->knots; i++ )
    {
       free(sd_indist[i]);
@@ -1323,15 +1383,18 @@ static double levelm4(
       free(sd_outdist[i]);
       free(sd_outtran[i]);
    }
+#endif
 
 
    free(sddist);
    free(sdtrans);
    free(sdrand);
+#if 0
    free(sd_indist);
    free(sd_intran);
    free(sd_outdist);
    free(sd_outtran);
+#endif
    free(heap);
    free(state);
    free(cost);
@@ -1425,7 +1488,7 @@ double reduce(
       fixed = level1(scip, g);
 
    if (level == 2)
-      fixed = level1(scip, g) + level2(g);
+      fixed = level1(scip, g) + level2(scip, g);
 
    if (level == 3)
       fixed = level3(g);

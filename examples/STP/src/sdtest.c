@@ -431,6 +431,7 @@ static void compute_sd_dir(
  * Special Distance Test
  */
 int sd_reduction(
+   SCIP* scip,
    GRAPH* g,
    double*  sddist,
    double*  sdtrans,
@@ -441,6 +442,9 @@ int sd_reduction(
    int*    state
    )
 {
+   SCIP_Real redstarttime;
+   SCIP_Real timelimit;
+   SCIP_Real stalltime;
    int     count = 0;
    int     i;
    int     e;
@@ -465,6 +469,10 @@ int sd_reduction(
    */
    assert(cost != NULL);
 
+   redstarttime = SCIPgetTotalTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   stalltime = timelimit*0.1; /* this should be set as a parameter */
+
    for(i = 0; i < g->knots; i++)
       g->mark[i] = (g->grad[i] > 0);
 
@@ -476,6 +484,9 @@ int sd_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
+      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+         break;
+
       if (!(i % 100))
       {
          SCIPdebug(fputc('.', stdout));
@@ -1026,9 +1037,13 @@ inline static double mst_cost(
  * Nearest Special Vertex 3 Test
  */
 int nsv_reduction(
+   SCIP*   scip,
    GRAPH*  g,
    double* fixed)
 {
+   SCIP_Real redstarttime;
+   SCIP_Real timelimit;
+   SCIP_Real stalltime;
    PATH**  path;
    PATH*   mst1;
    PATH*   mst2;
@@ -1062,6 +1077,10 @@ int nsv_reduction(
 
    assert(cost != NULL);
 
+   redstarttime = SCIPgetTotalTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   stalltime = timelimit*0.1; /* this should be set as a parameter */
+
    /* Check this cost setting. It may need to be changed for the directed case.
     */
    for(i = 0; i < g->edges; i++)
@@ -1077,6 +1096,12 @@ int nsv_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
+      if( i % 100 == 0 && SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+         break;
+
       if (!(i % 100))
       {
          SCIPdebug(fputc('.', stdout));
