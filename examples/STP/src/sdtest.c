@@ -484,10 +484,7 @@ int sd_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
-      if( SCIPgetTotalTime(scip) > timelimit )
-         break;
-
-      if( elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
       if (!(i % 100))
@@ -1099,10 +1096,10 @@ int nsv_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
-      if( SCIPgetTotalTime(scip) > timelimit )
+      if( i % 1000 == 0 && SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      if( elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
       if (!(i % 100))
