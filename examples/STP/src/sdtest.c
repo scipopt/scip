@@ -1037,7 +1037,9 @@ int nsv_reduction(
    GRAPH*  g,
    double* fixed)
 {
+   SCIP_Real redstarttime;
    SCIP_Real timelimit;
+   SCIP_Real stalltime;
    PATH**  path;
    PATH*   mst1;
    PATH*   mst2;
@@ -1071,7 +1073,9 @@ int nsv_reduction(
 
    assert(cost != NULL);
 
+   redstarttime = SCIPgetTotalTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   stalltime = timelimit*0.1; /* this should be set as a parameter */
 
    /* Check this cost setting. It may need to be changed for the directed case.
     */
@@ -1089,6 +1093,9 @@ int nsv_reduction(
    for(i = 0; i < g->knots; i++)
    {
       if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
       if (!(i % 100))
