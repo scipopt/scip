@@ -51,11 +51,11 @@
                                          *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
-#define DEFAULT_ERRORBASEDRELIABLITY FALSE /**< should reliability be based on relative errors? */
+#define DEFAULT_USERELERRORFORRELIABILITY FALSE /**< should reliability be based on relative errors? */
 #define DEFAULT_RELERRORTOLERANCE 0.05  /**< tolerance for relative errors to be reliable */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
-#define DEFAULT_USEVARIABLETTESTSFORSB FALSE /**< should the strong branching decision be based on a hypothesis test? */
+#define DEFAULT_USEHYPTESTFORRELIABILITY FALSE /**< should the strong branching decision be based on a hypothesis test? */
 #define DEFAULT_USEDYNAMICERRORTHRESHOLD FALSE /**< should the error threshold be adjusted dynamically? */
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -77,11 +77,11 @@ struct SCIP_BranchruleData
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
-   SCIP_Bool             errorbasedreliability; /**< should reliability be based on relative errors? */
+   SCIP_Bool             userelerrorforreliability; /**< should reliability be based on relative errors? */
    SCIP_Real             relerrortolerance;  /**< tolerance for relative errors to be reliable */
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
-   SCIP_Bool             usevariablettestsforsb; /**< should the strong branching decision be based on a hypothesis test? */
+   SCIP_Bool             usehyptestforreliability; /**< should the strong branching decision be based on a hypothesis test? */
    SCIP_Bool             usedynamicerrorthreshold; /**< should the error threshold be adjusted dynamically? */
 };
 
@@ -366,6 +366,7 @@ SCIP_RETCODE execRelpscost(
       int nvars;
       int i;
       int c;
+      SCIP_CONFIDENCELEVEL clevel;
 
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
@@ -433,13 +434,31 @@ SCIP_RETCODE execRelpscost(
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* depending on the strong branching priority, optionally alter the error based reliability as rel / prio, such that
-       * rel -> infty for prio -> 0
+       * rel -> 1.0 for prio -> 0
        */
       relerrorthreshold = branchruledata->relerrortolerance;
-      if( branchruledata->usedynamicerrorthreshold )
+      if( branchruledata->userelerrorforreliability && branchruledata->usedynamicerrorthreshold )
       {
          assert(0 <= prio || maxninitcands == 0);
-         relerrorthreshold /= (prio + 1e-5);
+         /* maximum allowed relative error is 100 % */
+         relerrorthreshold = (1.0) + prio * (relerrorthreshold - 1.0);
+      }
+
+      clevel = SCIP_CONFIDENCELEVEL_90;
+      /* determine the confidence level for hypothesis testing based on value of prio */
+      if( branchruledata->usehyptestforreliability || branchruledata->userelerrorforreliability)
+      {
+         /* with decreasing priority, use a less strict confidence level */
+         if( prio >= 0.95 )
+            clevel = SCIP_CONFIDENCELEVEL_975;
+         else if( prio >= 0.85 )
+            clevel = SCIP_CONFIDENCELEVEL_95;
+         else if( prio >= 0.7 )
+            clevel = SCIP_CONFIDENCELEVEL_90;
+         else if( prio >= 0.55 )
+            clevel = SCIP_CONFIDENCELEVEL_875;
+         else
+            clevel = SCIP_CONFIDENCELEVEL_75;
       }
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
@@ -450,7 +469,7 @@ SCIP_RETCODE execRelpscost(
       bestpsdomainscore = -SCIPinfinity(scip);
 
       /* search for the best candidate first */
-      for( c = 0; branchruledata->usevariablettestsforsb && c < nbranchcands; ++c )
+      for( c = 0; branchruledata->usehyptestforreliability && c < nbranchcands; ++c )
       {
          SCIP_Real conflictscore;
          SCIP_Real conflengthscore;
@@ -541,26 +560,22 @@ SCIP_RETCODE execRelpscost(
             upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
-            /* use strong branching on variables with unreliable pseudo cost scores or optionally if the relative error
-             * of the pseudo costs is too high */
-            assert(!branchruledata->usevariablettestsforsb || bestpscand >= 0);
-
-            usesb = FALSE;
-
             /* determine if variable is considered reliable based on the current reliability setting */
             /* check fixed number threshold (aka original) reliability first */
+            assert(!branchruledata->usehyptestforreliability || bestpscand >= 0);
+            usesb = FALSE;
             if( size < reliable )
                usesb = TRUE;
             /* check if relative error is tolerable */
-            else if( branchruledata->errorbasedreliability &&
-                  SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, SCIP_CONFIDENCELEVEL_90))
+            else if( branchruledata->userelerrorforreliability &&
+                  SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel))
                usesb = TRUE;
             /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
-            else if( branchruledata->usevariablettestsforsb &&
+            else if( branchruledata->usehyptestforreliability &&
                   !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
-                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, SCIP_CONFIDENCELEVEL_90, TRUE) &&
+                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
                   !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, SCIP_CONFIDENCELEVEL_90, TRUE))
+                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE))
                usesb = TRUE;
 
             /* count the number of variables that are completely uninitialized */
@@ -587,7 +602,7 @@ SCIP_RETCODE execRelpscost(
             ninitcands++;
             ninitcands = MIN(ninitcands, maxninitcands);
          }
-         else if( !branchruledata->usevariablettestsforsb )
+         else if( !branchruledata->usehyptestforreliability )
          {
             /* variable will keep it's pseudo cost value: check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
@@ -611,7 +626,7 @@ SCIP_RETCODE execRelpscost(
       }
 
       /* in the special case that only the best pseudo candidate was selected for strong branching, skip the strong branching */
-      if( branchruledata->usevariablettestsforsb && ninitcands == 1 )
+      if( branchruledata->usehyptestforreliability && ninitcands == 1 )
       {
          ninitcands = 0;
          SCIPdebugMessage("Only one single candidate for initialization-->Skipping strong branching\n");
@@ -1243,12 +1258,12 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
          &branchruledata->probingbounds, TRUE, DEFAULT_PROBINGBOUNDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/errorbasedreliability",
-         "should reliability be based on relative errors?", &branchruledata->errorbasedreliability, TRUE, DEFAULT_ERRORBASEDRELIABLITY,
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/userelerrorreliability",
+         "should reliability be based on relative errors?", &branchruledata->userelerrorforreliability, TRUE, DEFAULT_USERELERRORFORRELIABILITY,
          NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/relerrortolerance", "relative error tolerance for reliability",
-         &branchruledata->relerrortolerance, TRUE, DEFAULT_RELERRORTOLERANCE, 0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->relerrortolerance, TRUE, DEFAULT_RELERRORTOLERANCE, 0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
@@ -1260,9 +1275,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->usesblocalinfo, TRUE, DEFAULT_USESBLOCALINFO,
          NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usevariablettestsforsb",
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usehyptestforreliability",
          "should the strong branching decision be based on a hypothesis test?",
-         &branchruledata->usevariablettestsforsb, TRUE, DEFAULT_USEVARIABLETTESTSFORSB,
+         &branchruledata->usehyptestforreliability, TRUE, DEFAULT_USEHYPTESTFORRELIABILITY,
          NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usedynamicerrorthreshold",
