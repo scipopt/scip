@@ -1096,7 +1096,7 @@ int nsv_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
-      if( i % 1000 == 0 && SCIPgetTotalTime(scip) > timelimit )
+      if( i % 100 == 0 && SCIPgetTotalTime(scip) > timelimit )
          break;
 
       if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
