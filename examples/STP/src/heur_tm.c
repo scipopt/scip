@@ -1962,7 +1962,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          }
          else
          {
-            if( 0 && (graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING) )
+            if( 1 && (graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING) )
             {
                int root = graph->source[0];
                assert(root >= 0);
@@ -2102,11 +2102,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       {
 	 heurdata->hopfactor = heurdata->hopfactor * (1.0 - MIN(0.5, (double)(graph->hoplimit - edgecount) / 10.0) );
 	 assert(heurdata->hopfactor > 0);
-         //printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
+         printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
       }
    }
    if( validate(graph, nval) )
    {
+      pobj = 0.0;
       for( v = 0; v < nvars; v++ )
          pobj += graph->cost[v % nedges] * nval[v];
 
