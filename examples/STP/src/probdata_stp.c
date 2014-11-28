@@ -436,10 +436,10 @@ SCIP_RETCODE createHopConstraint(
    printf("Hop limit: %f \n ", rhs);
    /* TODO: when presolving is enabled: set rhs = rhs - (number of fixed edges) */
 
-      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
-            -SCIPinfinity(scip), rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
+         -SCIPinfinity(scip), rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-      SCIP_CALL( SCIPaddCons(scip, probdata->hopcons) );
+   SCIP_CALL( SCIPaddCons(scip, probdata->hopcons) );
 
    return SCIP_OKAY;
 }
@@ -730,9 +730,9 @@ SCIP_RETCODE createVariables(
 	    int hopfactor;
 	    for( e = 0; e < nedges; ++e )
             {
-	      /* TODO: When presolving is used: MODIFY */
-	          hopfactor = 1;
-		  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
+               /* TODO: When presolving is used: MODIFY */
+               hopfactor = 1;
+               SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
 	    }
 	 }
 
@@ -1338,7 +1338,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
    assert(scip != NULL);
    probd = SCIPgetProbData(scip);
 #if 0
-      GRAPH* graph;
+   GRAPH* graph;
    graph = probd->graph;
    assert(graph != NULL);
 
@@ -1458,14 +1458,14 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
 
-       if( SCIPgetNSols(scip) > 0 )
-       {
-          SCIPprobdataWriteLogLine(scip, "\n");
-          SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
+      if( SCIPgetNSols(scip) > 0 )
+      {
+         SCIPprobdataWriteLogLine(scip, "\n");
+         SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
 
-          SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
-          SCIPprobdataWriteLogLine(scip, "End\n");
-       }
+         SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+         SCIPprobdataWriteLogLine(scip, "End\n");
+      }
 
       success = fclose(probd->logfile);
       if( success != 0 )
@@ -1719,7 +1719,7 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-	  /* if the problem is a HOP-Constrained-STP, an additional constraint is required */
+         /* if the problem is a HOP-Constrained-STP, an additional constraint is required */
 	 if( graph->stp_type == STP_HOP_CONS )
 	    SCIP_CALL( createHopConstraint(scip, probdata) );
 
@@ -2170,7 +2170,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 }
       }
 
-     // printf("norgnodes: %d \n", norgnodes);
+      // printf("norgnodes: %d \n", norgnodes);
       //printf("norgedges: %d \n", norgedges);
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
@@ -2180,11 +2180,21 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
             SCIPinfoMessage(scip, file, "V %d\n", e + 1);
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
-      for( e = 0; e < norgedges; e += 2 )
+      if( graph->stp_type == STP_HOP_CONS )
       {
-	 if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
-	    SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+	 for( e = 0; e < norgedges; e++ )
+	    if( orgedges[e] == TRUE )
+               SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
       }
+      else
+      {
+         for( e = 0; e < norgedges; e += 2 )
+         {
+            if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
+               SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+         }
+      }
+
    }
    else if( graph->stp_type == STP_GRID )
    {
@@ -2267,22 +2277,22 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       /* switch the terminal property (back to its original state), and mark the old terminals */
       /*
-      for( k = 0; k < graph->knots; k++ )
-      {
-	 if( Is_term(graph->term[k]) && k != root )
-	 {
-            for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-               if( graph->tail[e] != root )
-                  break;
-            assert(e != EAT_LAST);
-            graph->term[graph->tail[e]] = 0;
-            graph->term[k] = -2;
-	 }
-      }
+        for( k = 0; k < graph->knots; k++ )
+        {
+        if( Is_term(graph->term[k]) && k != root )
+        {
+        for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+        if( graph->tail[e] != root )
+        break;
+        assert(e != EAT_LAST);
+        graph->term[graph->tail[e]] = 0;
+        graph->term[k] = -2;
+        }
+        }
 
-       printf("norgmodeledges: %d \n", graph->norgmodeledges);
-       printf("norgmodelknots: %d \n", graph->norgmodelknots);
-       */
+        printf("norgmodeledges: %d \n", graph->norgmodeledges);
+        printf("norgmodelknots: %d \n", graph->norgmodelknots);
+      */
       for( e = 0; e <= graph->edges; e++ )
       {
 	 if( e == graph->edges || !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
@@ -2294,46 +2304,46 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	       curr = graph->fixedges;
             while( curr != NULL )
             {
-//	       assert(graph->head[curr->index] != root);
-          //     if( curr->index] == root )
-	//	  printf("rootedge: %d->%d \n",
+               //	       assert(graph->head[curr->index] != root);
+               //     if( curr->index] == root )
+               //	  printf("rootedge: %d->%d \n",
 	       if( curr->index < graph->norgmodeledges ) //if( graph->term[graph->head[curr->index]] != -2 )
 	       {
-                 // if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
+                  // if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
                   //{
-                     if( orgedges[curr->index] == FALSE )
-                     {
-                        orgedges[curr->index] = TRUE;
-                        nsoledges++;
-                     }
-                     if( orgnodes[graph->orgtail[curr->index]] == FALSE )
-                     {
-                        orgnodes[graph->orgtail[curr->index]] = TRUE;
-                        nsolnodes++;
-                     }
-                     if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                     {
-                        orgnodes[graph->orghead[curr->index]] = TRUE;
-                        nsolnodes++;
-                     }
-               /*   }
-                  else
+                  if( orgedges[curr->index] == FALSE )
                   {
-                     assert(graph->tail[curr->index] == root);
-                     if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                     {
-                        orgnodes[graph->orghead[curr->index]] = TRUE;
-                        nsolnodes++;
-                     }
-                  } */
+                     orgedges[curr->index] = TRUE;
+                     nsoledges++;
+                  }
+                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
+                  {
+                     orgnodes[graph->orgtail[curr->index]] = TRUE;
+                     nsolnodes++;
+                  }
+                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  {
+                     orgnodes[graph->orghead[curr->index]] = TRUE;
+                     nsolnodes++;
+                  }
+                  /*   }
+                       else
+                       {
+                       assert(graph->tail[curr->index] == root);
+                       if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                       {
+                       orgnodes[graph->orghead[curr->index]] = TRUE;
+                       nsolnodes++;
+                       }
+                       } */
 	       }
 	       else if( graph->orghead[curr->index] < graph->norgmodelknots )
 	       {
-		   if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                   {
-                        orgnodes[graph->orghead[curr->index]] = TRUE;
-                        nsolnodes++;
-                   }
+                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  {
+                     orgnodes[graph->orghead[curr->index]] = TRUE;
+                     nsolnodes++;
+                  }
 	       }
                curr = curr->parent;
             }
@@ -2399,13 +2409,14 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 {
    SCIP_PROBDATA* probdata;
    SCIP_VAR** edgevars;
+   GRAPH* graph;
 
    assert(scip != NULL);
 
    probdata = SCIPgetProbData(scip);
    edgevars = probdata->edgevars;
 
-   GRAPH* graph = probdata->graph;
+   graph = probdata->graph;
    assert(graph != NULL);
    assert(edgevars != NULL);
 
@@ -2561,7 +2572,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             if( Is_term(graph->term[k]) && k != graph->source[0] )
             {
                int origterm;
-               int e;
                int edge1 = graph->inpbeg[k];
                int edge2 = graph->ieat[edge1];
                assert(graph->ieat[edge2] == EAT_LAST);
@@ -2864,4 +2874,3 @@ void SCIPprobdataSetNSolvers(
    probdata = SCIPgetProbData(scip);
    probdata->nSolvers = nSolvers;
 }
-

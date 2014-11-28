@@ -1308,7 +1308,7 @@ SCIP_RETCODE do_layer(
          if( graph->stp_type == STP_DEG_CONS  )
             if( graph->maxdeg[realterms[0]] == 1 )
                nrealterms = 2;
-         printf("nrealterms: %d\n", nrealterms);
+
 	 if( ncalls % 3 == 0 || best == -1 )
 	    best = graph->source[0];
 
@@ -1974,30 +1974,31 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                      costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
                      cost[e + 1] = 1e+10;
                   }
-                  else
+                  else if( graph->head[e] == root && Is_term(graph->term[graph->tail[e]]) )
+		  {
+                     costrev[e] = graph->cost[e + 1];
+                     cost[e + 1] = costrev[e];
+		  }
+		  else
                   {
                      costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
                      cost[e + 1] = costrev[e];
                   }
-
                   if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
                   {
                      costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
                      cost[e] = 1e+10;
                   }
+                  else if( graph->head[e+1] == root && Is_term(graph->term[graph->tail[e+1]]) )
+		  {
+                     costrev[e + 1] = graph->cost[e];
+                     cost[e] = costrev[e+1];
+		  }
                   else
                   {
-                     if( 0 && graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
-                     {
-                        costrev[e + 1] = ((1.0 - xval[layer * nedges + e]));
-                        cost[e] = costrev[e + 1];
-                     }
-                     else
-                     {
-                        //TODO: chg s.t. original zero edges are also changed
-                        costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
-                        cost[e] = costrev[e + 1];
-                     }
+                     //TODO: chg s.t. original zero edges are also changed
+                     costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
+                     cost[e] = costrev[e + 1];
                   }
                }
 
@@ -2101,13 +2102,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       {
 	 heurdata->hopfactor = heurdata->hopfactor * (1.0 - MIN(0.5, (double)(graph->hoplimit - edgecount) / 10.0) );
 	 assert(heurdata->hopfactor > 0);
-         printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
+         //printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
       }
    }
    if( validate(graph, nval) )
    {
-      pobj = 0.0;
-
       for( v = 0; v < nvars; v++ )
          pobj += graph->cost[v % nedges] * nval[v];
 
