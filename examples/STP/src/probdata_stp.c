@@ -2405,6 +2405,8 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    probdata = SCIPgetProbData(scip);
    edgevars = probdata->edgevars;
 
+   GRAPH* graph = probdata->graph;
+   assert(graph != NULL);
    assert(edgevars != NULL);
 
    /* create a new primal solution (initialized to zero) */
@@ -2413,7 +2415,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    /* create path variables (Price mode) or set the flow vars (Flow mode) corresponding to the new solution */
    if( probdata->mode != MODE_CUT )
    {
-      GRAPH* graph = probdata->graph;
       SCIP_Real* edgecost;
       SCIP_Real* flowvals;
       PATH* path;
@@ -2426,7 +2427,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       int e;
       int t;
 
-      assert(graph != NULL);
       assert(nedges > 0);
 
       /* allocate memory for the values of the flow variables */
@@ -2550,7 +2550,54 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
 #endif
 
+      /* post-processing of solution for MWCS and PCSPG */
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+      {
+         int k;
 
+         for( k = 0; k < graph->knots; ++k )
+         {
+            /* is the kth node a terminal other than the root? */
+            if( Is_term(graph->term[k]) && k != graph->source[0] )
+            {
+               int origterm;
+               int e;
+               int edge1 = graph->inpbeg[k];
+               int edge2 = graph->ieat[edge1];
+               assert(graph->ieat[edge2] == EAT_LAST);
+
+               if( !SCIPisZero(scip, graph->cost[edge2]) )
+               {
+                  int tmp = edge1;
+                  edge1 = edge2;
+                  edge2 = tmp;
+               }
+               assert(SCIPisZero(scip, graph->cost[edge2]));
+
+               if( nval[edge2] > 0.5 )
+               {
+                  assert(nval[edge1] < 0.5);
+                  continue;
+               }
+               assert(nval[edge1] > 0.5);
+               assert(nval[edge2] < 0.5);
+
+               origterm = graph->tail[edge2];
+
+               for( e = graph->inpbeg[origterm]; e != EAT_LAST; e = graph->ieat[e] )
+               {
+                  if( nval[e] > 0.5 )
+                  {
+                     printf("two edges to one terminal\n");
+
+                     nval[edge1] = 0;
+                     nval[edge2] = 1;
+                     break;
+                  }
+               }
+            }
+         }
+      }
 
 #if 0
       if( fails > 0 )
