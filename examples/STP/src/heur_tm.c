@@ -1933,7 +1933,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    for( e = 0; e < nedges; e++ )
       results[e] = -1;
 
-   if( graph->stp_type == STP_PRIZE_COLLECTING && graph->edges > pctrivialbound )
+   if( graph->stp_type == STP_PRIZE_COLLECTING && (graph->edges > pctrivialbound || graph->terms > 3500) )
    {
       printf("tm trivial\n");
       do_prizecoll_trivial(scip, graph, results);
