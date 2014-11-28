@@ -795,6 +795,7 @@ GRAPH* graph_load(
    struct key*  p;
    double**     coordinates = NULL;
    int          i;
+   int          v;
    int          head;
    int          tail;
    int          grid_dim = -1;
@@ -814,7 +815,7 @@ GRAPH* graph_load(
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
    assert(file != NULL);
-
+   presol->fixed = 0.0;
    /* No section loaded so far.
     */
    for(i = 1; i < (int)(sizeof(section_table) / sizeof(section_table[0])); i++)
@@ -1212,6 +1213,8 @@ GRAPH* graph_load(
                      assert(maxnodeweights == NULL);
                      assert(terms == nodes);
                      maxnodeweights = malloc((size_t)terms * sizeof(double));
+		     for( v = 0; v < g->knots; v++ )
+		        maxnodeweights[v] = 0.0;
 		  }
                   break;
                case KEY_TERMINALS_ROOT :
@@ -1243,9 +1246,10 @@ GRAPH* graph_load(
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
 		     assert(maxnodeweights != NULL);
-		     maxnodeweights[(int)para[0].n - 1] = (double)para[1].n;
-		     if( GT((double)para[1].n, 0.0) )
-                        presol->fixed -= (double)para[1].n;
+		     v = (int)para[0].n - 1;
+		     maxnodeweights[v] = (double)para[1].n;
+		     if( GT(maxnodeweights[v], 0.0) )
+                        presol->fixed -= maxnodeweights[v];
                      /*  printf("maxnodeweight: %f \n", (double)para[1].n);*/
 		     termcount++;
 		  }

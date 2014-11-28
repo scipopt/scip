@@ -1476,7 +1476,7 @@ double reduce(
       assert((g->ancestors[i])->parent == NULL );
    }
 #endif
-
+   //printf("root: %d \n\n", g->source[0]);
    /* only use reduction for undirected STP's in graphs */
    printf("type: %d\n", g->stp_type);
    if( 0 && g->stp_type != STP_UNDIRECTED )
