@@ -119,11 +119,21 @@ do
         COUNT=`expr $COUNT + 1`
 
         # check if problem instance exists
-        if ! test -f $SCIPPATH/$INSTANCE
-        then
-            echo "input file "$SCIPPATH/$INSTANCE" not found!"
-            continue
-        fi
+        SCIP_INSTANCEPATH=$SCIPPATH
+        for IPATH in ${POSSIBLEPATHS[@]}
+        do
+            echo $IPATH
+            if test "$IPATH" = "DONE"
+            then
+                echo "input file $INSTANCE not found!"
+                SKIPINSTANCE="true"
+            elif test -f $IPATH/$INSTANCE
+            then
+                SCIP_INSTANCEPATH=$IPATH
+                break
+            fi
+
+        done
         # the cluster queue has an upper bound of 2000 jobs; if this limit is
         # reached the submitted jobs are dumped; to avoid that we check the total
         # load of the cluster and wait until it is save (total load not more than
@@ -147,6 +157,7 @@ do
                 continue
             fi
 
+            INSTANCE=$SCIP_INSTANCEPATH/$INSTANCE
             # call tmp file configuration for SCIP
             . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
 

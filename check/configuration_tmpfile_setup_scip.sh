@@ -83,7 +83,7 @@ echo set memory savefac 1.0            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
 
 # read and solve the instance
-echo read $SCIPPATH/$INSTANCE         >> $TMPFILE
+echo read $INSTANCE         >> $TMPFILE
 
 # set objective limit: optimal solution value from solu file, if existent
 if test $SETCUTOFF = 1

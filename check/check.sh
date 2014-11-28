@@ -84,16 +84,29 @@ do
             continue
         fi
         # check if problem instance exists
-        if ! test -f $SCIPPATH/$INSTANCE
-        then
-            echo "input file "$SCIPPATH/$INSTANCE" not found!"
-            continue
-        fi
+        SCIP_INSTANCEPATH=$SCIPPATH
+        for IPATH in ${POSSIBLEPATHS[@]}
+        do
+            echo $IPATH
+            if test "$IPATH" = "DONE"
+            then
+                echo "input file $INSTANCE not found!"
+                SKIPINSTANCE="true"
+            elif test -f $IPATH/$INSTANCE
+            then
+                SCIP_INSTANCEPATH=$IPATH
+                break
+            fi
+
+        done
 
         if test "$SKIPINSTANCE" = "true"
         then
             continue
         fi
+
+        INSTANCE=${SCIP_INSTANCEPATH}/${INSTANCE}
+
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
         . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE

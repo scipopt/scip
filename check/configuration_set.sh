@@ -136,3 +136,12 @@ then
 else
     VALGRINDCMD=""
 fi
+
+#check if additional instance paths are given
+POSSIBLEPATHS=$SCIPPATH
+if test -e paths.txt
+then
+    POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
+fi
+POSSIBLEPATHS="${POSSIBLEPATHS} DONE"
+echo $POSSIBLEPATHS
