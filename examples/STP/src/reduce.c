@@ -1323,17 +1323,20 @@ static double levelm4(
 #endif
                numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state);
             printf("SD Reduction %d: %d\n", i, numelim);
-            if( numelim > redbound )
-            {
-               rerun = TRUE;
-               sd = TRUE;
-            }
 
             if( SCIPgetTotalTime(scip) > timelimit )
             {
                timebreak = TRUE;
                break;
             }
+
+            if( numelim > redbound )
+            {
+               rerun = TRUE;
+               sd = TRUE;
+            }
+            else
+               break;
          }
       }
 
