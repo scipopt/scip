@@ -1,0 +1,118 @@
+# SCIP version 3.1.0.1
+
+# frequency for displaying node information lines
+# [type: int, range: [-1,2147483647], default: 100]
+display/freq = 1
+
+# maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)
+# [type: int, range: [-1,2147483647], default: 10]
+lp/rowagelimit = 30
+
+# maximal number of restarts (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = 0
+
+# minimal efficacy for a cut to enter the LP in the root node
+# [type: real, range: [0,1e+98], default: 0.001]
+separating/minefficacyroot = 0.01
+
+# maximal number of separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxrounds = -1
+
+# maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxstallrounds = -1
+
+# default clock type (1: CPU user seconds, 2: wall clock time)
+# [type: int, range: [1,2], default: 1]
+timing/clocktype = 2
+
+# maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
+# [type: real, range: [0,1.79769313486232e+308], default: 5]
+branching/relpscost/maxreliable = 1
+
+# maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)
+# [type: int, range: [-2,2147483647], default: -2]
+branching/relpscost/maxproprounds = 0
+
+# frequency for calling primal heuristic <coefdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/coefdiving/freq = -1
+
+# frequency for calling primal heuristic <feaspump> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/feaspump/freq = -1
+
+# frequency for calling primal heuristic <fracdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/fracdiving/freq = -1
+
+# frequency for calling primal heuristic <guideddiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/guideddiving/freq = -1
+
+# frequency for calling primal heuristic <linesearchdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/linesearchdiving/freq = -1
+
+# frequency for calling primal heuristic <nlpdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/nlpdiving/freq = -1
+
+# frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/objpscostdiving/freq = -1
+
+# frequency for calling primal heuristic <pscostdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/pscostdiving/freq = -1
+
+# frequency for calling primal heuristic <randrounding> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/randrounding/freq = -1
+
+# frequency for calling primal heuristic <rens> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/rens/freq = -1
+
+# frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 25]
+heuristics/rins/freq = -1
+
+# frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/rootsoldiving/freq = -1
+
+# frequency for calling primal heuristic <shiftandpropagate> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/shiftandpropagate/freq = -1
+
+# frequency for calling primal heuristic <shifting> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/shifting/freq = -1
+
+# frequency for calling primal heuristic <subnlp> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/subnlp/freq = -1
+
+# frequency for calling primal heuristic <undercover> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/undercover/freq = -1
+
+# frequency for calling primal heuristic <veclendiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/veclendiving/freq = -1
+
+# frequency for calling primal heuristic <zirounding> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/zirounding/freq = -1
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/probing/maxprerounds = 0
+
+# timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 7]
+propagating/pseudoobj/timingmask = 5
+
