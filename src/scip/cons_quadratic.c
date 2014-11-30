@@ -8039,9 +8039,9 @@ SCIP_RETCODE replaceByLinearConstraints(
 
          SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
-         if( checkresult != SCIP_INFEASIBLE )
+         if( checkresult != SCIP_INFEASIBLE && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
-            SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+            SCIPdebugMessage("linear constraint is feasible and LP optimal, thus do not add\n");
          }
          else
          {
