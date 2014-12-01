@@ -809,8 +809,62 @@ SCIP_RETCODE do_local(
                            }
 
                            /* assert that each leaf of the ST is a terminal */
-                           assert( e != EAT_LAST );
+                           //assert( e != EAT_LAST );
+                           if( e != EAT_LAST )
+			   {
 
+                              for( k = 0; k < nnodes; k++ )
+                              {
+                                 if( boundpaths[k] != NULL )
+                                 {
+                                    SCIPpairheapFree(scip, &boundpaths[k]);
+                                 }
+
+                                 blists_curr = blists_start[k];
+                                 lvledges_curr = lvledges_start[k];
+                                 while( lvledges_curr != NULL )
+                                 {
+                                    lvledges_start[k] = lvledges_curr->parent;
+                                    SCIPfreeMemory(scip, &lvledges_curr);
+                                    lvledges_curr = lvledges_start[k];
+                                 }
+
+                                 while( blists_curr != NULL )
+                                 {
+                                    blists_start[k] = blists_curr->parent;
+                                    SCIPfreeMemory(scip, &blists_curr);
+                                    blists_curr = blists_start[k];
+                                 }
+                              }
+
+                              SCIPunionfindFree(scip, &uf);
+                              SCIPfreeBufferArray(scip, &supernodes);
+                              SCIPfreeBufferArray(scip, &kpedges);
+                              SCIPfreeBufferArray(scip, &kpnodes);
+                              SCIPfreeBufferArray(scip, &vnoi);
+                              SCIPfreeBufferArray(scip, &dfstree);
+                              SCIPfreeBufferArray(scip, &supernodesid);
+                              SCIPfreeBufferArray(scip, &scanned);
+                              SCIPfreeBufferArray(scip, &heapsize);
+                              SCIPfreeBufferArray(scip, &boundedges);
+                              SCIPfreeBufferArray(scip, &newedges);
+
+                              SCIPfreeBufferArray(scip, &vbase);
+                              SCIPfreeBufferArray(scip, &memvbase);
+                              SCIPfreeBufferArray(scip, &memdist);
+                              SCIPfreeBufferArray(scip, &meminedges);
+                              SCIPfreeBufferArray(scip, &nodesmark);
+                              SCIPfreeBufferArray(scip, &pinned);
+
+                              SCIPfreeBufferArray(scip, &lvledges_start);
+                              SCIPfreeBufferArray(scip, &boundpaths);
+                              SCIPfreeBufferArray(scip, &blists_start);
+                              SCIPfreeBufferArray(scip, &nodes);
+                              SCIPfreeBufferArray(scip, &steinertree);
+
+
+                              return SCIP_OKAY;
+			   }
                            adjnode = graph->head[e];
                         }
                         /* does the last node on the path belong to a removed component? */
@@ -1987,9 +2041,6 @@ SCIP_RETCODE do_local(
          /* has there been a move during this run? */
 	 if( localmoves > 0 )
 	 {
-
-
-
             for( i = 0; i < nnodes; i++ )
             {
                steinertree[i] = FALSE;
@@ -2011,7 +2062,6 @@ SCIP_RETCODE do_local(
             }
             assert( nodes[root].edge == -1 );
             nodes[root].edge = -1;
-
 	 }
       }
 
@@ -2276,7 +2326,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
       return SCIP_OKAY;
 
-//   printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
+   //   printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */
    if( SCIPgetNNodes(scip) > 1 )
