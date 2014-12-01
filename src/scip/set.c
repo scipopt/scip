@@ -1113,9 +1113,6 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
 
-   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
-   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
-
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
@@ -1814,6 +1811,9 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
+
+   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
+   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
 
    return SCIP_OKAY;
 }
