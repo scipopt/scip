@@ -2304,9 +2304,19 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	       curr = graph->fixedges;
             while( curr != NULL )
             {
+	        if( e < graph->edges && graph->stp_type == STP_MAX_NODE_WEIGHT )
+                {
+	               if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
+	               {
+			  curr = curr->parent;
+			  continue;
+		       }
+		}
+
                //	       assert(graph->head[curr->index] != root);
                //     if( curr->index] == root )
                //	  printf("rootedge: %d->%d \n",
+
 	       if( curr->index < graph->norgmodeledges ) //if( graph->term[graph->head[curr->index]] != -2 )
 	       {
                   // if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
@@ -2341,6 +2351,10 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	       {
                   if( orgnodes[graph->orghead[curr->index]] == FALSE )
                   {
+		     if( graph->orghead[curr->index] == 2901 )
+		     {
+		       // printf("head: %d %d d\n", graph->orgtail[curr->index], graph->orghead[curr->index]);
+		     }
                      orgnodes[graph->orghead[curr->index]] = TRUE;
                      nsolnodes++;
                   }
