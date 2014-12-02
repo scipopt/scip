@@ -1489,7 +1489,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    assert((*cliquelist)->cliques[value][pos] == clique);
 
    /* remove clique from list */
-   /* @todo maybe buffered deletion */
+   /* @TODO maybe buffered deletion */
    (*cliquelist)->ncliques[value]--;
    if( pos < (*cliquelist)->ncliques[value] )
    {
@@ -2208,6 +2208,52 @@ SCIP_RETCODE SCIPcliquetableAdd(
    return SCIP_OKAY;
 }
 
+/** fixes a clique variable to a value and marks all cliques where variable appears with this value for cleanup */
+static
+SCIP_RETCODE cleanupHandleFixing(
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_VAR*             var,                /**< variable to fix */
+   SCIP_Bool             value,              /**< value to fix variable to (complement of variable value in clique) */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*                  nchgbds             /**< pointer to store number of fixed variables */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+     || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   /* the clique itself must belong to the complementary cliques of the fixing value */
+   SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, !value, clique) );
+
+   /* fix variable */
+   *nchgbds = 0;
+   SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+         eventqueue, value, infeasible, nchgbds) );
+
+   /* if infeasibility was detected, exit method, otherwise update other cliques of the variable for deletion */
+   if( !(*infeasible) )
+   {
+      SCIP_CLIQUE** varcliques;
+      int nvarcliques;
+      int c;
+      varcliques = SCIPvarGetCliques(var, value);
+      nvarcliques = SCIPvarGetNCliques(var, value);
+
+      /* mark variable for clean up in all cliques for the complementing value */
+      for( c = 0; c < nvarcliques; ++c )
+         SCIPcliqueDelVar(varcliques[c], var, value);
+   }
+
+   return SCIP_OKAY;
+}
 /** clean up given clique by removing fixed variables */
 static
 SCIP_RETCODE cliqueCleanup(
@@ -2367,24 +2413,24 @@ SCIP_RETCODE cliqueCleanup(
          SCIPdebugMessage("variable %s%s in clique %d fixed to one, fixing all other variables to zero\n",
             onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->id);
 
+         /* if there is a variable fixed to one, fix all other members of this clique to the value complementary to their
+          * clique value
+          */
          for( v = clique->nvars - 1; v >= 0; --v )
          {
-            assert(SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_COLUMN
-               || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_LOOSE);
+            /* skip the variable fixed to one */
+            if( clique->vars[v] == onefixedvar )
+               continue;
 
-            if( onefixedvalue != clique->values[v] || clique->vars[v] != onefixedvar )
-            {
-               SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[v], blkmem, clique->values[v], clique) );
+            SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clique->vars[v]), clique->id,
+               clique->values[v] ? 0 : 1);
 
-               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clique->vars[v]), clique->id,
-                  clique->values[v] ? 0 : 1);
+            SCIP_CALL( cleanupHandleFixing(clique, clique->vars[v], !clique->values[v], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+                  eventqueue, infeasible, &nlocalbdchgs) );
 
-               SCIP_CALL( SCIPvarFixBinary(clique->vars[v], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, !clique->values[v], infeasible, &nlocalbdchgs) );
-
-               if( *infeasible )
-                  return SCIP_OKAY;
-            }
+            /* if infeasibility was detected, exit method */
+            if( *infeasible )
+               return SCIP_OKAY;
 
             *nchgbds += nlocalbdchgs;
          }
@@ -2409,17 +2455,11 @@ SCIP_RETCODE cliqueCleanup(
          }
          else if( clique->nvars == 1 )
          {
-            assert(SCIPvarGetStatus(clique->vars[0]) == SCIP_VARSTATUS_COLUMN
-               || SCIPvarGetStatus(clique->vars[0]) == SCIP_VARSTATUS_LOOSE);
+            SCIPdebugMessage("fixing last variable %s in clique %d to %d\n", SCIPvarGetName(clique->vars[0]), clique->id,
+               clique->values[0] ? 1 : 0);
 
-            /* clearing data and removing variable from its clique list */
-            SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[0], blkmem, clique->values[0], clique) );
-
-            SCIPdebugMessage("fixing last variable %s in clique %d to %d\n", SCIPvarGetName(clique->vars[v]), clique->id,
-               clique->values[v] ? 1 : 0);
-
-            SCIP_CALL( SCIPvarFixBinary(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, clique->values[0], infeasible, &nlocalbdchgs) );
+            SCIP_CALL( cleanupHandleFixing(clique, clique->vars[0], !clique->values[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+                  eventqueue, infeasible, &nlocalbdchgs) );
 
             *nchgbds += nlocalbdchgs;
 
