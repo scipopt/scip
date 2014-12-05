@@ -14003,6 +14003,13 @@ SCIP_RETCODE SCIPcreateVar(
 
    SCIP_CALL( checkStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* forbid infinite objective function values */
+   if( SCIPisInfinity(scip, ABS(obj)) )
+   {
+      SCIPerrorMessage("invalid objective function value: value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -17770,6 +17777,13 @@ SCIP_RETCODE SCIPchgVarObj(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* forbid infinite objective values */
+   if( SCIPisInfinity(scip, ABS(newobj)) )
+   {
+      SCIPerrorMessage("invalid objective value: objective value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
 
    switch( scip->set->stage )
    {
