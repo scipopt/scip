@@ -302,6 +302,12 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** enables or disables all clocks of \p conshdlr, depending on the value of the flag */
+extern
+void SCIPconshdlrEnableOrDisableClocks(
+   SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the constraint handler be enabled? */
+   );
 
 /** calls variable deletion method of constraint handler */
 extern

@@ -328,7 +328,8 @@
 #define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
-
+#define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
+#define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
 
 /* visualization output */
 
@@ -469,7 +470,7 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
    return SCIP_OKAY;
 }
 
-/** parameter change information method that node limit was changed */
+/** parameter change information method that some limit was changed */
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 {  /*lint --e{715}*/
@@ -477,6 +478,64 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
    SCIPmarkLimitChanged(scip);
    return SCIP_OKAY;
 }
+
+/** enable or disable all plugin timers depending on the value of the flag \p enabled */
+void SCIPsetEnableOrDisablePluginClocks(
+   SCIP_SET*            set,                /**< SCIP settings */
+   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+
+   /* go through all plugin types and enable or disable their respective clocks */
+   for( i = set->nreaders - 1; i >= 0; --i )
+      SCIPreaderEnableOrDisableClocks(set->readers[i], enabled);
+
+   for( i = set->npricers - 1; i >= 0; --i )
+      SCIPpricerEnableOrDisableClocks(set->pricers[i], enabled);
+
+   for( i = set->nconshdlrs - 1; i >= 0; --i )
+      SCIPconshdlrEnableOrDisableClocks(set->conshdlrs[i], enabled);
+
+   for( i = set->nconflicthdlrs - 1; i >= 0; --i )
+      SCIPconflicthdlrEnableOrDisableClocks(set->conflicthdlrs[i], enabled);
+
+   for( i = set->npresols - 1; i >= 0; --i )
+      SCIPpresolEnableOrDisableClocks(set->presols[i], enabled);
+
+   for( i = set->nrelaxs - 1; i >= 0; --i )
+      SCIPrelaxEnableOrDisableClocks(set->relaxs[i], enabled);
+
+   for( i = set->nsepas - 1; i >= 0; --i )
+      SCIPsepaEnableOrDisableClocks(set->sepas[i], enabled);
+
+   for( i = set->nprops - 1; i >= 0; --i )
+      SCIPpropEnableOrDisableClocks(set->props[i], enabled);
+
+   for( i = set->nheurs - 1; i >= 0; --i )
+      SCIPheurEnableOrDisableClocks(set->heurs[i], enabled);
+
+   for( i = set->neventhdlrs - 1; i >= 0; --i )
+      SCIPeventhdlrEnableOrDisableClocks(set->eventhdlrs[i], enabled);
+
+   for( i = set->nnodesels - 1; i >= 0; --i )
+      SCIPnodeselEnableOrDisableClocks(set->nodesels[i], enabled);
+
+   for( i = set->nbranchrules - 1; i >= 0; --i )
+      SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
+}
+
+/* method to be invoked when the parameter timing/statistictiming is changed */
+static
+SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
+{
+   SCIPenableOrDisableStatisticTiming(scip);
+
+   return SCIP_OKAY;
+}
+
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
@@ -1080,6 +1139,7 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal time in seconds to run",
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
+
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
@@ -1717,6 +1777,16 @@ SCIP_RETCODE SCIPsetCreate(
          "belongs reading time to solving time?",
          &(*set)->time_reading, FALSE, SCIP_DEFAULT_TIME_READING,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/rareclockcheck",
+         "should clock checks of solving time be performed less frequently (note: time limit could be exceeded slightly)",
+         &(*set)->time_rareclockcheck, FALSE, SCIP_DEFAULT_TIME_RARECLOCKCHECK,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/statistictiming",
+         "should timing for statistic output be performed?",
+         &(*set)->time_statistictiming, FALSE, SCIP_DEFAULT_TIME_STATISTICTIMING,
+         paramChgdStatistictiming, NULL) );
 
    /* visualization parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -1778,6 +1848,9 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
+
+   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
+   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
 
    return SCIP_OKAY;
 }
@@ -4311,6 +4384,8 @@ void SCIPsetSetLimitChanged(
    )
 {
    set->limitchanged = TRUE;
+
+   set->istimelimitfinite = !SCIPsetIsInfinity(set, set->limit_time);
 }
 
 /** returns the maximal number of variables priced into the LP per round */

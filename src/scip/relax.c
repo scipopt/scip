@@ -501,6 +501,18 @@ SCIP_Real SCIPrelaxGetSetupTime(
    return SCIPclockGetTime(relax->setuptime);
 }
 
+/** enables or disables all clocks of \p relax, depending on the value of the flag */
+void SCIPrelaxEnableOrDisableClocks(
+   SCIP_RELAX*           relax,              /**< the relaxation handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the relaxation handler be enabled? */
+   )
+{
+   assert(relax != NULL);
+
+   SCIPclockEnableOrDisable(relax->setuptime, enable);
+   SCIPclockEnableOrDisable(relax->relaxclock, enable);
+}
+
 /** gets time in seconds used in this relaxation handler */
 SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */

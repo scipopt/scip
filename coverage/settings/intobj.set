@@ -1,0 +1,6 @@
+# SCIP version 2.1.1.6
+
+# frequency for calling separator <intobj> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/intobj/freq = 0
+

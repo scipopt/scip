@@ -3547,6 +3547,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {
+#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    SVECTOR b;
    int nrows;
@@ -3619,7 +3620,15 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
+#else
+   int j, ncols;
 
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+
+   /* Gurobi does not have the possibility to access the basis inverse -> setting coef to 0 */
+   for( j = 0; j < ncols; ++j )
+      coef[j] = 0.0;
+#endif
    return SCIP_OKAY;
 }
 
@@ -3637,6 +3646,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {
+#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    SVECTOR b;
    int nrows;
@@ -3711,6 +3721,11 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by Gurobi\n");
+
+   return SCIP_LPERROR;
+#endif
 }
 
 /** get row of inverse basis matrix times constraint matrix B^-1 * A */
@@ -3724,6 +3739,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
+#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    int ncols;
    int nrows;
@@ -3787,6 +3803,11 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiGetBInvARow() not supported by Gurobi\n");
+
+   return SCIP_LPERROR;
+#endif
 }
 
 /** get column of inverse basis matrix times constraint matrix B^-1 * A */
@@ -3799,6 +3820,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
+#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    int nrows;
    int k;
@@ -3860,6 +3882,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by Gurobi\n");
+
+   return SCIP_LPERROR;
+#endif
 }
 
 /**@} */

@@ -232,6 +232,13 @@ void SCIPheurSetExitsol(
    SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization callback of primal heuristic */
    );
 
+/** enables or disables all clocks of \p heur, depending on the value of the flag */
+extern
+void SCIPheurEnableOrDisableClocks(
+   SCIP_HEUR*            heur,               /**< the heuristic for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the heuristic be enabled? */
+   );
+
 #ifdef __cplusplus
 }
 #endif

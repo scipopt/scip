@@ -295,6 +295,15 @@ SCIP_RETCODE catchLinearVarEvents(
 
    consdata->lineventdata[linvarpos] = eventdata;
 
+   /* invalidate activity information
+    * NOTE: It could happen that a constraint gets temporary deactivated and some variable bounds change. In this case
+    *       we do not recognize those bound changes with the variable events and thus we have to recompute the activities.
+    */
+   consdata->minlinactivity = SCIP_INVALID;
+   consdata->maxlinactivity = SCIP_INVALID;
+   consdata->minlinactivityinf = -1;
+   consdata->maxlinactivityinf = -1;
+
    return SCIP_OKAY;
 }
 
@@ -387,6 +396,12 @@ SCIP_RETCODE catchQuadVarEvents(
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
    consdata->quadvarterms[quadvarpos].eventdata = eventdata;
+
+   /* invalidate activity information
+    * NOTE: It could happen that a constraint gets temporary deactivated and some variable bounds change. In this case
+    *       we do not recognize those bound changes with the variable events and thus we have to recompute the activities.
+    */
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    return SCIP_OKAY;
 }
@@ -8037,9 +8052,9 @@ SCIP_RETCODE replaceByLinearConstraints(
 
          SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
-         if( checkresult != SCIP_INFEASIBLE )
+         if( checkresult != SCIP_INFEASIBLE && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
-            SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+            SCIPdebugMessage("linear constraint is feasible and LP optimal, thus do not add\n");
          }
          else
          {

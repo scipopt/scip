@@ -415,6 +415,13 @@ void SCIPbranchruleSetExecPs(
    SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
    );
 
+/** enables or disables all clocks of \p branchrule, depending on the value of the flag */
+extern
+void SCIPbranchruleEnableOrDisableClocks(
+   SCIP_BRANCHRULE*      branchrule,         /**< the branching rule for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
+   );
+
 /*
  * branching methods
  */

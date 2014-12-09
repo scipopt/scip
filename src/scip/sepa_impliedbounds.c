@@ -43,7 +43,7 @@
  * Local methods
  */
 
-/* adds given cut with two variables, if it is violated */
+/** adds given cut with two variables, if it is violated */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */

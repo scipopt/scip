@@ -71,6 +71,13 @@ void SCIPclockDisable(
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 
+/** enables or disables \p clck, depending on the value of the flag */
+extern
+void SCIPclockEnableOrDisable(
+   SCIP_CLOCK*           clck,               /**< the clock to be disabled/enabled */
+   SCIP_Bool             enable              /**< should the clock be enabled? */
+   );
+
 /** sets the type of the clock, overriding the default clock type, and resets the clock */
 extern
 void SCIPclockSetType(
@@ -109,6 +116,7 @@ extern
 SCIP_Real SCIPclockGetLastTime(
    SCIP_CLOCK*           clck                /**< clock timer */
    );
+
 
 /** sets the used time of this clock in seconds */
 extern

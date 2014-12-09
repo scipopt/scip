@@ -246,6 +246,20 @@ void SCIPclockDisable(
    SCIPclockReset(clck);
 }
 
+/** enables or disables \p clck, depending on the value of the flag */
+void SCIPclockEnableOrDisable(
+   SCIP_CLOCK*           clck,               /**< the clock to be disabled/enabled */
+   SCIP_Bool             enable              /**< should the clock be enabled? */
+   )
+{
+   assert(clck != NULL);
+
+   if( enable )
+      SCIPclockEnable(clck);
+   else
+      SCIPclockDisable(clck);
+}
+
 /** sets the type of the clock, overriding the default clock type, and resets the clock */
 void SCIPclockSetType(
    SCIP_CLOCK*           clck,               /**< clock timer */
@@ -302,7 +316,7 @@ void SCIPclockStart(
             clck->lasttime = cputime2sec(clck->data.cpuclock.user);
             break;
 
-         case SCIP_CLOCKTYPE_WALL:            
+         case SCIP_CLOCKTYPE_WALL:
 #if defined(_WIN32) || defined(_WIN64)
             clck->data.wallclock.sec -= time(NULL);
 #else
@@ -321,12 +335,13 @@ void SCIPclockStart(
             clck->lasttime = walltime2sec(clck->data.wallclock.sec, clck->data.wallclock.usec);
             break;
 
-         case SCIP_CLOCKTYPE_DEFAULT:            
+         case SCIP_CLOCKTYPE_DEFAULT:
          default:
             SCIPerrorMessage("invalid clock type\n");
             SCIPABORT();
          }
       }
+
       clck->nruns++;
    }
 }
@@ -371,7 +386,7 @@ void SCIPclockStop(
 #endif
             break;
 
-         case SCIP_CLOCKTYPE_WALL:            
+         case SCIP_CLOCKTYPE_WALL:
 #if defined(_WIN32) || defined(_WIN64)
             clck->data.wallclock.sec += time(NULL);
 #else
@@ -431,7 +446,7 @@ SCIP_Real SCIPclockGetTime(
       case SCIP_CLOCKTYPE_CPU:
          result = cputime2sec(clck->data.cpuclock.user);
          break;
-      case SCIP_CLOCKTYPE_WALL:            
+      case SCIP_CLOCKTYPE_WALL:
          result = walltime2sec(clck->data.wallclock.sec, clck->data.wallclock.usec);
          break;
       default:
@@ -464,7 +479,7 @@ SCIP_Real SCIPclockGetTime(
          result = cputime2sec(clck->data.cpuclock.user + now.tms_utime);
 #endif
          break;
-      case SCIP_CLOCKTYPE_WALL:            
+      case SCIP_CLOCKTYPE_WALL:
 #if defined(_WIN32) || defined(_WIN64)
          result = walltime2sec(clck->data.wallclock.sec + time(NULL), 0);
 #else
@@ -520,7 +535,7 @@ void SCIPclockSetTime(
       sec2cputime(sec, &clck->data.cpuclock.user);
       break;
 
-   case SCIP_CLOCKTYPE_WALL:            
+   case SCIP_CLOCKTYPE_WALL:
       sec2walltime(sec, &clck->data.wallclock.sec, &clck->data.wallclock.usec);
       break;
 
@@ -555,7 +570,7 @@ void SCIPclockSetTime(
 #endif
          break;
 
-      case SCIP_CLOCKTYPE_WALL:            
+      case SCIP_CLOCKTYPE_WALL:
 #if defined(_WIN32) || defined(_WIN64)
          clck->data.wallclock.sec -= time(NULL);
 #else

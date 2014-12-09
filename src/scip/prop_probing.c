@@ -830,12 +830,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
    propdata->nuseless = 0;
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
-#if 0
-   propdata->nfixings = 0;
-   propdata->naggregations = 0;
-   propdata->nimplications = 0;
-   propdata->nbdchgs = 0;
-#endif
 
    return SCIP_OKAY;
 }
