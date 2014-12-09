@@ -57,6 +57,7 @@ fixed bugs:
 - fixed bug leading to an incorrect dual bound when solving probing LPs within a DURINGPRICINGLOOP heuristic
 - fixed bug in components presolver with handling of dual fixable variables: unboundedness was not detected,
   better handle components with single variables by dual fixing propagator
+- fixed bug in prop_dualfixing: don't fix variables to infinite values during solving
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
