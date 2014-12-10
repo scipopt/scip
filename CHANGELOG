@@ -58,6 +58,7 @@ fixed bugs:
 - fixed bug in components presolver with handling of dual fixable variables: unboundedness was not detected,
   better handle components with single variables by dual fixing propagator
 - fixed bug in prop_dualfixing: don't fix variables to infinite values during solving
+- fixed bug in cons_setppc with dual presolving disabled
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
