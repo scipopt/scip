@@ -1399,7 +1399,9 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
             break;
          }
 
-         y[c] = SCIPgetDualsolLinear(scip, transcons);
+         y[c] = SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE
+            ? SCIPgetDualsolLinear(scip, transcons)
+            : -SCIPgetDualsolLinear(scip, transcons);
          assert(y[c] != SCIP_INVALID); /*lint !e777*/
       }
    }
