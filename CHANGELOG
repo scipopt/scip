@@ -60,6 +60,7 @@ fixed bugs:
 - fixed bug in prop_dualfixing: don't fix variables to infinite values during solving
 - fixed bug in cons_setppc with dual presolving disabled
 - fixed sign of the dual multipliers returned by AMPL interfaces for maximization
+- fixed bug in GMI example: fractionality of slack variable is now computed correctly
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
