@@ -3747,7 +3747,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT )
+      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT || ((SCIPvarGetNLocksDown(var) == 0) && (SCIPvarGetNLocksUp(var) == 0)) )
       {
          /* convert maximization problem into minimization since MPS format the objective is to minimize */
          if( objsense == SCIP_OBJSENSE_MAXIMIZE )

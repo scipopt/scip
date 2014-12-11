@@ -921,7 +921,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* disable output to console */
 
 #ifdef SCIP_DEBUG
-   /* for debugging DINS, enable MIP output */
+   /* for debugging crossover, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
 #endif
@@ -942,6 +942,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
+
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
    /* set limits for the subproblem */
    heurdata->nodelimit = nstallnodes;

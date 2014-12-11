@@ -236,6 +236,8 @@ struct SCIP_Set
    int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
+   SCIP_Bool             istimelimitfinite;  /**< is the time limit finite */
+
    /* LP settings */
    int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    SCIP_Longint          lp_iterlim;         /**< iteration limit for each single LP solve; -1: no limit */
@@ -399,6 +401,8 @@ struct SCIP_Set
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
+   SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
+   SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
 
    /* visualization settings */
    char*                 visual_vbcfilename; /**< name of the VBC tool output file, or - if no VBC output should be created */

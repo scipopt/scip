@@ -1,0 +1,10 @@
+# SCIP version 3.0.0
+
+# frequency for calling separator <cgmip> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/cgmip/freq = 0
+
+# use strong CG-function to strengthen cut?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/usestrongcg = TRUE
+

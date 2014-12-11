@@ -355,22 +355,6 @@ INFERINFO getInferInfo(
  */
 
 #ifndef NDEBUG
-/** converts the given double bound which is integral to an int; in optimized mode the function gets inlined for
- *  performance; in debug mode we check some additional conditions
- */
-static
-int convertBoundToInt(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             bound               /**< double bound to convert */
-   )
-{
-   assert(SCIPisFeasIntegral(scip, bound));
-   assert(SCIPisFeasEQ(scip, bound, (SCIP_Real)(int)(bound < 0 ? bound - 0.5 : bound + 0.5)));
-   assert(bound < INT_MAX);
-   assert(bound > INT_MIN);
-
-   return (int)(bound < 0 ? (bound - 0.5) : (bound + 0.5));
-}
 
 /** compute the core of a job which lies in certain interval [begin, end) */
 static
@@ -388,7 +372,6 @@ int computeCoreWithInterval(
    return core;
 }
 #else
-#define convertBoundToInt(x, y) ((int)((y) < 0 ? (y) - 0.5 : (y) + 0.5))
 #define computeCoreWithInterval(begin, end, ect, lst) (MAX(0, MIN((end), (ect)) - MAX((lst), (begin))))
 #endif
 
@@ -411,7 +394,7 @@ SCIP_RETCODE computeImpliedEst(
    int v;
 #endif
 
-   (*est) = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+   (*est) = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
 
 #if 0
    /* the code contains a bug; we need to check if an implication forces that the jobs do not run in parallel */
@@ -434,7 +417,7 @@ SCIP_RETCODE computeImpliedEst(
          int vbdconst;
 
          duration = (int)(size_t)image;
-         vbdconst = convertBoundToInt(scip, vbdconsts[v]);
+         vbdconst = SCIPconvertRealToInt(scip, vbdconsts[v]);
 
          SCIPdebugMessage("check implication <%s>[%g,%g] >= <%s>[%g,%g] + <%g>\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -444,7 +427,7 @@ SCIP_RETCODE computeImpliedEst(
          {
             int impliedest;
 
-            impliedest =  convertBoundToInt(scip, SCIPvarGetUbLocal(vbdvar)) + duration;
+            impliedest =  SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vbdvar)) + duration;
 
             if( (*est) < impliedest )
             {
@@ -479,7 +462,7 @@ SCIP_RETCODE computeImpliedLct(
    int v;
 #endif
 
-   (*lct) = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
+   (*lct) = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration;
 
 #if 0
    /* the code contains a bug; we need to check if an implication forces that the jobs do not run in parallel */
@@ -498,7 +481,7 @@ SCIP_RETCODE computeImpliedLct(
       {
          int vbdconst;
 
-         vbdconst = convertBoundToInt(scip, -vbdconsts[v]);
+         vbdconst = SCIPconvertRealToInt(scip, -vbdconsts[v]);
 
          SCIPdebugMessage("check implication <%s>[%g,%g] <= <%s>[%g,%g] + <%g>\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -508,7 +491,7 @@ SCIP_RETCODE computeImpliedLct(
          {
             int impliedlct;
 
-            impliedlct = convertBoundToInt(scip, SCIPvarGetLbLocal(vbdvar));
+            impliedlct = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vbdvar));
 
             if( (*lct) > impliedlct )
             {
@@ -567,7 +550,7 @@ SCIP_RETCODE collectBinaryVars(
       demand = consdata->demands[varidx];
       assert(var != NULL);
 
-      endtime = convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + duration;
+      endtime = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var)) + duration;
 
       /* check the end time of this job is larger than the curtime; in this case the job is still running */
       if( endtime > curtime )
@@ -672,9 +655,9 @@ SCIP_RETCODE collectIntVars(
       assert(var != NULL);
 
       if( lower )
-         starttime = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+         starttime = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
       else
-         starttime = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+         starttime = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       endtime = MIN(starttime + duration, consdata->hmax);
 
@@ -724,16 +707,16 @@ void createSortedEventpoints(
       assert(var != NULL);
 
       if( local )
-         starttimes[j] = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+         starttimes[j] = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
       else
-         starttimes[j] = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
+         starttimes[j] = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var));
 
       startindices[j] = j;
 
       if( local )
-         endtimes[j] = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + durations[j];
+         endtimes[j] = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + durations[j];
       else
-         endtimes[j] = convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + durations[j];
+         endtimes[j] = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var)) + durations[j];
 
       endindices[j] = j;
 
@@ -771,10 +754,10 @@ void createSortedEventpointsSol(
       var = vars[j];
       assert(var != NULL);
 
-      starttimes[j] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, var));
+      starttimes[j] = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, var));
       startindices[j] = j;
 
-      endtimes[j] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, var)) + durations[j];
+      endtimes[j] = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, var)) + durations[j];
       endindices[j] = j;
 
    }
@@ -824,7 +807,7 @@ void createSelectedSortedEventpointsSol(
             continue;
 
 
-         starttimes[*nvars] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, var));
+         starttimes[*nvars] = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, var));
          startindices[*nvars] = j;
 
          endtimes[*nvars] =  starttimes[*nvars] + consdata->durations[j];
@@ -844,7 +827,7 @@ void createSelectedSortedEventpointsSol(
             || !SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetUbLocal(var)) )
             continue;
 
-         starttimes[*nvars] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, var));
+         starttimes[*nvars] = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, var));
          startindices[*nvars] = j;
 
          endtimes[*nvars] =  starttimes[*nvars] + consdata->durations[j];
@@ -963,7 +946,7 @@ SCIP_RETCODE computeRelevantEnergyIntervals(
          }
 
          idx = endindices[endindex];
-         est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[idx]));
+         est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[idx]));
          totaldemand -= (SCIP_Real) demands[idx] * durations[idx] / (endtimes[endindex] - est);
          endindex++;
 
@@ -971,7 +954,7 @@ SCIP_RETCODE computeRelevantEnergyIntervals(
       }
 
       idx = startindices[j];
-      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx]) + durations[idx]);
+      lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[idx]) + durations[idx]);
       totaldemand += (SCIP_Real) demands[idx] * durations[idx] / (lct - starttimes[j]);
 
       if( (*timepoints)[*ntimepoints] < curtime )
@@ -988,7 +971,7 @@ SCIP_RETCODE computeRelevantEnergyIntervals(
       {
          ++j;
          idx = startindices[j];
-         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx]) + durations[idx]);
+         lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[idx]) + durations[idx]);
          totaldemand += (SCIP_Real) demands[idx] * durations[idx] / (lct - starttimes[j]);
 
          (*cumulativedemands)[*ntimepoints] = totaldemand;
@@ -1009,7 +992,7 @@ SCIP_RETCODE computeRelevantEnergyIntervals(
       }
 
       idx = endindices[endindex];
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[idx]));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[idx]));
       totaldemand -= (SCIP_Real) demands[idx] * durations[idx] / (endtimes[endindex] - est);
       (*cumulativedemands)[*ntimepoints] = totaldemand;
 
@@ -1080,7 +1063,7 @@ SCIP_RETCODE evaluateCumulativeness(
 
       int timepoint;
       int j;
-      timepoint = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[v]));
+      timepoint = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[v]));
       peak = consdata->demands[v];
       ndemands = 1;
       maxdemand = 0;
@@ -1097,7 +1080,7 @@ SCIP_RETCODE evaluateCumulativeness(
             continue;
 
          maxdemand = 0.0;
-         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
+         lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
 
          if( lb <= timepoint && lb + consdata->durations[j] > timepoint )
          {
@@ -1123,7 +1106,7 @@ SCIP_RETCODE evaluateCumulativeness(
 
    resstrength1 = (capacity-globalmaxdemand) / (globalpeak-globalmaxdemand);
 
-   consdata->maxpeak = convertBoundToInt(scip, globalpeak);
+   consdata->maxpeak = SCIPconvertRealToInt(scip, globalpeak);
    consdata->disjfactor2 = disjfactor2;
    consdata->cumfactor1 = cumfactor1;
    consdata->resstrength2 = resstrength2;
@@ -1189,14 +1172,14 @@ SCIP_RETCODE getActiveVar(
       assert(SCIPvarIsActive(*var));
 
       if( realconstant < 0.0 )
-         (*constant) = -convertBoundToInt(scip, -realconstant);
+         (*constant) = -SCIPconvertRealToInt(scip, -realconstant);
       else
-         (*constant) = convertBoundToInt(scip, realconstant);
+         (*constant) = SCIPconvertRealToInt(scip, realconstant);
 
       if( realscalar < 0.0 )
-         (*scalar) = -convertBoundToInt(scip, -realscalar);
+         (*scalar) = -SCIPconvertRealToInt(scip, -realscalar);
       else
-         (*scalar) = convertBoundToInt(scip, realscalar);
+         (*scalar) = SCIPconvertRealToInt(scip, realscalar);
    }
    else
    {
@@ -2287,7 +2270,7 @@ SCIP_RETCODE checkCumulativeCondition(
       /* the constraint of the cumulative constraint handler should be called after the integrality check */
       assert(SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j])));
 
-      solvalue = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, vars[j]));
+      solvalue = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, vars[j]));
 
       /* we need to ensure that we check at least one time point during the effective horizon; therefore we project all
        * jobs which start before hmin to hmin
@@ -2481,8 +2464,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
          SCIPvarGetName(var),  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
          SCIPgetConflictVarLb(scip, var), SCIPgetConflictVarUb(scip, var), duration, demands[j]);
 
-      ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+      ect = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
 
       /* check if the inference peak is part of the global bound core; if so we decreasing the capacity by the demand of
        * that job without adding it the explanation
@@ -2506,8 +2489,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
        * hence these bound are already reported by other resolve propation steps. In case a bound (lower or upper) is
        * not part of the conflict yet we get the global bounds back.
        */
-      ect = convertBoundToInt(scip, SCIPgetConflictVarLb(scip, var)) + duration;
-      lst = convertBoundToInt(scip, SCIPgetConflictVarUb(scip, var));
+      ect = SCIPconvertRealToInt(scip, SCIPgetConflictVarLb(scip, var)) + duration;
+      lst = SCIPconvertRealToInt(scip, SCIPgetConflictVarUb(scip, var));
 
       /* check if the inference peak is part of the conflict bound core; if so we decreasing the capacity by the demand
        * of that job without and collect the job as part of the explanation
@@ -2559,8 +2542,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
          assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
 
          /* collect local core information */
-         ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
-         lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+         ect = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
+         lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
          SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
             SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
@@ -2599,8 +2582,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
          duration = durations[cands[c]];
 
-         ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
-         lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+         ect = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
+         lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
          maxlst = MAX(maxlst, lst);
          minect = MIN(minect, ect);
@@ -2726,8 +2709,8 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
          continue;
       }
 
-      lb = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
-      ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
       duration = durations[j];
       assert(duration > 0);
@@ -2884,7 +2867,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             int lct;
 
             /* get the latest start time of the infer start time variable before the propagation took place */
-            lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+            lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
             /* the latest start time of the inference start time variable before the propagation needs to be smaller as
              * the end of the time interval; meaning the job needs be overlap with the time interval in case the job is
@@ -2900,9 +2883,9 @@ SCIP_RETCODE analyzeEnergyRequirement(
             /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
             assert(right > 0);
 
-            lct = convertBoundToInt(scip, relaxedbd) + duration;
+            lct = SCIPconvertRealToInt(scip, relaxedbd) + duration;
             assert(begin <= lct);
-            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
+            assert(bdchgidx == NULL || SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             left = MIN(lct - begin + 1, end - begin);
@@ -2916,7 +2899,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             if( usebdwidening )
             {
-               assert(convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) <= (end - overlap));
+               assert(SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) <= (end - overlap));
                SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - overlap)) );
             }
             else
@@ -2931,7 +2914,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             assert(boundtype == SCIP_BOUNDTYPE_LOWER);
 
             /* get the earliest completion time of the infer start time variable before the propagation took place */
-            ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
+            ect = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
 
             /* the earliest start time of the inference start time variable before the propagation needs to be larger as
              * than the beginning of the time interval; meaning the job needs be overlap with the time interval in case
@@ -2947,7 +2930,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
             assert(left > 0);
 
-            est = convertBoundToInt(scip, relaxedbd);
+            est = SCIPconvertRealToInt(scip, relaxedbd);
             assert(end >= est);
             assert(bdchgidx == NULL || end - SCIPvarGetLbAtIndex(var, bdchgidx, TRUE) < duration);
 
@@ -2963,7 +2946,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             if( usebdwidening )
             {
-               assert(convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) >= (begin + overlap - duration));
+               assert(SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) >= (begin + overlap - duration));
                SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(begin + overlap - duration)) );
             }
             else
@@ -2982,8 +2965,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
       }
 
       /* global time points */
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
 
       glbenergy = 0;
 
@@ -3003,8 +2986,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
       }
 
       /* local time points */
-      est = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
-      lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
       /* check if the job has any overlap w.r.t. local bound; meaning some parts of the job will run for sure within the
        * time window
@@ -3148,8 +3131,8 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the inference peak that the time point which lead to the that propagtion */
-         inferpeak = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
-         relaxedpeak = convertBoundToInt(scip, relaxedbd) + inferduration;
+         inferpeak = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
+         relaxedpeak = SCIPconvertRealToInt(scip, relaxedbd) + inferduration;
 
          /* make sure that the relaxed peak is part of the effective horizon */
          relaxedpeak = MIN(relaxedpeak, hmax-1);
@@ -3166,8 +3149,8 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the time interval where the job could not be scheduled */
-         inferpeak = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
-         relaxedpeak = convertBoundToInt(scip, relaxedbd) - 1;
+         inferpeak = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
+         relaxedpeak = SCIPconvertRealToInt(scip, relaxedbd) - 1;
 
          /* make sure that the relaxed peak is part of the effective horizon */
          relaxedpeak = MAX(relaxedpeak, hmin);
@@ -3279,7 +3262,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
       {
          int ub;
 
-         ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+         ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
          if( alternativelbs[v] <= ub )
          {
@@ -3297,7 +3280,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
       {
          int lb;
 
-         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+         lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
 
          if( alternativeubs[v] >= lb )
          {
@@ -3529,8 +3512,8 @@ SCIP_RETCODE collectBranchingCands(
          if( SCIPhashtableExists(collectedvars, (void*)var) )
             continue;
 
-         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-         ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+         lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+         ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
          if( lb <= curtime && ub + consdata->durations[j] > curtime && lb < ub  )
          {
@@ -3958,8 +3941,8 @@ SCIP_RETCODE coretimesUpdateLb(
    demand = demands[idx];
    assert(demand > 0);
 
-   est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-   lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+   est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+   lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
    ntimepoints = SCIPprofileGetNTimepoints(profile);
 
    /* first we find left position of earliest start time (lower bound) in resource profile; this position gives us the
@@ -4053,7 +4036,7 @@ SCIP_RETCODE coretimesUpdateLb(
        *       the proposed lower bound might be even strength by be the core which can be the case if aggregations are
        *       involved.
        */
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
       assert(est >= newlb);
 
       /* adjust the search position for the resource profile for the next step */
@@ -4097,8 +4080,8 @@ SCIP_RETCODE coretimesUpdateUb(
    assert(duration > 0);
    assert(demand > 0);
 
-   est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-   lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+   est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+   lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
    /* in case the start time variable is fixed do nothing */
    if( est == lst )
@@ -4188,7 +4171,7 @@ SCIP_RETCODE coretimesUpdateUb(
        *       the proposed upper bound might be even strength by be the core which can be the case if aggregations are
        *       involved.
        */
-      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
       assert(lst <= newub);
       lct = lst + duration;
 
@@ -4311,8 +4294,8 @@ void collectDataTTEF(
       duration = durations[v];
       assert(duration > 0);
 
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
-      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v]));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[v]));
       ect = est + duration;
       lct = lst + duration;
 
@@ -4421,7 +4404,7 @@ SCIP_RETCODE tightenLbTTEF(
       {
          SCIP_Real relaxedbd;
 
-         assert(convertBoundToInt(scip, SCIPvarGetUbLocal(var)) < newlb);
+         assert(SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) < newlb);
 
          /* it is enough to overshoot the upper bound of the variable by one */
          relaxedbd = SCIPvarGetUbLocal(var) + 1.0;
@@ -4535,7 +4518,7 @@ SCIP_RETCODE tightenUbTTEF(
       {
          SCIP_Real relaxedbd;
 
-         assert(convertBoundToInt(scip, SCIPvarGetLbLocal(var)) > newub);
+         assert(SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var)) > newub);
 
          /* it is enough to undershoot the lower bound of the variable by one */
          relaxedbd = SCIPvarGetLbLocal(var) - 1.0;
@@ -4616,8 +4599,8 @@ SCIP_RETCODE propagateUbTTEF(
    /* compute earliest start and latest completion time of all jobs */
    for( v = 0; v < nvars; ++v )
    {
-      start = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
-      end = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
+      start = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      end = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
 
       est = MIN(est, start);
       lct = MAX(lct, end);
@@ -4752,7 +4735,7 @@ SCIP_RETCODE propagateUbTTEF(
          demand = demands[idx];
          assert(demand > 0);
 
-         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
+         lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration;
 
          /* the latest start time of the free part of the job */
          lst = lsts[idx];
@@ -4778,7 +4761,7 @@ SCIP_RETCODE propagateUbTTEF(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), duration, demand, est, lst);
 
          begin = est;
-         assert(convertBoundToInt(scip, SCIPvarGetLbLocal(var)) == est);
+         assert(SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var)) == est);
 
          /* if the earliest start time is smaller than hmin we can stop here since the next job will not decrease the
           * free energy
@@ -4863,8 +4846,8 @@ SCIP_RETCODE propagateUbTTEF(
             int newlb;
             int ect;
 
-            ect = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[lbcand])) + durations[lbcand];
-            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[lbcand]));
+            ect = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[lbcand])) + durations[lbcand];
+            lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[lbcand]));
 
             /* remove the energy of our job from the ... */
             energy = freeenergy + (computeCoreWithInterval(begin, end, ect, lst) + MAX(0, end - lsts[lbcand])) * demands[lbcand];
@@ -4974,8 +4957,8 @@ SCIP_RETCODE propagateLbTTEF(
    /* compute earliest start and latest completion time of all jobs */
    for( v = 0; v < nvars; ++v )
    {
-      start = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
-      end = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
+      start = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      end = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
 
       minest = MIN(minest, start);
       maxlct = MAX(maxlct, end);
@@ -5083,7 +5066,7 @@ SCIP_RETCODE propagateLbTTEF(
          demand = demands[idx];
          assert(demand > 0);
 
-         est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+         est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
 
          /* the earliest completion time of the flexible part of the job */
          ect = ects[idx];
@@ -5109,7 +5092,7 @@ SCIP_RETCODE propagateLbTTEF(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), duration, demand, est, ect);
 
          end = lct;
-         assert(convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration == lct);
+         assert(SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration == lct);
 
          /* if the latest completion time is larger than hmax we can stop here since the next job will not decrease the
           * free energy
@@ -5197,8 +5180,8 @@ SCIP_RETCODE propagateLbTTEF(
             duration = durations[ubcand];
             assert(duration > 0);
 
-            ect = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[ubcand])) + duration;
-            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[ubcand]));
+            ect = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[ubcand])) + duration;
+            lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[ubcand]));
 
             /* remove the energy of our job from the ... */
             energy = freeenergy + (computeCoreWithInterval(begin, end, ect, lst) + MAX(0, ects[ubcand] - begin)) * demands[ubcand];
@@ -5329,8 +5312,8 @@ SCIP_RETCODE propagateTTEF(
    /* we need to buffer the bound changes since the propagation algorithm cannot handle new bound dynamically */
    for( v = 0; v < nvars; ++v )
    {
-      newlbs[v] = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
-      newubs[v] = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v]));
+      newlbs[v] = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      newubs[v] = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[v]));
       lbinferinfos[v] = 0;
       ubinferinfos[v] = 0;
    }
@@ -5519,8 +5502,8 @@ SCIP_RETCODE propagateTimetable(
       assert(duration > 0);
 
       /* collect earliest and latest start time */
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       /* check if the start time variables is already fixed; in that case we can ignore the job */
       if( est == lst )
@@ -5561,8 +5544,8 @@ SCIP_RETCODE propagateTimetable(
          break;
 
       /* collect the potentially updated earliest and latest start time */
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       /* compute core interval w.r.t. effective time horizon */
       begin = MAX(hmin, lst);
@@ -6783,7 +6766,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       {
          int lct;
 
-         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[j])) + durations[j];
+         lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[j])) + durations[j];
          shift = MAX(shift, lct);
       }
    }
@@ -6811,8 +6794,8 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       leftadjust = 0;
       rightadjust = 0;
 
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration;
 
       /* adjust the duration, earliest start time, and latest completion time of jobs which do not lie completely in the
        * effective horizon [hmin,hmax)
@@ -6973,8 +6956,8 @@ SCIP_RETCODE checkOverloadViaThetaTree(
          duration = nodedata->duration - nodedata->leftadjust - nodedata->rightadjust;
 
          /* get latest start time */
-         glbest = convertBoundToInt(scip, SCIPvarGetLbGlobal(nodedata->var));
-         glblct = convertBoundToInt(scip, SCIPvarGetUbGlobal(nodedata->var)) + duration;
+         glbest = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(nodedata->var));
+         glblct = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(nodedata->var)) + duration;
 
          /* check if parts of the jobs run with the time window defined by the last inserted job */
          if( glbest < est )
@@ -7129,8 +7112,8 @@ SCIP_RETCODE consCheckRedundancy(
       var = vars[j];
       assert(var != NULL);
 
-      lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       /* check if jobs runs completely outside of the effective time horizon */
       if( lb >= hmax || ub + durations[j] <= hmin )
@@ -7241,8 +7224,8 @@ SCIP_RETCODE createCoreProfile(
       assert(demand > 0);
 
       /* collect earliest and latest start time */
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       /* check if the job runs completely outside of the effective horizon [hmin, hmax); if so skip it */
       if( lst + duration <= hmin || est >= hmax )
@@ -7719,7 +7702,7 @@ SCIP_RETCODE computeAlternativeBounds(
             int est;
 
             /* the variable has a down locked */
-            est = scalar * convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + constant;
+            est = scalar * SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var)) + constant;
             ect = est + consdata->durations[v];
 
             if( ect <= hmin || hmin >= hmax )
@@ -7741,7 +7724,7 @@ SCIP_RETCODE computeAlternativeBounds(
             duration =  consdata->durations[v];
 
             /* the variable has a up lock locked */
-            lst = scalar * convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
+            lst = scalar * SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + constant;
             lct = lst + duration;
 
             if( lst >= hmax || hmin >= hmax  )
@@ -7804,8 +7787,8 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       var = vars[v];
       assert(var != NULL);
 
-      lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       /* ignore fixed variables */
       if( ub - lb <= 0 )
@@ -7852,8 +7835,8 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
          }
       }
 
-      lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
       /* ignore fixed variables */
       if( ub - lb <= 0 )
@@ -8029,7 +8012,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
    {
       int ub;
 
-      ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[j]));
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(consdata->vars[j]));
 
       /* only add jobs to array if they intersect with point 'time' */
       if( startvalues[j] <= time && ub + consdata->durations[j] > time )
@@ -8105,8 +8088,8 @@ SCIP_RETCODE createCoverCutsTimepoint(
       vals = SCIPgetValsLinking(scip, consdata->linkingconss[idx]);
       assert(vals != NULL);
 
-      lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
-      ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
 
       /* compute start and finishing time */
       start = time - consdata->durations[idx] + 1;
@@ -8194,8 +8177,8 @@ SCIP_RETCODE createCoverCutsTimepoint(
          vals = SCIPgetValsLinking(scip, consdata->linkingconss[idx]);
          assert(vals != NULL);
 
-         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
-         ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
+         lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
+         ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
 
          /* compute start and finishing time */
          start = time - consdata->durations[idx] + 1;
@@ -8290,10 +8273,10 @@ SCIP_RETCODE createCoverCuts(
    /* assign start and endpoints to arrays */
    for ( j = 0; j < nvars; ++j )
    {
-      startvalues[j] = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
+      startvalues[j] = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
       startvaluessorted[j] = startvalues[j];
 
-      endvalues[j] = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[j])) + consdata->durations[j];
+      endvalues[j] = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(consdata->vars[j])) + consdata->durations[j];
       endvaluessorted[j] = endvalues[j];
 
       startindices[j] = j;
@@ -9163,8 +9146,8 @@ SCIP_RETCODE removeIrrelevantJobs(
       duration = consdata->durations[j];
 
       /* earliest completion time (ect) and latest start time (lst) */
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
-      lct = convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + duration;
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var));
+      lct = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var)) + duration;
 
       if( demand == 0 || duration == 0 )
       {
@@ -9223,8 +9206,8 @@ SCIP_RETCODE adjustOversizedJobBounds(
       SCIPvarGetName(var), consdata->demands[pos], consdata->capacity);
 
    /* earliest completion time (ect) and latest start time (lst) */
-   ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
-   lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+   ect = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
+   lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
 
    /* the jobs has to have an overlap with the efficient horizon otherwise it would be already removed */
    if( ect - duration >= consdata->hmax || lst + duration <= consdata->hmin)
@@ -9842,7 +9825,7 @@ SCIP_RETCODE presolveConsEst(
    {
       int ect;
 
-      ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[v])) + durations[v];
+      ect = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(vars[v])) + durations[v];
 
       if( ect < firstminect )
       {
@@ -9875,9 +9858,9 @@ SCIP_RETCODE presolveConsEst(
       /* collect earlier start time (est), earlier completion time (ect), latest start time (lst), and latest completion
        * time (lct)
        */
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var));
       ect = est + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
       lct = lst + duration;
 
       /* compute the earliest completion time of all remaining jobs */
@@ -9967,7 +9950,7 @@ SCIP_RETCODE presolveConsEst(
                SCIPvarGetName(var), ect - duration, lst, duration);
 
             /* after fixing the start time variable to its lower bound, the (new) earliest completion time should be smaller or equal ti hmin */
-            assert(convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration <= hmin);
+            assert(SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var)) + duration <= hmin);
 
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
@@ -10127,7 +10110,7 @@ SCIP_RETCODE presolveConsLct(
    {
       int lst;
 
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(vars[v]));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(vars[v]));
 
       if( lst > firstmaxlst )
       {
@@ -10159,9 +10142,9 @@ SCIP_RETCODE presolveConsLct(
       /* collect earlier start time (est), earlier completion time (ect), latest start time (lst), and latest completion
        * time (lct)
        */
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var));
       ect = est + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
 
       /* compute the latest start time of all remaining jobs */
       if( lst == firstmaxlst )
@@ -10247,7 +10230,7 @@ SCIP_RETCODE presolveConsLct(
                SCIPvarGetName(var), est, lst, duration);
 
             /* after fixing the start time variable to its upper bound, the (new) latest start time should be greather or equal ti hmax */
-            assert(convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) >= hmax);
+            assert(SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var)) >= hmax);
 
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
@@ -10379,8 +10362,8 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
          var = consdata->vars[v];
          assert(var != NULL);
 
-         ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + consdata->durations[v];
-         lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+         ect = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var)) + consdata->durations[v];
+         lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
 
          /* check if the jobs runs completely during the effective horizon */
          if( lst <= consdata->hmin && ect >= consdata->hmax )
@@ -10443,7 +10426,7 @@ SCIP_RETCODE collectDemands(
       var = consdata->vars[varidx];
       assert(var != NULL);
 
-      endtime = convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + consdata->durations[varidx];
+      endtime = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var)) + consdata->durations[varidx];
 
       /* check the end time of this job is larger than the curtime; in this case the job is still running */
       if( endtime > curtime )
@@ -10513,7 +10496,7 @@ SCIP_RETCODE getHighestCapacityUsage(
    assert(SCIPisFeasIntegral(scip, solval));
 
    /* store result */
-   *bestcapacity = convertBoundToInt(scip, solval);
+   *bestcapacity = SCIPconvertRealToInt(scip, solval);
 
    SCIPfreeBufferArray(scip, &items);
    SCIPfreeBufferArray(scip, &profits);
@@ -10737,8 +10720,8 @@ SCIP_RETCODE tightenCoefs(
 
       chgcoef = TRUE;
 
-      est_j = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
-      lct_j = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[j])) + consdata->durations[j];
+      est_j = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
+      lct_j = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(consdata->vars[j])) + consdata->durations[j];
 
       for( i = 0; i < nvars; ++i )
       {
@@ -10748,8 +10731,8 @@ SCIP_RETCODE tightenCoefs(
          if( i == j )
             continue;
 
-         est_i = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[i]));
-         lct_i = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[i])) + consdata->durations[i];
+         est_i = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(consdata->vars[i]));
+         lct_i = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(consdata->vars[i])) + consdata->durations[i];
 
          if( est_i >= lct_j || est_j >= lct_i )
             continue;
@@ -10819,9 +10802,9 @@ SCIP_RETCODE reformulateCons(
 
       duration = consdata->durations[v];
 
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(var));
       ect = est + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var));
       lct = lst + duration;
 
       /* jobs for which the core [lst,ect) contains [hmin,hmax) should be removed already */
@@ -11519,15 +11502,15 @@ SCIP_RETCODE constraintNonOverlappingGraph(
                int lct2;
 
                /* check if the effective horizon is large enough */
-               est1 = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[i]));
-               est2 = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[j]));
+               est1 = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[i]));
+               est2 = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[j]));
 
                /* at least one of the jobs needs to start at hmin or later */
                if( est1 < consdata->hmin && est2 < consdata->hmin )
                   continue;
 
-               lct1 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[i])) + consdata->durations[i];
-               lct2 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[j])) + consdata->durations[j];
+               lct1 = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[i])) + consdata->durations[i];
+               lct2 = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[j])) + consdata->durations[j];
 
                /* at least one of the jobs needs to finish not later then hmin */
                if( lct1 > consdata->hmax && lct2 > consdata->hmax )
@@ -11814,8 +11797,8 @@ SCIP_RETCODE computeMinDistance(
    BMSclearMemoryArray(tcliquegraph->weights, nnodes);
 
    /* get latest completion time (lct) of the source and the earliest start time (est) of sink */
-   lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[source])) + tcliquegraph->durations[source];
-   est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[sink]));
+   lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[source])) + tcliquegraph->durations[source];
+   est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(vars[sink]));
 
    /* weight all jobs which run for sure between source and sink with their duration */
    for( i = 0; i < nnodes; ++i )
@@ -11838,8 +11821,8 @@ SCIP_RETCODE computeMinDistance(
          /* job i runs after source and before sink */
          tcliquegraph->weights[i] = duration;
       }
-      else if( lct <= convertBoundToInt(scip, SCIPvarGetLbLocal(var))
-         && est >= convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration )
+      else if( lct <= SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var))
+         && est >= SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration )
       {
          /* job i run in between due the bounds of the start time variables */
          tcliquegraph->weights[i] = duration;
@@ -12375,7 +12358,7 @@ SCIP_RETCODE strengthVarbaounds(
       {
          if( SCIPisEQ(scip, vbdcoefs[b], 1.0) )
          {
-            if( convertBoundToInt(scip, vbdconsts[b]) > -durations[i] )
+            if( SCIPconvertRealToInt(scip, vbdconsts[b]) > -durations[i] )
             {
                for( j = 0; j < nvars; ++j )
                {
@@ -12385,7 +12368,7 @@ SCIP_RETCODE strengthVarbaounds(
                if( j == nvars )
                   continue;
 
-               if( demands[i] +  demands[j] > capacity && convertBoundToInt(scip, vbdconsts[b]) < durations[j] )
+               if( demands[i] +  demands[j] > capacity && SCIPconvertRealToInt(scip, vbdconsts[b]) < durations[j] )
                {
                   SCIP_Bool infeasible;
                   char name[SCIP_MAXSTRLEN];
@@ -14288,10 +14271,10 @@ SCIP_RETCODE SCIPcreateWorstCaseProfile(
       duration = durations[idx];
       assert(duration > 0);
 
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      est = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
       SCIP_CALL( computeImpliedEst(scip, var, addedvars, &impliedest) );
 
-      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
+      lct = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration;
       SCIP_CALL( computeImpliedLct(scip, var, duration, addedvars, &impliedlct) );
 
       if( impliedest < impliedlct )

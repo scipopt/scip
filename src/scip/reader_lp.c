@@ -1474,10 +1474,14 @@ SCIP_RETCODE createIndicatorConstraint(
    /* create second constraint if it was an equation */
    if( linConsEQ )
    {
+      char newname[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(newname, SCIP_MAXSTRLEN, "%s_eqneg", name);
+
       for( j = 0; j < nlincoefs; ++j )
          lincoefs[j] *= -1;
       linrhs *= -1;
-      SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
+      SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, newname, binvar, nlincoefs, linvars, lincoefs, linrhs,
             initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,

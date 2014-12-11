@@ -120,6 +120,13 @@ SCIP_RETCODE SCIPpricerDeactivate(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** enables or disables all clocks of \p pricer, depending on the value of the flag */
+extern
+void SCIPpricerEnableOrDisableClocks(
+   SCIP_PRICER*          pricer,             /**< the pricer for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the pricer be enabled? */
+   );
+
 /** calls reduced cost pricing method of variable pricer */
 extern
 SCIP_RETCODE SCIPpricerRedcost(

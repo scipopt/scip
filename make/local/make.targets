@@ -73,14 +73,4 @@ docexamples:
 
 .PHONY: coverage
 coverage:
-		-ln -s ../../../../src $(OBJDIR)/lib/scip
-		-ln -s ../../../../src $(OBJDIR)/lib/tclique
-		-ln -s ../../../../src $(OBJDIR)/lib/dijkstra
-		-ln -s ../../../../src $(OBJDIR)/lib/blockmemshell
-		-ln -s ../../../../src $(OBJDIR)/lib/nlpi
-		-ln -s ../../../../src $(OBJDIR)/lib/xml
-		-mkdir -p gcov
-		lcov -d $(OBJDIR) -z
-		make  $^ test
-		lcov -d $(OBJDIR) -c >gcov/scip.capture
-		genhtml -o gcov gcov/scip.capture
+		$(SHELL) ./check/check_coverage.sh $(MAINFILE) $(notdir $(MAINFILE)).$(HOSTNAME) $(MEM) $(VERSION) $(LPS) $(OBJDIR);

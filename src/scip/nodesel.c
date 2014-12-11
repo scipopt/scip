@@ -1145,6 +1145,18 @@ SCIP_Bool SCIPnodeselIsInitialized(
    return nodesel->initialized;
 }
 
+/** enables or disables all clocks of \p nodesel, depending on the value of the flag */
+void SCIPnodeselEnableOrDisableClocks(
+   SCIP_NODESEL*         nodesel,            /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   )
+{
+   assert(nodesel != NULL);
+
+   SCIPclockEnableOrDisable(nodesel->setuptime, enable);
+   SCIPclockEnableOrDisable(nodesel->nodeseltime, enable);
+}
+
 /** gets time in seconds used in this node selector for setting up for next stages */
 SCIP_Real SCIPnodeselGetSetupTime(
    SCIP_NODESEL*         nodesel             /**< node selector */

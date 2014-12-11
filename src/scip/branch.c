@@ -1927,6 +1927,18 @@ void SCIPbranchruleSetMaxbounddist(
    branchrule->maxbounddist = maxbounddist;
 }
 
+/** enables or disables all clocks of \p branchrule, depending on the value of the flag */
+void SCIPbranchruleEnableOrDisableClocks(
+   SCIP_BRANCHRULE*      branchrule,         /**< the branching rule for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
+   )
+{
+   assert(branchrule != NULL);
+
+   SCIPclockEnableOrDisable(branchrule->setuptime, enable);
+   SCIPclockEnableOrDisable(branchrule->branchclock, enable);
+}
+
 /** gets time in seconds used in this branching rule for setting up for next stages */
 SCIP_Real SCIPbranchruleGetSetupTime(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */

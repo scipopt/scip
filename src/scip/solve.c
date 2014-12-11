@@ -59,7 +59,9 @@
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
-
+#define MAXNCLOCKSKIPS 64               /**< maximum number of SCIPsolveIsStopped() calls without checking the clock */
+#define NINITCALLS 1000L                /**< minimum number of calls to SCIPsolveIsStopped() prior to dynamic clock skips */
+#define SAFETYFACTOR 1e-2               /**< the probability that SCIP skips the clock call after the time limit has already been reached */
 
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
@@ -72,6 +74,10 @@ SCIP_Bool SCIPsolveIsStopped(
 {
    assert(set != NULL);
    assert(stat != NULL);
+   assert(set->istimelimitfinite || SCIPsetIsInfinity(set, set->limit_time));
+
+   /* increase the number of calls to this method */
+   ++stat->nisstoppedcalls;
 
    /* in case lowerbound >= upperbound, we do not want to terminate with SCIP_STATUS_GAPLIMIT but with the ordinary 
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
@@ -91,9 +97,48 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
    }
-   else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
-      stat->status = SCIP_STATUS_TIMELIMIT;
-   else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - set->mem_externestim )
+   /* only measure the clock if a time limit is set */
+   else if( set->istimelimitfinite )
+   {
+      /* check if we have already called this function sufficiently often for a valid estimation of its average call interval */
+      if( stat->nclockskipsleft <= 0 || stat->nisstoppedcalls < NINITCALLS )
+      {
+         SCIP_Real currtime = SCIPclockGetTime(stat->solvingtime);
+
+         /* use the measured time to update the average time interval between two calls to this method */
+         if( set->time_rareclockcheck && stat->nisstoppedcalls >= NINITCALLS )
+         {
+            SCIP_Real avgisstoppedfreq;
+            int nclockskips = MAXNCLOCKSKIPS;
+
+            avgisstoppedfreq = currtime / stat->nisstoppedcalls;
+
+            /* if we are approaching the time limit, reset the number of clock skips to 0 */
+            if( (SAFETYFACTOR * (set->limit_time - currtime) / (avgisstoppedfreq + 1e-6)) < nclockskips )
+               nclockskips = 0;
+
+            stat->nclockskipsleft = nclockskips;
+         }
+         else
+            stat->nclockskipsleft = 0;
+
+         /* set the status if the time limit was hit */
+         if( currtime >= set->limit_time )
+         {
+            stat->status = SCIP_STATUS_TIMELIMIT;
+            return TRUE;
+         }
+      }
+      else if( SCIPclockGetLastTime(stat->solvingtime) >= set->limit_time )
+      {
+         /* use information if clock has been updated more recently */
+         stat->status = SCIP_STATUS_TIMELIMIT;
+         return TRUE;
+      }
+      else
+         --stat->nclockskipsleft;
+   }
+   if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - set->mem_externestim )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
       stat->status = SCIP_STATUS_GAPLIMIT;

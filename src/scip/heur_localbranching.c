@@ -553,6 +553,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    /* set limits for the subproblem */
    heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );

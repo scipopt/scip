@@ -1076,6 +1076,22 @@ SCIP_Bool SCIPisPresolveFinished(
    return finished;
 }
 
+/** returns whether SCIP has performed presolving during the last solve
+ *
+ *  @return Returns TRUE if presolving was performed during the last solve
+ */
+SCIP_Bool SCIPhasPerformedPresolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPerformedPresolve", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->performpresol;
+}
+
 /** returns whether the user pressed CTRL-C to interrupt the solving process
  *
  *  @return Returns TRUE if Ctrl-C was pressed, otherwise FALSE.
@@ -8700,7 +8716,7 @@ SCIP_RETCODE SCIPreadProb(
    char* tmpfilename;
    char* fileextension;
 
-   assert(scip != NULL);  
+   assert(scip != NULL);
    assert(filename != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -13354,7 +13370,7 @@ SCIP_RETCODE freeTransform(
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
    /* reset objective limit */
-   SCIP_CALL( SCIPsetObjlimit(scip, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
 
    /* reset original variable's local and global bounds to their original values */
    SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
@@ -14035,6 +14051,13 @@ SCIP_RETCODE SCIPcreateVar(
    assert(lb <= ub);
 
    SCIP_CALL( checkStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* forbid infinite objective function values */
+   if( SCIPisInfinity(scip, ABS(obj)) )
+   {
+      SCIPerrorMessage("invalid objective function value: value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
 
    switch( scip->set->stage )
    {
@@ -17832,6 +17855,13 @@ SCIP_RETCODE SCIPchgVarObj(
    SCIP_CALL( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
+
+   /* forbid infinite objective values */
+   if( SCIPisInfinity(scip, ABS(newobj)) )
+   {
+      SCIPerrorMessage("invalid objective value: objective value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
 
    switch( scip->set->stage )
    {
@@ -37652,7 +37682,7 @@ void printSolutionStatistics(
 
    objlimitreached = FALSE;
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-      && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+      && !SCIPisInfinity(scip, primalbound)  )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
@@ -37668,7 +37698,7 @@ void printSolutionStatistics(
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
-         if( scip->primal->nsols == 0 )
+         if( scip->primal->nlimsolsfound == 0 )
          {
             if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
             {
@@ -37696,7 +37726,7 @@ void printSolutionStatistics(
    }
    else
    {
-      if( scip->primal->nsols == 0 )
+      if( scip->primal->nlimsolsfound == 0 )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
@@ -38312,6 +38342,56 @@ SCIP_RETCODE SCIPstopClock(
    assert(scip != NULL);
 
    SCIPclockStop(clck, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** enables or disables all statistic clocks of SCIP concerning plugin statistics,
+ *  LP execution time, strong branching time, etc.
+ *
+ *  Method reads the value of the parameter timing/statistictiming. In order to disable statistic timing,
+ *  set the parameter to FALSE.
+ *
+ *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
+ *         are not affected by this method
+ *
+ *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPenableOrDisableStatisticTiming(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPenableOrDisableStatisticTiming", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIPsetEnableOrDisablePluginClocks(scip->set, scip->set->time_statistictiming);
+
+   if( scip->set->stage > SCIP_STAGE_INIT )
+   {
+      assert(scip->stat != NULL);
+      SCIPstatEnableOrDisableStatClocks(scip->stat, scip->set->time_statistictiming);
+   }
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMING )
+   {
+      assert(scip->conflict != NULL);
+      SCIPconflictEnableOrDisableClocks(scip->conflict, scip->set->time_statistictiming);
+   }
 
    return SCIP_OKAY;
 }
@@ -39060,6 +39140,8 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisSumRelLE
 #undef SCIPisSumRelGT
 #undef SCIPisSumRelGE
+#undef SCIPconvertRealToInt
+#undef SCIPconvertRealToLongint
 #undef SCIPisUpdateUnreliable
 #undef SCIPisHugeValue
 #undef SCIPgetHugeValue
@@ -40112,6 +40194,38 @@ SCIP_Bool SCIPisSumRelGE(
       || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
+}
+
+/** converts the given real number representing an integer to an int; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+int SCIPconvertRealToInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   )
+{
+   assert(SCIPisFeasIntegral(scip, real));
+   assert(SCIPisFeasEQ(scip, real, (SCIP_Real)(int)(real < 0 ? real - 0.5 : real + 0.5)));
+   assert(real < INT_MAX);
+   assert(real > INT_MIN);
+
+   return (int)(real < 0 ? (real - 0.5) : (real + 0.5));
+}
+
+/** converts the given real number representing an integer to a long integer; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+SCIP_Longint SCIPconvertRealToLongint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   )
+{
+   assert(SCIPisFeasIntegral(scip, real));
+   assert(SCIPisFeasEQ(scip, real, (SCIP_Real)(SCIP_Longint)(real < 0 ? real - 0.5 : real + 0.5)));
+   assert(real < SCIP_LONGINT_MAX);
+   assert(real > SCIP_LONGINT_MIN);
+
+   return (SCIP_Longint)(real < 0 ? (real - 0.5) : (real + 0.5));
 }
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.

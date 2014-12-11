@@ -317,6 +317,7 @@ struct SCIP_Lp
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
+   int                   lpitiming;          /**< current timing type in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */

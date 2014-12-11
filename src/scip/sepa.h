@@ -182,6 +182,13 @@ void SCIPsepaSetExitsol(
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
+/** enables or disables all clocks of \p sepa, depending on the value of the flag */
+extern
+void SCIPsepaEnableOrDisableClocks(
+   SCIP_SEPA*            sepa,               /**< the separator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the separator be enabled? */
+   );
+
 /** increase count of applied cuts */
 extern
 void SCIPsepaIncNAppliedCuts(

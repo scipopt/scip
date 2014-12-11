@@ -3873,7 +3873,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool redundant;
-   int nchgcoefs;
+   int nchgcoefs = 0;
    int c;
    int v;
 

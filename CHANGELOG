@@ -46,12 +46,16 @@ interface:
 - submenu for setting "vbc" settings renamed to "visual"
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
+- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
 
 
 SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug in cons_quadratic which leads to wrong min/max activities
+- fixed wrong conversion of reals representing negative integer values
+- in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
 - fixed bug in proximity heuristic which attempted to enter diving mode even at nodes without a constructed LP
 - fixed wrong pseudo cost updates during diving heuristic execution after backtracking
 - fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
@@ -94,17 +98,30 @@ fixed bugs:
   SCIPvarIsBinary() returned true
 - treat activities of pseudo solutions as invalid when containing positive and negative infinity contributions
 - fixed bug in cons_setppc, wrongly aggregating variables if dual-presolving was disabled
+- fixed bug that objective limit was not reset correctly during SCIPfreeTransform() for maximization problems
+- fixed bug in cons_sos1: locks and events were not initialized if constraint was added to transformed problem
+- fixed bug(?) in reader_mps: variables are now written in columns section even of they occur in no constraint
+  and have an objective coefficient of 0 (otherwise, CPLEX and Gurobi cannot read the file)
+- fixed bug that hitting the time limit while solving a pure LP and then continuing the solving process lead to
+  not solving the LP, but always creating a single child node until maximum depth is reached
+- fixed bug in reader_lp which created two indicator constraints with the same name to trigger an equality
+- fixed bug leading to an incorrect dual bound when solving probing LPs within a DURINGPRICINGLOOP heuristic
+- fixed bug in components presolver with handling of dual fixable variables: unboundedness was not detected,
+  better handle components with single variables by dual fixing propagator
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
 - improved memory management of proximity heuristic
+- disabled statistic timing in all subscips via new parameter timing/statistictiming
 
 features:
+- use clock average to reduce number of system calls via timing/rareclockcheck parameter
 - added copy mechanism for conjunction constraints
 - added Makefile support for cygwin 64 Bit
 - added revised lpi_xprs for using XPRESS as LP solver
 
 interface:
+- added methods SCIPconvertRealTo[Long]Int() to convert reals that represent integers to [long] ints.
 - added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance
 - forbid to call SCIPfixVar() in SCIP_STAGE_PRESOLVED stage, which is not allowed since it calls SCIPchgVarLb/Ub()
 - rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData(); SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
@@ -113,8 +130,15 @@ interface:
   the created subscip automatically at the end.
 - new method SCIPdeleteSubproblemProximity() to free proximity subproblem manually as external caller
 - added dialog for writing the finite solution (calling SCIPcreateFiniteSolCopy() before writing)
+- new method SCIPhasPerformedPresolve() to check, e.g., whether LP duals are accessible
+- AMPL interface now returns dual multipliers if problem is an LP and presolving was turned off
+- changes in clock type are now transferred to SoPlex
 
 parameters:
+- new parameter timing/rareclockcheck to call the system time less frequently, based on the current average time interval
+  between two calls to SCIPsolveIsStopped(); the default value is FALSE
+- new parameter timing/statistictiming to enable/disable all timers for statistic output of SCIP;
+  the default value is TRUE
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
 - changed default value of parameter heuristics/proximity/usefinallp to FALSE
 

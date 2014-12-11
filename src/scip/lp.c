@@ -46,6 +46,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
+#include "scip/solve.h"
 #include "scip/event.h"
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
@@ -3035,6 +3036,40 @@ SCIP_RETCODE lpSetConditionLimit(
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_CONDITIONLIMIT, condlimit, success) );
       if( *success )
          lp->lpiconditionlimit = condlimit;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets the type of timer of the LP solver */
+static
+SCIP_RETCODE lpSetTiming(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLOCKTYPE        timing,             /**< new timing value */
+   SCIP_Bool             enabled,            /**< is timing enabled? */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   int lptiming;
+
+   assert(lp != NULL);
+   assert(success != NULL);
+   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2);
+
+   SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_TIMING, lp->lpitiming) );
+
+   if( !enabled )
+      lptiming = 0;
+   else
+      lptiming = (int) timing;
+
+   if( lptiming != lp->lpitiming )  /*lint !e777*/
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_TIMING, lptiming, success) );
+      if( *success )
+         lp->lpitiming = lptiming;
    }
    else
       *success = FALSE;
@@ -8658,6 +8693,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
+   (*lp)->lpitiming = set->time_clocktype;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -8718,6 +8754,13 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: presolving not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_TIMING, (*lp)->lpitiming, &success) );
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: clock type cannot be set\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim, &success) );
@@ -13485,17 +13528,21 @@ SCIP_RETCODE lpAlgorithm(
    assert(lp->flushed);
    assert(lperror != NULL);
 
-   lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
-   success = FALSE;
-   if( lptimelimit > 0.0 )
-      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
-
-   if( lptimelimit <= 0.0 || !success )
+   /* check if a time limit is set, and set time limit for LP solver accordingly */
+   if( set->istimelimitfinite )
    {
-      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
-      *timelimit = TRUE;
-      return SCIP_OKAY;
+      lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      success = FALSE;
+      if( lptimelimit > 0.0 )
+         SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+
+      if( lptimelimit <= 0.0 || !success )
+      {
+         SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
+         *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
+         *timelimit = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
@@ -13621,6 +13668,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetThreads(lp, set->lp_threads, &success) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
+   SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
@@ -14405,7 +14453,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
    assert(lp->flushed);
 
-   if( !lp->solved )
+   /* if the time limit was reached in the last call and the LP did not change, lp->solved is set to TRUE, but we want
+    * to run again anyway, since there seems to be some time left / the time limit was increased
+    */
+   if( !lp->solved || (lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT && stat->status != SCIP_STATUS_TIMELIMIT) )
    {
       SCIP_Bool* primalfeaspointer;
       SCIP_Bool* dualfeaspointer;
@@ -14852,6 +14903,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIPdebugMessage(" -> LP time limit exceeded\n");
+
+         if( !SCIPsolveIsStopped(set, stat, FALSE) )
+         {
+            SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
+               "you might consider switching the clock type of SCIP\n");
+            stat->status = SCIP_STATUS_TIMELIMIT;
+         }
          break;
 
       case SCIP_LPSOLSTAT_ERROR:

@@ -946,6 +946,21 @@ int SCIPpropGetFreq(
    return prop->freq;
 }
 
+/** enables or disables all clocks of \p prop, depending on the value of the flag */
+void SCIPpropEnableOrDisableClocks(
+   SCIP_PROP*            prop,               /**< the propagator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the propagator be enabled? */
+   )
+{
+   assert(prop != NULL);
+
+   SCIPclockEnableOrDisable(prop->setuptime, enable);
+   SCIPclockEnableOrDisable(prop->presoltime, enable);
+   SCIPclockEnableOrDisable(prop->proptime, enable);
+   SCIPclockEnableOrDisable(prop->resproptime, enable);
+   SCIPclockEnableOrDisable(prop->sbproptime, enable);
+}
+
 /** gets time in seconds used for setting up this propagator for new stages */
 SCIP_Real SCIPpropGetSetupTime(
    SCIP_PROP*            prop                /**< propagator */

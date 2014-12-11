@@ -714,6 +714,18 @@ SCIP_Bool SCIPsepaUsesSubscip(
    return sepa->usessubscip;
 }
 
+/** enables or disables all clocks of \p sepa, depending on the value of the flag */
+void SCIPsepaEnableOrDisableClocks(
+   SCIP_SEPA*            sepa,               /**< the separator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the separator be enabled? */
+   )
+{
+   assert(sepa != NULL);
+
+   SCIPclockEnableOrDisable(sepa->setuptime, enable);
+   SCIPclockEnableOrDisable(sepa->sepaclock, enable);
+}
+
 /** gets time in seconds used in this separator for setting up for next stages */
 SCIP_Real SCIPsepaGetSetupTime(
    SCIP_SEPA*            sepa                /**< separator */

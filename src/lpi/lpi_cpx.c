@@ -80,12 +80,18 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 #define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
 
 /* CPLEX parameter lists which can be changed */
+#if (CPX_VERSION < 12060100)
 #define NUMINTPARAM  10
+#else
+#define NUMINTPARAM  9
+#endif
 static const int intparam[NUMINTPARAM] =
 {
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
+#if (CPX_VERSION < 12060100)
    CPX_PARAM_FASTMIP,
+#endif
    CPX_PARAM_SCAIND,
    CPX_PARAM_PREIND,
    CPX_PARAM_PPRIIND,
@@ -3914,9 +3920,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FROMSCRATCH:
       *ival = lpi->fromscratch;
       break;
+#if (CPX_VERSION < 12060100)
    case SCIP_LPPAR_FASTMIP:
       *ival = getIntParam(lpi, CPX_PARAM_FASTMIP);
       break;
+#endif
    case SCIP_LPPAR_SCALING:
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound )
@@ -4002,10 +4010,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       lpi->fromscratch = ival;
       break;
+#if (CPX_VERSION < 12060100)
    case SCIP_LPPAR_FASTMIP:
       assert(0 <= ival && ival <= 1);
       setIntParam(lpi, CPX_PARAM_FASTMIP, ival);
       break;
+#endif
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
 #if (CPX_VERSION <= 1100)
