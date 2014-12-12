@@ -8301,6 +8301,29 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    );
 
+/** force SCIP to clean up all cliques; cliques do not get automatically cleaned up after presolving. Use
+ *  this method to prevent inactive variables in cliques when retrieved via SCIPgetCliques()
+ *
+ *  @return SCIP_OKAY if everything worked, otherwise a suitable error code is passed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_RETCODE SCIPcleanupCliques(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            infeasible,         /**< pointer to store if cleanup detected infeasibility */
+   int*                  nlocalbdchgs        /**< pointer to store the number of detected bound changes */
+   );
+
 /** gets the number of cliques in the clique table
  *
  *  @return number of cliques in the clique table

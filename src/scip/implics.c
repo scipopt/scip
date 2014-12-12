@@ -935,11 +935,60 @@ SCIP_Bool SCIPimplicsContainsImpl(
  * methods for cliques
  */
 
+/* swaps cliques at positions first and second in cliques array of clique table */
+static
+void cliquetableSwapCliques(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   int                   first,              /**< first index */
+   int                   second              /**< second index */
+   )
+{
+   /* nothing to do if clique happens to be at the pole position of clean cliques */
+   if( first != second )
+   {
+      SCIP_CLIQUE* tmp;
+
+      tmp = cliquetable->cliques[first];
+      assert(tmp->index == first);
+      assert(cliquetable->cliques[second]->index == second);
+
+      cliquetable->cliques[first] = cliquetable->cliques[second];
+      cliquetable->cliques[second] = tmp;
+
+      /* change the indices accordingly */
+      tmp->index = second;
+      cliquetable->cliques[first]->index = first;
+   }
+}
+
+/* moves clique to the last position of currently dirty cliques */
+static
+void cliquetableMarkCliqueForCleanup(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   assert(cliquetable->ndirtycliques <= clique->index);
+   assert(cliquetable->cliques[clique->index] == clique);
+   assert(cliquetable->ndirtycliques < cliquetable->ncliques);
+   assert(SCIPcliqueIsCleanedUp(cliquetable->cliques[cliquetable->ndirtycliques]));
+
+   /* nothing to do if clique happens to be at the pole position of clean cliques */
+   if( clique->index > cliquetable->ndirtycliques )
+   {
+      cliquetableSwapCliques(cliquetable, clique->index, cliquetable->ndirtycliques);
+   }
+
+   ++cliquetable->ndirtycliques;
+}
+
+
 /** creates a clique data structure with already created variables and values arrays in the size of 'size' */
 static
 SCIP_RETCODE cliqueCreateWithData(
    SCIP_CLIQUE**         clique,             /**< pointer to store clique data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< the clique table */
    int                   size,               /**< initial size of clique */
    SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given
                                               *   value */
@@ -954,6 +1003,7 @@ SCIP_RETCODE cliqueCreateWithData(
    assert(size >= nvars && nvars > 0);
    assert(vars != NULL);
    assert(values != NULL);
+   assert(cliquetable != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, clique) );
    (*clique)->vars = vars;
@@ -961,10 +1011,11 @@ SCIP_RETCODE cliqueCreateWithData(
    (*clique)->nvars = nvars;
    (*clique)->size = size;
    (*clique)->startcleanup = -1;
-   (*clique)->ncleanupvars = 0;
    (*clique)->id = (unsigned int)id;
    (*clique)->eventsissued = FALSE;
    (*clique)->equation = isequation;
+   (*clique)->cliquetable = cliquetable;
+   (*clique)->index = -1;
 
    return SCIP_OKAY;
 }
@@ -1228,6 +1279,7 @@ void SCIPcliqueDelVar(
 
    assert(clique != NULL);
    assert(SCIPvarIsBinary(var));
+   assert(clique->cliquetable != NULL);
 
    SCIPdebugMessage("marking variable <%s> == %u from clique %u for deletion\n", SCIPvarGetName(var), value, clique->id);
 
@@ -1238,11 +1290,15 @@ void SCIPcliqueDelVar(
    assert(clique->vars[pos] == var);
    assert(clique->values[pos] == value);
 
+   /* inform the clique table that this clique should be cleaned up */
+   if( clique->startcleanup == -1 )
+      cliquetableMarkCliqueForCleanup(clique->cliquetable, clique);
+
    if( clique->startcleanup == -1 || pos < clique->startcleanup )
       clique->startcleanup = pos;
-
+/*
    ++(clique->ncleanupvars);
-   assert(clique->ncleanupvars <= clique->nvars);
+   assert(clique->ncleanupvars <= clique->nvars);*/
 }
 
 /** gets the position of the given clique in the cliques array; returns -1 if clique is not member of cliques array */
@@ -1316,6 +1372,11 @@ void cliqueCheck(
       pos = cliquesSearchClique(cliques, ncliques, clique);
       assert(0 <= pos && pos < ncliques);
       assert(cliques[pos] == clique);
+      assert(clique->cliquetable != NULL);
+      assert(clique->index >= 0);
+      assert(clique->index < clique->cliquetable->ncliques);
+      assert(clique->cliquetable->cliques[clique->index] == clique);
+      assert(!SCIPcliqueIsCleanedUp(clique) || clique->index >= clique->cliquetable->ndirtycliques);
    }
 }
 #else
@@ -1701,7 +1762,7 @@ SCIP_RETCODE SCIPcliquetableCreate(
    (*cliquetable)->ncreatedcliques = 0;
    (*cliquetable)->ncleanupfixedvars = 0;
    (*cliquetable)->ncleanupaggrvars = 0;
-   (*cliquetable)->ncleanupcliques = 0;
+   (*cliquetable)->ndirtycliques = 0;
    (*cliquetable)->nentries = 0;
 
    return SCIP_OKAY;
@@ -1806,7 +1867,7 @@ SCIP_RETCODE mergeClique(
    assert(infeasible != NULL);
 
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
-    * new clique, and therefore the sortation before removing them should be ok, otherwise we may need to remove these
+    * new clique, and therefore sorting before removing them should be ok, otherwise we may need to remove these
     * variables before sorting
     */
    for( v = *nclqvars - 1; v > 0; --v )
@@ -1857,6 +1918,10 @@ SCIP_RETCODE mergeClique(
          /* do we have the same variable with the same clique value twice? */
          else
          {
+            if( clique != NULL )
+            {
+               SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, clqvalues[v], clique) );
+            }
             /* a variable multiple times in one clique forces this variable to be zero */
             SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                   !clqvalues[v], infeasible, &nlocalbdchgs) );
@@ -2217,7 +2282,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
       /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 ) */
 
       /* create the clique data structure */
-      SCIP_CALL( cliqueCreateWithData(&clique, blkmem, size, clqvars, clqvalues, nvars, cliquetable->ncreatedcliques, isequation) );
+      SCIP_CALL( cliqueCreateWithData(&clique, blkmem, cliquetable, size, clqvars, clqvalues, nvars, cliquetable->ncreatedcliques, isequation) );
 
       sameclique = SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
 
@@ -2230,6 +2295,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
          /* add clique to clique table */
          SCIP_CALL( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
          cliquetable->cliques[cliquetable->ncliques] = clique;
+         clique->index = cliquetable->ncliques;
          cliquetable->ncliques++;
          cliquetable->nentries += nvars;
 
@@ -2292,7 +2358,7 @@ SCIP_RETCODE cliqueCleanup(
    assert(infeasible != NULL);
 
    /* do we need to clean up fixed variables? */
-   if( clique->ncleanupvars > 0 )
+   if( !SCIPcliqueIsCleanedUp(clique) )
    {
       SCIP_VAR* onefixedvar = NULL;
       SCIP_Bool onefixedvalue;
@@ -2302,7 +2368,7 @@ SCIP_RETCODE cliqueCleanup(
       int v;
       int w;
 
-      assert(clique->ncleanupvars <= clique->nvars - clique->startcleanup);
+      /*assert(clique->ncleanupvars <= clique->nvars - clique->startcleanup);*/
 
 /* @TODO start w,v from clique->startcleanup again */
       w = 0;
@@ -2420,7 +2486,7 @@ SCIP_RETCODE cliqueCleanup(
          }
       }
       clique->nvars = w;
-      clique->ncleanupvars = 0;
+/*      clique->ncleanupvars = 0;*/
       clique->startcleanup = -1;
 
       if( onefixedvar != NULL )
@@ -2508,16 +2574,11 @@ SCIP_RETCODE cliqueCleanup(
 
       /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 ) */
 
-      clique->ncleanupvars = 0;
+      /*clique->ncleanupvars = 0;*/
       clique->startcleanup = -1;
    }
-   assert(clique->ncleanupvars == 0);
-   assert(clique->startcleanup == -1);
-
-   if( !*infeasible )
-   {
-      cliqueCheck(clique);
-   }
+   /*assert(clique->ncleanupvars == 0);*/
+   assert(SCIPcliqueIsCleanedUp(clique));
 
    return SCIP_OKAY;
 }
@@ -2543,8 +2604,12 @@ SCIP_Bool checkNEntries(
 #define checkNEntries(cliquetable) TRUE
 #endif
 
-/** removes all empty and single variable cliques from the clique table; removes double entries from the clique table */
-/** @todo try to detect infeasible implications, e.g., x = 1 => (y = 0 && y = 1) */
+/** removes all empty and single variable cliques from the clique table; removes double entries from the clique table
+ *
+ * @note cliques can be processed several times by this method
+ *
+ * @TODO try to detect infeasible implications, e.g., x = 1 => (y = 0 && y = 1)
+ */
 SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2560,8 +2625,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
-   int i;
-
    assert(cliquetable != NULL);
    assert(stat != NULL);
    assert(infeasible != NULL);
@@ -2571,7 +2634,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    /* check if we have anything to do */
    if( stat->npresolfixedvars == cliquetable->ncleanupfixedvars
       && stat->npresolaggrvars == cliquetable->ncleanupaggrvars
-      && cliquetable->ncliques == cliquetable->ncleanupcliques )
+      && cliquetable->ndirtycliques == 0 )
       return SCIP_OKAY;
 
    SCIPdebugMessage("cleaning up clique table with %d cliques (with %"SCIP_LONGINT_FORMAT" entries)\n", cliquetable->ncliques, cliquetable->nentries);
@@ -2579,21 +2642,14 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
-
-
-   i = cliquetable->ncliques - 1;
-   while( i >= 0 && !(*infeasible) )
+   while( cliquetable->ndirtycliques > 0 && !(*infeasible) )
    {
       SCIP_CLIQUE* clique;
       SCIP_CLIQUE* sameclique;
 
-      clique = cliquetable->cliques[i];
+      clique = cliquetable->cliques[0];
 
-      if( clique->ncleanupvars == 0 )
-      {
-         --i;
-         continue;
-      }
+      assert(!SCIPcliqueIsCleanedUp(clique));
 
       /* remove not clean up clique from hastable */
       SCIP_CALL( SCIPhashtableRemove(cliquetable->hashtable, (void*)clique) );
@@ -2606,7 +2662,12 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       if( *infeasible )
          break;
 
-      assert(clique->ncleanupvars == 0);
+      assert(SCIPcliqueIsCleanedUp(clique));
+
+      /* swap freshly cleaned clique with last dirty clique */
+      cliquetable->ndirtycliques--;
+      cliquetableSwapCliques(cliquetable, 0, cliquetable->ndirtycliques);
+      cliqueCheck(clique);
 
       /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING */
 #if 0
@@ -2706,9 +2767,13 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          }
 
          /* free clique and remove it from clique table */
-         cliqueFree(&cliquetable->cliques[i], blkmem);
-         cliquetable->cliques[i] = cliquetable->cliques[cliquetable->ncliques-1];
+         cliqueFree(&cliquetable->cliques[cliquetable->ndirtycliques], blkmem);
          cliquetable->ncliques--;
+         if( cliquetable->ndirtycliques < cliquetable->ncliques )
+         {
+            cliquetable->cliques[cliquetable->ndirtycliques] = cliquetable->cliques[cliquetable->ncliques];
+            cliquetable->cliques[cliquetable->ndirtycliques]->index = cliquetable->ndirtycliques;
+         }
       }
       else
       {
@@ -2730,13 +2795,12 @@ SCIP_RETCODE SCIPcliquetableCleanup(
             clique->eventsissued = TRUE;
          }
       }
-      --i;
    }
 
    /* remember the number of fixed variables and cliques in order to avoid unnecessary cleanups */
    cliquetable->ncleanupfixedvars = stat->npresolfixedvars;
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
-   cliquetable->ncleanupcliques = cliquetable->ncliques;
+   assert(*infeasible || cliquetable->ndirtycliques == 0);
 
    assert(*infeasible || checkNEntries(cliquetable));
 
@@ -2910,7 +2974,7 @@ SCIP_Bool SCIPcliqueIsCleanedUp(
 {
    assert(clique != NULL);
 
-   return (clique->ncleanupvars == 0);
+   return (clique->startcleanup == -1);
 }
 
 /** return whether the given clique is an equation */

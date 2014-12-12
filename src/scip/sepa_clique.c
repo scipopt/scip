@@ -316,7 +316,6 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    int nelems;
    int i;
 
-   /* get clique table */
    cliques = SCIPgetCliques(scip);
    ncliques = SCIPgetNCliques(scip);
    if( ncliques == 0 )
@@ -834,9 +833,16 @@ SCIP_RETCODE separateCuts(
    int ncliquenodes;
    int maxtreenodes;
    int maxzeroextensions;
+   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(*result == SCIP_DIDNOTRUN);
+
+   infeasible = FALSE;
+   /* get clique table */
+   SCIP_CALL( SCIPcleanupCliques(scip, &infeasible, NULL) );
+   if( infeasible )
+      return SCIP_OKAY;
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);

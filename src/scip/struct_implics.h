@@ -68,7 +68,8 @@ struct SCIP_Clique
    int                   nvars;              /**< number of variables in the clique */
    int                   size;               /**< size of vars and values arrays */
    int                   startcleanup;       /**< clean up position to start with */
-   int                   ncleanupvars;       /**< number of variables that need to be removed in clean up */
+   SCIP_CLIQUETABLE*     cliquetable;        /**< pointer to the clique table */
+   int                   index;              /**< the index of the clique in the cliquetable cliques array */
    unsigned int          id:30;              /**< unique identifier of clique */
    unsigned int          eventsissued:1;     /**< were the IMPLADDED events on the variables already issued? */
    unsigned int          equation:1;         /**< is the clique an equation or an inequality? */
@@ -92,7 +93,7 @@ struct SCIP_CliqueTable
    int                   ncreatedcliques;    /**< number of ever created cliques */
    int                   ncleanupfixedvars;  /**< number of fixed variables when the last cleanup was performed */
    int                   ncleanupaggrvars;   /**< number of aggregated variables when the last cleanup was performed */
-   int                   ncleanupcliques;    /**< number of cliques stored when the last cleanup was performed */
+   int                   ndirtycliques;    /**< number of cliques stored when the last cleanup was performed */
    SCIP_Longint          nentries;           /**< number of entries in the whole clique table */
 };
 

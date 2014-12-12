@@ -10461,6 +10461,9 @@ SCIP_RETCODE SCIPvarFixBinary(
       }
    }
 
+   SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+   SCIPcliquelistFree(&var->cliquelist, blkmem);
+
    return SCIP_OKAY;
 }
 

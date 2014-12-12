@@ -20293,9 +20293,51 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    return SCIP_OKAY;
 }
 
+
+/** force SCIP to clean up all cliques; cliques do not get automatically cleaned up after presolving. Use
+ *  this method to prevent inactive variables in cliques when retrieved via SCIPgetCliques()
+ *
+ *  @return SCIP_OKAY if everything worked, otherwise a suitable error code is passed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_RETCODE SCIPcleanupCliques(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            infeasible,         /**< pointer to store if cleanup detected infeasibility */
+   int*                  nlocalbdchgs        /**< pointer to store the number of detected bound changes */
+   )
+{
+   SCIP_Bool globalinfeasibility;
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcleanupCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   globalinfeasibility = FALSE;
+   SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, nlocalbdchgs, &globalinfeasibility) );
+
+   if( infeasible != NULL )
+      *infeasible = globalinfeasibility;
+
+   if( globalinfeasibility )
+      scip->stat->status = SCIP_STATUS_INFEASIBLE;
+
+   return SCIP_OKAY;
+}
+
 /** gets the number of cliques in the clique table
  *
  *  @return number of cliques in the clique table
+ *
+ *  @note cliques do not get automatically cleaned up after presolving. Use SCIPcleanupCliques()
+ *  to prevent inactive variables in cliques when retrieved via SCIPgetCliques(). This might reduce the number of cliques
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -20320,6 +20362,9 @@ int SCIPgetNCliques(
 /** gets the array of cliques in the clique table
  *
  *  @return array of cliques in the clique table
+ *
+ *  @note cliques do not get automatically cleaned up after presolving. Use SCIPcleanupCliques()
+ *  to prevent inactive variables in cliques when retrieved via SCIPgetCliques(). This might reduce the number of cliques
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
