@@ -5463,7 +5463,7 @@ SCIP_RETCODE rangedRowPropagation(
    if( consdata->rangedrowpropagation )
       return SCIP_OKAY;
 
-   /* if we have to much continuoues variables stop here */
+   /* if we have too many continuous variables, so stop here */
    if( (consdata->sorted || consdata->binvarssorted) && SCIPvarGetType(consdata->vars[1]) == SCIP_VARTYPE_CONTINUOUS )
       return SCIP_OKAY;
 
@@ -5479,7 +5479,7 @@ SCIP_RETCODE rangedRowPropagation(
 
    fixedact = 0;
    nfixedconsvars = 0;
-   /* calculate fixed activity and number of unfixed variables */
+   /* calculate fixed activity and number of fixed variables */
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
       /* all zero coefficients should be eliminated */
@@ -5496,6 +5496,7 @@ SCIP_RETCODE rangedRowPropagation(
    if( SCIPisHugeValue(scip, REALABS(fixedact)) )
       return SCIP_OKAY;
 
+   /* compute lhs and rhs for unfixed variables only and get number of unfixed variables */
    assert(!SCIPisInfinity(scip, -fixedact) && !SCIPisInfinity(scip, fixedact));
    lhs = consdata->lhs - fixedact;
    rhs = consdata->rhs - fixedact;
@@ -6478,7 +6479,7 @@ SCIP_RETCODE rangedRowPropagation(
          assert(newlhs < newrhs);
 
          /* create, add, and release new artificial constraint */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_artcons1_%d", SCIPconsGetName(cons), conshdlrdata->naddconss);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_artcons2_%d", SCIPconsGetName(cons), conshdlrdata->naddconss);
          ++conshdlrdata->naddconss;
 
          SCIPdebugMessage("adding artificial constraint %s\n", name);
