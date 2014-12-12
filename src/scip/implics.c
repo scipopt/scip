@@ -1916,7 +1916,7 @@ SCIP_RETCODE mergeClique(
             || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
          /* check if we have a variable fixed to one for this clique */
-         if( (clqvalues[v] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[v] && SCIPvarGetUbGlobal(var) > 0.5) )
+         if( (clqvalues[v] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[v] && SCIPvarGetUbGlobal(var) < 0.5) )
          {
             if( onefixedvar != NULL )
             {
@@ -2218,7 +2218,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
       if( sameclique == NULL )
       {
-         SCIPdebugMessage("adding clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
+         SCIPdebugMessage("adding clique %d with %d vars to clique table\n", clique->id, nvars);
 
          cliquetable->ncreatedcliques++;
 
@@ -2519,7 +2519,7 @@ SCIP_RETCODE cliqueCleanup(
 #if !defined(NDEBUG) && defined(SCIP_MORE_DEBUG)
 /** checks whether clique appears in all clique lists of the involved variables */
 static
-void checkNEntries(
+SCIP_Bool checkNEntries(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
@@ -2531,10 +2531,10 @@ void checkNEntries(
    for( c = cliquetable->ncliques - 1; c >= 0; --c )
       nentries += cliquetable->cliques[c]->nvars;
 
-   assert(nentries == cliquetable->nentries);
+   return (nentries == cliquetable->nentries);
 }
 #else
-#define checkNEntries(cliquetable) /**/
+#define checkNEntries(cliquetable) TRUE
 #endif
 
 /** removes all empty and single variable cliques from the clique table; removes double entries from the clique table */
@@ -2730,7 +2730,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
    cliquetable->ncleanupcliques = cliquetable->ncliques;
 
-   checkNEntries(cliquetable);
+   assert(*infeasible || checkNEntries(cliquetable));
 
    SCIPdebugMessage("cleaned up clique table has %d cliques left (with %"SCIP_LONGINT_FORMAT" entries)\n", cliquetable->ncliques, cliquetable->nentries);
 
