@@ -1169,13 +1169,15 @@ SCIP_RETCODE makeExprtree(
                         SCIP_EXPRDATA_MONOMIAL** monomials;
                         SCIP_Real exponent;
                         SCIP_Real constant;
+                        int nmonomials;
                         int zero;
 
+                        nmonomials = nargs-1;
                         SCIP_CALL( SCIPallocBufferArray(scip, &monomials, nargs-1) );
 
                         zero = 0;
                         constant = 0.0;
-                        while( nargs > 0 )
+                        for( ; nargs > 0; --nargs )
                         {
                            assert(stackpos > 0);
 
@@ -1198,8 +1200,7 @@ SCIP_RETCODE makeExprtree(
                         term1 = stack[stackpos-1];
                         --stackpos;
 
-                        SCIP_CALL( SCIPexprCreatePolynomial(blkmem, &e, 1, &term1, nargs-1, monomials, constant, FALSE) );
-
+                        SCIP_CALL( SCIPexprCreatePolynomial(blkmem, &e, 1, &term1, nmonomials, monomials, constant, FALSE) );
                         SCIPfreeBufferArray(scip, &monomials);
                      }
                   }
@@ -1343,7 +1344,8 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
    BMSclearMemory(probdata);
 
-   SCIP_CALL( SCIPcreateProb(scip, "gamsprob",
+   (void) gmoNameInput(gmo, buffer);
+   SCIP_CALL( SCIPcreateProb(scip, buffer,
       probdataDelOrigGmo, probdataTransGmo, probdataDelTransGmo,
       probdataInitSolGmo, probdataExitSolGmo, probdataCopyGmo,
       probdata) );
