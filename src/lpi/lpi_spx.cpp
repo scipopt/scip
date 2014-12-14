@@ -4540,15 +4540,15 @@ SCIP_RETCODE SCIPlpiSetState(
          /* if lower bound is +/- infinity -> try upper bound */
          bnd = lpi->spx->lower(i);
          if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
-            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+            lpi->cstat[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free */
          else
-            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+            lpi->cstat[i] = (int) SCIP_BASESTAT_UPPER; /* use finite upper bound */
       }
       else
-         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+         lpi->cstat[i] = (int) SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
    for( i = lpistate->nrows; i < lpnrows; ++i )
-      lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+      lpi->rstat[i] = (int) SCIP_BASESTAT_BASIC; /*lint !e641*/
 
    /* load basis information */
    SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
@@ -4665,10 +4665,10 @@ SCIP_RETCODE SCIPlpiGetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{  /*lint --e{715}*/
    assert(lpinorms != NULL);
 
-   (*lpinorms) = NULL;
+   *lpinorms = NULL;
 
    return SCIP_OKAY;
 }
@@ -4681,7 +4681,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
    )
-{
+{  /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -4694,7 +4694,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{  /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
