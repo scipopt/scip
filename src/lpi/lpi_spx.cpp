@@ -4137,7 +4137,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
          DSVector rhs(spx->nCols());
          SSVector y(spx->nCols());
          int* bind;
-         int index;
+         int idx;
 
          /**@todo should bind be stored globally in lpi?  */
          /* get ordering of column basis matrix */
@@ -4145,31 +4145,31 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
          SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
 
          /* get vector corresponding to requested index r */
-         index = bind[r];
+         idx = bind[r];
 
          /* r corresponds to a row vector */
-         if( index < 0 )
+         if( idx < 0 )
          {
-            index = -index-1;
+            idx = -idx-1;
 
             /* should be a valid row index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-            assert(index >= 0);
-            assert(index < spx->nRows());
-            assert(!spx->isRowBasic(index));
+            assert(idx >= 0);
+            assert(idx < spx->nRows());
+            assert(!spx->isRowBasic(idx));
 
             /* get row vector */
-            rhs = spx->rowVector(index);
+            rhs = spx->rowVector(idx);
             rhs *= -1.0;
          }
          /* r corresponds to a column vector */
          else
          {
             /* should be a valid column index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-            assert(index < spx->nCols());
-            assert(!spx->isColBasic(index));
+            assert(idx < spx->nCols());
+            assert(!spx->isColBasic(idx));
 
             /* get unit vector */
-            rhs = spx->unitVector(index);
+            rhs = spx->unitVector(idx);
          }
 
          /* solve system "y B = rhs", where B is the row basis matrix */
@@ -4187,7 +4187,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
             {
                assert(spx->number(id) >= 0);
                assert(spx->number(id) < spx->nRows());
-               assert(bind[r] >= 0 || spx->number(id) != index);
+               assert(bind[r] >= 0 || spx->number(id) != idx);
 
                x[spx->number(id)] = y[i];
             }
@@ -4196,8 +4196,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
          /* if r corresponds to a row vector, we have to add a 1 at position r */
          if( bind[r] < 0 )
          {
-            assert(x[index] == 0.0);
-            x[index] = 1.0;
+            assert(x[idx] == 0.0);
+            x[idx] = 1.0;
          }
 
          /* free memory */
@@ -4291,29 +4291,29 @@ SCIP_RETCODE lpiGetBInvVec(
          /* fill result w.r.t. order given by bind */
          for( int i = 0; i < spx->nRows(); ++i )
          {
-            int index;
+            int idx;
 
-            index = bind[i];
+            idx = bind[i];
 
-            if( index < 0 )
+            if( idx < 0 )
             {
-               index = -index-1;
+               idx = -idx-1;
 
                /* should be a valid row index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-               assert(index >= 0);
-               assert(index < spx->nRows());
-               assert(!spx->isRowBasic(index));
+               assert(idx >= 0);
+               assert(idx < spx->nRows());
+               assert(!spx->isRowBasic(idx));
 
-               x[i] = v[index] - (spx->rowVector(index) * Vector(spx->nCols(), y.get_ptr()));
+               x[i] = v[idx] - (spx->rowVector(idx) * Vector(spx->nCols(), y.get_ptr()));
             }
             else
             {
                /* should be a valid column index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-               assert(index >= 0);
-               assert(index < spx->nCols());
-               assert(!spx->isColBasic(index));
+               assert(idx >= 0);
+               assert(idx < spx->nCols());
+               assert(!spx->isColBasic(idx));
 
-               x[i] = y[index];
+               x[i] = y[idx];
             }
          }
 
