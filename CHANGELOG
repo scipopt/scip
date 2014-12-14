@@ -64,6 +64,7 @@ fixed bugs:
 - issues in component solving by presol_components do not lead to stopping the overall process, anymore, the component
   is just disregarded
 - fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
+- fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
