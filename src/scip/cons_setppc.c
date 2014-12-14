@@ -6097,19 +6097,17 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          if( aggregated )
          {
-            assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
             assert(nuplocks >= 1 && ndownlocks >= 0); /* repeated from above */
-
             ++(*naggrvars);
 
-            if( (nuplocks == 1 && ndownlocks == 0) )
+            if( nuplocks == 1 && ndownlocks == 0 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
             {
                assert(deleteconsindex < 0);
 
                SCIP_CALL( delCoefPos(scip, cons, v) );
                ++(*nchgcoefs);
             }
-            else if( nuplocks == 1 && ndownlocks == 1 )
+            else if( nuplocks == 1 && ndownlocks == 1 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
             {
                assert(deleteconsindex < 0);
 
