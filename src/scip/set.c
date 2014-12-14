@@ -514,8 +514,8 @@ void SCIPsetEnableOrDisablePluginClocks(
 /* method to be invoked when the parameter timing/statistictiming is changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
-{
-   SCIPenableOrDisableStatisticTiming(scip);
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPenableOrDisableStatisticTiming(scip) );
 
    return SCIP_OKAY;
 }
