@@ -2158,6 +2158,10 @@ SCIP_RETCODE readQCMatrix(
 /** Process INDICATORS section.
  *
  *  We read the INDICATORS section, which is a nonstandard section introduced by CPLEX.
+ *  Note that CPLEX does not allow ranged rows.
+ *
+ *  If the linear constraints are equations or ranged rows, we generate two indicator
+ *  constraints.
  *
  *  The section has to come after the QMATRIX* sections.
  */
@@ -2300,48 +2304,39 @@ SCIP_RETCODE readIndicators(
             sign = 1.0;
          else
          {
-            if( !SCIPisEQ(scip, lhs, rhs) )
+            /* create second indicator constraint */
+            SCIP_VAR** vars;
+            SCIP_Real* vals;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
+            for( i = 0; i < nlinvars; ++i )
             {
-               SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
-               mpsinputSyntaxerror(mpsi);
-               return SCIP_OKAY;
+               vars[i] = linvars[i];
+               vals[i] = -linvals[i];
             }
-            else
-            {
-               /* create second indicator constraint */
-               SCIP_VAR** vars;
-               SCIP_Real* vals;
 
-               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
-               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
-               for( i = 0; i < nlinvars; ++i )
-               {
-                  vars[i] = linvars[i];
-                  vals[i] = -linvals[i];
-               }
+            /* create new name */
+            (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
 
-               /* create new name */
-               (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
+            /* create indicator constraint */
+            SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars, vars, vals, -lhs,
+                  initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
+            SCIPdebugPrintCons(scip, cons, NULL);
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-               /* create indicator constraint */
-               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars, vars, vals, -lhs,
-                     initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-               SCIP_CALL( SCIPaddCons(scip, cons) );
-               SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
-               SCIPdebugPrintCons(scip, cons, NULL);
-               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-               SCIPfreeBufferArray(scip, &vals);
-               SCIPfreeBufferArray(scip, &vars);
-            }
+            SCIPfreeBufferArray(scip, &vals);
+            SCIPfreeBufferArray(scip, &vars);
          }
       }
 
       /* check if slack variable can be made implicitly integer */
       slackvartype = SCIP_VARTYPE_IMPLINT;
-      for( i = 0; i < nlinvars; ++i )
+      for (i = 0; i < nlinvars; ++i)
       {
-         if( !SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
+         if( ! SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
          {
             slackvartype = SCIP_VARTYPE_CONTINUOUS;
             break;
@@ -2349,17 +2344,24 @@ SCIP_RETCODE readIndicators(
       }
 
       /* create slack variable */
-      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
+      if ( ! SCIPisInfinity(scip, -lhs) )
+         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_indrhs_%s", SCIPconsGetName(lincons));
+      else
+         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
       SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
             NULL, NULL, NULL, NULL, NULL) );
 
-      /* add slack variable */      
+      /* add slack variable */
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
-      /* create new name */
-      if ( SCIPisEQ(scip, lhs, rhs) )
+      /* correct linear constraint and create new name */
+      if ( ! SCIPisInfinity(scip, -lhs) )
+      {
+         /* we have added lhs above and only need the rhs */
+         SCIP_CALL( SCIPchgLhsLinear(scip, lincons, -SCIPinfinity(scip) ) );
          (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indrhs_%s", SCIPconsGetName(lincons));
+      }
       else
          (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "ind_%s", SCIPconsGetName(lincons));
 
