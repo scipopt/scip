@@ -3905,6 +3905,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    for( i = 0; i < lpi->spx->nRows(); ++i )
    {
+      assert( rstat != 0 ); /* for lint */
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
@@ -3930,6 +3931,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    for( i = 0; i < lpi->spx->nCols(); ++i )
    {
+      assert( cstat != 0 ); /* for lint */
       switch( cstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
