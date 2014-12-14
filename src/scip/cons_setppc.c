@@ -6098,9 +6098,11 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
          if( aggregated )
          {
             assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+            assert(nuplocks >= 1 && ndownlocks >= 0); /* repeated from above */
+
             ++(*naggrvars);
 
-            if( (nuplocks == 1 && ndownlocks == 0) || (nuplocks == 0 && ndownlocks == 1) )
+            if( (nuplocks == 1 && ndownlocks == 0) )
             {
                assert(deleteconsindex < 0);
 
