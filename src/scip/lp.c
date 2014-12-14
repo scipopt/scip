@@ -8693,7 +8693,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
-   (*lp)->lpitiming = set->time_clocktype;
+   (*lp)->lpitiming = (int) set->time_clocktype;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -13418,9 +13418,14 @@ SCIP_RETCODE lpAlgorithm(
          *timelimit = TRUE;
          return SCIP_OKAY;
       }
+      SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
    }
-
-   SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
+#ifndef NDEBUG
+   else
+   {
+      SCIPdebugMessage("calling LP algorithm <%s> (with no time limit)\n", lpalgoName(lpalgo));
+   }
+#endif
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
