@@ -1783,7 +1783,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_CALL( addCoef(scip, cons, consvars[v2]) );
                }
             }
-            /* we need to degrade this setppc constraint to a linear constraint*/
+            /* we need to degrade this setppc constraint to a linear constraint */
             else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
             {
                char name[SCIP_MAXSTRLEN];
@@ -1793,7 +1793,9 @@ SCIP_RETCODE applyFixings(
                int size;
                int k;
 
-               /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
+               /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole
+                * probvar sum over all variables
+                */
 
                size = MAX(nconsvars, 1) + consdata->nvars - 1;
 
@@ -1815,7 +1817,7 @@ SCIP_RETCODE applyFixings(
                /* get active variables for new constraint */
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize, TRUE) );
 
-               /* if space was not enough(we found another multi-aggregation), we need to resize the buffers */
+               /* if space was not enough (we found another multi-aggregation), we need to resize the buffers */
                if( requiredsize > nconsvars )
                {
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
@@ -1872,7 +1874,7 @@ SCIP_RETCODE applyFixings(
 
                return SCIP_OKAY;
             }
-            /* we need to degrade this logicor constraint to a linear constraint*/
+            /* we need to degrade this setppc constraint to a linear constraint*/
             else
             {
                /* check, if the variable should be replaced with the representative */
@@ -5501,7 +5503,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    /* sort constraints */
    SCIPsortPtr((void**)usefulconss, setppcConssSort2, nconss);
 
-   nlocaladdconss = 0;
    posreplacements = 0;
    nhashmapentries = 0;
    ndecs = 0;
@@ -5520,6 +5521,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       int oldnfixedvars;
+      nlocaladdconss = 0;
 
       cons = usefulconss[c];
       assert(cons != NULL);
