@@ -89,6 +89,7 @@ interface:
 - new method SCIPhasPerformedPresolve() to check, e.g., whether LP duals are accessible
 - AMPL interface now returns dual multipliers if problem is an LP and presolving was turned off
 - changes in clock type are now transferred to SoPlex
+- corrected wrong primal bound in statistics for unbounded problems
 
 parameters:
 - new parameter timing/rareclockcheck to call the system time less frequently, based on the current average time interval
