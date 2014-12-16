@@ -148,7 +148,7 @@ do
             fi
 
             # call tmp file configuration for SCIP
-            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
+            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
 
             # check queue type
             if test  "$QUEUETYPE" = "srun"
@@ -161,6 +161,7 @@ do
                 export CLIENTTMPDIR
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
+                export CHECKERPATH=$SCIPPATH/solchecker
                 sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables

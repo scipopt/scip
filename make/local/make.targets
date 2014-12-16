@@ -58,3 +58,8 @@ docexamples:
 .PHONY: coverage
 coverage:
 		$(SHELL) ./check/check_coverage.sh $(MAINFILE) $(notdir $(MAINFILE)).$(HOSTNAME) $(MEM) $(VERSION) $(LPS) $(OBJDIR);
+		
+.PHONY: solchecker
+solchecker:
+		cd ./check/solchecker; \
+		$(MAKE);

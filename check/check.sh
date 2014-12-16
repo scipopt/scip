@@ -37,7 +37,7 @@ then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
-    echo "SETNAMES       = $SETNAMES"
+    echo "SETNAMES      = $SETNAMES"
     echo "BINID         = $BINID"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
@@ -96,14 +96,16 @@ do
         fi
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
+        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH
         export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
         export BASENAME=$FILENAME
         export FILENAME=$INSTANCE
+        export SOLNAME=$SOLCHECKFILE
         export CLIENTTMPDIR
+        export CHECKERPATH=$SCIPPATH/solchecker
         echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
         bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
         #./runcluster.sh
