@@ -200,6 +200,10 @@ SCIP_Real calcShiftVal(
    if( shiftdown )
       shiftval *= -1.0;
 
+   /* we must not shift variables to infinity */
+   if( SCIPisInfinity(scip, solval + shiftval) )
+      shiftval = 0.0;
+
    return shiftval;
 }
 
