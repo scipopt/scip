@@ -56,6 +56,15 @@
       }                                                                 \
    }
 
+#if GRB_VERSION_MAJOR == 6 && GRB_VERSION_MINOR == 0
+struct _GRBsvec
+{
+  int     len;
+  int    *ind;
+  double *val;
+};
+#endif
+
 #if( GRB_VERSION_MAJOR < 4 )
 #define GRB_METHOD_DUAL    GRB_LPMETHOD_DUAL
 #define GRB_METHOD_PRIMAL  GRB_LPMETHOD_PRIMAL
@@ -3542,7 +3551,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
    )
 {
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    SVECTOR b;
    int nrows;
@@ -3598,15 +3606,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
-#else
-   int j, ncols;
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-
-   /* Gurobi does not have the possibility to access the basis inverse -> setting coef to 0 */
-   for( j = 0; j < ncols; ++j )
-      coef[j] = 0.0;
-#endif
    return SCIP_OKAY;
 }
 
@@ -3621,7 +3621,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    )
 {
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    SVECTOR b;
    int nrows;
@@ -3679,11 +3678,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by Gurobi\n");
-
-   return SCIP_LPERROR;
-#endif
 }
 
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
@@ -3694,7 +3688,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {  /*lint --e{715}*/
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    int ncols;
    int nrows;
@@ -3741,11 +3734,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetBInvARow() not supported by Gurobi\n");
-
-   return SCIP_LPERROR;
-#endif
 }
 
 /** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
@@ -3755,7 +3743,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {  /*lint --e{715}*/
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    int nrows;
    int k;
@@ -3800,11 +3787,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by Gurobi\n");
-
-   return SCIP_LPERROR;
-#endif
 }
 
 /**@} */
