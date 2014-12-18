@@ -5083,6 +5083,8 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    )
 {
    assert(set != NULL);
+   /* TODO: maybe we should compare with REALABS(val) to handle
+      numerical issues, e.g., if val < 0 */
    assert(SCIPsetIsGE(set, val, -set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 
