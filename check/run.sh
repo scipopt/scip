@@ -15,9 +15,9 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 # absolut tolerance for checking linear constraints and objective value
-LINTOL=1e-14 
+LINTOL=1e-04 
 # absolut tolerance for checking integrality constraints 
-INTTOL=1e-14
+INTTOL=1e-04
 
 # check if tmp-path exists
 if test ! -d $CLIENTTMPDIR/${USER}-tmpdir

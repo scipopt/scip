@@ -108,7 +108,7 @@ void Rational::integralityViolation(Rational& violation) const
       return;
    }
    // otherwise, we must check w.r.t. the given tolerance
-   // first calculate the fractional part 
+   // first calculate the fractional part
    violation = (*this);
    violation.abs();
    mpz_t r;
@@ -127,11 +127,11 @@ void Rational::toZero()
 }
 
 bool Rational::isInteger(const Rational& tolerance) const
-{  
+{
    // if denominator is 1, then it is an integer for sure
    if (mpz_cmp_ui(mpq_denref(number), 1) == 0) return true;
    // otherwise, we must check w.r.t. the given tolerance
-   // first calculate the fractional part 
+   // first calculate the fractional part
    Rational viol(*this);
    viol.abs();
    mpz_t r;
@@ -166,7 +166,7 @@ void Rational::fromString(const char* num)
    int   k = 0;
    int   exponent = 0;
    int   fraction = 0;
-   
+
    assert(num != NULL);
    assert(strlen(num) <  32);
 
@@ -174,12 +174,26 @@ void Rational::fromString(const char* num)
    while(isspace(*num))
       num++;
 
+   // check if the value is +/-infinity
+   if (strcmp(num, "+infinity") == 0 || strcmp(num, "-infinity") == 0)
+   {
+      double val = 1e+20;
+
+      if (*num == '-')
+         val *= -1;
+
+      mpq_set_d(number, val);
+      mpq_canonicalize(number);
+
+      return;
+   }
+
    // Skip initial +/-
    if (*num == '+')
       num++;
    else if (*num == '-')
       tmp[k++] = *num++;
-   
+
    for(int i = 0; num[i] != '\0'; i++)
    {
       if (isdigit(num[i]))
@@ -199,7 +213,7 @@ void Rational::fromString(const char* num)
    {
       tmp[k++] = '0';
       exponent--;
-   }         
+   }
    tmp[k++] = '/';
    tmp[k++] = '1';
 
@@ -207,7 +221,7 @@ void Rational::fromString(const char* num)
    {
       tmp[k++] = '0';
       exponent++;
-   }         
+   }
    tmp[k] = '\0';
 
    mpq_set_str(number, tmp, 10);
@@ -218,7 +232,7 @@ std::string Rational::toString() const
 {
    // assure the buffer is big enough to store the result
    assert( mpz_sizeinbase(mpq_numref(number), 10 ) + mpz_sizeinbase(mpq_denref(number), 10) + 3 < 1024 );
-   
+
    mpq_get_str(buffer, 10, number);
    return std::string(buffer);
 }
