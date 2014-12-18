@@ -47,6 +47,7 @@
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
 
+static unsigned char warnedbeta = 0;
 
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
@@ -1166,7 +1167,10 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (*lpi)->pricing) );
 
-   SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
+   if( !warnedbeta ) {
+      warnedbeta = 1;
+      SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
+   }
 
    return SCIP_OKAY;
 }
