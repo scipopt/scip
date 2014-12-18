@@ -66,6 +66,10 @@ struct _GRBsvec
 };
 #endif
 
+#ifndef SVECTOR
+#define SVECTOR GRBsvec
+#endif
+
 #if( GRB_VERSION_MAJOR < 4 )
 #define GRB_METHOD_DUAL    GRB_LPMETHOD_DUAL
 #define GRB_METHOD_PRIMAL  GRB_LPMETHOD_PRIMAL
