@@ -66,11 +66,9 @@ then
     # check if the link to the solution checker exists
     if test -f "$CHECKERPATH/bin/solchecker" 
     then
-      echo 
+      echo
       $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE
       echo
-    else
-      echo WARNING: solution cannot be checked because solution checker is missing 2>>$ERRFILE | tee -a $OUTFILE
     fi
 fi
 
