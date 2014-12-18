@@ -1139,9 +1139,11 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->senarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rhsarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rngarray);
+   BMSfreeMemoryArrayNull(&(*lpi)->valarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rngindarray);
    BMSfreeMemoryArrayNull(&(*lpi)->cstat);
    BMSfreeMemoryArrayNull(&(*lpi)->rstat);
+   BMSfreeMemoryArrayNull(&(*lpi)->indarray);
 
    /* free environment */
    CHECK_ZERO( (*lpi)->messagehdlr, CPXcloseCPLEX(&((*lpi)->cpxenv)) );
