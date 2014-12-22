@@ -13509,6 +13509,12 @@ SCIP_RETCODE SCIPvarAddToRow(
    }
 }
 
+/* optionally, define this compiler flag to write complete variable histories to a file */
+#ifdef SCIP_HISTORYTOFILE
+SCIP_Longint counter = 0l;
+const char* historypath="/OPTI/bzfhende/pseudocosts"; /* allows for user-defined path; use '.' for calling directory of SCIP */
+#endif
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
@@ -13543,6 +13549,22 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
+      /* append history to file */
+#ifdef SCIP_HISTORYTOFILE
+   {
+      FILE* f;
+      char filename[256];
+
+      sprintf(filename, "%s/%s.pse", historypath, SCIPgetProbName(set->scip));
+      f = fopen(filename, "a");
+      if( NULL != f )
+      {
+         fprintf(f, "%lld %s \t %lld \t %d %15.9f %.3f\n", ++counter,
+            SCIPvarGetName(var), stat->nnodes, SCIPgetDepth(set->scip), objdelta, solvaldelta);
+         fclose(f);
+      }
+   }
+#endif
       SCIPhistoryUpdatePseudocost(var->history, set, solvaldelta, objdelta, weight);
       SCIPhistoryUpdatePseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
       SCIPhistoryUpdatePseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
