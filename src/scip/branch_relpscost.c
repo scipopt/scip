@@ -566,9 +566,18 @@ SCIP_RETCODE execRelpscost(
             usesb = FALSE;
             if( size < reliable )
                usesb = TRUE;
+            else if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
+            {
+               if( !SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel) &&
+                     !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
+                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
+                     !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
+                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) )
+                  usesb = TRUE;
+            }
             /* check if relative error is tolerable */
             else if( branchruledata->userelerrorforreliability &&
-                  SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel))
+                  !SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel))
                usesb = TRUE;
             /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
             else if( branchruledata->usehyptestforreliability &&
