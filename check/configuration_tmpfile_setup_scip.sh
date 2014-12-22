@@ -102,6 +102,7 @@ then
     if test ""$CUTOFF != ""
     then
         echo set limits objective $CUTOFF      >> $TMPFILE
+        echo set heur emph off                 >> $TMPFILE
     fi
 fi
 
