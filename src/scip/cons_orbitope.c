@@ -2081,10 +2081,11 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
    SCIP_VAR*** vars;
-   int i;
-   int j;
    int nspcons;
    int nblocks;
+   int i;
+   int k;
+   int j;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -2133,8 +2134,10 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-   for (i = 0; i < nspcons; ++i)
-      SCIPfreeBufferArray(scip, &vars[i]);
+   /* free space; only up to row i if copying failed */
+   assert( 0 <= i && i <= nspcons );
+   for (k = 0; k < i; ++k)
+      SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
