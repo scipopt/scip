@@ -2093,16 +2093,17 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( varmap != NULL );
+   assert( valid != NULL );
 
    *valid = TRUE;
 
    SCIPdebugMessage("Copying method for orbitope constraint handler.\n");
 
    sourcedata = SCIPconsGetData(sourcecons);
-   assert(sourcedata != NULL);
-   assert(sourcedata->nspcons > 0);
-   assert(sourcedata->nblocks > 0);
-   assert(sourcedata->vars != NULL);
+   assert( sourcedata != NULL );
+   assert( sourcedata->nspcons > 0 );
+   assert( sourcedata->nblocks > 0 );
+   assert( sourcedata->vars != NULL );
 
    nspcons = sourcedata->nspcons;
    nblocks = sourcedata->nblocks;
@@ -2115,8 +2116,8 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 
       for (j = 0; j < nblocks && *valid; ++j)
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
-         assert(!(*valid) || vars[i][j] != NULL);
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &(vars[i][j]), varmap, consmap, global, valid) );
+         assert( !(*valid) || vars[i][j] != NULL );
       }
    }
 
