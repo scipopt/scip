@@ -590,6 +590,14 @@ preprocess:     checkdefines
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
+
+		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
+			then \
+				echo "-> generating gcc-include-path lint-file" ; \
+				cd lint; $(MAKE) -f co-gcc.mak ; \
+			else \
+				echo "-> lint Makefile not found"; \
+			fi'
 ifeq ($(FILES),)
 		$(SHELL) -ec 'for i in $^; \
 			do \
@@ -1009,6 +1017,15 @@ endif
 ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
 		@-touch -c $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
 endif
+ifneq ($(NOBLKMEM),$(LAST_NOBLKMEM))
+		@-touch -c $(ALLSRC)
+endif
+ifneq ($(NOBUFMEM),$(LAST_NOBUFMEM))
+		@-touch -c $(ALLSRC)
+endif
+ifneq ($(NOBLKBUFMEM),$(LAST_NOBLKBUFMEM))
+		@-touch -c $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
@@ -1026,6 +1043,9 @@ endif
 		@echo "LAST_USRLDFLAGS=$(USRLDFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRARFLAGS=$(USRARFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRDFLAGS=$(USRDFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_NOBLKMEM=$(NOBLKMEM)" >> $(LASTSETTINGS)
+		@echo "LAST_NOBUFMEM=$(NOBUFMEM)" >> $(LASTSETTINGS)
+		@echo "LAST_NOBLKBUFMEM=$(NOBLKBUFMEM)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links

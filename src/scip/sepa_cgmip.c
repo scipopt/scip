@@ -2201,6 +2201,12 @@ SCIP_RETCODE solveSubscip(
 
    SCIPdebugMessage("Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %"SCIP_LONGINT_FORMAT") ...\n", timelimit, memorylimit, nodelimit);
 
+   /* disable statistic timing inside sub SCIP */
+   if( !sepadata->output )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+   }
+
    /* check whether we want a complete solve */
    if ( ! sepadata->earlyterm )
    {

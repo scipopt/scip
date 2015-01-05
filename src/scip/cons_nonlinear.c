@@ -5776,7 +5776,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
          SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
-         if( checkresult != SCIP_INFEASIBLE )
+         if( checkresult != SCIP_INFEASIBLE && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
          }
@@ -7875,7 +7875,8 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          consdata->ispresolved = FALSE;
 
       /* if a constraint is not finished presolving yet, then we will try upgrade methods */
-      tryupgrades |= !consdata->ispresolved;
+      if( !consdata->ispresolved )
+         tryupgrades = TRUE;
    }
 
    if( tryupgrades )
@@ -7892,7 +7893,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
       for( c = 0; c < nconss; ++c )
       {
-         consdata = SCIPconsGetData(conss[c]);
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
          assert(consdata != NULL);
 
          /* call upgrade methods if constraint was not presolved, has been changed, or the expression graph has changed */
@@ -7900,7 +7901,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          {
             SCIP_Bool upgraded;
 
-            SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+            SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
             if( upgraded )
             {
                *result = SCIP_SUCCESS;

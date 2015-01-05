@@ -3855,7 +3855,7 @@ SCIP_RETCODE focusnodeToSubroot(
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up whole LP to keep only necessary columns and rows */
-#if 0
+#ifdef SCIP_DISABLED_CODE
       if( tree->focusnode->depth == 0 )
       {
          SCIP_CALL( SCIPlpCleanupAll(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
@@ -5245,7 +5245,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
       downub = SCIPsetFeasFloor(set, val);
       uplb = downub + 1.0;
-      assert( SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), uplb) );
+      assert( SCIPsetIsRelEQ(set, SCIPsetFeasCeil(set, val), uplb) );
       SCIPdebugMessage("fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n", 
          SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
@@ -6306,7 +6306,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             lp->resolvelperror = TRUE;
             tree->focusnodehaslp = FALSE;
          }
-         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
+         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp))
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
@@ -6893,7 +6893,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
 
          if( nbranchings > 0 )
          {
-            SCIPgmlWriteArc(file, (unsigned int)(size_t)nbranchings, (unsigned int)(size_t)(nbranchings-1), NULL, NULL);
+            SCIPgmlWriteArc(file, (unsigned int)nbranchings, (unsigned int)(nbranchings-1), NULL, NULL);
          }
 
          nbranchings++;

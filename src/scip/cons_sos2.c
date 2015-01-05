@@ -790,16 +790,19 @@ SCIP_RETCODE propSOS2(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
-   int*                  nGen                /**< number of domain changes */
+   int*                  ngen                /**< pointer to incremental counter for domain changes */
    )
 {
+   int ngenold;
+
    assert( scip != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
    assert( cutoff != NULL );
-   assert( nGen != NULL );
+   assert( ngen != NULL );
 
    *cutoff = FALSE;
+   ngenold = *ngen;
 
    /* if more than two variables are fixed to be nonzero */
    if ( consdata->nfixednonzeros > 2 )
@@ -847,7 +850,7 @@ SCIP_RETCODE propSOS2(
          assert( ! infeasible );
 
          if ( tightened )
-            ++(*nGen);
+            ++(*ngen);
       }
 
       /* fix variables after firstFixedNonzero+1 to 0 */
@@ -867,7 +870,7 @@ SCIP_RETCODE propSOS2(
          }
 
          if ( tightened )
-            ++(*nGen);
+            ++(*ngen);
       }
       /* cannot locally delete constraint, since position of second entry is not fixed! */
    }
@@ -910,7 +913,7 @@ SCIP_RETCODE propSOS2(
          assert( ! infeasible );
          allVarFixed = allVarFixed && success;
          if ( tightened )
-            ++(*nGen);
+            ++(*ngen);
       }
 
       /* fix variables after firstFixedNonzero+1 to 0 */
@@ -931,7 +934,7 @@ SCIP_RETCODE propSOS2(
          allVarFixed = allVarFixed && success;
 
          if ( tightened )
-            ++(*nGen);
+            ++(*ngen);
       }
 
       /* delete constraint locally, since the nonzero positions are fixed */
@@ -944,7 +947,7 @@ SCIP_RETCODE propSOS2(
    }
 
    /* reset constraint age counter */
-   if ( *nGen > 0 )
+   if ( *ngen > ngenold )
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
    return SCIP_OKAY;
@@ -1022,7 +1025,7 @@ SCIP_RETCODE enforceSOS2(
       SCIP_Real weight2;
       SCIP_Real w;
       int lastNonzero;
-      int nGen;
+      int ngen;
       int cnt;
       int ind;
 
@@ -1039,17 +1042,17 @@ SCIP_RETCODE enforceSOS2(
       if ( nvars <= 2 )
          return SCIP_OKAY;
 
-      nGen = 0;
+      ngen = 0;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propSOS2(scip, cons, consdata, &cutoff, &nGen) );
-      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, nGen);
+      SCIP_CALL( propSOS2(scip, cons, consdata, &cutoff, &ngen) );
+      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
-      if ( nGen > 0 )
+      if ( ngen > 0 )
       {
          *result = SCIP_REDUCEDDOM;
          return SCIP_OKAY;
@@ -1602,7 +1605,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
 {  /*lint --e{715}*/
    SCIP_Bool cutoff = FALSE;
    int c;
-   int nGen = 0;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1639,13 +1642,13 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++nGen;
+         ++ngen;
       }
    }
-   SCIPdebugMessage("Separated %d SOS2 constraints.\n", nGen);
+   SCIPdebugMessage("Separated %d SOS2 constraints.\n", ngen);
    if ( cutoff )
       *result = SCIP_CUTOFF;
-   else if ( nGen > 0 )
+   else if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -1658,7 +1661,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
 {  /*lint --e{715}*/
    SCIP_Bool cutoff = FALSE;
    int c;
-   int nGen = 0;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1695,13 +1698,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
          SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++nGen;
+         ++ngen;
       }
    }
-   SCIPdebugMessage("Separated %d SOS2 constraints.\n", nGen);
+   SCIPdebugMessage("Separated %d SOS2 constraints.\n", ngen);
    if ( cutoff )
       *result = SCIP_CUTOFF;
-   else if ( nGen > 0 )
+   else if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -1816,7 +1819,7 @@ static
 SCIP_DECL_CONSPROP(consPropSOS2)
 {  /*lint --e{715}*/
    int c;
-   int nGen = 0;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1834,7 +1837,6 @@ SCIP_DECL_CONSPROP(consPropSOS2)
       SCIP_CONSDATA* consdata;
       SCIP_Bool cutoff;
 
-      *result = SCIP_DIDNOTFIND;
       assert( conss[c] != NULL );
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -1842,15 +1844,15 @@ SCIP_DECL_CONSPROP(consPropSOS2)
       SCIPdebugMessage("Propagating SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( propSOS2(scip, cons, consdata, &cutoff, &nGen) );
+      SCIP_CALL( propSOS2(scip, cons, consdata, &cutoff, &ngen) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
    }
-   SCIPdebugMessage("Propagated %d domains.\n", nGen);
-   if ( nGen > 0 )
+   SCIPdebugMessage("Propagated %d domains.\n", ngen);
+   if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;

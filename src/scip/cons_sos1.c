@@ -685,14 +685,14 @@ SCIP_RETCODE propSOS1(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
-   int*                  nGen                /**< number of domain changes */
+   int*                  ngen                /**< pointer to incremental counter for domain changes */
    )
 {
    assert( scip != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
    assert( cutoff != NULL );
-   assert( nGen != NULL );
+   assert( ngen != NULL );
 
    *cutoff = FALSE;
 
@@ -714,6 +714,7 @@ SCIP_RETCODE propSOS1(
       SCIP_Bool success;
       SCIP_Bool allVarFixed;
       int firstFixedNonzero;
+      int ngenold;
       int nvars;
       int j;
 
@@ -721,6 +722,7 @@ SCIP_RETCODE propSOS1(
       nvars = consdata->nvars;
       vars = consdata->vars;
       assert( vars != NULL );
+      ngenold = *ngen;
 
       /* search nonzero variable - is needed for propinfo */
       for (j = 0; j < nvars; ++j)
@@ -744,7 +746,7 @@ SCIP_RETCODE propSOS1(
          assert( ! infeasible );
          allVarFixed = allVarFixed && success;
          if ( tightened )
-            ++(*nGen);
+            ++(*ngen);
       }
 
       /* fix variables after firstFixedNonzero to 0 */
@@ -755,11 +757,11 @@ SCIP_RETCODE propSOS1(
          assert( ! infeasible ); /* there should be no variables after firstFixedNonzero that are fixed to be nonzero */
          allVarFixed = allVarFixed && success;
          if ( tightened )
-            ++(*nGen);
+            ++(*ngen);
       }
 
       /* reset constraint age counter */
-      if ( *nGen > 0 )
+      if ( *ngen > ngenold )
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
@@ -848,7 +850,7 @@ SCIP_RETCODE enforceSOS1(
       SCIP_CONS* cons;
       SCIP_Bool cutoff;
       SCIP_Real weight;
-      int nGen;
+      int ngen;
       int cnt;
       int j;
 
@@ -857,7 +859,7 @@ SCIP_RETCODE enforceSOS1(
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
 
-      nGen = 0;
+      ngen = 0;
       cnt = 0;
       nvars = consdata->nvars;
       vars = consdata->vars;
@@ -867,19 +869,19 @@ SCIP_RETCODE enforceSOS1(
          continue;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &nGen) );
-      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, nGen);
+      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &ngen) );
+      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
-      if ( nGen > 0 )
+      if ( ngen > 0 )
       {
          *result = SCIP_REDUCEDDOM;
          return SCIP_OKAY;
       }
-      assert( nGen == 0 );
+      assert( ngen == 0 );
 
       /* check constraint */
       weight = 0.0;
@@ -1503,7 +1505,7 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 {  /*lint --e{715}*/
    SCIP_Bool cutoff = FALSE;
-   int nGen = 0;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -1543,7 +1545,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++nGen;
+         ++ngen;
       }
       row = consdata->rowlb;
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
@@ -1553,13 +1555,13 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++nGen;
+         ++ngen;
       }
    }
-   SCIPdebugMessage("Separated %d SOS1 constraints.\n", nGen);
+   SCIPdebugMessage("Separated %d SOS1 constraints.\n", ngen);
    if ( cutoff )
       *result = SCIP_CUTOFF;
-   else if ( nGen > 0 )
+   else if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -1571,7 +1573,7 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 {  /*lint --e{715}*/
    SCIP_Bool cutoff = FALSE;
-   int nGen = 0;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -1611,7 +1613,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++nGen;
+         ++ngen;
       }
       row = consdata->rowlb;
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
@@ -1621,13 +1623,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++nGen;
+         ++ngen;
       }
    }
-   SCIPdebugMessage("Separated %d SOS1 constraints.\n", nGen);
+   SCIPdebugMessage("Separated %d SOS1 constraints.\n", ngen);
    if ( cutoff )
       *result = SCIP_CUTOFF;
-   else if ( nGen > 0 )
+   else if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -1741,7 +1743,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
 static
 SCIP_DECL_CONSPROP(consPropSOS1)
 {  /*lint --e{715}*/
-   int nGen = 0;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -1760,7 +1762,6 @@ SCIP_DECL_CONSPROP(consPropSOS1)
       SCIP_CONSDATA* consdata;
       SCIP_Bool cutoff;
 
-      *result = SCIP_DIDNOTFIND;
       assert( conss[c] != NULL );
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -1768,15 +1769,15 @@ SCIP_DECL_CONSPROP(consPropSOS1)
       SCIPdebugMessage("Propagating SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &nGen) );
+      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &ngen) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
    }
-   SCIPdebugMessage("Propagated %d domains.\n", nGen);
-   if ( nGen > 0 )
+   SCIPdebugMessage("Propagated %d domains.\n", ngen);
+   if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
@@ -2240,6 +2241,8 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_Bool modifiable;
+   SCIP_Bool transformed;
+   int v;
 
    modifiable = FALSE;
 
@@ -2251,6 +2254,9 @@ SCIP_RETCODE SCIPcreateConsSOS1(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* are we in the transformed problem? */
+   transformed = SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED;
+
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    consdata->vars = NULL;
@@ -2258,7 +2264,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    consdata->maxvars = nvars;
    consdata->rowub = NULL;
    consdata->rowlb = NULL;
-   consdata->nfixednonzeros = -1;
+   consdata->nfixednonzeros = transformed ? 0 : -1;
    consdata->weights = NULL;
 
    if ( nvars > 0 )
@@ -2283,6 +2289,22 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   assert(transformed == SCIPconsIsTransformed(*cons));
+
+   /* replace original variables by transformed variables in transformed constraint, add locks, and catch events */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      /* always use transformed variables in transformed constraints */
+      if ( transformed )
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, consdata->vars[v], &(consdata->vars[v])) );
+      }
+      assert( consdata->vars[v] != NULL );
+      assert( transformed == SCIPvarIsTransformed(consdata->vars[v]) );
+
+      /* handle the new variable */
+      SCIP_CALL( handleNewVariableSOS1(scip, *cons, consdata, consdata->vars[v], transformed) );
+   }
 
    return SCIP_OKAY;
 }

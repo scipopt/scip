@@ -1,0 +1,6 @@
+# SCIP version 2.1.1.6
+
+# enable linear upgrading for constraint handler <logicor>
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/upgrade/logicor = FALSE
+

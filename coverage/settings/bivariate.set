@@ -1,0 +1,10 @@
+# SCIP version 2.1.1.6
+
+# enable quadratic upgrading for constraint handler <bivariate>
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/upgrade/bivariate = TRUE
+
+# enable nonlinear upgrading for constraint handler <bivariate>
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/nonlinear/upgrade/bivariate = TRUE
+

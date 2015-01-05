@@ -352,7 +352,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
          if( SCIPisLT(scip, solval, rootsolval) )
          {
             roundup = FALSE;
-            distquot = (solval - SCIPfeasFloor(scip, solval)) / (rootsolval - solval);
+            distquot = (solval - SCIPfloor(scip, solval)) / (rootsolval - solval);
 
             /* avoid roundable candidates */
             if( SCIPvarMayRoundDown(var) )
@@ -361,7 +361,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
          else if( SCIPisGT(scip, solval, rootsolval) )
          {
             roundup = TRUE;
-            distquot = (SCIPfeasCeil(scip, solval) - solval) / (solval - rootsolval);
+            distquot = (SCIPceil(scip, solval) - solval) / (solval - rootsolval);
 
             /* avoid roundable candidates */
             if( SCIPvarMayRoundUp(var) )
@@ -434,9 +434,8 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
                SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
-
-            SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+               SCIPceil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPceil(scip, lpcandssol[bestcand])) );
             roundup = TRUE;
          }
          else
@@ -446,9 +445,9 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
                SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+               SCIPvarGetLbLocal(var), SCIPfloor(scip, lpcandssol[bestcand]));
 
-            SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfloor(scip, lpcandssol[bestcand])) );
             roundup = FALSE;
          }
 

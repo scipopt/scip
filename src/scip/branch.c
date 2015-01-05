@@ -1927,6 +1927,18 @@ void SCIPbranchruleSetMaxbounddist(
    branchrule->maxbounddist = maxbounddist;
 }
 
+/** enables or disables all clocks of \p branchrule, depending on the value of the flag */
+void SCIPbranchruleEnableOrDisableClocks(
+   SCIP_BRANCHRULE*      branchrule,         /**< the branching rule for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
+   )
+{
+   assert(branchrule != NULL);
+
+   SCIPclockEnableOrDisable(branchrule->setuptime, enable);
+   SCIPclockEnableOrDisable(branchrule->branchclock, enable);
+}
+
 /** gets time in seconds used in this branching rule for setting up for next stages */
 SCIP_Real SCIPbranchruleGetSetupTime(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
@@ -2253,11 +2265,11 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
             if( SCIPsetIsInfinity(set, ub) )
             {
-               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb));
+               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb)); /*lint !e666*/
             }
             else if( SCIPsetIsInfinity(set, -lb) )
             {
-               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub));
+               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub)); /*lint !e666*/
             }
 
             lbabs = REALABS(lb);

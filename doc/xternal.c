@@ -582,9 +582,11 @@
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
- * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked by valgrind or
- *   similar tools.
- * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.  (The binary uses these shared
+ * - <code>NOBLKBUFMEM=\<true\></code> turns off the internal SCIP block and buffer memory.  This way the code can be checked by valgrind or
+ *   similar tools. (The individual options <code>NOBLKMEM=\<true\></code> and <code>NOBUFMEM=\<true\></code> to turn off the SCIP block and
+ *   buffer memory, respectively, exist as well).
+ *
+ * - <code>SHARED=\<true\></code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
  * - <code>OPT=prf</code> generates a profiling version of SCIP providing a detailed statistic of the time usage of
  *   every method of SCIP.
@@ -838,11 +840,11 @@
  * for these kinds of projects.
  * Below, you find some hints of how to start such a project.
  *
- * The example should be chosen
- *     depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
+ * - The example should be chosen
+ *   depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
- *
- *    We suggest the use one of the following examples:
+ *   <br>
+ *   We suggest the use one of the following examples:
  *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
@@ -852,28 +854,25 @@
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
- *
+ *     .
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
  *   \verbatim
  > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
      \endverbatim
- *
  *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
  *   the new SCIPProject directory rightafter.
- *
- *  - Open the <code>Makefile</code>  via
+ * - Open the <code>Makefile</code>  via
  *    \verbatim
  > kate Makefile
      \endverbatim
- *
  *    and edit the following variables at the top to have a compilable code:
  *
  *    - specify a correct path to the SCIP root (<code>SCIPDIR</code>)
  *    - rename the targets name (<code>MAINNAME</code>)
  *    - adjust the source file names (<code>MAINOBJ</code>).
- *
+ *    .
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
  *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
@@ -5669,6 +5668,9 @@
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
  *    which can be useful after a <code>SCIPfree()</code> call.
+ *  - If there are memory leaks for which you cannot detect the origin, you can remake your code with the option NOBLKBUFMEM=true
+ *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
+ *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
  *    containing a solution in SCIP format (see \ref EXAMPLE_2).

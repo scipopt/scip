@@ -155,6 +155,7 @@ struct SCIP_Stat
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
+   SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
@@ -203,6 +204,7 @@ struct SCIP_Stat
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
+   int                   nclockskipsleft;    /**< how many times the timing should be skipped in SCIPsolveIsStopped() */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

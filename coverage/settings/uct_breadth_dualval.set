@@ -1,0 +1,30 @@
+# SCIP version 3.0.2.1
+
+# priority of node selection rule <breadthfirst> in standard mode
+# [type: int, range: [-536870912,536870911], default: -10000]
+nodeselection/breadthfirst/stdpriority = 100000000
+
+# priority of node selection rule <uct> in standard mode
+# [type: int, range: [-536870912,536870911], default: 10]
+nodeselection/uct/stdpriority = 100000001
+
+# frequency for calling primal heuristic <dualval> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/dualval/freq = 20
+
+# exit if objective doesn't improve
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dualval/forceimprovements = TRUE
+
+# relax the indicator variables by introducing continuous copies
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dualval/relaxindicators = TRUE
+
+# relax the continous variables 
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dualval/relaxcontvars = TRUE
+
+# verblevel of the heuristic, default is 0 to display nothing
+# [type: int, range: [0,4], default: 0]
+heuristics/dualval/heurverblevel = 4
+

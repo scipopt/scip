@@ -253,7 +253,11 @@ SCIP_Real* SCIPgetValsLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the activity of the linear constraint in the given solution */
+/** gets the activity of the linear constraint in the given solution
+ *
+ *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
+ *        comprises positive and negative infinity contributions
+ */
 EXTERN
 SCIP_Real SCIPgetActivityLinear(
    SCIP*                 scip,               /**< SCIP data structure */

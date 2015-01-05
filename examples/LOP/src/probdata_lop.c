@@ -362,7 +362,7 @@ SCIP_RETCODE LOPevalSolution(
 	 int deg = 0;
 	 for (j = 0; j < n; ++j)
 	 {
-	    SCIP_Real val = 0.0;
+	    SCIP_Real val;
 	    if (j == i)
 	       continue;
 

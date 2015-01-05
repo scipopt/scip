@@ -811,6 +811,8 @@ SCIP_RETCODE setupConstraints(
    int nqpterms;
    struct cgrad* cg;
    int c;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
 
    assert(scip != NULL);
    assert(probdata != NULL);
@@ -828,13 +830,23 @@ SCIP_RETCODE setupConstraints(
 
    for( c = 0; c < n_con && *success; ++c )
    {
+      /* Attention: nqpcheck may modify LUrhs, so do before */
       nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
+
+      lhs = LUrhs[2*c];
+      if( SCIPisInfinity(scip, -lhs) )
+         lhs = -SCIPinfinity(scip);
+
+      rhs = LUrhs[2*c+1];
+      if( SCIPisInfinity(scip, rhs) )
+         rhs = SCIPinfinity(scip);
+
       if( nqpterms == 0 )
       {
          /* linear */
          SCIPdebugMessage("constraint %d (%s) is linear\n", c, con_name(c));  /*lint !e534*/
 
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
 
          /* add linear coefficients */
          for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -856,7 +868,7 @@ SCIP_RETCODE setupConstraints(
 
          SCIPdebugMessage("constraint %d (%s) is quadratic\n", c, con_name(c));  /*lint !e534*/
 
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, lhs, rhs) );
 
          /* add quadratic coefficients of constraint */
          for( i = 0; i < n_var; ++i )
@@ -913,7 +925,7 @@ SCIP_RETCODE setupConstraints(
          /* expression trees without variables raise assertions in CppAD, workaround here for now */
          if( nexprvars > 0 )
          {
-            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
+            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs) );
 
             /* add linear part of constraint */
             for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -925,20 +937,14 @@ SCIP_RETCODE setupConstraints(
          else
          {
             SCIP_Real val;
-            SCIP_Real lhs;
-            SCIP_Real rhs;
 
             SCIP_CALL( SCIPexprtreeEval(exprtree, NULL, &val) );
 
-            if( !SCIPisInfinity(scip, -LUrhs[2*c]) )
-               lhs = LUrhs[2*c] - val;
-            else
-               lhs = -SCIPinfinity(scip);
+            if( !SCIPisInfinity(scip, -lhs) )
+               lhs -= val;
 
-            if( !SCIPisInfinity(scip, LUrhs[2*c+1]) )
-               rhs = LUrhs[2*c+1] - val;
-            else
-               rhs = SCIPinfinity(scip);
+            if( !SCIPisInfinity(scip,  rhs) )
+               rhs -= val;
 
             SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
 
@@ -1291,6 +1297,7 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
    SCIP_Real* x;
+   SCIP_Real* y;
    const char* msg;
    ASL* asl;
 
@@ -1352,6 +1359,7 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
          return SCIP_INVALIDDATA;
    }
 
+   /* get best primal solution */
    x = NULL;
    if( SCIPgetBestSol(scip) != NULL )
    {
@@ -1359,10 +1367,50 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
       SCIP_CALL( SCIPgetSolVals(scip, SCIPgetBestSol(scip), probdata->nvars, probdata->vars, x) );
    }
 
+   /* if the problem is an LP and presolving was turned off, then we try to return the vector of dual multipliers */
+   y = NULL;
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && !SCIPhasPerformedPresolve(scip) && SCIPgetNVars(scip) == SCIPgetNContVars(scip) )
+   {
+      SCIP_CONSHDLR* linconshdlr;
+      SCIP_CONS** conss;
+      int nconss;
+      int c;
+
+      linconshdlr = SCIPfindConshdlr(scip, "linear");
+      assert(linconshdlr != NULL);
+
+      conss = SCIPgetConss(scip);
+      nconss = SCIPgetNConss(scip);
+      assert(conss != NULL);
+      assert(nconss >= 0);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &y, nconss) );
+
+      for( c = 0; c < SCIPgetNConss(scip); ++c )
+      {
+         SCIP_CONS* transcons;
+
+         /* dual solution is created by LP solver and therefore only available for linear constraints */
+         SCIP_CALL( SCIPgetTransformedCons(scip, conss[c], &transcons) );
+         if( transcons == NULL || SCIPconsGetHdlr(transcons) != linconshdlr )
+         {
+            SCIPfreeBufferArray(scip, &y);
+            y = NULL;
+            break;
+         }
+
+         y[c] = SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE
+            ? SCIPgetDualsolLinear(scip, transcons)
+            : -SCIPgetDualsolLinear(scip, transcons);
+         assert(y[c] != SCIP_INVALID); /*lint !e777*/
+      }
+   }
+
    asl = probdata->asl;
-   write_sol((char*)msg, x, NULL, NULL);
+   write_sol((char*)msg, x, y, NULL);
 
    SCIPfreeBufferArrayNull(scip, &x);
+   SCIPfreeBufferArrayNull(scip, &y);
 
    return SCIP_OKAY;
 }

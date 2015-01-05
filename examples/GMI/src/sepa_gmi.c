@@ -686,7 +686,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          {
             /* Compute value of the slack variable (we only care about the correct fractionality) */
             if ( SCIPisInfinity(scip, SCIProwGetRhs(row)) )
-               primsol = SCIPgetRowLPActivity(scip, row) - SCIProwGetLhs(row);
+               primsol = SCIProwGetLhs(row) - SCIPgetRowLPActivity(scip, row);
             else
                primsol = SCIProwGetRhs(row) - SCIPgetRowLPActivity(scip, row);
 

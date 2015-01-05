@@ -123,7 +123,7 @@ SCIP_RETCODE performDualfix(
          if( SCIPvarMayRoundDown(var) && !SCIPisNegative(scip, obj) )
          {
             bound = SCIPvarGetLbGlobal(var);
-            if ( SCIPisZero(scip, obj) && SCIPisInfinity(scip, -bound) )
+            if ( SCIPisInfinity(scip, -bound) )
             {
                /* variable can be fixed to -infinity */
                if ( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
@@ -132,7 +132,7 @@ SCIP_RETCODE performDualfix(
                    * consistently. We thus have to ignore this (should better be handled in presolving). */
                   continue;
                }
-               if ( SCIPvarGetNLocksUp(var) == 1 )
+               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(var) == 1 )
                {
                   /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
                    * clever enough to set/aggregate the variable to something more useful than -infinity and do nothing
@@ -146,7 +146,7 @@ SCIP_RETCODE performDualfix(
          else if( SCIPvarMayRoundUp(var) && !SCIPisPositive(scip, obj) )
          {
             bound = SCIPvarGetUbGlobal(var);
-            if ( SCIPisZero(scip, obj) && SCIPisInfinity(scip, bound) )
+            if ( SCIPisInfinity(scip, bound) )
             {
                /* variable can be fixed to infinity */
                if ( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
@@ -155,7 +155,7 @@ SCIP_RETCODE performDualfix(
                    * consistently. We thus have to ignore this (should better be handled in presolving). */
                   continue;
                }
-               if ( SCIPvarGetNLocksDown(var) == 1 )
+               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(var) == 1 )
                {
                   /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
                    * clever enough to set/aggregate the variable to something more useful than +infinity and do nothing

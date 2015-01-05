@@ -296,6 +296,15 @@ SCIP_RETCODE catchLinearVarEvents(
 
    consdata->lineventdata[linvarpos] = eventdata;
 
+   /* invalidate activity information
+    * NOTE: It could happen that a constraint gets temporary deactivated and some variable bounds change. In this case
+    *       we do not recognize those bound changes with the variable events and thus we have to recompute the activities.
+    */
+   consdata->minlinactivity = SCIP_INVALID;
+   consdata->maxlinactivity = SCIP_INVALID;
+   consdata->minlinactivityinf = -1;
+   consdata->maxlinactivityinf = -1;
+
    return SCIP_OKAY;
 }
 
@@ -388,6 +397,12 @@ SCIP_RETCODE catchQuadVarEvents(
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
    consdata->quadvarterms[quadvarpos].eventdata = eventdata;
+
+   /* invalidate activity information
+    * NOTE: It could happen that a constraint gets temporary deactivated and some variable bounds change. In this case
+    *       we do not recognize those bound changes with the variable events and thus we have to recompute the activities.
+    */
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    return SCIP_OKAY;
 }
@@ -8024,9 +8039,9 @@ SCIP_RETCODE replaceByLinearConstraints(
 
          SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
-         if( checkresult != SCIP_INFEASIBLE )
+         if( checkresult != SCIP_INFEASIBLE && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
-            SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+            SCIPdebugMessage("linear constraint is feasible and LP optimal, thus do not add\n");
          }
          else
          {
@@ -8939,7 +8954,7 @@ SCIP_RETCODE propagateBoundsCons(
                   {
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeUpwards();
-                     rhs2.sup = rhs.sup - minquadactivity;
+                     rhs2.sup = rhs.sup - minquadactivity;  /*lint !e644*/
                      /* if the residual quad min activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadminactinf == 0 && SCIPintervalGetInf(quadactcontr[i]) != 0.0 )
                         rhs2.sup += SCIPintervalGetInf(quadactcontr[i]);
@@ -8963,7 +8978,7 @@ SCIP_RETCODE propagateBoundsCons(
                   {
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeDownwards();
-                     rhs2.inf = rhs.inf - maxquadactivity;
+                     rhs2.inf = rhs.inf - maxquadactivity;  /*lint !e644*/
                      /* if the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
                      if( quadmaxactinf == 0 && SCIPintervalGetSup(quadactcontr[i]) != 0.0 )
                         rhs2.inf += SCIPintervalGetSup(quadactcontr[i]);

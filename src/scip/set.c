@@ -230,7 +230,7 @@
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
-                                                 *   freed (in case of bender decomposition this parameter should be set
+                                                 *   freed (in case of Benders decomposition this parameter should be set
                                                  *   to FALSE and therefore can be used to collect statistics over all
                                                  *   runs) */
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
@@ -317,7 +317,8 @@
 #define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
-
+#define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
+#define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
 
 /* VBC Tool output */
 #define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
@@ -453,7 +454,7 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
    return SCIP_OKAY;
 }
 
-/** parameter change information method that node limit was changed */
+/** parameter change information method that some limit was changed */
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 {  /*lint --e{715}*/
@@ -461,6 +462,64 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
    SCIPmarkLimitChanged(scip);
    return SCIP_OKAY;
 }
+
+/** enable or disable all plugin timers depending on the value of the flag \p enabled */
+void SCIPsetEnableOrDisablePluginClocks(
+   SCIP_SET*            set,                /**< SCIP settings */
+   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+
+   /* go through all plugin types and enable or disable their respective clocks */
+   for( i = set->nreaders - 1; i >= 0; --i )
+      SCIPreaderEnableOrDisableClocks(set->readers[i], enabled);
+
+   for( i = set->npricers - 1; i >= 0; --i )
+      SCIPpricerEnableOrDisableClocks(set->pricers[i], enabled);
+
+   for( i = set->nconshdlrs - 1; i >= 0; --i )
+      SCIPconshdlrEnableOrDisableClocks(set->conshdlrs[i], enabled);
+
+   for( i = set->nconflicthdlrs - 1; i >= 0; --i )
+      SCIPconflicthdlrEnableOrDisableClocks(set->conflicthdlrs[i], enabled);
+
+   for( i = set->npresols - 1; i >= 0; --i )
+      SCIPpresolEnableOrDisableClocks(set->presols[i], enabled);
+
+   for( i = set->nrelaxs - 1; i >= 0; --i )
+      SCIPrelaxEnableOrDisableClocks(set->relaxs[i], enabled);
+
+   for( i = set->nsepas - 1; i >= 0; --i )
+      SCIPsepaEnableOrDisableClocks(set->sepas[i], enabled);
+
+   for( i = set->nprops - 1; i >= 0; --i )
+      SCIPpropEnableOrDisableClocks(set->props[i], enabled);
+
+   for( i = set->nheurs - 1; i >= 0; --i )
+      SCIPheurEnableOrDisableClocks(set->heurs[i], enabled);
+
+   for( i = set->neventhdlrs - 1; i >= 0; --i )
+      SCIPeventhdlrEnableOrDisableClocks(set->eventhdlrs[i], enabled);
+
+   for( i = set->nnodesels - 1; i >= 0; --i )
+      SCIPnodeselEnableOrDisableClocks(set->nodesels[i], enabled);
+
+   for( i = set->nbranchrules - 1; i >= 0; --i )
+      SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
+}
+
+/* method to be invoked when the parameter timing/statistictiming is changed */
+static
+SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPenableOrDisableStatisticTiming(scip) );
+
+   return SCIP_OKAY;
+}
+
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
@@ -1053,6 +1112,7 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal time in seconds to run",
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
+
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
@@ -1346,8 +1406,7 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-   /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 0
+#if 0 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
@@ -1376,7 +1435,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
-         "should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
+         "should the statistics be reset if the transformed problem is freed (in case of a Benders decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
          NULL, NULL) );
 
@@ -1691,6 +1750,16 @@ SCIP_RETCODE SCIPsetCreate(
          "belongs reading time to solving time?",
          &(*set)->time_reading, FALSE, SCIP_DEFAULT_TIME_READING,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/rareclockcheck",
+         "should clock checks of solving time be performed less frequently (note: time limit could be exceeded slightly)",
+         &(*set)->time_rareclockcheck, FALSE, SCIP_DEFAULT_TIME_RARECLOCKCHECK,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/statistictiming",
+         "should timing for statistic output be performed?",
+         &(*set)->time_statistictiming, FALSE, SCIP_DEFAULT_TIME_STATISTICTIMING,
+         paramChgdStatistictiming, NULL) );
 
    /* VBC tool parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -1742,6 +1811,9 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
+
+   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
+   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
 
    return SCIP_OKAY;
 }
@@ -3710,10 +3782,10 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    }
    assert(set->nextcodes < set->extcodessize);
 
-   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)+1);  /*lint !e866*/
+   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) (strlen(name)+1));  /*lint !e866*/
    if( description != NULL )
    {
-      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) strlen(description)+1);  /*lint !e866*/
+      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) (strlen(description)+1));  /*lint !e866*/
    }
    else
    {
@@ -4275,6 +4347,8 @@ void SCIPsetSetLimitChanged(
    )
 {
    set->limitchanged = TRUE;
+
+   set->istimelimitfinite = !SCIPsetIsInfinity(set, set->limit_time);
 }
 
 /** returns the maximal number of variables priced into the LP per round */
@@ -5009,6 +5083,8 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    )
 {
    assert(set != NULL);
+   /* TODO: maybe we should compare with REALABS(val) to handle
+      numerical issues, e.g., if val < 0 */
    assert(SCIPsetIsGE(set, val, -set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 

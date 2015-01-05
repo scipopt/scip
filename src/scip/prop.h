@@ -266,6 +266,13 @@ void SCIPpropSetResprop(
    SCIP_DECL_PROPRESPROP ((*propresprop))    /**< propagation conflict resolving callback */
    );
 
+/** enables or disables all clocks of \p prop, depending on the value of the flag */
+extern
+void SCIPpropEnableOrDisableClocks(
+   SCIP_PROP*            prop,               /**< the propagator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the propagator be enabled? */
+   );
+
 #ifdef __cplusplus
 }
 #endif
