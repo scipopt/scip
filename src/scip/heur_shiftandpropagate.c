@@ -1725,7 +1725,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
       }
 
-      printf("nbinwithoutlocks: %d\n", nbinwithoutlocks);
+      //printf("nbinwithoutlocks: %d\n", nbinwithoutlocks);
 
       if( nbinwithoutlocks > 0 )
       {
@@ -1733,16 +1733,22 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          int b = 1;
          int tmp;
          c = 0;
-         binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
-         var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
 
          /* if c reaches nbinwithoutlocks, then all binary variables without locks were sorted to the beginning of the array */
-         while( c < nbinwithoutlocks )
+         while( c < nbinwithoutlocks && b < ndiscvars )
          {
+            assert(c < b);
+            assert(c < ndiscvars);
+            assert(b < ndiscvars);
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+
             /* search for next variable which is not a binary variable without locks */
             while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
             {
                ++c;
+               if( c >= nbinwithoutlocks )
+                  break;
                var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
             }
             if( c >= nbinwithoutlocks )
@@ -1757,6 +1763,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUp(binvar) > 0 && SCIPvarGetNLocksDown(binvar) > 0) )
             {
                ++b;
+               assert(b < ndiscvars);
                binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
             }
 
@@ -1768,13 +1775,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             /* increase counters */
             ++c;
             ++b;
-            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
-            binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
          }
       }
 
 #ifndef NDEBUG
-      for( c = 0; c <= ndiscvars; ++c )
+      for( c = 0; c < ndiscvars; ++c )
       {
          assert((c < nbinwithoutlocks) == (SCIPvarIsBinary(SCIPcolGetVar(heurdata->lpcols[permutation[c]]))
                && (SCIPvarGetNLocksUp(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0
