@@ -419,6 +419,10 @@ SCIP_RETCODE copyAndSolveComponent(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.cip", SCIPgetProbName(scip), compnr);
       SCIPdebugMessage("write problem to file %s\n", name);
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.set", SCIPgetProbName(scip), compnr);
+      SCIPdebugMessage("write settings to file %s\n", name);
+      SCIP_CALL( SCIPwriteParams(subscip, name, TRUE, TRUE) );
    }
 
    /* the following asserts are not true, because some aggregations in the original scip instance could not get resolved
