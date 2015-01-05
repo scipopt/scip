@@ -40,7 +40,7 @@ TIME=3600
 LOCK=false
 CONTINUE=false
 OPTS=(dbg opt)
-TESTS=(short MMM bugs)
+TESTS=(short MMM bugs SAP-MMP)
 
 # first delete cron jobs if one exists
 crontab -r
