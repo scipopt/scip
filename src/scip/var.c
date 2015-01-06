@@ -13861,7 +13861,7 @@ SCIP_Real SCIPvarCalcPscostConfidenceBound(
 
       /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
        * the number of pseudo cost evaluations of this variable in the respective direction. */
-      confidencebound *= SCIPstudentTGetCriticalValue(clevel, (int)count);
+      confidencebound *= SCIPstudentTGetCriticalValue(clevel, (int)SCIPsetFloor(set, count) - 1);
    }
    else
       confidencebound = 0.0;
@@ -13903,7 +13903,7 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
     * confidence interval bound at confidence level of 95% for individual variable reliability.
     * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
     */
-   if( downsize >= 2.0 )
+   if( downsize >= 1.5 )
    {
       SCIP_Real normval;
 
@@ -13983,7 +13983,7 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
    if( countx < 1.5 || county < 1.5 )
       return FALSE;
 
-   realdirection = dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0;
+   realdirection = (dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
 
    meanx = fracx * SCIPvarGetPseudocost(varx, stat, realdirection);
    meany = fracy * SCIPvarGetPseudocost(vary, stat, realdirection);
@@ -13993,7 +13993,7 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
 
    /* if there is no variance, the means are taken from a constant distribution */
    if( SCIPsetIsFeasEQ(set, variancex + variancey, 0.0) )
-      return !SCIPsetIsFeasEQ(set, meanx, meany);
+      return (onesided ? SCIPsetIsFeasGT(set, meanx, meany) : !SCIPsetIsFeasEQ(set, meanx, meany));
 
    tresult = SCIPcomputeTwoSampleTTestValue(meanx, meany, variancex, variancey, countx, county);
 

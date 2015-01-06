@@ -433,7 +433,7 @@ SCIP_RETCODE execRelpscost(
       prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
-      /* depending on the strong branching priority, optionally alter the error based reliability as rel / prio, such that
+      /* depending on the strong branching priority, optionally alter the error based reliability as 1.0 + prio * (rel - 1.0) , such that
        * rel -> 1.0 for prio -> 0
        */
       relerrorthreshold = branchruledata->relerrortolerance;
@@ -449,13 +449,13 @@ SCIP_RETCODE execRelpscost(
       if( branchruledata->usehyptestforreliability || branchruledata->userelerrorforreliability)
       {
          /* with decreasing priority, use a less strict confidence level */
-         if( prio >= 0.95 )
+         if( prio >= 0.9 )
             clevel = SCIP_CONFIDENCELEVEL_975;
-         else if( prio >= 0.85 )
-            clevel = SCIP_CONFIDENCELEVEL_95;
          else if( prio >= 0.7 )
+            clevel = SCIP_CONFIDENCELEVEL_95;
+         else if( prio >= 0.5 )
             clevel = SCIP_CONFIDENCELEVEL_90;
-         else if( prio >= 0.55 )
+         else if( prio >= 0.3 )
             clevel = SCIP_CONFIDENCELEVEL_875;
          else
             clevel = SCIP_CONFIDENCELEVEL_75;
@@ -469,40 +469,46 @@ SCIP_RETCODE execRelpscost(
       bestpsdomainscore = -SCIPinfinity(scip);
 
       /* search for the best candidate first */
-      for( c = 0; branchruledata->usehyptestforreliability && c < nbranchcands; ++c )
+      if( branchruledata->usehyptestforreliability )
       {
-         SCIP_Real conflictscore;
-         SCIP_Real conflengthscore;
-         SCIP_Real inferencescore;
-         SCIP_Real cutoffscore;
-         SCIP_Real pscostscore;
-         SCIP_Real score;
-
-         conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
-         conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
-         inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
-         cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
-         pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
-
-         score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
-
-         /* check for better score of candidate */
-         if( SCIPisSumGE(scip, score, bestpsscore) )
+         for( c = 0; c < nbranchcands; ++c )
          {
-            SCIP_Real fracscore;
-            SCIP_Real domainscore;
+            SCIP_Real conflictscore;
+            SCIP_Real conflengthscore;
+            SCIP_Real inferencescore;
+            SCIP_Real cutoffscore;
+            SCIP_Real pscostscore;
+            SCIP_Real score;
 
-            fracscore = MIN(branchcandsfrac[c], 1.0 - branchcandsfrac[c]);
-            domainscore = -(SCIPvarGetUbLocal(branchcands[c]) - SCIPvarGetLbLocal(branchcands[c]));
-            if( SCIPisSumGT(scip, score, bestpsscore)
-                  || SCIPisSumGT(scip, fracscore, bestpsfracscore)
-                  || (SCIPisSumGE(scip, fracscore, bestpsfracscore) && domainscore > bestpsdomainscore) )
+            if( SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
+               continue;
+
+            conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
+            conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
+            inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
+            cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
+
+            score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
+                  inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
+
+            /* check for better score of candidate */
+            if( SCIPisSumGE(scip, score, bestpsscore) )
             {
-               bestpscand = c;
-               bestpsscore = score;
-               bestpsfracscore = fracscore;
-               bestpsdomainscore = domainscore;
+               SCIP_Real fracscore;
+               SCIP_Real domainscore;
+
+               fracscore = MIN(branchcandsfrac[c], 1.0 - branchcandsfrac[c]);
+               domainscore = -(SCIPvarGetUbLocal(branchcands[c]) - SCIPvarGetLbLocal(branchcands[c]));
+               if( SCIPisSumGT(scip, score, bestpsscore)
+                     || SCIPisSumGT(scip, fracscore, bestpsfracscore)
+                     || (SCIPisSumGE(scip, fracscore, bestpsfracscore) && domainscore > bestpsdomainscore) )
+               {
+                  bestpscand = c;
+                  bestpsscore = score;
+                  bestpsfracscore = fracscore;
+                  bestpsdomainscore = domainscore;
+               }
             }
          }
       }
@@ -572,7 +578,7 @@ SCIP_RETCODE execRelpscost(
                      !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
                         branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
                      !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) )
+                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
                   usesb = TRUE;
             }
             /* check if relative error is tolerable */
@@ -584,7 +590,7 @@ SCIP_RETCODE execRelpscost(
                   !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
                         branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
                   !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE))
+                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE))
                usesb = TRUE;
 
             /* count the number of variables that are completely uninitialized */

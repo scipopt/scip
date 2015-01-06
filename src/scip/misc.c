@@ -81,7 +81,7 @@ static const SCIP_Real studentt_quartilesabove[] = {
 };
 
 /** the maximum degrees of freedom represented before switching to normal approximation */
-static const int studentt_maxdf = sizeof(studentt_quartiles)/5 * sizeof(SCIP_Real);
+static const int studentt_maxdf = sizeof(studentt_quartiles)/(5 * sizeof(SCIP_Real));
 
 /** get critical value of a Student-T distribution for a given number of degrees of freedom at a confidence level */
 SCIP_Real SCIPstudentTGetCriticalValue(
@@ -89,7 +89,7 @@ SCIP_Real SCIPstudentTGetCriticalValue(
    int                   df                  /**< degrees of freedom */
    )
 {
-   if( df >= studentt_maxdf )
+   if( df > studentt_maxdf )
       return studentt_quartilesabove[(int)clevel];
    else
       return studentt_quartiles[(int)clevel + 5 * (df - 1)];
@@ -113,7 +113,7 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    SCIP_Real pooledvariance;
    SCIP_Real tresult;
 
-   /* two few samples */
+   /* too few samples */
    if( countx < 1.9 || county < 1.9 )
       return SCIP_INVALID;
 
