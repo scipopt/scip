@@ -1894,18 +1894,22 @@ SCIP_RETCODE mergeClique(
    }
    assert(!onefixfound);
 
+   /* we fixed a variable because it appears at least twice, now we need to remove the fixings
+    *
+    * @note that if we are in probing or solving stage, the fixation on the variable might not be carried out yet,
+    *       because it was contradicting a local bound
+    */
    if( nlocalbdchgs > 0 )
    {
-      int w;
+      SCIP_VAR* onefixedvar;
       SCIP_Bool onefixedvalue;
-      SCIP_VAR* onefixedvar = NULL;
+      int w;
 
-      /* we fixed a variable because it appears at least twice, now we need to remove the fixings */
-      /* @note that if we are in probing or solving stage, the fixation on the variable might not be carried out yet,
-       *       because it was contradicting a local bound
-       */
+      /* we initialize the former value only to please gcc */
+      onefixedvalue = TRUE;
+      onefixedvar = NULL;
 
-      /* remove all inactive variables */
+      /* remove all inactive variables, thereby checking for a variable that is fixed to one */
       v = 0;
       w = 0;
       while( v < *nclqvars )
