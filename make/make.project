@@ -183,7 +183,7 @@ ALLSRC		=
 #-----------------------------------------------------------------------------
 # include additional make files
 #-----------------------------------------------------------------------------
-include $(SCIPREALPATH)/make/make.$(BASE)
+-include $(SCIPREALPATH)/make/make.$(BASE)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
