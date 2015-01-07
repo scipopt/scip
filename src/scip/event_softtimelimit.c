@@ -50,10 +50,8 @@ SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
-#if 0 /* should the event handler be copied??? */
    /* call inclusion method of event handler */
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
-#endif
 
    return SCIP_OKAY;
 }
