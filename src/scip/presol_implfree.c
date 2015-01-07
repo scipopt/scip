@@ -1148,7 +1148,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                int* rowend;
                SCIP_Real* valpnt;
                int nvars;
-               SCIP_Real lhs;
                SCIP_Real rhs;
 
                multiaggvar = SCIPmatrixGetVar(matrix, v);
@@ -1158,7 +1157,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                assert(row < nrows);
 
                multiaggcons = SCIPmatrixGetCons(matrix, row);
-               lhs = SCIPmatrixGetRowLhs(matrix, row);
                rhs = SCIPmatrixGetRowRhs(matrix, row);
 
                /* get the number of variables without the multi-agg variable itself */
@@ -1188,9 +1186,9 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                if( SCIPisEQ(scip, multiaggcoef, 0.0) )
                   continue;
 
-               assert(SCIPisInfinity(scip, -lhs) ||
+               assert(SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, row)) ||
                   SCIPisInfinity(scip, rhs) ||
-                  SCIPisEQ(scip, lhs, rhs));
+                  SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, row), rhs));
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )
