@@ -108,6 +108,14 @@ fixed bugs:
 - fixed bug leading to an incorrect dual bound when solving probing LPs within a DURINGPRICINGLOOP heuristic
 - fixed bug in components presolver with handling of dual fixable variables: unboundedness was not detected,
   better handle components with single variables by dual fixing propagator
+- fixed bug in prop_dualfixing: don't fix variables to infinite values during solving
+- fixed bug in cons_setppc with dual presolving disabled
+- fixed sign of the dual multipliers returned by AMPL interfaces for maximization
+- fixed bug in GMI example: fractionality of slack variable is now computed correctly
+- issues in component solving by presol_components do not lead to stopping the overall process, anymore, the component
+  is just disregarded
+- fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
+- fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
@@ -133,6 +141,7 @@ interface:
 - new method SCIPhasPerformedPresolve() to check, e.g., whether LP duals are accessible
 - AMPL interface now returns dual multipliers if problem is an LP and presolving was turned off
 - changes in clock type are now transferred to SoPlex
+- corrected wrong primal bound in statistics for unbounded problems
 
 parameters:
 - new parameter timing/rareclockcheck to call the system time less frequently, based on the current average time interval

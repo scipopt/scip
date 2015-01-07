@@ -33,7 +33,9 @@ NODELIMIT=${11}  # - node limit for the solver
 LPS=${12}        # - LP solver to use
 DISPFREQ=${13}   # - display frequency for chronological output table
 OPTCOMMAND=${14} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-SOLUFILE=${15}   # - solu file, only necessary if $SETCUTOFF is 1
+CLIENTTMPDIR=${15}
+SOLBASENAME=${16}
+SOLUFILE=${17}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -42,6 +44,9 @@ SOLUFILE=${15}   # - solu file, only necessary if $SETCUTOFF is 1
 
 # new environment variables after running this script
 # -None
+
+#set solfile
+SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
 # reset TMPFILE
 echo > $TMPFILE
@@ -100,7 +105,16 @@ then
     fi
 fi
 
+
+# filter all parseable file format extensions
+TMPINSTANCE=`basename $INSTANCE .gz`
+TMPINSTANCEB=`basename $INSTANCE .mps`
+
 echo $OPTCOMMAND                       >> $TMPFILE
 echo display statistics                >> $TMPFILE
 echo checksol                          >> $TMPFILE
+if test "$TMPINSTANCEB" != "$TMPINSTANCE"
+then
+   echo write sol $SOLFILE             >> $TMPFILE
+fi
 echo quit                              >> $TMPFILE

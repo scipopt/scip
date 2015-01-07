@@ -20,11 +20,12 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Gerald Gamrath
- * @author Ambrox Gleixner
+ * @author Ambros Gleixner
  * @author Marc Pfetsch
  * @author Stefan Vigerske
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Felipe Serrano
  */
 
 /* CPLEX supports FASTMIP which fastens the lp solving process but therefor it might happen that there will be a loss in
@@ -1138,9 +1139,11 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->senarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rhsarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rngarray);
+   BMSfreeMemoryArrayNull(&(*lpi)->valarray);
    BMSfreeMemoryArrayNull(&(*lpi)->rngindarray);
    BMSfreeMemoryArrayNull(&(*lpi)->cstat);
    BMSfreeMemoryArrayNull(&(*lpi)->rstat);
+   BMSfreeMemoryArrayNull(&(*lpi)->indarray);
 
    /* free environment */
    CHECK_ZERO( (*lpi)->messagehdlr, CPXcloseCPLEX(&((*lpi)->cpxenv)) );
@@ -3414,7 +3417,12 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get row of inverse basis matrix B^-1 */
+/** get dense row of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3425,6 +3433,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    )
 {
    int retval;
+   int nrows;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -3448,10 +3457,42 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
 
+   /* the LPi expects slack variables with coefficient +1; CPLEX adds slack variables with a coefficient -1 for 'G'
+    * constraints, so we have to change the sign of the corresponding rows
+    */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureValMem(lpi, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetbhead(lpi->cpxenv, lpi->cpxlp, lpi->indarray, NULL) );
+
+   if( lpi->indarray[r] < 0 )
+   {
+      int basicrow;
+      char rowsense;
+
+      basicrow = -lpi->indarray[r] - 1;
+      assert(basicrow >= 0);
+      assert(basicrow < nrows);
+
+      CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
+
+      if( rowsense == 'G' )
+      {
+         int i;
+
+         for( i = 0; i < nrows; i++ )
+            coef[i] *= -1.0;
+      }
+   }
+
    return SCIP_OKAY;
 }
 
-/** get column of inverse basis matrix B^-1 */
+/** get dense column of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ */
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -3466,6 +3507,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    )
 {
    int retval;
+   int nrows;
+   int r;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -3489,10 +3532,39 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
 
+   /* the LPi expects slack variables with coefficient +1; CPLEX adds slack variables with a coefficient -1 for 'G'
+    * constraints, so we have to change the sign of the corresponding rows
+    */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureValMem(lpi, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetbhead(lpi->cpxenv, lpi->cpxlp, lpi->indarray, NULL) );
+   SCIP_CALL( ensureSidechgMem(lpi, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, 0, nrows - 1) );
+
+   for( r = 0; r < nrows; r++ )
+   {
+      if( lpi->indarray[r] < 0 )
+      {
+         int basicrow;
+
+         basicrow = -lpi->indarray[r] - 1;
+         assert(basicrow >= 0);
+         assert(basicrow < nrows);
+
+         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+            coef[r] *= -1.0;
+      }
+   }
+
    return SCIP_OKAY;
 }
 
-/** get row of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3504,6 +3576,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    )
 {  /*lint --e{715}*/
    int retval;
+   int nrows;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -3527,10 +3600,42 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
 
+   /* the LPi expects slack variables with coefficient +1; CPLEX adds slack variables with a coefficient -1 for 'G'
+    * constraints, so we have to change the sign of the corresponding rows
+    */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureValMem(lpi, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetbhead(lpi->cpxenv, lpi->cpxlp, lpi->indarray, NULL) );
+
+   if( lpi->indarray[r] < 0 )
+   {
+      int basicrow;
+      char rowsense;
+
+      basicrow = -lpi->indarray[r] - 1;
+      assert(basicrow >= 0);
+      assert(basicrow < nrows);
+
+      CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
+
+      if( rowsense == 'G' )
+      {
+         int i;
+
+         for( i = 0; i < nrows; i++ )
+            coef[i] *= -1.0;
+      }
+   }
+
    return SCIP_OKAY;
 }
 
-/** get column of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ */
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
@@ -3541,6 +3646,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    )
 {  /*lint --e{715}*/
    int retval;
+   int nrows;
+   int r;
 
    assert(lpi->cpxenv != NULL);
    assert(lpi != NULL);
@@ -3563,6 +3670,30 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
+
+   /* the LPi expects slack variables with coefficient +1; CPLEX adds slack variables with a coefficient -1 for 'G'
+    * constraints, so we have to change the sign of the corresponding rows
+    */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureValMem(lpi, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetbhead(lpi->cpxenv, lpi->cpxlp, lpi->indarray, NULL) );
+   SCIP_CALL( ensureSidechgMem(lpi, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, 0, nrows - 1) );
+
+   for( r = 0; r < nrows; r++ )
+   {
+      if( lpi->indarray[r] < 0 )
+      {
+         int basicrow;
+
+         basicrow = -lpi->indarray[r] - 1;
+         assert(basicrow >= 0);
+         assert(basicrow < nrows);
+
+         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+            coef[r] *= -1.0;
+      }
+   }
 
    return SCIP_OKAY;
 }

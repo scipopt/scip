@@ -450,6 +450,30 @@ SCIP_RETCODE checkStage(
    initsolve,solving,solved,exitsolve,freetrans,freescip) SCIP_OKAY
 #endif
 
+/** gets global lower (dual) bound in transformed problem */
+static
+SCIP_Real getLowerbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip);
+
+   return SCIPtreeGetLowerbound(scip->tree, scip->set);
+}
+
+/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
+static
+SCIP_Real getUpperbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+      return -SCIPinfinity(scip);
+   else
+      return scip->primal->upperbound;
+}
+
 
 /** gets global primal bound (objective value of best solution or user objective limit) */
 static
@@ -457,7 +481,7 @@ SCIP_Real getPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->primal->upperbound);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, getUpperbound(scip));
 }
 
 /** gets global dual bound */
@@ -497,28 +521,6 @@ SCIP_Real getDualbound(
    else
       return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, lowerbound);
 }
-
-/** gets global lower (dual) bound in transformed problem */
-static
-SCIP_Real getLowerbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      return -SCIPinfinity(scip);
-
-   return SCIPtreeGetLowerbound(scip->tree, scip->set);
-}
-
-/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
-static
-SCIP_Real getUpperbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   return scip->primal->upperbound;
-}
-
 
 /*
  * miscellaneous methods
@@ -14053,7 +14055,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_CALL( checkStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* forbid infinite objective function values */
-   if( SCIPisInfinity(scip, ABS(obj)) )
+   if( SCIPisInfinity(scip, REALABS(obj)) )
    {
       SCIPerrorMessage("invalid objective function value: value is infinite\n");
       return SCIP_INVALIDDATA;
@@ -17857,7 +17859,7 @@ SCIP_RETCODE SCIPchgVarObj(
    assert( var->scip == scip );
 
    /* forbid infinite objective values */
-   if( SCIPisInfinity(scip, ABS(newobj)) )
+   if( SCIPisInfinity(scip, REALABS(newobj)) )
    {
       SCIPerrorMessage("invalid objective value: objective value is infinite\n");
       return SCIP_INVALIDDATA;

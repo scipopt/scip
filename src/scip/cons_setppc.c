@@ -255,7 +255,9 @@ int setppcCompare2(
       return 0;
    else
    {
-      assert(consdata1->setppctype > consdata2->setppctype || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars > consdata2->nvars) || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars < consdata2->nvars)); /*lint !e641*/
+      assert(consdata1->setppctype > consdata2->setppctype || ((consdata1->setppctype == consdata2->setppctype) &&
+            ((consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars > consdata2->nvars)
+               || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars < consdata2->nvars)))); /*lint !e641*/
       return +1;
    }
 }
@@ -1781,7 +1783,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_CALL( addCoef(scip, cons, consvars[v2]) );
                }
             }
-            /* we need to degrade this setppc constraint to a linear constraint*/
+            /* we need to degrade this setppc constraint to a linear constraint */
             else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
             {
                char name[SCIP_MAXSTRLEN];
@@ -1791,7 +1793,9 @@ SCIP_RETCODE applyFixings(
                int size;
                int k;
 
-               /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
+               /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole
+                * probvar sum over all variables
+                */
 
                size = MAX(nconsvars, 1) + consdata->nvars - 1;
 
@@ -1813,7 +1817,7 @@ SCIP_RETCODE applyFixings(
                /* get active variables for new constraint */
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize, TRUE) );
 
-               /* if space was not enough(we found another multi-aggregation), we need to resize the buffers */
+               /* if space was not enough (we found another multi-aggregation), we need to resize the buffers */
                if( requiredsize > nconsvars )
                {
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
@@ -1870,7 +1874,7 @@ SCIP_RETCODE applyFixings(
 
                return SCIP_OKAY;
             }
-            /* we need to degrade this logicor constraint to a linear constraint*/
+            /* we need to degrade this setppc constraint to a linear constraint*/
             else
             {
                /* check, if the variable should be replaced with the representative */
@@ -5490,7 +5494,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    /* sort constraints */
    SCIPsortPtr((void**)usefulconss, setppcConssSort2, nconss);
 
-   nlocaladdconss = 0;
    posreplacements = 0;
    nhashmapentries = 0;
    ndecs = 0;
@@ -5509,6 +5512,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       int oldnfixedvars;
+      nlocaladdconss = 0;
 
       cons = usefulconss[c];
       assert(cons != NULL);
@@ -5617,7 +5621,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
          }
       }
 
-      /* perform dualpresolve on set-packing constraints with exaclty two variables */
+      /* perform dualpresolve on set-packing constraints with exactly two variables */
       if( !donotaggr && consdata->nvars == 2 && dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
       {
          SCIP_VAR* var;
@@ -5733,14 +5737,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
          aggregated = FALSE;
          nuplocks = SCIPvarGetNLocksUp(var);
          ndownlocks = SCIPvarGetNLocksDown(var);
-         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && nuplocks >= 0 && ndownlocks >= 1) || (nuplocks >= 1 && ndownlocks >= 0));
+         assert(nuplocks >= 1 && ndownlocks >= 0); /* we are only treating set partitioning and set packing constraints, so every variable in there should have an uplock */
 
-         if( dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING && (nuplocks == 1 || ndownlocks == 1) && nuplocks + ndownlocks <= 2 )
+         if( dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING && nuplocks <= 1 && nuplocks + ndownlocks <= 2 )
          {
-            assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && nuplocks <= 1 && ndownlocks == 1) || (nuplocks == 1 && ndownlocks <= 1));
+            assert(nuplocks == 1 && ndownlocks <= 1);
 
             /* we found a redundant variable in a set-partitioning constraint */
-            if( nuplocks == 0 || ndownlocks == 0 )
+            if( ndownlocks == 0 )
             {
                SCIP_Real objval;
 
@@ -5927,14 +5931,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             ++ndecs;
          }
          /* we might have found a redundant variable */
-         else if( nuplocks <= 2 && nuplocks <= 2 && SCIPvarGetNegatedVar(var) != NULL )
+         else if( ndownlocks <= 2 && nuplocks <= 2 && SCIPvarGetNegatedVar(var) != NULL )
          {
             SCIP_CONSDATA* aggrconsdata;
             int image;
             int consindex;
             int varindex;
 
-            /* if we have two times the same variable in a set-partitioning constraint, so we cannot aggregate this */
+            /* if we have two times the same variable in a set-partitioning constraint, we cannot aggregate this */
             if( SCIPhashmapExists(vartoindex, (void*) var) )
             {
                image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
@@ -5974,7 +5978,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
 
-               /* if we have two times the same variable in a set-partitioning constraint, so we cannot aggregate this */
+               /* the negated variable did not occur in a set partitioning constraint (those will be iterated over
+                * first), so we cannot aggregate this variable
+                */
                if( !SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(var)) )
                   continue;
             }
@@ -6010,13 +6016,16 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             /* must not multi-aggregate variables that are locked more then twice by all setppc constraints */
             if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING &&
-               (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING && nuplocks + ndownlocks > 2 )
+               (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            {
+               assert(!dualpresolvingenabled || nuplocks + ndownlocks > 2);
                continue;
+            }
 
             assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ||
                (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
 
-            /* we already remove a variable before, so our positioning information might be wrong, so we need to walk
+            /* we already removed a variable before, so our positioning information might be wrong, so we need to walk
              * over all variables again
              */
             if( chgtype[consindex] )
@@ -6034,6 +6043,8 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                }
                assert(v2 >= 0);
 #endif
+               assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+
                SCIPdebugMessage("multi-aggregating in one set-partitioning or one set-packing constraint\n");
 
                /* perform aggregation on variables resulting from a set-partitioning constraint */
@@ -6050,7 +6061,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                /* @note it might have happened that we have a variable at hand which exists actually in a set-packing
                 *       constraint and due to some other aggregation we increased the number of locks and reached this
-                *       part of the code, where we would expect only set-partitioning constraint in generally, so in
+                *       part of the code, where we would expect only set-partitioning constraints in general, so in
                 *       such a strange case we cannot aggregate anything
                 */
                if( (SCIP_SETPPCTYPE)aggrconsdata->setppctype != SCIP_SETPPCTYPE_PARTITIONING )
@@ -6058,6 +6069,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                assert(0 <= varindex && varindex < aggrconsdata->nvars);
                assert(aggrconsdata->vars[varindex] == SCIPvarGetNegatedVar(var));
+               assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
 
                SCIPdebugMessage("multi-aggregating in two set-partitioning or one set-partitioning and -packing constraint\n");
 
@@ -6078,15 +6090,20 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          if( aggregated )
          {
+            assert(nuplocks >= 1 && ndownlocks >= 0); /* repeated from above */
             ++(*naggrvars);
 
-            if( ((nuplocks == 1 && ndownlocks == 0) || (nuplocks == 0 && ndownlocks == 1)) && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            if( nuplocks == 1 && ndownlocks == 0 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
             {
+               assert(deleteconsindex < 0);
+
                SCIP_CALL( delCoefPos(scip, cons, v) );
                ++(*nchgcoefs);
             }
             else if( nuplocks == 1 && ndownlocks == 1 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
             {
+               assert(deleteconsindex < 0);
+
                SCIP_CALL( delCoefPos(scip, cons, v) );
                ++(*nchgcoefs);
 

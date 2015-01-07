@@ -200,6 +200,10 @@ SCIP_Real calcShiftVal(
    if( shiftdown )
       shiftval *= -1.0;
 
+   /* we must not shift variables to infinity */
+   if( SCIPisInfinity(scip, solval + shiftval) )
+      shiftval = 0.0;
+
    return shiftval;
 }
 
@@ -323,6 +327,26 @@ SCIP_DECL_HEUREXITSOL(heurExitsolOneopt)
 
    return SCIP_OKAY;
 }
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitOneopt)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize last solution index */
+   heurdata->lastsolindex = -1;
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -718,7 +742,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             shiftval = calcShiftVal(scip, var, solval, activities);
             SCIPdebugMessage(" -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
             assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
-            assert( SCIPisFeasGE(scip, solval+shiftval, SCIPvarGetLbGlobal(var)) && SCIPisFeasLE(scip, solval+shiftval, SCIPvarGetUbGlobal(var)));
+            assert(SCIPisFeasGE(scip, solval+shiftval, SCIPvarGetLbGlobal(var)) && SCIPisFeasLE(scip, solval+shiftval, SCIPvarGetUbGlobal(var)));
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
             SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
          }
@@ -847,7 +871,6 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
 
    /* create Oneopt primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->lastsolindex = -1;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -861,6 +884,7 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOneopt) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolOneopt) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolOneopt) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitOneopt) );
 
    /* add oneopt primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/weightedobj",

@@ -49,6 +49,7 @@
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
 
+static unsigned char warnedbeta = 0;
 
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
@@ -57,6 +58,19 @@
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
+
+#if GRB_VERSION_MAJOR == 6 && GRB_VERSION_MINOR == 0
+struct _GRBsvec
+{
+  int     len;
+  int    *ind;
+  double *val;
+};
+#endif
+
+#ifndef SVECTOR
+#define SVECTOR GRBsvec
+#endif
 
 #if( GRB_VERSION_MAJOR < 4 )
 #define GRB_METHOD_DUAL    GRB_LPMETHOD_DUAL
@@ -1159,7 +1173,10 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (*lpi)->pricing) );
 
-   SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
+   if( !warnedbeta ) {
+      warnedbeta = 1;
+      SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
+   }
 
    return SCIP_OKAY;
 }
@@ -3537,7 +3554,14 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get row of inverse basis matrix B^-1 */
+/** get dense row of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3547,7 +3571,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    SVECTOR b;
    int nrows;
@@ -3620,19 +3643,18 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
-#else
-   int j, ncols;
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-
-   /* Gurobi does not have the possibility to access the basis inverse -> setting coef to 0 */
-   for( j = 0; j < ncols; ++j )
-      coef[j] = 0.0;
-#endif
    return SCIP_OKAY;
 }
 
-/** get column of inverse basis matrix B^-1 */
+/** get dense column of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -3646,7 +3668,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    SVECTOR b;
    int nrows;
@@ -3721,14 +3742,16 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by Gurobi\n");
-
-   return SCIP_LPERROR;
-#endif
 }
 
-/** get row of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3739,7 +3762,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    int ncols;
    int nrows;
@@ -3803,14 +3825,16 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetBInvARow() not supported by Gurobi\n");
-
-   return SCIP_LPERROR;
-#endif
 }
 
-/** get column of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
@@ -3820,7 +3844,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
-#if GRB_VERSION_MAJOR < 6
    SVECTOR x;
    int nrows;
    int k;
@@ -3882,11 +3905,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
-#else
-   SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by Gurobi\n");
-
-   return SCIP_LPERROR;
-#endif
 }
 
 /**@} */

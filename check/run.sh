@@ -14,6 +14,11 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# absolut tolerance for checking linear constraints and objective value
+LINTOL=1e-04 
+# absolut tolerance for checking integrality constraints 
+INTTOL=1e-04
+
 # check if tmp-path exists
 if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
 then
@@ -23,7 +28,9 @@ fi
 
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
+SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
 TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
+
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
@@ -43,6 +50,28 @@ then
   echo "$EXECNAME returned with error code $retcode." >>$ERRFILE
 fi
 
+if test -e $SOLFILE
+then
+    # translate SCIP solution format into format for solution checker. The
+    # SOLFILE format is a very simple format where in each line we have a
+    # <variable, value> pair, separated by spaces.  A variable name of
+    # =obj= is used to store the objective value of the solution, as
+    # computed by the solver. A variable name of =infeas= can be used to
+    # indicate that an instance is infeasible.
+    sed ' /solution status:/d;
+            s/objective value:/=obj=/g;
+            s/no solution available//g' $SOLFILE > $TMPFILE
+    mv $TMPFILE $SOLFILE
+    
+    # check if the link to the solution checker exists
+    if test -f "$CHECKERPATH/bin/solchecker" 
+    then
+      echo
+      $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE
+      echo
+    fi
+fi
+
 date +"@04 %s"                      >> $OUTFILE
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
@@ -55,6 +84,7 @@ mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
 
 rm -f $TMPFILE
+rm -f $SOLFILE
 #chmod g+r $ERRFILE
 #chmod g+r $SCIPPATH/results/$BASENAME.out
 #chmod g+r $SCIPPATH/results/$BASENAME.set

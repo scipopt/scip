@@ -414,6 +414,14 @@ BEGIN {
 /problem is solved/ { timeout = 0; }
 /best solution is not feasible in original problem/  { bestsolfeas = 0; }
 
+/Check SOL:/ { 
+   intcheck = $4;
+   conscheck = $6;
+   objcheck = $8;
+   if( !intcheck || !conscheck || !objcheck ) 
+      bestsolfeas = 0;
+}
+
 /^  First Solution   :/ {
    timetofirst = $11;
    firstpb = $4;

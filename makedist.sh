@@ -16,7 +16,7 @@ rm -f release/$NAME.tgz
 git status
 
 echo generating default setting files
-make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
+make LPS=none OPT=opt READLINE=false ZLIB=false ZIMPL=false -j4
 bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 # Before we create a tarball change the director and file rights in a command way
@@ -27,8 +27,6 @@ find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/* scripts/* interfaces/ampl/get.ASL interfaces/jni/createJniInterface.py check/cmpres.awk check/find_missing_instances.py
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
---exclude="*CVS*" \
---exclude="*cvs*" \
 --exclude="*~" \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \

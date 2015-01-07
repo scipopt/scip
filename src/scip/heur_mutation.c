@@ -86,7 +86,8 @@ SCIP_RETCODE createSubproblem(
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
    unsigned int*         randseed,           /**< a seed value for the random number generator                  */
-   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
+   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?  */
+   SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked   */
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                    */
@@ -100,6 +101,9 @@ SCIP_RETCODE createSubproblem(
    int i;
    int j;
    int nmarkers;
+   int maxiters;
+
+   *success = TRUE;
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -123,16 +127,31 @@ SCIP_RETCODE createSubproblem(
 
    j = 0;
    BMSclearMemoryArray(marked, nbinvars+nintvars);
-   while( j < nmarkers )
+
+   /* leave the loop after at most that many iterations */
+   maxiters = 3 * (nbinvars + nintvars);
+
+   while( j < nmarkers && maxiters > 0 )
    {
       do
       {
          i = SCIPgetRandomInt(0, nbinvars+nintvars-1, randseed);
+         --maxiters;
       }
-      while( marked[i] );
+      while( marked[i] && maxiters > 0 );
+
+      j = marked[i] ? j : j+1;
       marked[i] = TRUE;
-      j++;
    }
+
+   /* abort if it was not possible to fix enough variables */
+   if( j < nmarkers )
+   {
+      *success = FALSE;
+      assert(maxiters == 0);
+      goto TERMINATE;
+   }
+
    assert( j == nmarkers );
 
    /* change bounds of variables of the subproblem */
@@ -216,6 +235,7 @@ SCIP_RETCODE createSubproblem(
       }
    }
 
+ TERMINATE:
    SCIPfreeBufferArray(scip, &marked);
    return SCIP_OKAY;
 }
@@ -449,7 +469,15 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIPhashmapFree(&varmapfw);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed, heurdata->uselprows) );
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed,
+         heurdata->uselprows, &success) );
+
+   /* terminate if it was not possible to create the subproblem */
+   if( !success )
+   {
+      SCIPdebugMessage("Could not create the subproblem -> skip call\n");
+      goto TERMINATE;
+   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

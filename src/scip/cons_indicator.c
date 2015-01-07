@@ -6228,6 +6228,14 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
       }
    }
 
+   /* check correct linear constraint */
+   if ( ! SCIPisInfinity(scip, SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: linear constraint is ranged or equation.\n", name);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* create indicator constraint */
    SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, name, binvar, lincons, slackvar,
          initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );

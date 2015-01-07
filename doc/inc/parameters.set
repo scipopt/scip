@@ -1,4 +1,4 @@
-# SCIP version 3.1.0
+# SCIP version 3.1.1
 
 # branching score function ('s'um, 'p'roduct, 'q'uotient)
 # [type: char, range: {spq}, default: p]
@@ -444,7 +444,7 @@ misc/permuteconss = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 misc/permutevars = FALSE
 
-# should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)
+# should the statistics be reset if the transformed problem is freed (in case of a Benders decomposition this parameter should be set to FALSE)
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/resetstat = TRUE
 
@@ -683,6 +683,14 @@ timing/enabled = TRUE
 # belongs reading time to solving time?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 timing/reading = FALSE
+
+# should clock checks of solving time be performed less frequently (note: time limit could be exceeded slightly)
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+timing/rareclockcheck = FALSE
+
+# should timing for statistic output be performed?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+timing/statistictiming = TRUE
 
 # name of the VBC Tool output file, or - if no VBC Tool output should be created
 # [type: string, default: "-"]
@@ -1648,7 +1656,7 @@ constraints/indicator/trysolutions = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/enforcecuts = FALSE
 
-# should dual reduction steps be performed?
+# Should dual reduction steps be performed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/indicator/dualreductions = TRUE
 
@@ -1676,11 +1684,11 @@ constraints/indicator/trysolfromcover = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/sepaalternativelp = FALSE
 
-# force restart if we have a max FS instance and gap is 1?
+# Force restart if we have a max FS instance and gap is 1?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/forcerestart = FALSE
 
-# decompose problem - do not generate linear constraint if all variables are continuous
+# Decompose problem (do not generate linear constraint if all variables are continuous)?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/nolinconscont = FALSE
 
@@ -4165,8 +4173,8 @@ heuristics/proximity/uselprows = FALSE
 heuristics/proximity/restart = TRUE
 
 # should the heuristic solve a final LP in case of continuous objective variables?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-heuristics/proximity/usefinallp = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/proximity/usefinallp = FALSE
 
 # maximum number of nodes to regard in the subproblem
 # [type: longint, range: [0,9223372036854775807], default: 10000]
@@ -4193,8 +4201,8 @@ heuristics/proximity/minlpiters = 200
 heuristics/proximity/waitingnodes = 100
 
 # factor by which proximity should at least improve the incumbent
-# [type: real, range: [0,1], default: 0.25]
-heuristics/proximity/minimprove = 0.25
+# [type: real, range: [0,1], default: 0.02]
+heuristics/proximity/minimprove = 0.02
 
 # sub-MIP node limit w.r.t number of original nodes
 # [type: real, range: [0,1e+20], default: 0.1]
