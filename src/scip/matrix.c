@@ -85,7 +85,8 @@ SCIP_RETCODE addRow(
    int                   nvars,              /**< number of variables of this row */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   int                   maxnnonzsmem        /**< maximal number of fillable elements */
+   int                   maxnnonzsmem,       /**< maximal number of fillable elements */
+   SCIP_Bool*            rowadded            /**< flag indicating if constraint was added to matrix */
    )
 {
    int j;
@@ -173,6 +174,7 @@ SCIP_RETCODE addRow(
    matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
 
    ++(matrix->nrows);
+   *rowadded = TRUE;
 
    return SCIP_OKAY;
 }
@@ -187,7 +189,8 @@ SCIP_RETCODE addConstraint(
    int                   nvars,              /**< number of variables */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   int                   maxnnonzsmem        /**< maximal number of fillable elements */
+   int                   maxnnonzsmem,       /**< maximal number of fillable elements */
+   SCIP_Bool*            rowadded            /**< flag indicating of row was added to matrix */
    )
 {
    SCIP_VAR** activevars;
@@ -200,6 +203,9 @@ SCIP_RETCODE addConstraint(
    assert(matrix != NULL);
    assert(vars != NULL || nvars == 0);
    assert(SCIPisLE(scip, lhs, rhs));
+   assert(rowadded != NULL);
+
+   *rowadded = FALSE;
 
    /* constraint is redundant */
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
@@ -240,7 +246,7 @@ SCIP_RETCODE addConstraint(
    /* add single row to matrix */
    if( nactivevars > 0 )
    {
-      SCIP_CALL( addRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs, maxnnonzsmem) );
+      SCIP_CALL( addRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs, maxnnonzsmem, rowadded) );
    }
 
    /* free buffer arrays */
@@ -562,6 +568,7 @@ SCIP_RETCODE SCIPmatrixCreate(
    {
       SCIP_CONS** conshdlrconss;
       int nconshdlrconss;
+      SCIP_Bool rowadded;
 
       if( SCIPisStopped(scip) )
       {
@@ -580,14 +587,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
-            assert(cnt < nconss);
-            matrix->cons[cnt] = cons;
-            matrix->constype[cnt] = CONSTYPE_LINEAR;
-            cnt++;
-
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-                  SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), nnonzstmp) );
+                  SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), nnonzstmp, &rowadded) );
+
+            if(rowadded)
+            {
+               assert(cnt < nconss);
+               matrix->cons[cnt] = cons;
+               matrix->constype[cnt] = CONSTYPE_LINEAR;
+               cnt++;
+            }
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -599,11 +609,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
-
-            assert(cnt < nconss);
-            matrix->cons[cnt] = cons;
-            matrix->constype[cnt] = CONSTYPE_SETPPC;
-            cnt++;
 
             switch( SCIPgetTypeSetppc(scip, cons) )
             {
@@ -624,7 +629,15 @@ SCIP_RETCODE SCIPmatrixCreate(
             }
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsSetppc(scip, cons), NULL,
-                  SCIPgetNVarsSetppc(scip, cons), lhs, rhs, nnonzstmp) );
+                  SCIPgetNVarsSetppc(scip, cons), lhs, rhs, nnonzstmp, &rowadded) );
+
+            if(rowadded)
+            {
+               assert(cnt < nconss);
+               matrix->cons[cnt] = cons;
+               matrix->constype[cnt] = CONSTYPE_SETPPC;
+               cnt++;
+            }
          }
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
@@ -634,13 +647,16 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
-            assert(cnt < nconss);
-            matrix->cons[cnt] = cons;
-            matrix->constype[cnt] = CONSTYPE_LOGICOR;
-            cnt++;
-
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
-                  NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), nnonzstmp) );
+                  NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), nnonzstmp, &rowadded) );
+
+            if(rowadded)
+            {
+               assert(cnt < nconss);
+               matrix->cons[cnt] = cons;
+               matrix->constype[cnt] = CONSTYPE_LOGICOR;
+               cnt++;
+            }
          }
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
@@ -660,11 +676,6 @@ SCIP_RETCODE SCIPmatrixCreate(
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 
-               assert(cnt < nconss);
-               matrix->cons[cnt] = cons;
-               matrix->constype[cnt] = CONSTYPE_KNAPSACK;
-               cnt++;
-
                weights = SCIPgetWeightsKnapsack(scip, cons);
                nvars = SCIPgetNVarsKnapsack(scip, cons);
 
@@ -679,7 +690,15 @@ SCIP_RETCODE SCIPmatrixCreate(
 
                SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
                      SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
-                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons), nnonzstmp) );
+                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons), nnonzstmp, &rowadded) );
+
+               if(rowadded)
+               {
+                  assert(cnt < nconss);
+                  matrix->cons[cnt] = cons;
+                  matrix->constype[cnt] = CONSTYPE_KNAPSACK;
+                  cnt++;
+               }
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -701,18 +720,21 @@ SCIP_RETCODE SCIPmatrixCreate(
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 
-               assert(cnt < nconss);
-               matrix->cons[cnt] = cons;
-               matrix->constype[cnt] = CONSTYPE_VARBOUND;
-               cnt++;
-
                consvars[0] = SCIPgetVarVarbound(scip, cons);
                consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
 
                consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
                SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
-                     SCIPgetRhsVarbound(scip, cons), nnonzstmp) );
+                     SCIPgetRhsVarbound(scip, cons), nnonzstmp, &rowadded) );
+
+               if(rowadded)
+               {
+                  assert(cnt < nconss);
+                  matrix->cons[cnt] = cons;
+                  matrix->constype[cnt] = CONSTYPE_VARBOUND;
+                  cnt++;
+               }
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -720,6 +742,7 @@ SCIP_RETCODE SCIPmatrixCreate(
          }
       }
    }
+   assert(matrix->nrows == cnt);
    assert(matrix->nrows <= nconss);
    assert(matrix->nnonzs <= nnonzstmp);
 
@@ -819,19 +842,19 @@ void SCIPmatrixPrintRow(
    rowend = rowpnt + matrix->rowmatcnt[row];
    valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
 
-   SCIPdebugPrintf("### %s: %.15g <=", SCIPconsGetName(matrix->cons[row]), matrix->lhs[row]);
+   printf("### %s: %.15g <=", SCIPconsGetName(matrix->cons[row]), matrix->lhs[row]);
    for(; (rowpnt < rowend); rowpnt++, valpnt++)
    {
       col = *rowpnt;
       val = *valpnt;
       if( val < 0 )
-         SCIPdebugPrintf(" %.15g %s [%.15g,%.15g]", val, SCIPvarGetName(matrix->vars[col]),
+         printf(" %.15g %s [%.15g,%.15g]", val, SCIPvarGetName(matrix->vars[col]),
             SCIPvarGetLbGlobal(matrix->vars[col]), SCIPvarGetUbGlobal(matrix->vars[col]));
       else
-         SCIPdebugPrintf(" +%.15g %s [%.15g,%.15g]", val, SCIPvarGetName(matrix->vars[col]),
+         printf(" +%.15g %s [%.15g,%.15g]", val, SCIPvarGetName(matrix->vars[col]),
             SCIPvarGetLbGlobal(matrix->vars[col]), SCIPvarGetUbGlobal(matrix->vars[col]));
    }
-   SCIPdebugPrintf(" <= %.15g ###\n", matrix->rhs[row]);
+   printf(" <= %.15g ###\n", matrix->rhs[row]);
 }
 
 /** detect parallel rows of matrix. rhs/lhs are ignored. */
