@@ -3944,6 +3944,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             {
                assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
                tmpscalars[pos] += scalar * multscalar;
+               if( SCIPsetIsZero(set, tmpscalars[pos]) )
+                  tmpscalars[pos] = 0.0;
             }
             else
             {
