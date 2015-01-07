@@ -18,7 +18,7 @@
  * @author Dieter Weninger
  *
  * This presolver tries to find implied free variables within equalities
- * which convenient for multi-aggregation.
+ * which are convenient for multi-aggregation.
  *
  */
 

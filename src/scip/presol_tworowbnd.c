@@ -206,7 +206,7 @@ void writeLPs(
  * a2x      + a4z >= b2  (base row)
  *
  * minact = min{a2x : a1x + a3y >= b1}
- * maxac  = max{a2x : a1x + a3y >= b1}
+ * maxact = max{a2x : a1x + a3y >= b1}
  */
 static
 void getactivities(
@@ -526,7 +526,7 @@ SCIP_Real getinfimum(
    return infimum;
 }
 
-/**< get max activity */
+/**< calculate max activity */
 static
 SCIP_Real getsupremum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -607,7 +607,7 @@ SCIP_Real getsupremumidx(
    return supremum;
 }
 
-/** apply bounds tightening on two overlapping constraints */
+/** apply bound tightening on two overlapping constraints */
 static
 void applytightening(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -915,7 +915,7 @@ void getnumoverlap(
 }
 
 
-/** perform bound tightening on two rows with variables overlap */
+/** perform bound tightening on two rows with a specific support intersection */
 static
 SCIP_RETCODE calctworowbnds(
    SCIP*                 scip,               /**< SCIP data structure */

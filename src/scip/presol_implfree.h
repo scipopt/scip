@@ -17,8 +17,8 @@
  * @brief  exploit implied free variables for multi-aggregation
  * @author Dieter Weninger
  *
- * This presolver tries to find implied free variables within equalities and
- * exploits this variables for multi-aggregation.
+ * This presolver tries to find implied free variables within equalities
+ * which are convenient for multi-aggregation.
  *
  */
 
