@@ -2067,7 +2067,7 @@ SCIP_RETCODE spxSolve(
       {
          lpi->spx->clearBasis();
       }
-      catch(SPxException x)
+      catch(const SPxException& x)
       {
 #ifndef NDEBUG
          std::string s = x.what();
