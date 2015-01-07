@@ -480,14 +480,32 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real pscostscore;
             SCIP_Real score;
 
-            if( SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
-               continue;
-
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
             inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
+
+            /* replace the pseudo cost score with the already calculated one;
+             * @todo: use old data for strong branching with propagation?
+             */
+            if( SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
+            {
+               SCIP_Real down;
+               SCIP_Real up;
+               SCIP_Real lastlpobjval;
+               SCIP_Real downgain;
+               SCIP_Real upgain;
+
+               /* use the score of the strong branching call at the current node */
+               SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
+               downgain = MAX(down - lastlpobjval, 0.0);
+               upgain = MAX(up - lastlpobjval, 0.0);
+               pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
+
+               SCIPdebugMessage(" -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
+                  SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
+            }
 
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
                   inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
