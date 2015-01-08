@@ -35,11 +35,11 @@ extern "C" {
  */
 enum SCIP_Confidencelevel
 {
-   SCIP_CONFIDENCELEVEL_75  = 0,    /**< (one-sided) confidence level 75 % */
-   SCIP_CONFIDENCELEVEL_875 = 1,    /**< (one-sided) confidence level 87.5 % */
-   SCIP_CONFIDENCELEVEL_90  = 2,    /**< (one-sided) confidence level 90 % */
-   SCIP_CONFIDENCELEVEL_95  = 3,    /**< (one-sided) confidence level 95 % */
-   SCIP_CONFIDENCELEVEL_975 = 4     /**< (one-sided) confidence level 97.5 % */
+   SCIP_CONFIDENCELEVEL_MIN = 0,    /**< one-sided confidence level 75 %, two-sided 50 % */
+   SCIP_CONFIDENCELEVEL_LOW = 1,    /**< (one-sided) confidence level 87.5 %, two-sided 75 % */
+   SCIP_CONFIDENCELEVEL_MEDIUM = 2, /**< (one-sided) confidence level 90 %, two-sided 80 % */
+   SCIP_CONFIDENCELEVEL_HIGH = 3,   /**< (one-sided) confidence level 95 %, two-sided 90 % */
+   SCIP_CONFIDENCELEVEL_MAX = 4     /**< (one-sided) confidence level 97.5 %, two-sided 95 % */
 };
 typedef enum SCIP_Confidencelevel SCIP_CONFIDENCELEVEL;
 

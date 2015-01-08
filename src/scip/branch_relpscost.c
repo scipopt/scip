@@ -52,11 +52,13 @@
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
 #define DEFAULT_USERELERRORFORRELIABILITY FALSE /**< should reliability be based on relative errors? */
-#define DEFAULT_RELERRORTOLERANCE 0.05  /**< tolerance for relative errors to be reliable */
+#define DEFAULT_LOWERRORTOL 0.05   /**< lowest tolerance beneath which relative errors are reliable */
+#define DEFAULT_HIGHERRORTOL 1.0   /**< highest tolerance beneath which relative errors are reliable */
+#define DEFAULT_USEHYPTESTFORRELIABILITY FALSE /**< should the strong branching decision be based on a hypothesis test? */
+#define DEFAULT_USEDYNAMICCONFIDENCE FALSE /**< should the confidence level be adjusted dynamically? */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
-#define DEFAULT_USEHYPTESTFORRELIABILITY FALSE /**< should the strong branching decision be based on a hypothesis test? */
-#define DEFAULT_USEDYNAMICERRORTHRESHOLD FALSE /**< should the error threshold be adjusted dynamically? */
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -78,11 +80,12 @@ struct SCIP_BranchruleData
    SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
    SCIP_Bool             userelerrorforreliability; /**< should reliability be based on relative errors? */
-   SCIP_Real             relerrortolerance;  /**< tolerance for relative errors to be reliable */
+   SCIP_Real             lowerrortol;        /**< lowest tolerance beneath which relative errors are reliable */
+   SCIP_Real             higherrortol;       /**< highest tolerance beneath which relative errors are reliable */
+   SCIP_Bool             usehyptestforreliability; /**< should the strong branching decision be based on a hypothesis test? */
+   SCIP_Bool             usedynamicconfidence; /**< should the confidence level be adjusted dynamically? */
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
-   SCIP_Bool             usehyptestforreliability; /**< should the strong branching decision be based on a hypothesis test? */
-   SCIP_Bool             usedynamicerrorthreshold; /**< should the error threshold be adjusted dynamically? */
 };
 
 /*
@@ -433,32 +436,24 @@ SCIP_RETCODE execRelpscost(
       prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
-      /* depending on the strong branching priority, optionally alter the error based reliability as 1.0 + prio * (rel - 1.0) , such that
-       * rel -> 1.0 for prio -> 0
-       */
-      relerrorthreshold = branchruledata->relerrortolerance;
-      if( branchruledata->userelerrorforreliability && branchruledata->usedynamicerrorthreshold )
-      {
-         assert(0 <= prio || maxninitcands == 0);
-         /* maximum allowed relative error is 100 % */
-         relerrorthreshold = (1.0) + prio * (relerrorthreshold - 1.0);
-      }
+      /* calculate the threshold for the relative error in the same way; low tolerance is more strict than higher tolerance */
+      relerrorthreshold = (1.0 - prio) * branchruledata->higherrortol + prio * branchruledata->lowerrortol;
 
-      clevel = SCIP_CONFIDENCELEVEL_90;
+      clevel = SCIP_CONFIDENCELEVEL_HIGH;
       /* determine the confidence level for hypothesis testing based on value of prio */
-      if( branchruledata->usehyptestforreliability || branchruledata->userelerrorforreliability)
+      if( branchruledata->usedynamicconfidence )
       {
          /* with decreasing priority, use a less strict confidence level */
          if( prio >= 0.9 )
-            clevel = SCIP_CONFIDENCELEVEL_975;
+            clevel = SCIP_CONFIDENCELEVEL_MAX;
          else if( prio >= 0.7 )
-            clevel = SCIP_CONFIDENCELEVEL_95;
+            clevel = SCIP_CONFIDENCELEVEL_HIGH;
          else if( prio >= 0.5 )
-            clevel = SCIP_CONFIDENCELEVEL_90;
+            clevel = SCIP_CONFIDENCELEVEL_MEDIUM;
          else if( prio >= 0.3 )
-            clevel = SCIP_CONFIDENCELEVEL_875;
+            clevel = SCIP_CONFIDENCELEVEL_LOW;
          else
-            clevel = SCIP_CONFIDENCELEVEL_75;
+            clevel = SCIP_CONFIDENCELEVEL_MIN;
       }
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
@@ -1295,8 +1290,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "should reliability be based on relative errors?", &branchruledata->userelerrorforreliability, TRUE, DEFAULT_USERELERRORFORRELIABILITY,
          NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/relerrortolerance", "relative error tolerance for reliability",
-         &branchruledata->relerrortolerance, TRUE, DEFAULT_RELERRORTOLERANCE, 0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/lowerrortol", "low relative error tolerance for reliability",
+         &branchruledata->lowerrortol, TRUE, DEFAULT_LOWERRORTOL, 0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/higherrortol", "high relative error tolerance for reliability",
+            &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
@@ -1313,9 +1311,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->usehyptestforreliability, TRUE, DEFAULT_USEHYPTESTFORRELIABILITY,
          NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usedynamicerrorthreshold",
-         "should the error threshold be adjusted dynamically?",
-         &branchruledata->usedynamicerrorthreshold, TRUE, DEFAULT_USEDYNAMICERRORTHRESHOLD,
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usedynamicconfidence",
+         "should the confidence level be adjusted dynamically?",
+         &branchruledata->usedynamicconfidence, TRUE, DEFAULT_USEDYNAMICCONFIDENCE,
          NULL, NULL) );
 
    return SCIP_OKAY;
