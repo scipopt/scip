@@ -36136,10 +36136,24 @@ SCIP_RETCODE SCIPaddSol(
        */
       if( !SCIPsolIsOriginal(sol) )
       {
+         SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+         SCIP_SOL* tmpsol = sol;
          SCIP_Bool hasinfval;
 
-         SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+         SCIP_CALL( SCIPcreateSolCopy(scip, &tmpsol, sol) );
+
+         SCIP_CALL( SCIPsolUnlink(tmpsol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(tmpsol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+
+         SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
+               scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, &tmpsol, stored) );
+
+         if( *stored && (bestsol != SCIPgetBestSol(scip)) )
+         {
+            SCIPstoreSolutionGap(scip);
+         }
+
+         return SCIP_OKAY;
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
