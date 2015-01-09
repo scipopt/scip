@@ -50,6 +50,8 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PRESOLTIMING  SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM
 #define CONSHDLR_PROP_TIMING   SCIP_PROPTIMING_ALWAYS /**< when should the constraint handlers propagation routines be called? */
 
 #define QUADCONSUPGD_PRIORITY     50000 /**< priority of the constraint handler for upgrading of quadratic constraints */
@@ -6156,7 +6158,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
    *result = SCIP_DIDNOTFIND;
 
    /* check for duplicates, if not done yet or if absolute power constraints were modified (variable fixings) or new absolute power constraints had been added */
-   if( !conshdlrdata->comparedpairwise )
+   if( !conshdlrdata->comparedpairwise && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
       SCIP_CALL( presolveFindDuplicates(scip, conshdlr, conss, nconss, nupgdconss, ndelconss, naddconss, nfixedvars, naggrvars, &success, &infeas) );
       if( infeas )
@@ -6165,9 +6167,11 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          return SCIP_OKAY;
       }
       if( success )
-      {
          *result = SCIP_SUCCESS;
-      }
+
+      conshdlrdata->comparedpairwise = TRUE;
+
+      return SCIP_OKAY;
    }
 
    for( c = 0; c < nconss; ++c )
@@ -6405,10 +6409,6 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          }
       }
    }
-
-   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
-   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
@@ -6934,7 +6934,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolAbspower) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAbspower) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAbspower) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAbspower, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAbspower, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAbspower) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAbspower, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

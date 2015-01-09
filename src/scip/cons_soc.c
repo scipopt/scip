@@ -3965,8 +3965,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
    }
 
    /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
-   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
-      *result = SCIP_DELAYED;
+   //if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
+   //   *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 } /*lint !e715*/

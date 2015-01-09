@@ -300,6 +300,9 @@ void SCIPstatResetPresolving(
    assert(stat != NULL);
 
    stat->npresolrounds = 0;
+   stat->npresolroundsfast = 0;
+   stat->npresolroundsmed = 0;
+   stat->npresolroundsext = 0;
    stat->npresolfixedvars = 0;
    stat->npresolaggrvars = 0;
    stat->npresolchgvartypes = 0;

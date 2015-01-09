@@ -180,6 +180,9 @@ struct SCIP_Stat
    int                   nenabledconss;      /**< total number of currently enabled constraints */
    int                   nimplications;      /**< total number of implications stored in the implication graph */
    int                   npresolrounds;      /**< number of presolving rounds in current run */
+   int                   npresolroundsfast;  /**< number of fast presolving rounds in current run */
+   int                   npresolroundsmed;   /**< number of medium presolving rounds in current run */
+   int                   npresolroundsext;   /**< number of exhaustive presolving rounds in current run */
    int                   npresolfixedvars;   /**< number of presolving fixings in current run */
    int                   npresolaggrvars;    /**< number of presolving aggregations in current run */
    int                   npresolchgvartypes; /**< number of presolving variable type changes in current run */

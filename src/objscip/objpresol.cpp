@@ -179,7 +179,7 @@ SCIP_DECL_PRESOLEXEC(presolExecObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds,
+   SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds, presoltiming,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,

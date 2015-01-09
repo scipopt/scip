@@ -10669,7 +10669,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
     * otherwise, we wait with these
     * @todo first do all usual presolving steps, then check SCIPisPresolveFinished(scip), and if true then do reformulations (and usual steps again)
     */
-   doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) && SCIPisPresolveFinished(scip);
+   doreformulations = (nrounds > 0 || (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE)) && SCIPisPresolveFinished(scip);
    SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

@@ -213,7 +213,7 @@ SCIP_DECL_PROPPRESOL(propPresolObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_presol(scip, prop, nrounds,
+   SCIP_CALL( propdata->objprop->scip_presol(scip, prop, nrounds, presoltiming,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,

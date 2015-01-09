@@ -67,10 +67,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING   SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 /**@} */
 
@@ -201,6 +201,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             detectvarbounds;    /**< search for conflict set via maximal cliques to detect variable bound constraints */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
+   SCIP_Bool             detectedredundant;  /**< was detection of redundant constraints already performed? */
 
    SCIP_Longint          maxnodes;           /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
@@ -7292,6 +7293,7 @@ static
 SCIP_RETCODE propagateCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_PRESOLTIMING     presoltiming,       /**< current presolving timing */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -7312,7 +7314,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    assert(nchgbds != NULL);
    assert(initialized != NULL);
    assert(cutoff != NULL);
-   assert((*cutoff) == FALSE);
+   assert(!(*cutoff));
 
    /**@todo avoid always sorting the variable array */
 
@@ -7330,17 +7332,25 @@ SCIP_RETCODE propagateCumulativeCondition(
          initialized, explanation, cutoff) );
 
    /* propagate the job cores until nothing else can be detected */
-   SCIP_CALL( propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+   if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
+   {
+      SCIP_CALL( propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
             nchgbds, initialized, explanation, cutoff) );
+   }
 
    /* run edge finding propagator */
-   SCIP_CALL( propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
-         cons, initialized, explanation, nchgbds, cutoff) );
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   {
+      SCIP_CALL( propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+            cons, initialized, explanation, nchgbds, cutoff) );
+   }
 
    /* run time-table edge-finding propagator */
-   SCIP_CALL( propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-         nchgbds, initialized, explanation, cutoff) );
-
+   if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+   {
+      SCIP_CALL( propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff) );
+   }
    /* free resource profile */
    SCIPprofileFree(&profile);
 
@@ -7353,6 +7363,7 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to propagate */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_PRESOLTIMING     presoltiming,       /**< current presolving timing */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -7383,7 +7394,7 @@ SCIP_RETCODE propagateCons(
    if( consdata->propagated && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
-   SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
+   SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata, presoltiming,
          consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
          consdata->hmin, consdata->hmax, cons,
          nchgbds, &redundant, &initialized, NULL, cutoff) );
@@ -10939,6 +10950,9 @@ SCIP_RETCODE createDisjuctiveCons(
 
             /* adjust minimum demand of collected jobs */
             mindemand = MIN(mindemand, consdata->demands[v]);
+
+            /* @todo create one cumulative constraint and look for another small demand */
+            break;
          }
       }
 
@@ -10961,6 +10975,7 @@ SCIP_RETCODE presolveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< cumulative constraint */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing of presolving call */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
 #if 0
    int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
@@ -10988,10 +11003,13 @@ SCIP_RETCODE presolveCons(
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
        */
-      SCIP_CALL( solveIndependentCons(scip, cons, conshdlrdata->maxnodes, nchgbds, nfixedvars, ndelconss, cutoff, unbounded) );
+      if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+      {
+         SCIP_CALL( solveIndependentCons(scip, cons, conshdlrdata->maxnodes, nchgbds, nfixedvars, ndelconss, cutoff, unbounded) );
 
-      if( *cutoff || *unbounded )
-         return SCIP_OKAY;
+         if( *cutoff || *unbounded || presoltiming == SCIP_PRESOLTIMING_EXHAUSTIVE )
+            return SCIP_OKAY;
+      }
 
       SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
@@ -12320,9 +12338,9 @@ SCIP_RETCODE removeRedundantConss(
    return SCIP_OKAY;
 }
 
-/** strength the variable bounds using the cumulative condition */
+/** strengthen the variable bounds using the cumulative condition */
 static
-SCIP_RETCODE strengthVarbaounds(
+SCIP_RETCODE strengthenVarbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to propagate */
    int*                  nchgbds,            /**< pointer to store the number of changed bounds */
@@ -12479,7 +12497,13 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 static
 SCIP_DECL_CONSINITPRE(consInitpreCumulative)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->detectedredundant = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -12972,10 +12996,10 @@ SCIP_DECL_CONSPROP(consPropCumulative)
       if( SCIPgetDepth(scip) == 0 )
       {
 #if 0
-         SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
+         SCIP_CALL( presolveCons(scip, cons, conshdlrdata, SCIP_PRESOLTIMING_ALWAYS,
                &nchgbds, &naggrvars, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
 #else
-         SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
+         SCIP_CALL( presolveCons(scip, cons, conshdlrdata, SCIP_PRESOLTIMING_ALWAYS,
                &nchgbds, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
 #endif
          if( cutoff )
@@ -12985,7 +13009,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
             continue;
       }
 
-      SCIP_CALL( propagateCons(scip, cons, conshdlrdata, &nchgbds, &ndelconss, &cutoff) );
+      SCIP_CALL( propagateCons(scip, cons, conshdlrdata, SCIP_PRESOLTIMING_ALWAYS, &nchgbds, &ndelconss, &cutoff) );
    }
 
    if( !cutoff && nchgbds == 0 )
@@ -12993,7 +13017,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
       /* propgate all other constraints */
       for( c = nusefulconss; c < nconss && !cutoff; ++c )
       {
-         SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata, &nchgbds, &ndelconss, &cutoff) );
+         SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata, SCIP_PRESOLTIMING_ALWAYS, &nchgbds, &ndelconss, &cutoff) );
       }
    }
 
@@ -13069,19 +13093,22 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
        */
       SCIP_CALL( removeIrrelevantJobs(scip, conss[c]) );
 
+      if( presoltiming != SCIP_PRESOLTIMING_MEDIUM )
+      {
 #if 0
-      SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
-            nfixedvars, naggrvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
+         SCIP_CALL( presolveCons(scip, cons, conshdlrdata, presoltiming,
+               nfixedvars, naggrvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
 #else
-      SCIP_CALL( presolveCons(scip, cons, conshdlrdata,
-            nfixedvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
+         SCIP_CALL( presolveCons(scip, cons, conshdlrdata, presoltiming,
+               nfixedvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
 #endif
 
-      if( cutoff || unbounded )
-         break;
+         if( cutoff || unbounded )
+            break;
 
-      if( SCIPconsIsDeleted(cons) )
-         continue;
+         if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
 
       /* in the first round we create a disjunctive constraint containing those jobs which cannot run in parallel */
       if( nrounds == 1 && SCIPgetNRuns(scip) == 1 && conshdlrdata->disjunctive )
@@ -13089,31 +13116,36 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
          SCIP_CALL( createDisjuctiveCons(scip, cons, naddconss) );
       }
 
-      /* strength existing variable bounds using the cumulative condition */
-      SCIP_CALL( strengthVarbaounds(scip, cons, nchgbds, naddconss) );
+      /* strengthen existing variable bounds using the cumulative condition */
+      if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+      {
+         SCIP_CALL( strengthenVarbounds(scip, cons, nchgbds, naddconss) );
+      }
 
       /* propagate cumulative constraint */
-      SCIP_CALL( propagateCons(scip, cons, conshdlrdata, nchgbds, ndelconss, &cutoff) );
+      SCIP_CALL( propagateCons(scip, cons, conshdlrdata, presoltiming, nchgbds, ndelconss, &cutoff) );
       assert(checkDemands(scip, cons) || cutoff);
    }
 
-   if( !cutoff && !unbounded && conshdlrdata->dualpresolve && nconss > 1 )
+   if( !cutoff && !unbounded && conshdlrdata->dualpresolve && nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE,
             nfixedvars, &cutoff, NULL) );
    }
 
    /* only perform the detection of variable bounds and disjunctive constraint once */
-   if( !cutoff && SCIPgetNRuns(scip) == 1 && nrounds == 2
-      && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
+   if( !cutoff && SCIPgetNRuns(scip) == 1 && !conshdlrdata->detectedredundant
+      && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive)
+      && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       /* combine different source and detect disjunctive constraints and variable bound constraints to improve the
        * propagation
        */
       SCIP_CALL( detectRedundantConss(scip, conshdlrdata, conss, nconss, naddconss) );
+      conshdlrdata->detectedredundant = TRUE;
    }
 
-   if( !cutoff && conshdlrdata->presolpairwise )
+   if( !cutoff && conshdlrdata->presolpairwise && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
       SCIP_CALL( removeRedundantConss(scip, conss, nconss, ndelconss) );
    }
@@ -13496,7 +13528,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCumulative) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseCumulative) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCumulative, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCumulative) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCumulative, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -13982,6 +14014,7 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
 /** propagate the given cumulative condition */
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLTIMING     presoltiming,       /**< current presolving timing */
    int                   nvars,              /**< number of variables (jobs) */
    SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
    int*                  durations,          /**< array containing corresponding durations */
@@ -14020,7 +14053,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
 
    redundant = FALSE;
 
-   SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
+   SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata, presoltiming,
          nvars, vars, durations, demands, capacity,  hmin, hmax, cons,
          nchgbds, &redundant, initialized, explanation, cutoff) );
 

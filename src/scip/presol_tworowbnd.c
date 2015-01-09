@@ -36,7 +36,7 @@
 #define PRESOL_DESC            "do bound tigthening by using two rows"
 #define PRESOL_PRIORITY           500000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define SUPPORT_THRESHOLD            0.5     /**< threshold for two constraints overlap */
 #define FASTMODE_THRESHOLD          1000     /**< max number of baserows for switching to fast mode */
@@ -1366,7 +1366,7 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecTworowbnd, NULL) );
+         PRESOL_TIMING, presolExecTworowbnd, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyTworowbnd) );
 
    return SCIP_OKAY;

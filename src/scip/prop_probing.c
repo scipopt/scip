@@ -36,7 +36,7 @@
 #define PROP_DELAY                 TRUE /**< should propagation method be delayed, if other propagators found
                                          *   reductions? */
 #define PROP_PRESOL_PRIORITY    -100000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
@@ -952,7 +952,6 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       *result = SCIP_CUTOFF;
    else if( delay )
    {
-      *result = SCIP_DELAYED;
       /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
       propdata->lastnode = -2;
    }
@@ -1131,7 +1130,7 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreProbing) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOL_DELAY) );
+         PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropProbing) );
 
    /* add probing propagator parameters */

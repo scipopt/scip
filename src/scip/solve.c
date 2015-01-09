@@ -409,7 +409,7 @@ SCIP_RETCODE propagationRound(
    for( i = 0; i < set->nconshdlrs && (!(*cutoff) || !abortoncutoff); ++i )
    {
       /* timing needs to fit */
-      if( (SCIPconshdlrGetPropTimingmask(set->conshdlrs[i]) & timingmask) == 0 )
+      if( (SCIPconshdlrGetPropTiming(set->conshdlrs[i]) & timingmask) == 0 )
          continue;
 
       if( onlydelayed && !SCIPconshdlrWasPropagationDelayed(set->conshdlrs[i]) )

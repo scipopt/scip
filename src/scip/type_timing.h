@@ -34,6 +34,17 @@ extern "C" {
 #endif
 
 
+/** presolving execution timing flags */
+#define SCIP_PRESOLTIMING_FAST            0x001u  /**< timing for fast presolving methods */
+#define SCIP_PRESOLTIMING_MEDIUM          0x002u  /**< timing for more expensive presolving methods */
+#define SCIP_PRESOLTIMING_EXHAUSTIVE      0x004u  /**< timing for most expensive presolving methods */
+
+/** call presolver in every timing */
+#define SCIP_PRESOLTIMING_ALWAYS (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE )
+
+typedef unsigned int SCIP_PRESOLTIMING;
+
+
 /** propagation execution timing flags */
 #define SCIP_PROPTIMING_BEFORELP          0x001u  /**< call propagator before LP is solved */
 #define SCIP_PROPTIMING_DURINGLPLOOP      0x002u  /**< call propagator after each LP solving during cut-and-price loop */

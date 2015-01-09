@@ -368,7 +368,7 @@ SCIP_DECL_CONSPRESOL(consPresolObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds,
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds, presoltiming,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
