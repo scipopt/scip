@@ -1264,12 +1264,15 @@ SCIP_RETCODE readBounds(
 {
    char        bndname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_VAR*   var;
+   SCIP_RETCODE retcode;
    SCIP_Real   val;
    SCIP_Bool   shifted;
 
    SCIP_VAR** semicont;
    int nsemicont;
    int semicontsize;
+
+   retcode = SCIP_OKAY;
 
    semicont = NULL;
    nsemicont = 0;
@@ -1566,14 +1569,13 @@ SCIP_RETCODE readBounds(
  READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
-      int i;
-      SCIP_Real oldlb;
-      char name[SCIP_MAXSTRLEN];
       SCIP_CONS* cons;
-
       SCIP_VAR* vars[2];
       SCIP_BOUNDTYPE boundtypes[2];
       SCIP_Real bounds[2];
+      char name[SCIP_MAXSTRLEN];
+      SCIP_Real oldlb;
+      int i;
 
       assert(semicont != NULL);
 
@@ -1604,8 +1606,12 @@ SCIP_RETCODE readBounds(
          bounds[0] = 0.0;
          bounds[1] = oldlb;
 
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
-               !mpsi->dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, mpsi->dynamicconss, mpsi->dynamiccols, FALSE) );
+         retcode = SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
+            !mpsi->dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, mpsi->dynamicconss, mpsi->dynamiccols, FALSE);
+
+         if( retcode != SCIP_OKAY )
+            break;
+
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          SCIPdebugMessage("add bound disjunction constraint for semi-continuity/-integrality of <%s>:\n\t", SCIPvarGetName(var));
@@ -1616,6 +1622,8 @@ SCIP_RETCODE readBounds(
    }
 
    SCIPfreeBufferArrayNull(scip, &semicont);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -1825,10 +1833,13 @@ SCIP_RETCODE readQMatrix(
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
+   SCIP_RETCODE retcode;
    int cnt  = 0; /* number of qmatrix elements processed so far */
    int size;     /* size of quad* arrays */
 
    SCIPdebugMessage("read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
+
+   retcode = SCIP_OKAY;
 
    size = 1;
    SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, size) );
@@ -1979,15 +1990,18 @@ SCIP_RETCODE readQMatrix(
          rhs = SCIPinfinity(scip);
       }
 
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+      retcode = SCIPcreateConsQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
 
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-      SCIPdebugPrintCons(scip, cons, NULL);
+      if( retcode == SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+         SCIPdebugPrintCons(scip, cons, NULL);
 
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      SCIP_CALL( SCIPreleaseVar(scip, &qmatrixvar) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         SCIP_CALL( SCIPreleaseVar(scip, &qmatrixvar) );
+      }
    }
    else
    {
@@ -1997,6 +2011,8 @@ SCIP_RETCODE readQMatrix(
    SCIPfreeBufferArray(scip, &quadvars1);
    SCIPfreeBufferArray(scip, &quadvars2);
    SCIPfreeBufferArray(scip, &quadcoefs);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2019,6 +2035,7 @@ SCIP_RETCODE readQCMatrix(
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
+   SCIP_RETCODE retcode;
    int cnt  = 0; /* number of qcmatrix elements processed so far */
    int size;     /* size of quad* arrays */
 
@@ -2028,6 +2045,8 @@ SCIP_RETCODE readQCMatrix(
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
+
+   retcode = SCIP_OKAY;
 
    SCIPdebugMessage("read QCMATRIX section for row <%s>\n", mpsinputField1(mpsi));
 
@@ -2071,10 +2090,8 @@ SCIP_RETCODE readQCMatrix(
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
-         SCIPfreeBufferArray(scip, &quadvars1);
-         SCIPfreeBufferArray(scip, &quadvars2);
-         SCIPfreeBufferArray(scip, &quadcoefs);
-         return SCIP_OKAY;
+
+         goto TERMINATE;
       }
 
       /* get first variable */
@@ -2102,10 +2119,8 @@ SCIP_RETCODE readQCMatrix(
             {
                SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", mpsinputField1(mpsi), mpsinputField2(mpsi));
                mpsinputSyntaxerror(mpsi);
-               SCIPfreeBufferArray(scip, &quadvars1);
-               SCIPfreeBufferArray(scip, &quadvars2);
-               SCIPfreeBufferArray(scip, &quadcoefs);
-               return SCIP_OKAY;
+
+               goto TERMINATE;
             }
 
             /* store variables and coefficient */
@@ -2141,12 +2156,15 @@ SCIP_RETCODE readQCMatrix(
    {
       SCIP_CONS* cons = NULL;
 
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(lincons), 
+      retcode = SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(lincons),
             SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
             cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
             SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
             SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons), SCIPconsIsDynamic(lincons),
-            SCIPconsIsRemovable(lincons)) );
+            SCIPconsIsRemovable(lincons));
+
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
@@ -2161,9 +2179,12 @@ SCIP_RETCODE readQCMatrix(
       SCIPwarningMessage(scip, "QCMATRIX section has no entries.\n");
    }
 
+ TERMINATE:
    SCIPfreeBufferArray(scip, &quadvars1);
    SCIPfreeBufferArray(scip, &quadvars2);
    SCIPfreeBufferArray(scip, &quadcoefs);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2321,6 +2342,7 @@ SCIP_RETCODE readIndicators(
             /* create second indicator constraint */
             SCIP_VAR** vars;
             SCIP_Real* vals;
+            SCIP_RETCODE retcode;
 
             SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
             SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
@@ -2334,15 +2356,21 @@ SCIP_RETCODE readIndicators(
             (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
 
             /* create indicator constraint */
-            SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars, vars, vals, -lhs,
-                  initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
-            SCIPdebugPrintCons(scip, cons, NULL);
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            retcode = SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars, vars, vals, -lhs,
+               initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode);
+
+            if( retcode == SCIP_OKAY )
+            {
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
+               SCIPdebugPrintCons(scip, cons, NULL);
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            }
 
             SCIPfreeBufferArray(scip, &vals);
             SCIPfreeBufferArray(scip, &vars);
+
+            SCIP_CALL( retcode );
          }
       }
 
@@ -2416,6 +2444,7 @@ SCIP_RETCODE readMps(
 {
    SCIP_FILE* fp;
    MPSINPUT* mpsi;
+   SCIP_RETCODE retcode;
    SCIP_Bool error;
 
    assert(scip != NULL);
@@ -2431,63 +2460,63 @@ SCIP_RETCODE readMps(
 
    SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
 
-   SCIP_CALL( readName(scip, mpsi) );
+   SCIP_CALL_TERMINATE( retcode, readName(scip, mpsi), TERMINATE );
 
-   SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE );
 
    if( mpsinputSection(mpsi) == MPS_OBJSEN )
    {
-      SCIP_CALL( readObjsen(scip, mpsi) );
+      SCIP_CALL_TERMINATE( retcode, readObjsen(scip, mpsi), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_OBJNAME )
    {
-      SCIP_CALL( readObjname(scip, mpsi) );
+      SCIP_CALL_TERMINATE( retcode, readObjname(scip, mpsi), TERMINATE );
    }
    while( mpsinputSection(mpsi) == MPS_ROWS
       || mpsinputSection(mpsi) == MPS_USERCUTS
       || mpsinputSection(mpsi) == MPS_LAZYCONS )
    {
-      SCIP_CALL( readRows(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readRows(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_COLUMNS )
    {
-      SCIP_CALL( readCols(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readCols(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_RHS )
    {
-      SCIP_CALL( readRhs(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readRhs(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_RANGES )
    {
-      SCIP_CALL( readRanges(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readRanges(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_BOUNDS )
    {
-      SCIP_CALL( readBounds(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readBounds(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_SOS )
    {
-      SCIP_CALL( readSOS(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readSOS(mpsi, scip), TERMINATE );
    }
    while( mpsinputSection(mpsi) == MPS_QCMATRIX )
    {
-      SCIP_CALL( readQCMatrix(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readQCMatrix(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_QMATRIX )
    {
-      SCIP_CALL( readQMatrix(mpsi, FALSE, scip) );
+      SCIP_CALL_TERMINATE( retcode, readQMatrix(mpsi, FALSE, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_QUADOBJ )
    {
-      SCIP_CALL( readQMatrix(mpsi, TRUE, scip) );
+      SCIP_CALL_TERMINATE( retcode, readQMatrix(mpsi, TRUE, scip), TERMINATE );
    }
    while( mpsinputSection(mpsi) == MPS_QCMATRIX )
    {
-      SCIP_CALL( readQCMatrix(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readQCMatrix(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_INDICATORS )
    {
-      SCIP_CALL( readIndicators(mpsi, scip) );
+      SCIP_CALL_TERMINATE( retcode, readIndicators(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
@@ -2498,8 +2527,10 @@ SCIP_RETCODE readMps(
 
    if( !error )
    {
-      SCIP_CALL( SCIPsetObjsense(scip, mpsinputObjsense(mpsi)) );
+      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
+
+ TERMINATE:
    mpsinputFree(scip, &mpsi);
 
    if( error )
@@ -3536,6 +3567,9 @@ SCIP_DECL_READERREAD(readerReadMps)
    assert(result != NULL);
 
    retcode =  readMps(scip, filename);
+
+   if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIP_READERROR;
 
    if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
       return retcode;

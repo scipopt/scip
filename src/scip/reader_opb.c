@@ -1363,11 +1363,12 @@ SCIP_RETCODE readConstraints(
    SCIP_Real* termcoefs;
    int* ntermvars;
    int ntermcoefs;
-   SCIP_Bool newsection;
    OPBSENSE sense;
+   SCIP_RETCODE retcode;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool newsection;
    SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamicrows;
@@ -1393,6 +1394,7 @@ SCIP_RETCODE readConstraints(
    assert(nNonlinearConss != NULL);
 
    weight = -SCIPinfinity(scip);
+   retcode = SCIP_OKAY;
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, opbinput, name, &linvars, &lincoefs, &nlincoefs, &terms, &termcoefs, &ntermvars, &ntermcoefs, &newsection, &isNonlinear, &issoftcons, &weight) );
@@ -1523,9 +1525,11 @@ SCIP_RETCODE readConstraints(
 #else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
 #endif
-      SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
+      retcode = SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
             ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
    }
    else
    {
@@ -1535,8 +1539,10 @@ SCIP_RETCODE readConstraints(
 #else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear");
 #endif
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
    }
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1558,6 +1564,8 @@ SCIP_RETCODE readConstraints(
    SCIPfreeBufferArrayNull(scip, &terms);
    SCIPfreeBufferArrayNull(scip, &lincoefs);
    SCIPfreeBufferArrayNull(scip, &linvars);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -4074,6 +4082,9 @@ SCIP_RETCODE SCIPreadOpb(
    }
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
+
+   if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIP_READERROR;
 
    SCIP_CALL( retcode );
 

@@ -1327,20 +1327,16 @@ SCIP_RETCODE createIndicatorConstraint(
    char name2[LP_MAX_LINELEN];
    SCIP_VAR** linvars;
    SCIP_Real* lincoefs;
-   int nlincoefs;
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
-   int nquadcoefs;
-   SCIP_Bool newsection;
+   SCIP_CONS* cons;
+   SCIP_RETCODE retcode;
    LPSENSE linsense;
    SCIP_Real linsidevalue;
-   int linsidesign;
-   SCIP_CONS* cons;
    SCIP_Real linrhs;
-   int j;
+   SCIP_Bool newsection;
    SCIP_Bool linConsEQ;
-
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1349,9 +1345,15 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIP_Bool local;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
+   int nlincoefs;
+   int nquadcoefs;
+   int linsidesign;
+   int j;
 
    assert( lpinput != NULL );
    assert( binvar != NULL );
+
+   retcode = SCIP_OKAY;
 
    /* check that binvalue is 0 or 1 */
    if( !SCIPisFeasEQ(scip, binvalue, 0.0) && !SCIPisFeasEQ(scip, binvalue, 1.0) )
@@ -1463,8 +1465,12 @@ SCIP_RETCODE createIndicatorConstraint(
    dynamic = lpinput->dynamicconss;
    removable = lpinput->dynamicrows || lpinput->inusercuts;
 
-   SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
-         initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+   retcode = SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
+      initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE);
+
+   if( retcode != SCIP_OKAY )
+      goto TERMINATE;
+
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1481,8 +1487,12 @@ SCIP_RETCODE createIndicatorConstraint(
       for( j = 0; j < nlincoefs; ++j )
          lincoefs[j] *= -1;
       linrhs *= -1;
-      SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, newname, binvar, nlincoefs, linvars, lincoefs, linrhs,
-            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+      retcode = SCIPcreateConsIndicator(scip, &cons, newname, binvar, nlincoefs, linvars, lincoefs, linrhs,
+         initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE);
+
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
+
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1497,6 +1507,8 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIPfreeMemoryArrayNull(scip, &quadvars1);
    SCIPfreeMemoryArrayNull(scip, &quadvars2);
    SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -1524,11 +1536,12 @@ SCIP_RETCODE readConstraints(
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
-   SCIP_Bool newsection;
    LPSENSE sense;
+   SCIP_RETCODE retcode;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool newsection;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1544,6 +1557,8 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool isIndicatorCons;
 
    assert(lpinput != NULL);
+
+   retcode = SCIP_OKAY;
 
    /* read coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &vars, &coefs, &ncoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
@@ -1686,15 +1701,19 @@ SCIP_RETCODE readConstraints(
       removable = lpinput->dynamicrows || lpinput->inusercuts;
       if( nquadcoefs == 0 )
       {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         retcode = SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, ncoefs, vars, coefs,
-               nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         retcode = SCIPcreateConsQuadratic(scip, &cons, name, ncoefs, vars, coefs,
+            nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
       }
+
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
+
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1720,7 +1739,7 @@ SCIP_RETCODE readConstraints(
          goto TERMINATE;
       }
 
-      SCIP_CALL( createIndicatorConstraint(scip, lpinput, name, vars[0], lhs) );
+      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], lhs);
    }
 
  TERMINATE:
@@ -1730,6 +1749,8 @@ SCIP_RETCODE readConstraints(
    SCIPfreeMemoryArrayNull(scip, &quadvars1);
    SCIPfreeMemoryArrayNull(scip, &quadvars2);
    SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -3419,6 +3440,9 @@ SCIP_RETCODE SCIPreadLp(
    {
       SCIPfreeMemoryArray(scip, &lpinput.pushedtokens[i]);
    }
+
+   if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIP_READERROR;
 
    /* check for correct return value */
    SCIP_CALL( retcode );
