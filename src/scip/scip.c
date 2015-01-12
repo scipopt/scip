@@ -13022,7 +13022,7 @@ SCIP_RETCODE initSolve(
    scip->set->stage = SCIP_STAGE_INITSOLVE;
 
    /* initialize NLP if there are nonlinearities */
-   if( scip->set->nlpenabled && !scip->set->nlp_disable )
+   if( scip->transprob->nlpenabled && !scip->set->nlp_disable )
    {
       SCIPdebugMessage("constructing empty NLP\n");
 
@@ -13157,7 +13157,7 @@ SCIP_RETCODE freeSolve(
    {
       SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
    }
-   scip->set->nlpenabled = FALSE;
+   scip->transprob->nlpenabled = FALSE;
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
@@ -26048,7 +26048,7 @@ SCIP_Bool SCIPisNLPEnabled(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPEnabled", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return scip->set->nlpenabled;
+   return scip->transprob->nlpenabled;
 }
 
 /** marks that there are constraints that are representable by nonlinear rows
@@ -26071,7 +26071,7 @@ void SCIPenableNLP(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPenableNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   scip->set->nlpenabled = TRUE;
+   scip->transprob->nlpenabled = TRUE;
 }
 
 /** returns, whether an NLP has been constructed
