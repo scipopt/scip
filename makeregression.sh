@@ -1,35 +1,31 @@
 #!/bin/bash
-# 
+#
 # This script runs a regression test for SCIP
 #
-# As input it optionally expects the path to SCIP. If no path is given the
-# current directory is assumed to be the SCIP path. This optional argument
-# is needed to be able to restart the script via a cron job.
+# As input it optionally expects the parameter LPS - default is LPS=spx
 #
 
-
 SCRIPTNAME="makeregression.sh"
-SCIPDIR=$1
 
-# check if the SCIP directory is given
-if [ -z ${SCIPDIR} ];
+SCIPDIR=`pwd`
+
+LPS=$1
+
+# check which LP solver to use
+if [ -z ${LPS} ];
 then
-    SCIPDIR=`pwd`
+    LPS=spx
 fi
-
-# move into the SCIP directory; this is necessary due the cron job
-cd $SCIPDIR
 
 # email variables
 ADMINEMAIL=miltenberger@zib.de
 LPIPDEVELOPERSEMAIL=lpip-developers@zib.de
+EMAILTO=$LPIPDEVELOPERSEMAIL
 EMAILFROM="Git <git@zib.de>"
 HOSTNAME=`hostname`
 
 # get current time stamp of the script  file
 SCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
-
-CRONTABFILE="crontabfile"
 
 GITHASHFILE="check/results/githashorder"
 GITHASH=0
@@ -41,27 +37,6 @@ LOCK=false
 CONTINUE=false
 OPTS=(dbg opt)
 TESTS=(short MMM bugs SAP-MMP)
-
-# first delete cron jobs if one exists
-crontab -r
-
-# check if the script exists; if not we have to stop
-if [ ! -f $SCRIPTNAME ];
-then
-    SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-    echo "kill script due to not existing file $SCRIPTNAME in directory $SCIPDIR"
-    echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
-    exit;
-fi
-
-# if file named "kill" exists, stop the regression test
-if [ -f "kill" ];
-then
-    SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-    echo "kill script due to exists of file \"kill\" (rm kill)" 
-    echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
-    exit;
-fi
 
 # find last git hash for which a complete test was performed
 if [ -f $GITHASHFILE ];
@@ -91,21 +66,12 @@ GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 while [ $NEWSCRIPTTIMESTAMP -eq $SCRIPTTIMESTAMP ]
 do
     # backup current download lists of SCIP and SoPlex
-    YEAR=`date +%Y`
-    MONTH=`date +%m`
-    DAY=`date +%d`
-    cp /www/Abt-Optimization/scip/counter/users.dat ~/download-counter/scip-$YEAR-$MONTH-$DAY-users.dat
-    cp /www/Abt-Optimization/soplex/counter/users.dat ~/download-counter/soplex-$YEAR-$MONTH-$DAY-users.dat
-    echo "created backups of download statistics"
-
-    # if file named "kill" exist, stop the regression test
-    if [ -f "kill" ];
-    then
-	SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-	echo "kill script due to exists of file \"kill\" (rm kill)" 
-	echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
-	exit;
-    fi
+#     YEAR=`date +%Y`
+#     MONTH=`date +%m`
+#     DAY=`date +%d`
+#     cp /www/Abt-Optimization/scip/counter/users.dat ~/download-counter/scip-$YEAR-$MONTH-$DAY-users.dat
+#     cp /www/Abt-Optimization/soplex/counter/users.dat ~/download-counter/soplex-$YEAR-$MONTH-$DAY-users.dat
+#     echo "created backups of download statistics"
 
     echo "get current SoPlex version"
     cd ../soplex
@@ -118,13 +84,13 @@ do
     for OPT in ${OPTS[@]}
     do
         # compile SCIP in debug or opt mode
-        make OPT=$OPT VERSION=$GITHASH ZIMPL=true clean
-        make OPT=$OPT VERSION=$GITHASH ZIMPL=true
+        make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
+        make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
 	
         for TEST in ${TESTS[@]}
         do
             # run test
-            make OPT=$OPT VERSION=$GITHASH TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test
+            make OPT=$OPT VERSION=$GITHASH LPS=$LPS TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test
 
             # remove tex and pav file
             rm -f check/results/check.$TEST.*$GITHASH*tex
@@ -135,14 +101,6 @@ do
             NABORTS=`grep -c abort check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
             NREADERRORS=`grep -c readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
 
-	    # only send fail mail to the group if the occurs on MMM or short
-	    if [ "$TEST" == "bugs" ]
-	    then
-		RECEIVER=$ADMINEMAIL
-	    else
-		EMAILTO=$LPIPDEVELOPERSEMAIL
-	    fi
-
 	    # construct string which shows the destination of the out, err, and res files
 	    ERRORFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.err`
 	    OUTFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.out`
@@ -152,7 +110,7 @@ do
             # check read fails
             if [ $NFAILS -gt 0 ];
             then
-                SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+                SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
 		ERRORINSTANCES=`grep fail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
@@ -160,7 +118,7 @@ do
             # check read errors
             if [ $NREADERRORS -gt 0 ];
             then
-                SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+                SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
 		ERRORINSTANCES=`grep readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
@@ -168,7 +126,7 @@ do
             # check aborts
             if [ $NABORTS -gt 0 ];
             then
-                SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+                SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
 		ERRORINSTANCES=`grep abort check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
@@ -187,14 +145,14 @@ do
                     # check time outs
                     if [ $NTIMEOUTS -gt NLASTTIMEOUTS ];
                     then
-			SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+			SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
 			grep timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
                     fi
 		fi
             fi
 
             # in any case send a mail to admin
-            SUBJECT="[$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+            SUBJECT="[$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
 	    RESULTS=`tail -8 check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
             echo -e "$RESULTS \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
         done
@@ -225,15 +183,6 @@ do
     done
 done
 
-# create crontab file for restarting the script
-echo "* * * * * $SCIPDIR/$SCRIPTNAME $SCIPDIR"  > $CRONTABFILE
-
-# set cron job to to restart script
-crontab $CRONTABFILE
-
-# remove cron tab file 
-rm -f $CRONTABFILE
-
 # send email to admin to indicate  that the script stopped
-SUBJECT="[$HOSTNAME] Stop $SCRIPTNAME"
+SUBJECT="[$HOSTNAME] $SCRIPTNAME [LPS=$LPS] has stopped - restart it"
 echo "Time stamp $NEWSCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
