@@ -467,7 +467,7 @@ int computeUbmakespan(
       int i;
 
       nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
-      distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+      distances = SCIPdigraphGetSuccessorsData(precedencegraph, j);
 
       duration = durations[j];
 
@@ -827,7 +827,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
          void** distances;
 
          successors = SCIPdigraphGetSuccessors(precedencegraph, j);
-         distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+         distances = SCIPdigraphGetSuccessorsData(precedencegraph, j);
 
          for( i = 0; i < nsuccessors; ++i )
          {
