@@ -87,7 +87,7 @@
 #endif
 
 /* check version */
-#if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 210))
+#if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 201))
 #error "This interface is not compatible with SoPlex versions prior to 2.0.0.2"
 #endif
 
