@@ -15,9 +15,9 @@
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`
 
-DIRECTORIES=(check doc src src/* examples examples/* examples/*/src examples/*/doc interfaces/jni/src)
-EXTENSIONS=(sh awk h c hpp cpp html)
-EXTRAFILES=(Makefile INSTALL make/make.install make/make.project make/make.detecthost)
+DIRECTORIES=(check doc lint scripts src src/* examples examples/* examples/*/src examples/*/doc interfaces/jni/src)
+EXTENSIONS=(sh awk h c hpp cpp html dxy lnt)
+EXTRAFILES=(Makefile INSTALL make/make.install make/make.project make/make.detecthost Makefile.nmake)
 
 echo ""
 echo "This script reports *all* files which have not a correct COPYRIGHT."
