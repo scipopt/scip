@@ -118,7 +118,13 @@ SCIP_RETCODE addRow(
       if( !SCIPisInfinity(scip, rhs) )
          rangedorequality = TRUE;
    }
-   assert(!SCIPisInfinity(scip, -matrix->lhs[rowidx]));
+
+   if(SCIPisInfinity(scip, -matrix->lhs[rowidx]))
+   {
+      /* ignore redundant constraint */
+      *rowadded = FALSE;
+      return SCIP_OKAY;
+   }
 
    matrix->rowmatbeg[rowidx] = matrix->nnonzs;
 
