@@ -1312,7 +1312,6 @@ SCIP_RETCODE dualPresolving(
    assert(idx >= 0 && idx < nvars);
    assert(bestobjval < SCIPinfinity(scip));
 
-   *result = SCIP_SUCCESS;
    noldfixed = *nfixedvars;
 
    /* in case of set packing and set partitioning we fix the dominated variables to zero */
@@ -1443,6 +1442,13 @@ SCIP_RETCODE dualPresolving(
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
+
+   assert(*nfixedvars >= noldfixed);
+
+   /* set result pointer to SCIP_SUCCESS, if variables could be fixed */
+   if( *nfixedvars != noldfixed )
+      *result = SCIP_SUCCESS;
+
 
    return SCIP_OKAY;
 }
