@@ -394,9 +394,9 @@ SCIP_RETCODE solveComponent(
 
             SCIP_CALL( SCIPcheckSolOrig(scip, presoldata->bestsol, &feasible, TRUE, TRUE) );
 
-            printf("feasible = %d, obj = %g\n", feasible, SCIPgetSolOrigObj(scip, sol));
+            //printf("feasible = %d, obj = %g\n", feasible, SCIPgetSolOrigObj(scip, sol));
 
-            SCIP_CALL( SCIPprintSol(scip, presoldata->bestsol, NULL, FALSE) );
+            //SCIP_CALL( SCIPprintSol(scip, presoldata->bestsol, NULL, FALSE) );
 
             SCIP_CALL( SCIPaddSol(scip, presoldata->bestsol, &feasible) );
          }
@@ -407,9 +407,6 @@ SCIP_RETCODE solveComponent(
    presoldata->lastdualbound[comp] = SCIPgetDualbound(subscip);
    presoldata->lastprimalbound[comp] = SCIPgetPrimalbound(subscip);
    presoldata->laststatus[comp] = SCIPgetStatus(subscip);
-
-   printf("lastprimalbound[%d] = %g\n", comp, presoldata->lastprimalbound[comp]);
-   SCIPprintBestSol(subscip, NULL, FALSE);
 
    if( status == SCIP_STATUS_OPTIMAL )
    {
@@ -465,7 +462,6 @@ SCIP_RETCODE copyComponent(
    assert(scip != NULL);
    assert(presoldata != NULL);
    assert(conss != NULL);
-   assert(nconss > 0);
    assert(vars != NULL);
    assert(nvars > 0);
    assert(nsolvedprobs != NULL);
@@ -512,6 +508,10 @@ SCIP_RETCODE copyComponent(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
    }
+   if( !SCIPisParamFixed(subscip, "limits/maxorigsol") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "limits/maxorigsol", 0) );
+   }
 
    /* reduce the effort spent for hash tables */
    if( !SCIPisParamFixed(subscip, "misc/usevartable") )
@@ -541,7 +541,7 @@ SCIP_RETCODE copyComponent(
 
 #ifndef SCIP_MORE_DEBUG
    /* disable output */
-   //SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
 
 #ifndef SCIP_DEBUG
@@ -1344,7 +1344,7 @@ SCIP_RETCODE presolComponents(
             (*nfixedvars) += ndeletedvars;
             (*ndelconss) += ndeletedconss;
 
-            if( presoldata->pluginscopied )
+            if( presoldata->pluginscopied && *result == SCIP_DIDNOTFIND )
             {
                solveIteratively(scip, presoldata, &nsolvedprobs, result);
             }
@@ -1358,6 +1358,8 @@ SCIP_RETCODE presolComponents(
                }
             }
 
+            /* free working solution */
+            SCIP_CALL( SCIPfreeSol(scip, &presoldata->bestsol) );
          }
 
          SCIPfreeBufferArray(scip, &components);
