@@ -114,7 +114,8 @@
 #define DEFAULT_DETECTPARTIALOBJECTIVE TRUE/**< should presolving try to detect subsets of constraints parallel to the
                                            *   objective function */
 #define DEFAULT_RANGEDROWPROPAGATION TRUE /**< should we perform ranged row propagation */
-
+#define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
+                                           *   removed afterwards? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
@@ -282,6 +283,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             rangedrowpropagation;/**< should presolving and propagation try to improve bounds, detect
                                                *   infeasibility, and extract sub-constraints from ranged rows and
                                                *   equations */
+   SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
+                                              *   removed afterwards? */
 };
 
 /** linear constraint update method */
@@ -9211,6 +9214,7 @@ void getNewSidesAfterAggregation(
 static
 SCIP_RETCODE convertLongEquality(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
@@ -9455,6 +9459,10 @@ SCIP_RETCODE convertLongEquality(
 
                removescons = (SCIPisFeasLE(scip, newlhs, minresactivity) && SCIPisFeasLE(scip, maxresactivity, newrhs));
             }
+
+            /* if parameter multaggrremove is set to TRUE, only aggregate when this removes constraint */
+            if( conshdlrdata->multaggrremove && !removescons )
+               continue;
 
             /* prefer variables that make the constraints redundant */
             if( bestremovescons && !removescons )
@@ -10099,7 +10107,7 @@ SCIP_RETCODE convertEquality(
       SCIP_CALL( checkPartialObjective(scip, cons, conshdlrdata) );
 
       /* try to multi-aggregate one of the variables */
-      SCIP_CALL( convertLongEquality(scip, cons, cutoff, naggrvars, ndelconss) );
+      SCIP_CALL( convertLongEquality(scip, conshdlrdata, cons, cutoff, naggrvars, ndelconss) );
    }
 
    return SCIP_OKAY;
@@ -16113,6 +16121,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/"CONSHDLR_NAME"/rangedrowpropagation",
          "should presolving and propagation try to improve bounds, detect infeasibility, and extract sub-constraints from ranged rows and equations?",
          &conshdlrdata->rangedrowpropagation, TRUE, DEFAULT_RANGEDROWPROPAGATION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/multaggrremove",
+         "should multi-aggregations only be performed if the constraint can be removed afterwards?",
+         &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
