@@ -9349,6 +9349,7 @@ void exprgraphPrintNodeExpression(
    }
 
    case SCIP_EXPR_LAST:
+      break;    // there is no name for last expr
    default:
       SCIPmessageFPrintInfo(messagehdlr, file, SCIPexpropGetName(node->op));
       break;
