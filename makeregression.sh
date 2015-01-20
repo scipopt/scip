@@ -96,22 +96,24 @@ do
             rm -f check/results/check.$TEST.*$GITHASH*tex
             rm -f check/results/check.$TEST.*$GITHASH*pav
 
+            BASEFILE="check/results/check.$TEST.*$GITHASH.*.$OPT.$LPS"
+
             # check if fail occurs
-            NFAILS=`grep -c fail check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-            NABORTS=`grep -c abort check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-            NREADERRORS=`grep -c readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+            NFAILS=`grep -c fail $BASEFILE.*res`
+            NABORTS=`grep -c abort $BASEFILE.*res`
+            NREADERRORS=`grep -c readerror $BASEFILE.*res`
 
 	    # construct string which shows the destination of the out, err, and res files
-	    ERRORFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.err`
-	    OUTFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.out`
-	    RESFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+	    ERRORFILE=`ls $BASEFILE.*.err`
+	    OUTFILE=`ls $BASEFILE.*.out`
+	    RESFILE=`ls $BASEFILE.*.res`
 	    DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
 
             # check read fails
             if [ $NFAILS -gt 0 ];
             then
                 SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep fail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+		ERRORINSTANCES=`grep fail $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
@@ -119,7 +121,7 @@ do
             if [ $NREADERRORS -gt 0 ];
             then
                 SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+		ERRORINSTANCES=`grep readerror $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
@@ -127,33 +129,33 @@ do
             if [ $NABORTS -gt 0 ];
             then
                 SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep abort check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+		ERRORINSTANCES=`grep abort $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check performance in opt mode
             if [ "$OPT" == "opt" ];
             then
-                NOK=`grep -c ok check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-                NSOLVED=`grep -c solved check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-                NTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+                NOK=`grep -c ok $BASEFILE.*res`
+                NSOLVED=`grep -c solved $BASEFILE.*res`
+                NTIMEOUTS=`grep -c timeouts $BASEFILE.*res`
 
 		if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
 		then
-                    NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res`
+                    NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.$LPS.*res`
 
                     # check time outs
                     if [ $NTIMEOUTS -gt NLASTTIMEOUTS ];
                     then
 			SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-			grep timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+			grep timeouts $BASEFILE.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
                     fi
 		fi
             fi
 
             # in any case send a mail to admin
             SUBJECT="[$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-	    RESULTS=`tail -8 check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+	    RESULTS=`tail -8 $BASEFILE.*.res`
             echo -e "$RESULTS \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
         done
     done
