@@ -58,7 +58,7 @@
 #define DEFAULT_USEDYNAMICCONFIDENCE FALSE /**< should the confidence level be adjusted dynamically? */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
-
+#define DEFAULT_CONFIDENCELEVEL SCIP_CONFIDENCELEVEL_MAX /**< the default confidence level for statistical tests */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -439,7 +439,7 @@ SCIP_RETCODE execRelpscost(
       /* calculate the threshold for the relative error in the same way; low tolerance is more strict than higher tolerance */
       relerrorthreshold = (1.0 - prio) * branchruledata->higherrortol + prio * branchruledata->lowerrortol;
 
-      clevel = SCIP_CONFIDENCELEVEL_HIGH;
+      clevel = DEFAULT_CONFIDENCELEVEL;
       /* determine the confidence level for hypothesis testing based on value of prio */
       if( branchruledata->usedynamicconfidence )
       {

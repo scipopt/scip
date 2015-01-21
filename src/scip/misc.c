@@ -41,6 +41,8 @@
 #include "scip/struct_misc.h"
 #endif
 
+#define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
+
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
  *   a certain confidence level;
@@ -131,6 +133,65 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    tresult *= SQRT(countx * county / (countx + county));
 
    return tresult;
+}
+
+/** calculates the cumulative distribution P(-infinity <= x <= value) that a normally distributed
+ *  random variable x takes a value between -infinity and parameter \p value.
+ *
+ *  The distribution is given by the respective mean and deviation. This implementation
+ *  uses the error function erf().
+ */
+SCIP_Real SCIPnormalCDF(
+   SCIP_Real             mean,               /**< the mean value of the distribution */
+   SCIP_Real             variance,           /**< the square of the deviation of the distribution */
+   SCIP_Real             value               /**< the upper limit of the calculated distribution integral */
+   )
+{
+   SCIP_Real normvalue;
+   SCIP_Real std;
+
+   /* we need to calculate the standard deviation from the variance */
+   assert(variance >= -1e-9);
+   if( variance < 1e-9 )
+      std = 0.0;
+   else
+      std = sqrt(variance);
+
+   /* special treatment for zero variance */
+   if( std < 1e-9 )
+   {
+      if( value < mean + 1e-9 )
+         return 1.0;
+      else
+         return 0.0;
+   }
+   assert( std != 0.0 ); /* for lint */
+
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
+   normvalue = (value - mean)/(std * SQRTOFTWO);
+
+   SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
+
+   /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate
+    * the normvalue and use the oddness of the erf()-function; special treatment for values close to zero.
+    */
+   if( normvalue < 1e-9 && normvalue > -1e-9 )
+      return .5;
+   else if( normvalue > 0 )
+   {
+      SCIP_Real erfresult;
+
+      erfresult = erf(normvalue);
+      return  erfresult / 2.0 + 0.5;
+   }
+   else
+   {
+      SCIP_Real erfresult;
+
+      erfresult = erf(-normvalue);
+
+      return 0.5 - erfresult / 2.0;
+   }
 }
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */

@@ -84,6 +84,19 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    SCIP_Real             county              /**< number of samples of y */
    );
 
+/** calculates the cumulative distribution P(-infinity <= x <= value) that a normally distributed
+ *  random variable x takes a value between -infinity and parameter \p value.
+ *
+ *  The distribution is given by the respective mean and deviation. This implementation
+ *  uses the error function erf().
+ */
+EXTERN
+SCIP_Real SCIPnormalCDF(
+   SCIP_Real             mean,               /**< the mean value of the distribution */
+   SCIP_Real             variance,           /**< the square of the deviation of the distribution */
+   SCIP_Real             value               /**< the upper limit of the calculated distribution integral */
+   );
+
 /**@} */
 
 /*
