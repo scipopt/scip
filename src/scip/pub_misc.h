@@ -84,6 +84,12 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    SCIP_Real             county              /**< number of samples of y */
    );
 
+/** get critical value of a standard normal distribution  at a given confidence level */
+EXTERN
+SCIP_Real SCIPnormalGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel              /**< (one-sided) confidence level */
+   );
+
 /** calculates the cumulative distribution P(-infinity <= x <= value) that a normally distributed
  *  random variable x takes a value between -infinity and parameter \p value.
  *
