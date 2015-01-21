@@ -59,6 +59,8 @@
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
 #define DEFAULT_CONFIDENCELEVEL SCIP_CONFIDENCELEVEL_MAX /**< the default confidence level for statistical tests */
+#define DEFAULT_SKIPBADINITCANDS FALSE  /**< should branching rule skip candidates that have a low probability to be
+                                          *  better than the best strong-branching or pseudo-candidate? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -86,6 +88,8 @@ struct SCIP_BranchruleData
    SCIP_Bool             usedynamicconfidence; /**< should the confidence level be adjusted dynamically? */
    SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
+   SCIP_Bool             skipbadinitcands;   /**< should branching rule skip candidates that have a low probability to be
+                                               *  better than the best strong-branching or pseudo-candidate? */
 };
 
 /*
@@ -365,6 +369,7 @@ SCIP_RETCODE execRelpscost(
       int maxbdchgs;
       int bestpscand;
       int bestsbcand;
+      int bestuninitsbcand;
       int inititer;
       int nvars;
       int i;
@@ -630,6 +635,7 @@ SCIP_RETCODE execRelpscost(
             ninitcands++;
             ninitcands = MIN(ninitcands, maxninitcands);
          }
+         /* in the case of hypothesis reliability, the best pseudo candidate has been determined already */
          else if( !branchruledata->usehyptestforreliability )
          {
             /* variable will keep it's pseudo cost value: check for better score of candidate */
@@ -701,6 +707,8 @@ SCIP_RETCODE execRelpscost(
       bestsbscore = -SCIPinfinity(scip);
       bestsbfracscore = -SCIPinfinity(scip);
       bestsbdomainscore = -SCIPinfinity(scip);
+      bestuninitsbscore = -SCIPinfinity(scip);
+      bestuninitsbcand = -1;
       lookahead = 0.0;
       for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
               && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
@@ -723,6 +731,58 @@ SCIP_RETCODE execRelpscost(
          c = initcands[i];
          assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
 
+         if( branchruledata->skipbadinitcands )
+         {
+            SCIP_Bool skipsb = FALSE;
+            /* if the current best candidate is a candidate found by strong branching, determine if candidate pseudo-costs are
+             * significantly smaller in at least one direction, in which case we safe the execution of strong-branching for now
+             */
+            if( bestsbscore > bestpsscore && bestsbscore > bestuninitsbscore && bestsbupvalid && bestsbdownvalid )
+            {
+               assert(bestsbcand != -1);
+               assert(bestsbup != SCIP_INVALID && bestsbdown != SCIP_INVALID);
+
+               /* test if the variable is unlikely to produce a better gain than the currently best one. Skip strong-branching
+                * in such a case
+                */
+               if( SCIPpscostThresholdProbabilityTest(scip, branchcands[c], branchcandsfrac[c], bestsbdown,
+                     SCIP_BRANCHDIR_DOWNWARDS, clevel)
+                     || SCIPpscostThresholdProbabilityTest(scip, branchcands[c], 1.0 - branchcandsfrac[c], bestsbup,
+                           SCIP_BRANCHDIR_UPWARDS, clevel) )
+                  skipsb = TRUE;
+            }
+            /* the currently best candidate is also a pseudo-candidate; apply significancy test and skip candidate if it
+             * is significantly worse in at least one direction
+             */
+            else if( bestpscand != -1 && bestpsscore > bestuninitsbscore )
+            {
+               if( SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
+                     branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE)
+                     || SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1.0 - branchcandsfrac[bestpscand],
+                           branchcands[c], 1.0 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
+                  skipsb = TRUE;
+            }
+            /* compare against the best init cand that has been skipped already */
+            else if( bestuninitsbcand != -1 )
+            {
+               if( SCIPsignificantVarPscostDifference(scip, branchcands[bestuninitsbcand], branchcandsfrac[bestuninitsbcand],
+                     branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE)
+                     || SCIPsignificantVarPscostDifference(scip, branchcands[bestuninitsbcand], 1.0 - branchcandsfrac[bestuninitsbcand],
+                           branchcands[c], 1.0 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
+                  skipsb = TRUE;
+            }
+
+            /* skip candidate, update the best score of an unitialized candidate */
+            if( skipsb )
+            {
+               if( bestuninitsbcand == -1 )
+               {
+                  bestuninitsbcand = c;
+                  bestuninitsbscore = initcandscores[i];
+               }
+               continue;
+            }
+         }
          SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iterations) -- %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" iterations\n",
             SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
             SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS), 
@@ -1020,10 +1080,8 @@ SCIP_RETCODE execRelpscost(
       if( *result != SCIP_CUTOFF )
       {
          /* get the score of the best uninitialized strong branching candidate */
-         if( i < ninitcands )
+         if( i < ninitcands && bestuninitsbcand == -1 )
             bestuninitsbscore = initcandscores[i];
-         else
-            bestuninitsbscore = -SCIPinfinity(scip);
 
          /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
           * compare it to the best initialized strong branching candidate
@@ -1315,6 +1373,12 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "should the confidence level be adjusted dynamically?",
          &branchruledata->usedynamicconfidence, TRUE, DEFAULT_USEDYNAMICCONFIDENCE,
          NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/skipbadinitcands",
+            "should branching rule skip candidates that have a low probability to "
+            "be better than the best strong-branching or pseudo-candidate?",
+            &branchruledata->skipbadinitcands, TRUE, DEFAULT_SKIPBADINITCANDS,
+            NULL, NULL) );
+   /**<  */
 
    return SCIP_OKAY;
 }
