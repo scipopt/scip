@@ -8960,6 +8960,30 @@ SCIP_Bool SCIPsignificantVarPscostDifference(
    SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
    );
 
+/** tests at a given confidence level whether the variable pseudo-costs only have a small probability to
+ *  exceed a \p threshold. This is useful to determine if past observations provide enough evidence
+ *  to skip an expensive strong-branching step if there is already a candidate that has been proven to yield an improvement
+ *  of at least \p threshold.
+ *
+ *  @note use \p clevel to adjust the level of confidence. For SCIP_CONFIDENCELEVEL_MIN, the method returns TRUE if
+ *        the estimated probability to exceed \p threshold is less than 25 %.
+ *
+ *  @see  SCIP_Confidencelevel for a list of available levels. The used probability limits refer to the one-sided levels
+ *        of confidence.
+ *
+ *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
+ *          at the given confidence level \p clevel.
+ */
+EXTERN
+SCIP_Bool SCIPpscostThresholdProbabilityTest(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable x */
+   SCIP_Real             frac,               /**< the fractionality of variable x */
+   SCIP_Real             threshold,          /**< the threshold to test against */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for rejecting hypothesis */
+   );
+
 /** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
  *  Error is calculated at a specific confidence level
  *

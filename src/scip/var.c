@@ -14004,6 +14004,87 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
    return (tresult >= SCIPstudentTGetCriticalValue(clevel, (int)(countx + county - 2)));
 }
 
+/** tests at a given confidence level whether the variable pseudo-costs only have a small probability to
+ *  exceed a \p threshold. This is useful to determine if past observations provide enough evidence
+ *  to skip an expensive strong-branching step if there is already a candidate that has been proven to yield an improvement
+ *  of at least \p threshold.
+ *
+ *  @note use \p clevel to adjust the level of confidence. For SCIP_CONFIDENCELEVEL_MIN, the method returns TRUE if
+ *        the estimated probability to exceed \p threshold is less than 25 %.
+ *
+ *  @see  SCIP_Confidencelevel for a list of available levels. The used probability limits refer to the one-sided levels
+ *        of confidence.
+ *
+ *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
+ *          at the given confidence level \p clevel.
+ */
+SCIP_Bool SCIPvarPscostThresholdProbabilityTest(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             var,                /**< variable x */
+   SCIP_Real             frac,               /**< the fractionality of variable x */
+   SCIP_Real             threshold,          /**< the threshold to test against */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for rejecting hypothesis */
+   )
+{
+   SCIP_Real mean;
+   SCIP_Real variance;
+   SCIP_Real count;
+   SCIP_Real realdirection;
+   SCIP_Real probability;
+   SCIP_Real problimit;
+
+   count = SCIPvarGetPseudocostCount(var, dir);
+
+   /* if not at least 2 measurements were taken, return FALSE */
+   if( count < 1.5 )
+      return FALSE;
+
+   realdirection = (dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
+
+   mean = frac * SCIPvarGetPseudocost(var, stat, realdirection);
+   variance = SQR(frac) * SCIPvarGetPseudocostVariance(var, dir, FALSE);
+
+   /* if mean is at least threshold, it has at least a 50% probability to exceed threshold, we therefore return FALSE */
+   if( SCIPsetIsFeasGE(set, mean, threshold) )
+      return FALSE;
+
+   /* if there is no variance, the means are taken from a constant distribution */
+   if( SCIPsetIsFeasEQ(set, variance, 0.0) )
+      return SCIPsetIsFeasLT(set, mean, threshold);
+
+   /* obtain probability of a normally distributed random variable at given mean and variance to yield at most threshold */
+   probability = SCIPnormalCDF(mean, variance, threshold);
+
+   /* determine a probability limit corresponding to the given confidence level */
+   switch( clevel )
+   {
+      case SCIP_CONFIDENCELEVEL_MIN:
+         problimit = 0.75;
+         break;
+      case SCIP_CONFIDENCELEVEL_LOW:
+         problimit = 0.875;
+         break;
+      case SCIP_CONFIDENCELEVEL_MEDIUM:
+         problimit = 0.9;
+         break;
+      case SCIP_CONFIDENCELEVEL_HIGH:
+         problimit = 0.95;
+         break;
+      case SCIP_CONFIDENCELEVEL_MAX:
+         problimit = 0.975;
+         break;
+      default:
+         problimit = -1;
+         SCIPerrorMessage("Confidence level set to unknown value <%d>", (int)clevel);
+         SCIPABORT();
+         break;
+   }
+
+   return (probability >= problimit);
+}
+
 /** find the corresponding history entry if already existing, otherwise create new entry */
 static
 SCIP_RETCODE findValuehistoryEntry(
