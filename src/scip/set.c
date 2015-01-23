@@ -5315,7 +5315,9 @@ SCIP_Real SCIPsetDualfeasFrac(
    return EPSFRAC(val, set->num_dualfeastol);
 }
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one
+ */
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newlb,              /**< new lower bound */
@@ -5333,7 +5335,9 @@ SCIP_Bool SCIPsetIsLbBetter(
    return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one
+ */
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newub,              /**< new upper bound */

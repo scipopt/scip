@@ -39050,7 +39050,9 @@ SCIP_Real SCIPdualfeasFrac(
    return SCIPsetDualfeasFrac(scip->set, val);
 }
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one
+ */
 SCIP_Bool SCIPisLbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newlb,              /**< new lower bound */
@@ -39063,7 +39065,9 @@ SCIP_Bool SCIPisLbBetter(
    return SCIPsetIsLbBetter(scip->set, newlb, oldlb, oldub);
 }
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one
+ */
 SCIP_Bool SCIPisUbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newub,              /**< new upper bound */
