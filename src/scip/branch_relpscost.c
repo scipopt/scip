@@ -58,7 +58,7 @@
 #define DEFAULT_USEDYNAMICCONFIDENCE FALSE /**< should the confidence level be adjusted dynamically? */
 #define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
 #define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
-#define DEFAULT_CONFIDENCELEVEL SCIP_CONFIDENCELEVEL_MAX /**< the default confidence level for statistical tests */
+#define DEFAULT_CONFIDENCELEVEL 2       /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
 #define DEFAULT_SKIPBADINITCANDS FALSE  /**< should branching rule skip candidates that have a low probability to be
                                           *  better than the best strong-branching or pseudo-candidate? */
 /** branching rule data */
@@ -90,6 +90,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             skipbadinitcands;   /**< should branching rule skip candidates that have a low probability to be
                                                *  better than the best strong-branching or pseudo-candidate? */
+   int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
 };
 
 /*
@@ -444,7 +445,7 @@ SCIP_RETCODE execRelpscost(
       /* calculate the threshold for the relative error in the same way; low tolerance is more strict than higher tolerance */
       relerrorthreshold = (1.0 - prio) * branchruledata->higherrortol + prio * branchruledata->lowerrortol;
 
-      clevel = DEFAULT_CONFIDENCELEVEL;
+      clevel = (SCIP_CONFIDENCELEVEL)branchruledata->confidencelevel;
       /* determine the confidence level for hypothesis testing based on value of prio */
       if( branchruledata->usedynamicconfidence )
       {
@@ -1378,7 +1379,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
             "be better than the best strong-branching or pseudo-candidate?",
             &branchruledata->skipbadinitcands, TRUE, DEFAULT_SKIPBADINITCANDS,
             NULL, NULL) );
-   /**<  */
+   SCIP_CALL( SCIPaddIntParam(scip,
+            "branching/relpscost/confidencelevel",
+            "the confidence level for statistical methods, between 0 (Min) and 4 (Max).",
+            &branchruledata->confidencelevel, TRUE, DEFAULT_CONFIDENCELEVEL, 0, 4, NULL, NULL) );
 
    return SCIP_OKAY;
 }
