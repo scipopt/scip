@@ -167,7 +167,7 @@ SCIP_RETCODE primalSetCutoffbound(
 {
    assert(primal != NULL);
    assert(cutoffbound <= SCIPsetInfinity(set));
-   assert(SCIPsetIsLE(set, cutoffbound, primal->upperbound));
+   assert(primal->upperbound == SCIP_INVALID || SCIPsetIsLE(set, cutoffbound, primal->upperbound));
    assert(!SCIPtreeInRepropagation(tree));
 
    SCIPdebugMessage("changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
@@ -190,7 +190,7 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
