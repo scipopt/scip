@@ -131,7 +131,6 @@ struct SCIP_Set
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
-   SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */

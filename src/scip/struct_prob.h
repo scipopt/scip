@@ -76,6 +76,7 @@ struct SCIP_Prob
    SCIP_OBJSENSE         objsense;           /**< objective sense of the original problem */
    SCIP_Bool             objisintegral;      /**< is objective value always integral for feasible solutions? */
    SCIP_Bool             transformed;        /**< TRUE iff problem is the transformed problem */
+   SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 };
 
 #ifdef __cplusplus
