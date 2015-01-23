@@ -3436,7 +3436,7 @@ SCIP_RETCODE nodeToLeaf(
 
 #ifndef NDEBUG
    /* check, if the LP state fork is the first node with LP state information on the path back to the root */
-   if( cutoffbound != SCIP_REAL_MIN ) /*lint !e777*/ /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
+   if( !SCIPsetIsInfinity(set, -cutoffbound) ) /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
    {
       SCIP_NODE* pathnode;
       pathnode = (*node)->parent;
@@ -4112,7 +4112,7 @@ SCIP_RETCODE SCIPnodeFocus(
    if( exitsolve && tree->nchildren > 0 )
    {
       SCIPdebugMessage(" -> deleting the %d children (in exitsolve) of the old focus node\n", tree->nchildren);
-      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, NULL, SCIP_REAL_MIN) );
+      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, NULL, -SCIPsetInfinity(set)) );
       assert(tree->nchildren == 0);
    }
 
@@ -4124,25 +4124,25 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIPdebugMessage("path to old focus node of depth %u was cut off at depth %d\n", 
          tree->focusnode->depth, oldcutoffdepth);
 
-      /* delete the focus node's children by converting them to leaves with a cutoffbound of SCIP_REAL_MIN;
+      /* delete the focus node's children by converting them to leaves with a cutoffbound of -SCIPsetInfinity(set);
        * we cannot delete them directly, because in SCIPnodeFree(), the children array is changed, which is the
        * same array we would have to iterate over here;
        * the children don't have an LP fork, because the old focus node is not yet converted into a fork or subroot
        */
       SCIPdebugMessage(" -> deleting the %d children of the old focus node\n", tree->nchildren);
-      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, NULL, SCIP_REAL_MIN) );
+      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, NULL, -SCIPsetInfinity(set)) );
       assert(tree->nchildren == 0);
 
       if( oldcutoffdepth < (int)tree->focusnode->depth )
       {
-         /* delete the focus node's siblings by converting them to leaves with a cutoffbound of SCIP_REAL_MIN;
+         /* delete the focus node's siblings by converting them to leaves with a cutoffbound of -SCIPsetInfinity(set);
           * we cannot delete them directly, because in SCIPnodeFree(), the siblings array is changed, which is the
           * same array we would have to iterate over here;
           * the siblings have the same LP state fork as the old focus node
           */
          SCIPdebugMessage(" -> deleting the %d siblings of the old focus node\n", tree->nsiblings);
          SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
-               SCIP_REAL_MIN) );
+               -SCIPsetInfinity(set)) );
          assert(tree->nsiblings == 0);
       }
    }
