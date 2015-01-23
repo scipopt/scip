@@ -2,6 +2,14 @@ SCIP version NEXT
 ==================
 
 features:
+- variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
+  and the main SCIP to reuse this information.
+- tighter reliability notions introduced for reliability branching, based on pseudo-cost relative errors
+  and comparing candidates with the best pseudo-candidate using a 2-sample student-T test. These methods
+  are used in disjunction with the existing reliability notion that uses a fixed number as reliability
+  threshold for every variable before turning off strong-branching. This means, the classical method
+  must be turned off by setting parameters minreliable and maxreliable to 0. The behavior is
+  controlled through several parameters.
 - new distribution branching rule to base decisions on row activity (normal) distribution over domain space
 - new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible. It also
   tries to improve them (or external solutions) by a one-opt local search.
@@ -12,6 +20,17 @@ features:
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 
 parameters:
+- new parameter "branching/relpscost/userelerrorreliability" to enable relative error based reliability
+- new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
+- new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
+- new parameter "branching/relpscost/usehyptestforreliability" to enable strong branching decisions based on a 2-sample student-T test
+  of all prior pseudo-cost observations   between the best pseudo-candidate and the candidate for which to decide whether strong-branching
+  should be applied
+- new parameter "branching/relpscost/usedynamicconfidence" to use a dynamic confidence level based on the amount of
+  strong-branching simplex-iterations compared to the overall simplex iterations (default is FALSE)
+- new parameter "branching/relpscost/confidencelevel" to set the confidence level to be used by statistical tests
+- new parameter "branching/relpscost/skipbadinitcands" for skipping strong-branching candidates whose estimated gain
+  is significantly worse than the one of the locally best (sb or pseudo) candidate
 - rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
 - rename parameter "vbc/filename" to "visual/vbcfilename"
 - rename parameter "vbc/realtime" to "visual/realtime"
@@ -32,7 +51,7 @@ performance improvements:
   and the difference between the depth and the maximum dive depth; if more than one candidate should
   be rounded, all candidates are sorted w.r.t. the diving score and then attempted in order of their score
   unless their LP solution has already become infeasible from intermediate propagations.
-- all hard diving heuristics additionally consider indicator variables as candidate variables and try to 
+- all hard diving heuristics additionally consider indicator variables as candidate variables and try to
   make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
   coefficients
@@ -40,6 +59,8 @@ performance improvements:
 - new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
 
 interface:
+- methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
+- new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
   without 'obj' at the beginning) create their diveset and store it in their heuristic data.
 - new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
