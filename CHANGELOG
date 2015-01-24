@@ -72,6 +72,8 @@ interface:
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
 
+fixed bugs:
+- fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
 
 SCIP version 3.1.1
 ==================

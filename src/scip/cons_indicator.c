@@ -2293,7 +2293,7 @@ SCIP_RETCODE addObjcut(
    SCIP_CALL( SCIPallocBufferArray(scip, &objvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
 
-   /* collect nonzeros*/
+   /* collect nonzeros */
    for (v = 0; v < nvars; ++v)
    {
       SCIP_VAR* var;
@@ -4755,7 +4755,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       assert( consdata->binvar != NULL );
       assert( consdata->slackvar != NULL );
 
-      assert( SCIPisZero(scip, SCIPvarGetObj(consdata->slackvar)) );
+      /* Presolving might replace a slack variable by an active variable. Thus, the objective of a slack variables might
+       * be nonzero. However, we do not need to check slack variables here. */
       if ( ! SCIPisZero(scip, varGetObjDelta(consdata->binvar)) )
          conshdlrdata->objothervarsonly = FALSE;
 
