@@ -13608,7 +13608,7 @@ SCIP_RETCODE SCIPsolve(
 
    if( scip->stat->status == SCIP_STATUS_INFEASIBLE || scip->stat->status == SCIP_STATUS_OPTIMAL || scip->stat->status == SCIP_STATUS_UNBOUNDED || scip->stat->status == SCIP_STATUS_INFORUNBD )
    {
-      SCIPwarningMessage(scip, "SCIPsolve() was called but problem was already solved, maybe a SCIPfreeTransform() was necessary to change the problem\n");
+      SCIPwarningMessage(scip, "SCIPsolve() was called, but problem is already solved\n");
       return SCIP_OKAY;
    }
 
