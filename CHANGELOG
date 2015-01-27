@@ -2,6 +2,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
 - fixed bug in cons_quadratic which leads to wrong min/max activities
 - fixed wrong conversion of reals representing negative integer values
 - in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
@@ -103,6 +104,9 @@ parameters:
 Makefile:
 - allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
   also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
+
+misc:
+- moved assertions in comparison methods from scip.c to set.c
 
 SCIP version 3.1.0
 ==================

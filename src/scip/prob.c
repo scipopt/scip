@@ -317,6 +317,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->dualbound = SCIP_INVALID;
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
+   (*prob)->nlpenabled = FALSE;
 
    return SCIP_OKAY;
 }
@@ -565,6 +566,9 @@ SCIP_RETCODE SCIPprobTransform(
     * cutoff bound if primal solution is already known 
     */
    SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, lp, eventqueue) );
+
+   /* copy the nlpenabled flag */
+   (*target)->nlpenabled = source->nlpenabled;
 
    return SCIP_OKAY;
 }
