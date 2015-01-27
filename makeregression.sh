@@ -129,8 +129,9 @@ do
             if [ $NABORTS -gt 0 ];
             then
                 SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+                ASSERTINFO=`grep Assertion $BASEFILE.*.err`
 		ERRORINSTANCES=`grep abort $BASEFILE.*.res`
-                echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+                echo -e "$ASSERTINFO \n$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check performance in opt mode
