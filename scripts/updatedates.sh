@@ -94,6 +94,7 @@ do
 
             # change file permissions back, since piping might create the file with different file permissions
             chmod --reference $FILE.olddate $FILE
+            rm $FILE.olddate
 	fi
     fi
 done
