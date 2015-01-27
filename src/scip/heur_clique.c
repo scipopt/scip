@@ -350,7 +350,7 @@ SCIP_RETCODE applyCliqueFixings(
          break;
 
       /* @todo need to be check if it's ok to always try to round and check the solution in each probing step */
-#if 0
+#if 1
 
 #ifdef SCIP_DEBUG
       ++nsolsround;
