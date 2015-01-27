@@ -1296,9 +1296,6 @@ void SCIPcliqueDelVar(
 
    if( clique->startcleanup == -1 || pos < clique->startcleanup )
       clique->startcleanup = pos;
-/*
-   ++(clique->ncleanupvars);
-   assert(clique->ncleanupvars <= clique->nvars);*/
 }
 
 /** gets the position of the given clique in the cliques array; returns -1 if clique is not member of cliques array */
@@ -2362,19 +2359,18 @@ SCIP_RETCODE cliqueCleanup(
    {
       SCIP_VAR* onefixedvar = NULL;
       SCIP_Bool onefixedvalue;
-      SCIP_Bool needremoval = FALSE;
       SCIP_Bool needsorting = FALSE;
       int nlocalbdchgs = 0;
       int v;
       int w;
 
-      /*assert(clique->ncleanupvars <= clique->nvars - clique->startcleanup);*/
-
-/* @TODO start w,v from clique->startcleanup again */
-      w = 0;
+      w = clique->startcleanup;
       /* exchange inactive by active variables */
-      for( v = 0; v < clique->nvars; ++v )
+      for( v = w; v < clique->nvars; ++v )
       {
+         SCIP_Bool addvartoclique; /* has the variable status changed such that it needs to be replaced by an active representative? */
+
+         addvartoclique = FALSE;
          if( SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_AGGREGATED
             || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_NEGATED
             || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_MULTAGGR )
@@ -2393,88 +2389,40 @@ SCIP_RETCODE cliqueCleanup(
                continue;
             }
 
-            assert(SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_COLUMN
+            addvartoclique = TRUE;
+         }
+
+         assert(SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_COLUMN
                || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_LOOSE
                || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_FIXED);
 
-            /* check for a variable fixed to zero in the clique */
-            if( (clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) ||
+         /* check for a variable fixed to zero in the clique */
+         if( (clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) ||
                (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) )
-            {
-               continue;
-            }
-            /* check for a variable fixed to one in the clique */
-            else if( (clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5)
-               || (!clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) )
-            {
-               if( onefixedvar != NULL )
-               {
-                  *infeasible = TRUE;
-
-                  SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique->id,
-                     onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->values[v] ? "" : "~",
-                     SCIPvarGetName(clique->vars[v])); /*lint !e530*/
-                  return SCIP_OKAY;
-               }
-               onefixedvar = clique->vars[v];
-               onefixedvalue = clique->values[v];
-            }
-            else
-            {
-               assert(SCIPvarGetStatus(clique->vars[v]) != SCIP_VARSTATUS_FIXED);
-               assert(w <= v);
-
-               if( w < v )
-               {
-                  clique->vars[w] = clique->vars[v];
-                  clique->values[w] = clique->values[v];
-               }
-
-               /* add clique to active variable */
-               SCIP_CALL( SCIPvarAddCliqueToList(clique->vars[w], blkmem, set, clique->values[w], clique) );
-               ++w;
-            }
+         {
+            /* the variable will be overwritten by subsequent active variables */
+            continue;
          }
          /* check for a variable fixed to one in the clique */
-         else if( SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_FIXED )
-         {
-            if( (clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5)
+         else if( (clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5)
                || (!clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) )
+         {
+            if( onefixedvar != NULL )
             {
-               if( onefixedvar != NULL )
-               {
-                  *infeasible = TRUE;
+               *infeasible = TRUE;
 
-                  SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique->id,
+               SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique->id,
                      onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->values[v] ? "" : "~",
-                     SCIPvarGetName(clique->vars[v]));
-                  return SCIP_OKAY;
-               }
-               onefixedvar = clique->vars[v];
-               onefixedvalue = clique->values[v];
+                           SCIPvarGetName(clique->vars[v])); /*lint !e530*/
+               return SCIP_OKAY;
             }
+            onefixedvar = clique->vars[v];
+            onefixedvalue = clique->values[v];
          }
          else
          {
-            assert(SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_COLUMN
-               || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_LOOSE);
-
-            if( (clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5)
-               || (!clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) )
-            {
-               if( onefixedvar != NULL )
-               {
-                  *infeasible = TRUE;
-
-                  SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique->id,
-                     onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->values[v] ? "" : "~",
-                     SCIPvarGetName(clique->vars[v]));
-                  return SCIP_OKAY;
-               }
-               onefixedvar = clique->vars[v];
-               onefixedvalue = clique->values[v];
-               needremoval = TRUE;
-            }
+            assert(SCIPvarGetStatus(clique->vars[v]) != SCIP_VARSTATUS_FIXED);
+            assert(w <= v);
 
             if( w < v )
             {
@@ -2482,11 +2430,17 @@ SCIP_RETCODE cliqueCleanup(
                clique->values[w] = clique->values[v];
             }
 
+            /* add clique to active variable if it replaced a aggregated or negated var */
+            if( addvartoclique )
+            {
+               SCIP_CALL( SCIPvarAddCliqueToList(clique->vars[w], blkmem, set, clique->values[w], clique) );
+            }
+            /* increase indexer of last active, i.e. unfixed, variable in clique */
             ++w;
          }
+
       }
       clique->nvars = w;
-/*      clique->ncleanupvars = 0;*/
       clique->startcleanup = -1;
 
       if( onefixedvar != NULL )
@@ -2516,7 +2470,8 @@ SCIP_RETCODE cliqueCleanup(
             *nchgbds += nlocalbdchgs;
          }
 
-         if( needremoval )
+         if( SCIPvarGetStatus(onefixedvar) == SCIP_VARSTATUS_COLUMN
+            || SCIPvarGetStatus(onefixedvar) == SCIP_VARSTATUS_LOOSE )
          {
             SCIP_CALL( SCIPvarDelCliqueFromList(onefixedvar, blkmem, onefixedvalue, clique) );
          }
@@ -2574,10 +2529,8 @@ SCIP_RETCODE cliqueCleanup(
 
       /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 ) */
 
-      /*clique->ncleanupvars = 0;*/
       clique->startcleanup = -1;
    }
-   /*assert(clique->ncleanupvars == 0);*/
    assert(SCIPcliqueIsCleanedUp(clique));
 
    return SCIP_OKAY;
