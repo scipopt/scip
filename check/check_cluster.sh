@@ -132,6 +132,9 @@ do
                 break
             fi
         done
+
+	INSTANCE=${SCIP_INSTANCEPATH}/${INSTANCE}
+
         # the cluster queue has an upper bound of 2000 jobs; if this limit is
         # reached the submitted jobs are dumped; to avoid that we check the total
         # load of the cluster and wait until it is save (total load not more than
@@ -156,7 +159,7 @@ do
             fi
 
             # call tmp file configuration for SCIP
-            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
+            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
 
             # check queue type
             if test  "$QUEUETYPE" = "srun"
@@ -165,7 +168,7 @@ do
                 export SOLVERPATH=$SCIPPATH
                 export EXECNAME=$SCIPPATH/../$BINNAME
                 export BASENAME=$FILENAME
-                export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
+                export FILENAME=$INSTANCE
                 export CLIENTTMPDIR
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
@@ -173,7 +176,7 @@ do
                 sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables
-                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME
         # after the first termination of the set loop, no file needs to be initialized anymore

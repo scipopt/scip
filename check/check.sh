@@ -105,9 +105,8 @@ do
             continue
         fi
 
-        INSTANCE=${SCIP_INSTANCEPATH}/${INSTANCE}
+	INSTANCE=${SCIP_INSTANCEPATH}/${INSTANCE}
 
-        # overwrite the tmp file now
         # call tmp file configuration for SCIP
         . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
 
