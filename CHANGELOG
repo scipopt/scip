@@ -66,6 +66,7 @@ fixed bugs:
   is just disregarded
 - fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
 - fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
+- fixed	bug in cons_indicator with handling local bounds
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints

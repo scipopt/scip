@@ -1707,7 +1707,7 @@ SCIP_RETCODE checkIISlocal(
             assert( 0 <= col && col < nCols );
             if ( ! SCIPisFeasZero(scip, vector[col]) )
             {
-               *isLocal = FALSE;
+               *isLocal = TRUE;
                return SCIP_OKAY;
             }
          }
@@ -1725,7 +1725,7 @@ SCIP_RETCODE checkIISlocal(
             assert( 0 <= col && col < nCols );
             if ( ! SCIPisFeasZero(scip, vector[col]) )
             {
-               *isLocal = FALSE;
+               *isLocal = TRUE;
                return SCIP_OKAY;
             }
          }
@@ -2820,7 +2820,7 @@ SCIP_RETCODE extendToCover(
       /* if cut is violated, i.e., sum - sizeIIS + 1 > 0 */
       if ( SCIPisEfficacious(scip, sum - (SCIP_Real) (sizeIIS - 1)) )
       {
-         SCIP_Bool isLocal;
+         SCIP_Bool isLocal = FALSE;
 
 #ifdef SCIP_ENABLE_IISCHECK
          /* check whether we really have an infeasible subsystem */
@@ -2828,7 +2828,10 @@ SCIP_RETCODE extendToCover(
 #endif
 
          /* check whether IIS corresponds to a local cut */
-         SCIP_CALL( checkIISlocal(scip, conshdlrdata, primsol, &isLocal) );
+         if (  conshdlrdata->updatebounds )
+         {
+            SCIP_CALL( checkIISlocal(scip, conshdlrdata, primsol, &isLocal) );
+         }
 
          if ( genlogicor )
          {
