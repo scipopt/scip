@@ -2455,9 +2455,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
       assert(duration > 0);
 
       /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
-      assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
+      assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
-      assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
+      assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
 
       SCIPdebugMessage("variable <%s>: glb=[%g,%g] conflict=[%g,%g] (duration %d, demand %d)\n",
@@ -2536,9 +2536,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
          assert(duration > 0);
 
          /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
-         assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
+         assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
          assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
-         assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
+         assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
          assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
 
          /* collect local core information */
