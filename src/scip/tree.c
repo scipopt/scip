@@ -2910,9 +2910,12 @@ SCIP_RETCODE treeSwitchPath(
       focusnode = focusnode->parent;
    }
 
-   /* propagate common fork again, if the reprop flag is set */
-   if( fork != NULL && fork->reprop )
+   /* fork might be cut off when applying the pending bound changes */
+   if( fork != NULL && fork->cutoff )
+      *cutoff = TRUE;
+   else if( fork != NULL && fork->reprop )
    {
+     /* propagate common fork again, if the reprop flag is set */
       assert(tree->path[forkdepth] == fork);
       assert(fork->active);
       assert(!fork->cutoff);
