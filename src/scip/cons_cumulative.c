@@ -3131,13 +3131,22 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the inference peak that the time point which lead to the that propagtion */
-         inferpeak = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
+         inferpeak = inferInfoGetData2(inferinfo);
+         /* the bound passed back to be resolved might be tighter as the bound propagted by the core time propagator;
+          * this can happen if the variable is not activ and aggregated to an activ variable with a scale != 1.0
+          */
+         assert(SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration <= inferpeak);
          relaxedpeak = SCIPconvertRealToInt(scip, relaxedbd) + inferduration;
 
          /* make sure that the relaxed peak is part of the effective horizon */
          relaxedpeak = MIN(relaxedpeak, hmax-1);
          assert(relaxedpeak >= hmin);
 
+         /* make sure that relaxed peak is not larger than the infer peak
+          *
+          * This can happen in case the variable is not an active variable!
+          */
+         relaxedpeak = MAX(relaxedpeak, inferpeak);
          assert(relaxedpeak >= inferpeak);
       }
       else
@@ -3149,14 +3158,22 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the time interval where the job could not be scheduled */
-         inferpeak = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
+         inferpeak = inferInfoGetData2(inferinfo);
+         /* the bound passed back to be resolved might be tighter as the bound propagted by the core time propagator;
+          * this can happen if the variable is not activ and aggregated to an activ variable with a scale != 1.0
+          */
+         assert(SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1 >= inferpeak);
          relaxedpeak = SCIPconvertRealToInt(scip, relaxedbd) - 1;
 
          /* make sure that the relaxed peak is part of the effective horizon */
          relaxedpeak = MAX(relaxedpeak, hmin);
          assert(relaxedpeak < hmax);
 
-         assert(relaxedpeak <= inferpeak);
+         /* make sure that relaxed peak is not larger than the infer peak
+          *
+          * This can happen in case the variable is not an active variable!
+          */
+         relaxedpeak = MIN(relaxedpeak, inferpeak);
       }
 
       /* resolves the propagation of the core time algorithm */
@@ -4017,7 +4034,7 @@ SCIP_RETCODE coretimesUpdateLb(
       /* construct the inference information which we are using with the conflict analysis to resolve that particular
        * bound change
        */
-      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, 0);
+      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, newlb-1);
 
       /* perform the bound lower bound change */
       SCIP_CALL( SCIPinferVarLbCons(scip, var, (SCIP_Real)newlb, cons, inferInfoToInt(inferinfo), TRUE, infeasible, &tightened) );
@@ -4152,7 +4169,7 @@ SCIP_RETCODE coretimesUpdateUb(
       /* construct the inference information which we are using with the conflict analysis to resolve that particular
        * bound change
        */
-      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, 0);
+      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, newub+duration);
 
       /* perform the bound upper bound change */
       SCIP_CALL( SCIPinferVarUbCons(scip, var, (SCIP_Real)newub, cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
