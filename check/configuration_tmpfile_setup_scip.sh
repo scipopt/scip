@@ -108,13 +108,17 @@ then
 fi
 
 
-# filter all parseable file format extensions
-TMPINSTANCE=`basename $SCIP_INSTANCEPATH/$INSTANCE .gz`
-TMPINSTANCEB=`basename $SCIP_INSTANCEPATH/$INSTANCE .mps`
 
 echo $OPTCOMMAND                       >> $TMPFILE
 echo display statistics                >> $TMPFILE
 echo checksol                          >> $TMPFILE
+
+
+# currently, the solution checker only supports .mps-files.
+# compare instance name (without .gz) to instance name stripped by .mps.
+#if they are unequal, we have an mps-file
+TMPINSTANCE=`basename $SCIP_INSTANCEPATH/$INSTANCE .gz`
+TMPINSTANCEB=`basename $TMPINSTANCE .mps`
 if test "$TMPINSTANCEB" != "$TMPINSTANCE"
 then
    echo write sol $SOLFILE             >> $TMPFILE

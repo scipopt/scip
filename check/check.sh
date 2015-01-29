@@ -105,21 +105,19 @@ do
             continue
         fi
 
-        INSTANCE=${SCIP_INSTANCEPATH}/${INSTANCE}
-
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
+        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH
         export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
         export BASENAME=$FILENAME
-        export FILENAME=$INSTANCE
+        export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
         export SOLNAME=$SOLCHECKFILE
         export CLIENTTMPDIR
         export CHECKERPATH=$SCIPPATH/solchecker
-        echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
+        echo Solving instance $SCIP_INSTANCEPATH/$INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
         bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
         #./run.sh
     done
