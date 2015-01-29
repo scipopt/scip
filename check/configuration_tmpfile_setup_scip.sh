@@ -21,21 +21,22 @@
 # environment variables passed as arguments
 INSTANCE=$1      #  instance name to solve
 SCIPPATH=$2      # - path to working directory for test (usually, the check subdirectory)
-TMPFILE=$3       # - the batch file to control SCIP
-SETNAME=$4       # - specified basename of settings-file, or 'default'
-SETFILE=$5       # - instance/settings specific set-file
-THREADS=$6       # - the number of LP solver threads to use
-SETCUTOFF=$7     # - should optimal instance value be used as objective limit (0 or 1)?
-FEASTOL=$8       # - feasibility tolerance, or 'default'
-TIMELIMIT=$9     # - time limit for the solver
-MEMLIMIT=${10}   # - memory limit for the solver
-NODELIMIT=${11}  # - node limit for the solver
-LPS=${12}        # - LP solver to use
-DISPFREQ=${13}   # - display frequency for chronological output table
-OPTCOMMAND=${14} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-CLIENTTMPDIR=${15}
-SOLBASENAME=${16}
-SOLUFILE=${17}   # - solu file, only necessary if $SETCUTOFF is 1
+SCIP_INSTANCEPATH=$3 # instance path
+TMPFILE=$4       # - the batch file to control SCIP
+SETNAME=$5       # - specified basename of settings-file, or 'default'
+SETFILE=$6       # - instance/settings specific set-file
+THREADS=$7       # - the number of LP solver threads to use
+SETCUTOFF=$8     # - should optimal instance value be used as objective limit (0 or 1)?
+FEASTOL=$9       # - feasibility tolerance, or 'default'
+TIMELIMIT=${10}     # - time limit for the solver
+MEMLIMIT=${11}      # - memory limit for the solver
+NODELIMIT=${12}  # - node limit for the solver
+LPS=${13}        # - LP solver to use
+DISPFREQ=${14}   # - display frequency for chronological output table
+OPTCOMMAND=${15} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
+CLIENTTMPDIR=${16}
+SOLBASENAME=${17}
+SOLUFILE=${18}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -88,7 +89,7 @@ echo set memory savefac 1.0            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
 
 # read and solve the instance
-echo read $INSTANCE         >> $TMPFILE
+echo read $SCIP_INSTANCEPATH/$INSTANCE         >> $TMPFILE
 
 # set objective limit: optimal solution value from solu file, if existent
 if test $SETCUTOFF = 1
@@ -108,8 +109,8 @@ fi
 
 
 # filter all parseable file format extensions
-TMPINSTANCE=`basename $INSTANCE .gz`
-TMPINSTANCEB=`basename $TMPINSTANCE .mps`
+TMPINSTANCE=`basename $SCIP_INSTANCEPATH/$INSTANCE .gz`
+TMPINSTANCEB=`basename $SCIP_INSTANCEPATH/$INSTANCE .mps`
 
 echo $OPTCOMMAND                       >> $TMPFILE
 echo display statistics                >> $TMPFILE
