@@ -350,7 +350,7 @@ SCIP_RETCODE applyCliqueFixings(
          break;
 
       /* @todo need to be check if it's ok to always try to round and check the solution in each probing step */
-#if 1
+#if 0
 
 #ifdef SCIP_DEBUG
       ++nsolsround;
@@ -532,6 +532,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_Bool shortconflict;
    SCIP_Bool allfixsolfound;
    SCIP_Bool backtracked;
+   SCIP_Bool solvelp;
    char consname[SCIP_MAXSTRLEN];
 
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
@@ -544,7 +545,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   /* assert(SCIPhasCurrentNodeLP(scip)); */
 
    *result = SCIP_DIDNOTRUN;
 
@@ -636,7 +636,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* sort the cliques together by respecting the current order (which is w.r.t. the objective coefficients */
    SCIP_CALL( stableSortBinvars(scip, binvars, nbinvars, cliquepartition, ncliques) );
 
-   if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
+   solvelp = SCIPhasCurrentNodeLP(scip);
+
+   if( !SCIPisLPConstructed(scip) && solvelp )
    {
       SCIP_Bool nodecutoff;
 
@@ -679,6 +681,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       /* propagate fixings */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &backtrackcutoff, NULL) );
+
+      SCIPdebugMessage("backtrack was %sfeasible\n", (backtrackcutoff ? "in" : ""));
    }
 
    /*************************** Probing LP Solving ***************************/
@@ -687,7 +691,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    lperror = FALSE;
    allfixsolfound = FALSE;
    /* solve lp only if the problem is still feasible */
-   if( !backtrackcutoff && SCIPhasCurrentNodeLP(scip) )
+   if( !backtrackcutoff && solvelp )
    {
 #if 1
       SCIPdebugMessage("starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));

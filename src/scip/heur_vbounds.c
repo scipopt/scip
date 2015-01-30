@@ -359,6 +359,8 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP_Bool             obj,                /**< should the objective be taken into account? */
    SCIP_SOL*             sol,                /**< working solution */
    SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
+   SCIP_VAR**            lastvar,            /**< last fixed variable */
+   SCIP_Bool*            fixedtolb,          /**< was last fixed variable fixed to its lower bound? */
    int*                  nfound,
    SCIP_Real*            solobj,
    SCIP_RESULT*          result              /**< pointer to store the result (solution found) */
@@ -366,7 +368,6 @@ SCIP_RETCODE applyVboundsFixings(
 {
    SCIP_VAR* var;
    SCIP_BOUNDTYPE bound;
-   SCIP_Bool success;
    int v;
 
    /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
@@ -390,12 +391,17 @@ SCIP_RETCODE applyVboundsFixings(
       if( obj && ((SCIPvarGetObj(var) >= 0) == (bound == SCIP_BOUNDTYPE_LOWER)) )
          continue;
 
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+
+      *lastvar = var;
+
       if( obj ? (tighten == (SCIPvarGetObj(var) >= 0)) : (tighten == (bound == SCIP_BOUNDTYPE_UPPER)) )
       {
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
          SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPgetNPseudoBranchCands(scip));
+         *fixedtolb = TRUE;
       }
       else
       {
@@ -405,13 +411,16 @@ SCIP_RETCODE applyVboundsFixings(
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
          SCIPdebugMessage("fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPgetNPseudoBranchCands(scip));
+         *fixedtolb = FALSE;
       }
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
-
+#if 0
       if( !(*infeasible) )
       {
+         SCIP_Bool success;
+
          /* create solution from probing run and try to round it */
          SCIP_CALL( SCIPlinkCurrentSol(scip, sol) );
          SCIP_CALL( SCIProundSol(scip, sol, &success) );
@@ -436,6 +445,7 @@ SCIP_RETCODE applyVboundsFixings(
             }
          }
       }
+#endif
    }
 
    SCIPdebugMessage("probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
@@ -502,11 +512,17 @@ SCIP_RETCODE applyVbounds(
 {
    SCIP_CLOCK* clock;
    SCIP_VAR** vars;
+   SCIP_VAR* lastfixedvar = NULL;
    SCIP_SOL* newsol;
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
+   SCIP_LPSOLSTAT lpstatus;
    SCIP_Bool infeasible;
+   SCIP_Bool lastfixedlower = TRUE;
+   SCIP_Bool allfixsolfound;
+   SCIP_Bool lperror;
+   SCIP_Bool solvelp;
    int nfound = 0;
    int nrounded = 0;
    SCIP_Real solobj = SCIPinfinity(scip);
@@ -558,6 +574,22 @@ SCIP_RETCODE applyVbounds(
    SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable bounds\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars);
 
+   /* check whether the LP should be solved at the current node in the tree to determine whether the heuristic
+    * is allowed to solve an LP
+    */
+   solvelp = SCIPhasCurrentNodeLP(scip);
+
+   if( !SCIPisLPConstructed(scip) && solvelp )
+   {
+      SCIP_Bool nodecutoff;
+
+      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
+      SCIP_CALL( SCIPflushLP(scip) );
+      if( nodecutoff )
+         return SCIP_OKAY;
+   }
+
+
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -565,10 +597,106 @@ SCIP_RETCODE applyVbounds(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, newsol, &infeasible, &nrounded, &solobj, result) );
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, newsol, &infeasible, &lastfixedvar, &lastfixedlower, &nrounded, &solobj, result) );
+
+   /* try to repair probing */
+   if( infeasible )
+   {
+      assert(lastfixedvar != NULL);
+
+      SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
+
+      /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
+      SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar,
+            lastfixedlower ? SCIPvarGetUbLocal(lastfixedvar) : SCIPvarGetLbLocal(lastfixedvar)) );
+
+      /* propagate fixings */
+      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &infeasible, NULL) );
+
+      SCIPdebugMessage("backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
+   }
+
+   /*************************** Probing LP Solving ***************************/
+
+   lpstatus = SCIP_LPSOLSTAT_ERROR;
+   lperror = FALSE;
+   allfixsolfound = FALSE;
+   /* solve lp only if the problem is still feasible */
+   if( !infeasible && solvelp )
+   {
+#if 1
+      SCIPdebugMessage("starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+
+      /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
+       * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
+       * SCIP will stop.
+       */
+#ifdef NDEBUG
+      {
+         SCIP_Bool retstat;
+         retstat = SCIPsolveProbingLP(scip, -1, &lperror, NULL);
+         if( retstat != SCIP_OKAY )
+         {
+            SCIPwarningMessage(scip, "Error while solving LP in vbound heuristic; LP solve terminated with code <%d>\n",
+               retstat);
+         }
+      }
+#else
+      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
+#endif
+      SCIPdebugMessage("ending solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+
+      lpstatus = SCIPgetLPSolstat(scip);
+
+      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
+   }
+
+   /* check if this is a feasible solution */
+   if( lpstatus == SCIP_LPSOLSTAT_OPTIMAL && !lperror )
+   {
+      SCIP_Bool stored;
+      SCIP_Bool success;
+
+      /* copy the current LP solution to the working solution */
+      SCIP_CALL( SCIPlinkLPSol(scip, newsol) );
+
+      SCIP_CALL( SCIProundSol(scip, newsol, &success) );
+
+      if( success )
+      {
+         SCIPdebugMessage("vbound heuristic found roundable primal solution: obj=%g\n",
+            SCIPgetSolOrigObj(scip, newsol));
+
+         /* check solution for feasibility, and add it to solution store if possible.
+          * Neither integrality nor feasibility of LP rows have to be checked, because they
+          * are guaranteed by the heuristic at this stage.
+          */
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, &stored) );
+#else
+         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
+#endif
+         if( stored )
+         {
+            SCIPdebugMessage("found feasible solution:\n");
+            *result = SCIP_FOUNDSOL;
+            allfixsolfound = TRUE;
+            solobj = MIN(solobj, SCIPgetSolOrigObj(scip, newsol));
+         }
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPclearSol(scip, newsol) );
+   }
+#endif
+
+   /*************************** END Probing LP Solving ***************************/
+
 
    /* if a solution has been found --> fix all other variables by subscip if necessary */
-   if( !infeasible )
+   if( !allfixsolfound && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -770,8 +898,10 @@ SCIP_RETCODE applyVbounds(
 
    SCIP_CALL( SCIPstopClock(scip, clock) );
 
-   printf("### vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d rounded=%d subscip=%d bestobj=%.2g time=%.2f\n", forward, tighten, obj,
-      nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible, nrounded, nfound, solobj, SCIPclockGetTime(clock) );
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "### vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d rounded=%d lp=%d subscip=%d bestobj=%.2g time=%.2f\n",
+      forward, tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
+      nrounded, allfixsolfound ? 1 : 0, nfound, solobj, SCIPclockGetTime(clock) );
 
 
    SCIP_CALL( SCIPfreeClock(scip, &clock) );
@@ -875,13 +1005,14 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    /* try variable bounds */
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, TRUE, result) );
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, FALSE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, TRUE, result) );
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, FALSE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, TRUE, result) );
+#if 0
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, TRUE, result) );
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, FALSE, result) );
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, TRUE, result) );
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, FALSE, result) );
-
+#endif
    return SCIP_OKAY;
 }
 
