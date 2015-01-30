@@ -43,7 +43,7 @@ CMAINOBJ	=	cmain.o \
 			grphload.o \
 			grphmcut.o \
 			grphpath.o \
-                        grphsave.o \
+			grphsave.o \
 			heur_tm.o \
 			heur_local.o \
 			heur_rec.o \
@@ -57,6 +57,7 @@ CMAINOBJ	=	cmain.o \
 			reduce.o \
 			dirreduce.o \
 			sdtest.o \
+			bndtest.o \
 			validate.o
 CXXMAINOBJ	=
 

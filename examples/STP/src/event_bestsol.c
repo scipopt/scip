@@ -24,6 +24,7 @@
 
 #include "event_bestsol.h"
 #include "probdata_stp.h"
+#include "grph.h"
 
 #include <string.h>
 
@@ -79,6 +80,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_SOL* bestsol;
    SCIP_Real solvalue;
    SCIP_Real factor = 1.0;
+   int elimins = 0;
 
    if( SCIPprobdataGetType(scip) ==  STP_MAX_NODE_WEIGHT )
       factor = -1.0;
@@ -96,6 +98,9 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    solvalue = factor * SCIPgetSolOrigObj(scip, bestsol);
 
    SCIPprobdataWriteLogLine(scip, "Solution %.1f %16.9g\n", SCIPgetTotalTime(scip), solvalue);
+
+   /* Calling the bound-based reduction tests */
+   SCIP_CALL(bound_reduction(scip, solvalue, &elimins));
 
    return SCIP_OKAY;
 }

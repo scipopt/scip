@@ -17,4 +17,4 @@ then
 fi
 
 
-bash -c  "$BINARY -c 'set load $SETTINGS set stp logfile $OUTPUTFILE set limit time $TIME read $FILENAME o write stpsol disp stat q'"
+bash -c  "ulimit -f 2000000; ulimit -s unlimited; gdb --batch -ex 'r' -ex 'bt' --args $BINARY -c 'set load $SETTINGS set stp logfile $OUTPUTFILE set limit time $TIME read $FILENAME o write stpsol disp stat q'"

@@ -1119,6 +1119,7 @@ static double level4(
    char    sd = TRUE;
    char    bd3 = FALSE;
    char    nsv = TRUE;
+   char    nv = TRUE;
    char    timebreak = FALSE;
    assert(g != NULL);
    //bound_test(scip, g);
@@ -1130,6 +1131,17 @@ static double level4(
    printf("nodebound: %d \n", nodebound );
 
    degree_test(g, &fixed);
+
+   //i = 0;
+   //while( nv_reduction(g, &fixed) > 0)
+   //{
+      //i++;
+      //if( i > 2 )
+         //break;
+      //degree_test(g, &fixed);
+   //}
+
+   //return fixed;
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1196,6 +1208,18 @@ static double level4(
             break;
       }
 
+      if( nv )
+      {
+         /* if( !(nv_reduction(g, &fixed) > nodebound) ) */
+         if( !(nv_reduction(g, &fixed) > 0) )
+            nv = FALSE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
       if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
    }
@@ -1212,8 +1236,8 @@ static double level4(
      }
      }
    */
-   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n",
-      fixed);
+   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
+   printf("Total Fixed: %f\n", fixed);
    free(sddist);
    free(sdtrans);
    free(sdrand);

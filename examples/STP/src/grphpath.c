@@ -426,6 +426,9 @@ void graph_path_exec(
           */
          state[k] = CONNECT;
 
+         //if( p->elimknots[k] < 0 )
+            //continue;
+
          /* Verbunden Knoten berichtigen ...
           *
           * Wenn ein Knoten noch nicht erledigt ist
@@ -433,6 +436,9 @@ void graph_path_exec(
           */
          for(i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i])
          {
+            //if( p->elimedges[i] < 0 )
+               //continue;
+
             m = p->head[i];
 
             /* 1. Ist der Knoten noch nicht festgelegt ?
@@ -644,6 +650,42 @@ void graph_path_exec2(
       }
    }
 }
+
+
+
+/* computes the shortest path from each terminal to every other vertex */
+void calculate_distances(
+   const GRAPH* g,
+   PATH** path)
+{
+   int i;
+
+   SCIPdebug(fputc('C', stdout));
+   SCIPdebug(fflush(stdout));
+
+   for(i = 0; i < g->knots; i++)
+   {
+      if (Is_term(g->term[i]) && (g->grad[i] > 0))
+      {
+         if (path[i] == NULL)
+            path[i] = malloc((size_t)g->knots * sizeof(PATH));
+
+         assert(path[i] != NULL);
+
+         graph_path_exec(g, FSP_MODE, i, g->cost, path[i]);
+      }
+      else
+      {
+         if (path[i] != NULL)
+         {
+            free(path[i]);
+
+            path[i] = NULL;
+         }
+      }
+   }
+}
+
 
 
 
@@ -1133,20 +1175,24 @@ void voronoi_inout(
    int* minArc1;
    int* minArc2;
    PATH* inpath;
+   double* distance;
+   double* radius;
    PATH* outpath;
 
+   distance = malloc((size_t)g->knots * sizeof(double));
+   radius = malloc((size_t)g->knots * sizeof(double));
    inpath = malloc((size_t)g->knots * sizeof(PATH));
    outpath = malloc((size_t)g->knots * sizeof(PATH));
-   inpred = malloc((size_t)g->knots * sizeof(int));
-   outpred = malloc((size_t)g->knots * sizeof(int));
+   inpred = malloc((size_t)g->edges * sizeof(int));
+   outpred = malloc((size_t)g->edges * sizeof(int));
    terms = malloc((size_t)g->terms * sizeof(int));
    minArc1 = malloc((size_t)g->knots * sizeof(int));
    minArc2 = malloc((size_t)g->knots * sizeof(int));
    heap  = malloc((size_t)g->knots * sizeof(int));
    state = malloc((size_t)g->knots * sizeof(int));
 
-   voronoi_term(g, g->cost, inpath, heap, state, inpred, 1);
-   voronoi_term(g, g->cost, outpath, heap, state, outpred, 0);
+   voronoi_term(g, g->cost, distance, radius, inpath, heap, state, inpred, 1);
+   voronoi_term(g, g->cost, distance, radius, outpath, heap, state, outpred, 0);
 
    k = 0;
    for( i = 0; i < g->knots; i++ )
@@ -1197,6 +1243,8 @@ void voronoi_inout(
 void voronoi_term(
    const GRAPH*   g,
    double*        cost,
+   double*        distance,
+   double*        radius,
    PATH*          path,
    int*           vregion,
    int*           heap,
@@ -1209,22 +1257,26 @@ void voronoi_term(
    int k;
    int m;
    int i;
+   int p;
+   int q;
    int curr_edge;
    int nv;
    int nvedge;
    int count = 0;
    int nbases = 0;
 
-   assert(g      != NULL);
-   assert(path   != NULL);
-   assert(cost   != NULL);
-   assert(vregion != NULL);
-   assert(heap   != NULL);
-   assert(state  != NULL);
+   assert(g          != NULL);
+   assert(path       != NULL);
+   assert(cost       != NULL);
+   assert(distance   != NULL);
+   assert(radius     != NULL);
+   assert(vregion    != NULL);
+   assert(heap       != NULL);
+   assert(state      != NULL);
    assert(predecessor != NULL);
+
    if( g->knots == 0 )
       return;
-
 
    /* initialize */
    for( i = 0; i < g->knots; i++ )
@@ -1239,7 +1291,9 @@ void voronoi_term(
          path[i].dist = 0.0;
          path[i].edge = UNKNOWN;
          state[i] = count;
+         distance[i] = FARAWAY;
          predecessor[i] = UNKNOWN;
+         radius[i] = FARAWAY;
       }
       else
       {
@@ -1247,15 +1301,12 @@ void voronoi_term(
          path[i].dist = FARAWAY;
          path[i].edge = UNKNOWN;
          state[i]     = UNKNOWN;
+         distance[i] = FARAWAY;
          predecessor[i] = UNKNOWN;
+         radius[i] = FARAWAY;
       }
    }
    assert(nbases > 0);
-
-   for( e = 0; e < g->edges; e++)
-   {
-      assert(GE(g->cost[e], 0));
-   }
 
    if( g->knots > 1 )
    {
@@ -1267,7 +1318,11 @@ void voronoi_term(
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-         //printf("get node %d \n ", k);
+
+         /* only process the node if it has not been eliminated in a reduction test */
+         if( g->elimknots[k] < 0 )
+            continue;
+
          /* iterate over all ingoing edges of vertex k.
           * working in reverse from the terminal nodes.
           * For the undirected case this does not make any difference,
@@ -1278,8 +1333,13 @@ void voronoi_term(
             nvedge = g->inpbeg[k];
          else
             nvedge = g->outbeg[k];
+
          for( i = g->inpbeg[k]; i != EAT_LAST; i = g->ieat[i] )
          {
+            /* only process the edge if it has not been eliminated in a reduction test */
+            if( g->elimedges[i] < 0 )
+               continue;
+
             m = g->tail[i];
             if( inward > 0 )
                curr_edge = i;
@@ -1287,22 +1347,61 @@ void voronoi_term(
                curr_edge = Edge_anti(i);
 
             /* check whether the path (to m) including k is shorter than the so far best known */
-            if( (state[m]) && GT(path[m].dist, path[k].dist + cost[curr_edge]) )
+            if( (state[m]) )
             {
-               assert(g->term[m] < 0);
-               correct(heap, state, &count, path, m, k, curr_edge, cost[curr_edge], FSP_MODE);
-               vregion[m] = vregion[k];
-               predecessor[m] = predecessor[k];
-            }
+               if( GT(path[m].dist, path[k].dist + cost[curr_edge]) )
+               {
+                  assert(g->term[m] < 0);
+                  correct(heap, state, &count, path, m, k, curr_edge, cost[curr_edge], FSP_MODE);
+                  predecessor[m] = predecessor[k];
+                  vregion[m] = vregion[k];
+               }
 
-            if( g->term[k] >= 0 )
+
+               if( g->term[k] >= 0 )
+               {
+                  if( LE(cost[curr_edge], cost[nvedge]) )
+                     nvedge = curr_edge;
+               }
+            }
+            else if( state[m] == CONNECT )
             {
-               if( (state[m]) && GT(cost[nvedge], cost[curr_edge]) )
-                  nvedge = curr_edge;
+               // updating the shortest distance between two terminals. This is used for the nearest vertex test.
+               if( vregion[m] != vregion[k] )
+               {
+                  // this only gives an upper bound on the shortest distance from k to the nearest terminal through the
+                  // nearest vertex. The conditions should be checked.
+                  if( predecessor[k] == vregion[k] && predecessor[m] != vregion[k] )
+                  {
+                     assert(predecessor[k] != vregion[m]);
+                     assert(predecessor[m] != vregion[k]);
+
+                     assert(g->grad[vregion[m]] > 0);
+
+                     //printf("predecessor[path[k].edge]: %d, predecessor[path[m].edge]: %d, VR[k]: %d, VR[m]: %d, "
+                           //"k: %d, path[k].dist: %f, m: %d, path[m].dist: %f, cost[curr_edge]: %f, distance: %f, "
+                           //"(%d, %d)\n", predecessor[path[k].edge], predecessor[path[m].edge], vregion[k], vregion[m],
+                           //k, path[k].dist, m, path[m].dist, cost[curr_edge], distance[predecessor[path[k].edge]],
+                           //g->head[curr_edge], g->tail[curr_edge]);
+
+                     if( predecessor[k] != UNKNOWN )
+                        distance[predecessor[k]] = MIN(distance[predecessor[k]],
+                              path[k].dist + cost[curr_edge] + path[m].dist);
+
+#if 0
+                     if( predecessor[path[m].edge] != UNKNOWN )
+                        distance[predecessor[path[m].edge]] = MIN(distance[predecessor[path[m].edge]],
+                              path[k].dist + cost[curr_edge] + path[m].dist);
+#endif
+                  }
+
+                  radius[vregion[k]] = MIN(radius[vregion[k]], path[k].dist + cost[curr_edge]);
+                  radius[vregion[m]] = MIN(radius[vregion[m]], path[m].dist + cost[curr_edge]);
+               }
             }
          }
 
-         if( g->term[k] >= 0 && nvedge != EAT_LAST )
+         if( g->term[k] >= 0 && g->grad[k] > 0 && nvedge != EAT_LAST )
          {
             if( inward > 0 )
             {
@@ -1314,6 +1413,7 @@ void voronoi_term(
                assert(k == g->tail[nvedge]);
                nv = g->head[nvedge];
             }
+
             predecessor[nv] = k;
          }
       }

@@ -90,6 +90,13 @@ typedef struct
                    /* Knot [i]                                    */
    int*    ypos;   /* Array [0..knots-1] with Y Coordinates of    */
                    /* Knot [i]                                    */
+   /* Bound-based reductions
+    */
+   SCIP_Real greatestlb;/* The largest lower bound found using the bound test */
+   int*    elimknots;   /* Array [0..knots-1] to indicate whether the knot is eliminated,
+                           i if included, -1 if eliminated  */
+   int*    elimedges;   /* Array [0..edges-1] to indicate whether the edge is eliminated
+                           i if included, -1 if eliminated  */
 #if 0
    /* Contraction Data
     */
@@ -209,10 +216,11 @@ extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
+extern void   calculate_distances(const GRAPH*, PATH**);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_radius(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_inout(const GRAPH*);
-extern void   voronoi_term(const GRAPH*, double*, PATH*, int*, int*, int*, int*, int);
+extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   heap_add(int*, int*, int*, int, PATH*);
 extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, char*, UF*, PATH*);
@@ -254,10 +262,15 @@ extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, d
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(SCIP*, GRAPH*, double*);
 extern int    nv_reduction_optimal(GRAPH*, double*);
+extern int    nv_reduction(GRAPH*, double*);
 
 /* dirreduce.c
  */
 extern int degree_test_dir(GRAPH*, double*);
+
+/* bndtest.c
+ */
+extern SCIP_RETCODE bound_reduction(SCIP*, double, int*);
 
 /* validate.c
  */
