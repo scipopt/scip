@@ -840,7 +840,7 @@ SCIP_RETCODE separateCuts(
 
    infeasible = FALSE;
    /* get clique table */
-   SCIP_CALL( SCIPcleanupCliques(scip, &infeasible, NULL) );
+   SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
    if( infeasible )
       return SCIP_OKAY;
 

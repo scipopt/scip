@@ -1803,6 +1803,13 @@ SCIP_RETCODE varRemoveImplicsVbs(
       }
    }
 
+   /* remove the variable from all cliques */
+   if( SCIPvarIsBinary(var) )
+   {
+      SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+      SCIPcliquelistFree(&var->cliquelist, blkmem);
+   }
+
    /**@todo variable bounds like x <= b*z + d with z general integer are not removed from x's vbd arrays, because
     *       z has no link (like in the binary case) to x
     */
@@ -3629,13 +3636,6 @@ SCIP_RETCODE SCIPvarFix(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
-
-      /* remove the variable from all cliques */
-      if( SCIPvarIsBinary(var) )
-      {
-         SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-         SCIPcliquelistFree(&var->cliquelist, blkmem);
-      }
       assert(var->cliquelist == NULL);
 
       /* clear the history of the variable */
@@ -4482,6 +4482,7 @@ SCIP_RETCODE SCIPvarAggregate(
     * aggregated variable
     */
    SCIP_CALL( varRemoveImplicsVbs(var, blkmem, set, FALSE, FALSE) );
+   assert(var->cliquelist == NULL);
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
@@ -4595,18 +4596,6 @@ SCIP_RETCODE SCIPvarAggregate(
       }
    }
    SCIPimplicsFree(&var->implics, blkmem);
-
-   /* move the cliques to the aggregation variable:
-    *  - remove the variable from all cliques it is contained in
-    *  - add all cliques again to the variable, thus adding it to the aggregated variable
-    *  - free the cliquelist data structures
-    */
-   if( SCIPvarIsBinary(var) )
-   {
-      SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-      SCIPcliquelistFree(&var->cliquelist, blkmem);
-   }
-   assert(var->cliquelist == NULL);
 
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
@@ -5249,13 +5238,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
-
-      /* the variable also has to be removed from all cliques */
-      if( SCIPvarIsBinary(var) )
-      {
-         SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-         SCIPcliquelistFree(&var->cliquelist, blkmem);
-      }
       assert(var->cliquelist == NULL);
 
       /* set the aggregated variable's objective value to 0.0 */
@@ -10461,8 +10443,8 @@ SCIP_RETCODE SCIPvarFixBinary(
       }
    }
 
-   SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-   SCIPcliquelistFree(&var->cliquelist, blkmem);
+   /* during presolving, the variable should have been removed immediately from all its cliques */
+   assert(SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING || var->cliquelist == NULL);
 
    return SCIP_OKAY;
 }

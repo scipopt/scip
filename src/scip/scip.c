@@ -20312,16 +20312,18 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
  */
 SCIP_RETCODE SCIPcleanupCliques(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            infeasible,         /**< pointer to store if cleanup detected infeasibility */
-   int*                  nlocalbdchgs        /**< pointer to store the number of detected bound changes */
+   SCIP_Bool*            infeasible          /**< pointer to store if cleanup detected infeasibility */
    )
 {
+   int nlocalbdchgs;
    SCIP_Bool globalinfeasibility;
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPcleanupCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    globalinfeasibility = FALSE;
+   nlocalbdchgs = 0;
    SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, nlocalbdchgs, &globalinfeasibility) );
+         scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs, &globalinfeasibility) );
 
    if( infeasible != NULL )
       *infeasible = globalinfeasibility;

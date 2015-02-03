@@ -1296,6 +1296,18 @@ void SCIPcliqueDelVar(
 
    if( clique->startcleanup == -1 || pos < clique->startcleanup )
       clique->startcleanup = pos;
+
+#ifdef SCIP_MORE_DEBUG
+   {
+      int v;
+      /* all variables prior to the one marked for startcleanup should be unfixed */
+      for( v = clique->startcleanup - 1; v >= 0; --v)
+      {
+         assert(SCIPvarGetUbGlobal(clique->vars[v]) > 0.5);
+         assert(SCIPvarGetLbGlobal(clique->vars[v]) < 0.5);
+      }
+   }
+#endif
 }
 
 /** gets the position of the given clique in the cliques array; returns -1 if clique is not member of cliques array */
@@ -1663,7 +1675,11 @@ void SCIPcliquelistRemoveFromCliques(
 
          assert(SCIPvarGetCliques(var, (SCIP_Bool)value) == cliquelist->cliques[value]);
          assert(SCIPvarGetNCliques(var, (SCIP_Bool)value) == cliquelist->ncliques[value]);
-         for( i = 0; i < cliquelist->ncliques[value]; ++i )
+
+         /* it is important to iterate from the end of the array because otherwise, each removal causes
+          * a memory move of the entire array
+          */
+         for( i = cliquelist->ncliques[value] - 1; i >= 0; --i )
          {
             SCIP_CLIQUE* clique;
 
@@ -2448,19 +2464,24 @@ SCIP_RETCODE cliqueCleanup(
          SCIPdebugMessage("variable %s%s in clique %d fixed to one, fixing all other variables to zero\n",
             onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->id);
 
-         for( v = clique->nvars - 1; v >= 0; --v )
+         for( v = 0; v < clique->nvars ; ++v )
          {
-            assert(SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_COLUMN
-               || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_LOOSE);
+            SCIP_VAR* clqvar = clique->vars[v];
 
-            if( onefixedvalue != clique->values[v] || clique->vars[v] != onefixedvar )
+            assert(SCIPvarGetStatus(clqvar) == SCIP_VARSTATUS_COLUMN
+               || SCIPvarGetStatus(clqvar) == SCIP_VARSTATUS_LOOSE);
+
+            if( onefixedvalue != clique->values[v] || clqvar != onefixedvar )
             {
-               SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[v], blkmem, clique->values[v], clique) );
+               /* there should be no fixed variable in the clique */
+               assert(SCIPvarGetLbGlobal(clqvar) < SCIPvarGetUbGlobal(clqvar) - 0.5);
 
-               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clique->vars[v]), clique->id,
+               SCIP_CALL( SCIPvarDelCliqueFromList(clqvar, blkmem, clique->values[v], clique) );
+
+               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvar), clique->id,
                   clique->values[v] ? 0 : 1);
 
-               SCIP_CALL( SCIPvarFixBinary(clique->vars[v], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+               SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                      eventqueue, !clique->values[v], infeasible, &nlocalbdchgs) );
 
                if( *infeasible )
@@ -2720,10 +2741,12 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          }
 
          /* free clique and remove it from clique table */
-         cliqueFree(&cliquetable->cliques[cliquetable->ndirtycliques], blkmem);
+         cliqueFree(&clique, blkmem);
          cliquetable->ncliques--;
+         /* insert a clean clique from the end of the array */
          if( cliquetable->ndirtycliques < cliquetable->ncliques )
          {
+            assert(SCIPcliqueIsCleanedUp(cliquetable->cliques[cliquetable->ncliques]));
             cliquetable->cliques[cliquetable->ndirtycliques] = cliquetable->cliques[cliquetable->ncliques];
             cliquetable->cliques[cliquetable->ndirtycliques]->index = cliquetable->ndirtycliques;
          }

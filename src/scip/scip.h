@@ -8320,8 +8320,7 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
 EXTERN
 SCIP_RETCODE SCIPcleanupCliques(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            infeasible,         /**< pointer to store if cleanup detected infeasibility */
-   int*                  nlocalbdchgs        /**< pointer to store the number of detected bound changes */
+   SCIP_Bool*            infeasible          /**< pointer to store if cleanup detected infeasibility */
    );
 
 /** gets the number of cliques in the clique table
