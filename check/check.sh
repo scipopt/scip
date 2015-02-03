@@ -30,9 +30,10 @@ LPS=${14}
 VALGRIND=${15}
 CLIENTTMPDIR=${16}
 OPTCOMMAND=${17}
+SETCUTOFF=${18}
 
 # check if all variables defined (by checking the last one)
-if test -z $OPTCOMMAND
+if test -z $SETCUTOFF
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -52,6 +53,7 @@ then
     echo "VALGRIND      = $VALGRIND"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "OPTCOMMAND    = $OPTCOMMAND"
+    echo "SETCUTOFF     = $SETCUTOFF"
     exit 1;
 fi
 
@@ -59,7 +61,7 @@ fi
 # of passed settings, etc
 TIMEFORMAT="sec"
 MEMFORMAT="kB"
-. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
 
 INIT="true"
 COUNT=0
@@ -107,7 +109,8 @@ do
 
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SOLUFILE
+        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+            $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH

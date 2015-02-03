@@ -33,14 +33,11 @@ TIMELIMIT=$4     # the time limit in seconds
 TIMEFORMAT=$5    # the format for the time (sec or format)
 MEMLIMIT=$6      # the memory limit in MB
 MEMFORMAT=$7     # the format for hard memory limit (kB or MB)
-
-#optional parameters
-VALGRIND=$8      # should valgrind be used? (OPTIONAL)
+VALGRIND=$8      # should valgrind be used?
+SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
 
 # get current SCIP path
 SCIPPATH=`pwd`
-# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
-SETCUTOFF=0
 
 # check if binary exists
 if test ! -e $SCIPPATH/../$BINNAME

@@ -11,7 +11,7 @@ testcluster:
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(OPTCOMMAND);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(OPTCOMMAND) $(SETCUTOFF);
 
 .PHONY: testclustercpx
 testclustercpx:
@@ -74,7 +74,7 @@ docexamples:
 .PHONY: coverage
 coverage:
 		$(SHELL) ./check/check_coverage.sh $(MAINFILE) $(notdir $(MAINFILE)).$(HOSTNAME) $(MEM) $(VERSION) $(LPS) $(OBJDIR);
-		
+
 .PHONY: solchecker
 solchecker:
 		cd ./check/solchecker; \
