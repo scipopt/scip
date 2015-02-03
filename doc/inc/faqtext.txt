@@ -1036,7 +1036,7 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     <p>
         Instead of deleting a variable completely, you can also remove it from the problem by either fixing the variable to zero
         using <code>SCIPfixVar()</code>, which fixes the variable globally or using <code>SCIPchgVarUbNode()</code> and
-        <code>SCIPchgVarLBNode()</code>, which changes the bounds only for the current subtree.
+        <code>SCIPchgVarLbNode()</code>, which changes the bounds only for the current subtree.
     </p>
 
     QUESTION: How do I branch on constraints?
