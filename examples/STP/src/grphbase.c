@@ -88,8 +88,8 @@ GRAPH* graph_init(
    p->xpos  = malloc((size_t)ksize * sizeof(int));
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
-   //p->ctrctknot = malloc((size_t)ksize * sizeof(int));
-   // p->ctrctedge = malloc((size_t)esize * sizeof(int));
+   p->elimknots = malloc((size_t)ksize * sizeof(int));
+   p->elimedges = malloc((size_t)esize * sizeof(int));
 
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;
@@ -110,6 +110,8 @@ GRAPH* graph_init(
 
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
+   assert(p->elimknots != NULL);
+   assert(p->elimedges != NULL);
    assert(p->locals != NULL);
    assert(p->source != NULL);
    assert(p->term   != NULL);
@@ -196,7 +198,7 @@ void graph_resize(
       p->outbeg = realloc(p->outbeg, (size_t)ksize * sizeof(int));
       p->xpos   = realloc(p->xpos,   (size_t)ksize * sizeof(int));
       p->ypos   = realloc(p->ypos,   (size_t)ksize * sizeof(int));
-      // p->ctrctknot = realloc(p->ctrctknot, (size_t)ksize * sizeof(int));
+      p->elimknots = realloc(p->elimknots, (size_t)ksize * sizeof(int));
    }
    if ((esize > 0) && (esize != p->esize))
    {
@@ -209,7 +211,7 @@ void graph_resize(
       */
       p->ieat  = realloc(p->ieat, (size_t)esize * sizeof(int));
       p->oeat  = realloc(p->oeat, (size_t)esize * sizeof(int));
-      // p->ctrctedge = realloc(p->ctrctedge, (size_t)esize * sizeof(int));
+      p->elimedges = realloc(p->elimedges, (size_t)esize * sizeof(int));
    }
    if( p->stp_type == STP_GRID )
    {
@@ -230,8 +232,8 @@ void graph_resize(
    assert(p->oeat   != NULL);
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
-   //  assert(p->ctrctknot != NULL);
-   //  assert(p->ctrctedge != NULL);
+   assert(p->elimknots != NULL);
+   assert(p->elimedges != NULL);
 }
 
 
@@ -1129,6 +1131,9 @@ void graph_free(
    free(p->xpos);
    free(p->ypos);
 
+   free(p->elimknots);
+   free(p->elimedges);
+
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
    else if(p->stp_type == STP_GRID )
@@ -1165,8 +1170,8 @@ GRAPH* graph_copy(
    assert(g->head   != NULL);
    assert(g->ieat   != NULL);
    assert(g->oeat   != NULL);
-   //   assert(g->ctrctknot != NULL);
-   // assert(g->ctrctedge != NULL);
+   assert(g->elimknots != NULL);
+   assert(g->elimedges != NULL);
 
    g->norgmodeledges = p->norgmodeledges;
    g->norgmodelknots = p->norgmodelknots;
@@ -1237,8 +1242,8 @@ GRAPH* graph_copy(
    memcpy(g->xpos,   p->xpos,   p->ksize  * sizeof(*p->xpos));
    memcpy(g->ypos,   p->ypos,   p->ksize  * sizeof(*p->ypos));
 
-   //  memcpy(g->ctrctknot,   p->ctrctknot,   p->ksize  * sizeof(*p->ctrctknot));
-   //  memcpy(g->ctrctedge,   p->ctrctedge,   p->esize  * sizeof(*p->ctrctedge));
+   memcpy(g->elimknots,   p->elimknots,   p->ksize  * sizeof(*p->elimknots));
+   memcpy(g->elimedges,   p->elimedges,   p->esize  * sizeof(*p->elimedges));
 
    if( g->stp_type == STP_DEG_CONS )
    {
@@ -1336,6 +1341,8 @@ void graph_knot_add(
    p->outbeg[p->knots] = EAT_LAST;
    p->xpos  [p->knots] = xpos;
    p->ypos  [p->knots] = ypos;
+
+   p->elimknots[p->knots] = p->knots;
 
    if (Is_term(term))
    {
@@ -1592,8 +1599,6 @@ void graph_knot_contract(
    }
 
    //TODO free ancestors?
-   /* p->ctrctedge[cedgeout] = p->ctrctknot[s];
-      p->ctrctknot[t] = cedgeout;*/
    /* SCIPindexListNodeFree(&stancestors);
       SCIPindexListNodeFree(&tsancestors);*/
    for( i = 0; i < slc; i++ )
@@ -1637,8 +1642,6 @@ void graph_edge_add(
 
    p->grad[head]++;
    p->grad[tail]++;
-   //  p->ctrctknot[head]   = EAT_LAST;
-   //  p->ctrctknot[tail]   = EAT_LAST;
 
    p->cost[e]           = cost1;
    p->tail[e]           = tail;
@@ -1647,7 +1650,7 @@ void graph_edge_add(
    p->oeat[e]           = p->outbeg[tail];
    p->inpbeg[head]      = e;
    p->outbeg[tail]      = e;
-   // p->ctrctedge[e]      = EAT_LAST;
+   p->elimedges[e]      = e;
 
    e++;
 
@@ -1658,7 +1661,7 @@ void graph_edge_add(
    p->oeat[e]           = p->outbeg[head];
    p->inpbeg[tail]      = e;
    p->outbeg[head]      = e;
-   // p->ctrctedge[e]      = EAT_LAST;
+   p->elimedges[e]      = e;
 
    p->edges += 2;
 }

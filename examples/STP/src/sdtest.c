@@ -980,39 +980,6 @@ int bd3_reduction(
 }
 
 
-/* computes the shortest path from each terminal to every other vertex */
-static void calculate_distances(
-   const GRAPH* g,
-   PATH** path)
-{
-   int i;
-
-   SCIPdebug(fputc('C', stdout));
-   SCIPdebug(fflush(stdout));
-
-   for(i = 0; i < g->knots; i++)
-   {
-      if (Is_term(g->term[i]) && (g->grad[i] > 0))
-      {
-         if (path[i] == NULL)
-            path[i] = malloc((size_t)g->knots * sizeof(PATH));
-
-         assert(path[i] != NULL);
-
-         graph_path_exec(g, FSP_MODE, i, g->cost, path[i]);
-      }
-      else
-      {
-         if (path[i] != NULL)
-         {
-            free(path[i]);
-
-            path[i] = NULL;
-         }
-      }
-   }
-}
-
 inline static double mst_cost(
    const GRAPH* g,
    const PATH*  mst)
@@ -1245,6 +1212,8 @@ int nv_reduction_optimal(
    PATH**  path;
    PATH*   pathfromterm;
    PATH*   pathfromsource;
+   double* distance;
+   double* radius;
    int*    vregion;
    int*    heap;
    int*    state;
@@ -1277,6 +1246,12 @@ int nv_reduction_optimal(
    assert(pathfromterm != NULL);
    assert(pathfromsource != NULL);
 
+   distance = malloc((size_t)g->knots * sizeof(double));
+   radius = malloc((size_t)g->knots * sizeof(double));
+
+   assert(distance != NULL);
+   assert(radius != NULL);
+
    vregion = malloc((size_t)g->knots * sizeof(int));
 
    assert(vregion != NULL);
@@ -1287,7 +1262,7 @@ int nv_reduction_optimal(
    assert(heap != NULL);
    assert(state != NULL);
 
-   pred = malloc((size_t)g->knots * sizeof(int));
+   pred = malloc((size_t)g->edges * sizeof(int));
    minArc1 = malloc((size_t)g->knots * sizeof(int));
    minArc2 = malloc((size_t)g->knots * sizeof(int));
    terms = malloc((size_t)g->terms * sizeof(int));
@@ -1309,7 +1284,7 @@ int nv_reduction_optimal(
    assert(g->source[0] >= 0);
 
    /* computing the voronoi regions inward to a node */
-   voronoi_term(g, g->cost, pathfromterm, vregion, heap, state, pred, 1);
+   voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from the source node */
    graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
@@ -1433,6 +1408,8 @@ int nv_reduction_optimal(
    free(minArc2);
    free(minArc1);
    free(pred);
+   free(radius);
+   free(distance);
    free(vregion);
    free(pathfromsource);
    free(pathfromterm);
@@ -1440,6 +1417,266 @@ int nv_reduction_optimal(
 
    assert(graph_valid(g));
    SCIPdebugMessage(" %d Knots deleted\n", elimins);
+
+   return(elimins);
+}
+
+
+
+/* T. Polzin
+ *
+ * "Algorithms for the Steiner problem in networks"
+ *
+ * Section 3.3.3 pp. 54-55
+ *
+ * This is undirected nearest vertex test
+ */
+int nv_reduction(
+   GRAPH*  g,
+   double* fixed)
+{
+   PATH**  path;
+   PATH*   pathfromterm;
+   PATH*   pathfromsource;
+   double* distance;
+   double* radius;
+   int*    vregion;
+   int*    heap;
+   int*    state;
+   int*    pred;
+   int*    minArc1;
+   int*    minArc2;
+   int*    terms;
+   int     termcount;
+   int     i;
+   int     j;
+   int     k;
+   int     e;
+   double  min1;
+   double  min2;
+   double  mindist;
+   double  minshortarcdist;
+   int     shortarc;
+   int     shortarctail;
+   int     elimins = 0;
+   char    antiedgeexists;
+   char    termexists;
+
+   SCIPdebugMessage("NSV-Reduction: ");
+   fflush(stdout);
+
+   /*
+     graph_show(g);
+   */
+   path = malloc((size_t)g->knots * sizeof(PATH*));
+
+   assert(path != NULL);
+
+   pathfromterm = malloc((size_t)g->knots * sizeof(PATH));
+   pathfromsource = malloc((size_t)g->knots * sizeof(PATH));
+
+   assert(pathfromterm != NULL);
+   assert(pathfromsource != NULL);
+
+   distance = malloc((size_t)g->knots * sizeof(double));
+   radius = malloc((size_t)g->knots * sizeof(double));
+
+   assert(distance != NULL);
+   assert(radius != NULL);
+
+   vregion = malloc((size_t)g->knots * sizeof(int));
+
+   assert(vregion != NULL);
+
+   heap  = malloc((size_t)g->knots * sizeof(int));
+   state = malloc((size_t)g->knots * sizeof(int));
+
+   assert(heap != NULL);
+   assert(state != NULL);
+
+   pred = malloc((size_t)g->knots * sizeof(int));
+   minArc1 = malloc((size_t)g->knots * sizeof(int));
+   minArc2 = malloc((size_t)g->knots * sizeof(int));
+   terms = malloc((size_t)g->terms * sizeof(int));
+
+   termcount = 0;
+   for(i = 0; i < g->knots; i++)
+   {
+      if( Is_term(g->term[i]) )
+      {
+         terms[termcount] = i;
+         termcount++;
+      }
+      g->mark[i] = (g->grad[i] > 0);
+      minArc1[i] = -1;
+      minArc2[i] = -1;
+      path[i] = NULL;
+   }
+
+   assert(g->source[0] >= 0);
+
+   /* computing the voronoi regions inward to a node */
+   voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
+
+   /* computing the shortest paths from each terminal to every other node */
+   calculate_distances(g, path);
+
+   for(i = 0; i < g->knots; i++)
+   {
+      if (Is_term(g->term[i]) && g->grad[i] >= 2)
+      {
+         min1  = FARAWAY;
+         min2  = FARAWAY;
+         shortarctail = -1;
+         shortarc = -1;
+         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         {
+            assert(g->cost[e] == g->cost[Edge_anti(e)]);
+            if ( LE(g->cost[e], min1) )
+            {
+               shortarc = e;
+               shortarctail = g->tail[e];
+
+               min2 = min1;
+               min1 = g->cost[e];
+            }
+            else if( !LT(min2, FARAWAY) )
+               min2 = g->cost[e];
+
+            if( Is_term(g->term[g->tail[e]]) )
+            {
+               min1 = FARAWAY;
+               break;
+            }
+         }
+
+         // NOTE: if min1 and min2 are equal, the distance array may not be updated correctly.
+         // What can occur is distance is calculated using min2, the contraction occurs with min1. Hence, the wrong
+         // reduction occurs.
+         if( LT(min1, FARAWAY) && !EQ(min1, min2) )
+         {
+            printf("i: %d, min1: %f, min2: %f, distance: %f, pathfromterm: %f, path: %f\n", i, min1, min2, distance[i],
+                  pathfromterm[shortarctail].dist, path[vregion[shortarctail]][shortarctail].dist);
+            mindist = FARAWAY;
+            minshortarcdist = FARAWAY;
+            k = -1;
+            if( vregion[shortarctail] == vregion[i] )
+            {
+               for( j = 0; j < g->knots; j++ )
+               {
+                  if( i != j && Is_term(g->term[j]) && g->grad[j] > 0 )
+                  {
+                     if( LT(path[j][shortarctail].dist, minshortarcdist) )
+                        minshortarcdist = path[j][shortarctail].dist;
+
+                     if( LT(path[j][i].dist, mindist) )
+                     {
+                        printf("Terminal: %d\n", j);
+                        mindist = path[j][i].dist;
+                        k = j;
+                     }
+                  }
+               }
+               //assert(LE(mindist + min1, distance[i]));
+               assert(LE(mindist, min1 + minshortarcdist));
+               assert(LE(mindist, distance[i]));
+               if( path[k][i].edge != shortarc && path[k][i].edge != Edge_anti(shortarc) )
+                  continue;
+               printf("Minimum Distance: %f %f %f\n", mindist, min1 + minshortarcdist, min1 + distance[i]);
+               assert(EQ(mindist, min1 + minshortarcdist));
+               assert(LE(min1 + minshortarcdist, min1 + distance[i]));
+            }
+
+            //continue;
+
+            // distance is only given as a upper bound on the length of the path from i to the nearest terminal using
+            // shortarc.
+            if( (vregion[shortarctail] == vregion[i] && GE(min2, min1 + distance[i])) ||
+             (vregion[shortarctail] != vregion[i] && GE(min2, min1 + pathfromterm[shortarctail].dist)) )
+            {
+
+               assert(vregion[i] == i);
+               assert(vregion[shortarctail] != vregion[i] || distance[i] < FARAWAY);
+               assert(min2 < FARAWAY);
+
+               *fixed += min1;
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
+                                                                                       shortarc instead of shortarctail */
+
+               graph_knot_contract(g, shortarctail, i);
+               //graph_knot_contract(g, i, shortarctail);
+
+               elimins++;
+
+               printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
+                     shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
+
+               voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
+               calculate_distances(g, path);
+            }
+         }
+      }
+#if 0
+      /* The knot is not a terminal so we can perform the short link test */
+      else if ( !Is_term(g->term[i]) )
+      {
+         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         {
+            j = g->tail[e];
+            if( vregion[i] != vregion[j] )
+            {
+               if( minArc1[vregion[i]] < 0 )
+                  minArc1[vregion[i]] = e;
+               else if( LE(g->cost[e], g->cost[minArc1[vregion[i]]]) )
+               {
+                  minArc2[vregion[i]] = minArc1[vregion[i]];
+                  minArc1[vregion[i]] = e;
+               }
+            }
+         }
+      }
+#endif
+   }
+
+#if 0
+   for( k = 0; k < termcount; k++ )
+   {
+      assert(terms[k] >= 0 && terms[k] < g->knots);
+
+      if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && GE(g->cost[minArc2[terms[k]]],
+               pathfromterm[g->tail[minArc1[terms[k]]]].dist + g->cost[minArc1[terms[k]]]
+               + pathfromterm[g->head[minArc1[terms[k]]]].dist) )
+      {
+         e = minArc1[terms[k]];
+         i = g->head[e];
+         j = g->tail[e];
+
+         if( !Is_term(g->term[i]) && !Is_term(g->term[j]) )
+         {
+            SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+            *fixed += g->cost[e];
+            graph_knot_contract(g, j, i);
+
+            elimins++;
+         }
+      }
+   }
+#endif
+
+   free(terms);
+   free(minArc2);
+   free(minArc1);
+   free(pred);
+   free(vregion);
+   free(radius);
+   free(distance);
+   free(pathfromsource);
+   free(pathfromterm);
+   free(path);
+
+   assert(graph_valid(g));
+   SCIPdebugMessage("nv_reduction: %d Knots deleted\n", elimins);
+   printf("nv_reduction: %d Knots deleted\n", elimins);
 
    return(elimins);
 }
