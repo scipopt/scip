@@ -28,14 +28,24 @@
 
 
 #include "scip/scip.h"
+#include "grph.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
    /** creates the local primal heuristic and includes it in SCIP */
-   EXTERN
+   extern
    SCIP_RETCODE SCIPincludeHeurLocal(
       SCIP*                 scip                /**< SCIP data structure */
+      );
+
+   extern
+   SCIP_RETCODE do_local(
+      SCIP*                 scip,               /**< SCIP data structure */
+      const GRAPH*  graph,
+      const SCIP_Real* cost,
+      const SCIP_Real* costrev,
+      int*          best_result
       );
 
 #ifdef __cplusplus

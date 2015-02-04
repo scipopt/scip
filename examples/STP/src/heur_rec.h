@@ -31,16 +31,17 @@
 
 
 #include "scip/scip.h"
+#include "grph.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the rec primal heuristic and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurRec(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+   /** creates the rec primal heuristic and includes it in SCIP */
+   EXTERN
+   SCIP_RETCODE SCIPincludeHeurRec(
+      SCIP*                 scip                /**< SCIP data structure */
+      );
 
 #ifdef __cplusplus
 }

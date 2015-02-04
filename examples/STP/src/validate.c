@@ -111,6 +111,7 @@ static void trail(
    }
 }
 #endif
+#if 0
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Trail                                                    ---*/
 /*--- Function : Durchlaeuft einen Graphen entsprechend einer Loesung und ---*/
@@ -178,7 +179,7 @@ static void trail2(
 
    printf("done\n");
 }
-
+#endif
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Validate Solution                                        ---*/
 /*--- Function : Stellt fuer eine (Teil-)Loesung fest, ob sie zulaessig   ---*/

@@ -26,7 +26,7 @@
 #include "heur_local.h"
 #include "heur_tm.h"
 #include "probdata_stp.h"
-#include "grph.h"
+
 
 /* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
  *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
@@ -297,7 +297,6 @@ SCIP_RETCODE printGraph(
 }
 static int SS=0;
 
-static
 SCIP_RETCODE do_local(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*  graph,
@@ -2326,7 +2325,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
       return SCIP_OKAY;
 
-   //   printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
+   //printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */
    if( SCIPgetNNodes(scip) > 1 )

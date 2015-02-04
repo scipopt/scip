@@ -1672,7 +1672,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    graph = probdata->graph;
 
-   /* if graph reduction solved the whole problem, NULL is returned */
+   /* */
    if( graph != NULL )
    {
       int t;
@@ -2304,14 +2304,14 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	       curr = graph->fixedges;
             while( curr != NULL )
             {
-	        if( e < graph->edges && graph->stp_type == STP_MAX_NODE_WEIGHT )
-                {
-	               if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
-	               {
-			  curr = curr->parent;
-			  continue;
-		       }
-		}
+               if( e < graph->edges && graph->stp_type == STP_MAX_NODE_WEIGHT )
+               {
+                  if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
+                  {
+                     curr = curr->parent;
+                     continue;
+                  }
+               }
 
                //	       assert(graph->head[curr->index] != root);
                //     if( curr->index] == root )
@@ -2353,7 +2353,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                   {
 		     if( graph->orghead[curr->index] == 2901 )
 		     {
-		       // printf("head: %d %d d\n", graph->orgtail[curr->index], graph->orghead[curr->index]);
+                        // printf("head: %d %d d\n", graph->orgtail[curr->index], graph->orghead[curr->index]);
 		     }
                      orgnodes[graph->orghead[curr->index]] = TRUE;
                      nsolnodes++;
@@ -2565,7 +2565,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       {
          if( SCIPisGT(scip, nval[e], SCIPvarGetUbGlobal(edgevars[e])) ||  SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[e]), nval[e]) )
          {
-            //  printf("XXXXXXXXXXXXXXXXx  \n solution violates orginal bounds \n  XXXXXXXXXXXX \n");
+            //  printf("XXXXXXXXXXXXXXXXx  \n solution violates orginal bounds (%d %f bounds: %f %f) \n  XXXXXXXXXXXX \n", e ,nval[e], SCIPvarGetLbGlobal(edgevars[e]), SCIPvarGetUbGlobal(edgevars[e]) );
             *success = FALSE;
             fails++;
             SCIP_CALL( SCIPfreeSol(scip, &sol) );
