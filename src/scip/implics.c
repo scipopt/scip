@@ -1856,9 +1856,6 @@ SCIP_RETCODE mergeClique(
    SCIP_VAR* var = NULL;
    int nlocalbdchgs = 0;
    int startidx;
-#ifndef NDEBUG
-   SCIP_Bool onefixfound = FALSE;
-#endif
 
    assert(nclqvars != NULL);
 
@@ -1969,34 +1966,34 @@ SCIP_RETCODE mergeClique(
          SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                fixvalue, infeasible, &nlocalbdchgs) );
 
-         SCIPdebugMessage("same var %s twice in a clique with value %u fixed to %d (was %s)\n", SCIPvarGetName(var), !fixvalue, fixvalue, *infeasible ? "infeasible" : "feasible");
+         SCIPdebugMessage("same var %s twice in a clique with value %d fixed to %d (was %s)\n", SCIPvarGetName(var), fixvalue ? 0 : 1,
+               fixvalue ? 1 : 0, *infeasible ? "infeasible" : "feasible");
 
          if( *infeasible )
             break;
       }
+
       /* do we have a pair of negated variables? */
       if( nones >= 1 && nzeros >= 1 )
       {
-
-#ifndef NDEBUG
-         onefixfound = TRUE;
-#endif
-
          SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
 
          /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
          if( nzeros + nones < *nclqvars )
          {
-            int w;
-            for( w = *nclqvars - 1; w >= 0; --w )
+            int w = *nclqvars - 1;
+            while( w >= 0 )
             {
                /* skip all occurrences of variable var itself, these are between curr and startidx */
                if( w == startidx )
                {
-                  w = curr + 1;
-                  continue;
+                  if( curr == -1 )
+                     break;
+
+                  w = curr;
                }
                assert(clqvars[w] != var);
+
                if( clique != NULL )
                {
                   SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[w], blkmem, clqvalues[w], clique) );
@@ -2008,6 +2005,8 @@ SCIP_RETCODE mergeClique(
 
                if( *infeasible )
                   break;
+
+               --w;
             }
          }
          /* all variables except for var were fixed */
@@ -2030,8 +2029,6 @@ SCIP_RETCODE mergeClique(
    /* we might have found an infeasibility or reduced the clique to size 0 */
    if( *infeasible || *nclqvars == 0 )
       return SCIP_OKAY;
-
-   assert(!onefixfound);
 
    /* we fixed a variable because it appears at least twice, now we need to remove the fixings
     *
