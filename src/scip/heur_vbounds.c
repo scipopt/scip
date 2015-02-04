@@ -43,7 +43,7 @@
 #define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.5       /* minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_MINFIXINGRATE 0.25      /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which vbounds heuristic should at least improve the incumbent          */
 #define DEFAULT_MINNODES      500LL     /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes          */
@@ -367,7 +367,9 @@ SCIP_RETCODE applyVboundsFixings(
    )
 {
    SCIP_VAR* var;
+   SCIP_RETCODE retcode;
    SCIP_BOUNDTYPE bound;
+   SCIP_Bool newnode = TRUE;
    int v;
 
    /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
@@ -391,7 +393,16 @@ SCIP_RETCODE applyVboundsFixings(
       if( obj && ((SCIPvarGetObj(var) >= 0) == (bound == SCIP_BOUNDTYPE_LOWER)) )
          continue;
 
-      SCIP_CALL( SCIPnewProbingNode(scip) );
+      if( newnode )
+      {
+         retcode = SCIPnewProbingNode(scip);
+         if( retcode == SCIP_MAXDEPTHLEVEL )
+            newnode = FALSE;
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
 
       *lastvar = var;
 
@@ -523,6 +534,8 @@ SCIP_RETCODE applyVbounds(
    SCIP_Bool allfixsolfound;
    SCIP_Bool lperror;
    SCIP_Bool solvelp;
+   int oldnpscands;
+   int npscands;
    int nfound = 0;
    int nrounded = 0;
    SCIP_Real solobj = SCIPinfinity(scip);
@@ -542,6 +555,8 @@ SCIP_RETCODE applyVbounds(
 
    if( nvbvars < nvars * heurdata->minfixingrate )
       return SCIP_OKAY;
+
+   oldnpscands = SCIPgetNPseudoBranchCands(scip);
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
@@ -606,7 +621,7 @@ SCIP_RETCODE applyVbounds(
 
       SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
 
-      /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
+      /* fix the last variable, which was fixed the reverse bound */
       SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar,
             lastfixedlower ? SCIPvarGetUbLocal(lastfixedvar) : SCIPvarGetLbLocal(lastfixedvar)) );
 
@@ -616,11 +631,24 @@ SCIP_RETCODE applyVbounds(
       SCIPdebugMessage("backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
    }
 
+   allfixsolfound = FALSE;
+
+   /* check that we had enough fixings */
+   npscands = SCIPgetNPseudoBranchCands(scip);
+
+   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+
+   if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   {
+      SCIPdebugMessage("--> too few fixings\n");
+
+      goto TERMINATE;
+   }
+
    /*************************** Probing LP Solving ***************************/
 
    lpstatus = SCIP_LPSOLSTAT_ERROR;
    lperror = FALSE;
-   allfixsolfound = FALSE;
    /* solve lp only if the problem is still feasible */
    if( !infeasible && solvelp )
    {
@@ -757,8 +785,10 @@ SCIP_RETCODE applyVbounds(
          goto TERMINATE;
       }
 
+#ifndef SCIP_DEBUG
       /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
@@ -774,12 +804,24 @@ SCIP_RETCODE applyVbounds(
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-#ifdef SCIP_DEBUG
-      /* for debugging vbounds heuristic, enable MIP output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#if 0
+      /* use best estimate node selection */
+      if( SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/4) );
+      }
 #endif
+      /* use inference branching */
+      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+      }
+
+      /* disable conflict analysis */
+      if( !SCIPisParamFixed(subscip, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+      }
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -791,6 +833,12 @@ SCIP_RETCODE applyVbounds(
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }
+
+#ifdef SCIP_DEBUG
+      /* for debugging vbounds heuristic, enable MIP output */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
 
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )
@@ -842,7 +890,7 @@ SCIP_RETCODE applyVbounds(
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
        */
-      if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate / 2.0 )
+      if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate )
       {
          SCIP_SOL** subsols;
          SCIP_Bool success;

@@ -41,7 +41,7 @@
 #define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINFIXINGRATE 0.5                        /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINFIXINGRATE 0.25                       /**< minimum percentage of variables that have to be fixed */
 #define DEFAULT_MINIMPROVE    0.01                       /**< factor by which clique heuristic should at least improve the
                                                           *   incumbent
                                                           */
@@ -69,7 +69,7 @@ struct SCIP_HeurData
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
    SCIP_Longint          usednodes;          /**< nodes already used by clique heuristic in earlier calls */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of variables that have to be fixed */
    SCIP_Real             minimprove;         /**< factor by which clique heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    int                   maxproprounds;      /**< maximum number of propagation rounds during probing */
@@ -516,6 +516,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    int nbinvars;
    int* cliquepartition;
    int ncliques;
+   int oldnpscands;
+   int npscands;
 #if 0
    SCIP_Longint tmpnnodes;
 #endif
@@ -593,6 +595,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    *result = SCIP_DIDNOTFIND;
 
+
+   oldnpscands = SCIPgetNPseudoBranchCands(scip);
    onefixvars = NULL;
    sol = NULL;
 
@@ -683,6 +687,18 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &backtrackcutoff, NULL) );
 
       SCIPdebugMessage("backtrack was %sfeasible\n", (backtrackcutoff ? "in" : ""));
+   }
+
+   /* check that we had enough fixings */
+   npscands = SCIPgetNPseudoBranchCands(scip);
+
+   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+
+   if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   {
+      SCIPdebugMessage("--> too few fixings\n");
+
+      goto TERMINATE;
    }
 
    /*************************** Probing LP Solving ***************************/
@@ -871,6 +887,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
+      /* use inference branching */
+      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+      }
+
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
        * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -941,7 +963,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
        */
-      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= (heurdata->minfixingrate / 2.0) )
+      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minfixingrate )
       {
          SCIP_SOL** subsols;
          SCIP_Bool success;
