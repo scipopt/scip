@@ -741,7 +741,7 @@ SCIP_RETCODE execRelpscost(
             if( bestsbscore > bestpsscore && bestsbscore > bestuninitsbscore && bestsbupvalid && bestsbdownvalid )
             {
                assert(bestsbcand != -1);
-               assert(bestsbup != SCIP_INVALID && bestsbdown != SCIP_INVALID);
+               assert(bestsbup != SCIP_INVALID && bestsbdown != SCIP_INVALID); /*lint !e777 lint doesn't like comparing floats */
 
                /* test if the variable is unlikely to produce a better gain than the currently best one. Skip strong-branching
                 * in such a case
@@ -1008,7 +1008,7 @@ SCIP_RETCODE execRelpscost(
             /* optionally, use only local information obtained via strong branching for this candidate, i.e., local
              * domain reductions and no cutoff score
              */
-            inferencescore = branchruledata->usesblocalinfo ? SCIPgetBranchScore(scip, branchcands[c], ndomredsdown, ndomredsup)
+            inferencescore = branchruledata->usesblocalinfo ? SCIPgetBranchScore(scip, branchcands[c], (SCIP_Real)ndomredsdown, (SCIP_Real)ndomredsup)
                   : SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
@@ -1350,10 +1350,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/lowerrortol", "low relative error tolerance for reliability",
-         &branchruledata->lowerrortol, TRUE, DEFAULT_LOWERRORTOL, 0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->lowerrortol, TRUE, DEFAULT_LOWERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/higherrortol", "high relative error tolerance for reliability",
-            &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0, SCIP_REAL_MAX, NULL, NULL) );
+            &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
