@@ -1855,7 +1855,7 @@ SCIP_RETCODE mergeClique(
 {
    SCIP_VAR* var = NULL;
    int nlocalbdchgs = 0;
-   int v;
+   int startidx;
 #ifndef NDEBUG
    SCIP_Bool onefixfound = FALSE;
 #endif
@@ -1864,7 +1864,7 @@ SCIP_RETCODE mergeClique(
 
    SCIPdebugMessage("starting merging %d variables in clique %d\n", *nclqvars, clique == NULL ? -1 : clique->id);
 
-   if( *nclqvars == 0 )
+   if( *nclqvars <= 1 )
       return SCIP_OKAY;
 
    assert(clqvars != NULL);
@@ -1879,98 +1879,158 @@ SCIP_RETCODE mergeClique(
    assert(nbdchgs != NULL);
    assert(infeasible != NULL);
 
+
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
     * new clique, and therefore sorting before removing them should be ok, otherwise we may need to remove these
     * variables before sorting
     */
-   for( v = *nclqvars - 1; v > 0; --v )
+   startidx = *nclqvars - 1;
+   while( startidx >= 0 )
    {
-      var = clqvars[v - 1];
+      int nones;
+      int nzeros;
+      int curr;
 
-      /* only column and loose variables can exist now */
+      var = clqvars[startidx];
+       /* only column and loose variables can exist now */
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
       assert(SCIPvarIsBinary(var));
 
-      /* do we have same variables at least twice? */
-      if( clqvars[v] == var )
+      /* the counters denote the occurrences of the variable var with value TRUE and FALSE as clqvalues, respectively */
+      if( clqvalues[startidx] )
       {
-         /* do we have a pair of negated variables? */
-         if( clqvalues[v] != clqvalues[v - 1] )
+         nones = 1;
+         nzeros = 0;
+      }
+      else
+      {
+         nzeros = 1;
+         nones = 0;
+      }
+      curr = startidx - 1;
+
+      /* loop and increase the counter based on the clique value */
+      while( curr >= 0 )
+      {
+         if( clqvars[curr] == var )
          {
-            int w;
+            if( clqvalues[curr] )
+               nones++;
+            else
+               nzeros++;
+         }
+         else
+            /* var is different from variable pointed at by z */
+            break;
+
+         --curr;
+      }
+
+
+      /* single occurrence of the variable */
+      if( nones + nzeros == 1 )
+      {
+         startidx = curr;
+         continue;
+      }
+      /* at least two occurrences of both the variable and its negation; infeasible */
+      if( nones >= 2 && nzeros >= 2 )
+      {
+         *infeasible = TRUE;
+         break;
+      }
+
+      /* do we have the same variable with the same clique value twice? */
+      if( nones >= 2 || nzeros >= 2 )
+      {
+         SCIP_Bool fixvalue;
+
+         /* other cases should be handled as infeasible */
+         assert(nones <= 1 || nzeros <= 1);
+
+         /* ensure that the variable is removed from both clique lists before fixing it */
+         if( clique != NULL )
+         {
+            if( nones >= 1 )
+            {
+               SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, TRUE, clique) );
+            }
+            if( nzeros >= 1 )
+            {
+               SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, FALSE, clique) );
+            }
+         }
+
+         /* we fix the variable into the direction of less occurrences */
+         fixvalue = nones >= 2 ? FALSE : TRUE;
+
+         /* a variable multiple times in one clique forces this variable to be zero */
+         SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+               fixvalue, infeasible, &nlocalbdchgs) );
+
+         SCIPdebugMessage("same var %s twice in a clique with value %u fixed to %d (was %s)\n", SCIPvarGetName(var), !fixvalue, fixvalue, *infeasible ? "infeasible" : "feasible");
+
+         if( *infeasible )
+            break;
+      }
+      /* do we have a pair of negated variables? */
+      if( nones >= 1 && nzeros >= 1 )
+      {
 
 #ifndef NDEBUG
-            onefixfound = TRUE;
+         onefixfound = TRUE;
 #endif
 
-            SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
+         SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
 
-            /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
+         /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
+         if( nzeros + nones < *nclqvars )
+         {
+            int w;
             for( w = *nclqvars - 1; w >= 0; --w )
             {
-               if( clqvars[w] != var )
+               /* skip all occurrences of variable var itself, these are between curr and startidx */
+               if( w == startidx )
                {
-                  if( clique != NULL )
-                  {
-                     SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[w], blkmem, clqvalues[w], clique) );
-                  }
-                  SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                        eventqueue, !clqvalues[w], infeasible, &nlocalbdchgs) );
-
-                  SCIPdebugMessage("fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
-
-                  if( *infeasible )
-                     break;
+                  w = curr + 1;
+                  continue;
                }
-            }
+               assert(clqvars[w] != var);
+               if( clique != NULL )
+               {
+                  SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[w], blkmem, clqvalues[w], clique) );
+               }
+               SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+                     eventqueue, !clqvalues[w], infeasible, &nlocalbdchgs) );
 
-            /* all variables are fixed so we can stop */
-            break;
+               SCIPdebugMessage("fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
+
+               if( *infeasible )
+                  break;
+            }
          }
-         /* do we have the same variable with the same clique value twice? */
-         else
+         /* all variables except for var were fixed */
+         if( clique != NULL )
          {
-            if( clique != NULL )
-            {
-               SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, clqvalues[v], clique) );
-            }
-            /* a variable multiple times in one clique forces this variable to be zero */
-            SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                  !clqvalues[v], infeasible, &nlocalbdchgs) );
-
-            SCIPdebugMessage("same var %s twice in a clique with value %u fixed to %d (was %s)\n", SCIPvarGetName(var), clqvalues[v], clqvalues[v] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
-
-            if( *infeasible )
-               break;
+            SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, TRUE, clique) );
+            SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, FALSE, clique) );
          }
+         *nclqvars = 0;
+         *isequation = FALSE;
       }
-   }
 
-   if( *infeasible )
-      return SCIP_OKAY;
+      /* otherwise, we would have an endless loop */
+      assert(curr < startidx);
+      startidx = curr;
+   }
 
    *nbdchgs += nlocalbdchgs;
-   /* we terminate early by identifying two variables negated to each other in one clique */
-   if( v > 0 )
-   {
-      assert(onefixfound);
-      assert(var != NULL);
-      assert(var == clqvars[v]);
-      assert(var == clqvars[v-1]);
-      assert(clqvalues[v] != clqvalues[v - 1]);
 
-      if( clique != NULL )
-      {
-         SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, TRUE, clique) );
-         SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, FALSE, clique) );
-      }
-      *nclqvars = 0;
-      *isequation = FALSE;
-      *nbdchgs += nlocalbdchgs;
-
+   /* we might have found an infeasibility or reduced the clique to size 0 */
+   if( *infeasible || *nclqvars == 0 )
       return SCIP_OKAY;
-   }
+
    assert(!onefixfound);
 
    /* we fixed a variable because it appears at least twice, now we need to remove the fixings
@@ -1989,52 +2049,52 @@ SCIP_RETCODE mergeClique(
       onefixedvar = NULL;
 
       /* remove all inactive variables, thereby checking for a variable that is fixed to one */
-      v = 0;
+      startidx = 0;
       w = 0;
-      while( v < *nclqvars )
+      while( startidx < *nclqvars )
       {
-         var = clqvars[v];
+         var = clqvars[startidx];
 
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
             || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
          /* check if we have a variable fixed to one for this clique */
-         if( (clqvalues[v] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[v] && SCIPvarGetUbGlobal(var) < 0.5) )
+         if( (clqvalues[startidx] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[startidx] && SCIPvarGetUbGlobal(var) < 0.5) )
          {
             if( onefixedvar != NULL )
             {
                *infeasible = TRUE;
 
                SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique != NULL ? clique->id : -1,
-                     onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clqvalues[v] ? "" : "~",
-                           SCIPvarGetName(clqvars[v]));
+                     onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clqvalues[startidx] ? "" : "~",
+                           SCIPvarGetName(clqvars[startidx]));
                return SCIP_OKAY;
             }
             onefixedvar = var;
-            onefixedvalue = clqvalues[v];
+            onefixedvalue = clqvalues[startidx];
          }
          /* only keep active variables */
          else if( SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
          {
             /* we remove all fixed variables */
-            if( v > w  )
+            if( startidx > w  )
             {
-               clqvars[w] = clqvars[v];
-               clqvalues[w] = clqvalues[v];
+               clqvars[w] = clqvars[startidx];
+               clqvalues[w] = clqvalues[startidx];
             }
             ++w;
          }
          else
          {
             /* can we have some variable fixed to one? */
-            assert((SCIPvarGetUbGlobal(var) < 0.5 && clqvalues[v]) || (SCIPvarGetLbGlobal(var) > 0.5 && !clqvalues[v]));
+            assert((SCIPvarGetUbGlobal(var) < 0.5 && clqvalues[startidx]) || (SCIPvarGetLbGlobal(var) > 0.5 && !clqvalues[startidx]));
 
             if( clique != NULL )
             {
-               SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, clqvalues[v], clique) );
+               SCIP_CALL( SCIPvarDelCliqueFromList(var, blkmem, clqvalues[startidx], clique) );
             }
          }
-         ++v;
+         ++startidx;
       }
 
       /* the clique has been reduced to w active (unfixed) variables */
@@ -2047,25 +2107,25 @@ SCIP_RETCODE mergeClique(
                onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique != NULL ? clique->id : -1);
 
          /* handle all active variables by fixing them */
-         for( v = *nclqvars; v >= 0; --v )
+         for( startidx = *nclqvars; startidx >= 0; --startidx )
          {
-            assert(SCIPvarGetStatus(clqvars[v]) == SCIP_VARSTATUS_COLUMN
-                  || SCIPvarGetStatus(clqvars[v]) == SCIP_VARSTATUS_LOOSE);
+            assert(SCIPvarGetStatus(clqvars[startidx]) == SCIP_VARSTATUS_COLUMN
+                  || SCIPvarGetStatus(clqvars[startidx]) == SCIP_VARSTATUS_LOOSE);
 
             /* delete the variable from its clique lists and fix it */
-            if( onefixedvalue != clqvalues[v] || clqvars[v] != onefixedvar )
+            if( onefixedvalue != clqvalues[startidx] || clqvars[startidx] != onefixedvar )
             {
                if( clique != NULL )
                {
-                  SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[v], blkmem, clqvalues[v], clique) );
+                  SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[startidx], blkmem, clqvalues[startidx], clique) );
                }
 
-               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[v]), clique != NULL ? clique->id : -1,
-                     clqvalues[v] ? 0 : 1);
+               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[startidx]), clique != NULL ? clique->id : -1,
+                     clqvalues[startidx] ? 0 : 1);
 
                /* note that the variable status will remain unchanged */
-               SCIP_CALL( SCIPvarFixBinary(clqvars[v], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, !clqvalues[v], infeasible, &nlocalbdchgs) );
+               SCIP_CALL( SCIPvarFixBinary(clqvars[startidx], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+                     eventqueue, !clqvalues[startidx], infeasible, &nlocalbdchgs) );
 
                if( *infeasible )
                   return SCIP_OKAY;
