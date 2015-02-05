@@ -155,6 +155,7 @@ inline static void correct(
 
    path[l].dist = (mode == MST_MODE) ? cost : (path[k].dist + cost);
    path[l].edge = e;
+   path[l].hops = path[k].hops + 1;
 
    /* Ist der Knoten noch ganz frisch ?
     */
@@ -372,12 +373,14 @@ void graph_path_exec(
    int   i;
    int* heap;
    int* state;
+   double pathdist;
+   double pathhops;
    int count;
 
    assert(p      != NULL);
    assert(start  >= 0);
    assert(start  <  p->knots);
-   assert((mode  == FSP_MODE) || (mode == MST_MODE));
+   assert((mode  == FSP_MODE) || (mode == BSP_MODE) || (mode == MST_MODE));
    assert(p->path_heap   != NULL);
    assert(p->path_state  != NULL);
    assert(path   != NULL);
@@ -398,6 +401,7 @@ void graph_path_exec(
       state[i]     = UNKNOWN;
       path[i].dist = FARAWAY;
       path[i].edge = -1;
+      path[i].hops = 0;
    }
    /* Startknoten in den Heap
     */
@@ -444,13 +448,19 @@ void graph_path_exec(
             /* 1. Ist der Knoten noch nicht festgelegt ?
              *    Ist der wohlmoeglich tabu ?
              */
-            if ((state[m]) && (p->mark[m])
+            if ((state[m]) && (p->mark[m]))
+            {
 
                /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
                 *    Wenn ja, dann muss die Entferung kuerzer sein.
                 */
-               && (GT(path[m].dist, (mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i]))))
-               correct(heap, state, &count, path, m, k, i, cost[i], mode);
+               pathdist = ((mode == MST_MODE) ? cost[i] : (mode == FSP_MODE) ? (path[k].dist + cost[i]) :
+                     (path[k].dist + cost[Edge_anti(i)]));
+               pathhops = path[k].hops + 1;
+               if( GT(path[m].dist, pathdist) ||
+                     (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)))
+                  correct(heap, state, &count, path, m, k, i, (mode == FSP_MODE) ? cost[i] : cost[Edge_anti(i)], mode);
+            }
          }
       }
    }
@@ -656,9 +666,13 @@ void graph_path_exec2(
 /* computes the shortest path from each terminal to every other vertex */
 void calculate_distances(
    const GRAPH* g,
-   PATH** path)
+   PATH** path,
+   double* cost,
+   int mode)
 {
    int i;
+
+   assert(mode == FSP_MODE || mode == BSP_MODE);
 
    SCIPdebug(fputc('C', stdout));
    SCIPdebug(fflush(stdout));
@@ -672,7 +686,7 @@ void calculate_distances(
 
          assert(path[i] != NULL);
 
-         graph_path_exec(g, FSP_MODE, i, g->cost, path[i]);
+         graph_path_exec(g, mode, i, cost, path[i]);
       }
       else
       {
@@ -1245,6 +1259,7 @@ void voronoi_term(
    double*        cost,
    double*        distance,
    double*        radius,
+   double**       termdist,
    PATH*          path,
    int*           vregion,
    int*           heap,
@@ -1270,6 +1285,7 @@ void voronoi_term(
    assert(cost       != NULL);
    assert(distance   != NULL);
    assert(radius     != NULL);
+   assert(termdist   != NULL);
    assert(vregion    != NULL);
    assert(heap       != NULL);
    assert(state      != NULL);
@@ -1305,6 +1321,9 @@ void voronoi_term(
          predecessor[i] = UNKNOWN;
          radius[i] = FARAWAY;
       }
+
+      if( termdist[i] == NULL )
+         termdist[i] = malloc((size_t)g->knots * sizeof(double));
    }
    assert(nbases > 0);
 
@@ -1398,6 +1417,14 @@ void voronoi_term(
                   radius[vregion[k]] = MIN(radius[vregion[k]], path[k].dist + cost[curr_edge]);
                   radius[vregion[m]] = MIN(radius[vregion[m]], path[m].dist + cost[curr_edge]);
                }
+
+#if 0
+               assert(vregion[k] >= 0 && vregion[m] >= 0);
+               printf("vregions: %d %d\n", vregion[k], vregion[m]);
+               termdist[vregion[k]][vregion[m]] = MIN(termdist[vregion[k]][vregion[m]], path[k].dist + cost[curr_edge]
+                     + path[m].dist);
+               termdist[vregion[m]][vregion[k]] = termdist[vregion[k]][vregion[m]];
+#endif
             }
          }
 
@@ -1418,7 +1445,219 @@ void voronoi_term(
          }
       }
    }
+
+   /* Check to make sure I don't need to free the termdist array */
 }
+
+
+
+
+/*** build a voronoi region for hop constrained problem, w.r.t. shortest paths, for all terminals ***/
+/* The voronoi region surronding the root is an outward region and the voronoi region surronding each of the terminals
+ * is an inward region. */
+void voronoi_hop(
+   const GRAPH*   g,
+   double*        cost,
+   double*        distance,
+   double*        radius,
+   PATH*          path,
+   int*           vregion,
+   int*           heap,
+   int*           state,
+   int*           predecessor,
+   int*           radiushops
+   )
+{
+   int e;
+   int k;
+   int m;
+   int i;
+   int p;
+   int q;
+   int curr_edge;
+   int nv;
+   int nvedge;
+   int count = 0;
+   int nbases = 0;
+   int source;
+
+   assert(g          != NULL);
+   assert(path       != NULL);
+   assert(cost       != NULL);
+   assert(distance   != NULL);
+   assert(radius     != NULL);
+   assert(vregion    != NULL);
+   assert(heap       != NULL);
+   assert(state      != NULL);
+   assert(predecessor != NULL);
+   assert(radiushops != NULL);
+
+   if( g->knots == 0 )
+      return;
+
+   /* initialize */
+   for( i = 0; i < g->knots; i++ )
+   {
+      /* set the base of vertex i */
+      if( g->term[i] >= 0 )
+      {
+         nbases++;
+         if( g->knots > 1 )
+            heap[++count] = i;
+         vregion[i] = i;
+         path[i].dist = 0.0;
+         path[i].edge = UNKNOWN;
+         path[i].hops = 0;
+         state[i] = count;
+         distance[i] = FARAWAY;
+         predecessor[i] = UNKNOWN;
+         radius[i] = FARAWAY;
+         radiushops[i] = 0;
+      }
+      else
+      {
+         vregion[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         path[i].hops = -1;
+         state[i]     = UNKNOWN;
+         distance[i] = FARAWAY;
+         predecessor[i] = UNKNOWN;
+         radius[i] = FARAWAY;
+         radiushops[i] = 0;
+      }
+
+   }
+   assert(nbases > 0);
+
+   source = g->source[0];
+
+   if( g->knots > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+         /* only process the node if it has not been eliminated in a reduction test */
+         if( g->elimknots[k] < 0 )
+            continue;
+
+         /* iterate over all ingoing edges of vertex k.
+          * We traverse the graph in two different directions, out from the source and in to the terminals.
+          * This is required for the hop constained problems because each of the terminals are leaves of the steiner
+          * tree.
+          */
+         if( vregion[k] == source )
+            nvedge = g->outbeg[k];
+         else
+            nvedge = g->inpbeg[k];
+
+         for( i = g->inpbeg[k]; i != EAT_LAST; i = g->ieat[i] )
+         {
+            /* only process the edge if it has not been eliminated in a reduction test */
+            if( g->elimedges[i] < 0 )
+               continue;
+
+            m = g->tail[i];
+            if( vregion[k] == source )
+               curr_edge = Edge_anti(i);
+            else
+               curr_edge = i;
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) )
+            {
+               if( GT(path[m].dist, path[k].dist + cost[curr_edge]) )
+               {
+                  assert(g->term[m] < 0);
+                  correct(heap, state, &count, path, m, k, curr_edge, cost[curr_edge], FSP_MODE);
+                  predecessor[m] = predecessor[k];
+                  vregion[m] = vregion[k];
+               }
+
+
+               if( g->term[k] >= 0 )
+               {
+                  if( LE(cost[curr_edge], cost[nvedge]) )
+                     nvedge = curr_edge;
+               }
+            }
+            else if( state[m] == CONNECT )
+            {
+               // updating the shortest distance between two terminals. This is used for the nearest vertex test.
+               if( vregion[m] != vregion[k] )
+               {
+                  // this only gives an upper bound on the shortest distance from k to the nearest terminal through the
+                  // nearest vertex. The conditions should be checked.
+                  if( predecessor[k] == vregion[k] && predecessor[m] != vregion[k] )
+                  {
+                     assert(predecessor[k] != vregion[m]);
+                     assert(predecessor[m] != vregion[k]);
+
+                     assert(g->grad[vregion[m]] > 0);
+
+                     //printf("predecessor[path[k].edge]: %d, predecessor[path[m].edge]: %d, VR[k]: %d, VR[m]: %d, "
+                           //"k: %d, path[k].dist: %f, m: %d, path[m].dist: %f, cost[curr_edge]: %f, distance: %f, "
+                           //"(%d, %d)\n", predecessor[path[k].edge], predecessor[path[m].edge], vregion[k], vregion[m],
+                           //k, path[k].dist, m, path[m].dist, cost[curr_edge], distance[predecessor[path[k].edge]],
+                           //g->head[curr_edge], g->tail[curr_edge]);
+
+                     if( predecessor[k] != UNKNOWN )
+                        distance[predecessor[k]] = MIN(distance[predecessor[k]],
+                              path[k].dist + cost[curr_edge] + path[m].dist);
+
+#if 0
+                     if( predecessor[path[m].edge] != UNKNOWN )
+                        distance[predecessor[path[m].edge]] = MIN(distance[predecessor[path[m].edge]],
+                              path[k].dist + cost[curr_edge] + path[m].dist);
+#endif
+                  }
+
+                  if( GT(radius[vregion[k]], path[k].dist + cost[curr_edge]) ||
+                        (EQ(radius[vregion[k]], path[k].dist + cost[curr_edge]) &&
+                        GT(radiushops[vregion[k]], path[k].hops + 1)) )
+                  {
+                     radius[vregion[k]] = path[k].dist + cost[curr_edge];
+                     radiushops[vregion[k]] = path[k].hops + 1;
+                  }
+
+                  if( GT(radius[vregion[m]], path[m].dist + cost[curr_edge]) ||
+                        (EQ(radius[vregion[m]], path[m].dist + cost[curr_edge]) &&
+                        GT(radiushops[vregion[m]], path[m].hops + 1)) )
+                  {
+                     radius[vregion[m]] = path[m].dist + cost[curr_edge];
+                     radiushops[vregion[m]] = path[m].hops + 1;
+                  }
+               }
+
+            }
+         }
+
+         if( g->term[k] >= 0 && g->grad[k] > 0 && nvedge != EAT_LAST )
+         {
+            if( vregion[k] == source )
+            {
+               assert(k == g->tail[nvedge]);
+               nv = g->head[nvedge];
+            }
+            else
+            {
+               assert(k == g->head[nvedge]);
+               nv = g->tail[nvedge];
+            }
+
+            predecessor[nv] = k;
+         }
+      }
+   }
+}
+
+
 
 /*** repair the voronoi diagram for a given set nodes ***/
 void voronoi_repair(

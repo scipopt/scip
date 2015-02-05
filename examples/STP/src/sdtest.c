@@ -16,6 +16,9 @@
 #include "portab.h"
 #include "scip/scip.h"
 
+#define KNOTFREQ 100
+#define KNOTLIMIT 1e+05
+
 /* Das Nachfolgende ist eine Implementierung von Dijkstras Algorithmus
  * mit einem Heap zur Verwaltung der aktiven Knoten.
  *
@@ -439,7 +442,8 @@ int sd_reduction(
    double* cost,
    double* random,
    int*    heap,
-   int*    state
+   int*    state,
+   int     runnum
    )
 {
    SCIP_Real redstarttime;
@@ -450,9 +454,11 @@ int sd_reduction(
    int     e;
    int     j;
    int     elimins = 0;
+   int     knotoffset;
 
    SCIPdebugMessage("SD-Reduktion: ");
    fflush(stdout);
+
    /*
      heap  = malloc((size_t)g->knots * sizeof(int));
      state = malloc((size_t)g->knots * sizeof(int));
@@ -474,13 +480,19 @@ int sd_reduction(
    stalltime = timelimit*0.1; /* this should be set as a parameter */
 
    for(i = 0; i < g->knots; i++)
-      g->mark[i] = (g->grad[i] > 0);
-
-   for(i = 0; i < g->edges; i++)
    {
-      random[i] = (double)(rand() % 512);
-      cost[i] = g->cost[i] * 1000.0 + random[i];
+      g->mark[i] = (g->grad[i] > 0);
+      for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
+      {
+         random[e] = (double)(rand() % 512);
+         cost[e] = g->cost[e] * 1000.0 + random[e];
+      }
    }
+
+   /* this is the offset used to minimise the number of knots to examine in large graphs. */
+   srand(runnum*100);
+   knotoffset = rand() % KNOTFREQ;
+
 
    for(i = 0; i < g->knots; i++)
    {
@@ -494,6 +506,12 @@ int sd_reduction(
       }
       if (g->grad[i] == 0)
          continue;
+
+
+      if( g->knots > KNOTLIMIT && i % KNOTFREQ != knotoffset )
+         continue;
+
+      printf("SD-test: %d\n", i);
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
       if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
@@ -1059,7 +1077,7 @@ int nsv_reduction(
       path[i] = NULL;
    }
 
-   calculate_distances(g, path);
+   calculate_distances(g, path, g->cost, FSP_MODE);
 
    for(i = 0; i < g->knots; i++)
    {
@@ -1147,7 +1165,7 @@ int nsv_reduction(
 
          elimins++;
 
-         calculate_distances(g, path);
+         calculate_distances(g, path, g->cost, FSP_MODE);
 
          for(j = 0; j < g->edges; j++)
             cost[j] = g->cost[j];
@@ -1207,13 +1225,15 @@ int nsv_reduction(
  */
 int nv_reduction_optimal(
    GRAPH*  g,
-   double* fixed)
+   double* fixed,
+   int runnum)
 {
    PATH**  path;
    PATH*   pathfromterm;
    PATH*   pathfromsource;
    double* distance;
    double* radius;
+   double** termdist;
    int*    vregion;
    int*    heap;
    int*    state;
@@ -1230,6 +1250,7 @@ int nv_reduction_optimal(
    int     shortarctail;
    int     elimins = 0;
    char    antiedgeexists;
+   int     knotoffset;
 
    SCIPdebugMessage("NSV-Reduction: ");
    fflush(stdout);
@@ -1248,9 +1269,11 @@ int nv_reduction_optimal(
 
    distance = malloc((size_t)g->knots * sizeof(double));
    radius = malloc((size_t)g->knots * sizeof(double));
+   termdist = malloc((size_t)g->knots * sizeof(double*));
 
    assert(distance != NULL);
    assert(radius != NULL);
+   assert(termdist != NULL);
 
    vregion = malloc((size_t)g->knots * sizeof(int));
 
@@ -1284,19 +1307,28 @@ int nv_reduction_optimal(
    assert(g->source[0] >= 0);
 
    /* computing the voronoi regions inward to a node */
-   voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
+   voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from the source node */
    graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
 
    /* computing the shortest paths from each terminal to every other node */
-   //calculate_distances(g, path);
+   //calculate_distances(g, path, g->cost, FSP_MODE);
+
+   /* this is the offset used to minimise the number of knots to examine in large graphs. */
+   srand(runnum*100);
+   knotoffset = rand() % KNOTFREQ;
 
    for(i = 0; i < g->knots; i++)
    {
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
       if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
+
+      if( g->knots > KNOTLIMIT && i % KNOTFREQ != knotoffset )
+         continue;
+
+      printf("NV-test: %d\n", i);
 
       if (Is_term(g->term[i]) && g->grad[i] >= 3)
       {
@@ -1356,7 +1388,7 @@ int nv_reduction_optimal(
 
             /* computing the shortest paths from the source node */
             graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
-            //calculate_distances(g, path);
+            //calculate_distances(g, path, g->cost, FSP_MODE);
          }
       }
       /* The knot is not a terminal so we can perform the short link test */
@@ -1440,6 +1472,7 @@ int nv_reduction(
    PATH*   pathfromsource;
    double* distance;
    double* radius;
+   double** termdist;
    int*    vregion;
    int*    heap;
    int*    state;
@@ -1480,9 +1513,11 @@ int nv_reduction(
 
    distance = malloc((size_t)g->knots * sizeof(double));
    radius = malloc((size_t)g->knots * sizeof(double));
+   termdist = malloc((size_t)g->knots * sizeof(double*));
 
    assert(distance != NULL);
    assert(radius != NULL);
+   assert(termdist != NULL);
 
    vregion = malloc((size_t)g->knots * sizeof(int));
 
@@ -1516,10 +1551,10 @@ int nv_reduction(
    assert(g->source[0] >= 0);
 
    /* computing the voronoi regions inward to a node */
-   voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
+   voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from each terminal to every other node */
-   calculate_distances(g, path);
+   calculate_distances(g, path, g->cost, FSP_MODE);
 
    for(i = 0; i < g->knots; i++)
    {
@@ -1540,7 +1575,7 @@ int nv_reduction(
                min2 = min1;
                min1 = g->cost[e];
             }
-            else if( !LT(min2, FARAWAY) )
+            else if( LE(g->cost[e], min2) )
                min2 = g->cost[e];
 
             if( Is_term(g->term[g->tail[e]]) )
@@ -1611,8 +1646,8 @@ int nv_reduction(
                printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
                      shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
 
-               voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
-               calculate_distances(g, path);
+               voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+               calculate_distances(g, path, g->cost, FSP_MODE);
             }
          }
       }
@@ -1668,6 +1703,7 @@ int nv_reduction(
    free(minArc1);
    free(pred);
    free(vregion);
+   free(termdist);
    free(radius);
    free(distance);
    free(pathfromsource);

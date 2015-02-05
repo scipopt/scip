@@ -146,6 +146,7 @@ typedef struct shortest_path
 {
    double       dist;         /* Distance to the end of the path             */
    signed int   edge;         /* First edge to go                            */
+   int          hops;         /* First edge to go                            */
 } PATH;
 
 /* ONE segment of a voronoi path
@@ -167,6 +168,7 @@ typedef struct voronoi_path
 
 #define MST_MODE   0
 #define FSP_MODE   1
+#define BSP_MODE   2
 
 #define NO_CHANGE    -10
 
@@ -216,11 +218,12 @@ extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
-extern void   calculate_distances(const GRAPH*, PATH**);
+extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_radius(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_inout(const GRAPH*);
-extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
+extern void   voronoi_term(const GRAPH*, double*, double*, double*, double**, PATH*, int*, int*, int*, int*, int);
+extern void   voronoi_hop(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int*);
 extern void   heap_add(int*, int*, int*, int, PATH*);
 extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, char*, UF*, PATH*);
@@ -257,11 +260,11 @@ extern double reduce(GRAPH*, int, SCIP*);
 
 /* sdtest.c
  */
-extern int    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*);
+extern int    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int);
 extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*);
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(SCIP*, GRAPH*, double*);
-extern int    nv_reduction_optimal(GRAPH*, double*);
+extern int    nv_reduction_optimal(GRAPH*, double*, int);
 extern int    nv_reduction(GRAPH*, double*);
 
 /* dirreduce.c
@@ -270,6 +273,8 @@ extern int degree_test_dir(GRAPH*, double*);
 
 /* bndtest.c
  */
+extern void get_close_terms(PATH**, double*, int*, int*, int*, int*, int, int);
+extern double compute_node_lb(double*, double*, int*, int*, int*, int, int, int*);
 extern SCIP_RETCODE bound_reduction(SCIP*, double, int*);
 
 /* validate.c

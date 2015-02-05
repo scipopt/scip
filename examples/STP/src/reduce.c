@@ -428,119 +428,290 @@ static int tt_deletion(
 static
 int bound_test(
    SCIP*  scip,
-   GRAPH* graph
+   GRAPH* graph,
+   int* elimins
    )
 {
-   //SCIP_Real** pathdist;
-   SCIP_Real dist;
-   SCIP_Real obj;
-   SCIP_Real* rad;
-   PATH* vnoi;
-   PATH** path;
+   PATH**      heurpath;
+   PATH**      path;
+   PATH*       pathtoterm;
+   SCIP_Real*  edgecost;
+   SCIP_Real*  edgecostrev;
+   SCIP_Real*  distance;
+   SCIP_Real*  radius;
+   SCIP_Real** termdist;
+   int*        result;
+   int*        vregion;
+   int*        radiushops;
+   int*        heap;
+   int*        state;
+   int*        pred;
+   int*        terms;
+   int         source;
+   int         termcount;
+   int         i;
+   int         j;
+   int         k;
+   int         e;
+   int         nnodes;
+   int         nedges;
 
-   int k;
-   int r;
-   int i;
-   int e;
-   int nnodes;
-   //int** pathedge;
+   SCIP_Real   obj;
 
-   int* vbase;
-   int* result;
-   char* base;
+   int     closeterms[3] = {-1, -1, -1};
+   double  closetermsdist[3] = {FARAWAY, FARAWAY, FARAWAY};
+   int     closetermshops[3] = {-1, -1, -1};
+   double  tempcost;
+   double  lowerbound = FARAWAY;
+   int     hopsbound = 0;
+
+   int temptype;
+
 
    assert(scip != NULL);
    assert(graph != NULL);
+   (*elimins) = 0;
    nnodes = graph->knots;
+   nedges = graph->edges;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &result, graph->edges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rad, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &base, nnodes) );
-   /*SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
-     SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
-     BMSclearMemoryArray(pathdist, nnodes);
-     BMSclearMemoryArray(pathedge, nnodes);*/
-   for( k = nnodes - 1; k >= 0; k-- )
+   path = malloc((size_t)nnodes * sizeof(PATH*));
+   SCIP_CALL(SCIPallocBufferArray(scip, &heurpath, nnodes));
+
+   assert(path != NULL);
+   assert(heurpath != NULL);
+
+   pathtoterm = malloc((size_t)nnodes * sizeof(PATH));
+
+   assert(pathtoterm != NULL);
+
+   edgecost = malloc((size_t)nedges * sizeof(double));
+   edgecostrev = malloc((size_t)nedges * sizeof(double));
+
+   assert(edgecost != NULL);
+   assert(edgecostrev != NULL);
+
+   radius = malloc((size_t)nnodes * sizeof(double));
+   distance = malloc((size_t)nnodes * sizeof(double));
+   termdist = malloc((size_t)nnodes * sizeof(double*));
+
+   assert(distance != NULL);
+   assert(radius != NULL);
+   assert(termdist != NULL);
+
+   vregion = malloc((size_t)nnodes * sizeof(int));
+   radiushops = malloc((size_t)nnodes * sizeof(int));
+
+   assert(vregion != NULL);
+   assert(radiushops != NULL);
+
+   heap  = malloc((size_t)nnodes * sizeof(int));
+   state = malloc((size_t)nnodes * sizeof(int));
+
+   assert(heap != NULL);
+   assert(state != NULL);
+
+   pred = malloc((size_t)nedges * sizeof(int));
+   terms = malloc((size_t)graph->terms * sizeof(int));
+
+   assert(pred != NULL);
+   assert(terms != NULL);
+
+   result = malloc((size_t)nedges * sizeof(int));
+
+   assert(result != NULL);
+
+   for( i = 0; i < nnodes; i++ )
    {
-      if( Is_term(graph->term[k]) )
-	 base[k] = TRUE;
-      else
-	 base[k] = FALSE;
+      path[i] = NULL;
+      heurpath[i] = NULL;
+      termdist[i] = NULL;
    }
 
+   for( e = 0; e < nedges; e++ )
+   {
+      if( graph->cost[e] != FARAWAY )
+         edgecost[e] = 1;
+      else
+         edgecost[e] = graph->cost[e];
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
-   BMSclearMemoryArray(path, nnodes);
+      if( graph->cost[Edge_anti(e)] != FARAWAY )
+         edgecostrev[e] = 1;
+      else
+         edgecostrev[e] = graph->cost[Edge_anti(e)];
+   }
 
-   SCIP_CALL( SCIPtmHeur(scip, graph, path, graph->cost, graph->cost, result) );
+   /* Not currently in use */
+#if 0
+   /* storing the current type of the stp */
+   temptype = graph->stp_type;
+   graph->stp_type = STP_DIRECTED;
+
+   SCIP_CALL( SCIPtmHeur(scip, graph, heurpath, edgecost, edgecostrev, result) );
+
+   /* resetting the stp type */
+   graph->stp_type = temptype;
+#endif
 
    obj = 0.0;
 
-   for( e = 0; e < graph->edges; e++ )
+   for( e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
-         obj += graph->cost[e];
+         obj += edgecost[e];
 
-   voronoi_radius(scip, graph, rad, graph->cost, graph->cost, base, vbase, vnoi);
-   SCIPsortReal(rad, nnodes);
-   /* test each node k */
-   for( k = 0; k < nnodes; k++ )
+   termcount = 0;
+   for(i = 0; i < nnodes; i++)
    {
-      dist = FARAWAY;
-      r = UNKNOWN;
-      for( i = 0; i < nnodes; i++ )
+      if( Is_term(graph->term[i]) )
       {
-	 if( Is_term(graph->term[i]) && SCIPisLT(scip, path[i][k].dist, dist ) )
-	 {
-	    r = i;
-	    dist = path[i][k].dist;
-	 }
+         terms[termcount] = i;
+         termcount++;
       }
-      i = k;
-      while(i != r)
-      {
-	 if( i == vbase[k] )
-            break;
-         e = path[r][i].edge;
-         i = graph->tail[e];
-      }
-      if( i != r )
+      graph->mark[i] = (graph->grad[i] > 0);
+      termdist[i] = malloc((size_t)nnodes * sizeof(double));
+   }
+
+   source = graph->source[0];
+
+   voronoi_hop(graph, edgecost, distance, radius, pathtoterm, vregion, heap, state, pred, radiushops);
+
+   SCIPsortRealInt(radius, radiushops, nnodes);
+
+   calculate_distances(graph, path, edgecost, BSP_MODE);
+
+   printf("Hop Limit: %d\n", graph->hoplimit);
+
+   /* test each node i */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(graph->term[i]) || vregion[i] == source )
          continue;
-      for( i = 0; i < graph->terms - 2; i++ )
-	 dist += rad[i];
-      if( SCIPisGT(scip, dist + path[vbase[k]][k].dist, obj) )
-	 printf("node to eliminate!! \n");
+
+      if( graph->grad[i] == 0 )
+         continue;
+
+      if( vregion[i] < 0 )
+      {
+         while( graph->inpbeg[i] != EAT_LAST )
+         {
+            e = graph->inpbeg[i];
+            //if( Is_term(graph->term[graph->tail[e]]) )
+               //printf("Found terminal: %d\n", graph->tail[e]);
+            graph_edge_del(graph, e);
+            SCIPindexListNodeFree(&(graph->ancestors[e]));
+            graph->ancestors[e] = NULL;
+            (*elimins)++;
+         }
+         continue;
+      }
+
+      get_close_terms(path, closetermsdist, closetermshops, closeterms, vregion, terms, termcount, i);
+
+      /* computing the lower bound for node i */
+      lowerbound = compute_node_lb(radius, closetermsdist, closetermshops, closeterms, radiushops, termcount,
+            graph->grad[i], &hopsbound);
+
+      //if( i % 1000 == 0 )
+         //printf("node: %d, lowerbound: %f, grad: %d, vregion: %d\n", i, lowerbound, graph->grad[i], vregion[i]);
+
+      if( GT(lowerbound, graph->hoplimit) )
+      {
+         while( graph->inpbeg[i] != EAT_LAST )
+         {
+            e = graph->inpbeg[i];
+            //if( Is_term(graph->term[graph->tail[e]]) )
+               //printf("Found terminal: %d\n", graph->tail[e]);
+            graph_edge_del(graph, e);
+            SCIPindexListNodeFree(&(graph->ancestors[e]));
+            graph->ancestors[e] = NULL;
+            (*elimins)++;
+         }
+
+         voronoi_hop(graph, edgecost, distance, radius, pathtoterm, vregion, heap, state, pred, radiushops);
+
+         SCIPsortRealInt(radius, radiushops, nnodes);
+
+         //calculate_distances(graph, path, edgecost, BSP_MODE);
+
+         continue;
+      }
+
+#if 0
+      /* computing the lowerbound for the inclusion of a single edge */
+      /* Resetting the lowerbound */
+      lowerbound -= closetermsdist[1];
+      if( graph->grad[i] >= 3 )
+      {
+         lowerbound -= closetermsdist[2];
+         lowerbound += radius[termcount - 4];
+      }
 
 
+      for( j = graph->inpbeg[i]; j != EAT_LAST; j = graph->ieat[j] )
+      {
+         k = graph->tail[j];
+         if( LT(edgecost[j], edgecostrev[j]) )
+            tempcost = edgecost[j] + path[vregion[k]][k].dist;
+         else
+            tempcost = edgecostrev[j] + path[vregion[k]][k].dist;
+         lowerbound += tempcost;
+
+         //printf("Edge - lowerbound: %f, bestbound: %f\n", lowerbound, bestbound);
+         if( GT(lowerbound, graph->hoplimit) )
+         {
+            graph_edge_del(graph, j);
+            SCIPindexListNodeFree(&(graph->ancestors[j]));
+            graph->ancestors[j] = NULL;
+            (*elimins)++;
+
+            /* computing the voronoi regions inward to a node */
+            voronoi_hop(graph, edgecost, distance, radius, pathtoterm, vregion, heap, state, pred, radiushops);
+
+            /* sorting the radius values */
+            SCIPsortRealInt(radius, radiushops, graph->knots);
+
+            /* computing the shortest paths from each terminal to every other node */
+            //calculate_distances(g, path, graph->cost, FSP_MODE);
+
+            continue;
+         }
+
+         lowerbound -= tempcost;
+      }
+#endif
    }
 
+   free(result);
 
+   free(terms);
+   free(pred);
+   free(state);
+   free(heap);
 
-   for( k = graph->edges - 1; k >= 0; k-- )
-      if( result[k] == 0 )
-         printf("%d->%d \n", graph->tail[k] + 1, graph->head[k] + 1);
-   for( k = 0; k < nnodes; k++ )
-   {
-      printf("vbase[%d] = %d \n", k+1, vbase[k] + 1);
-      printf("RAD: %f \n", rad[k] );
+   free(vregion);
 
-   }
-   for( k = nnodes - 1; k >= 0; k-- )
-   {
+   for( i = 0; i < nnodes; i++ )
+      free(termdist[i]);
 
-      assert(path[k] == NULL || graph->term[k] == 0);
-      SCIPfreeBufferArrayNull(scip, &(path[k]));
+   free(termdist);
 
-   }
-   SCIPfreeBufferArray(scip, &path);
+   free(distance);
+   free(radius);
 
-   SCIPfreeBufferArray(scip, &base);
-   SCIPfreeBufferArray(scip, &vbase);
-   SCIPfreeBufferArray(scip, &vnoi);
-   SCIPfreeBufferArray(scip, &result);
-   SCIPfreeBufferArray(scip, &rad);
-   assert(0);
+   free(edgecostrev);
+   free(edgecost);
+
+   free(pathtoterm);
+
+   for( i = 0; i < nnodes; i++ )
+      SCIPfreeBufferArrayNull(scip, &heurpath[i]);
+
+   SCIPfreeBufferArray(scip, &heurpath);
+
+   for( i = 0; i < nnodes; i++ )
+      free(path[i]);
+
+   free(path);
+
    return 1;
 }
 
@@ -1004,7 +1175,7 @@ static double level1(
    degree_test(g, &fixed);
    if( 0 )
    {
-      bound_test(scip, g);
+      //bound_test(scip, g);
 
       degree_test(g, &fixed);
 
@@ -1116,6 +1287,7 @@ static double level4(
    double* random;
    int*    heap;
    int*    state;
+   int     runnum = 0;
    char    sd = TRUE;
    char    bd3 = FALSE;
    char    nsv = TRUE;
@@ -1165,8 +1337,10 @@ static double level4(
       {
          for( i = 0; i < 4; i++ ) //TODO 6
          {
-            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state) > nodebound )
+            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, runnum) > nodebound )
                rerun = TRUE;
+
+            runnum++;
 
             if( SCIPgetTotalTime(scip) > timelimit )
             {
@@ -1286,6 +1460,7 @@ static double levelm4(
    int*    heap;
    int*    state;
    int*     outterms;
+   int     runnum = 0;
    char    sd = TRUE;
    char    nsv = TRUE;
    char    timebreak = FALSE;
@@ -1323,11 +1498,26 @@ static double levelm4(
    }
 #endif
 
-   //voronoi_inout(g);
+   if( g->stp_type == STP_HOP_CONS )
+   {
+      do
+      {
+         printf("Bound test\n");
+         bound_test(scip, g, &numelim);
+         printf("Num elimins: %d\n", numelim);
+      } while(numelim > 0);
 
-   degree_test_dir(g, &fixed);
+      rerun = FALSE;
+   }
+   else
+   {
 
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      //voronoi_inout(g);
+
+      degree_test_dir(g, &fixed);
+
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   }
 
    while(rerun && !SCIPisStopped(scip))
    {
@@ -1345,7 +1535,9 @@ static double levelm4(
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
 #endif
-               numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state);
+               numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, runnum);
+            runnum++;
+
             printf("SD Reduction %d: %d\n", i, numelim);
 
             if( SCIPgetTotalTime(scip) > timelimit )
@@ -1380,7 +1572,8 @@ static double levelm4(
          {
             for (i = 0; i < 4; i++)
             {
-               numelim = nv_reduction_optimal(g, &fixed);
+               numelim = nv_reduction_optimal(g, &fixed, runnum);
+               runnum++;
                printf("NV Reduction %d: %d\n", i, numelim);
 
                if( SCIPgetTotalTime(scip) > timelimit )
@@ -1509,8 +1702,8 @@ double reduce(
    if( g->stp_type == STP_GRID )
       return fixed;
 
-   if( g->stp_type == STP_HOP_CONS )
-      return fixed;
+   //if( g->stp_type == STP_HOP_CONS )
+      //return fixed;
 
    if( g->stp_type == STP_DEG_CONS )
       return fixed;
