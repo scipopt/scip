@@ -1544,6 +1544,8 @@ SCIP_RETCODE do_layer(
 	 int edgecount;
 	 SCIP_Real hopfactor = heurdata->hopfactor;
 	 char solfound = FALSE;
+	 if( SCIPisLE(scip, maxcost, 0.0) )
+	    maxcost = 1.0;
          for( r = 0; r < runs; r++ )
          {
             for( e = 0; e < nedges; e++ )
@@ -1620,7 +1622,9 @@ SCIP_RETCODE do_layer(
 	       {
 		  assert(edgecount > graph->hoplimit);
 		  //printf(" before hopfactor: %f int: %d ", hopfactor, edgecount - graph->hoplimit);
-		  hopfactor = hopfactor * (1.0 + MIN(1.0, ((double)(edgecount - graph->hoplimit)) / 20.0));
+		  hopfactor = hopfactor * (1.0 + MIN(1.0, (((double)(edgecount - graph->hoplimit))) / 20.0));
+		  if( SCIPisLE(scip, hopfactor, 0.0) )
+                     hopfactor = 1.0;
 		  //printf(" aft hopfactor: %f int: %d ", hopfactor, edgecount - graph->hoplimit);
 	       }
             }
@@ -2066,6 +2070,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
             else if( graph->stp_type == STP_HOP_CONS )
             {
+
                for( e = 0; e < nedges; e++)
                {
                   if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
@@ -2073,9 +2078,23 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                      cost[e] = 1e+10;
                   }
                   else
-		  {
-		     cost[e] = ((1.0 - xval[e]) * graph->cost[e]);
-		  }
+                  {
+                     if( heurdata->nexecs % 8 == 0 )
+                     {
+                        rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
+                        cost[e] = graph->cost[e] * rand;
+                     }
+                     else
+                     {
+                        cost[e] = ((1.0 - xval[e]) * graph->cost[e]);
+                     }
+                  }
+                  if( heurdata->nexecs % 3 == 0 )
+                  {
+                     rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
+                     cost[e] = cost[e] * rand;
+                  }
+                /* TODO graphcost to cost*/
                   if( SCIPisLT(scip, graph->cost[e], 1e+8 ) && SCIPisGT(scip, graph->cost[e], maxcost) )
                      maxcost = graph->cost[e];
                }
@@ -2087,7 +2106,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                /* swap costs; set a high cost if the variable is fixed to 0 */
                for( e = 0; e < nedges; e += 2)
                {
-		  rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
+                  rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
 
                   if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
                   {
@@ -2115,7 +2134,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   }
                   else
                   {
-		     if( heurdata->nexecs % 7 == 0 )
+		     if( heurdata->nexecs % 8 == 0 )
 		        costrev[e + 1] = graph->cost[e] * rand;
 		     else
                         costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);

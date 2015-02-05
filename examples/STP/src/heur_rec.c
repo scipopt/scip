@@ -633,7 +633,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_Real* nval;
    SCIP_Real pobj;
    SCIP_Real avg;
-   SCIP_Real maxcost;
+   SCIP_Real maxcost = 0.0;
    SCIP_Bool success;
    SCIP_Bool fixed;
    IDX* curr;
@@ -684,6 +684,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    {
       return SCIP_OKAY;
    }
+   if( graph->stp_type != STP_UNDIRECTED )
+      return SCIP_OKAY;
 
    /* suspend heuristic? */
    if( SCIPisLT(scip, nsols, heurdata->nlastsols + heurdata->nwaitingsols + heurdata->nfailures) && heurdata->ncalls > 0 )
@@ -751,17 +753,39 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       /* hop constraint problem? */
       if( graph->stp_type == STP_HOP_CONS )
       {
-         assert(0);
+         maxcost = 0.0;
+	 factor1 = SCIPgetRandomInt(140, 200, &(heurdata->randseed));
+	 factor2 = SCIPgetRandomInt(30, 60, &(heurdata->randseed));
          for( e = 0; e < nsoledges; e++)
          {
             /* TODO */
-            if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
-            {
-               cost[e] = 1e+10;
-            }
-            if( SCIPisLT(scip, solgraph->cost[e], 1e+8 ) && SCIPisGT(scip, solgraph->cost[e], maxcost) )
-               maxcost = solgraph->cost[e];
 
+	    curr = ancestors[e];
+	    avg = 0.0;
+	    i = 0;
+	    fixed = FALSE;
+            while( curr != NULL )
+            {
+	       i++;
+	       avg += edgeweight[curr->index];
+               if(  SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
+               {
+                  fixed = TRUE;
+                  //break;
+               }
+               curr = curr->parent;
+            }
+            avg = (double) avg / (double) i;
+	    assert(avg >= 1);
+            if( fixed )
+               cost[e] = 1e+10;
+            else if( SCIPisLT(scip, avg, 2) )
+		  cost[e] = cost[e] * (double) factor1 * (1.0 / avg);
+	    else if( SCIPisLT(scip, avg, 3) )
+		  cost[e] = cost[e] * (double) factor2 * (1.0 / avg);
+
+            if( SCIPisLT(scip, cost[e], 1e+8 ) && SCIPisGT(scip, cost[e], maxcost) )
+               maxcost = solgraph->cost[e];
          }
          for( e = 0; e < nsoledges; e++)
             costrev[e] = cost[flipedge(e)];
@@ -849,19 +873,18 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       /* init shortest path algorithm */
       graph_path_init(solgraph);
 
-      maxcost = 0;
-
       /* set (edge) result array to default */
       for( e = 0; e < nsoledges; e++ )
          results[e] = UNKNOWN;
 
       /* run TM heuristic */
       SCIP_CALL( do_layer(scip, tmheurdata, solgraph, &best_start, results, heurdata->ntmruns, solgraph->source[0], cost, costrev, maxcost) );
-
+//printf("BEF LC \n");
       /* run local heuristic */
-      SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
+      if( solgraph->stp_type == STP_UNDIRECTED )
+         SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
       graph_path_exit(solgraph);
-
+//printf("aft LC \n");
       /* retransform solution found by TM heuristic */
       for( e = 0; e < nsoledges; e++ )
       {

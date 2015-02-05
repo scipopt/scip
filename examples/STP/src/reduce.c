@@ -1237,7 +1237,7 @@ static double level4(
      }
    */
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
-   printf("Total Fixed: %f\n", fixed);
+   /*printf("Total Fixed: %f\n", fixed);*/
    free(sddist);
    free(sdtrans);
    free(sdrand);

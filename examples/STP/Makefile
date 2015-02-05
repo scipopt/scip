@@ -50,14 +50,12 @@ CMAINOBJ	=	cmain.o \
 			heur_rs.o \
 			misc_stp.o \
 			probdata_stp.o \
-			event_bestsol.o \
 			dialog_stp.o \
 			reader_stp.o \
 			pricer_stp.o \
 			reduce.o \
 			dirreduce.o \
 			sdtest.o \
-			bndtest.o \
 			validate.o
 CXXMAINOBJ	=
 
