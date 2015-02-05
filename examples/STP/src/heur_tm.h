@@ -41,13 +41,26 @@ extern "C" {
 
    extern
    SCIP_RETCODE SCIPtmHeur(
-   SCIP*                 scip,                  /**< SCIP data structure */
-   const GRAPH*          graph,                 /**< graph structure */
-   PATH**                path,
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
-   int*                  result
-		);
+      SCIP*                 scip,                  /**< SCIP data structure */
+      const GRAPH*          graph,                 /**< graph structure */
+      PATH**                path,
+      SCIP_Real*            cost,
+      SCIP_Real*            costrev,
+      int*                  result
+      );
+
+   extern
+   SCIP_RETCODE do_layer(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_HEURDATA* heurdata,
+      const GRAPH*  graph,
+      int*          bestnewstart,
+      int*          best_result,
+      int           runs,
+      int           bestincstart,
+      SCIP_Real*    cost,
+      SCIP_Real*    costrev,
+      SCIP_Real      maxcost);
 
    extern
    SCIP_RETCODE do_prune(

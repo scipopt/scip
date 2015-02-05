@@ -100,7 +100,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIPprobdataWriteLogLine(scip, "Solution %.1f %16.9g\n", SCIPgetTotalTime(scip), solvalue);
 
    /* Calling the bound-based reduction tests */
-   SCIP_CALL(bound_reduction(scip, solvalue, &elimins));
+   //SCIP_CALL(bound_reduction(scip, solvalue, &elimins));
 
    return SCIP_OKAY;
 }

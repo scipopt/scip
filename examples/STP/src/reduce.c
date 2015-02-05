@@ -228,7 +228,7 @@ static int degree_test(
       }
    }
    SCIPdebugMessage(" %d Knots deleted\n", count);
-   printf(" %d Knots deleted\n", count);
+   /*printf(" %d Knots deleted\n", count);*/
    assert(graph_valid(g));
 
    return count;
@@ -1300,7 +1300,7 @@ static double level4(
    //edgebound = MAX(g->edges / 100, 5 );
    nodebound = MAX(g->knots / 500, 10);
    //printf("edgebound: %d \n", edgebound );
-   printf("nodebound: %d \n", nodebound );
+   //printf("nodebound: %d \n", nodebound );
 
    degree_test(g, &fixed);
 
@@ -1330,7 +1330,7 @@ static double level4(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      printf("new presolving run \n");
+      //printf("new presolving run \n");
       rerun = FALSE;
 
       if( sd )
@@ -1411,7 +1411,7 @@ static double level4(
      }
    */
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
-   printf("Total Fixed: %f\n", fixed);
+   /*printf("Total Fixed: %f\n", fixed);*/
    free(sddist);
    free(sdtrans);
    free(sdrand);
@@ -1677,7 +1677,7 @@ double reduce(
    )
 {
    double fixed = 0.0;
-   printf("Level: %d\n", level);
+   //printf("Level: %d\n", level);
 
    assert(g      != NULL);
    assert(level  >= 0 || level == -4);
@@ -1695,7 +1695,7 @@ double reduce(
 #endif
    //printf("root: %d \n\n", g->source[0]);
    /* only use reduction for undirected STP's in graphs */
-   printf("type: %d\n", g->stp_type);
+   //printf("type: %d\n", g->stp_type);
    if( 0 && g->stp_type != STP_UNDIRECTED )
       return fixed;
 

@@ -147,8 +147,8 @@ void graph_init_history(
 
    nedges = graph->edges;
 
-   (*orgtail)  = malloc((size_t)nedges * sizeof(int));
-   (*orghead)  = malloc((size_t)nedges * sizeof(int));
+   (*orgtail) = malloc((size_t)nedges * sizeof(int));
+   (*orghead) = malloc((size_t)nedges * sizeof(int));
 
    for( e = 0; e < nedges; e++ )
    {
@@ -1095,6 +1095,8 @@ void graph_free(
    free(p->cost);
    if( final )
    {
+      IDX* curr;
+      int e;
       free(p->tail);
       free(p->head);
       if( p->orgtail != NULL )
@@ -1103,14 +1105,35 @@ void graph_free(
          free(p->orgtail);
          free(p->orghead);
       }
-      //TODO free list
+      curr = p->fixedges;
+      while( curr != NULL )
+      {
+         p->fixedges = curr->parent;
+         free(curr);
+         curr = p->fixedges;
+      }
+      if( p->ancestors != NULL )
+      {
+         for( e = 0; e < p->edges; e++ )
+	 {
+	    curr = p->ancestors[e];
+	    while( curr != NULL )
+	    {
+	       p->ancestors[e] = curr->parent;
+	       free(curr);
+	       curr = p->ancestors[e];
+	    }
+	 }
+      }
    }
    free(p->ieat);
    free(p->oeat);
    free(p->xpos);
    free(p->ypos);
+
    free(p->elimknots);
    free(p->elimedges);
+
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
    else if(p->stp_type == STP_GRID )
@@ -1127,7 +1150,6 @@ void graph_free(
 GRAPH* graph_copy(
    const GRAPH* p)
 {
-   int e;
    GRAPH* g;
    assert(p != NULL);
 
@@ -1820,7 +1842,7 @@ GRAPH *graph_pack(
    assert(p      != NULL);
    assert(graph_valid(p));
 
-   (void)printf("Packing Graph: ");
+   /*(void)printf("Packing Graph: ");*/
 
    new = malloc((size_t)p->knots * sizeof(new[0]));
 
@@ -1966,7 +1988,7 @@ GRAPH *graph_pack(
 #endif
    assert(q->source[0] >= 0);
 
-   (void)printf(msg1, q->knots, q->edges, q->terms);
+   /*(void)printf(msg1, q->knots, q->edges, q->terms);*/
 
    return(q);
 }

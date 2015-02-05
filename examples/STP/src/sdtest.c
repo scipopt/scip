@@ -564,7 +564,7 @@ int sd_reduction(
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
-   printf("%d SD: Edges deleted\n", elimins * 2);
+   /*printf("%d SD: Edges deleted\n", elimins * 2);*/
    return(elimins);
 }
 
@@ -991,7 +991,7 @@ int bd3_reduction(
    free(pathtran2);
    assert(graph_valid(g));
 
-   printf("bd3: Knots deleted %d\n", elimins);
+   /*printf("bd3: Knots deleted %d\n", elimins);*/
    SCIPdebugMessage("%d Knots deleted\n", elimins);
 
    return(elimins);
@@ -1188,7 +1188,7 @@ int nsv_reduction(
    assert(graph_valid(g));
 
    SCIPdebugMessage(" %d Knots deleted\n", elimins);
-   printf("nsv_reduction: %d Knots deleted\n", elimins);
+   /*printf("nsv_reduction: %d Knots deleted\n", elimins);*/
 
    return(elimins);
 }
@@ -1590,8 +1590,8 @@ int nv_reduction(
          // reduction occurs.
          if( LT(min1, FARAWAY) && !EQ(min1, min2) )
          {
-            printf("i: %d, min1: %f, min2: %f, distance: %f, pathfromterm: %f, path: %f\n", i, min1, min2, distance[i],
-                  pathfromterm[shortarctail].dist, path[vregion[shortarctail]][shortarctail].dist);
+            //printf("i: %d, min1: %f, min2: %f, distance: %f, pathfromterm: %f, path: %f\n", i, min1, min2, distance[i],
+            //      pathfromterm[shortarctail].dist, path[vregion[shortarctail]][shortarctail].dist);
             mindist = FARAWAY;
             minshortarcdist = FARAWAY;
             k = -1;
@@ -1606,7 +1606,7 @@ int nv_reduction(
 
                      if( LT(path[j][i].dist, mindist) )
                      {
-                        printf("Terminal: %d\n", j);
+                        //printf("Terminal: %d\n", j);
                         mindist = path[j][i].dist;
                         k = j;
                      }
@@ -1617,7 +1617,7 @@ int nv_reduction(
                assert(LE(mindist, distance[i]));
                if( path[k][i].edge != shortarc && path[k][i].edge != Edge_anti(shortarc) )
                   continue;
-               printf("Minimum Distance: %f %f %f\n", mindist, min1 + minshortarcdist, min1 + distance[i]);
+               //printf("Minimum Distance: %f %f %f\n", mindist, min1 + minshortarcdist, min1 + distance[i]);
                assert(EQ(mindist, min1 + minshortarcdist));
                assert(LE(min1 + minshortarcdist, min1 + distance[i]));
             }
@@ -1643,8 +1643,8 @@ int nv_reduction(
 
                elimins++;
 
-               printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
-                     shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
+               //printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
+                  //   shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
 
                voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
                calculate_distances(g, path, g->cost, FSP_MODE);
@@ -1712,7 +1712,7 @@ int nv_reduction(
 
    assert(graph_valid(g));
    SCIPdebugMessage("nv_reduction: %d Knots deleted\n", elimins);
-   printf("nv_reduction: %d Knots deleted\n", elimins);
+   /*printf("nv_reduction: %d Knots deleted\n", elimins);*/
 
    return(elimins);
 }
