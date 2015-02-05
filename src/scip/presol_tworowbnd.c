@@ -781,7 +781,8 @@ void getcoefficients(
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int                   numoverlap,         /**< overlap-size */
-   int*                  overlapidx,         /**< overlap column indexes */
+   int*                  olapidxbaseorder,   /**< overlap column indexes in baserow order */
+   int*                  olapidxotherorder,  /**< overlap column indexes in otherrow order */
    int*                  othernonoverlapidx, /**< other row non overlap indexes */
    int*                  basenonoverlapidx,  /**< base row non overlap indexes */
    SCIP_Real*            coebaseoverlap,     /**< base row overlap coefficients */
@@ -804,7 +805,10 @@ void getcoefficients(
 
    /* set end marker */
    if(numoverlap < SCIPmatrixGetNColumns(matrix))
-      overlapidx[numoverlap] = -1;
+   {
+      olapidxbaseorder[numoverlap] = -1;
+      olapidxotherorder[numoverlap] = -1;
+   }
 
    olapcnt = 0;
    nonolapcnt = 0;
@@ -814,7 +818,7 @@ void getcoefficients(
    valpnt = SCIPmatrixGetRowValPtr(matrix, baserow);
    for( ; rowpnt < rowend; rowpnt++, valpnt++ )
    {
-      if( overlapidx[olapcnt] == *rowpnt )
+      if( olapidxbaseorder[olapcnt] == *rowpnt )
       {
          coebaseoverlap[olapcnt] = *valpnt;
          olapcnt++;
@@ -839,7 +843,7 @@ void getcoefficients(
    valpnt = SCIPmatrixGetRowValPtr(matrix, otherrow);
    for( ; rowpnt < rowend; rowpnt++, valpnt++ )
    {
-      if( overlapidx[olapcnt] == *rowpnt )
+      if( olapidxotherorder[olapcnt] == *rowpnt )
       {
          coeotheroverlap[olapcnt] = *valpnt;
          olapcnt++;
@@ -866,7 +870,7 @@ void getnumoverlap(
    int*                  countings,          /**< overlap counting helper array */
    int*                  clearinfo,          /**< reset helper array */
    int*                  numoverlap,         /**< overlap-size */
-   int*                  overlapidx          /**< overlap column indexes */
+   int*                  olapidxotherorder   /**< overlap column indexes in otherrow order */
    )
 {
    int* rowpnt;
@@ -888,11 +892,12 @@ void getnumoverlap(
       return;
    }
 
+   /* set flags corresponding to baserow non-zeros */
    rowpnt = SCIPmatrixGetRowIdxPtr(matrix, baserow);
    rowend = rowpnt + baserowcnt;
    for( ; rowpnt < rowend; rowpnt++ )
    {
-      countings[*rowpnt]++;
+      countings[*rowpnt] = 1;
       clearinfo[nclear] = *rowpnt;
       nclear++;
    }
@@ -903,7 +908,8 @@ void getnumoverlap(
    {
       if(countings[*rowpnt] == 1)
       {
-         overlapidx[noverlap] = *rowpnt;
+         /* collect overlapping indexes in otherrow order */
+         olapidxotherorder[noverlap] = *rowpnt;
          noverlap++;
       }
    }
@@ -912,6 +918,60 @@ void getnumoverlap(
       countings[clearinfo[i]] = 0;
 
    *numoverlap = noverlap;
+}
+
+static
+void getoverlapbaseordered(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   int                   baserow,            /**< base row index */
+   int                   otherrow,           /**< other row index */
+   int*                  countings,          /**< overlap counting helper array */
+   int*                  clearinfo,          /**< reset helper array */
+   int                   numoverlap,         /**< just calculated overlap-size */
+   int*                  olapidxbaseorder    /**< overlap column indexes in baserow order */
+   )
+{
+   int* rowpnt;
+   int* rowend;
+   int noverlap;
+   int baserowcnt;
+   int otherrowcnt;
+   int nclear;
+   int i;
+
+   noverlap = 0;
+   nclear = 0;
+
+   baserowcnt = SCIPmatrixGetRowNNonzs(matrix, baserow);
+   otherrowcnt = SCIPmatrixGetRowNNonzs(matrix, otherrow);
+
+   /* set flags corresponding to otherrow non-zeros */
+   rowpnt = SCIPmatrixGetRowIdxPtr(matrix, otherrow);
+   rowend = rowpnt + otherrowcnt;
+   for( ; rowpnt < rowend; rowpnt++ )
+   {
+      countings[*rowpnt] = 1;
+      clearinfo[nclear] = *rowpnt;
+      nclear++;
+   }
+
+   rowpnt = SCIPmatrixGetRowIdxPtr(matrix, baserow);
+   rowend = rowpnt + baserowcnt;
+   for( ; rowpnt < rowend; rowpnt++ )
+   {
+      if(countings[*rowpnt] == 1)
+      {
+         /* collect overlapping indexes in baserow order */
+         olapidxbaseorder[noverlap] = *rowpnt;
+         noverlap++;
+      }
+   }
+
+   for( i = 0; i < nclear; i++ )
+      countings[clearinfo[i]] = 0;
+
+   assert(noverlap == numoverlap);
 }
 
 
@@ -939,7 +999,8 @@ SCIP_RETCODE calctworowbnds(
    int* colend;
    int colcnt;
    int numoverlap;
-   int* overlapidx;
+   int* olapidxbaseorder;
+   int* olapidxotherorder;
    SCIP_Real threshold;
    int rowcnt2;
    int nrows;
@@ -967,7 +1028,8 @@ SCIP_RETCODE calctworowbnds(
    nrows = SCIPmatrixGetNRows(matrix);
    ncols = SCIPmatrixGetNColumns(matrix);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &overlapidx, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &olapidxbaseorder, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &olapidxotherorder, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &othernonoverlapidx, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basenonoverlapidx, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coebaseoverlap, ncols) );
@@ -1019,8 +1081,10 @@ SCIP_RETCODE calctworowbnds(
             if( !SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) )
                continue;
 
-            /* determine overlap */
-            getnumoverlap(scip, matrix, baserows[br], *colpnt, countings, clearinfo, &numoverlap, overlapidx);
+            /* determine overlap-size */
+            getnumoverlap(scip, matrix, baserows[br], *colpnt,
+               countings, clearinfo, &numoverlap, olapidxotherorder);
+
             if( numoverlap == 0 )
                continue;
 
@@ -1030,12 +1094,14 @@ SCIP_RETCODE calctworowbnds(
             /* verify if overlap-size is ok */
             if( SUPPORT_THRESHOLD <= threshold && numoverlap < rowcnt )
             {
-               getcoefficients(scip, matrix, baserows[br], *colpnt, numoverlap, overlapidx,
-                  othernonoverlapidx, basenonoverlapidx,
+               getoverlapbaseordered(scip, matrix, baserows[br], *colpnt,
+                  countings, clearinfo, numoverlap, olapidxbaseorder);
+
+               getcoefficients(scip, matrix, baserows[br], *colpnt, numoverlap,
+                  olapidxbaseorder, olapidxotherorder, othernonoverlapidx, basenonoverlapidx,
                   coebaseoverlap, coeotheroverlap, coebasenonoverlap, coeothernonoverlap);
 
-               /* bounds tightening */
-               applytightening(scip, matrix, baserows[br], *colpnt, numoverlap, overlapidx,
+               applytightening(scip, matrix, baserows[br], *colpnt, numoverlap, olapidxotherorder,
                   othernonoverlapidx, basenonoverlapidx,
                   coebaseoverlap, coeotheroverlap, coebasenonoverlap, coeothernonoverlap,
                   lowerbds, upperbds, tmplowerbds, tmpupperbds, minratios, maxratios,
@@ -1074,7 +1140,8 @@ SCIP_RETCODE calctworowbnds(
    SCIPfreeBufferArray(scip, &coebaseoverlap);
    SCIPfreeBufferArray(scip, &basenonoverlapidx);
    SCIPfreeBufferArray(scip, &othernonoverlapidx);
-   SCIPfreeBufferArray(scip, &overlapidx);
+   SCIPfreeBufferArray(scip, &olapidxotherorder);
+   SCIPfreeBufferArray(scip, &olapidxbaseorder);
 
    return SCIP_OKAY;
 }

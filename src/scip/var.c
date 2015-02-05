@@ -3859,6 +3859,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       assert(var != NULL);
 
+      /* TODO: maybe we should test here on SCIPsetIsZero() instead of 0.0 */
       if( scalar == 0.0 )
          continue;
 
@@ -3969,6 +3970,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             {
                tmpvars2[ntmpvars2] = multvar;
                tmpscalars2[ntmpvars2] = scalar * multscalar;
+
+               /* clear very small values to zero */
+               if( SCIPsetIsZero(set, tmpscalars2[ntmpvars2]) )
+                  tmpscalars2[ntmpvars2] = 0.0;
+
                ++(ntmpvars2);
                assert(ntmpvars2 <= tmpvarssize2);
             }
