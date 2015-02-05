@@ -34,7 +34,7 @@
 #include "heur_rec.h"
 #include "heur_rs.h"
 #include "pricer_stp.h"
-//#include "event_bestsol.h"
+#include "event_bestsol.h"
 #include "probdata_stp.h"
 #include "dialog_stp.h"
 
@@ -87,7 +87,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeHeurRec(scip) );
 
    /* include event handler for printing primal solution development */
-  // SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
 
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
