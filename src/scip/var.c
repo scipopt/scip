@@ -3835,11 +3835,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
       {
          tmpscalars[v - 1] += tmpscalars[v];
-
-         /* clear very small values to zero */
-         if( SCIPsetIsZero(set, tmpscalars[v - 1]) )
-            tmpscalars[v - 1] = 0.0;
-
          --ntmpvars;
          tmpvars[v] = tmpvars[ntmpvars];
          tmpscalars[v] = tmpscalars[ntmpvars];
@@ -3961,20 +3956,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             {
                assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
                tmpscalars[pos] += scalar * multscalar;
-
-               /* clear very small values to zero */
-               if( SCIPsetIsZero(set, tmpscalars[pos]) )
-                  tmpscalars[pos] = 0.0;
             }
             else
             {
                tmpvars2[ntmpvars2] = multvar;
                tmpscalars2[ntmpvars2] = scalar * multscalar;
-
-               /* clear very small values to zero */
-               if( SCIPsetIsZero(set, tmpscalars2[ntmpvars2]) )
-                  tmpscalars2[ntmpvars2] = 0.0;
-
                ++(ntmpvars2);
                assert(ntmpvars2 <= tmpvarssize2);
             }
@@ -3988,11 +3974,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             if( SCIPvarCompare(tmpvars2[v], tmpvars2[v - 1]) == 0 )
             {
                tmpscalars2[v - 1] += tmpscalars2[v];
-
-               /* clear very small values to zero */
-               if( SCIPsetIsZero(set, tmpscalars2[v - 1]) )
-                  tmpscalars2[v - 1] = 0.0;
-
                --ntmpvars2;
                tmpvars2[v] = tmpvars2[ntmpvars2];
                tmpscalars2[v] = tmpscalars2[ntmpvars2];

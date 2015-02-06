@@ -137,6 +137,10 @@ SCIP_RETCODE addRow(
       {
          assert(maxnnonzsmem > matrix->nnonzs);
 
+         /* ignore variables with very small coefficients */
+         if( SCIPisZero(scip, vals[j]) )
+            continue;
+
          matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
          probindex = SCIPvarGetProbindex(vars[j]);
          assert(matrix->vars[probindex] == vars[j]);
@@ -156,6 +160,10 @@ SCIP_RETCODE addRow(
       for( j = 0; j < nvars; j++ )
       {
          assert(maxnnonzsmem > matrix->nnonzs);
+
+         /* ignore variables with very small coefficients */
+         if( SCIPisZero(scip, vals[j]) )
+            continue;
 
          /* due to the factor, <= constraints will be transfered to >= */
          matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
