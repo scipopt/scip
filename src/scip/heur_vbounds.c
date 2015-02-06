@@ -19,6 +19,9 @@
  * @author Stefan Heinz
  * @author Jens Schulz
  * @author Gerald Gamrath
+ *
+ * @todo allow smaller fixing rate for probing LP?
+ * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -638,6 +641,7 @@ SCIP_RETCODE applyVbounds(
 
    SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
 
+   /* check fixing rate */
    if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
       SCIPdebugMessage("--> too few fixings\n");
@@ -705,11 +709,13 @@ SCIP_RETCODE applyVbounds(
 #else
          SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
+
+         allfixsolfound = TRUE;
+
          if( stored )
          {
             SCIPdebugMessage("found feasible solution:\n");
             *result = SCIP_FOUNDSOL;
-            allfixsolfound = TRUE;
             solobj = MIN(solobj, SCIPgetSolOrigObj(scip, newsol));
          }
       }

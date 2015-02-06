@@ -18,6 +18,9 @@
  * @brief  clique primal heuristic
  * @author Stefan Heinz
  * @author Michael Winkler
+ *
+ * @todo allow smaller fixing rate for probing LP?
+ * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -762,12 +765,13 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #else
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
+         allfixsolfound = TRUE;
+
          if( stored )
          {
             SCIPdebugMessage("found feasible solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
-            allfixsolfound = TRUE;
          }
       }
    }
@@ -869,9 +873,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          goto TERMINATE;
       }
 
+#ifndef SCIP_DEBUG
       /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
+#endif
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
