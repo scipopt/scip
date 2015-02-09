@@ -38,7 +38,7 @@
  *
  * Since SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
- * directory of the \SCIP standard distribution. See also <a href=annotated.shtml>Wrapper Classes</a>.
+ * directory of the \SCIP standard distribution. See also <a href=annotated.php>Wrapper Classes</a>.
  *
  *
  * @section MODELLING Modeling languages and Matlab interface
