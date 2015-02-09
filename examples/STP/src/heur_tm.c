@@ -2094,9 +2094,10 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                      rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
                      cost[e] = cost[e] * rand;
                   }
-                /* TODO graphcost to cost*/
+                  /* TODO graphcost to cost*/
                   if( SCIPisLT(scip, graph->cost[e], 1e+8 ) && SCIPisGT(scip, graph->cost[e], maxcost) )
                      maxcost = graph->cost[e];
+		  assert(SCIPisGE(scip, cost[e], 0));
                }
                for( e = 0; e < nedges; e++)
                   costrev[e] = cost[flipedge(e)];
@@ -2143,10 +2144,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 		        costrev[e + 1] = costrev[e + 1]  * rand;
                      cost[e] = costrev[e + 1];
                   }
+                  assert(SCIPisGE(scip, cost[e], 0));
+		  assert(SCIPisGE(scip, costrev[e], 0));
                }
             }
          }
-         assert(SCIPisGE(scip, cost[e], 0));
 
 	 /* hop constraint problem? */
          if( graph->stp_type == STP_HOP_CONS )
