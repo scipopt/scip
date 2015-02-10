@@ -28,12 +28,13 @@ THREADS=$6       # - the number of LP solver threads to use
 SETCUTOFF=$7     # - should optimal instance value be used as objective limit (0 or 1)?
 FEASTOL=$8       # - feasibility tolerance, or 'default'
 TIMELIMIT=$9     # - time limit for the solver
-MEMLIMIT=${10}      # - memory limit for the solver
+MEMLIMIT=${10}   # - memory limit for the solver
 NODELIMIT=${11}  # - node limit for the solver
 LPS=${12}        # - LP solver to use
 DISPFREQ=${13}   # - display frequency for chronological output table
 OPTCOMMAND=${14} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-SOLUFILE=${15}   # - solu file, only necessary if $SETCUTOFF is 1
+REOPT=${15}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
+SOLUFILE=${16}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -82,25 +83,32 @@ echo set display freq $DISPFREQ        >> $TMPFILE
 echo set memory savefac 1.0            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
 
-# read and solve the instance
-echo read $SCIPPATH/$INSTANCE         >> $TMPFILE
-
-# set objective limit: optimal solution value from solu file, if existent
-if test $SETCUTOFF = 1
+if test "$REOPT" = false
 then
-    if test $SOLUFILE == ""
-    then
-        echo Exiting test because no solu file can be found for this test
-        exit
-    fi
-    CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
-    if test ""$CUTOFF != ""
-    then
-        echo set limits objective $CUTOFF      >> $TMPFILE
-    fi
+    # read and solve the instance
+	echo read $SCIPPATH/$INSTANCE         >> $TMPFILE
+
+    # set objective limit: optimal solution value from solu file, if existent
+	if test $SETCUTOFF = 1
+	then
+	    if test $SOLUFILE == ""
+	    then
+	        echo Exiting test because no solu file can be found for this test
+	        exit
+	    fi
+	    CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+	    if test ""$CUTOFF != ""
+	    then
+	        echo set limits objective $CUTOFF      >> $TMPFILE
+	    fi
+	fi
+
+	echo $OPTCOMMAND                       >> $TMPFILE
+	echo display statistics                >> $TMPFILE
+	echo checksol                          >> $TMPFILE
+else
+	# read the difflist file
+	cat $SCIPPATH/$INSTANCE                >> $TMPFILE
 fi
 
-echo $OPTCOMMAND                       >> $TMPFILE
-echo display statistics                >> $TMPFILE
-echo checksol                          >> $TMPFILE
-echo quit                              >> $TMPFILE
+echo quit                                  >> $TMPFILE

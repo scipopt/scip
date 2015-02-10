@@ -29,7 +29,8 @@ VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
 CLIENTTMPDIR=${16}
-OPTCOMMAND=${17}
+REOPT=${17}
+OPTCOMMAND=${18}
 
 # check if all variables defined (by checking the last one)
 if test -z $OPTCOMMAND
@@ -51,6 +52,7 @@ then
     echo "LPS           = $LPS"
     echo "VALGRIND      = $VALGRIND"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     exit 1;
 fi
@@ -96,7 +98,7 @@ do
         fi
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
+        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH

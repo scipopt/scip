@@ -49,7 +49,9 @@ CLIENTTMPDIR=${16}
 NOWAITCLUSTER=${17}
 EXCLUSIVE=${18}
 PERMUTE=${19}
-OPTCOMMAND=${20}
+VALGRIND=${20}
+REOPT=${21}
+OPTCOMMAND=${22}
 
 # check if all variables defined (by checking the last one)
 if test -z $OPTCOMMAND
@@ -74,6 +76,8 @@ then
     echo "NOWAITCLUSTER = $NOWAITCLUSTER"
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
+    echo "VALGRIND      = $VALGRIND"
+    echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     exit 1;
 fi
@@ -93,7 +97,6 @@ else
 fi
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
-VALGRIND="false" # change this to "true" for using valgrind
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND
 
 
@@ -148,14 +151,14 @@ do
             fi
 
             # call tmp file configuration for SCIP
-            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $SOLUFILE
+            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $SOLUFILE
 
             # check queue type
             if test  "$QUEUETYPE" = "srun"
             then
             # additional environment variables needed by runcluster.sh
                 export SOLVERPATH=$SCIPPATH
-                export EXECNAME=$SCIPPATH/../$BINNAME
+                export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
                 export BASENAME=$FILENAME
                 export FILENAME=$INSTANCE
                 export CLIENTTMPDIR
