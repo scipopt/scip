@@ -24,7 +24,6 @@
 
 #include "scip/relax_reoptsolvelp.h"
 #include "scip/scip.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/struct_tree.h"
 
 

@@ -35,7 +35,6 @@
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_mostinf.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/branch_pscost.h"
 #include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"

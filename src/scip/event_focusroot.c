@@ -22,7 +22,6 @@
 #include <string.h>
 
 #include "scip/event_focusroot.h"
-#include "scip/branch_nodereopt.h"
 
 #define EVENTHDLR_NAME         "focusroot"
 #define EVENTHDLR_DESC         "event handler for focusroot event"

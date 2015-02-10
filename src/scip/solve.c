@@ -54,7 +54,6 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/pub_misc.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/debug.h"
 
 
