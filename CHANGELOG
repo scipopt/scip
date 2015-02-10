@@ -108,6 +108,7 @@ Makefile:
 
 misc:
 - moved assertions in comparison methods from scip.c to set.c
+- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
 
 SCIP version 3.1.0
 ==================
