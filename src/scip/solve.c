@@ -2713,6 +2713,8 @@ SCIP_RETCODE solveNodeLP(
             SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
+            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event) );
+
             stat->nlpsolsfound++;
          }
 
@@ -4328,11 +4330,6 @@ SCIP_RETCODE SCIPsolveCIP(
 
       assert(eventthrown == FALSE);
 
-      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) && set->stage == SCIP_STAGE_SOLVING )
-      {
-         SCIP_CALL( SCIPbranchruledataNodereoptLPTimeStart(set->scip) );
-      }
-
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore, branchcand,
             cutpool, delayedcutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur, &stopped) );
@@ -4340,11 +4337,6 @@ SCIP_RETCODE SCIPsolveCIP(
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
       assert(SCIPtreeGetFocusNode(tree) == focusnode);
-
-      if( set->reopt_enable && (tree->focusnode == tree->root || tree->focusnode->reoptID >= 1) && set->stage == SCIP_STAGE_SOLVING )
-      {
-         SCIP_CALL( SCIPbranchruledataNodereoptLPTimeStop(set->scip) );
-      }
 
       if( stopped )
          break;
@@ -4396,6 +4388,8 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
                eventthrown = TRUE;
+
+               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event) );
             }
          }
          else if( !unbounded )
@@ -4424,6 +4418,8 @@ SCIP_RETCODE SCIPsolveCIP(
             SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             eventthrown = TRUE;
+
+            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -4502,6 +4498,8 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          eventthrown = TRUE;
+
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event) );
       }
 
       /* compute number of successfully applied conflicts */
@@ -4561,6 +4559,8 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
          SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event) );
       }
 
       focusnode = NULL;

@@ -126,7 +126,8 @@ SCIP_DECL_RELAXEXEC(relaxExecreoptsolvelp)
    if( SCIPgetRootNode(scip) == node || (SCIPnodeGetReoptID(node) > -1 && relaxdata->lastnode != SCIPnodeGetNumber(node)) )
    {
       relaxdata->lastnode = SCIPnodeGetNumber(node);
-      SCIP_CALL( SCIPbranchruleNodereoptSolveLP(scip, node, &solvelp) );
+      solvelp = TRUE;
+      SCIP_CALL( SCIPgetReoptSolveLP(scip, node, &solvelp) );
       SCIPsetFocusnodeLP(scip, solvelp);
    }
 

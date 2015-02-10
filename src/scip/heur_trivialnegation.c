@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/heur_trivialnegation.h"
 #include "scip/reopt.h"
@@ -46,6 +47,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_Bool             reopt_enabled;           /**< reoptimization enabled */
 };
 
 
@@ -67,8 +69,41 @@ SCIP_DECL_HEURCOPY(heurCopyTrivialnegation)
    return SCIP_OKAY;
 }
 
-#define heurFreeTrivialnegation NULL
-#define heurInitTrivialnegation NULL
+/* free data of the heuristic */
+static
+SCIP_DECL_HEURFREE(heurFreeTrivialnegation)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(scip != NULL );
+   assert(heur != NULL );
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL );
+
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+/* initialize the heuristic */
+static
+SCIP_DECL_HEURINIT(heurInitTrivialnegation)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(scip != NULL );
+   assert(heur != NULL );
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL );
+
+   heurdata->reopt_enabled = SCIPisReoptEnabled(scip);
+
+   return SCIP_OKAY;
+}
+
 #define heurExitTrivialnegation NULL
 #define heurInitsolTrivialnegation NULL
 #define heurExitsolTrivialnegation NULL
@@ -86,7 +121,6 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_VAR** vars;
 
    int nvars;
-   int nbinvars;
    int i;
 
    SCIP_Real solval;
@@ -103,7 +137,6 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
    vars = SCIPgetOrigVars(scip);
    nvars = SCIPgetNOrigVars(scip);
-   nbinvars = SCIPgetNOrigBinVars(scip);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -119,7 +152,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_CALL( SCIPcreateSol(scip, &singlenegatedsol, heur) );
 
    /* copy the solutions */
-   for(i = 0; i < SCIPgetNOrigVars(scip); i++)
+   for(i = 0; i < nvars; i++)
    {
       solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
       SCIP_CALL( SCIPsetSolVal(scip, allchanged, vars[i], solval) );
@@ -132,7 +165,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    assert(SCIPsolGetHeur(singlenegatedsol) == heur);
 
    /* change the entries */
-   for(i = 0; i < SCIPgetNOrigVars(scip); i++)
+   for(i = 0; i < nvars; i++)
    {
       SCIP_Bool entering;
       SCIP_Bool leaving;
@@ -144,11 +177,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
        && SCIPvarGetStatus(SCIPvarGetTransVar(vars[i])) != SCIP_VARSTATUS_AGGREGATED
        && SCIPvarGetStatus(SCIPvarGetTransVar(vars[i])) != SCIP_VARSTATUS_MULTAGGR )
       {
-         /* check if the objective coefficient has changed the sign */
-         negated = SCIPreoptIsObjCoefNegated(scip->reopt, SCIPvarGetIndex(vars[i]));
-
-         /* check if a a variable enters or leaves the objective function */
-         SCIPreoptEnterOrLeaveObj(scip->reopt, SCIPvarGetIndex(vars[i]), &entering, &leaving);
+         /* check the changes of the variable */
+         SCIPgetVarCoefChg(scip, SCIPvarGetIndex(vars[i]), &negated, &entering, &leaving);
 
          if( negated || entering || leaving )
          {
@@ -244,10 +274,7 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
    SCIP_HEUR* heur;
 
    /* create trivialnegation primal heuristic data */
-   heurdata = NULL;
-
-   heur = NULL;
-
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* use SCIPincludeHeurBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
@@ -257,9 +284,12 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, heurdata) );
 
    assert(heur != NULL);
-   
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivialnegation) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTrivialnegation) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTrivialnegation) );
+
 
    return SCIP_OKAY;
 }

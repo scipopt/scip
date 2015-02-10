@@ -39,6 +39,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_disp.h"
 #include "scip/type_heur.h"
+#include "scip/type_compress.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
@@ -74,6 +75,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copycompessions,    /**< should the tree compressions be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
@@ -747,6 +749,32 @@ void SCIPsetSortHeurs(
 /** sorts heuristics by name */
 extern
 void SCIPsetSortHeursName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts tree compression in tree compression list */
+extern
+SCIP_RETCODE SCIPsetIncludeCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_COMPR*           compr               /**< tree compression */
+   );
+
+/** returns the tree compression of the given name, or NULL if not existing */
+extern
+SCIP_COMPR* SCIPsetFindCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of tree compression */
+   );
+
+/** sorts compressions by priorities */
+extern
+void SCIPsetSortComprs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts heuristics by names */
+extern
+void SCIPsetSortComprsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

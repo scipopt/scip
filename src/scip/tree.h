@@ -173,7 +173,6 @@ SCIP_RETCODE SCIPnodeGetAddedcons(
 
 extern
 int SCIPnodeGetNAddedcons(
-   SCIP*                scip,
    SCIP_NODE*           node
    );
 
@@ -342,7 +341,7 @@ SCIP_Bool SCIPnodeIsPseudoBranched(
    );
 
 extern
-int SCIPnodeGetNPseudoBranchings(
+int SCIPnodeGetNDualBndchgs(
    SCIP_NODE*            node
    );
 

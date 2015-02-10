@@ -61,6 +61,7 @@ struct SCIP_Stat
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
+   SCIP_Longint          nreoptnodes;        /**< number of reoptimized nodes */
    SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    SCIP_Longint          ntotalinternalnodes;/**< total number of nodes processed in all runs where a branching was performed */
@@ -128,12 +129,6 @@ struct SCIP_Stat
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
-   SCIP_CLOCK*           revivetime;         /**< time needed for initialize reoptimization */
-   SCIP_CLOCK*           revivetimeoverall;  /**< time needed for initialize reoptimization */
-   SCIP_CLOCK*           updatesolutime;     /**< time needed for update solutions during reoptimization */
-   SCIP_CLOCK*           updatesolutimeoverall;/**< time needed for update solutions during reoptimization */
-   SCIP_CLOCK*           savetime;           /**< time needed for save nodes during reoptimization */
-   SCIP_CLOCK*           savetimeoverall;    /**< time needed for save nodes during reoptimization */
    SCIP_CLOCK*           strongpropclock;    /**< time needed for propagation during strong branching */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */

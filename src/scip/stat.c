@@ -69,12 +69,6 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->revivetime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->revivetimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->savetime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->savetimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->updatesolutime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->updatesolutimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongpropclock, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
@@ -96,7 +90,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->reopt_prunednodesoverall = 0;
    (*stat)->reopt_strbrnodesoverall = 0;
    (*stat)->reopt_rediednodesoverall = 0;
-   (*stat)->reopt_nruns = -1;
+   (*stat)->reopt_nruns = 0;
    (*stat)->reopt_infsubtrees = 0;
 
    SCIPstatReset(*stat, set);
@@ -130,12 +124,6 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
-   SCIPclockFree(&(*stat)->revivetime);
-   SCIPclockFree(&(*stat)->revivetimeoverall);
-   SCIPclockFree(&(*stat)->savetime);
-   SCIPclockFree(&(*stat)->savetimeoverall);
-   SCIPclockFree(&(*stat)->updatesolutime);
-   SCIPclockFree(&(*stat)->updatesolutimeoverall);
    SCIPclockFree(&(*stat)->strongpropclock);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
@@ -205,9 +193,6 @@ void SCIPstatReset(
    SCIPclockReset(stat->nodeactivationtime);
    SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
-   SCIPclockReset(stat->revivetime);
-   SCIPclockReset(stat->savetime);
-   SCIPclockReset(stat->updatesolutime);
    SCIPclockReset(stat->strongpropclock);
 
    SCIPhistoryReset(stat->glbhistory);
@@ -281,7 +266,7 @@ void SCIPstatReset(
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
    stat->nrunsbeforefirst = -1;
-   stat->firstprimalheur = NULL; 
+   stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
    stat->firstsolgap = SCIP_DEFAULT_INFINITY;
@@ -466,6 +451,7 @@ void SCIPstatResetCurrentRun(
    assert(stat != NULL);
 
    stat->nnodes = 0;
+   stat->nreoptnodes = 0;
    stat->ninternalnodes = 0;
    stat->ncreatednodesrun = 0;
    stat->nactivatednodes = 0;
@@ -516,6 +502,16 @@ void SCIPstatEnforceLPUpdates(
    assert(stat != NULL);
 
    stat->lpcount++;
+}
+
+/** increases reoptnodes count */
+void SCIPstatEnforceNReoptnodes(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->nreoptnodes++;
 }
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */

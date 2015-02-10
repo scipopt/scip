@@ -299,7 +299,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_mostinf.o \
 			scip/branch_nodereopt.o \
 			scip/branch_pscost.o \
-			scip/branch_pseudo.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_abspower.o \
@@ -332,7 +331,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/disp_default.o \
 			scip/event_focusroot.o \
 			scip/event_globalboundchg.o \
-			scip/event_nodereopt.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
@@ -444,6 +442,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \
+			scip/compress.o \
 			scip/history.o \
 			scip/implics.o \
 			scip/interrupt.o \
@@ -515,6 +514,7 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objdisp.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
+			objscip/objcompress.o \
 			objscip/objmessagehdlr.o \
 			objscip/objnodesel.o \
 			objscip/objpresol.o \
@@ -641,8 +641,11 @@ check:		test
 
 .PHONY: test
 test:
-		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
+		cd check; \$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) false $(OPTCOMMAND);
+
+.PHONY: testreopt
+testreopt:
+		cd check; \$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) true $(OPTCOMMAND);
 
 .PHONY: testcount
 testcount:		

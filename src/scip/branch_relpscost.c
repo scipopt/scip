@@ -21,7 +21,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+
 #include <assert.h>
 #include <string.h>
 
@@ -489,7 +489,7 @@ SCIP_RETCODE execRelpscost(
          }
 
          /* combine the four score values */
-         score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
+         score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
             inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
 
          if( usesb )
@@ -592,8 +592,8 @@ SCIP_RETCODE execRelpscost(
          assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
 
          SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iterations) -- %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" iterations\n",
-            SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
-            SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS), 
+            SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS),
+            SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS),
             SCIPvarGetName(branchcands[c]), branchcandssol[c], initcandscores[i],
             inititer, SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
@@ -632,7 +632,7 @@ SCIP_RETCODE execRelpscost(
             if( !SCIPisStopped(scip) )
             {
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                  "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
+                  "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n",
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
             }
             break;
@@ -806,7 +806,7 @@ SCIP_RETCODE execRelpscost(
             inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
-            score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
+            score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
                inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
@@ -847,7 +847,7 @@ SCIP_RETCODE execRelpscost(
       if( bestsbcand >= 0 )
       {
          SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
-            SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
+            SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore,
             lookahead, maxlookahead);
       }
 #endif
@@ -942,7 +942,7 @@ SCIP_RETCODE execRelpscost(
       SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%u, psc=%g/%g [%g])\n",
          nbranchcands, ninitcands, bestcand, SCIPvarGetName(var), branchcandssol[bestcand],
          bestsbdown, bestsbdown - lpobjval, bestsbup, bestsbup - lpobjval, bestisstrongbranch,
-         SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS), 
+         SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS),
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS),
          SCIPgetVarPseudocostScoreCurrentRun(scip, var, branchcandssol[bestcand]));
       SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
@@ -1082,55 +1082,55 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 
    /* relpscost branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/conflictweight", 
+         "branching/relpscost/conflictweight",
          "weight in score calculations for conflict score",
          &branchruledata->conflictweight, TRUE, DEFAULT_CONFLICTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/conflictlengthweight", 
+         "branching/relpscost/conflictlengthweight",
          "weight in score calculations for conflict length score",
          &branchruledata->conflengthweight, TRUE, DEFAULT_CONFLENGTHWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/inferenceweight", 
+         "branching/relpscost/inferenceweight",
          "weight in score calculations for inference score",
          &branchruledata->inferenceweight, TRUE, DEFAULT_INFERENCEWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/cutoffweight", 
+         "branching/relpscost/cutoffweight",
          "weight in score calculations for cutoff score",
          &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/pscostweight", 
+         "branching/relpscost/pscostweight",
          "weight in score calculations for pseudo cost score",
          &branchruledata->pscostweight, TRUE, DEFAULT_PSCOSTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/minreliable", 
+         "branching/relpscost/minreliable",
          "minimal value for minimum pseudo cost size to regard pseudo cost value as reliable",
          &branchruledata->minreliable, TRUE, DEFAULT_MINRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/maxreliable", 
+         "branching/relpscost/maxreliable",
          "maximal value for minimum pseudo cost size to regard pseudo cost value as reliable",
          &branchruledata->maxreliable, TRUE, DEFAULT_MAXRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/sbiterquot", 
+         "branching/relpscost/sbiterquot",
          "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
          &branchruledata->sbiterquot, FALSE, DEFAULT_SBITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/relpscost/sbiterofs", 
+         "branching/relpscost/sbiterofs",
          "additional number of allowed strong branching LP iterations",
          &branchruledata->sbiterofs, FALSE, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/relpscost/maxlookahead", 
+         "branching/relpscost/maxlookahead",
          "maximal number of further variables evaluated without better score",
          &branchruledata->maxlookahead, TRUE, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/relpscost/initcand", 
+         "branching/relpscost/initcand",
          "maximal number of candidates initialized with strong branching per node",
          &branchruledata->initcand, FALSE, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/relpscost/inititer", 
+         "branching/relpscost/inititer",
          "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
          &branchruledata->inititer, FALSE, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/relpscost/maxbdchgs", 
+         "branching/relpscost/maxbdchgs",
          "maximal number of bound tightenings before the node is reevaluated (-1: unlimited)",
          &branchruledata->maxbdchgs, TRUE, DEFAULT_MAXBDCHGS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -1170,6 +1170,6 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
 
    /* execute branching rule */
    SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, branchcands, branchcandssol, branchcandsfrac, nbranchcands, executebranching, result) );
-   
+
    return SCIP_OKAY;
 }

@@ -164,6 +164,7 @@ SCIP_RETCODE createSubSCIP(
          FALSE, /* separators */
          TRUE,  /* propagators */
          FALSE, /* heuristics */
+         FALSE, /* compressions */
          TRUE,  /* eventhandler */
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE,  /* branchrules */

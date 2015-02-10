@@ -133,6 +133,12 @@ void SCIPstatEnforceLPUpdates(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
+/** increases reoptnodes count */
+extern
+void SCIPstatEnforceNReoptnodes(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */
 extern
 void SCIPstatUpdateMemsaveMode(

@@ -54,6 +54,7 @@
 #include "scip/type_dialog.h"
 #include "scip/type_disp.h"
 #include "scip/type_heur.h"
+#include "scip/type_compress.h"
 #include "scip/type_history.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
@@ -517,6 +518,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copycompressions,   /**< should the compressions be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
@@ -3444,6 +3446,130 @@ SCIP_RETCODE SCIPsetHeurPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
+/** creates a tree compression and includes it in SCIP.
+ *
+ *  @note method has all compression callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeComprBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeCompr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of tree compression */
+   const char*           desc,               /**< description of tree compression */
+   char                  dispchar,           /**< display character of tree compression */
+   int                   priority,           /**< priority of the tree compression */
+   int                   mindepth,           /**< minimal depth level to call compression at (-1: no limit) */
+   int                   minnnodes,          /**< minimal number of nodes to call compression */
+   SCIP_Bool             usessubscip,        /**< does the compression use a secondary SCIP instance? */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
+   SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */
+   SCIP_DECL_COMPREXIT   ((*comprexit)),     /**< deinitialize tree compression */
+   SCIP_DECL_COMPRINITSOL ((*comprinitsol)), /**< solving process initialization method of tree compression */
+   SCIP_DECL_COMPREXITSOL ((*comprexitsol)), /**< solving process deinitialization method of tree compression */
+   SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
+   SCIP_COMPRDATA*        comprdata          /**< tree compression data */
+   );
+
+/** creates a tree compression and includes it in SCIP with its most fundamental callbacks.
+ *  All non-fundamental (or optional) callbacks
+ *  as, e. g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetComprCopy(), SCIPsetComprFree(),
+ *  SCIPsetComprInit(), SCIPsetComprExit(), SCIPsetComprInitsol(), and SCIPsetComprExitsol()
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeCompr() instead
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeComprBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR**          compr,              /**< pointer to tree compression */
+   const char*           name,               /**< name of tree compression */
+   const char*           desc,               /**< description of tree compression */
+   char                  dispchar,           /**< display character of tree compression */
+   int                   priority,           /**< priority of the tree compression */
+   int                   mindepth,           /**< minimal depth level to call tree compression at (-1: no limit) */
+   int                   minnnodes,          /**< minimal number of nodes to call the compression */
+   SCIP_Bool             usessubscip,        /**< does the compression use a secondary SCIP instance? */
+   SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
+   SCIP_COMPRDATA*       comprdata           /**< tree compression data */
+   );
+
+/** sets copy method of tree compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy))      /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of tree compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRFREE    ((*comprfree))     /**< destructor of tree compression */
+   );
+
+/** sets initialization method of tree compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRINIT   ((*comprinit))      /**< initialize tree compression */
+   );
+
+/** sets deinitialization method of tree compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPREXIT   ((*comprexit))      /**< deinitialize tree compression */
+   );
+
+/** sets solving process initialization method of tree compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRINITSOL ((*comprinitsol))  /**< solving process initialization method of tree compression */
+   );
+
+/** sets solving process deinitialization method of tree compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPREXITSOL ((*comprexitsol))  /**< solving process deinitialization method of tree compression */
+   );
+
+/** returns the tree compression of the given name, or NULL if not existing */
+EXTERN
+SCIP_COMPR* SCIPfindCompr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of tree compression */
+   );
+
+/** returns the array of currently available tree compression */
+EXTERN
+SCIP_COMPR** SCIPgetComprs(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available tree compression */
+EXTERN
+int SCIPgetNCompr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a compression */
+EXTERN
+SCIP_RETCODE SCIPsetComprPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression */
+   int                   priority            /**< new priority of the tree compression */
+   );
+
 /** creates an event handler and includes it in SCIP
  *
  *  @note method has all event handler callbacks as arguments and is thus changed every time a new
@@ -5561,6 +5687,17 @@ SCIP_RETCODE SCIPaddConsNode(
    SCIP_NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    );
 
+/*
+ * returns the number of domain changes at a given node
+ */
+int SCIPgetNDomchgs(
+   SCIP*                 scip,
+   SCIP_NODE*            node,
+   SCIP_Bool             branching,          /**< count branching decisions */
+   SCIP_Bool             consinfer,          /**< count constraint propagation */
+   SCIP_Bool             propinfer           /**< count propagation */
+   );
+
 /** adds constraint locally to the current node (and all of its subnodes), even if it is a global constraint;
  *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
  *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
@@ -5986,12 +6123,68 @@ SCIP_RETCODE SCIPrestartSolve(
    );
 
 /**
+ * check if reoptimization is enabled
+ */
+EXTERN
+SCIP_Bool SCIPisReoptEnabled(
+   SCIP*                 scip
+   );
+
+/* returns the stored solutions corresponding to a given run */
+EXTERN
+SCIP_RETCODE SCIPgetReopSolsRun(
+   SCIP*                 scip,
+   int                   run,
+   SCIP_SOL**            sols,
+   int                   allocmem,
+   int*                  nsols
+   );
+
+/* mark all stored solutions as not updated */
+EXTERN
+void SCIPresetReoptSolMarks(
+   SCIP*                 scip
+   );
+
+/* update number of checked solutions during the reoptimization process */
+EXTERN
+void SCIPsetReoptNCheckedsols(
+   SCIP*                 scip,
+   int                   ncheckedsols
+   );
+
+/* update number of improving solutions during the reoptimization process */
+EXTERN
+void SCIPsetReoptNImprovingsols(
+   SCIP*                 scip,
+   int                   nimprovingsols
+   );
+
+/**
  * check if reoptimization can restart
  */
 EXTERN
-SCIP_Bool SCIPcheckRestartReopt(
+SCIP_RETCODE SCIPcheckRestartReopt(
+   SCIP*                 scip
+   );
+
+/** checks the reason for cut off a node; if necessary, store the node in
+ * reopt data structure */
+EXTERN
+SCIP_RETCODE SCIPcheckNodeCutoff(
    SCIP*                 scip,
-   SCIP_Real*            sim
+   SCIP_NODE*            node,
+   SCIP_EVENT*           event
+   );
+
+/** save bound changes based on dual information */
+EXTERN
+SCIP_RETCODE SCIPaddDualBndchg(
+   SCIP*                 scip,
+   SCIP_NODE*            node,
+   SCIP_VAR*             var,
+   SCIP_Real             newbound,
+   SCIP_Real             oldbound
    );
 
 /** returns whether we are in the restarting phase
@@ -16652,6 +16845,200 @@ void SCIPsetFocusnodeLP(
 
 
 /*
+ * reoptimization methods
+ */
+
+/**@name Reoptimization Methods */
+/**@{ */
+
+/* disable all techniques performing dual reductions */
+EXTERN
+SCIP_RETCODE SCIPdisableAllDualTechniques(
+   SCIP*                 scip
+   );
+
+/* increase reoptnodes counter */
+EXTERN
+void SCIPenforceNReoptnodes(
+   SCIP*                 scip
+   );
+
+/* return all IDs of stored nodes that need to be reoptimized at current point in time */
+EXTERN
+SCIP_RETCODE SCIPgetReoptNodeIDs(
+   SCIP*                 scip,
+   SCIP_NODE*            node,
+   int*                  ids,
+   int                   mem,
+   int*                  nids
+   );
+
+EXTERN
+SCIP_RETCODE SCIPgetReoptSolveLP(
+   SCIP*                 scip,
+   SCIP_NODE*            node,
+   SCIP_Bool*            solvelp
+   );
+
+/* add a node to the reopttree */
+EXTERN
+SCIP_RETCODE SCIPaddReoptnode(
+   SCIP*                 scip,
+   SCIP_NODE*            node,
+   SCIP_REOPTTYPE        reopttype,
+   SCIP_Bool             saveafterduals
+   );
+
+/* returns the number of nodes that need be reoptimized
+ * directly below the given @param node */
+EXTERN
+int SCIPgetNReoptNodeIDs(
+   SCIP*                 scip,
+   SCIP_NODE*            node
+   );
+
+/* returns the number of bound changes stored in the reopttree at ID id*/
+EXTERN
+int SCIPgetReoptnodeNVars(
+   SCIP*                 scip,
+   int                   id
+   );
+
+/* returns the number of added constraints stored in the reopttree at ID id*/
+EXTERN
+int SCIPgetReoptnodeNConss(
+   SCIP*                 scip,
+   int                   id
+   );
+
+/* return the branching path stored in the reoptree at ID id */
+EXTERN
+void SCIPgetReoptnodePath(
+   SCIP*                 scip,
+   int                   id,
+   SCIP_VAR**            vars,
+   SCIP_Real*            vals,
+   SCIP_BOUNDTYPE*       boundtypes,
+   int                   mem,
+   int*                  nvars,
+   int*                  nafterdualvars
+   );
+
+/* replace the node stored in the reopttree at ID id by its child nodes */
+EXTERN
+SCIP_RETCODE SCIPshrinkReoptnode(
+   SCIP*                 scip,
+   int                   id
+   );
+
+/* delete a node by reoptimization */
+EXTERN
+SCIP_RETCODE SCIPdeleteReoptnode(
+   SCIP*                 scip,
+   int                   id
+   );
+
+/* store a global constraint */
+EXTERN
+SCIP_RETCODE SCIPaddReoptGlbCons(
+   SCIP*                 scip,
+   LOGICORDATA*          consdata
+   );
+
+/* add stored constraints globally to the problem */
+EXTERN
+SCIP_RETCODE SCIPapplyReoptGlbConss(
+   SCIP*                 scip
+   );
+
+/* calls a method of reopt that calculates a local similarity and
+ * returns if the subproblem should be solved from scratch */
+EXTERN
+SCIP_RETCODE SCIPcheckLocalRestart(
+   SCIP*                 scip,
+   SCIP_NODE*            node,
+   SCIP_Bool*            localrestart
+   );
+
+/* reoptimize a given node */
+EXTERN
+SCIP_RETCODE SCIPapplyReopt(
+   SCIP*                 scip,
+   SCIP_NODE*            node_fix,
+   SCIP_NODE*            node_cons,
+   int                   id
+   );
+
+/** returns if the given node contains bound changes based on dual information */
+EXTERN
+SCIP_Bool SCIPnodeHasDualBndchgs(
+   SCIP*                 scip,
+   SCIP_NODE*            node
+   );
+
+/* returns the reopttype of a stored node */
+EXTERN
+SCIP_REOPTTYPE SCIPreoptGetNodeType(
+   SCIP*                 scip,
+   int                   id
+   );
+
+/* remove the stored information about bound changes
+ * based in dual information */
+EXTERN
+SCIP_RETCODE SCIPnodeReoptResetDualcons(
+   SCIP*                 scip,
+   SCIP_NODE*            node
+   );
+
+/* create a dummy node in the reopttree. the dummy node will be a child of the root node and */
+EXTERN
+SCIP_RETCODE SCIPsplitReoptRoot(
+   SCIP*                 scip
+   );
+
+/* returns a constraint which splits the current node into to disjoint parts */
+EXTERN
+SCIP_RETCODE SCIPnodeGetSplitCons(
+   SCIP*                 scip,
+   int                   id,
+   LOGICORDATA*          consdata
+   );
+
+/* returns if a node to be split because some bound changes were based
+ * on dual information */
+EXTERN
+SCIP_Bool SCIPnodeSplit(
+   SCIP*                 scip,
+   SCIP_NODE*            node
+   );
+
+/* returns if a node should be reoptimized */
+EXTERN
+SCIP_Bool SCIPreoptimizeNode(
+   SCIP*                 scip,
+   SCIP_NODE*            node
+   );
+
+/** return the similarity between two objective functions */
+EXTERN
+SCIP_Real SCIPgetReoptSimilarity(
+   SCIP*                 scip,
+   int                   run1,
+   int                   run2
+   );
+
+/* check the changes of teh variable coefficient in the objective function */
+EXTERN
+void SCIPgetVarCoefChg(
+   SCIP*                 scip,
+   int                   varidx,
+   SCIP_Bool*            negated,
+   SCIP_Bool*            entering,
+   SCIP_Bool*            leaving
+   );
+
+/*
  * statistic methods
  */
 
@@ -16678,6 +17065,29 @@ void SCIPsetFocusnodeLP(
  */
 EXTERN
 int SCIPgetNRuns(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of reoptimization runs performed, including the current run
+ *
+ *  @return the number of reoptimization runs performed, including the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+int SCIPgetNReoptRuns(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18308,120 +18718,6 @@ SCIP_RETCODE SCIPstartSolvingTime(
  */
 EXTERN
 SCIP_RETCODE SCIPstopSolvingTime(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** starts the current initialization time
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPstartInitTime(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** stops the current initialization time in seconds
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPstopInitTime(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** starts the current update time
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPstartUpdatesoluTime(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** stops the current update time in seconds
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPstopUpdatesoluTime(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** starts the current saving time
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPstartSaveTime(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** stops the current saving time in seconds
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPstopSaveTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

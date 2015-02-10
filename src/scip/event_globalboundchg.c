@@ -19,7 +19,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#include <string.h>
 
 #include "scip/branch_pseudo.h"
 #include "scip/event_globalboundchg.h"
@@ -163,7 +163,6 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalboundchg)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_NODE*          eventnode;
-   SCIP_BOUNDTYPE      boundtype;
    int                 oldbound;
    int                 newbound;
 
@@ -181,7 +180,6 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalboundchg)
    eventnode = SCIPgetCurrentNode(scip);
    oldbound = SCIPeventGetOldbound(event);
    newbound = SCIPeventGetNewbound(event);
-   boundtype = (SCIPisFeasGE(scip, oldbound, newbound) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
 
    assert( eventnode != NULL );
 
@@ -193,7 +191,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalboundchg)
    SCIPdebugMessage(" -> depth: %d\n", SCIPnodeGetDepth(eventnode));
    SCIPdebugMessage(" -> change bound for <%s>: %g -> %g\n", SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
-   SCIP_CALL(SCIPbranchrulePseudoAddPseudoVar(scip, eventnode, SCIPeventGetVar(event), boundtype, newbound));
+   SCIP_CALL( SCIPaddDualBndchg(scip, eventnode, SCIPeventGetVar(event), newbound, oldbound) );
 
    return SCIP_OKAY;
 }

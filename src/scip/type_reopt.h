@@ -27,12 +27,18 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_Reopt SCIP_REOPT;           /**< primal data */
+typedef struct SCIP_Reopt SCIP_REOPT;             /**< reopt data */
 
-typedef struct SCIP_SolTree SCIP_SOLTREE;       /**< tree to check solutions */
+typedef struct SCIP_SolTree SCIP_SOLTREE;         /**< tree to check solutions */
 
-typedef struct SCIP_SolNode SCIP_SOLNODE;       /**< nodes of SCIP_SOLTREE */
+typedef struct SCIP_SolNode SCIP_SOLNODE;         /**< nodes of SCIP_SOLTREE */
 
+typedef struct SCIP_ReoptTree SCIP_REOPTTREE;     /**< data structure to store the search tree */
+
+typedef struct SCIP_ReoptNode SCIP_REOPTNODE;     /**< nodes of SCIP_REOPTTREE */
+
+typedef struct LogicOrData LOGICORDATA;           /**< data for constraints to handle dual information \
+                                                    *  within (mixed) binary programs */
 /* type of nodes during reoptimization */
 enum SCIP_ReoptType
 {
@@ -47,6 +53,14 @@ enum SCIP_ReoptType
    SCIP_REOPTTYPE_FEASIBLE    = 8
 };
 typedef enum SCIP_ReoptType SCIP_REOPTTYPE;     /**< type nodes during reoptimization */
+
+enum Reopt_ConsType
+{
+   REOPT_CONSTYPE_SEPASOLUTION = 0,
+   REOPT_CONSTYPE_INFSUBTREE   = 1,
+   REOPT_CONSTYPE_STRBRANCHED  = 2
+};
+typedef enum Reopt_ConsType REOPT_CONSTYPE;
 
 #ifdef __cplusplus
 }

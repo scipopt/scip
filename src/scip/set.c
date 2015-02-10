@@ -42,6 +42,7 @@
 #include "scip/disp.h"
 #include "scip/dialog.h"
 #include "scip/heur.h"
+#include "scip/compress.h"
 #include "scip/nodesel.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
@@ -71,6 +72,11 @@
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
 #define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
+
+/* Tree Compression */
+
+#define SCIP_DEFAULT_COMPR_ENABLE         FALSE /**< should automatic tree compression after presolving be enabled? */
+#define SCIP_DEFAULT_COMPR_TIME              60 /**< maximum time to run */
 
 /* Conflict Analysis */
 
@@ -290,13 +296,17 @@
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
-#define SCIP_DEFAULT_REOPT_MINAVGHAMDIST      0 /**< minimal average Hamming-Distance between a solution and the solution pool */
-#define SCIP_DEFAULT_REOPT_OBJSIMSOL        0.0 /**< reuse stored solutions only if the similarity of the new and the old objective
+#define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 #define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     1.0 /**< similarity of two sequential objective function to disable solving the root LP. */
 #define SCIP_DEFAULT_REOPT_DELAY           -1.0 /**< start reoptimzing the search if the new objective function has similarity of
                                                      at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
+#define SCIP_DEFAULT_REOPT_SHRINKTRANSIT   TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
+#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT FALSE/**< try to fix variables before reoptimizing by probing like strong branching */
+#define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
+#define SCIP_DEFAULT_REOPT_DYNLOCALDELAY    FALSE/**< increase the local delay by 0.5% if no subproblem was restarted. */
+#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
 
 /* Propagating */
 
@@ -502,6 +512,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copycompressions,   /**< should the compressions be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
@@ -627,6 +638,14 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all tree compressions plugins */
+   if( copycompressions && sourceset->comprs != NULL )
+   {
+      for( p = sourceset->ncomprs - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPcomprCopyInclude(sourceset->comprs[p], targetset) );
+      }
+   }
 
    /* copy all event handler plugins */
    if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
@@ -775,6 +794,11 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->heurssize = 0;
    (*set)->heurssorted = FALSE;
    (*set)->heursnamesorted = FALSE;
+   (*set)->comprs = NULL;
+   (*set)->ncomprs = 0;
+   (*set)->comprssize = 0;
+   (*set)->comprssorted = FALSE;
+   (*set)->comprsnamesorted = FALSE;
    (*set)->eventhdlrs = NULL;
    (*set)->neventhdlrs = 0;
    (*set)->eventhdlrssize = 0;
@@ -859,6 +883,18 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/roundsbsol",
          "should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE)",
          &(*set)->branch_roundsbsol, TRUE, SCIP_DEFAULT_BRANCH_ROUNDSBSOL,
+         NULL, NULL) );
+
+   /* tree compression parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "compression/enable",
+         "should automatic tree compression after the presolving be enabled?",
+         &(*set)->compr_enable, TRUE, SCIP_DEFAULT_COMPR_ENABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "compression/time",
+         "maximal time in seconds to run",
+         &(*set)->compr_time, TRUE, SCIP_DEFAULT_COMPR_TIME, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* conflict analysis parameters */
@@ -1662,19 +1698,14 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_savesols, TRUE, SCIP_DEFAULT_REOPT_SAVESOLS, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "reoptimization/minavghamdist",
-         "minimal average Hamming-Distance between a solution and the solution.",
-         &(*set)->reopt_minavghamdist, TRUE, SCIP_DEFAULT_REOPT_MINAVGHAMDIST, 0, 1,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimrootLP",
          "similarity of two sequential objective function to disable solving the root LP.",
-         &(*set)->reopt_objsimrootLP, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, 0, 1,
+         &(*set)->reopt_objsimrootLP, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimsol",
          "similarity of two objective function to reuse stored solutions.",
-         &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, 0, 1,
+         &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/delay",
@@ -1685,6 +1716,31 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/commontimelimit",
          "time limit over all reoptimization rounds?.",
          &(*set)->reopt_commontimelimit, TRUE, SCIP_DEFAULT_REOPT_COMMONTIMELIMIT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/shrinktransit",
+         "replace branched transit nodes by their child nodes, if the number of bound changes is not to large.",
+         &(*set)->reopt_shrinktransit, TRUE, SCIP_DEFAULT_REOPT_SHRINKTRANSIT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/strongbranchinginit",
+         "try to fix variables before reoptimizing by probing like strong branching.",
+         &(*set)->reopt_strongbranchinginit, TRUE, SCIP_DEFAULT_REOPT_STRONGBRANCHINIT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/reducetofrontier",
+         "delete stored nodes which were not reoptimized.",
+         &(*set)->reopt_reducetofrontier, TRUE, SCIP_DEFAULT_REOPT_REDUCETOFRONTIER,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/dynlocdelay",
+         "increase the local delay by 0.5% if no subproblem was restarted.",
+         &(*set)->reopt_dynamiclocaldelay, TRUE, SCIP_DEFAULT_REOPT_DYNLOCALDELAY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/forceheurrestart",
+         "force a restart if the optimal solution was found n times in a row by reoptsols.",
+         &(*set)->reopt_forceheurrestart, TRUE, SCIP_DEFAULT_REOPT_FORCEHEURRESTART, 1, INT_MAX,
          NULL, NULL) );
 
    /* separation parameters */
@@ -1942,6 +1998,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->heurs);
+
+   /* free tree compressions */
+   for( i = 0; i < (*set)->ncomprs; ++i )
+   {
+      SCIP_CALL( SCIPcomprFree(&(*set)->comprs[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->comprs);
 
    /* free event handlers */
    for( i = 0; i < (*set)->neventhdlrs; ++i )
@@ -3431,6 +3494,80 @@ void SCIPsetSortHeursName(
       SCIPsortPtr((void**)set->heurs, SCIPheurCompName, set->nheurs);
       set->heurssorted = FALSE;
       set->heursnamesorted = TRUE;
+   }
+}
+
+/** inserts tree compression in tree compression list */
+SCIP_RETCODE SCIPsetIncludeCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_COMPR*           compr               /**< tree compression */
+   )
+{
+   assert(set != NULL);
+   assert(compr != NULL);
+   assert(!SCIPcomprIsInitialized(compr));
+
+   if( set->ncomprs >= set->comprssize )
+   {
+      set->comprssize = SCIPsetCalcMemGrowSize(set, set->ncomprs+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->comprs, set->comprssize) );
+   }
+   assert(set->ncomprs < set->comprssize);
+
+   set->comprs[set->ncomprs] = compr;
+   set->ncomprs++;
+   set->comprssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the tree compression of the given name, or NULL if not existing */
+SCIP_COMPR* SCIPsetFindCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of tree compression */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ncomprs; ++i )
+   {
+      if( strcmp(SCIPcomprGetName(set->comprs[i]), name) == 0 )
+         return set->comprs[i];
+   }
+
+   return NULL;
+}
+
+/** sorts compressions by priorities */
+void SCIPsetSortComprs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->comprssorted )
+   {
+      SCIPsortPtr((void**)set->comprs, SCIPcomprComp, set->ncomprs);
+      set->comprssorted = TRUE;
+      set->comprsnamesorted = FALSE;
+   }
+}
+
+/** sorts heuristics by names */
+void SCIPsetSortComprsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->comprsnamesorted )
+   {
+      SCIPsortPtr((void**)set->comprs, SCIPcomprCompName, set->ncomprs);
+      set->comprssorted = FALSE;
+      set->comprsnamesorted = TRUE;
    }
 }
 

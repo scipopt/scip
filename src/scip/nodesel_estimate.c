@@ -302,11 +302,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
          SCIP_NODETYPE nodetype1;
          SCIP_NODETYPE nodetype2;
 
-//         if( SCIPnodeGetReopttype(node1) == SCIP_REOPTTYPE_FEASIBLE && SCIPnodeGetReopttype(node2) < SCIP_REOPTTYPE_FEASIBLE )
-//            return -1;
-//         else if( SCIPnodeGetReopttype(node1) < SCIP_REOPTTYPE_FEASIBLE && SCIPnodeGetReopttype(node2) == SCIP_REOPTTYPE_FEASIBLE )
-//            return +1;
-
          nodetype1 = SCIPnodeGetType(node1);
          nodetype2 = SCIPnodeGetType(node2);
          if( nodetype1 == SCIP_NODETYPE_CHILD && nodetype2 != SCIP_NODETYPE_CHILD )
