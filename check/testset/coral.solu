@@ -57,7 +57,7 @@
 =best= neos-1324574                      8
 =best= neos-1330346                      8
 =opt= neos-1330635                25.8781
-=best= neos-1337307                -202319
+=opt= neos-1337307                -202319
 =opt= neos-1337489                    -77
 =best= neos-1346382                   -176
 =unkn= neos-1354092      
@@ -344,6 +344,6 @@
 =best= seymour.disj-10                287
 =best= sp97ic                    404237985
 =best= sp98ar                    543622634
-=best= sp98ic                    450923675
-=opt= sp98ir                    219676790
+=opt= sp98ic                  449144758.4
+=opt= sp98ir                  219676790.4
 =opt= Test3                    2673520.21
