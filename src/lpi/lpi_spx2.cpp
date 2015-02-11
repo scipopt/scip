@@ -466,13 +466,13 @@ public:
 
    SPxSolver::Status doSolve(bool printwarning = true)
    {
-      int verbosity;
+      SPxOut::Verbosity verbosity;
 
       SPxSolver::Status spxStatus;
 
       /* store and set verbosity */
-      verbosity = Param::verbose();
-      Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+      verbosity = spxout.getVerbosity();
+      spxout.setVerbosity((SPxOut::Verbosity)(getLpInfo() ? SOPLEX_VERBLEVEL : 0));
 
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
@@ -602,7 +602,7 @@ public:
 #endif
 
       /* restore verbosity */
-      Param::setVerbose(verbosity);
+      spxout.setVerbosity(verbosity);
 
       return spxStatus;
    }
@@ -986,10 +986,10 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    {
-      int verbosity = Param::verbose();
-      Param::setVerbose((*lpi)->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+      SPxOut::Verbosity verbosity = (*lpi)->spx->spxout.getVerbosity();
+      (*lpi)->spx->spxout.setVerbosity((SPxOut::Verbosity)((*lpi)->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0));
       (*lpi)->spx->printVersion();
-      Param::setVerbose(verbosity);
+      (*lpi)->spx->spxout.setVerbosity(verbosity);
    }
 
    return SCIP_OKAY;
@@ -2045,10 +2045,10 @@ SCIP_RETCODE spxSolve(
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
 
-   int verbosity;
+   SPxOut::Verbosity verbosity;
    /* store and set verbosity */
-   verbosity = Param::verbose();
-   Param::setVerbose(lpi->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+   verbosity = lpi->spx->spxout.getVerbosity();
+   lpi->spx->spxout.setVerbosity((SPxOut::Verbosity)(lpi->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0));
 
    SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows\n", lpi->spx->numColsReal(), lpi->spx->numRowsReal());
 
@@ -2084,7 +2084,7 @@ SCIP_RETCODE spxSolve(
    lpi->solved = TRUE;
 
    /* restore verbosity */
-   Param::setVerbose(verbosity);
+   lpi->spx->spxout.setVerbosity(verbosity);
 
    switch( status )
    {
@@ -2191,11 +2191,11 @@ SCIP_RETCODE lpiStrongbranch(
    bool fromparentbasis;
    bool error;
    int oldItlim;
-   int verbosity;
+   SPxOut::Verbosity verbosity;
 
    /* store and set verbosity */
-   verbosity = Param::verbose();
-   Param::setVerbose(lpi->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+   verbosity = lpi->spx->spxout.getVerbosity();
+   lpi->spx->spxout.setVerbosity((SPxOut::Verbosity)(lpi->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0));
 
    SCIPdebugMessage("calling SCIPlpiStrongbranch() on variable %d (%d iterations)\n", col, itlim);
 
@@ -2387,7 +2387,7 @@ SCIP_RETCODE lpiStrongbranch(
    (void) spx->setIntParam(SoPlex::ITERLIMIT, oldItlim);
 
    /* restore verbosity */
-   Param::setVerbose(verbosity);
+   lpi->spx->spxout.setVerbosity(verbosity);
 
    if( error )
    {

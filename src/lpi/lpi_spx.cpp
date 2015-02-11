@@ -221,6 +221,10 @@ class SPxSCIP : public SPxSolver
    NameSet*              m_rownames;         /**< row names */
    NameSet*              m_colnames;         /**< column names */
 
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+   SPxOut                m_spxout;
+#endif
+
 #ifdef WITH_LPSCHECK
    int                   m_checknum;
    bool                  m_doublecheck;
@@ -252,6 +256,9 @@ public:
         m_colnames(0),
         m_messagehdlr(messagehdlr)
    {
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+      setOutstream(m_spxout);
+#endif
       m_sense = sense();
       setSense(SPxLP::MINIMIZE);
       setSolver(&m_slu); /*lint !e1506*/
@@ -676,11 +683,16 @@ public:
 
    void doSolve(bool printwarning = true)
    {
-      int verbosity;
-
       /* store and set verbosity */
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+      SPxOut::Verbosity verbosity;
+      verbosity = m_spxout.getVerbosity();
+      m_spxout.setVerbosity(getLpInfo() ? (SPxOut::Verbosity) SOPLEX_VERBLEVEL : (SPxOut::Verbosity) 0);
+#else
+      int verbosity;
       verbosity = Param::verbose();
       Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+#endif
 
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
@@ -828,13 +840,17 @@ public:
 #endif
 
       /* restore verbosity */
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+      m_spxout.setVerbosity(verbosity);
+#else
       Param::setVerbose(verbosity);
+#endif
+
    }
 
    virtual Status solve()
    {
       assert(m_sense == sense());
-
       SPxEquiliSC* scaler = NULL;
       SPxMainSM* simplifier = NULL;
       SPxLP origlp;
@@ -864,6 +880,9 @@ public:
          spx_alloc(scaler, 1);
          scaler = new (scaler) SPxEquiliSC();
          assert(scaler != NULL);
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+         scaler->setOutstream(m_spxout);
+#endif
       }
 
       if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getPresolving() && nCols() > 0 && nRows() > 0 )
@@ -887,11 +906,16 @@ public:
 
       if( simplifier != NULL )
       {
-         int verbosity;
-
          /* store and set verbosity */
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+         SPxOut::Verbosity verbosity;
+         verbosity = m_spxout.getVerbosity();
+         m_spxout.setVerbosity(getLpInfo() ? (SPxOut::Verbosity) SOPLEX_VERBLEVEL : (SPxOut::Verbosity) 0);
+#else
+         int verbosity;
          verbosity = Param::verbose();
          Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+#endif
          SCIPdebugMessage("simplifying LP\n");
 #ifdef WITH_BOUNDFLIPPING
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol(), true);
@@ -918,7 +942,11 @@ public:
             goto SOLVEAGAIN;
          }
          /* reset verbosity */
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 201)
+         m_spxout.setVerbosity(verbosity);
+#else
          Param::setVerbose(verbosity);
+#endif
       }
 
       /* solve */
