@@ -7,19 +7,14 @@ $(LIBOBJDIR)/lpi/lpi_spx.o: src/lpi/lpi_spx.cpp  \
     \
     \
     \
-   \
-   \
-    \
-    \
-    \
-    \
-    \
-    \
     \
     \
     \
    \
+    \
+    \
    \
+    \
    \
    \
   src/scip/pub_message.h src/scip/def.h \

@@ -141,8 +141,6 @@ SCIP_RETCODE SCIPcomprCreate(
    SCIP_CALL( SCIPclockCreate(&(*compr)->comprclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*compr)->ncalls = 0;
    (*compr)->ncompressed = 0;
-   (*compr)->bestrate = 0.0;
-   (*compr)->avgrate = 0.0;
    (*compr)->rate = 0.0;
    (*compr)->initialized = FALSE;
    (*compr)->nnodes = 0;
@@ -157,11 +155,11 @@ SCIP_RETCODE SCIPcomprCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "compression/%s/mindepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "minimal depth for calling tree compression <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*compr)->mindepth, FALSE, mindepth, -1, INT_MAX, NULL, NULL) );
+                  &(*compr)->mindepth, FALSE, mindepth, 0, INT_MAX, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "compression/%s/minnnodes", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "minimal number of nodes for calling tree compression <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*compr)->minnnodes, FALSE, minnnodes, -1, INT_MAX, NULL, NULL) );
+                  &(*compr)->minnnodes, FALSE, minnnodes, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -214,8 +212,6 @@ SCIP_RETCODE SCIPcomprInit(
 
       compr->ncalls = 0;
       compr->ncompressed = 0;
-      compr->bestrate = 0.0;
-      compr->bestrate = 0.0;
    }
 
    if( compr->comprinit != NULL )
@@ -588,26 +584,6 @@ SCIP_Real SCIPcomprGetLOI(
    assert(compr != NULL);
 
    return compr->loi;
-}
-
-/** gets the best compression rate found by this compression */
-SCIP_Longint SCIPcomprGetBestRate(
-   SCIP_COMPR*          compr               /**< tree compression */
-   )
-{
-   assert(compr != NULL);
-
-   return compr->bestrate;
-}
-
-/** gets the average compression rate found by this compression */
-SCIP_Longint SCIPcomprGetAvgRate(
-   SCIP_COMPR*          compr               /**< tree compression */
-   )
-{
-   assert(compr != NULL);
-
-   return compr->ncompressed == 0 ? 0 : compr->avgrate/compr->ncompressed;
 }
 
 /** is tree compression initialized? */

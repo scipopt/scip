@@ -4036,6 +4036,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPheurInit(set->heurs[i], set) );
    }
 
+   /* tree compression */
+   for( i = 0; i < set->ncomprs; ++i )
+   {
+      SCIP_CALL( SCIPcomprInit(set->comprs[i], set) );
+   }
+
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
@@ -4122,6 +4128,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nheurs; ++i )
    {
       SCIP_CALL( SCIPheurExit(set->heurs[i], set) );
+   }
+
+   /* tree compression */
+   for( i = 0; i < set->ncomprs; ++i )
+   {
+      SCIP_CALL( SCIPcomprExit(set->comprs[i], set) );
    }
 
    /* event handlers */
@@ -4269,6 +4281,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPheurInitsol(set->heurs[i], set) );
    }
 
+   /* tree compression */
+   for( i = 0; i < set->ncomprs; ++i )
+   {
+      SCIP_CALL( SCIPcomprInitsol(set->comprs[i], set) );
+   }
+
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
@@ -4352,6 +4370,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nheurs; ++i )
    {
       SCIP_CALL( SCIPheurExitsol(set->heurs[i], set) );
+   }
+
+   /* tree compression */
+   for( i = 0; i < set->ncomprs; ++i )
+   {
+      SCIP_CALL( SCIPcomprExitsol(set->comprs[i], set) );
    }
 
    /* event handlers */

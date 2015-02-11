@@ -71,6 +71,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
 
+/** dialog execution method for the display compression command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCompression);
+
 /** dialog execution method for the display conflict command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict);

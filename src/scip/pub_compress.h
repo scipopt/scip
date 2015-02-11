@@ -127,18 +127,6 @@ SCIP_Real SCIPcomprGetLOI(
    SCIP_COMPR*           compr
    );
 
-/** gets the average rate of all compressions found by this compression */
-EXTERN
-SCIP_Longint SCIPcomprGetBestRate(
-   SCIP_COMPR*           compr               /**< tree compression */
-   );
-
-/** gets the average compression rate found by this compression */
-EXTERN
-SCIP_Longint SCIPcomprGetAvgRate(
-   SCIP_COMPR*          compr               /**< tree compression */
-   );
-
 /** is tree compression initialized? */
 EXTERN
 SCIP_Bool SCIPcomprIsInitialized(

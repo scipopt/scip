@@ -38,6 +38,7 @@
 #include "scip/type_disp.h"
 #include "scip/type_dialog.h"
 #include "scip/type_heur.h"
+#include "scip/type_compress.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"

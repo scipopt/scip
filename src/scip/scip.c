@@ -14451,11 +14451,16 @@ int SCIPgetNReoptNodeIDs(
 )
 {
    assert(scip != NULL);
-   assert(node != NULL);
 
-   if( SCIPnodeGetReoptID(node) == -1 )
+   /* the given node is root node */
+   if( node == NULL )
+      return SCIPreoptGetNNodes(scip->reopt);
+
+   /* the given node was not created by reoptimization */
+   else if( SCIPnodeGetReoptID(node) == -1 )
       return 0;
 
+   /* the given node is an inner reoptimized node */
    return SCIPreoptNChilds(scip->reopt, node);
 
 }
@@ -37756,7 +37761,7 @@ void printCompressionStatistics(
 
    assert(scip != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Tree Compressions  :   ExecTime  SetupTime      Calls      Found  Avg. Rate\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Tree Compressions  :   ExecTime  SetupTime      Calls      Found  Avg. Loss\n");
 
    /* sort compressions w.r.t. their names */
    SCIPsetSortComprsName(scip->set);
@@ -37769,7 +37774,7 @@ void printCompressionStatistics(
          SCIPcomprGetSetupTime(scip->set->comprs[i]),
          SCIPcomprGetNCalls(scip->set->comprs[i]),
          SCIPcomprGetNCompressionFound(scip->set->comprs[i]),
-         SCIPcomprGetAvgRate(scip->set->comprs[i]));
+         SCIPcomprGetNCompressionFound(scip->set->comprs[i]) > 0 ? SCIPcomprGetLOI(scip->set->comprs[i])/SCIPcomprGetNCompressionFound(scip->set->comprs[i]) : 0);
    }
 }
 

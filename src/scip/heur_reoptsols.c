@@ -25,7 +25,6 @@
 
 #include "scip/heur_reoptsols.h"
 #include "scip/reopt.h"
-#include "scip/scip.h"
 
 
 #define HEUR_NAME             "reoptsols"

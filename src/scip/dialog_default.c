@@ -1290,6 +1290,49 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display compression command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCompression)
+{  /*lint --e{715}*/
+   SCIP_COMPR** comprs;
+   SCIP_COMPR** sorted;
+   int ncomprs;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   comprs = SCIPgetComprs(scip);
+   ncomprs = SCIPgetNCompr(scip);
+
+   /* copy compression array into temporary memory for sorting */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, comprs, ncomprs) );
+
+   /* sort the compression t */
+   SCIPsortPtr((void**)sorted, SCIPcomprComp, ncomprs);
+
+   /* display sorted list of branching rules */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " compression method       priority mindepth minnodes  description\n");
+   SCIPdialogMessage(scip, NULL, " ------------------       -------- -------- --------  -----------\n");
+   for( i = 0; i < ncomprs; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-24s ", SCIPcomprGetName(sorted[i]));
+      if( strlen(SCIPcomprGetName(sorted[i])) > 24 )
+         SCIPdialogMessage(scip, NULL, "\n %24s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d %8d %8d  ", SCIPcomprGetPriority(sorted[i]),
+         SCIPcomprGetMindepth(sorted[i]), SCIPcomprGetMinnnodes(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPcomprGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &sorted);
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display transproblem command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem)
 {  /*lint --e{715}*/
@@ -3122,6 +3165,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayBranching, NULL, NULL,
             "branching", "display branching rules", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display compressions */
+   if( !SCIPdialogHasEntry(submenu, "compression") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayCompression, NULL, NULL,
+            "compression", "display compression techniques", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

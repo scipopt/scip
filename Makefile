@@ -297,9 +297,11 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
+			scip/branch_nodereopt.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
+			scip/compr_weakcompr.o \
 			scip/cons_abspower.o \
 			scip/cons_and.o \
 			scip/cons_bivariate.o \

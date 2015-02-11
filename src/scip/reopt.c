@@ -17,7 +17,7 @@
  * @brief  data structures and methods for collecting reoptimization information
  * @author Jakob Witzig
  */
-
+#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <assert.h>
 #include <string.h>
@@ -1900,6 +1900,7 @@ SCIP_RETCODE addNode(
             if( reopt->reducetofrontier )
             {
                SCIP_CALL( deleteChildrenBelow(reopt->reopttree, SCIPblkmem(scip), nodeID, FALSE, FALSE) );
+               SCIPreoptResetDualcons(reopt, node, SCIPblkmem(scip));
             }
             /* dive through all children and change the reopttype to PRUNED */
             else
@@ -1914,6 +1915,7 @@ SCIP_RETCODE addNode(
             if( reopt->reducetofrontier )
             {
                SCIP_CALL( deleteChildrenBelow(reopt->reopttree, SCIPblkmem(scip), nodeID, FALSE, FALSE) );
+               SCIPreoptResetDualcons(reopt, node, SCIPblkmem(scip));
             }
             /* dive through all children and change the reopttype to LEAF */
             else
@@ -1978,6 +1980,7 @@ SCIP_RETCODE addNode(
                if( reopt->reducetofrontier )
                {
                   SCIP_CALL( deleteChildrenBelow(reopt->reopttree, SCIPblkmem(scip), 0, FALSE, FALSE) );
+                  SCIPreoptResetDualcons(reopt, node, SCIPblkmem(scip));
                }
                /* dive through all children and change the reopttype to LEAF */
                else
@@ -1985,6 +1988,8 @@ SCIP_RETCODE addNode(
                   SCIP_CALL( changeReopttypeOfSubtree(reopt->reopttree, 0, SCIP_REOPTTYPE_PRUNED) );
                }
             }
+            else
+               SCIPreoptResetDualcons(reopt, node, SCIPblkmem(scip));
 
             SCIPdebugMessage("update node %d at ID %u:\n", 1, 0);
             SCIPdebugMessage(" -> nvars: 0, ncons: 0, parentID: -, reopttype: %d\n", reopttype);
@@ -2003,6 +2008,7 @@ SCIP_RETCODE addNode(
                if( reopt->reducetofrontier )
                {
                   SCIP_CALL( deleteChildrenBelow(reopt->reopttree, SCIPblkmem(scip), 0, FALSE, FALSE) );
+                  SCIPreoptResetDualcons(reopt, node, SCIPblkmem(scip));
                }
                /* dive through all children and change the reopttype to LEAF */
                else
@@ -2010,6 +2016,8 @@ SCIP_RETCODE addNode(
                   SCIP_CALL( changeReopttypeOfSubtree(reopt->reopttree, 0, SCIP_REOPTTYPE_PRUNED) );
                }
             }
+            else
+               SCIPreoptResetDualcons(reopt, node, SCIPblkmem(scip));
 
             SCIPdebugMessage("update node %d at ID %u:\n", 1, 0);
             SCIPdebugMessage(" -> nvars: 0, ncons: 0, parentID: -, reopttype: %d\n", reopttype);
@@ -4403,6 +4411,8 @@ SCIP_RETCODE SCIPreoptAddNode(
    assert(reopt != NULL);
    assert(node != NULL);
    assert(blkmem != NULL);
+
+   printf("node: %llu dual bound %.g reopttype %d\n", SCIPnodeGetNumber(node), SCIPnodeGetLowerbound(node), reopttype);
 
    SCIP_CALL( addNode(scip, reopt, node, reopttype, saveafterduals) );
 

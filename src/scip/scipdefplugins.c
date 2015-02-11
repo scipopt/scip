@@ -98,9 +98,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+   SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeEventHdlrFocusroot(scip) );
    SCIP_CALL( SCIPincludeEventHdlrGlobalboundchg(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
@@ -148,7 +150,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
-   SCIP_CALL( SCIPincludePropRedcost(scip) );   
+   SCIP_CALL( SCIPincludePropRedcost(scip) );
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );

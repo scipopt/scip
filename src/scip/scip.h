@@ -75,6 +75,7 @@
 #include "scip/pub_event.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
+#include "scip/pub_compress.h"
 #include "scip/pub_history.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_lp.h"

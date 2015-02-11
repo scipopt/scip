@@ -37,8 +37,6 @@ struct SCIP_Compr
 {
    SCIP_Longint          ncalls;             /**< number of times, this compression was called */
    SCIP_Longint          ncompressed;        /**< number of compressions found so far by this method */
-   SCIP_Real             bestrate;           /**< best compression rate found by this method */
-   SCIP_Real             avgrate;            /**< average compression rate found by this method */
    SCIP_Real             rate;               /**< rate of the last compression */
    SCIP_Real             loi;                /**< loss of information of the last compression */
    char*                 name;               /**< name of tree compression */
