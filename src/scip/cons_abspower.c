@@ -3447,7 +3447,10 @@ SCIP_RETCODE generateLinearizationCut(
 
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*exponent*tmp) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
-   SCIP_CALL( SCIPchgRowRhs(scip, *row, rhs + ((exponent-1)*refpoint-xoffset)*tmp) );
+
+   /* do not change the right hand side to an infinite value (this would trigger an assertion in lp.c) */
+   if( !SCIPisInfinity(scip, rhs + ((exponent-1)*refpoint-xoffset)*tmp) )
+      SCIP_CALL( SCIPchgRowRhs(scip, *row, rhs + ((exponent-1)*refpoint-xoffset)*tmp) );
 
    return SCIP_OKAY;
 }
