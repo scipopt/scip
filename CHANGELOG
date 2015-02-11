@@ -2,6 +2,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
 - fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
 - fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
 - fixed bug in cons_quadratic which leads to wrong min/max activities
