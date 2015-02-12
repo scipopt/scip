@@ -16414,7 +16414,9 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
             && (!SCIPsetIsNegative(set, ray[c]) || SCIPsetIsInfinity(set, -lpicols[c]->lb))
             && (!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  lpicols[c]->ub));
 
-      /* check primal feasibility of (finite) primal solution */
+      /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
+       * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
+       */
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
             && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
