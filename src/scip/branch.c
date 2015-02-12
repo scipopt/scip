@@ -254,8 +254,8 @@ SCIP_RETCODE branchcandCalcLPCands(
 
          primsol = SCIPcolGetPrimsol(col);
          assert(primsol < SCIP_INVALID);
-         assert(SCIPsetIsFeasGE(set, primsol, col->lb));
-         assert(SCIPsetIsFeasLE(set, primsol, col->ub));
+         assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
+         assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
 
          var = col->var;
          assert(var != NULL);
