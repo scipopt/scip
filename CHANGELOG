@@ -2,6 +2,7 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
 - fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
 - fixed wrong comparison when executing branching rule for external branching candidates
 - fixed bug in lp.c which leads to wrong primal and dual feasibility
