@@ -10586,7 +10586,7 @@ SCIP_RETCODE SCIPvarAddCliqueToList(
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
-   /* add clique from variable's clique list */
+   /* add clique to variable's clique list */
    SCIP_CALL( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, value, clique) );
 
    return SCIP_OKAY;
