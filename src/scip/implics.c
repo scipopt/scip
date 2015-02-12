@@ -2530,8 +2530,9 @@ SCIP_RETCODE cliqueCleanup(
 
             if( onefixedvalue != clique->values[v] || clqvar != onefixedvar )
             {
-               /* there should be no fixed variable in the clique */
-               assert(SCIPvarGetLbGlobal(clqvar) < SCIPvarGetUbGlobal(clqvar) - 0.5);
+               /* the variable could have been fixed already because it appears more than once in the clique */
+               if( SCIPvarGetLbGlobal(clqvar) > SCIPvarGetUbGlobal(clqvar) - 0.5 )
+                  continue;
 
                SCIP_CALL( SCIPvarDelCliqueFromList(clqvar, blkmem, clique->values[v], clique) );
 
