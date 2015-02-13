@@ -16803,14 +16803,14 @@ SCIP_RETCODE SCIPlpUpdateAges(
    {
       lpirows[r]->nlpsaftercreation++;
       assert(lpirows[r] == lp->rows[r]);
-      if( lpirows[r]->dualsol == 0.0 )
-      {
+
+      if( lpirows[r]->dualsol == 0.0 ) /* basic rows to remove are exactly at 0.0 */
          lpirows[r]->age++;
-         lpirows[r]->activeinlpcounter++;
-         /* basic rows to remove are exactly at 0.0 */
-      }
       else
+      {
+         lpirows[r]->activeinlpcounter++;
          lpirows[r]->age = 0;
+      }
       /*debugMessage(" -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);*/
    }
 
