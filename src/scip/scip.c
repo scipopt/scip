@@ -1296,6 +1296,37 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  * SCIP copy methods
  */
 
+static
+SCIP_Bool takeCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUT*             cut,                /**< a cut */
+   char                  cutsel              /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
+   )
+{
+   SCIP_Bool takecut;
+
+   assert(cut != NULL);
+
+   if( !SCIProwIsInLP(SCIPcutGetRow(cut)) )
+      return FALSE;
+
+   takecut = FALSE;
+   switch( cutsel )
+   {
+      case 'a':
+         takecut = (SCIPcutGetAge(cut) == 0);
+         break;
+      case 'q':
+         takecut = (SCIPcutGetLPActivityQuot(cut) >= scip->set->sepa_minactivityquot);
+         break;
+      default:
+         SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
+         SCIPABORT();
+         takecut = FALSE;
+      break;
+   }
+   return takecut;
+}
 /** copy active and tight cuts from one SCIP instance to linear constraints of another SCIP instance */
 static
 SCIP_RETCODE copyCuts(
@@ -1323,32 +1354,22 @@ SCIP_RETCODE copyCuts(
    for( c = 0; c < ncuts; ++c )
    {
       SCIP_ROW* row;
-      SCIP_Longint nlpsaftercreation;
-      SCIP_Longint activeinlpcounter;
       SCIP_Bool takecut;
 
       row = SCIPcutGetRow(cuts[c]); /*lint !e613*/
       assert(!SCIProwIsLocal(row));
       assert(!SCIProwIsModifiable(row));
 
-      nlpsaftercreation = SCIPcutGetNLPsAfterCreation(cuts[c]);
-      activeinlpcounter = SCIPcutGetActiveLPCount(cuts[c]);
-
       /* in case of a restart, convert the cuts with a good LP activity quotient; in other cases, e.g., when heuristics
        * copy cuts into subscips, take only currently active ones
        */
       if( sourcescip == targetscip )
       {
-         SCIP_Real quotient;
-
          assert( SCIPisInRestart(sourcescip) );
-         quotient = nlpsaftercreation > 0 ? activeinlpcounter / (SCIP_Real)nlpsaftercreation : 0;
-         takecut = (quotient >= targetscip->set->sepa_minactivityquot);
-
-         SCIPdebugMessage("Cut <%s> has a quotient of %.2f --> %s conversion\n", SCIProwGetName(row), quotient, takecut ? "" : "No");
+         takecut = takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselrestart);
       }
       else
-         takecut = (SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row));
+         takecut = takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselsubscip);
 
       /* create a linear constraint out of the cut */
       if( takecut )

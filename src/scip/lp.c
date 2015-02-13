@@ -18424,6 +18424,8 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
 #undef SCIProwIsInLP
+#undef SCIProwGetActiveLPCount
+#undef SCIProwGetNLPsAfterCreation
 #undef SCIProwChgRank
 #undef SCIPlpGetCols
 #undef SCIPlpGetNCols
@@ -18996,6 +18998,26 @@ void SCIProwChgRank(
    assert(row != NULL);
 
    row->rank = rank;
+}
+
+/** returns the number of times that this row has been sharp in an optimal LP solution */
+SCIP_Longint SCIProwGetActiveLPCount(
+   SCIP_ROW*             row                 /**< row */
+   )
+{
+   assert(row != NULL);
+
+   return row->activeinlpcounter;
+}
+
+/** returns the number of LPs since this row has been created */
+SCIP_Longint SCIProwGetNLPsAfterCreation(
+   SCIP_ROW*             row                 /**< row */
+   )
+{
+   assert(row != NULL);
+
+   return row->nlpsaftercreation;
 }
 
 /** gets array with columns of the LP */
