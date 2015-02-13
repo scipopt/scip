@@ -20,6 +20,9 @@ features:
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 
 parameters:
+- new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
+- new parameter "separating/cutselrestart" for cut selection during restart copy process ('a'ge, activity 'q'uotient) [default is 'a']
+- new parameter "separating/cutselsubscip" for cut selection for sub SCIPs ('a'ge, activity 'q'uotient) [default is 'a']
 - new parameter "branching/relpscost/userelerrorreliability" to enable relative error based reliability
 - new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
 - new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
@@ -59,6 +62,7 @@ performance improvements:
 - new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
 
 interface:
+- new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
