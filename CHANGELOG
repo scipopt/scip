@@ -73,6 +73,7 @@ fixed bugs:
 - fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
 - fixed	bug in cons_indicator with handling local bounds
 - fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
+- fixed bug that led to an erroneous warning about the clock type
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints

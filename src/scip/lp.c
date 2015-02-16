@@ -14784,6 +14784,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIPdebugMessage(" -> LP time limit exceeded\n");
 
+         /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
+         stat->nclockskipsleft = 0;
          if( !SCIPsolveIsStopped(set, stat, FALSE) )
          {
             SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
