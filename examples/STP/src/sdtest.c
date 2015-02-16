@@ -476,7 +476,7 @@ int sd_reduction(
    */
    assert(cost != NULL);
 
-   assert(knotexaimed != NULL);
+   assert(knotexamined != NULL);
 
    redstarttime = SCIPgetTotalTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -493,14 +493,17 @@ int sd_reduction(
    }
 
    /* this is the offset used to minimise the number of knots to examine in large graphs. */
-   srand(runnum*100);
-   i = 0;
-   do
+   if( g->knots > KNOTLIMIT )
    {
-      knotoffset = rand() % KNOTFREQ;
-      i++;
-   } while( g->knots > KNOTLIMIT && knotexamined[knotoffset] >= 0 && i < 50 );
-   knotexamined[knotoffset]++;
+      srand(runnum*100);
+      i = 0;
+      do
+      {
+         knotoffset = rand() % KNOTFREQ;
+         i++;
+      } while( g->knots > KNOTLIMIT && knotexamined[knotoffset] >= 0 && i < 50 );
+      knotexamined[knotoffset]++;
+   }
 
 
    for(i = 0; i < g->knots; i++)
@@ -519,8 +522,6 @@ int sd_reduction(
 
       if( g->knots > KNOTLIMIT && i % KNOTFREQ != knotoffset )
          continue;
-
-      printf("SD-test: %d\n", i);
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
       if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
