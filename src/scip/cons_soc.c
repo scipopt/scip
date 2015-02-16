@@ -4525,7 +4525,7 @@ SCIP_RETCODE SCIPcreateConsSOC(
    }
 
    assert(vars     != NULL);
-   assert(nvars    >= 2);
+   assert(nvars    >= 1);
    assert(constant >= 0.0);
    assert(!SCIPisInfinity(scip, ABS(rhsoffset)));
    assert(!SCIPisInfinity(scip, constant));

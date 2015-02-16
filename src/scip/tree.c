@@ -2910,9 +2910,12 @@ SCIP_RETCODE treeSwitchPath(
       focusnode = focusnode->parent;
    }
 
-   /* propagate common fork again, if the reprop flag is set */
-   if( fork != NULL && fork->reprop )
+   /* fork might be cut off when applying the pending bound changes */
+   if( fork != NULL && fork->cutoff )
+      *cutoff = TRUE;
+   else if( fork != NULL && fork->reprop )
    {
+     /* propagate common fork again, if the reprop flag is set */
       assert(tree->path[forkdepth] == fork);
       assert(fork->active);
       assert(!fork->cutoff);
@@ -5115,9 +5118,10 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   /* see comment in SCIPbranchVarVal (don't need check for infty here, as SCIPsetIsLT doesn't assert this, while SCIPisLT does) */
+   /* see comment in SCIPbranchVarVal */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
       SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set) ||
+      SCIPsetIsInfinity(set, -2.1*SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, 2.1*SCIPvarGetUbLocal(var)) ||
       (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );
 
    downub = SCIP_INVALID;

@@ -404,6 +404,8 @@ BEGIN {
    if( grepresult == "" ) {
       aborted = 0;
    }
+
+   close(command)
 }
 
 /solving was interrupted/ { timeout = 1; }

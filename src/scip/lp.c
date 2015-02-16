@@ -16275,8 +16275,9 @@ SCIP_RETCODE SCIPlpGetSol(
       lpicols[c]->validredcostlp = lpcount;
       if( stillprimalfeasible )
       {
-         stillprimalfeasible = !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
-            && !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub);
+         stillprimalfeasible =
+            (SCIPsetIsInfinity(set, -lpicols[c]->lb) || !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb))
+            && (SCIPsetIsInfinity(set, lpicols[c]->ub) || !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub));
          primalbound += (lpicols[c]->primsol * lpicols[c]->obj);
       }
       if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
@@ -16313,9 +16314,11 @@ SCIP_RETCODE SCIPlpGetSol(
           * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
           * bounds, its reduced cost must be zero
           */
-         if( stilldualfeasible && SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+         if( stilldualfeasible
+            && (SCIPsetIsInfinity(set, -lpicols[c]->lb) || SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb)) )
             stilldualfeasible = !SCIPsetIsDualfeasPositive(set, lpicols[c]->redcost);
-         if( stilldualfeasible && SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+         if( stilldualfeasible
+            && (SCIPsetIsInfinity(set, lpicols[c]->ub) || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub)) )
             stilldualfeasible = !SCIPsetIsDualfeasNegative(set, lpicols[c]->redcost);
 
          SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
@@ -16351,8 +16354,9 @@ SCIP_RETCODE SCIPlpGetSol(
       lpirows[r]->validactivitylp = lpcount;
       if( stillprimalfeasible )
       {
-         stillprimalfeasible = SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
-            && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
+         stillprimalfeasible =
+            (SCIPsetIsInfinity(set,-lpirows[r]->lhs) ||SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs))
+            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs));
       }
       if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
       {
@@ -16388,9 +16392,11 @@ SCIP_RETCODE SCIPlpGetSol(
           * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
           * strictly within left-hand and right-hand side, its dual multiplier must be zero
           */
-         if( stilldualfeasible && SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs) )
+         if( stilldualfeasible &&
+               (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->lhs)) )
             stilldualfeasible = !SCIPsetIsDualfeasPositive(set, lpirows[r]->dualsol);
-         if( stilldualfeasible && SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+         if( stilldualfeasible &&
+               (SCIPsetIsInfinity(set,lpirows[r]->rhs) || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs)) )
             stilldualfeasible = !SCIPsetIsDualfeasNegative(set, lpirows[r]->dualsol);
 
          SCIPdebugMessage(" row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
@@ -16535,7 +16541,9 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
             && (!SCIPsetIsNegative(set, ray[c]) || SCIPsetIsInfinity(set, -lpicols[c]->lb))
             && (!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  lpicols[c]->ub));
 
-      /* check primal feasibility of (finite) primal solution */
+      /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
+       * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
+       */
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
             && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
@@ -16610,8 +16618,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
-            && SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
-            && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
+            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs))
+            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs));
    }
 
    /* free temporary memory */
