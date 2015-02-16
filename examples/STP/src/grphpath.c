@@ -1447,6 +1447,9 @@ void voronoi_term(
    }
 
    /* Check to make sure I don't need to free the termdist array */
+
+   for( i = g->knots - 1; i >= 0; i-- )
+      free(termdist[i]);
 }
 
 

@@ -1624,6 +1624,7 @@ int nv_reduction(
       minArc1[i] = -1;
       minArc2[i] = -1;
       path[i] = NULL;
+      termdist[i] = NULL;
    }
 
    assert(g->source[0] >= 0);
@@ -1776,10 +1777,18 @@ int nv_reduction(
    }
 #endif
 
+   for( i = g->knots - 1; i >= 0; i-- )
+   {
+      if( path[i] != NULL )
+         free(path[i]);
+   }
+
    free(terms);
    free(minArc2);
    free(minArc1);
    free(pred);
+   free(state);
+   free(heap);
    free(vregion);
    free(termdist);
    free(radius);
