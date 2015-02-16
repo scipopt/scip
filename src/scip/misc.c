@@ -6183,6 +6183,197 @@ void SCIPdigraphGetComponent(
       (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
 }
 
+/* Performs Tarjan's algorithm for a given directed graph to obtain the strongly connected components
+ * which are reachable from a given node.
+ */
+static
+void tarjan(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   v,                  /**< node to start the algorithm */
+   int*                  lowlink,            /**< array to store lowlink values */
+   int*                  dfsidx,             /**< array to store dfs indices */
+   int*                  stack,              /**< array to store a stack */
+   int*                  stacksize,          /**< pointer to store the size of the stack */
+   SCIP_Bool*            unprocessed,        /**< array to store which node is unprocessed yet */
+   SCIP_Bool*            nodeinstack,        /**< array to store which nodes are in the stack */
+   int*                  maxdfs,             /**< pointer to store index for DFS */
+   int*                  strongcomponents,   /**< array to store for each node the strongly connected
+                                              *   component to which it belongs (components are
+                                              *   numbered 0 to nstrongcomponents - 1); */
+   int*                  nstrongcomponents,   /**< pointer to store the number of computed components so far */
+   int*                  strongcompstartidx,  /**< array to store the start index of the computed components */
+   int*                  nstorednodes         /**< pointer to store the number of already stored nodes */
+   )
+{
+   int i;
+
+   assert(digraph != NULL);
+   assert(v >= 0);
+   assert(v < digraph->nnodes);
+   assert(lowlink != NULL);
+   assert(dfsidx != NULL);
+   assert(stack != NULL);
+   assert(stacksize != NULL);
+   assert(*stacksize >= 0);
+   assert(*stacksize < digraph->nnodes);
+   assert(unprocessed != NULL);
+   assert(nodeinstack != NULL);
+   assert(maxdfs != NULL);
+   assert(strongcomponents != NULL);
+   assert(nstrongcomponents != NULL);
+   assert(strongcompstartidx != NULL);
+   assert(nstorednodes != NULL);
+   assert(*nstorednodes >= 0 && *nstorednodes < digraph->nnodes);
+
+   dfsidx[v] = *maxdfs;
+   lowlink[v] = *maxdfs;
+   *maxdfs += 1;
+
+   /* add v to the stack */
+   stack[*stacksize] = v;
+   *stacksize += 1;
+   nodeinstack[v] = TRUE;
+
+   /* mark v as processed */
+   unprocessed[v] = FALSE;
+
+   for( i = 0; i < digraph->nsuccessors[v]; ++i )
+   {
+      int w;
+
+      /* edge (v,w) */
+      w = digraph->successors[v][i];
+
+      if( unprocessed[w] )
+      {
+         tarjan(digraph, w, lowlink, dfsidx, stack, stacksize, unprocessed, nodeinstack, maxdfs, strongcomponents,
+               nstrongcomponents, strongcompstartidx, nstorednodes);
+
+         assert(lowlink[v] >= 0 && lowlink[v] < digraph->nnodes);
+         assert(lowlink[w] >= 0 && lowlink[w] < digraph->nnodes);
+
+         /* update lowlink */
+         lowlink[v] = MIN(lowlink[v], lowlink[w]);
+      }
+      else if( nodeinstack[w] )
+      {
+         assert(lowlink[v] >= 0 && lowlink[v] < digraph->nnodes);
+         assert(dfsidx[w] >= 0 && dfsidx[w] < digraph->nnodes);
+
+         /* update lowlink */
+         lowlink[v] = MIN(lowlink[v], dfsidx[w]);
+      }
+   }
+
+   /* found a root of a strong component */
+   if( lowlink[v] == dfsidx[v] )
+   {
+      int w;
+
+      strongcompstartidx[*nstrongcomponents] = *nstorednodes;
+      *nstrongcomponents += 1;
+
+      do
+      {
+         assert(*stacksize > 0);
+
+         /* stack.pop() */
+         w = stack[*stacksize - 1];
+         *stacksize -= 1;
+         nodeinstack[w] = FALSE;
+
+         /* store the node in the corresponding component */
+         strongcomponents[*nstorednodes] = w;
+         *nstorednodes += 1;
+      }
+      while( v != w );
+   }
+}
+
+/** Computes all strongly connected components of an undirected connected component with Tarjan's Algorithm.
+ *  The resulting strongly connected components are sorted topologically (starting from the end of the
+ *  strongcomponents array).
+ *
+ *  @note In general a topological sort of the strongly connected components is not unique.
+ */
+void SCIPdigraphComputeDirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the undirected connected component */
+   int*                  strongcomponents,   /**< array to store the strongly connected components
+                                              *   (length >= size of the component) */
+   int*                  strongcompstartidx, /**< array to store the start indices of the strongly connected
+                                              *   components (length >= size of the component) */
+   int*                  nstrongcomponents   /**< pointer to store the number of strongly connected
+                                              *   components */
+   )
+{
+   int* lowlink;
+   int* dfsidx;
+   int* stack;
+   int stacksize;
+   SCIP_Bool* unprocessed;
+   SCIP_Bool* nodeinstack;
+   int maxdfs;
+   int nstorednodes;
+   int i;
+
+   assert(digraph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < digraph->ncomponents);
+   assert(strongcomponents != NULL);
+   assert(strongcompstartidx != NULL);
+   assert(nstrongcomponents != NULL);
+
+   BMSallocMemoryArray(&lowlink, digraph->nnodes);
+   BMSallocMemoryArray(&dfsidx, digraph->nnodes);
+   BMSallocMemoryArray(&stack, digraph->nnodes);
+   BMSallocMemoryArray(&unprocessed, digraph->nnodes);
+   BMSallocMemoryArray(&nodeinstack, digraph->nnodes);
+
+   for( i = 0; i < digraph->nnodes; ++i )
+   {
+      lowlink[i] = -1;
+      dfsidx[i] = -1;
+      stack[i] = -1;
+      unprocessed[i] = TRUE;
+      nodeinstack[i] = FALSE;
+   }
+
+   nstorednodes = 0;
+   stacksize = 0;
+   maxdfs = 0;
+   *nstrongcomponents = 0;
+
+   /* iterate over all nodes in the undirected connected component */
+   for( i = digraph->componentstarts[compidx]; i < digraph->componentstarts[compidx + 1]; ++i )
+   {
+      int v;
+
+      v = digraph->components[i];
+      assert(v >= 0 && v < digraph->nnodes);
+
+      /* call Tarjan's algorithm for unprocessed nodes */
+      if( unprocessed[v] )
+      {
+         SCIPdebugMessage("apply Tarjan's algorithm for node %d\n", v);
+         tarjan(digraph, v, lowlink, dfsidx, stack, &stacksize, unprocessed, nodeinstack, &maxdfs,
+               strongcomponents, nstrongcomponents, strongcompstartidx, &nstorednodes);
+      }
+   }
+
+   /* we should have stored as many nodes as in the undirected connected component */
+   assert(nstorednodes == digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx]);
+
+   /* to simplify the iteration over all strongly connected components */
+   strongcompstartidx[*nstrongcomponents] = nstorednodes;
+
+   BMSfreeMemoryArray(&lowlink);
+   BMSfreeMemoryArray(&dfsidx);
+   BMSfreeMemoryArray(&stack);
+   BMSfreeMemoryArray(&unprocessed);
+   BMSfreeMemoryArray(&nodeinstack);
+}
+
 /** frees the component information for the given directed graph */
 void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
