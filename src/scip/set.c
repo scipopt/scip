@@ -145,7 +145,7 @@
 /* Heuristics */
 
 #define SCIP_DEFAULT_HEUR_DIVESTARTFRAC         0.15 /**< start percentage of diving candidates that should be fixed before LP resolve */
-
+#define SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ       1    /**< LP solve frequency for diving heuristics */
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -1127,24 +1127,26 @@ SCIP_RETCODE SCIPsetCreate(
          "should statistics be collected for variable domain value pairs?",
          &(*set)->history_valuebased, FALSE, SCIP_DEFAULT_HISTORY_VALUEBASED,
          NULL, NULL) );
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "history/allowmerge",
          "should variable histories be merged from sub-SCIPs whenever possible?",
          &(*set)->history_allowmerge, FALSE, SCIP_DEFAULT_HISTORY_ALLOWMERGE,
          NULL, NULL) );
-
-#define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "history/allowtransfer",
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
+
    /* heuristic parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divestartfrac",
          "start percentage of diving candidates that should be fixed before LP resolve",
          &(*set)->heur_divestartfrac, FALSE, SCIP_DEFAULT_HEUR_DIVESTARTFRAC,  0.01, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "heuristics/divelpsolvefreq",
+         "LP solve frequency for diving heuristics (0: no LP is solved)",
+         &(*set)->heur_divelpsolvefreq, FALSE, SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ, 0, INT_MAX,
+         NULL, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -1152,7 +1154,6 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal time in seconds to run",
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
-
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",

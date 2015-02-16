@@ -30773,9 +30773,16 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       /* determine the target depth (depth where the next LP should be solved) */
       startdepth = divedepth;
+#if 0
       ncandstofix = MIN(ndivecands, maxdivedepth - divedepth);
       ncandstofix = (int)SCIPceil(scip, ncandstofix * SCIPdivesetGetTargetdepthfrac(diveset));
       ncandstofix = MAX(ncandstofix, 1);
+#endif
+      if( ndivecands <= scip->set->heur_divelpsolvefreq || scip->set->heur_divelpsolvefreq == 0 )
+         ncandstofix = ndivecands;
+      else
+         ncandstofix = scip->set->heur_divelpsolvefreq;
+
       targetdepth = divedepth + ncandstofix;
 
       SCIPdebugMessage("%s heuristic continues diving at depth %d, %d candidates left, %d candidates to fix\n",
