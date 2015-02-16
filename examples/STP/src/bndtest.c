@@ -81,6 +81,8 @@ double compute_node_lb(
       int*     radiushops,
       int      termcount,
       int      nodegrad,
+      int      source,
+      int      probtype,
       int*     hopsbound
       )
 {
@@ -100,6 +102,11 @@ double compute_node_lb(
       (*hopsbound) += radiushops[j];
    }
 
+   /* For the hop constrained problems we are not able to obtain a tighter bound given when the grad >= 3 condition */
+   if( probtype == STP_HOP_CONS )
+      return lowerbound;
+
+#if 1
    if( nodegrad >= 3 )
    {
       lowerbound += closetermsdist[2];
@@ -107,6 +114,7 @@ double compute_node_lb(
       lowerbound -= radius[termcount - 4];
       (*hopsbound) -= radiushops[termcount - 4];
    }
+#endif
 
    return lowerbound;
 }
@@ -255,7 +263,7 @@ SCIP_RETCODE bound_reduction(
 
       /* computing the lower bound for node i */
       lowerbound = compute_node_lb(radius, closetermsdist, closetermshops, closeterms, radiushops, termcount, g->grad[i],
-            &hopsbound);
+            g->source[0], g->stp_type, &hopsbound);
 
       //printf("termdist: %f, %f, radius: %f\n", closetermsdist[0], closetermsdist[1],
             //lowerbound - (closetermsdist[0] + closetermsdist[1]));

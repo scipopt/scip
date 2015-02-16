@@ -608,10 +608,10 @@ int bound_test(
 
       /* computing the lower bound for node i */
       lowerbound = compute_node_lb(radius, closetermsdist, closetermshops, closeterms, radiushops, termcount,
-            graph->grad[i], &hopsbound);
+            graph->grad[i], graph->source[0], graph->stp_type, &hopsbound);
 
       //if( i % 1000 == 0 )
-         //printf("node: %d, lowerbound: %f, grad: %d, vregion: %d\n", i, lowerbound, graph->grad[i], vregion[i]);
+      printf("node: %d, lowerbound: %f, grad: %d, vregion: %d\n", i, lowerbound, graph->grad[i], vregion[i]);
 
       if( GT(lowerbound, graph->hoplimit) )
       {
@@ -630,7 +630,7 @@ int bound_test(
 
          SCIPsortRealInt(radius, radiushops, nnodes);
 
-         //calculate_distances(graph, path, edgecost, BSP_MODE);
+         calculate_distances(graph, path, edgecost, BSP_MODE);
 
          continue;
       }
@@ -1287,6 +1287,7 @@ static double level4(
    double* random;
    int*    heap;
    int*    state;
+   int*    knotexamined;
    int     runnum = 0;
    char    sd = TRUE;
    char    bd3 = FALSE;
@@ -1319,6 +1320,7 @@ static double level4(
 
    heap  = malloc((size_t)g->knots * sizeof(int));
    state = malloc((size_t)g->knots * sizeof(int));
+   knotexamined = malloc((size_t)g->knots * sizeof(int));
    sddist = malloc((size_t)g->knots * sizeof(double));
    sdtrans = malloc((size_t)g->knots * sizeof(double));
    sdrand = malloc((size_t)g->knots * sizeof(double));
@@ -1337,7 +1339,7 @@ static double level4(
       {
          for( i = 0; i < 4; i++ ) //TODO 6
          {
-            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, runnum) > nodebound )
+            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, runnum) > nodebound )
                rerun = TRUE;
 
             runnum++;
@@ -1415,6 +1417,7 @@ static double level4(
    free(sddist);
    free(sdtrans);
    free(sdrand);
+   free(knotexamined);
    free(heap);
    free(state);
    free(cost);
@@ -1446,7 +1449,7 @@ static double levelm4(
    double*  sddist;
    double*  sdtrans;
    double*  sdrand;
-#if 0
+#if 1
    /* These are only used for the sd_reduction_dir.
     * Since the HOP constrained problems are not being solved, then this function is currently redundant.
     */
@@ -1459,6 +1462,7 @@ static double levelm4(
    double* random;
    int*    heap;
    int*    state;
+   int*    knotexamined;
    int*     outterms;
    int     runnum = 0;
    char    sd = TRUE;
@@ -1470,10 +1474,11 @@ static double levelm4(
    printf("redbound: %d \n", redbound );
    heap        = malloc((size_t)g->knots * sizeof(int));
    state       = malloc((size_t)g->knots * sizeof(int));
+   knotexamined = malloc((size_t)g->knots * sizeof(int));
    sddist      = malloc((size_t)g->knots * sizeof(double));
    sdtrans     = malloc((size_t)g->knots * sizeof(double));
    sdrand      = malloc((size_t)g->knots * sizeof(double));
-#if 0
+#if 1
    sd_indist   = malloc((size_t)g->knots * sizeof(double*));
    sd_intran   = malloc((size_t)g->knots * sizeof(double*));
    sd_outdist  = malloc((size_t)g->knots * sizeof(double*));
@@ -1483,7 +1488,10 @@ static double levelm4(
    random        = malloc((size_t)g->edges * sizeof(double));
    outterms    = malloc((size_t)g->knots * sizeof(int));
 
-#if 0
+   for( i = 0; i < g->knots; i++ )
+      knotexamined[i] = -1;
+
+#if 1
    assert(sd_indist  != NULL);
    assert(sd_intran  != NULL);
    assert(sd_outdist != NULL);
@@ -1500,12 +1508,21 @@ static double levelm4(
 
    if( g->stp_type == STP_HOP_CONS )
    {
+#if 1
       do
       {
          printf("Bound test\n");
          bound_test(scip, g, &numelim);
          printf("Num elimins: %d\n", numelim);
+
+         degree_test_dir(g, &fixed);
+
+         numelim += nv_reduction_optimal(g, &fixed, runnum);
+
+         numelim += sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
+         printf("Num elimins: %d\n", numelim);
       } while(numelim > 0);
+#endif
 
       rerun = FALSE;
    }
@@ -1535,7 +1552,7 @@ static double levelm4(
                numelim = sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
             else
 #endif
-               numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, runnum);
+               numelim = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, runnum);
             runnum++;
 
             printf("SD Reduction %d: %d\n", i, numelim);
@@ -1604,7 +1621,7 @@ static double levelm4(
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
 
-#if 0
+#if 1
    for( i = 0; i < g->knots; i++ )
    {
       free(sd_indist[i]);
@@ -1618,12 +1635,13 @@ static double levelm4(
    free(sddist);
    free(sdtrans);
    free(sdrand);
-#if 0
+#if 1
    free(sd_indist);
    free(sd_intran);
    free(sd_outdist);
    free(sd_outtran);
 #endif
+   free(knotexamined);
    free(heap);
    free(state);
    free(cost);

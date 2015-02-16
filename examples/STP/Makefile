@@ -57,6 +57,7 @@ CMAINOBJ	=	cmain.o \
 			reduce.o \
 			dirreduce.o \
 			sdtest.o \
+			bndtest.o \
 			validate.o
 CXXMAINOBJ	=
 

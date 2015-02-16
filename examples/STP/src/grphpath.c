@@ -1480,6 +1480,7 @@ void voronoi_hop(
    int count = 0;
    int nbases = 0;
    int source;
+   double edgecost;
 
    assert(g          != NULL);
    assert(path       != NULL);
@@ -1618,19 +1619,29 @@ void voronoi_hop(
 #endif
                   }
 
-                  if( GT(radius[vregion[k]], path[k].dist + cost[curr_edge]) ||
-                        (EQ(radius[vregion[k]], path[k].dist + cost[curr_edge]) &&
+                  /* For the directed case, which is the situation for the hop constrained problems, the radius is a
+                   * little difficult to calculate. In the situation where the edge (k, m) crosses a vregion boundary
+                   * and m is a terminal, the cost of the edge will be FARAWAY. This is because all terminals are leaves
+                   * in this problem type. So the radius must take into account this different cost and add it to the
+                   * distance from the vregion[k]. */
+                  if( Is_term(g->term[m]) && !LT(cost[curr_edge], FARAWAY) )
+                     edgecost = cost[Edge_anti(curr_edge)];
+                  else
+                     edgecost = cost[curr_edge];
+
+                  if( GT(radius[vregion[k]], path[k].dist + edgecost) ||
+                        (EQ(radius[vregion[k]], path[k].dist + edgecost) &&
                         GT(radiushops[vregion[k]], path[k].hops + 1)) )
                   {
-                     radius[vregion[k]] = path[k].dist + cost[curr_edge];
+                     radius[vregion[k]] = path[k].dist + edgecost;
                      radiushops[vregion[k]] = path[k].hops + 1;
                   }
 
-                  if( GT(radius[vregion[m]], path[m].dist + cost[curr_edge]) ||
-                        (EQ(radius[vregion[m]], path[m].dist + cost[curr_edge]) &&
+                  if( GT(radius[vregion[m]], path[m].dist + edgecost) ||
+                        (EQ(radius[vregion[m]], path[m].dist + edgecost) &&
                         GT(radiushops[vregion[m]], path[m].hops + 1)) )
                   {
-                     radius[vregion[m]] = path[m].dist + cost[curr_edge];
+                     radius[vregion[m]] = path[m].dist + edgecost;
                      radiushops[vregion[m]] = path[m].hops + 1;
                   }
                }

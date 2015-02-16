@@ -1988,7 +1988,7 @@ GRAPH *graph_pack(
 #endif
    assert(q->source[0] >= 0);
 
-   /*(void)printf(msg1, q->knots, q->edges, q->terms);*/
+   (void)printf(msg1, q->knots, q->edges, q->terms);
 
    return(q);
 }

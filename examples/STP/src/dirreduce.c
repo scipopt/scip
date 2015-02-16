@@ -56,6 +56,9 @@ int degree_test_dir(
 
       for(i = 0; i < g->knots; i++)
       {
+         if( i % 100 == 0 )
+            printf("Directed Degree Test - Node %d. Number of reductions: %d\n", i, count);
+
          assert(g->grad[i] >= 0);
          assert( g->grad[450]  > 1);
          if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY )
@@ -127,11 +130,14 @@ int degree_test_dir(
                }
                assert(Is_term(g->term[i]));
 
-               if (g->cost[g->outbeg[i]] != g->cost[g->inpbeg[i]])
-                  continue;
+               // this avoids the degree two test for terminals. There is a bug, so the "if 0" is stopping that test
+               // from occurring.
+               //if (g->cost[g->outbeg[i]] != g->cost[g->inpbeg[i]])
+                  //break;
 
                /* At present the degree two test for terminals does not work.
                 * Needs to be researched and updated. */
+#if 0
                if (Is_term(g->term[i1]) && Is_term(g->term[i2]))
                {
                   if (LT(g->cost[e1], g->cost[e2]))
@@ -170,6 +176,7 @@ int degree_test_dir(
 
                   break;
                }
+#endif
                done = FALSE;
             }
             /* CONSTCOND */

@@ -443,6 +443,7 @@ int sd_reduction(
    double* random,
    int*    heap,
    int*    state,
+   int*    knotexamined,
    int     runnum
    )
 {
@@ -475,6 +476,8 @@ int sd_reduction(
    */
    assert(cost != NULL);
 
+   assert(knotexaimed != NULL);
+
    redstarttime = SCIPgetTotalTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    stalltime = timelimit*0.1; /* this should be set as a parameter */
@@ -491,7 +494,13 @@ int sd_reduction(
 
    /* this is the offset used to minimise the number of knots to examine in large graphs. */
    srand(runnum*100);
-   knotoffset = rand() % KNOTFREQ;
+   i = 0;
+   do
+   {
+      knotoffset = rand() % KNOTFREQ;
+      i++;
+   } while( g->knots > KNOTLIMIT && knotexamined[knotoffset] >= 0 && i < 50 );
+   knotexamined[knotoffset]++;
 
 
    for(i = 0; i < g->knots; i++)
@@ -588,6 +597,7 @@ int sd_reduction_dir(
    int*     outterms
    )
 {
+   int*    sourceadj;
    int     outtermcount = 0;
    int     count = 0;
    int     i;
@@ -612,6 +622,8 @@ int sd_reduction_dir(
 
    assert(outterms != NULL);
 
+   sourceadj = malloc((size_t)g->knots * sizeof(int));
+
    for(i = 0; i < g->knots; i++)
    {
       assert(sd_indist[i]  != NULL);
@@ -634,6 +646,14 @@ int sd_reduction_dir(
          }
       }
       g->mark[i] = (g->grad[i] > 0);
+      sourceadj[i] = -1;
+   }
+
+   /* getting the knots that are adjacent to the source */
+   for( e = g->outbeg[g->source[0]]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      l = g->head[e];
+      sourceadj[l] = l;
    }
 
    for(i = 0; i < g->edges; i++)
@@ -660,6 +680,10 @@ int sd_reduction_dir(
       if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
 
+      /* for the hop constrained problems we only want to examine the nodes adjacent to the source. */
+      if( g->stp_type == STP_HOP_CONS && sourceadj[i] < 0 )
+         continue;
+
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = j)
       {
@@ -671,6 +695,10 @@ int sd_reduction_dir(
          j = g->oeat[e];
 
          if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && l == g->source[0] )
+            continue;
+
+         /* for the hop constrained problems we only want to examine the nodes adjacent to the source. */
+         if( g->stp_type == STP_HOP_CONS && sourceadj[l] < 0 )
             continue;
 
          specialdist = FARAWAY;
@@ -739,6 +767,8 @@ int sd_reduction_dir(
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
+
+   free(sourceadj);
 
    return(elimins);
 }
@@ -1231,9 +1261,11 @@ int nv_reduction_optimal(
    PATH**  path;
    PATH*   pathfromterm;
    PATH*   pathfromsource;
+   PATH*   pathhops;
    double* distance;
    double* radius;
    double** termdist;
+   double* hopscost;
    int*    vregion;
    int*    heap;
    int*    state;
@@ -1246,6 +1278,7 @@ int nv_reduction_optimal(
    int     e;
    double  min1;
    double  min2;
+   int     minhops;
    int     shortarc;
    int     shortarctail;
    int     elimins = 0;
@@ -1267,6 +1300,10 @@ int nv_reduction_optimal(
    assert(pathfromterm != NULL);
    assert(pathfromsource != NULL);
 
+   pathhops = malloc((size_t)g->knots * sizeof(PATH));
+
+   assert(pathhops != NULL);
+
    distance = malloc((size_t)g->knots * sizeof(double));
    radius = malloc((size_t)g->knots * sizeof(double));
    termdist = malloc((size_t)g->knots * sizeof(double*));
@@ -1274,6 +1311,10 @@ int nv_reduction_optimal(
    assert(distance != NULL);
    assert(radius != NULL);
    assert(termdist != NULL);
+
+   hopscost = malloc((size_t)g->edges * sizeof(double));
+
+   assert(hopscost != NULL);
 
    vregion = malloc((size_t)g->knots * sizeof(int));
 
@@ -1302,6 +1343,19 @@ int nv_reduction_optimal(
       minArc1[i] = -1;
       minArc2[i] = -1;
       path[i] = NULL;
+
+      for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+      {
+         if( LT(g->cost[e], FARAWAY) )
+            hopscost[e] = 1;
+         else
+            hopscost[e] = FARAWAY;
+
+         if( LT(g->cost[Edge_anti(e)], FARAWAY) )
+            hopscost[Edge_anti(e)] = 1;
+         else
+            hopscost[Edge_anti(e)] = FARAWAY;
+      }
    }
 
    assert(g->source[0] >= 0);
@@ -1311,6 +1365,9 @@ int nv_reduction_optimal(
 
    /* computing the shortest paths from the source node */
    graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+
+   /* computing the shortest hops paths from the source node */
+   graph_path_exec(g, FSP_MODE, g->source[0], hopscost, pathhops);
 
    /* computing the shortest paths from each terminal to every other node */
    //calculate_distances(g, path, g->cost, FSP_MODE);
@@ -1328,13 +1385,12 @@ int nv_reduction_optimal(
       if( g->knots > KNOTLIMIT && i % KNOTFREQ != knotoffset )
          continue;
 
-      printf("NV-test: %d\n", i);
-
       if (Is_term(g->term[i]) && g->grad[i] >= 3)
       {
 
          min1  = FARAWAY;
          min2  = FARAWAY;
+         minhops = g->hoplimit;
          shortarctail = -1;
          shortarc = -1;
          antiedgeexists = FALSE;
@@ -1349,6 +1405,9 @@ int nv_reduction_optimal(
                min1 = g->cost[e];
             }
 
+            if( LT(pathfromsource[g->tail[e]].hops, minhops) )
+               minhops = pathfromsource[g->tail[e]].hops;
+
             if( LT(g->cost[Edge_anti(e)], FARAWAY) )
                antiedgeexists = TRUE;
          }
@@ -1357,6 +1416,16 @@ int nv_reduction_optimal(
          {
             if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && shortarctail == g->source[0] )
                continue;
+
+            if( g->stp_type == STP_HOP_CONS && GT(pathfromsource[shortarctail].hops, pathhops[i].dist - 1) )
+            {
+               printf("Hop constrained potential reduction - node: %d, hops: %d, minhops: %f\n", i,
+                     pathfromsource[shortarctail].hops, pathhops[i].dist - 1);
+               continue;
+            }
+
+            printf("Hop constrained actual reduction - node: %d, hops: %d, minhops: %f\n", i,
+                  pathfromsource[shortarctail].hops, pathhops[i].dist - 1);
 
             if( antiedgeexists == TRUE )
             {
@@ -1381,7 +1450,13 @@ int nv_reduction_optimal(
                *fixed += min1;
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
                                                                                        shortarc instead of shortarctail */
-               graph_knot_contract(g, shortarctail, i);
+               graph_knot_contract(g, i, shortarctail);
+
+               if( g->stp_type == STP_HOP_CONS )
+               {
+                  for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+                     g->cost[e] = FARAWAY;
+               }
 
                elimins++;
             }
@@ -1440,9 +1515,11 @@ int nv_reduction_optimal(
    free(minArc2);
    free(minArc1);
    free(pred);
+   free(hopscost);
    free(radius);
    free(distance);
    free(vregion);
+   free(pathhops);
    free(pathfromsource);
    free(pathfromterm);
    free(path);

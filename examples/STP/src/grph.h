@@ -260,7 +260,7 @@ extern double reduce(GRAPH*, int, SCIP*);
 
 /* sdtest.c
  */
-extern int    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int);
+extern int    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int*, int);
 extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*);
 extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(SCIP*, GRAPH*, double*);
@@ -274,7 +274,7 @@ extern int degree_test_dir(GRAPH*, double*);
 /* bndtest.c
  */
 extern void get_close_terms(PATH**, double*, int*, int*, int*, int*, int, int);
-extern double compute_node_lb(double*, double*, int*, int*, int*, int, int, int*);
+extern double compute_node_lb(double*, double*, int*, int*, int*, int, int, int, int, int*);
 extern SCIP_RETCODE bound_reduction(SCIP*, double, int*);
 
 /* validate.c
