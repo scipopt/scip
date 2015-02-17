@@ -1083,6 +1083,8 @@ void graph_free(
    char   final
    )
 {
+   IDX* curr;
+   int e;
    assert(p != NULL);
 
    free(p->locals);
@@ -1093,15 +1095,28 @@ void graph_free(
    free(p->inpbeg);
    free(p->outbeg);
    free(p->cost);
+
+   if( p->ancestors != NULL )
+   {
+      for( e = 0; e < p->edges; e++ )
+      {
+         curr = p->ancestors[e];
+         while( curr != NULL )
+         {
+            p->ancestors[e] = curr->parent;
+            free(curr);
+            curr = p->ancestors[e];
+         }
+      }
+      free(p->ancestors);
+   }
+   free(p->tail);
+   free(p->head);
    if( final )
    {
-      IDX* curr;
-      int e;
-      free(p->tail);
-      free(p->head);
       if( p->orgtail != NULL )
       {
-	 assert(p->orghead != NULL);
+         assert(p->orghead != NULL);
          free(p->orgtail);
          free(p->orghead);
       }
@@ -1111,19 +1126,6 @@ void graph_free(
          p->fixedges = curr->parent;
          free(curr);
          curr = p->fixedges;
-      }
-      if( p->ancestors != NULL )
-      {
-         for( e = 0; e < p->edges; e++ )
-	 {
-	    curr = p->ancestors[e];
-	    while( curr != NULL )
-	    {
-	       p->ancestors[e] = curr->parent;
-	       free(curr);
-	       curr = p->ancestors[e];
-	    }
-	 }
       }
    }
    free(p->ieat);
@@ -1406,9 +1408,9 @@ void graph_knot_contract(
       double       outcost;
    } SLIST;
 
-   SLIST* slp;
-   IDX**   ancestors;
-   IDX**   revancestors;
+   SLIST* slp = NULL;
+   IDX**   ancestors = NULL;
+   IDX**   revancestors = NULL;
    IDX*   tsancestors = NULL;
    IDX*   stancestors = NULL;
    int    slc = 0;
@@ -1419,6 +1421,7 @@ void graph_knot_contract(
    int    cedgeout = UNKNOWN;
    int    head;
    int    tail;
+   int    sgrad;
 
    assert(p          != NULL);
    assert(t          >= 0);
@@ -1441,10 +1444,15 @@ void graph_knot_contract(
    if (p->source[0] == s)
       p->source[0] = t;
 
-   slp = malloc((size_t)p->grad[s] * sizeof(SLIST));
-   ancestors = malloc((size_t)p->grad[s] * sizeof(IDX*));
-   revancestors = malloc((size_t)p->grad[s] * sizeof(IDX*));
-   assert(slp != NULL);
+   sgrad =  p->grad[s];
+   if( sgrad >= 2 )
+   {
+      slp = malloc((size_t)(sgrad - 1) * sizeof(SLIST));
+      ancestors = malloc((size_t)(sgrad - 1) * sizeof(IDX*));
+      revancestors = malloc((size_t)(sgrad - 1) * sizeof(IDX*));
+      assert(slp != NULL);
+   }
+
 
    /* Liste mit Kanten des aufzuloesenden Knotens merken
     */
@@ -1452,15 +1460,18 @@ void graph_knot_contract(
    {
       assert(p->tail[es] == s);
 
-      ancestors[slc] = NULL;
-      SCIPindexListNodeAppendCopy(&(ancestors[slc]), p->ancestors[es]);
-      revancestors[slc] = NULL;
-      SCIPindexListNodeAppendCopy(&(revancestors[slc]), p->ancestors[Edge_anti(es)]);
+
       if( p->head[es] != t )
       {
          /*
            assert(EQ(p->cost[es], p->cost[Edge_anti(es)]));
          */
+
+	 ancestors[slc] = NULL;
+         SCIPindexListNodeAppendCopy(&(ancestors[slc]), p->ancestors[es]);
+         revancestors[slc] = NULL;
+         SCIPindexListNodeAppendCopy(&(revancestors[slc]), p->ancestors[Edge_anti(es)]);
+
          slp[slc].mark = FALSE;
 	 slp[slc].edge = es;
          slp[slc].knot = p->head[es];
@@ -1468,7 +1479,7 @@ void graph_knot_contract(
          slp[slc].incost = p->cost[Edge_anti(es)];
          slc++;
 
-         assert(slc < p->grad[s]);
+         assert(slc < sgrad);
       }
       else
       {
@@ -1477,7 +1488,7 @@ void graph_knot_contract(
 	 SCIPindexListNodeAppendCopy(&tsancestors, p->ancestors[cedgeout]);
       }
    }
-   assert(slc == p->grad[s] - 1);
+   assert(slc == sgrad - 1);
 
    /* Kantenliste durchgehen
     */
@@ -1594,23 +1605,28 @@ void graph_knot_contract(
    {
       es = p->outbeg[s];
       SCIPindexListNodeFree(&(p->ancestors[es]));
+      SCIPindexListNodeFree(&(p->ancestors[Edge_anti(es)]));
       p->ancestors[es] = NULL;
+      p->ancestors[Edge_anti(es)] = NULL;
       graph_edge_del(p, es);
    }
 
    //TODO free ancestors?
-   /* SCIPindexListNodeFree(&stancestors);
-      SCIPindexListNodeFree(&tsancestors);*/
-   for( i = 0; i < slc; i++ )
+   SCIPindexListNodeFree(&stancestors);
+   SCIPindexListNodeFree(&tsancestors);
+
+   if( sgrad >= 2 )
    {
-      SCIPindexListNodeFree(&(ancestors[i]));
-      SCIPindexListNodeFree(&(revancestors[i]));
+
+      for( i = 0; i < slc; i++ )
+      {
+         SCIPindexListNodeFree(&(ancestors[i]));
+         SCIPindexListNodeFree(&(revancestors[i]));
+      }
+      free(ancestors);
+      free(revancestors);
+      free(slp);
    }
-
-   free(ancestors);
-   free(revancestors);
-   free(slp);
-
    assert(p->grad[s]   == 0);
    assert(p->outbeg[s] == EAT_LAST);
    assert(p->inpbeg[s] == EAT_LAST);
@@ -1897,10 +1913,11 @@ GRAPH *graph_pack(
    q->grid_ncoords = p->grid_ncoords;
    q->grid_coordinates = p->grid_coordinates;
    q->fixedges = p->fixedges;
+   /*SCIPindexListNodeAppendCopy(&(q->fixedges), p->fixedges);*/
+
    q->hoplimit = p->hoplimit;
    if( new == NULL )
    {
-
       q->ancestors = p->ancestors;
       graph_free(p, FALSE);
       graph_knot_add(q, 0, -1, -1);
@@ -1960,8 +1977,8 @@ GRAPH *graph_pack(
       graph_edge_add(q, new[p->tail[i]], new[p->head[i]],
          p->cost[i], p->cost[Edge_anti(i)]);
 
-      SCIPindexListNodeFree(&(p->ancestors[i]));
-      SCIPindexListNodeFree(&(p->ancestors[i + 1]));
+      // SCIPindexListNodeFree(&(p->ancestors[i]));
+      // SCIPindexListNodeFree(&(p->ancestors[i + 1]));
    }
 
    /* Wurzeln umladen
