@@ -1265,7 +1265,6 @@ int nv_reduction_optimal(
    PATH*   pathhops;
    double* distance;
    double* radius;
-   double** termdist;
    double* hopscost;
    int*    vregion;
    int*    heap;
@@ -1307,11 +1306,9 @@ int nv_reduction_optimal(
 
    distance = malloc((size_t)g->knots * sizeof(double));
    radius = malloc((size_t)g->knots * sizeof(double));
-   termdist = malloc((size_t)g->knots * sizeof(double*));
 
    assert(distance != NULL);
    assert(radius != NULL);
-   assert(termdist != NULL);
 
    hopscost = malloc((size_t)g->edges * sizeof(double));
 
@@ -1362,7 +1359,7 @@ int nv_reduction_optimal(
    assert(g->source[0] >= 0);
 
    /* computing the voronoi regions inward to a node */
-   voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+   voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from the source node */
    graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
@@ -1550,7 +1547,6 @@ int nv_reduction(
    PATH*   pathfromsource;
    double* distance;
    double* radius;
-   double** termdist;
    int*    vregion;
    int*    heap;
    int*    state;
@@ -1591,11 +1587,9 @@ int nv_reduction(
 
    distance = malloc((size_t)g->knots * sizeof(double));
    radius = malloc((size_t)g->knots * sizeof(double));
-   termdist = malloc((size_t)g->knots * sizeof(double*));
 
    assert(distance != NULL);
    assert(radius != NULL);
-   assert(termdist != NULL);
 
    vregion = malloc((size_t)g->knots * sizeof(int));
 
@@ -1624,13 +1618,12 @@ int nv_reduction(
       minArc1[i] = -1;
       minArc2[i] = -1;
       path[i] = NULL;
-      termdist[i] = NULL;
    }
 
    assert(g->source[0] >= 0);
 
    /* computing the voronoi regions inward to a node */
-   voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+   voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from each terminal to every other node */
    calculate_distances(g, path, g->cost, FSP_MODE);
@@ -1725,7 +1718,7 @@ int nv_reduction(
                //printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
                   //   shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
 
-               voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+               voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
                calculate_distances(g, path, g->cost, FSP_MODE);
             }
          }
@@ -1790,7 +1783,6 @@ int nv_reduction(
    free(state);
    free(heap);
    free(vregion);
-   free(termdist);
    free(radius);
    free(distance);
    free(pathfromsource);

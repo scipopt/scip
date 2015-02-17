@@ -134,7 +134,6 @@ SCIP_RETCODE bound_reduction(
    PATH*   pathfromterm;
    double* distance;
    double* radius;
-   double** termdist;
    int*    radiushops;
    int*    vregion;
    int*    heap;
@@ -187,11 +186,9 @@ SCIP_RETCODE bound_reduction(
 
    distance = malloc((size_t)g->knots * sizeof(double));
    radius = malloc((size_t)g->knots * sizeof(double));
-   termdist = malloc((size_t)g->knots * sizeof(double*));
 
    assert(distance != NULL);
    assert(radius != NULL);
-   assert(termdist != NULL);
 
    radiushops = malloc((size_t)g->knots * sizeof(int));
    vregion = malloc((size_t)g->knots * sizeof(int));
@@ -220,7 +217,6 @@ SCIP_RETCODE bound_reduction(
       }
       g->mark[i] = (g->grad[i] > 0);
       path[i] = NULL;
-      termdist[i] = NULL;
       radiushops[i] = 0;
    }
 
@@ -228,7 +224,7 @@ SCIP_RETCODE bound_reduction(
    if( g->stp_type == STP_HOP_CONS )
       voronoi_hop(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, radiushops);
    else
-      voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+      voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* sorting the radius values */
    SCIPsortRealInt(radius, radiushops, g->knots);
@@ -264,9 +260,6 @@ SCIP_RETCODE bound_reduction(
       /* computing the lower bound for node i */
       lowerbound = compute_node_lb(radius, closetermsdist, closetermshops, closeterms, radiushops, termcount, g->grad[i],
             g->source[0], g->stp_type, &hopsbound);
-
-      //printf("termdist: %f, %f, radius: %f\n", closetermsdist[0], closetermsdist[1],
-            //lowerbound - (closetermsdist[0] + closetermsdist[1]));
 
       /* fixing variables in and out of the target node as a result of the bound violation */
       if( GT(lowerbound, bestbound) )
@@ -305,7 +298,7 @@ SCIP_RETCODE bound_reduction(
          if( g->stp_type == STP_HOP_CONS )
             voronoi_hop(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, radiushops);
          else
-            voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+            voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
          /* sorting the radius values */
          SCIPsortRealInt(radius, radiushops, g->knots);
@@ -366,7 +359,7 @@ SCIP_RETCODE bound_reduction(
             (*elimins)++;
 
             /* computing the voronoi regions inward to a node */
-            voronoi_term(g, g->cost, distance, radius, termdist, pathfromterm, vregion, heap, state, pred, 1);
+            voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
             /* sorting the radius values */
             SCIPsortReal(radius, g->knots);
@@ -390,7 +383,6 @@ SCIP_RETCODE bound_reduction(
    free(pred);
    free(vregion);
    free(radiushops);
-   free(termdist);
    free(radius);
    free(distance);
    free(pathfromterm);

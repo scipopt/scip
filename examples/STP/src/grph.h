@@ -222,7 +222,7 @@ extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_radius(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_inout(const GRAPH*);
-extern void   voronoi_term(const GRAPH*, double*, double*, double*, double**, PATH*, int*, int*, int*, int*, int);
+extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   voronoi_hop(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int*);
 extern void   heap_add(int*, int*, int*, int, PATH*);
 extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
