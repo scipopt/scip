@@ -19,6 +19,7 @@ features:
 - the MPS reader can now read semi-integer variables, they are handled by creating bound disjunction constraints
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 - added methods to compute strongly connected components with Tarjan's Algorithm
+- improved clique and variable bound heuristics
 
 parameters:
 - new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
