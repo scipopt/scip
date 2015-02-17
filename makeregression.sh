@@ -50,17 +50,8 @@ fi
 SUBJECT="[$HOSTNAME] (Re)Start $SCRIPTNAME"
 echo "Time stamp $SCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
 
-# pull new version form git repository
-git pull
 
-# to clean the local git repository perform a git status (to avoid a dirty hash)
-git status
-
-# get maybe new time stamp for makeregression.sh 
-NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
-
-# get current git hash
-GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+NEWSCRIPTTIMESTAMP=$SCRIPTTIMESTAMP
 
 # continue testing if makeregression.sh did not change
 while [ $NEWSCRIPTTIMESTAMP -eq $SCRIPTTIMESTAMP ]
@@ -73,22 +64,30 @@ do
 #     cp /www/Abt-Optimization/soplex/counter/users.dat ~/download-counter/soplex-$YEAR-$MONTH-$DAY-users.dat
 #     echo "created backups of download statistics"
 
-    echo "get current SoPlex version"
-    cd ../soplex
-    git pull
-    make
-    cd ../scip
-
-    echo "run regression test"
-
     for OPT in ${OPTS[@]}
     do
-        # compile SCIP in debug or opt mode
-        make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
-        make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
-	
+
         for TEST in ${TESTS[@]}
         do
+            # pull and compile SoPlex
+            cd ../soplex
+            git pull
+            make
+
+            # pull new version from git repository
+            cd ../scip
+            git pull
+
+            # to clean the local git repository perform a git status (to avoid a dirty hash)
+            git status
+
+            # get current git hash
+            GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+
+            # compile SCIP in debug or opt mode
+            make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
+            make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
+
             # run test
             make OPT=$OPT VERSION=$GITHASH LPS=$LPS TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test
 
@@ -103,17 +102,17 @@ do
             NABORTS=`grep -c abort $BASEFILE.*res`
             NREADERRORS=`grep -c readerror $BASEFILE.*res`
 
-	    # construct string which shows the destination of the out, err, and res files
-	    ERRORFILE=`ls $BASEFILE.*.err`
-	    OUTFILE=`ls $BASEFILE.*.out`
-	    RESFILE=`ls $BASEFILE.*.res`
-	    DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
+            # construct string which shows the destination of the out, err, and res files
+            ERRORFILE=`ls $BASEFILE.*.err`
+            OUTFILE=`ls $BASEFILE.*.out`
+            RESFILE=`ls $BASEFILE.*.res`
+            DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
 
             # check read fails
             if [ $NFAILS -gt 0 ];
             then
                 SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep fail $BASEFILE.*.res`
+                ERRORINSTANCES=`grep fail $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
@@ -121,7 +120,7 @@ do
             if [ $NREADERRORS -gt 0 ];
             then
                 SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep readerror $BASEFILE.*.res`
+                ERRORINSTANCES=`grep readerror $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
@@ -130,7 +129,7 @@ do
             then
                 SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
                 ASSERTINFO=`grep Assertion $BASEFILE.*.err`
-		ERRORINSTANCES=`grep abort $BASEFILE.*.res`
+                ERRORINSTANCES=`grep abort $BASEFILE.*.res`
                 echo -e "$ASSERTINFO \n$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
@@ -141,46 +140,45 @@ do
                 NSOLVED=`grep -c solved $BASEFILE.*res`
                 NTIMEOUTS=`grep -c timeouts $BASEFILE.*res`
 
-		if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
-		then
+                if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
+                then
                     NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.$LPS.*res`
 
                     # check time outs
                     if [ $NTIMEOUTS -gt NLASTTIMEOUTS ];
                     then
-			SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-			grep timeouts $BASEFILE.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+                    SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+                    grep timeouts $BASEFILE.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
                     fi
-		fi
+                fi
             fi
 
             # in any case send a mail to admin
             SUBJECT="[$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-	    RESULTS=`tail -8 $BASEFILE.*.res`
+            RESULTS=`tail -8 $BASEFILE.*.res`
             echo -e "$RESULTS \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
         done
     done
-    
-    # all test are performed for the current hash
+
+    # last test was performed for the current hash
     echo $GITHASH >> $GITHASHFILE
-    
-    echo $GITHASH
+
     LASTGITHASH=$GITHASH
-    
+
     # wait until new version is available
     while [ "$GITHASH" == "$LASTGITHASH" ]
     do
         echo "wait for new version"
-	sleep 60
+        sleep 60
 
         # pull new version form git repository
         git pull
-	
-        # to clean the local git repository perform a git status (to avoid a dirty hash)
-	git status
 
-	NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
-        
+        # to clean the local git repository perform a git status (to avoid a dirty hash)
+        git status
+
+        NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
+
         # get current git hash
         GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
     done
