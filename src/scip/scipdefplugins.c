@@ -30,12 +30,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 {
    SCIP_NLPI* nlpi;
 
-   //SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear must be before linear, quadratic, abspower, and and due to constraint upgrading */
-   //SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear must be before linear, quadratic, abspower, and and due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
-   //SCIP_CALL( SCIPincludeConshdlrAbspower(scip) ); /* absolute power needs to be after quadratic and nonlinear due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrAbspower(scip) ); /* absolute power needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrBivariate(scip) ); /* bivariate needs to be after quadratic and nonlinear due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrBivariate(scip) ); /* bivariate needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );

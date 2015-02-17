@@ -60,10 +60,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
@@ -10694,7 +10694,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       havechange = FALSE;
 #ifdef CHECKIMPLINBILINEAR
-      if( consdata->isimpladded )
+      if( consdata->isimpladded && (presoltiming & SCIP_PRESOLTIMING_FAST) )
       {
          int nbilinremoved;
          SCIP_CALL( presolveApplyImplications(scip, conss[c], &nbilinremoved) );
@@ -10920,10 +10920,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       consdata->ispresolved = TRUE;
    }
-
-   /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-   if( !doreformulations )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
@@ -11675,7 +11671,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolQuadratic) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpQuadratic) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseQuadratic) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolQuadratic, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolQuadratic, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintQuadratic) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropQuadratic, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
