@@ -44,16 +44,16 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrLinking(scip) );
+   SCIP_CALL( SCIPincludeConshdlrLinking(scip) );
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrOr(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
+   SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
+   SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC needs to be after quadratic due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC needs to be after quadratic due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
@@ -78,8 +78,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
-   //SCIP_CALL( SCIPincludePresolImplfree(scip) );
-   //SCIP_CALL( SCIPincludePresolDualinfer(scip) );
+   SCIP_CALL( SCIPincludePresolImplfree(scip) );
+   SCIP_CALL( SCIPincludePresolDualinfer(scip) );
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
