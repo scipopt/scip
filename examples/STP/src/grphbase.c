@@ -1899,7 +1899,8 @@ GRAPH *graph_pack(
          edges++;
       }
    }
-
+   if( knots == 1 )
+      assert(edges == 0);
    q = graph_init(knots, edges, p->layers, p->flags);
    q->norgmodelknots = p->norgmodelknots;
    q->norgmodeledges = p->norgmodeledges;
@@ -1918,7 +1919,7 @@ GRAPH *graph_pack(
    q->hoplimit = p->hoplimit;
    if( new == NULL )
    {
-      q->ancestors = p->ancestors;
+      q->ancestors = NULL;
       graph_free(p, FALSE);
       graph_knot_add(q, 0, -1, -1);
       q->source[0] = 0;

@@ -1650,7 +1650,7 @@ static double levelm4(
 
    return(fixed);
 }
-
+#if 0
 static double level5(
    GRAPH* g)
 {
@@ -1686,6 +1686,137 @@ static double level5(
 
    return(fixed);
 }
+#endif
+
+static double level5(
+   SCIP* scip,
+   GRAPH* g
+   )
+{
+   SCIP_Real timelimit;
+   double fixed   = 0.0;
+   char    rerun   = TRUE;
+   int    i;
+   //int    edgebound;
+   int    nodebound;
+   double*  sddist;
+   double*  sdtrans;
+   double*  sdrand;
+   double* cost;
+   double* random;
+   int*    heap;
+   int*    state;
+   int*    knotexamined;
+   int     runnum = 0;
+   char    sd = TRUE;
+   char    bd3 = FALSE;
+   char    nsv = TRUE;
+   char    nv = TRUE;
+   char    timebreak = FALSE;
+   assert(g != NULL);
+
+   nodebound = 0;
+
+   degree_test(g, &fixed);
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   heap  = malloc((size_t)g->knots * sizeof(int));
+   state = malloc((size_t)g->knots * sizeof(int));
+   knotexamined = malloc((size_t)g->knots * sizeof(int));
+   sddist = malloc((size_t)g->knots * sizeof(double));
+   sdtrans = malloc((size_t)g->knots * sizeof(double));
+   sdrand = malloc((size_t)g->knots * sizeof(double));
+   cost  = malloc((size_t)g->edges * sizeof(double));
+   random  = malloc((size_t)g->edges * sizeof(double));
+
+   while(rerun && !SCIPisStopped(scip) )
+   {
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      //printf("new presolving run \n");
+      rerun = FALSE;
+
+      if( sd )
+      {
+         for( i = 0; i < 20; i++ ) //TODO 6
+         {
+            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, runnum) > nodebound )
+               rerun = TRUE;
+
+            runnum++;
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+            {
+               timebreak = TRUE;
+               break;
+            }
+         }
+         sd = rerun;
+      }
+
+      if( timebreak )
+         break;
+
+      if( degree_test(g, &fixed) > 0.5 * nodebound )
+         rerun = TRUE;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( nsv )
+      {
+         if( !(nsv_reduction(scip, g, &fixed) > nodebound) )
+            nsv = FALSE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( bd3 )
+      {
+         if( !(bd3_reduction(g) > nodebound) )
+            bd3 = FALSE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( nv )
+      {
+         /* if( !(nv_reduction(g, &fixed) > nodebound) ) */
+         if( !(nv_reduction(g, &fixed) > 0) )
+            nv = FALSE;
+         else
+            rerun = TRUE;
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+            if( degree_test(g, &fixed) > 0.5 * nodebound )
+         rerun = TRUE;
+   }
+
+   SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
+
+   free(sddist);
+   free(sdtrans);
+   free(sdrand);
+   free(knotexamined);
+   free(heap);
+   free(state);
+   free(cost);
+   free(random);
+
+   return(fixed);
+}
+
 
 
 double reduce(
@@ -1744,7 +1875,7 @@ double reduce(
       fixed = level4(scip, g);
 
    if (level == 5)
-      fixed = level5(g);
+      fixed = level5(scip, g);
 
    if (level == -4)
       fixed = levelm4(scip, g);
