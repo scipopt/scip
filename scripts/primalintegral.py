@@ -78,9 +78,7 @@ DEFAULT_TIMELIMIT = 36000
 ### enter the list of exclude reasons here. Every instance matching one of the listed reasons like, e. g., 
 ### it is considered infeasible, will be excluded from the evaluated set of instances, if 'Comparator.EXCLUDE_REASON_INFEASIBLE'
 ### is an element of this list.
-excludereasons = [
-   Comparator.EXCLUDE_REASON_INFEASIBLE
-   ]
+excludereasons = [Comparator.EXCLUDE_REASON_INFEASIBLE,Comparator.EXCLUDE_REASON_NOSOLUTIONKNOWN]
 
 options = ['-files', '-solufilename', '-meanintegralsfilename', '-integralsfilename', '-timelimit']
 
@@ -456,7 +454,7 @@ def execute(comparator, myprobnamelist):
       optimalfloat = float(optimalsolution)
       
       f.write(getTexSection(probname))
-      assert(optimalfloat != Misc.FLOAT_INFINITY)
+      assert(optimalfloat != Misc.FLOAT_INFINITY), probname
       
       timelimithit = False;
       nprocessedinstances += 1
