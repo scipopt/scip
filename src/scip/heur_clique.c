@@ -521,6 +521,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    int ncliques;
    int oldnpscands;
    int npscands;
+   int i;
 #if 0
    SCIP_Longint tmpnnodes;
 #endif
@@ -596,9 +597,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       return SCIP_OKAY;
    }
 
-   *result = SCIP_DIDNOTFIND;
-
-
    oldnpscands = SCIPgetNPseudoBranchCands(scip);
    onefixvars = NULL;
    sol = NULL;
@@ -642,6 +640,24 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    /* sort the cliques together by respecting the current order (which is w.r.t. the objective coefficients */
    SCIP_CALL( stableSortBinvars(scip, binvars, nbinvars, cliquepartition, ncliques) );
+#if 0
+   for( i = nbinvars - 1; i >= 0; --i )
+   {
+      if( cliquepartition[i] != ncliques - nbinvars + i )
+      {
+         assert(cliquepartition[i] > ncliques - nbinvars + i);
+         break;
+      }
+   }
+
+   if( i + 2 < heurdata->minfixingrate * nbinvars )
+   {
+      printf("too few variables in nontrivial cliques: %d/%d (=%.1f%%)\n", i + 2, nbinvars, 100.0 * (i+2)/nbinvars);
+      SCIPdebugMessage("--> too few variables in nontrivial cliques\n");
+
+      goto TERMINATE;
+   }
+#endif
 
    solvelp = SCIPhasCurrentNodeLP(scip);
 
@@ -703,6 +719,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       goto TERMINATE;
    }
+
+   *result = SCIP_DIDNOTFIND;
 
    /*************************** Probing LP Solving ***************************/
 
@@ -814,7 +832,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_VAR** subvars;
       SCIP_HASHMAP* varmap;
       SCIP_Bool valid;
-      int i;
 
       valid = FALSE;
 

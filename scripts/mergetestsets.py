@@ -41,7 +41,7 @@ def main():
         line1 = grepline.strip().split("\n")[0].split(":",1)[1]
 
         if len(grepline.strip().split("\n")) != 1:
-            assert len(grepline.strip().split("\n")) == 2
+            assert len(grepline.strip().split("\n")) == 2, grepline
             line2 = grepline.strip().split("\n")[1].split(":",1)[1]
 
             if line1.split()[0] != line2.split()[0]\

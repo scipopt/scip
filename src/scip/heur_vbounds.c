@@ -586,9 +586,6 @@ SCIP_RETCODE applyVbounds(
    SCIP_CALL( SCIPcreateClock(scip, &clock) );
    SCIP_CALL( SCIPstartClock(scip, clock) );
 
-   if( *result == SCIP_DIDNOTRUN )
-      *result = SCIP_DIDNOTFIND;
-
    SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable bounds\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars);
 
@@ -648,6 +645,9 @@ SCIP_RETCODE applyVbounds(
 
       goto TERMINATE;
    }
+
+   if( *result == SCIP_DIDNOTRUN )
+      *result = SCIP_DIDNOTFIND;
 
    /*************************** Probing LP Solving ***************************/
 
