@@ -1259,7 +1259,6 @@ void voronoi_term(
    double*        cost,
    double*        distance,
    double*        radius,
-   double**       termdist,
    PATH*          path,
    int*           vregion,
    int*           heap,
@@ -1285,7 +1284,6 @@ void voronoi_term(
    assert(cost       != NULL);
    assert(distance   != NULL);
    assert(radius     != NULL);
-   assert(termdist   != NULL);
    assert(vregion    != NULL);
    assert(heap       != NULL);
    assert(state      != NULL);
@@ -1321,9 +1319,6 @@ void voronoi_term(
          predecessor[i] = UNKNOWN;
          radius[i] = FARAWAY;
       }
-
-      if( termdist[i] == NULL )
-         termdist[i] = malloc((size_t)g->knots * sizeof(double));
    }
    assert(nbases > 0);
 
@@ -1417,14 +1412,6 @@ void voronoi_term(
                   radius[vregion[k]] = MIN(radius[vregion[k]], path[k].dist + cost[curr_edge]);
                   radius[vregion[m]] = MIN(radius[vregion[m]], path[m].dist + cost[curr_edge]);
                }
-
-#if 0
-               assert(vregion[k] >= 0 && vregion[m] >= 0);
-               printf("vregions: %d %d\n", vregion[k], vregion[m]);
-               termdist[vregion[k]][vregion[m]] = MIN(termdist[vregion[k]][vregion[m]], path[k].dist + cost[curr_edge]
-                     + path[m].dist);
-               termdist[vregion[m]][vregion[k]] = termdist[vregion[k]][vregion[m]];
-#endif
             }
          }
 
@@ -1445,11 +1432,6 @@ void voronoi_term(
          }
       }
    }
-
-   /* Check to make sure I don't need to free the termdist array */
-
-   for( i = g->knots - 1; i >= 0; i-- )
-      free(termdist[i]);
 }
 
 
