@@ -625,9 +625,10 @@ SCIP_RETCODE createCoveringProblem(
 
          /* calculate size of hash map */
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
-         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
+         mapsize = (conshdlr == NULL) ? 0 : SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "soc");
-         mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
+         if( conshdlr != NULL )
+            mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
          mapsize = SCIPcalcHashtableSize(2*mapsize);
          assert(mapsize > 0);
@@ -638,7 +639,7 @@ SCIP_RETCODE createCoveringProblem(
       }
    }
 
-   /* go through all and constraints in the original problem */
+   /* go through all AND constraints in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "and");
    if( conshdlr != NULL )
    {
