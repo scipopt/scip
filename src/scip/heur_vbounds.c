@@ -32,8 +32,10 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_vbounds.h"
-#include "scip/clock.h"
 
+#ifdef SCIP_STATISTIC
+#include "scip/clock.h"
+#endif
 
 #define HEUR_NAME             "vbounds"
 #define HEUR_DESC             "LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood"
@@ -524,7 +526,7 @@ SCIP_RETCODE applyVbounds(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_CLOCK* clock;
+   SCIPstatistic( SCIP_CLOCK* clock; )
    SCIP_VAR** vars;
    SCIP_VAR* lastfixedvar = NULL;
    SCIP_SOL* newsol;
@@ -543,7 +545,7 @@ SCIP_RETCODE applyVbounds(
    int nrounded = 0;
    SCIP_Real solobj = SCIPinfinity(scip);
    int nvars;
-   int nprevars;
+   SCIPstatistic( int nprevars = nvars; )
 
    assert(heur != NULL);
    assert(heurdata != NULL);
@@ -554,7 +556,6 @@ SCIP_RETCODE applyVbounds(
 
    /* get variable data of original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   nprevars = nvars;
 
    if( nvbvars < nvars * heurdata->minfixingrate )
       return SCIP_OKAY;
@@ -586,8 +587,8 @@ SCIP_RETCODE applyVbounds(
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateClock(scip, &clock) );
-   SCIP_CALL( SCIPstartClock(scip, clock) );
+   SCIPstatistic( SCIP_CALL( SCIPcreateClock(scip, &clock) ) );
+   SCIPstatistic( SCIP_CALL( SCIPstartClock(scip, clock) ) );
 
    SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable bounds\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars);
@@ -902,7 +903,7 @@ SCIP_RETCODE applyVbounds(
          SCIP_Bool success;
          int nsubsols;
 
-         nprevars = SCIPgetNVars(subscip);
+         SCIPstatistic( nprevars = SCIPgetNVars(subscip) );
 
          SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->maxnodes);
 
@@ -950,15 +951,14 @@ SCIP_RETCODE applyVbounds(
 
  TERMINATE:
 
+#ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPstopClock(scip, clock) );
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-      "### vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d rounded=%d lp=%d subscip=%d bestobj=%.2g time=%.2f\n",
+   SCIPstatisticMessage("### vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d rounded=%d lp=%d subscip=%d bestobj=%.2g time=%.2f\n",
       forward, tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
       nrounded, allfixsolfound ? 1 : 0, nfound, solobj, SCIPclockGetTime(clock) );
+#endif
 
-
-   SCIP_CALL( SCIPfreeClock(scip, &clock) );
+   SCIPstatistic( SCIP_CALL( SCIPfreeClock(scip, &clock) ) );
 
    /* free solution */
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
