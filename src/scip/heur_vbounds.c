@@ -18,6 +18,10 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Jens Schulz
+ * @author Gerald Gamrath
+ *
+ * @todo allow smaller fixing rate for probing LP?
+ * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -29,6 +33,9 @@
 #include "scip/scipdefplugins.h"
 #include "scip/heur_vbounds.h"
 
+#ifdef SCIP_STATISTIC
+#include "scip/clock.h"
+#endif
 
 #define HEUR_NAME             "vbounds"
 #define HEUR_DESC             "LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood"
@@ -41,7 +48,7 @@
 #define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.5       /* minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_MINFIXINGRATE 0.25      /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which vbounds heuristic should at least improve the incumbent          */
 #define DEFAULT_MINNODES      500LL     /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes          */
@@ -59,15 +66,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_VAR**            lbvars;             /**< topological sorted variables with respect to the variable lower bound */
-   SCIP_VAR**            ubvars;             /**< topological sorted variables with respect to the variable upper bound */
-   SCIP_VAR**            impvars;            /**< topological sorted variables with respect to the variable lower and upper
-                                              *   bound and with a corresponding improving objective coefficient */
-   int                   nlbvars;            /**< number of variables in variable lower bound array */
-   int                   nubvars;            /**< number of variables in variable upper bound array */
-   int                   nlbimpvars;         /**< number of variables in variable improving lower bound array */
-   int                   nubimpvars;         /**< number of variables in variable improving upper bound array */
-
+   SCIP_VAR**            vbvars;             /**< topological sorted variables with respect to the variable bounds */
+   SCIP_BOUNDTYPE*       vbbounds;           /**< topological sorted variables with respect to the variable bounds */
+   int                   nvbvars;            /**< number of variables in variable lower bound array */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
@@ -83,34 +84,30 @@ struct SCIP_HeurData
                                               */
 };
 
+/**@name Propagator defines
+ *
+ * @{
+ *
+ * The propagator works on indices representing a bound of a variable. This index will be called bound index in the
+ * following. For a given active variable with problem index i (note that active variables have problem indices
+ * between 0 and nactivevariable - 1), the bound index of its lower bound is 2*i, the bound index of its upper
+ * bound is 2*i + 1. The other way around, a given bound index i corresponds to the variable with problem index
+ * i/2 (rounded down), and to the lower bound, if i is even, to the upper bound if i is odd.
+ * The following macros can be used to convert bound index into variable problem index and boundtype and vice versa.
+ */
+#define getLbIndex(idx) (2*(idx))
+#define getUbIndex(idx) (2*(idx)+1)
+#define getVarIndex(idx) ((idx)/2)
+#define getBoundtype(idx) (((idx) % 2 == 0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
+#define isIndexLowerbound(idx) ((idx) % 2 == 0)
+#define getBoundString(lower) ((lower) ? "lb" : "ub")
+#define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
+#define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
+
+
 /*
  * Hash map callback methods
  */
-
-/** hash key retrieval function for variables */
-static
-SCIP_DECL_HASHGETKEY(hashGetKeyVar)
-{  /*lint --e{715}*/
-   return elem;
-}
-
-/** returns TRUE iff the indices of both variables are equal */
-static
-SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
-{  /*lint --e{715}*/
-   if( key1 == key2 )
-      return TRUE;
-   return FALSE;
-}
-
-/** returns the hash value of the key */
-static
-SCIP_DECL_HASHKEYVAL(hashKeyValVar)
-{  /*lint --e{715}*/
-   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
-   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
-}
-
 
 /*
  * Local methods
@@ -122,242 +119,178 @@ void heurdataReset(
    SCIP_HEURDATA*        heurdata            /**< structure containing heurdata */
    )
 {
-   heurdata->lbvars = NULL;
-   heurdata->ubvars = NULL;
-   heurdata->impvars = NULL;
-   heurdata->nlbvars = 0;
-   heurdata->nubvars = 0;
-   heurdata->nlbimpvars = 0;
-   heurdata->nubimpvars = 0;
+   heurdata->vbvars = NULL;
+   heurdata->vbbounds = NULL;
+   heurdata->nvbvars = 0;
    heurdata->initialized = FALSE;
    heurdata->applicable = FALSE;
 }
 
-/** gets the requested variables bounds */
-static
-void getVariableBounds(
-   SCIP_VAR*             var,                /**< variable to get the variable bounds from */
-   SCIP_VAR***           vbvars,             /**< pointer to store the variable bound array */
-   int*                  nvbvars,            /**< pointer to store the number of variable bounds */
-   SCIP_Bool             lowerbound          /**< variable lower bounds? (otherwise variable upper bound) */
-   )
-{
-   if( lowerbound )
-   {
-      /* get variable lower bounds */
-      (*vbvars) = SCIPvarGetVlbVars(var);
-      (*nvbvars) = SCIPvarGetNVlbs(var);
-   }
-   else
-   {
-      /* get variable upper bounds */
-      (*vbvars) = SCIPvarGetVubVars(var);
-      (*nvbvars) = SCIPvarGetNVubs(var);
-   }
-}
 
-/** perform depth-first-search from the given variable using the variable lower or upper bounds of the variable */
+/** performs depth-first-search in the implicitly given directed graph from the given start index */
 static
-SCIP_RETCODE depthFirstSearch(
+SCIP_RETCODE dfs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to start the depth-first-search  */
-   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */
-   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
-   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
-   SCIP_HASHTABLE*       connected,          /**< hash table storing if a node was already visited */
-   SCIP_VAR**            sortedvars,         /**< array that will contain the topological sorted variables */
-   int*                  nsortedvars,        /**< pointer to store the number of already collects variables in the sorted variables array */
-   SCIP_Bool             lowerbound          /**< depth-first-search with respect to the variable lower bounds, otherwise variable upper bound */
+   int                   startnode,          /**< node to start the depth-first-search */
+   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
+                                              *   already visited for each node on the stack; only needed for
+                                              *   performance reasons */
+   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse
+                                              *   dfs order */
+   int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at
+                                              *   startnode */
    )
 {
+   SCIP_VAR** vars;
+   SCIP_VAR* startvar;
    SCIP_VAR** vbvars;
-   SCIP_VAR* vbvar;
-   SCIP_Real scalar;
-   SCIP_Real constant;
+   SCIP_Real* coefs;
+   SCIP_Bool lower;
+   int stacksize;
+   int curridx;
+   int idx;
    int nvbvars;
-   int v;
+   int i;
 
-   assert(scip != NULL);
-   assert(var != NULL);
-   assert(varPosMap == NULL || (varPosMap != NULL && usedvars != NULL && nusedvars != NULL));
-   assert(sortedvars != NULL);
-   assert(nsortedvars != NULL);
-   assert(*nsortedvars >= 0);
-   assert(SCIPvarGetProbindex(var) > -1);
-   assert(SCIPhashtableExists(connected, var));
+   assert(startnode >= 0);
+   assert(startnode < 2 * SCIPgetNVars(scip));
+   assert(visited != NULL);
+   assert(visited[startnode] == FALSE);
+   assert(dfsstack != NULL);
+   assert(dfsnodes != NULL);
+   assert(ndfsnodes != NULL);
 
-   /* mark variable as visited, remove variable from hash table */
-   SCIP_CALL( SCIPhashtableRemove(connected, var) );
+   vars = SCIPgetVars(scip);
 
-   /* get variable bounds */
-   getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
+   /* put start node on the stack */
+   dfsstack[0] = startnode;
+   stacknextedge[0] = 0;
+   stacksize = 1;
+   idx = -1;
 
-   SCIPdebugMessage("variable <%s> has %d variable %s bounds\n", SCIPvarGetName(var), nvbvars,
-      lowerbound ? "lower" : "upper");
-
-   for( v = 0; v < nvbvars; ++v )
+   /* we run until no more bounds indices are on the stack, i.e. all changed bounds were propagated */
+   while( stacksize > 0 )
    {
-      vbvar = vbvars[v];
-      assert(vbvar != NULL);
+      /* get next node from stack */
+      curridx = dfsstack[stacksize - 1];
 
-      scalar = 1.0;
-      constant = 0.0;
+      /* mark current node as visited */
+      assert(visited[curridx] == (stacknextedge[stacksize - 1] > 0));
+      visited[curridx] = TRUE;
 
-      /* transform variable bound variable to an active variable if possible */
-      SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &scalar, &constant) );
+      startvar = vars[getVarIndex(curridx)];
+      lower = isIndexLowerbound(curridx);
 
-      /* we could not resolve the variable bound variable to one active variable, therefore, ignore this variable bound */
-      if( !SCIPvarIsActive(vbvar) )
+      /*SCIPdebugMessage("stack[%d]: %s(%s)\n", stacksize - 1, getBoundString(lower), SCIPvarGetName(startvar));*/
+
+      /* go over edges corresponding to varbounds */
+      if( lower )
+      {
+         vbvars = SCIPvarGetVlbVars(startvar);
+         coefs = SCIPvarGetVlbCoefs(startvar);
+         nvbvars = SCIPvarGetNVlbs(startvar);
+      }
+      else
+      {
+         vbvars = SCIPvarGetVubVars(startvar);
+         coefs = SCIPvarGetVubCoefs(startvar);
+         nvbvars = SCIPvarGetNVubs(startvar);
+      }
+
+      /* iterate over all vbounds for the given bound */
+      for( i = stacknextedge[stacksize - 1]; i < nvbvars; ++i )
+      {
+         if( !SCIPvarIsActive(vbvars[i]) )
+            continue;
+
+         idx = (SCIPisPositive(scip, coefs[i]) == lower) ? getLbIndex(SCIPvarGetProbindex(vbvars[i])) : getUbIndex(SCIPvarGetProbindex(vbvars[i]));
+         assert(idx >= 0);
+
+         /* break when the first unvisited node is reached */
+         if( !visited[idx] )
+            break;
+      }
+
+      /* we stopped because we found an unhandled node and not because we reached the end of the list */
+      if( i < nvbvars )
+      {
+         assert(!visited[idx]);
+
+         /*SCIPdebugMessage("vbound: %s(%s) <- %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+           indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));*/
+
+         /* put the adjacent node onto the stack */
+         dfsstack[stacksize] = idx;
+         stacknextedge[stacksize] = 0;
+         stacknextedge[stacksize - 1] = i + 1;
+         stacksize++;
+         assert(stacksize <= 2* SCIPgetNVars(scip));
+
+         /* restart while loop, get next index from stack */
          continue;
-
-      /* insert variable bound variable into the hash table since they are involved in later propagation */
-      if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, vbvar) )
-      {
-         SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(vbvar), *nusedvars);
-         SCIP_CALL( SCIPhashmapInsert(varPosMap, vbvar, (void*)(size_t)(*nusedvars)) );
-         usedvars[*nusedvars] = vbvar;
-         (*nusedvars)++;
       }
 
-      /* check if the variable bound variable was already visited */
-      if( SCIPhashtableExists(connected, vbvar) )
+      /* the current node was completely handled, remove it from stack */
+      stacksize--;
+
+      if( (stacksize > 0 || nvbvars > 0) && SCIPvarGetType(startvar) != SCIP_VARTYPE_CONTINUOUS )
       {
-         /* recursively call depth-first-search */
-         SCIP_CALL( depthFirstSearch(scip, vbvar, varPosMap, usedvars, nusedvars, connected, sortedvars, nsortedvars, lowerbound) );
+         /*SCIPdebugMessage("topoorder[%d] = %s(%s)\n", *ndfsnodes, getBoundString(lower), SCIPvarGetName(startvar));*/
+
+         /* store node in the sorted nodes array */
+         dfsnodes[(*ndfsnodes)] = curridx;
+         (*ndfsnodes)++;
       }
-   }
-
-   /* store variable in the sorted variable array */
-   sortedvars[(*nsortedvars)] = var;
-   (*nsortedvars)++;
-
-   /* insert variable bound variable into the hash table since they are involve in the later propagation */
-   if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, var) )
-   {
-      SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(var), *nusedvars);
-      SCIP_CALL( SCIPhashmapInsert(varPosMap, var, (void*) (size_t)(*nusedvars)) );
-      usedvars[*nusedvars] = var;
-      (*nusedvars)++;
+      else
+         visited[curridx] = FALSE;
    }
 
    return SCIP_OKAY;
 }
 
-/** create a topologically sorted variable array of the given variables and stores if (needed) the involved variables into
- *  the corresponding variable array and hash map
- *
- * @note: for all arrays and the hash map (if requested) you need to allocate enough memory before calling this method
- */
+
+/** sort the bounds of variables topologically */
 static
-SCIP_RETCODE createTopoSortedVars(
+SCIP_RETCODE topologicalSort(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variable which we want sort */
-   int                   nvars,              /**< number of variables */
-   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */
-   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
-   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
-   SCIP_VAR**            topovars,           /**< array where the topologically sorted variables are stored */
-   int*                  ntopovars,          /**< pointer to store the number of topologically sorted variables */
-   SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
+   int*                  vbvars,             /**< array to store variable bounds in topological order */
+   int*                  nvbvars             /**< array to store number of variable bounds in the graph */
    )
 {
-   SCIP_VAR** sortedvars;
-   SCIP_VAR** vbvars;
-   SCIP_VAR* var;
-   SCIP_HASHTABLE* connected;
-   int nvbvars;
-   int hashsize;
+   int* dfsstack;
+   int* stacknextedge;
+   SCIP_Bool* inqueue;
+   int nbounds;
    int i;
-   int v;
 
    assert(scip != NULL);
-   assert(vars != NULL || nvars == 0);
-   assert(varPosMap == NULL || (varPosMap != NULL && usedvars != NULL && nusedvars != NULL));
-   assert(topovars != NULL);
-   assert(ntopovars != NULL);
 
-   SCIPdebugMessage("create topological sorted variable array with respect to variables %s bounds\n",
-      lowerbound ? "lower" : "upper");
+   nbounds = 2 * SCIPgetNVars(scip);
 
-   if( nvars == 0 )
-      return SCIP_OKAY;
+   SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stacknextedge, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inqueue, nbounds) );
+   BMSclearMemoryArray(inqueue, nbounds);
 
-   assert(vars != NULL);
-
-   /* allocate buffer array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortedvars, nvars) );
-
-   hashsize = SCIPcalcHashtableSize(5 * nvars);
-
-   /* create hash table for variables which are (still) connected */
-   SCIP_CALL( SCIPhashtableCreate(&connected, SCIPblkmem(scip), hashsize, SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
-
-   /* detect isolated variables; mark all variables which have at least one entering or leaving arc as connected */
-   for( v = 0; v < nvars; ++v )
+   /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
+    * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
+    * reverse topological order
+    */
+   for( i = 0; i < nbounds; ++i )
    {
-      var = vars[v];
-      assert(var != NULL);
-
-      if( !SCIPvarIsActive(var) )
-         continue;
-
-      /* get variable bounds */
-      getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
-
-      if( nvbvars > 0 && !SCIPhashtableExists(connected, var) )
+      if( !inqueue[i] )
       {
-         SCIP_CALL( SCIPhashtableInsert(connected, var) );
-      }
-
-      for( i = 0; i < nvbvars; ++i )
-      {
-         if( !SCIPvarIsActive(vbvars[i]) )
-            continue;
-
-         /* there is a leaving arc, hence, the variable/node is connected */
-         assert(vbvars[i] != NULL);
-         if( !SCIPhashtableExists(connected, vbvars[i]) )
-         {
-            SCIP_CALL( SCIPhashtableInsert(connected, vbvars[i]) );
-         }
+         SCIP_CALL( dfs(scip, i, inqueue, dfsstack, stacknextedge, vbvars, nvbvars) );
       }
    }
+   assert(*nvbvars <= nbounds);
 
-   /* loop over all "connected" variable and find for each connected component an "almost" topologically sorted version */
-   for( v = 0; v < nvars; ++v )
-   {
-      if( SCIPhashtableExists(connected, vars[v]) )
-      {
-         int nsortedvars;
-
-         SCIPdebugMessage("start depth-first-search with variable <%s>\n", SCIPvarGetName(vars[v]));
-
-         /* use depth first search to get an "almost" topologically sorted variables for the connected component which
-          * includes vars[v]
-          */
-         nsortedvars = 0;
-         SCIP_CALL( depthFirstSearch(scip, vars[v], varPosMap, usedvars, nusedvars, connected, sortedvars, &nsortedvars, lowerbound) );
-
-         SCIPdebugMessage("detected connected component of size <%d>\n", nsortedvars);
-
-         /* copy variables */
-         for( i = 0; i < nsortedvars; ++i )
-         {
-            topovars[(*ntopovars)] = sortedvars[i];
-            (*ntopovars)++;
-         }
-      }
-   }
-
-   assert(*ntopovars <= nvars);
-   SCIPdebugMessage("topologically sorted array contains %d of %d variables (variable %s bound)\n",
-      *ntopovars, nvars, lowerbound ? "lower" : "upper");
-
-   /* free hash table */
-   SCIPhashtableFree(&connected);
-
-   /* free buffer memory */
-   SCIPfreeBufferArray(scip, &sortedvars);
+   SCIPfreeBufferArray(scip, &inqueue);
+   SCIPfreeBufferArray(scip, &stacknextedge);
+   SCIPfreeBufferArray(scip, &dfsstack);
 
    return SCIP_OKAY;
 }
@@ -369,123 +302,52 @@ SCIP_RETCODE initializeCandsLists(
    SCIP_HEURDATA*        heurdata            /**< structure containing heurdata */
    )
 {
-   SCIP_VAR** allvars;
    SCIP_VAR** vars;
-   SCIP_VAR** lbvars;
-   SCIP_VAR** ubvars;
-   SCIP_VAR** impvars;
-   SCIP_HASHTABLE* collectedvars;
-   int nallvars;
+   int* vbs;
    int nvars;
-   int nlbvars;
-   int nubvars;
-   int nlbimpvars;
-   int nubimpvars;
+   int nvbs;
    int v;
 
    SCIPdebugMessage("initialize variable bound heuristic (%s)\n", SCIPgetProbName(scip));
 
-   allvars = SCIPgetVars(scip);
-   nallvars = SCIPgetNVars(scip);
-   nvars = 0;
-   nlbvars = 0;
-   nubvars = 0;
-   nlbimpvars = 0;
-   nubimpvars = 0;
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nvbs = 0;
 
    /* allocate memory for the arrays of the heurdata */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nallvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lbvars, nallvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ubvars, nallvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &impvars, nallvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbs, 2 * nvars) );
 
-   /* create the topological sorted variable array with respect to the variable lower bounds */
-   SCIP_CALL( createTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, lbvars, &nlbvars, TRUE) );
+   /* create the topological sorted variable array with respect to the variable bounds */
+   SCIP_CALL( topologicalSort(scip, vbs, &nvbs) );
 
-   /* create the topological sorted variable array with respect to the variable upper bounds */
-   SCIP_CALL( createTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, ubvars, &nubvars, FALSE) );
-
-   /* create hash table for variables which are already collected */
-   SCIP_CALL( SCIPhashtableCreate(&collectedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nallvars), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
-
-   /* collect variables which improve the objective by fixing them to suggested bound  */
-   for( v = 0; v < nlbvars; ++v )
+   /* check if the candidate list contains enough candidates */
+   if( nvbs >= heurdata->minfixingrate * nvars )
    {
-      if( SCIPisGE(scip, SCIPvarGetObj(lbvars[v]), 0.0) )
-      {
-         SCIP_CALL( SCIPhashtableInsert(collectedvars, lbvars[v]) );
-         assert(nlbimpvars < nallvars);
-         impvars[nlbimpvars] = lbvars[v];
-         nlbimpvars++;
-      }
-   }
-
-   for( v = 0; v < nubvars; ++v )
-   {
-      if( SCIPisLE(scip, SCIPvarGetObj(ubvars[v]), 0.0) && !SCIPhashtableExists(collectedvars, ubvars[v])  )
-      {
-         assert(nlbimpvars + nubimpvars < nallvars);
-         impvars[nlbimpvars + nubimpvars] = ubvars[v];
-         nubimpvars++;
-      }
-   }
-
-   /* free hash table */
-   SCIPhashtableFree(&collectedvars);
-
-   /* check if the candidate lists contain enough candidates */
-   if( nlbvars >= heurdata->minfixingrate * nallvars )
-   {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->lbvars, lbvars, nlbvars) );
-      heurdata->nlbvars = nlbvars;
-      heurdata->applicable = TRUE;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vbvars, nvbs) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vbbounds, nvbs) );
 
       /* capture variable candidate list */
-      for( v = 0; v < nlbvars; ++v )
+      for( v = 0; v < nvbs; ++v )
       {
-         SCIP_CALL( SCIPcaptureVar(scip, heurdata->lbvars[v]) );
-      }
-   }
-   if( nubvars >= heurdata->minfixingrate * nallvars )
-   {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->ubvars, ubvars, nubvars) );
-      heurdata->nubvars = nubvars;
-      heurdata->applicable = TRUE;
+         heurdata->vbvars[v] = vars[getVarIndex(vbs[v])];
+         heurdata->vbbounds[v] = getBoundtype(vbs[v]);
 
-      /* capture variable candidate list */
-      for( v = 0; v < nubvars; ++v )
-      {
-         SCIP_CALL( SCIPcaptureVar(scip, heurdata->ubvars[v]) );
+         SCIP_CALL( SCIPcaptureVar(scip, heurdata->vbvars[v]) );
       }
-   }
-   if( nlbvars > nlbimpvars && nubvars > nubimpvars && nlbimpvars + nubimpvars >= heurdata->minfixingrate * nallvars )
-   {
-      assert(nlbimpvars < INT_MAX - nubimpvars);
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->impvars, impvars, nlbimpvars + nubimpvars) );
-      heurdata->nlbimpvars = nlbimpvars;
-      heurdata->nubimpvars = nubimpvars;
-      heurdata->applicable = TRUE;
 
-      /* capture variable candidate list */
-      for( v = 0; v < nlbimpvars + nubimpvars; ++v )
-      {
-         SCIP_CALL( SCIPcaptureVar(scip, heurdata->impvars[v]) );
-      }
+      heurdata->nvbvars = nvbs;
+      heurdata->applicable = TRUE;
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &impvars);
-   SCIPfreeBufferArray(scip, &ubvars);
-   SCIPfreeBufferArray(scip, &lbvars);
-   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vbs);
 
    /* initialize data */
    heurdata->usednodes = 0;
    heurdata->initialized = TRUE;
 
-   SCIPstatisticMessage("lbvars %.3g, ubvars %.3g, impvars %.3g (%s)\n",
-      (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
-      ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
+   SCIPstatisticMessage("vbvars %.3g (%s)\n",
+      (nvbs * 100.0) / nvars, SCIPgetProbName(scip));
 
    return SCIP_OKAY;
 }
@@ -496,47 +358,85 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< structure containing heurdata */
    SCIP_VAR**            vars,               /**< variables to fix during probing */
-   int                   nlbvars,            /**< number of variables to use the lower bound */
-   int                   nubvars,            /**< number of variables to use the upper bound */
+   int                   nvbvars,            /**< number of variables in the variable bound graph */
+   SCIP_Bool             forward,            /**< should fixings be done forward w.r.t. the vbound graph? */
+   SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
+   SCIP_Bool             obj,                /**< should the objective be taken into account? */
    SCIP_SOL*             sol,                /**< working solution */
    SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
+   SCIP_VAR**            lastvar,            /**< last fixed variable */
+   SCIP_Bool*            fixedtolb,          /**< was last fixed variable fixed to its lower bound? */
+   int*                  nfound,
+   SCIP_Real*            solobj,
    SCIP_RESULT*          result              /**< pointer to store the result (solution found) */
    )
 {
-   SCIP_Bool success;
+   SCIP_VAR* var;
+   SCIP_RETCODE retcode;
+   SCIP_BOUNDTYPE bound;
+   SCIP_Bool newnode = TRUE;
    int v;
 
    /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
-   for( v = 0; v < nlbvars + nubvars && !(*infeasible); ++v )
+   for( v = 0; v < nvbvars && !(*infeasible); ++v )
    {
+      var = forward ? vars[v] : vars[nvbvars - 1 - v];
+      bound = forward ? heurdata->vbbounds[v] : heurdata->vbbounds[nvbvars - 1 - v];
+
+      /*SCIPdebugMessage("topoorder[%d]: %s(%s) (%s)\n", v,
+         bound == SCIP_BOUNDTYPE_UPPER ? "ub" : "lb", SCIPvarGetName(var),
+         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS ? "c" : "d");*/
+
       /* only check integer or binary variables */
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          continue;
 
       /* skip variables which are already fixed */
-      if( SCIPvarGetLbLocal(vars[v]) + 0.5 > SCIPvarGetUbLocal(vars[v]) )
+      if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
          continue;
 
-      if( v < nlbvars )
+      if( obj && ((SCIPvarGetObj(var) >= 0) == (bound == SCIP_BOUNDTYPE_LOWER)) )
+         continue;
+
+      if( newnode )
+      {
+         retcode = SCIPnewProbingNode(scip);
+         if( retcode == SCIP_MAXDEPTHLEVEL )
+            newnode = FALSE;
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
+
+      *lastvar = var;
+
+      if( obj ? (tighten == (SCIPvarGetObj(var) >= 0)) : (tighten == (bound == SCIP_BOUNDTYPE_UPPER)) )
       {
          /* fix variable to lower bound */
-         SCIP_CALL( SCIPfixVarProbing(scip, vars[v], SCIPvarGetLbLocal(vars[v])) );
+         SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
          SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
-            v, SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), SCIPgetNPseudoBranchCands(scip));
+            v, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPgetNPseudoBranchCands(scip));
+         *fixedtolb = TRUE;
       }
       else
       {
+         assert((obj && (tighten == (SCIPvarGetObj(var) < 0)))
+            || (!obj && (tighten == (bound == SCIP_BOUNDTYPE_LOWER))));
          /* fix variable to upper bound */
-         SCIP_CALL( SCIPfixVarProbing(scip, vars[v], SCIPvarGetUbLocal(vars[v])) );
+         SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
          SCIPdebugMessage("fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
-            v, SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), SCIPgetNPseudoBranchCands(scip));
+            v, SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPgetNPseudoBranchCands(scip));
+         *fixedtolb = FALSE;
       }
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
-
+#if 0
       if( !(*infeasible) )
       {
+         SCIP_Bool success;
+
          /* create solution from probing run and try to round it */
          SCIP_CALL( SCIPlinkCurrentSol(scip, sol) );
          SCIP_CALL( SCIProundSol(scip, sol, &success) );
@@ -553,12 +453,15 @@ SCIP_RETCODE applyVboundsFixings(
             {
                SCIPdebugMessage(" -> solution was feasible and good enough\n");
                *result = SCIP_FOUNDSOL;
+               (*nfound)++;
+               *solobj = MIN(*solobj, SCIPgetSolOrigObj(scip, sol));
 
                if( SCIPisStopped(scip) )
                   break;
             }
          }
       }
+#endif
    }
 
    SCIPdebugMessage("probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
@@ -615,22 +518,38 @@ SCIP_RETCODE applyVbounds(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
-   SCIP_VAR**            probvars,           /**< variables to fix during probing */
-   int                   nlbvars,            /**< number of variables to use the lower bound */
-   int                   nubvars,            /**< number of variables to use the upper bound */
+   SCIP_VAR**            vbvars,             /**< variables to fix during probing */
+   int                   nvbvars,            /**< number of variables to fix */
+   SCIP_Bool             forward,            /**< should fixings be done forward w.r.t. the vbound graph? */
+   SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
+   SCIP_Bool             obj,                /**< should the objective be taken into account? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
+   SCIPstatistic( SCIP_CLOCK* clock; )
    SCIP_VAR** vars;
+   SCIP_VAR* lastfixedvar = NULL;
    SCIP_SOL* newsol;
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
+   SCIP_LPSOLSTAT lpstatus;
    SCIP_Bool infeasible;
+   SCIP_Bool lastfixedlower = TRUE;
+   SCIP_Bool allfixsolfound;
+   SCIP_Bool lperror;
+   SCIP_Bool solvelp;
+   int oldnpscands;
+   int npscands;
+   int nfound = 0;
+   int nrounded = 0;
+   SCIP_Real solobj = SCIPinfinity(scip);
    int nvars;
+   SCIPstatistic( int nprevars = nvars; )
 
    assert(heur != NULL);
    assert(heurdata != NULL);
+   assert(nvbvars > 0);
 
    /* initialize default values */
    infeasible = FALSE;
@@ -638,10 +557,13 @@ SCIP_RETCODE applyVbounds(
    /* get variable data of original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   if( nlbvars + nubvars < nvars * heurdata->minfixingrate )
+   if( nvbvars < nvars * heurdata->minfixingrate )
       return SCIP_OKAY;
 
-   assert(nlbvars + nubvars > 0);
+   if( *result == SCIP_DIDNOTRUN )
+      *result = SCIP_DIDNOTFIND;
+
+   oldnpscands = SCIPgetNPseudoBranchCands(scip);
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
@@ -665,8 +587,27 @@ SCIP_RETCODE applyVbounds(
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("apply variable bounds heuristic at node %"SCIP_LONGINT_FORMAT" on %d variable lower bound and %d variable upper bounds\n",
-      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nlbvars, nubvars);
+   SCIPstatistic( SCIP_CALL( SCIPcreateClock(scip, &clock) ) );
+   SCIPstatistic( SCIP_CALL( SCIPstartClock(scip, clock) ) );
+
+   SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable bounds\n",
+      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars);
+
+   /* check whether the LP should be solved at the current node in the tree to determine whether the heuristic
+    * is allowed to solve an LP
+    */
+   solvelp = SCIPhasCurrentNodeLP(scip);
+
+   if( !SCIPisLPConstructed(scip) && solvelp )
+   {
+      SCIP_Bool nodecutoff;
+
+      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
+      SCIP_CALL( SCIPflushLP(scip) );
+      if( nodecutoff )
+         return SCIP_OKAY;
+   }
+
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -675,10 +616,122 @@ SCIP_RETCODE applyVbounds(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, probvars, nlbvars, nubvars, newsol, &infeasible, result) );
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, newsol, &infeasible, &lastfixedvar, &lastfixedlower, &nrounded, &solobj, result) );
+
+   /* try to repair probing */
+   if( infeasible )
+   {
+      assert(lastfixedvar != NULL);
+
+      SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
+
+      /* fix the last variable, which was fixed the reverse bound */
+      SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar,
+            lastfixedlower ? SCIPvarGetUbLocal(lastfixedvar) : SCIPvarGetLbLocal(lastfixedvar)) );
+
+      /* propagate fixings */
+      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &infeasible, NULL) );
+
+      SCIPdebugMessage("backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
+   }
+
+   allfixsolfound = FALSE;
+
+   /* check that we had enough fixings */
+   npscands = SCIPgetNPseudoBranchCands(scip);
+
+   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+
+   /* check fixing rate */
+   if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   {
+      SCIPdebugMessage("--> too few fixings\n");
+
+      goto TERMINATE;
+   }
+
+   /*************************** Probing LP Solving ***************************/
+
+   lpstatus = SCIP_LPSOLSTAT_ERROR;
+   lperror = FALSE;
+   /* solve lp only if the problem is still feasible */
+   if( !infeasible && solvelp )
+   {
+#if 1
+      SCIPdebugMessage("starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+
+      /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
+       * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
+       * SCIP will stop.
+       */
+#ifdef NDEBUG
+      {
+         SCIP_Bool retstat;
+         retstat = SCIPsolveProbingLP(scip, -1, &lperror, NULL);
+         if( retstat != SCIP_OKAY )
+         {
+            SCIPwarningMessage(scip, "Error while solving LP in vbound heuristic; LP solve terminated with code <%d>\n",
+               retstat);
+         }
+      }
+#else
+      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
+#endif
+      SCIPdebugMessage("ending solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+
+      lpstatus = SCIPgetLPSolstat(scip);
+
+      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
+   }
+
+   /* check if this is a feasible solution */
+   if( lpstatus == SCIP_LPSOLSTAT_OPTIMAL && !lperror )
+   {
+      SCIP_Bool stored;
+      SCIP_Bool success;
+
+      /* copy the current LP solution to the working solution */
+      SCIP_CALL( SCIPlinkLPSol(scip, newsol) );
+
+      SCIP_CALL( SCIProundSol(scip, newsol, &success) );
+
+      if( success )
+      {
+         SCIPdebugMessage("vbound heuristic found roundable primal solution: obj=%g\n",
+            SCIPgetSolOrigObj(scip, newsol));
+
+         /* check solution for feasibility, and add it to solution store if possible.
+          * Neither integrality nor feasibility of LP rows have to be checked, because they
+          * are guaranteed by the heuristic at this stage.
+          */
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, &stored) );
+#else
+         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
+#endif
+
+         allfixsolfound = TRUE;
+
+         if( stored )
+         {
+            SCIPdebugMessage("found feasible solution:\n");
+            *result = SCIP_FOUNDSOL;
+            solobj = MIN(solobj, SCIPgetSolOrigObj(scip, newsol));
+         }
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPclearSol(scip, newsol) );
+   }
+#endif
+
+   /*************************** END Probing LP Solving ***************************/
+
 
    /* if a solution has been found --> fix all other variables by subscip if necessary */
-   if( !infeasible )
+   if( !allfixsolfound && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -739,8 +792,10 @@ SCIP_RETCODE applyVbounds(
          goto TERMINATE;
       }
 
+#ifndef SCIP_DEBUG
       /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
@@ -756,12 +811,24 @@ SCIP_RETCODE applyVbounds(
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-#ifdef SCIP_DEBUG
-      /* for debugging vbounds heuristic, enable MIP output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#if 0
+      /* use best estimate node selection */
+      if( SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/4) );
+      }
 #endif
+      /* use inference branching */
+      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+      }
+
+      /* disable conflict analysis */
+      if( !SCIPisParamFixed(subscip, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+      }
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -773,6 +840,12 @@ SCIP_RETCODE applyVbounds(
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }
+
+#ifdef SCIP_DEBUG
+      /* for debugging vbounds heuristic, enable MIP output */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
 
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )
@@ -824,11 +897,13 @@ SCIP_RETCODE applyVbounds(
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
        */
-      if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate / 2.0 )
+      if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate )
       {
          SCIP_SOL** subsols;
          SCIP_Bool success;
          int nsubsols;
+
+         SCIPstatistic( nprevars = SCIPgetNVars(subscip) );
 
          SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->maxnodes);
 
@@ -857,7 +932,12 @@ SCIP_RETCODE applyVbounds(
             SCIP_CALL( createNewSol(scip, subscip, subvars, newsol, subsols[i], &success) );
          }
          if( success )
+         {
             *result = SCIP_FOUNDSOL;
+            nfound++;
+            solobj = MIN(solobj, SCIPgetSolOrigObj(scip, newsol));
+
+         }
       }
 
 #ifdef SCIP_DEBUG
@@ -870,6 +950,16 @@ SCIP_RETCODE applyVbounds(
    }
 
  TERMINATE:
+
+#ifdef SCIP_STATISTIC
+   SCIP_CALL( SCIPstopClock(scip, clock) );
+   SCIPstatisticMessage("### vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d rounded=%d lp=%d subscip=%d bestobj=%.2g time=%.2f\n",
+      forward, tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
+      nrounded, allfixsolfound ? 1 : 0, nfound, solobj, SCIPclockGetTime(clock) );
+#endif
+
+   SCIPstatistic( SCIP_CALL( SCIPfreeClock(scip, &clock) ) );
+
    /* free solution */
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
@@ -925,25 +1015,14 @@ SCIP_DECL_HEUREXITSOL(heurExitsolVbounds)
    assert(heurdata != NULL);
 
    /* release all variables */
-   for( v = 0; v < heurdata->nlbvars; ++v )
+   for( v = 0; v < heurdata->nvbvars; ++v )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &heurdata->lbvars[v]) );
-   }
-   /* release all variables */
-   for( v = 0; v < heurdata->nubvars; ++v )
-   {
-      SCIP_CALL( SCIPreleaseVar(scip, &heurdata->ubvars[v]) );
-   }
-   /* release all variables */
-   for( v = 0; v < heurdata->nlbimpvars + heurdata->nubimpvars; ++v )
-   {
-      SCIP_CALL( SCIPreleaseVar(scip, &heurdata->impvars[v]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &heurdata->vbvars[v]) );
    }
 
    /* free varbounds array */
-   SCIPfreeMemoryArrayNull(scip, &heurdata->impvars);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->lbvars);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->ubvars);
+   SCIPfreeMemoryArrayNull(scip, &heurdata->vbbounds);
+   SCIPfreeMemoryArrayNull(scip, &heurdata->vbvars);
 
    /* reset heuristic data structure */
    heurdataReset(heurdata);
@@ -977,17 +1056,17 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    if( !heurdata->applicable )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-
-   /* try variable lower and upper bounds which respect to objective coefficients */
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->impvars, heurdata->nlbimpvars, heurdata->nubimpvars, result) );
-
-   /* try variable lower bounds */
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->lbvars, heurdata->nlbvars, 0, result) );
-
-   /* try variable upper bounds */
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->ubvars, 0, heurdata->nubvars, result) );
-
+   /* try variable bounds */
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, TRUE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, FALSE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, FALSE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, TRUE, result) );
+#if 0
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, TRUE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, FALSE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, TRUE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, FALSE, result) );
+#endif
    return SCIP_OKAY;
 }
 

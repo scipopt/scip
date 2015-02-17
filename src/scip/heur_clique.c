@@ -18,6 +18,9 @@
  * @brief  clique primal heuristic
  * @author Stefan Heinz
  * @author Michael Winkler
+ *
+ * @todo allow smaller fixing rate for probing LP?
+ * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,7 +44,7 @@
 #define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINFIXINGRATE 0.5                        /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINFIXINGRATE 0.25                       /**< minimum percentage of variables that have to be fixed */
 #define DEFAULT_MINIMPROVE    0.01                       /**< factor by which clique heuristic should at least improve the
                                                           *   incumbent
                                                           */
@@ -69,7 +72,7 @@ struct SCIP_HeurData
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
    SCIP_Longint          usednodes;          /**< nodes already used by clique heuristic in earlier calls */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of variables that have to be fixed */
    SCIP_Real             minimprove;         /**< factor by which clique heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    int                   maxproprounds;      /**< maximum number of propagation rounds during probing */
@@ -516,6 +519,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    int nbinvars;
    int* cliquepartition;
    int ncliques;
+   int oldnpscands;
+   int npscands;
+   int i;
 #if 0
    SCIP_Longint tmpnnodes;
 #endif
@@ -532,6 +538,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_Bool shortconflict;
    SCIP_Bool allfixsolfound;
    SCIP_Bool backtracked;
+   SCIP_Bool solvelp;
    char consname[SCIP_MAXSTRLEN];
 
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
@@ -544,7 +551,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   /* assert(SCIPhasCurrentNodeLP(scip)); */
 
    *result = SCIP_DIDNOTRUN;
 
@@ -591,8 +597,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       return SCIP_OKAY;
    }
 
-   *result = SCIP_DIDNOTFIND;
-
+   oldnpscands = SCIPgetNPseudoBranchCands(scip);
    onefixvars = NULL;
    sol = NULL;
 
@@ -636,7 +641,27 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* sort the cliques together by respecting the current order (which is w.r.t. the objective coefficients */
    SCIP_CALL( stableSortBinvars(scip, binvars, nbinvars, cliquepartition, ncliques) );
 
-   if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
+   for( i = nbinvars - 1; i >= 0; --i )
+   {
+      if( cliquepartition[i] != ncliques - nbinvars + i )
+      {
+         assert(cliquepartition[i] > ncliques - nbinvars + i);
+         break;
+      }
+   }
+
+   if( i + 2 < heurdata->minfixingrate * nbinvars )
+   {
+      printf("too few variables in nontrivial cliques: %d/%d (=%.1f%%)\n", i + 2, nbinvars, 100.0 * (i+2)/nbinvars);
+      SCIPdebugMessage("--> too few variables in nontrivial cliques\n");
+
+      goto TERMINATE;
+   }
+
+
+   solvelp = SCIPhasCurrentNodeLP(scip);
+
+   if( !SCIPisLPConstructed(scip) && solvelp )
    {
       SCIP_Bool nodecutoff;
 
@@ -645,6 +670,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       if( nodecutoff )
          goto TERMINATE;
    }
+
+   *result = SCIP_DIDNOTFIND;
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -679,6 +706,20 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       /* propagate fixings */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &backtrackcutoff, NULL) );
+
+      SCIPdebugMessage("backtrack was %sfeasible\n", (backtrackcutoff ? "in" : ""));
+   }
+
+   /* check that we had enough fixings */
+   npscands = SCIPgetNPseudoBranchCands(scip);
+
+   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+
+   if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   {
+      SCIPdebugMessage("--> too few fixings\n");
+
+      goto TERMINATE;
    }
 
    /*************************** Probing LP Solving ***************************/
@@ -687,7 +728,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    lperror = FALSE;
    allfixsolfound = FALSE;
    /* solve lp only if the problem is still feasible */
-   if( !backtrackcutoff && SCIPhasCurrentNodeLP(scip) )
+   if( !backtrackcutoff && solvelp )
    {
 #if 1
       SCIPdebugMessage("starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
@@ -742,12 +783,13 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #else
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
+         allfixsolfound = TRUE;
+
          if( stored )
          {
             SCIPdebugMessage("found feasible solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
-            allfixsolfound = TRUE;
          }
       }
    }
@@ -790,7 +832,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_VAR** subvars;
       SCIP_HASHMAP* varmap;
       SCIP_Bool valid;
-      int i;
 
       valid = FALSE;
 
@@ -849,9 +890,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          goto TERMINATE;
       }
 
+#ifndef SCIP_DEBUG
       /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
+#endif
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
@@ -866,6 +908,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+      /* use inference branching */
+      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+      }
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -937,7 +985,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
        */
-      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= (heurdata->minfixingrate / 2.0) )
+      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minfixingrate )
       {
          SCIP_SOL** subsols;
          SCIP_Bool success;

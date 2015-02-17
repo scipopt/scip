@@ -19521,11 +19521,16 @@ void SCIPprintReal(
                                                      BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
 
 #define SCIPallocBuffer(scip,ptr)               SCIPallocBufferSize(scip, (void**)(ptr), (int)sizeof(**(ptr)))
-#define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
-#define SCIPreallocBufferArray(scip,ptr,num)    SCIPreallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
+#define SCIPallocBufferArray(scip,ptr,num)      ( ( (num) < 0 || ((size_t)(num)) > (INT_MAX / sizeof(**(ptr))) ) \
+                                                   ? SCIP_NOMEMORY : \
+                                                         SCIPallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr))) )
+#define SCIPreallocBufferArray(scip,ptr,num)    ( ( (num) < 0 || ((size_t)(num)) > (INT_MAX / sizeof(**(ptr))) ) \
+                                                   ? SCIP_NOMEMORY : \
+                                                         SCIPreallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr))) )
 #define SCIPduplicateBuffer(scip,ptr,source)    SCIPduplicateBufferSize(scip, (void**)(ptr), source, (int)sizeof(**(ptr)))
-#define SCIPduplicateBufferArray(scip,ptr,source,num) \
-                                                     SCIPduplicateBufferSize(scip, (void**)(ptr), source, (num)*(int)sizeof(**(ptr)))
+#define SCIPduplicateBufferArray(scip,ptr,source,num) ( ( (num) < 0 || ((size_t)(num)) > (INT_MAX / sizeof(**(ptr))) ) \
+                                                   ? SCIP_NOMEMORY : \
+                                                         SCIPduplicateBufferSize(scip, (void**)(ptr), source, (num)*(int)sizeof(**(ptr))) )
 #define SCIPfreeBuffer(scip,ptr)                SCIPfreeBufferSize(scip, (void**)(ptr), 0)
 #define SCIPfreeBufferNull(scip,ptr)            { if( *(ptr) != NULL ) SCIPfreeBuffer(scip, ptr); }
 #define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0)

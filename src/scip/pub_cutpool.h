@@ -44,6 +44,16 @@ int SCIPcutGetAge(
    SCIP_CUT*             cut                 /**< cut */
    );
 
+/** returns the ratio of LPs where the row belonging to this cut was active in an LP solution, i.e.
+ *  where the age of its row has not been increased
+ *
+ *  @see SCIPcutGetAge() to get the age of a cut
+ */
+EXTERN
+SCIP_Real SCIPcutGetLPActivityQuot(
+   SCIP_CUT*             cut                 /**< cut */
+   );
+
 /** gets array of cuts in the cut pool */
 EXTERN
 SCIP_CUT** SCIPcutpoolGetCuts(

@@ -995,6 +995,24 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
                                               *   number of components is accessed by SCIPdigraphGetNComponents() */
    );
 
+/** Computes all strongly connected components of an undirected connected component with Tarjan's Algorithm.
+ *  The resulting strongly connected components are sorted topologically (starting from the end of the
+ *  strongcomponents array).
+ *
+ *  @note In general a topological sort of the strongly connected components is not unique.
+ */
+EXTERN
+void SCIPdigraphComputeDirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the undirected connected component */
+   int*                  strongcomponents,   /**< array to store the strongly connected components
+                                              *   (length >= size of the component) */
+   int*                  strongcompstartidx, /**< array to store the start indices of the strongly connected
+                                              *   components (length >= size of the component) */
+   int*                  nstrongcomponents   /**< pointer to store the number of strongly connected
+                                              *   components */
+   );
+
 /** Performes an (almost) topological sort on the undirected components of the given directed graph. The undirected
  *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *

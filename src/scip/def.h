@@ -277,6 +277,17 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+#define SCIP_CALL_TERMINATE(retcode, x, TERM)   do                                                            \
+                       {                                                                                      \
+                          if( ((retcode) = (x)) != SCIP_OKAY )                                                \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", retcode);                      \
+                             goto TERM;                                                                       \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+
 /*
  * Define to mark deprecated API functions
  */

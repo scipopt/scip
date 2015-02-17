@@ -1855,6 +1855,7 @@ SCIP_RETCODE readNonlinearExprs(
    SCIP_EXPR* expr;
    SCIP_VAR** exprvars;
    int* exprvaridx;
+   SCIP_RETCODE retcode;
    int nexprvars;
    int nnlexprs;
    int count;
@@ -1868,6 +1869,8 @@ SCIP_RETCODE readNonlinearExprs(
    assert(constypes != NULL || nconss == 0);
    assert(objcons != NULL);
    assert(doingfine != NULL);
+
+   retcode = SCIP_OKAY;
 
    nlexprs = xmlFindNodeMaxdepth(datanode, "nonlinearExpressions", 0, 1);
 
@@ -1980,10 +1983,10 @@ SCIP_RETCODE readNonlinearExprs(
 
          minusone = -1.0;
          one = 1.0;
-         SCIP_CALL( SCIPcreateConsNonlinear(scip, objcons, "objcons", 1, &objvar, &minusone, 1, &exprtree, &one,
+         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, objcons, "objcons", 1, &objvar, &minusone, 1, &exprtree, &one,
                SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
                SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE), TERMINATE );
          *objconstype = NONLINEAR;
 
          SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
@@ -2014,13 +2017,14 @@ SCIP_RETCODE readNonlinearExprs(
             SCIP_Real one;
 
             one = 1.0;
-            SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
+            SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
                   SCIPgetNVarsLinear(scip, *cons), SCIPgetVarsLinear(scip, *cons), SCIPgetValsLinear(scip, *cons),
                   1, &exprtree, &one,
                   SCIPgetLhsLinear(scip, *cons), SCIPgetRhsLinear(scip, *cons),
                   SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
                   SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
-                  SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons), SCIPconsIsStickingAtNode(*cons)) );
+                  SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons),
+                  SCIPconsIsStickingAtNode(*cons)), TERMINATE );
 
             SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
 
@@ -2103,13 +2107,14 @@ SCIP_RETCODE readNonlinearExprs(
             SCIPfreeBufferArray(scip, &children);
             SCIPfreeBufferArray(scip, &quadelems);
 
-            SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
-               SCIPgetNLinearVarsNonlinear(scip, *cons), SCIPgetLinearVarsNonlinear(scip, *cons), SCIPgetLinearCoefsNonlinear(scip, *cons),
-               2, exprtrees, exprcoefs,
-               SCIPgetLhsNonlinear(scip, *cons), SCIPgetRhsNonlinear(scip, *cons),
-               SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
-               SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
-               SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons), SCIPconsIsStickingAtNode(*cons)) );
+            SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
+                  SCIPgetNLinearVarsNonlinear(scip, *cons), SCIPgetLinearVarsNonlinear(scip, *cons),
+                  SCIPgetLinearCoefsNonlinear(scip, *cons), 2, exprtrees, exprcoefs,
+                  SCIPgetLhsNonlinear(scip, *cons), SCIPgetRhsNonlinear(scip, *cons),
+                  SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
+                  SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
+                  SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons),
+                  SCIPconsIsStickingAtNode(*cons)), TERMINATE );
 
             SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
 
@@ -2128,12 +2133,17 @@ SCIP_RETCODE readNonlinearExprs(
 
          *constype = NONLINEAR;
       }
-
+   TERMINATE:
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+      if( retcode != SCIP_OKAY )
+         break;
    }
 
    SCIPfreeBufferArray(scip, &exprvars);
    SCIPfreeBufferArray(scip, &exprvaridx);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2444,34 +2454,34 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    /* read variables */
-   SCIP_CALL( readVariables(scip, data, &vars, &nvars, initialconss, dynamicconss, dynamiccols, dynamicrows, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readVariables(scip, data, &vars, &nvars, initialconss, dynamicconss, dynamiccols, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
    assert(vars != NULL || nvars == 0);
 
    /* read objective sense, coefficient, and constant */
-   SCIP_CALL( readObjective(scip, data, vars, nvars, dynamiccols, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readObjective(scip, data, vars, nvars, dynamiccols, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
    /* read constraint data (names, constants, lhs/rhs) */
-   SCIP_CALL( readConstraints(scip, data, &conss, &constypes, &nconss, initialconss, dynamicconss, dynamicrows, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readConstraints(scip, data, &conss, &constypes, &nconss, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
    assert(conss != NULL || nconss == 0);
 
    /* read linear coefficients matrix */
-   SCIP_CALL( readLinearCoefs(scip, data, vars, nvars, conss, constypes, nconss, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readLinearCoefs(scip, data, vars, nvars, conss, constypes, nconss, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
    /* read quadratic coefficients (turns linear constraints into quadratic ones, may create objcons) */
-   SCIP_CALL( readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
    /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
-   SCIP_CALL( readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
@@ -2487,7 +2497,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    }
 
    /* read sos2 constraints  and add to problem*/
-   SCIP_CALL( readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine) );
+   SCIP_CALL_TERMINATE( retcode, readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
@@ -2495,7 +2505,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    *result = SCIP_SUCCESS;
    retcode = SCIP_OKAY;
 
-CLEANUP:
+ CLEANUP:
    /* free xml data */
    if( start != NULL )
       xmlFreeNode(start);
@@ -2520,7 +2530,12 @@ CLEANUP:
       SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
    }
 
-   return retcode;
+   if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIP_READERROR;
+
+   SCIP_CALL( retcode );
+
+   return SCIP_OKAY;
 }
 
 /*

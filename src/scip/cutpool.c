@@ -375,7 +375,26 @@ int SCIPcutGetAge(
    return cut->age;
 }
 
+/** returns the ratio of LPs where the row belonging to this cut was active in an LP solution, i.e.
+ *  where the age of its row has not been increased
+ *
+ *  @see SCIPcutGetAge() to get the age of a cut
+ */
+SCIP_Real SCIPcutGetLPActivityQuot(
+   SCIP_CUT*             cut                 /**< cut */
+   )
+{
+   SCIP_Longint nlpsaftercreation;
+   SCIP_Longint activeinlpcounter;
 
+   assert(cut != NULL);
+   assert(cut->row != NULL);
+
+   nlpsaftercreation = SCIProwGetNLPsAfterCreation(cut->row);
+   activeinlpcounter = SCIProwGetActiveLPCount(cut->row);
+
+   return (nlpsaftercreation > 0 ? activeinlpcounter / (SCIP_Real)nlpsaftercreation : 0.0);
+}
 
 /*
  * Cutpool methods

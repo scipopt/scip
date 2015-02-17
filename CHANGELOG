@@ -18,8 +18,13 @@ features:
   "testclusterxpress" and "testxpress" in Makefile
 - the MPS reader can now read semi-integer variables, they are handled by creating bound disjunction constraints
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
+- added methods to compute strongly connected components with Tarjan's Algorithm
+- improved clique and variable bound heuristics
 
 parameters:
+- new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
+- new parameter "separating/cutselrestart" for cut selection during restart copy process ('a'ge, activity 'q'uotient) [default is 'a']
+- new parameter "separating/cutselsubscip" for cut selection for sub SCIPs ('a'ge, activity 'q'uotient) [default is 'a']
 - new parameter "branching/relpscost/userelerrorreliability" to enable relative error based reliability
 - new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
 - new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
@@ -59,6 +64,7 @@ performance improvements:
 - new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
 
 interface:
+- new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
@@ -79,6 +85,12 @@ SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
+- fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
+- fixed wrong comparison when executing branching rule for external branching candidates
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
+- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
 - fixed bug in cons_quadratic which leads to wrong min/max activities
 - fixed wrong conversion of reals representing negative integer values
 - in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
@@ -142,8 +154,11 @@ fixed bugs:
   is just disregarded
 - fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
 - fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
+- fixed	bug in cons_indicator with handling local bounds
+- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
 
 performance improvements:
+- improved solving of LPs in OBBT propagator
 - improved activity-delta computation and thereby propagation for linear constraints
 - improved memory management of proximity heuristic
 - disabled statistic timing in all subscips via new parameter timing/statistictiming
@@ -180,6 +195,10 @@ parameters:
 Makefile:
 - allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
   also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
+
+misc:
+- moved assertions in comparison methods from scip.c to set.c
+- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
 
 SCIP version 3.1.0
 ==================

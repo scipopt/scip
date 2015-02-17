@@ -254,8 +254,8 @@ SCIP_RETCODE branchcandCalcLPCands(
 
          primsol = SCIPcolGetPrimsol(col);
          assert(primsol < SCIP_INVALID);
-         assert(SCIPsetIsFeasGE(set, primsol, col->lb));
-         assert(SCIPsetIsFeasLE(set, primsol, col->ub));
+         assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
+         assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
 
          var = col->var;
          assert(var != NULL);
@@ -1557,10 +1557,22 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+      assert(!SCIPsetIsInfinity(set, loclowerbound));
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
