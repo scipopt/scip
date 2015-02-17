@@ -26,6 +26,7 @@ class Comparator:
    EXCLUDE_REASON_TIMEOUT = 'timout'
    EXCLUDE_REASON_INFEASIBLE = 'infeasible'
    EXCLUDE_REASON_ZEROSOLUTION = 'zerosolution'
+   EXCLUDE_REASON_NOSOLUTIONKNOWN = 'nosolution'
    EXCLUDE_REASON_NOOPTIMALSOLUTIONKNOWN = 'nooptsolution'
    INFINITY = 1e09
    COMP_SIGN_LE = 1
@@ -129,18 +130,22 @@ class Comparator:
 
    def excludeProb(self, probname, excludereasons=[]):
       for testrun in self.testruns:
-         if Comparator.EXCLUDE_REASON_TIMEOUT in excludereasons:
-            if testrun.problemGetData(probname, TimeLimitReader.datakey) == TimeLimitReader.timelimit_reached:
-               return True
-         elif Comparator.EXCLUDE_REASON_NOOPTIMALSOLUTIONKNOWN in excludereasons:
-            if testrun.problemGetSoluFileStatus(probname) != 'opt':
-               return True
-         elif Comparator.EXCLUDE_REASON_ZEROSOLUTION in excludereasons:
-            if testrun.problemGetOptimalSolution(probname) == 0:
-               return True
-         elif Comparator.EXCLUDE_REASON_INFEASIBLE in excludereasons:
-            if testrun.problemGetSoluFileStatus(probname) == 'inf':
-               return True
+         for reason in excludereasons:
+            if Comparator.EXCLUDE_REASON_TIMEOUT == reason:
+               if testrun.problemGetData(probname, TimeLimitReader.datakey) == TimeLimitReader.timelimit_reached:
+                  return True
+            elif Comparator.EXCLUDE_REASON_NOOPTIMALSOLUTIONKNOWN == reason:
+               if testrun.problemGetSoluFileStatus(probname) != 'opt':
+                  return True
+            elif Comparator.EXCLUDE_REASON_NOSOLUTIONKNOWN == reason:
+               if testrun.problemGetSoluFileStatus(probname) == 'unkn':
+                  return True
+            elif Comparator.EXCLUDE_REASON_ZEROSOLUTION == reason:
+               if testrun.problemGetOptimalSolution(probname) == 0:
+                  return True
+            elif Comparator.EXCLUDE_REASON_INFEASIBLE == reason:
+               if testrun.problemGetSoluFileStatus(probname) == 'inf':
+                  return True
       else:
          return False
 
