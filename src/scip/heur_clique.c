@@ -640,7 +640,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    /* sort the cliques together by respecting the current order (which is w.r.t. the objective coefficients */
    SCIP_CALL( stableSortBinvars(scip, binvars, nbinvars, cliquepartition, ncliques) );
-#if 0
+
    for( i = nbinvars - 1; i >= 0; --i )
    {
       if( cliquepartition[i] != ncliques - nbinvars + i )
@@ -657,7 +657,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       goto TERMINATE;
    }
-#endif
+
 
    solvelp = SCIPhasCurrentNodeLP(scip);
 
@@ -670,6 +670,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       if( nodecutoff )
          goto TERMINATE;
    }
+
+   *result = SCIP_DIDNOTFIND;
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -719,8 +721,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       goto TERMINATE;
    }
-
-   *result = SCIP_DIDNOTFIND;
 
    /*************************** Probing LP Solving ***************************/
 

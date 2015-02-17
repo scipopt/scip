@@ -559,6 +559,9 @@ SCIP_RETCODE applyVbounds(
    if( nvbvars < nvars * heurdata->minfixingrate )
       return SCIP_OKAY;
 
+   if( *result == SCIP_DIDNOTRUN )
+      *result = SCIP_DIDNOTFIND;
+
    oldnpscands = SCIPgetNPseudoBranchCands(scip);
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
@@ -645,9 +648,6 @@ SCIP_RETCODE applyVbounds(
 
       goto TERMINATE;
    }
-
-   if( *result == SCIP_DIDNOTRUN )
-      *result = SCIP_DIDNOTFIND;
 
    /*************************** Probing LP Solving ***************************/
 
