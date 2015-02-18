@@ -22,6 +22,10 @@ features:
 - improved clique and variable bound heuristics
 
 parameters:
+- new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
+  (set to FALSE for static order) (default is FALSE)
+- new parameter "heuristics/shiftandpropagate/maxcutoffquot" to select a maximum percentage of allowed cutoffs before stopping the heuristic
+  (default is 0.0)
 - new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
 - new parameter "separating/cutselrestart" for cut selection during restart copy process ('a'ge, activity 'q'uotient) [default is 'a']
 - new parameter "separating/cutselsubscip" for cut selection for sub SCIPs ('a'ge, activity 'q'uotient) [default is 'a']
