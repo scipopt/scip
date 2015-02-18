@@ -1459,7 +1459,7 @@ SCIP_RETCODE readConstraints(
    SCIP_Real* quadcoefs;
 
    PIPSENSE sense;
-   SCIP_RETCODE retcode;
+   SCIP_RETCODE retcode = SCIP_READERROR;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;

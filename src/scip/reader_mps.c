@@ -2445,7 +2445,7 @@ SCIP_RETCODE readMps(
    SCIP_FILE* fp;
    MPSINPUT* mpsi;
    SCIP_RETCODE retcode;
-   SCIP_Bool error;
+   SCIP_Bool error = TRUE;
 
    assert(scip != NULL);
    assert(filename != NULL);
