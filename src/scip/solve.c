@@ -2712,7 +2712,7 @@ SCIP_RETCODE solveNodeLP(
             SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
-            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event) );
+            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event, tree->focusnode->lowerbound) );
 
             stat->nlpsolsfound++;
          }
@@ -4388,7 +4388,7 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
                eventthrown = TRUE;
 
-               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event) );
+               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event, focusnode->lowerbound) );
             }
          }
          else if( !unbounded )
@@ -4418,7 +4418,7 @@ SCIP_RETCODE SCIPsolveCIP(
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             eventthrown = TRUE;
 
-            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event) );
+            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event, focusnode->lowerbound) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -4498,7 +4498,7 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          eventthrown = TRUE;
 
-         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event) );
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event, focusnode->lowerbound) );
       }
 
       /* compute number of successfully applied conflicts */
@@ -4559,7 +4559,7 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
-         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event) );
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event, tree->focusnode->lowerbound) );
       }
 
       focusnode = NULL;

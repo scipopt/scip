@@ -27,18 +27,20 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_Reopt SCIP_REOPT;             /**< reopt data */
+typedef struct SCIP_Reopt SCIP_REOPT;              /**< reopt data */
 
-typedef struct SCIP_SolTree SCIP_SOLTREE;         /**< tree to check solutions */
+typedef struct SCIP_SolTree SCIP_SOLTREE;          /**< tree to check solutions */
 
-typedef struct SCIP_SolNode SCIP_SOLNODE;         /**< nodes of SCIP_SOLTREE */
+typedef struct SCIP_SolNode SCIP_SOLNODE;          /**< nodes of SCIP_SOLTREE */
 
-typedef struct SCIP_ReoptTree SCIP_REOPTTREE;     /**< data structure to store the search tree */
+typedef struct SCIP_ReoptTree SCIP_REOPTTREE;      /**< data structure to store the search tree */
 
-typedef struct SCIP_ReoptNode SCIP_REOPTNODE;     /**< nodes of SCIP_REOPTTREE */
+typedef struct SCIP_ReoptNode SCIP_REOPTNODE;      /**< nodes of SCIP_REOPTTREE */
 
-typedef struct LogicOrData LOGICORDATA;           /**< data for constraints to handle dual information \
-                                                    *  within (mixed) binary programs */
+typedef struct SCIP_ReoptNode SCIP_REPRESENTATIVE; /**< representatives of the search frontier */
+
+typedef struct LogicOrData LOGICORDATA;            /**< data for constraints to handle dual information \
+                                                     *  within (mixed) binary programs */
 /* type of nodes during reoptimization */
 enum SCIP_ReoptType
 {

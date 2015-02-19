@@ -346,6 +346,9 @@ SCIP_RETCODE SCIPcomprExec(
    if( *result != SCIP_DIDNOTRUN )
       compr->ncalls++;
 
+   if( *result == SCIP_SUCCESS )
+      compr->ncompressed++;
+
    return SCIP_OKAY;
 }
 
@@ -566,6 +569,18 @@ SCIP_Real SCIPcomprGetRate(
    return compr->rate;
 }
 
+/* set the rate of the compression */
+void SCIPcomprUpdateRate(
+   SCIP_COMPR*           compr,
+   SCIP_Real             rate
+   )
+{
+   assert(compr != NULL);
+   assert(compr->initialized);
+
+   compr->rate = rate;
+}
+
 /* return the number of nodes of the last compression */
 int SCIPcomprGetNNodes(
    SCIP_COMPR*           compr
@@ -576,6 +591,18 @@ int SCIPcomprGetNNodes(
    return compr->nnodes;
 }
 
+/* update the number of nodes of the last compression */
+void SCIPcomprUpdateNNodes(
+   SCIP_COMPR*           compr,
+   int                   nnodes
+   )
+{
+   assert(compr != NULL);
+   assert(compr->initialized);
+
+   compr->nnodes = nnodes;
+}
+
 /* returns the loss of information of the last compression */
 SCIP_Real SCIPcomprGetLOI(
    SCIP_COMPR*           compr
@@ -584,6 +611,18 @@ SCIP_Real SCIPcomprGetLOI(
    assert(compr != NULL);
 
    return compr->loi;
+}
+
+/* update the loss of information of the last compression */
+void SCIPcomprUpdateLOI(
+   SCIP_COMPR*           compr,
+   SCIP_Real             loi
+   )
+{
+   assert(compr != NULL);
+   assert(compr->initialized);
+
+   compr->loi = loi;
 }
 
 /** is tree compression initialized? */

@@ -166,7 +166,6 @@ SCIP_RETCODE SCIPnodeDelCons(
 
 extern
 SCIP_RETCODE SCIPnodeGetAddedcons(
-   SCIP*                scip,
    SCIP_NODE*           node,
    SCIP_CONS**          addecons
    );

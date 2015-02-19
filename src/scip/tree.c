@@ -1115,11 +1115,14 @@ void SCIPnodeCutoff(
    )
 {
   SCIP_EVENT event;
+  SCIP_Real oldlowerbound;
 
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
+
+   oldlowerbound = node->lowerbound;
 
    node->cutoff = TRUE;
    node->lowerbound = SCIPsetInfinity(set);
@@ -1135,7 +1138,7 @@ void SCIPnodeCutoff(
    SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter);
 
    /* check if the node should be stored for reoptimization */
-   SCIPcheckNodeCutoff(set->scip, node, &event);
+   SCIPcheckNodeCutoff(set->scip, node, &event, oldlowerbound);
 
    SCIPdebugMessage("cutting off %s node #%"SCIP_LONGINT_FORMAT" at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -1566,10 +1569,9 @@ SCIP_RETCODE SCIPnodeDelCons(
 }
 
 SCIP_RETCODE SCIPnodeGetAddedcons(
-      SCIP*               scip,
-      SCIP_NODE*          node,
-      SCIP_CONS**         addedcons
-)
+   SCIP_NODE*          node,
+   SCIP_CONS**         addedcons
+   )
 {
    int cons;
 
@@ -3549,7 +3551,7 @@ SCIP_RETCODE nodeToLeaf(
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
 
       /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPcheckNodeCutoff(set->scip, *node, &event) );
+      SCIP_CALL( SCIPcheckNodeCutoff(set->scip, *node, &event, (*node)->lowerbound) );
 
       /* delete node due to bound cut off */
       SCIPvbcCutoffNode(stat->vbc, stat, *node);
@@ -4170,7 +4172,7 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
 
       /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPcheckNodeCutoff(set->scip, *node, &event) );
+      SCIP_CALL( SCIPcheckNodeCutoff(set->scip, *node, &event, (*node)->lowerbound) );
 
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventqueue, tree, lp) );
 
@@ -4886,7 +4888,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
 
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, node, &event) );
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, node, &event, node->lowerbound) );
 
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
@@ -4910,7 +4912,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
 
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, node, &event) );
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, node, &event, node->lowerbound) );
 
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }

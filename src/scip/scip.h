@@ -6175,7 +6175,8 @@ EXTERN
 SCIP_RETCODE SCIPcheckNodeCutoff(
    SCIP*                 scip,
    SCIP_NODE*            node,
-   SCIP_EVENT*           event
+   SCIP_EVENT*           event,
+   SCIP_Real             lowerbound
    );
 
 /** save bound changes based on dual information */
@@ -16866,7 +16867,7 @@ void SCIPenforceNReoptnodes(
 
 /* return all IDs of stored nodes that need to be reoptimized at current point in time */
 EXTERN
-SCIP_RETCODE SCIPgetReoptNodeIDs(
+SCIP_RETCODE SCIPgetReoptChildrenIDs(
    SCIP*                 scip,
    SCIP_NODE*            node,
    int*                  ids,
@@ -16887,7 +16888,8 @@ SCIP_RETCODE SCIPaddReoptnode(
    SCIP*                 scip,
    SCIP_NODE*            node,
    SCIP_REOPTTYPE        reopttype,
-   SCIP_Bool             saveafterduals
+   SCIP_Bool             saveafterduals,
+   SCIP_Real             lowerbound
    );
 
 /* returns the number of nodes that need be reoptimized
@@ -16898,11 +16900,44 @@ int SCIPgetNReoptNodeIDs(
    SCIP_NODE*            node
    );
 
+/* returns the lowerbound of a stored node */
+EXTERN
+SCIP_Real SCIPgetReoptNodeLb(
+   SCIP*                 scip,
+   int                   id
+   );
+
 /* returns the number of bound changes stored in the reopttree at ID id*/
 EXTERN
 int SCIPgetReoptnodeNVars(
    SCIP*                 scip,
    int                   id
+   );
+
+/* returns the number of children of @param node */
+EXTERN
+int SCIPgetNReoptChildrenIDs(
+   SCIP*                 scip,
+   SCIP_NODE*            node
+   );
+
+/* add a variable to a given reoptnode */
+EXTERN
+SCIP_RETCODE SCIPaddReoptnodeVar(
+   SCIP*                 scip,
+   SCIP_REOPTNODE*       reoptnode,
+   SCIP_VAR*             var,
+   SCIP_Real             val,
+   SCIP_BOUNDTYPE        boundtype
+   );
+
+/* set the @param representation as the new search frontier */
+EXTERN
+SCIP_RETCODE SCIPsetReoptCompression(
+   SCIP*                 scip,
+   SCIP_REOPTNODE**      representation,
+   int                   nrepresentatives,
+   SCIP_Bool*            success
    );
 
 /* returns the number of added constraints stored in the reopttree at ID id*/
@@ -16923,6 +16958,18 @@ void SCIPgetReoptnodePath(
    int                   mem,
    int*                  nvars,
    int*                  nafterdualvars
+   );
+
+/* returns the added constraints stored in the reopttree at ID id */
+EXTERN
+void SCIPgetReoptnodeConss(
+   SCIP*                 scip,
+   int                   id,
+   SCIP_VAR***           vars,
+   SCIP_Real**           vals,
+   int                   mem,
+   int*                  nconss,
+   int*                  nvars
    );
 
 /* replace the node stored in the reopttree at ID id by its child nodes */

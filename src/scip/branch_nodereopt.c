@@ -1574,7 +1574,7 @@ SCIP_RETCODE Exec(
          break;
 
          case REOPT_CONSTYPE_INFSUBTREE:
-            assert( SCIPgetNReoptNodeIDs(scip, node) == 0 );
+            assert( SCIPgetNReoptChildrenIDs(scip, node) == 0 );
 
             /* the logic-or constraint induces an infeasible subtree
              * and at the beginning of the next iteration the constraint can
@@ -1637,9 +1637,9 @@ SCIP_RETCODE Exec(
    REVIVE:
 
    /* get the IDs of all child nodes */
-   SCIP_CALL( SCIPallocBufferArray(scip, &childids, SCIPgetNReoptNodeIDs(scip, node)) );
-   SCIP_CALL( SCIPgetReoptNodeIDs(scip, node, childids, SCIPgetNReoptNodeIDs(scip, node), &nchilds) );
-   assert(SCIPgetNReoptNodeIDs(scip, node) == nchilds);
+   SCIP_CALL( SCIPallocBufferArray(scip, &childids, SCIPgetNReoptChildrenIDs(scip, node)) );
+   SCIP_CALL( SCIPgetReoptChildrenIDs(scip, node, childids, SCIPgetNReoptChildrenIDs(scip, node), &nchilds) );
+   assert(SCIPgetNReoptChildrenIDs(scip, node) == nchilds);
 
    ncreatedchilds = 0;
 
@@ -1766,7 +1766,7 @@ SCIP_RETCODE Exec(
       /** check if child2 includes some added constraints and save the node */
       if(child2 != NULL && SCIPnodeGetNAddedcons(child2) > 0)
       {
-         SCIP_CALL( SCIPaddReoptnode(scip, child2, SCIP_REOPTTYPE_LEAF, TRUE) );
+         SCIP_CALL( SCIPaddReoptnode(scip, child2, SCIP_REOPTTYPE_LEAF, TRUE, SCIPgetLocalTransEstimate(scip)) );
       }
    }
 

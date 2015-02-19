@@ -84,6 +84,7 @@ struct SCIP_ReoptNode
    int                   allocafterdualvarmem;    /**< size of allocated memory */
 
    SCIP_Bool             dualfixing;              /**< flag whether bound changed on dual decisions exists */
+   SCIP_Real             lowerbound;              /**< the last lowerbound of this node in the previous iteration */
 
    /* other information: child nodes, added constraints, ... */
    int*                  childids;                /**< array of child nodes that need to be reoptimized */
@@ -143,9 +144,17 @@ struct SCIP_Reopt
 
    int                   noptsolsbyreoptsol;      /**< count the number of the last n optimal solutions found by reoptsols */
 
+   SCIP_Longint          lastseennode;            /**< node number of the last caught event */
+
    /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */
    LOGICORDATA*          dualcons;                /**< constraint describing bound changes based on dual information */
+
+   /* permanent arrays to create constraints */
+   SCIP_VAR**            consvars;                /**< variable array for constraints */
+   SCIP_Real*            consvals;                /**< value array for constraints */
+   SCIP_BOUNDTYPE*       consbounds;              /**< boundtype array for constraints */
+   int                   consallocmem;            /**< size of allocated memory */
 
    /* global constraints */
    LOGICORDATA**         glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
