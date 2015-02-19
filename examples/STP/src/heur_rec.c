@@ -247,49 +247,41 @@ SCIP_RETCODE selectsols(
    int nselectedsols = 0;
    int nsols;                                /* number of all solutions found so far        */
    int shift;
-   int ncalls;                               /* number of heuristic calls */
    int nusedsols;                            /* number of solutions to use in rec     */
    int* perm;
    int* solselected;
 
    /* get solution data */
    nsols = SCIPgetNSols(scip);
-   ncalls = heurdata->ncalls;
    nusedsols = heurdata->nusedsols;
    assert(nusedsols > 1);
    assert(nsols >= nusedsols);
    sols = SCIPgetSols(scip);
    SCIP_CALL( SCIPduplicateBufferArray(scip, &permsols, SCIPgetSols(scip), nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solselected, nsols) );
-   // SCIP_CALL( SCIPallocBufferArray(scip, &soltimes, nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsols) );
 
    for( i = 0; i < nsols; i++ )
    {
       perm[i] = i;
-      // soltimes[i] = SCIPsolGetTime(sols[i]);
       solselected[i] = FALSE;
    }
 
-   if( ncalls % 3 != 0)
+   if( SCIPgetRandomInt(1, 2, &(heurdata->randseed)) != 1 )
    {
       solselected[0] = TRUE;
       selection[nselectedsols++] = 0;
       //printf("0select sol found by: %s \n", SCIPheurGetName(SCIPsolGetHeur(SCIPgetSols(scip)[0])) );
+      //printf("==2\n");
    }
 
-   //SCIPsortRealIntPtr(soltimes, perm, (void**) permsols,  nsols);
+   end = (nusedsols - nusedsols / 2) + (int) ((SCIPgetRandomReal(0.8, 1.5, &(heurdata->randseed))) );
 
-   //SCIPfreeBufferArray(scip, &soltimes);
-   end = (nusedsols - nusedsols / 2) + (int) ((SCIPgetRandomReal(8, 15, &(heurdata->randseed))) / 10.0) ;
-
-   shift = SCIPgetRandomInt(1, (nusedsols - nusedsols / 2), &(heurdata->randseed));
-
+   shift = SCIPgetRandomInt(1, (nusedsols - nusedsols / 2) + (double) nsols / 5.0 , &(heurdata->randseed));
 
    if( end + shift > nsols )
       shift = nsols - end;
-   assert(shift >= 0);
-
+   //printf("shift: %d \n", shift);
    SCIPpermuteIntArray(perm, nselectedsols, end + shift, &(heurdata->randseed));
 
    for( i = nselectedsols; i < end; i++ )
@@ -409,6 +401,7 @@ SCIP_RETCODE buildsolgraph(
    /* initialize new graph */
    newgraph = graph_init(nsolnodes, 2 * nsoledges, 1, 0);
    newgraph->stp_type = graph->stp_type;
+   newgraph->hoplimit = graph->hoplimit;
    j = 0;
    for( i = 0; i < nnodes; i++ )
    {
@@ -684,8 +677,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    {
       return SCIP_OKAY;
    }
-   if( graph->stp_type != STP_UNDIRECTED )
-      return SCIP_OKAY;
+   // if( graph->stp_type != STP_UNDIRECTED )
+   //  return SCIP_OKAY;
 
    /* suspend heuristic? */
    if( SCIPisLT(scip, nsols, heurdata->nlastsols + heurdata->nwaitingsols + heurdata->nfailures) && heurdata->ncalls > 0 )
@@ -780,12 +773,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             if( fixed )
                cost[e] = 1e+10;
             else if( SCIPisLT(scip, avg, 2) )
-		  cost[e] = cost[e] * (double) factor1 * (1.0 / avg);
+               cost[e] = cost[e] * (double) factor1 * (1.0 / avg);
 	    else if( SCIPisLT(scip, avg, 3) )
-		  cost[e] = cost[e] * (double) factor2 * (1.0 / avg);
+               cost[e] = cost[e] * (double) factor2 * (1.0 / avg);
 
             if( SCIPisLT(scip, cost[e], 1e+8 ) && SCIPisGT(scip, cost[e], maxcost) )
-               maxcost = solgraph->cost[e];
+               maxcost = cost[e];
          }
          for( e = 0; e < nsoledges; e++)
             costrev[e] = cost[flipedge(e)];
@@ -816,7 +809,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 	    assert(avg >= 1);
             if( fixed )
             {
-               costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+               costrev[e] = 1e+10;
                cost[e + 1] = 1e+10;
             }
             else
@@ -852,7 +845,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 	    assert(avg >= 1);
             if( fixed )
             {
-               costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+               costrev[e + 1] = 1e+10;
                cost[e] = 1e+10;
             }
             else
@@ -879,12 +872,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
       /* run TM heuristic */
       SCIP_CALL( do_layer(scip, tmheurdata, solgraph, &best_start, results, heurdata->ntmruns, solgraph->source[0], cost, costrev, maxcost) );
-//printf("BEF LC \n");
+      //printf("BEF LC \n");
       /* run local heuristic */
-      if( solgraph->stp_type == STP_UNDIRECTED )
+      if( graph->stp_type == STP_UNDIRECTED )
          SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
       graph_path_exit(solgraph);
-//printf("aft LC \n");
+      //printf("aft LC \n");
       /* retransform solution found by TM heuristic */
       for( e = 0; e < nsoledges; e++ )
       {

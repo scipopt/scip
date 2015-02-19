@@ -399,7 +399,7 @@ void graph_path_exec(
    for(i = 0; i < p->knots; i++)
    {
       state[i]     = UNKNOWN;
-      path[i].dist = FARAWAY;
+      path[i].dist = FARAWAY + 1;
       path[i].edge = -1;
       path[i].hops = 0;
    }
@@ -459,7 +459,9 @@ void graph_path_exec(
                pathhops = path[k].hops + 1;
                if( GT(path[m].dist, pathdist) ||
                      (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)))
-                  correct(heap, state, &count, path, m, k, i, (mode == FSP_MODE) ? cost[i] : cost[Edge_anti(i)], mode);
+	       {
+                  correct(heap, state, &count, path, m, k, i, (mode == BSP_MODE) ? cost[Edge_anti(i)] : cost[i], mode);
+	       }
             }
          }
       }

@@ -2188,7 +2188,6 @@ char graph_sol_valid(
          if( Is_term(graph->term[i]) && !terminal[i] )
             printf("not reached, node: %d\n", i);
       printf("a: %d, b: %d: \n", termcount, graph->terms);
-      assert(0);
    }
 
    free(terminal);

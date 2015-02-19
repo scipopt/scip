@@ -29,7 +29,7 @@
 #include "probdata_stp.h"
 #include "portab.h"
 #include "scip/misc.h"
-
+#include <math.h>
 #define HEUR_NAME             "TM"
 #define HEUR_DESC             "takahashi matsuyama primal heuristic for steiner trees"
 #define HEUR_DISPCHAR         '+'
@@ -206,22 +206,27 @@ SCIP_RETCODE do_prune(
    nnodes = g->knots;
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
    assert(layer == 0);
+   j = 0;
+
    /* compute the MST */
    for( i = 0; i < nnodes; i++ )
+   {
+      if( connected[i] )
+         j++;
       g->mark[i] = connected[i];
-
+   }
    assert(g->source[layer] >= 0);
    assert(g->source[layer] <  nnodes);
 
    graph_path_exec(g, MST_MODE, g->source[layer], cost, mst);
-
    for( i = 0; i < nnodes; i++ )
    {
+
+
       if( connected[i] && (mst[i].edge != -1) )
       {
          assert(g->head[mst[i].edge] == i);
          assert(result[mst[i].edge] == -1);
-
          result[mst[i].edge] = layer;
       }
    }
@@ -441,7 +446,7 @@ SCIP_RETCODE do_tmX(
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
    nnodes = g->knots;
-
+   assert(start < nnodes);
    SCIPdebugMessage("Heuristic: Start=%5d ", start);
 
 
@@ -525,7 +530,6 @@ SCIP_RETCODE do_tmX(
       {
          e = pathedge[newval][k];
          k = g->tail[e];
-
          if (!connected[k])
          {
             connected[k] = TRUE;
@@ -537,9 +541,13 @@ SCIP_RETCODE do_tmX(
    SCIPdebug(fputc('M', stdout));
    SCIPdebug(fflush(stdout));
    SCIPfreeBufferArray(scip, &cluster);
+
    for( e = 0; e < g->edges; e++ )
+   {
+      assert(cost[e] >= 0);
       if( SCIPisLT(scip, cost[e], 1e+9) )
          cost[e] = g->cost[e];
+   }
    SCIP_CALL( do_prune(scip, g, cost, 0, result, connected) );
    for( e = 0; e < g->edges; e++ )
       cost[e] = costrev[flipedge(e)];
@@ -1324,28 +1332,20 @@ SCIP_RETCODE do_layer(
       else if( runs < nnodes )
       {
 	 int* perm = NULL; /* permutation array */
-	 //printf(" runs: %d \n", runs);
-         // int shift;
 	 if( SCIPgetRandomInt(0, 2, &(heurdata->randseed)) == 2 || best == -1 )
-	 {
-            // printf("XXXXX \n  --- 1/3 ----  \n XXXXX \n");
 	    best = graph->source[0];
-	 }
-         /*	 else
-                 {
-                 printf("XXXXX \n  USUAL  \n XXXXX \n");
-                 }*/
+
+
          r = 0;
-         // shift = SCIPgetRandomInt(0, nnodes - 1, &(heurdata->intrandseed));
 
-	 /* allocate memory for permutation array */
-	 SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
-	 for( k = 0; k < nnodes; k++ )
-	    perm[k] = k;
-	 SCIPpermuteIntArray(perm, 0, nnodes, &(heurdata->randseed));
+         /* allocate memory for permutation array */
+         SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
+         for( k = 0; k < nnodes; k++ )
+            perm[k] = k;
+         SCIPpermuteIntArray(perm, 0, nnodes, &(heurdata->randseed));
 
 
-	 /* use terminals (randomly permutated) as starting points for TM heuristic */
+         /* use terminals (randomly permutated) as starting points for TM heuristic */
          for( k = 0; k < nnodes; k++ )
          {
 	    if( r >= runs || r >= nterms )
@@ -1541,28 +1541,36 @@ SCIP_RETCODE do_layer(
       }
       else
       {
-	 int edgecount;
 	 SCIP_Real hopfactor = heurdata->hopfactor;
+	 double* orgcost = NULL;
+	 int edgecount;
 	 char solfound = FALSE;
+	 assert(SCIPisGT(scip, hopfactor, 0.0));
 	 if( SCIPisLE(scip, maxcost, 0.0) )
 	    maxcost = 1.0;
+
+	 if( graph->stp_type == STP_HOP_CONS )
+	 {
+	    SCIP_CALL( SCIPallocBufferArray(scip, &orgcost, nedges) );
+	    BMScopyMemoryArray(orgcost, cost, nedges);
+	 }
          for( r = 0; r < runs; r++ )
          {
             for( e = 0; e < nedges; e++ )
                result[e] = UNKNOWN;
 
-	    if( graph->stp_type == STP_HOP_CONS && (hopfactor != heurdata->hopfactor || r == 0)  )
+            if( graph->stp_type == STP_HOP_CONS && (hopfactor != heurdata->hopfactor || r == 0)  )
             {
-	       heurdata->hopfactor = hopfactor;
+               heurdata->hopfactor = hopfactor;
                for( e = 0; e < nedges; e++ )
                {
                   if( Is_term(graph->term[graph->tail[e]]) && graph->tail[e] != graph->source[0] && (SCIPisLT(scip, graph->cost[e], 1e+9 )) )
-                     printf("ougoing edge !!!! : %f \n\n", graph->cost[e]);
+                     assert(0);
                   if( (SCIPisLT(scip, cost[e], 1e+8 )) )
-                     cost[e] = 1 + cost[e] / (hopfactor * maxcost);
-                  if( (SCIPisLT(scip, costrev[e], 1e+8 )) )
-                     costrev[e] = 1 + costrev[e] / (hopfactor * maxcost);
+                     cost[e] = 1 + orgcost[e] / (hopfactor * maxcost);
                }
+               for( e = 0; e < nedges; e++)
+                  costrev[e] = cost[flipedge(e)];
             }
             assert(start[r] >= 0);
             assert(start[r] < nnodes);
@@ -1607,31 +1615,44 @@ SCIP_RETCODE do_layer(
                   *bestnewstart = start[r];
                   SCIPdebugMessage(" Objt=%.12e    ", objt);
                   if( printfs )
-                     printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) nexecs, obj);
+                     printf(" Obj(run: %d, ncall: %d)=%.12e, count: %d  limit: %d \n", r, (int) nexecs, obj, edgecount, graph->hoplimit);
                   if( printfs )
                      printf(" Objt: %.12e\n", objt);
 
                   for( e = 0; e < nedges; e++ )
-                  {
                      best_result[e] = result[e];
-                     /* if( best_result[e] != - 1)
-                        printf("%d->%d %d\n", graph->tail[e], graph->head[e], best_result[e]); */
-                  }
+
 	       }
-	       else
-	       {
-		  assert(edgecount > graph->hoplimit);
-		  //printf(" before hopfactor: %f int: %d ", hopfactor, edgecount - graph->hoplimit);
-		  hopfactor = hopfactor * (1.0 + MIN(1.0, (((double)(edgecount - graph->hoplimit))) / 20.0));
-		  if( SCIPisLE(scip, hopfactor, 0.0) )
+
+               /*    else
+                     {
+                     assert(edgecount > graph->hoplimit);
+                     //printf(" before hopfactor: %f int: %d ", hopfactor, edgecount - graph->hoplimit);
+                     hopfactor = hopfactor * (1.0 + MIN(1.0, (((double)(edgecount - graph->hoplimit))) / graph->hoplimit));
+                     if( SCIPisLE(scip, hopfactor, 0.0) )
                      hopfactor = 1.0;
-		  //printf(" aft hopfactor: %f int: %d ", hopfactor, edgecount - graph->hoplimit);
-	       }
+                     //printf(" aft hopfactor: %f int: %d ", hopfactor, edgecount - graph->hoplimit);
+                     }*/
+
+            }
+            if( graph->stp_type == STP_HOP_CONS && (edgecount > graph->hoplimit || SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.2)) )
+            {
+               // printf("old hopfactor: %f fac: %f hoplimit: %d ", hopfactor, fabs((double) (edgecount - graph->hoplimit)), graph->hoplimit);
+               hopfactor = hopfactor * (1.0 + fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit);
+               //|| SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.05))
+               //    printf("new hopfactor: %f  ", hopfactor);
+               if( SCIPisLE(scip, hopfactor, 0.0) )
+                  hopfactor = 1.0;
+               //  printf(" aft hopfactor: %f count: %d  limit: %d  \n", hopfactor, edgecount, graph->hoplimit);
+               //	  printf("new1 hopfactor: %f  ", hopfactor);
             }
          }
+         if( graph->stp_type == STP_HOP_CONS )
+	    SCIPfreeBufferArray(scip, &orgcost);
+         //	 printf(" hopfactor: %f obj: %.12e\n", hopfactor, obj);
       }
    }
-   //  printf(" hoplimit: %d obj: %.12e\n", graph->hoplimit, min);
+
 
    /* free allocated memory */
    if( mode == TM )
@@ -2095,8 +2116,8 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                      cost[e] = cost[e] * rand;
                   }
                   /* TODO graphcost to cost*/
-                  if( SCIPisLT(scip, graph->cost[e], 1e+8 ) && SCIPisGT(scip, graph->cost[e], maxcost) )
-                     maxcost = graph->cost[e];
+                  if( SCIPisLT(scip, cost[e], 1e+8 ) && SCIPisGT(scip, cost[e], maxcost) )
+                     maxcost = cost[e];
 		  assert(SCIPisGE(scip, cost[e], 0));
                }
                for( e = 0; e < nedges; e++)
@@ -2150,16 +2171,16 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
          }
 
-	 /* hop constraint problem? */
-         if( graph->stp_type == STP_HOP_CONS )
-         {
-            for( e = 0; e < nedges; e++ )
-            {
-               cost[e] = 1 + cost[e] / maxcost;
-               costrev[e] = 1 + costrev[e] / maxcost;
-            }
-         }
-
+	 /*
+           if( graph->stp_type == STP_HOP_CONS )
+           {
+           for( e = 0; e < nedges; e++ )
+           {
+           cost[e] = 1 + cost[e] / maxcost;
+           costrev[e] = 1 + costrev[e] / maxcost;
+           }
+           }
+           hop constraint problem? */
          /* can we connect the network */
          SCIP_CALL( do_layer(scip, heurdata, graph, &best_start, results, runs, heurdata->beststartnode, cost, costrev, maxcost) );
 #if 0
@@ -2192,12 +2213,13 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       //printf("edgecount: %d root: %d \n ", edgecount, graph->source[0]);
       for( v = graph->inpbeg[ graph->source[0]]; v != EAT_LAST; v = graph->ieat[v] )
 	 assert( SCIPisEQ(scip, nval[v], 0.0) );
-      if( edgecount < graph->hoplimit )
-      {
-	 heurdata->hopfactor = heurdata->hopfactor * (1.0 - MIN(0.5, (double)(graph->hoplimit - edgecount) / 10.0) );
-	 assert(heurdata->hopfactor > 0);
-         printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
-      }
+      /*
+        if( edgecount < graph->hoplimit )
+        {
+        heurdata->hopfactor = heurdata->hopfactor * (1.0 - MIN(0.5, (double)(graph->hoplimit - edgecount) / 10.0) );
+        assert(heurdata->hopfactor > 0);
+        printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
+        }*/
    }
    if( validate(graph, nval) )
    {
@@ -2212,7 +2234,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       {
          heurdata->beststartnode = best_start;
       }
-      if( best_start != graph->source[0] || SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
+      if( 1 || SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) ) /* best_start != graph->source[0] || */
       {
          SCIP_Bool success;
 

@@ -72,7 +72,7 @@ typedef struct
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
    int     orgedges;
-   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs    */
+   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs   TODO: static */
    int*    tail;   /* Array [0..edges-1] of knot-number of tail   */
                    /* of edge [i]                                 */
    int*    head;   /* Array [0..edges-1] of knot-number of head   */
