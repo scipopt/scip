@@ -59,6 +59,55 @@ struct SCIP_ComprData
    int                   size;                    /**< size of the compression, -1: log(#variables) */
 };
 
+
+/*
+ * Local methods
+ */
+
+static
+int partition(
+   SCIP*                 scip,
+   int*                  childids,
+   int                   left,
+   int                   right
+   )
+{
+   int pivot;
+   int i;
+   int j;
+   int t;
+
+   pivot = left;
+   i = left;
+   j = right+1;
+
+   while( TRUE )
+   {
+      do
+      {
+         ++i;
+      } while( i <= right && SCIPisGT(scip, SCIPgetReoptNodeLb(scip, childids[i]), SCIPgetReoptNodeLb(scip, childids[pivot])) );
+
+      do
+      {
+         --j;
+      } while( j > 0 && SCIPisLT(scip, SCIPgetReoptNodeLb(scip, childids[j]), SCIPgetReoptNodeLb(scip, childids[pivot])) );
+
+      if( i >= j )
+         break;
+
+      t = childids[i];
+      childids[i] = childids[j];
+      childids[j] = t;
+   }
+
+   t = childids[left];
+   childids[left] = childids[j];
+   childids[j] = t;
+
+   return j;
+}
+
 static
 void sortIDs(
    SCIP*                 scip,

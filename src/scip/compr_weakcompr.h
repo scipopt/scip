@@ -39,26 +39,6 @@ SCIP_RETCODE SCIPincludeComprWeakcompr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-   /*
-    * Local methods
-    */
-   static int
-   partition(SCIP* scip, int* childids, int left, int right)
-   {
-      int pivot;
-      int i;
-      int j;
-      int t;
-      pivot = left;
-      i = left;
-      j = right + 1;
-
-      t = childids[left];
-      childids[left] = childids[j];
-      childids[j] = t;
-      return j;
-   }
-
 #ifdef __cplusplus
 }
 #endif
