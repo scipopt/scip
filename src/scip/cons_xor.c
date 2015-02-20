@@ -2410,9 +2410,8 @@ SCIP_RETCODE checkSystemGF2(
    /* free storage */
    SCIPfreeBufferArray(scip, &s);
    SCIPfreeBufferArray(scip, &p);
-   SCIPfreeBufferArray(scip, &xorbackidx);
-   j = 0;
-   for (i = 0; i < nconss; ++i)
+   j = nconssmat - 1;
+   for (i = nconss - 1; i >= 0 ; --i)
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -2423,10 +2422,11 @@ SCIP_RETCODE checkSystemGF2(
       if( !xoractive[i] )
          continue;
 
-      SCIPfreeBufferArray(scip, &(A[j++]));
+      SCIPfreeBufferArray(scip, &(A[j--]));
    }
    SCIPfreeBufferArray(scip, &A);
    SCIPfreeBufferArray(scip, &b);
+   SCIPfreeBufferArray(scip, &xorbackidx);
    SCIPfreeBufferArray(scip, &xoridx);
    SCIPfreeBufferArray(scip, &xorvars);
    SCIPfreeBufferArray(scip, &xoractive);
