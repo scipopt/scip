@@ -1416,14 +1416,7 @@ int nv_reduction_optimal(
                continue;
 
             if( g->stp_type == STP_HOP_CONS && GT(pathfromsource[shortarctail].hops, pathhops[i].dist - 1) )
-            {
-               printf("Hop constrained potential reduction - node: %d, hops: %d, minhops: %f\n", i,
-                     pathfromsource[shortarctail].hops, pathhops[i].dist - 1);
                continue;
-            }
-
-            printf("Hop constrained actual reduction - node: %d, hops: %d, minhops: %f\n", i,
-                  pathfromsource[shortarctail].hops, pathhops[i].dist - 1);
 
             if( antiedgeexists == TRUE )
             {

@@ -56,11 +56,7 @@ int degree_test_dir(
 
       for(i = 0; i < g->knots; i++)
       {
-         if( i % 100 == 0 )
-            printf("Directed Degree Test - Node %d. Number of reductions: %d\n", i, count);
-
          assert(g->grad[i] >= 0);
-         assert( g->grad[450]  > 1);
          if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY )
          {
             e1  = g->inpbeg[i];
