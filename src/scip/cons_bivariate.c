@@ -6302,8 +6302,6 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type [%s]\n", nconvextypeslhs[c], nconvextypesrhs[c], typename);
       }
 #endif
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "NOTE: the constraint handler for bivariate constraints is still experimental!\n");
    }
 
    /* reset counter */
