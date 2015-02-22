@@ -731,7 +731,7 @@ endif
 .PHONY: testgams
 testgams:
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true;
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true $(SETCUTOFF);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
