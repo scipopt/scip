@@ -7,7 +7,7 @@ fixed bugs:
 - fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
 - fixed bug in lp.c which leads to wrong primal and dual feasibility
 - fixed wrong comparison when executing branching rule for external branching candidates
-- fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
+- fixed bug in cons_abspower.c: do not generate cuts with infinity right-hand-side anymore
 - fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
 - fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
 - fixed bug that led to an erroneous warning about the clock type

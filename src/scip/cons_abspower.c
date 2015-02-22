@@ -3440,17 +3440,22 @@ SCIP_RETCODE generateLinearizationCut(
       return SCIP_OKAY;
    }
 
+   rhs += ((exponent-1)*refpoint-xoffset)*tmp;   /* now rhs is the rhs of the cut */
+   /* do not change the right hand side to a value > infinity (this would trigger an assertion in lp.c) */
+   if( SCIPisInfinity(scip, rhs) )
+   {
+      SCIPdebugMessage("skip linearization cut because its rhs would be > infinity\n");
+      *row = NULL;
+      return SCIP_OKAY;
+   }
+
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "signpowlinearizecut_%u", ++(conshdlrdata->ncuts));
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowname, -SCIPinfinity(scip), SCIPinfinity(scip), islocal,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowname, -SCIPinfinity(scip), rhs, islocal,
          FALSE /* modifiable */, TRUE /* removable */ ) );
 
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*exponent*tmp) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
-
-   /* do not change the right hand side to an infinite value (this would trigger an assertion in lp.c) */
-   if( !SCIPisInfinity(scip, rhs + ((exponent-1)*refpoint-xoffset)*tmp) )
-      SCIP_CALL( SCIPchgRowRhs(scip, *row, rhs + ((exponent-1)*refpoint-xoffset)*tmp) );
 
    return SCIP_OKAY;
 }
