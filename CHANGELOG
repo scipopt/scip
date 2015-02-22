@@ -1,13 +1,25 @@
+SCIP version 3.1.2
+==================
+
+fixed bugs:
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
+- fixed bug in cons_indicator with handling local bounds
+- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
+- fixed wrong comparison when executing branching rule for external branching candidates
+- fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
+- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
+- fixed bug that led to an erroneous warning about the clock type
+
+misc:
+- moved assertions in comparison methods from scip.c to set.c
+- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
+
 SCIP version 3.1.1
 ==================
 
 fixed bugs:
-- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
-- fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
-- fixed wrong comparison when executing branching rule for external branching candidates
-- fixed bug in lp.c which leads to wrong primal and dual feasibility
-- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
-- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
 - fixed bug in cons_quadratic which leads to wrong min/max activities
 - fixed wrong conversion of reals representing negative integer values
 - in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
@@ -71,9 +83,6 @@ fixed bugs:
   is just disregarded
 - fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
 - fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
-- fixed	bug in cons_indicator with handling local bounds
-- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
-- fixed bug that led to an erroneous warning about the clock type
 
 performance improvements:
 - improved activity-delta computation and thereby propagation for linear constraints
@@ -113,9 +122,6 @@ Makefile:
 - allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
   also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
 
-misc:
-- moved assertions in comparison methods from scip.c to set.c
-- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
 
 SCIP version 3.1.0
 ==================
