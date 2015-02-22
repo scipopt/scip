@@ -2612,8 +2612,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
                {
                   if( nval[e] > 0.5 )
                   {
-                     printf("two edges to one terminal\n");
-
+                     //printf("two edges to one terminal\n");
                      nval[edge1] = 0;
                      nval[edge2] = 1;
                      break;
