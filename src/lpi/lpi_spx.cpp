@@ -4036,22 +4036,28 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    else
    {
       int k = 0;
+      int nrows = spx->nRows();
+      int ncols = spx->nCols();
 
       assert( spx->rep() == SPxSolver::ROW );
 
-      for( int i = 0; i < spx->nRows(); ++i )
+      for( int i = 0; i < nrows; ++i )
       {
          if( !spx->isRowBasic(i) )
+         {
             bind[k++] = -1 - i;
+            if( k >= nrows )
+               break;
+         }
       }
 
-      for( int j = 0; j < spx->nCols(); ++j )
+      for( int j = 0; j < ncols && k < nrows; ++j )
       {
          if( !spx->isColBasic(j) )
             bind[k++] = j;
       }
 
-      assert(k == spx->nRows());
+      assert(k == nrows);
    }
 
    return SCIP_OKAY;
