@@ -4229,6 +4229,8 @@ SCIP_RETCODE SCIPsetEmphasis(
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
  *  auxiliary SCIP instances to avoid recursion
  *
+ *  @note only deactivates plugins which could cause recursion, some plugins which use sub-SCIPs stay activated
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
