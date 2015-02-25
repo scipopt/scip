@@ -1,4 +1,3 @@
-#define SCIP_DEBUG_INT
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -192,6 +191,7 @@ struct SCIP_ConshdlrData
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
+   SCIP_Bool             strongcuts;         /**< should convex quadratics generated strong cuts? */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
                                               * SCIP might declare sub-optimal solutions optimal or feasible instances
@@ -7372,11 +7372,17 @@ SCIP_RETCODE generateCutSol(
    SCIP_Real             minefficacy         /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_HASHMAP* varmap;
    SCIP_VAR*  var;
    SCIP_Real  lb;
    SCIP_Real  ub;
    SCIP_Real* ref;
+   SCIP_Real gval;
+   SCIP_Real aterm;
+   SCIP_Real bterm;
+   SCIP_Real cterm;
    int j;
 
    assert(scip != NULL);
@@ -7385,6 +7391,9 @@ SCIP_RETCODE generateCutSol(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    if( refsol == NULL )
       refsol = sol;
@@ -7399,7 +7408,9 @@ SCIP_RETCODE generateCutSol(
     * */
    SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
 
-   if( (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
+   if( conshdlrdata->strongcuts && (
+            (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
+            (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
    {
       SCIPdebugMessage("cons %s: is convex, and rhs is violated\n", SCIPconsGetName(cons));
       if( consdata->recomputeinterior )
@@ -7428,11 +7439,6 @@ SCIP_RETCODE generateCutSol(
 
       if( consdata->interiorcomputed )
       {
-         SCIP_Real gval;
-         SCIP_Real aterm;
-         SCIP_Real bterm;
-         SCIP_Real cterm;
-         SCIP_HASHMAP* varmap;
          int i;
 
          /* evaluate gauge function at x0 = (sol - interior point) */
@@ -7454,12 +7460,12 @@ SCIP_RETCODE generateCutSol(
          bterm = 0;
          for( i = 0; i < consdata->nlinvars; i++ )
          {
-            bterm += (SCIPgetSolVal(scip, sol, consdata->linvars[i]) - consdata->interiorpoint[i]) * consdata->gaugelincoefs[i];
+            bterm += (SCIPgetSolVal(scip, sol, consdata->linvars[i]) - consdata->interiorpoint[i]) * consdata->lincoefs[i];
          }
          for( i = 0; i < consdata->nquadvars; i++ )
          {
             j = i + consdata->nlinvars;
-            bterm += (SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var) - consdata->interiorpoint[j]) * consdata->gaugelincoefs[j];
+            bterm += (SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var) - consdata->interiorpoint[j]) * consdata->gaugelincoefs[i];
          }
 
          /* compute cterm = x0^t A x0 */
@@ -12132,6 +12138,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/strongcuts",
+         "should convex quadratics generated strong cuts?",
+         &conshdlrdata->strongcuts, FALSE, TRUE, NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
