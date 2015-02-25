@@ -7157,7 +7157,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_Real* interiorpoint;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
-   SCIP_Real nlpirhs;
+   SCIP_Real nlpiside;
    char probname[SCIP_MAXSTRLEN];
    int* lininds;
    int nlrownlinvars;
@@ -7229,9 +7229,21 @@ SCIP_RETCODE computeInteriorPoint(
    }
 
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(cons));
-   nlpirhs = consdata->rhs - INTERIOR_EPS;
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, NULL, &nlpirhs, &nlrownlinvars, &lininds, &nlrowlincoefs,
-            &nlrownquadelems, &quadelems, NULL, NULL, NULL) );
+
+   if( consdata->isconvex )
+   {
+      nlpiside = consdata->rhs - INTERIOR_EPS;
+      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, NULL, &nlpiside, &nlrownlinvars, &lininds, &nlrowlincoefs,
+               &nlrownquadelems, &quadelems, NULL, NULL, NULL) );
+   }
+   else
+   {
+      assert(consdata->isconcave);
+
+      nlpiside = consdata->lhs + INTERIOR_EPS;
+      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, &nlpiside, NULL, &nlrownlinvars, &lininds, &nlrowlincoefs,
+               &nlrownquadelems, &quadelems, NULL, NULL, NULL) );
+   }
 
    /* solve NLP problem */
    SCIP_CALL( SCIPnlpiSolve(nlpi, prob) );
@@ -7387,8 +7399,7 @@ SCIP_RETCODE generateCutSol(
     * */
    SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
 
-   /* FIXME: add this case to if and logic: || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )*/
-   if( consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT )
+   if( (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
    {
       SCIPdebugMessage("cons %s: is convex, and rhs is violated\n", SCIPconsGetName(cons));
       if( consdata->recomputeinterior )
@@ -7404,7 +7415,10 @@ SCIP_RETCODE generateCutSol(
          for( j = 0; j < consdata->nquadvars; j++ )
             printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->interiorpoint[j + consdata->nlinvars]);
          printf("function value: %g\n", consdata->interiorpointval);
-         printf("rhs: %g\n", consdata->rhs);
+         if( consdata->isconvex )
+            printf("rhs: %g\n", consdata->rhs);
+         else
+            printf("lhs: %g\n", consdata->lhs);
 
          printf("gauge's linear coef of quadratic vars:\n");
          for( j = 0; j < consdata->nquadvars; j++ )
@@ -7423,8 +7437,18 @@ SCIP_RETCODE generateCutSol(
 
          /* evaluate gauge function at x0 = (sol - interior point) */
          /* compute aterm = function(interior point) - rhs */
-         aterm = consdata->interiorpointval - consdata->rhs;
-         assert(aterm < 0);
+         if( consdata->isconvex )
+         {
+            aterm = consdata->interiorpointval - consdata->rhs;
+            assert(SCIPisNegative(scip, aterm));
+         }
+         else
+         {
+            assert(consdata->isconcave);
+
+            aterm = consdata->interiorpointval - consdata->lhs;
+            assert(SCIPisPositive(scip, aterm));
+         }
 
          /* compute bterm = gauge's b * x0 */
          bterm = 0;
@@ -7463,8 +7487,17 @@ SCIP_RETCODE generateCutSol(
             cterm += consdata->bilinterms[i].coef * val1 * val2;
          }
 
-         gval = -bterm - sqrt(bterm*bterm - 4 * aterm * cterm);
-         gval = gval / (2 * aterm);
+         if( consdata->isconvex )
+         {
+            gval = -bterm - sqrt(bterm*bterm - 4 * aterm * cterm);
+            gval = gval / (2 * aterm);
+         }
+         else
+         {
+            gval = -bterm + sqrt(bterm*bterm - 4 * aterm * cterm);
+            gval = gval / (2 * aterm);
+         }
+
 
          /* set reference as (sol - interior point)/gval + interior point */
          for( j = 0; j < consdata->nquadvars; ++j )
