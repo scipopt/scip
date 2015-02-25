@@ -30607,6 +30607,9 @@ void SCIPresetDiveset(
  *
  *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
  */
+#include "scip/struct_heur.h"
+#include "scip/struct_stat.h"
+
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< settings for diving */
@@ -30626,7 +30629,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real ubquot;
    SCIP_Real avgquot;
    SCIP_Longint ncalls;
-   SCIP_Longint nsolsfound;
+   SCIP_Longint oldsolsuccess;
    SCIP_Longint nlpiterations;
    SCIP_Longint maxnlpiterations;
    int ndivecands;
@@ -30646,6 +30649,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
+   int oldnsolsfound;
+   int oldnbestsolsfound;
 
    SCIP_VAR** indcands = NULL;
    SCIP_Real* indcandssol = NULL;
@@ -30691,9 +30696,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = 10 * SCIPheurGetNBestSolsFound(heur) + SCIPdivesetGetNSuccess(diveset);
-   maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
+   oldsolsuccess = SCIPdivesetGetSolSuccess(diveset);
+
+   /*todo another factor of 10, REALLY? */
+   maxnlpiterations = (SCIP_Longint)((1.0 + 10*(oldsolsuccess+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
    maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
+
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
@@ -30770,6 +30778,16 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    maxdivedepth *= 10;
 
    *result = SCIP_DIDNOTFIND;
+
+   oldnsolsfound = SCIPgetNSolsFound(scip);
+   oldnbestsolsfound = SCIPgetNBestSolsFound(scip);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Diving heuristic %s: success: %d (tot: %d) avg. depth: %.1f (tot: %.1f), avg. LP iters: %.1f (tot: %.1f) \n", SCIPheurGetName(heur),
+         oldsolsuccess, scip->stat->divesetsolsuccess,
+         ncalls > 0 ? (diveset->totaldepth /(1.0 * ncalls)) : 0,
+         scip->stat->ndivesetcalls > 0 ? scip->stat->totaldivesetdepth / (1.0 * scip->stat->ndivesetcalls) : 0.0,
+         diveset->nlps > 0 ? diveset->nlpiterations / (1.0 * diveset->nlps) : 0.0,
+         scip->stat->ndivesetlps > 0 ? scip->stat->ndivesetlpiterations / (1.0 * scip->stat->ndivesetlps) : 0.0
+         );
 
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -31154,7 +31172,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
 
          /* update iteration count */
-         SCIPdivesetIncreaseNLPIterations(diveset, SCIPgetNLPIterations(scip) - nlpiterations);
+         SCIPdivesetUpdateLPStats(diveset, scip->stat, SCIPgetNLPIterations(scip) - nlpiterations);
 
          /* get LP solution status, objective value, and fractional variables, that should be integral */
          objval = SCIPgetLPObjval(scip);
@@ -31236,11 +31254,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPfreeBufferArray(scip, &indcandsfrac);
    }
 
+   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetProbingDepth(scip), 10 * (SCIPgetNBestSolsFound(scip) - oldnbestsolsfound) + SCIPgetNSolsFound(scip) - oldnsolsfound);
+
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 
-   if( *result == SCIP_FOUNDSOL )
-      SCIPdivesetIncreaseNSuccess(diveset);
 
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
       SCIPgetNNodes(scip), SCIPheurGetName(heur), ndivecands, divedepth, maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,

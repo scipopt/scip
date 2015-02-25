@@ -32,6 +32,7 @@
 #include "scip/type_primal.h"
 #include "scip/type_heur.h"
 #include "scip/pub_heur.h"
+#include "scip/stat.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +80,15 @@ void SCIPdivesetReset(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** update diveset statistics and global diveset statistics */
+extern
+void SCIPdivesetUpdateStats(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   int                   depth,              /**< the probing depth reached this time */
+   int                   updatesuccess       /**< an update of the success */
+   );
+
 /** stores the candidate score and preferred rounding direction for a candidate variable */
 extern
 SCIP_RETCODE SCIPdivesetGetScore(
@@ -90,6 +100,15 @@ SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_Real*            candscore,          /**< pointer to store the candidate score */
    SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
    );
+
+/** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
+extern
+void SCIPdivesetUpdateLPStats(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   );
+
 /** copies the given primal heuristic to a new scip */
 extern
 SCIP_RETCODE SCIPheurCopyInclude(

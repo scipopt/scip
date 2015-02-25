@@ -178,7 +178,7 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 
 /** get the number of successful runs of the diving settings */
 EXTERN
-int SCIPdivesetGetNSuccess(
+int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
@@ -228,19 +228,6 @@ SCIP_Real SCIPdivesetGetAvgQuot(
 EXTERN
 SCIP_Bool SCIPdivesetUseBacktrack(
    SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
-/** increases LP iterations counter of diving settings */
-EXTERN
-void SCIPdivesetIncreaseNLPIterations(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
-   );
-
-/** increases success counter of diving settings by 1 */
-EXTERN
-void SCIPdivesetIncreaseNSuccess(
-   SCIP_DIVESET*         diveset             /**< diving settings which happened to earn the reward */
    );
 
 /** frees memory of a diveset */

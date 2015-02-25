@@ -93,8 +93,26 @@ void SCIPdivesetReset(
    assert(diveset != NULL);
 
    diveset->nlpiterations = 0L;
-   diveset->nsuccess = 0;
+   diveset->totaldepth = 0;
+   diveset->nlps = 0;
    diveset->targetdepthfrac = set->heur_divestartfrac;
+}
+
+/** update diveset statistics and global diveset statistics */
+void SCIPdivesetUpdateStats(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   int                   depth,              /**< the probing depth reached this time */
+   int                   updatesuccess       /**< an update of the success */
+   )
+{
+   assert(diveset != NULL);
+
+   diveset->totaldepth += depth;
+   stat->totaldivesetdepth += depth;
+   stat->ndivesetcalls++;
+
+   stat->divesetsolsuccess += updatesuccess;
 }
 
 /** create a set of diving heuristic settings */
@@ -210,11 +228,11 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 }
 
 /** get the number of successful runs of the diving settings */
-int SCIPdivesetGetNSuccess(
+int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
-   return diveset->nsuccess;
+   return 10 * SCIPheurGetNBestSolsFound(diveset->heur) + SCIPheurGetNSolsFound(diveset->heur);
 }
 
 /** get the maximum LP iterations quotient of the diving settings */
@@ -280,21 +298,17 @@ SCIP_Bool SCIPdivesetUseBacktrack(
    return diveset->backtrack;
 }
 
-/** increases LP iterations counter of diving settings */
-void SCIPdivesetIncreaseNLPIterations(
+/** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
+void SCIPdivesetUpdateLPStats(
    SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
    SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
    )
 {
    diveset->nlpiterations += niterstoadd;
-}
-
-/** increases success counter of diving settings by 1 */
-void SCIPdivesetIncreaseNSuccess(
-   SCIP_DIVESET*         diveset             /**< diving settings which happened to earn the reward */
-   )
-{
-   diveset->nsuccess++;
+   stat->ndivesetlpiterations += niterstoadd;
+   diveset->nlps++;
+   stat->ndivesetlps++;
 }
 
 /** get the target depth fraction of the diving settings  */

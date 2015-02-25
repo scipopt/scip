@@ -47,8 +47,9 @@ struct SCIP_Diveset
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             targetdepthfrac;    /**< fraction of lpcands to be reached before next LP solve */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
+   SCIP_Longint          nlps;               /**< the number of LPs solved by this heuristic */
+   SCIP_Longint          totaldepth;         /**< the total depth used in this heuristic */
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
-   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
 };
