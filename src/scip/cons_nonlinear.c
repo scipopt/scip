@@ -51,7 +51,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
-#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
 #define BOUNDTIGHTENING_MINSTRENGTH 0.05/**< minimal required bound tightening strength in expression graph domain tightening for propagating bound change */
@@ -8162,19 +8162,22 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* run domain propagation (if updated bounds in graph above, then can skip cleanup) */
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, !tryupgrades, &propresult, nchgbds, ndelconss) );
-   switch( propresult )
+   if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
-   case SCIP_REDUCEDDOM:
-      *result = SCIP_SUCCESS;
-      break;
-   case SCIP_CUTOFF:
-      SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   default:
-      assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
-   }  /*lint !e788*/
+      SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, !tryupgrades, &propresult, nchgbds, ndelconss) );
+      switch( propresult )
+      {
+      case SCIP_REDUCEDDOM:
+         *result = SCIP_SUCCESS;
+         break;
+      case SCIP_CUTOFF:
+         SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      default:
+         assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
+      }  /*lint !e788*/
+   }
 
    if( conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
    {
@@ -8182,7 +8185,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
        * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
        * otherwise, we wait with these
        */
-      if( SCIPisPresolveFinished(scip) )
+      if( SCIPisPresolveFinished(scip) || (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
          int naddconssbefore;
 
