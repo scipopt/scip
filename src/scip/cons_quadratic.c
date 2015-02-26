@@ -7379,7 +7379,7 @@ SCIP_RETCODE generateCutSol(
    SCIP_Real  lb;
    SCIP_Real  ub;
    SCIP_Real* ref;
-   SCIP_Real gval;
+   SCIP_Real gaugeval;
    SCIP_Real aterm;
    SCIP_Real bterm;
    SCIP_Real cterm;
@@ -7492,20 +7492,22 @@ SCIP_RETCODE generateCutSol(
             val2 = SCIPgetSolVal(scip, sol, var2) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var2)];
             cterm += consdata->bilinterms[i].coef * val1 * val2;
          }
+         assert(bterm*bterm - 4*aterm*cterm >= 0);
 
          if( consdata->isconvex )
          {
-            gval = -bterm - sqrt(bterm*bterm - 4 * aterm * cterm);
-            gval = gval / (2 * aterm);
+            gaugeval = -bterm - sqrt(bterm*bterm - 4 * aterm * cterm);
+            gaugeval = gaugeval / (2 * aterm);
          }
          else
          {
-            gval = -bterm + sqrt(bterm*bterm - 4 * aterm * cterm);
-            gval = gval / (2 * aterm);
+            gaugeval = -bterm + sqrt(bterm*bterm - 4 * aterm * cterm);
+            gaugeval = gaugeval / (2 * aterm);
          }
+         assert(gaugeval >= 1);
 
 
-         /* set reference as (sol - interior point)/gval + interior point */
+         /* set reference as (sol - interior point)/gaugeval + interior point */
          for( j = 0; j < consdata->nquadvars; ++j )
          {
             SCIP_Real intpoint;
@@ -7518,14 +7520,14 @@ SCIP_RETCODE generateCutSol(
             assert(!SCIPisInfinity(scip,  lb));
             assert(!SCIPisInfinity(scip, -ub));
 
-            ref[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gval + intpoint;
+            ref[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gaugeval + intpoint;
          }
 
 #ifdef SCIP_DEBUG_INT
          printf("trying to separate:\n");
          SCIPprintSol(scip, sol, NULL, TRUE);
 
-         printf("gauge function at sol - interiorpoint: %g\n", gval);
+         printf("gauge function at sol - interiorpoint: %g\n", gaugeval);
          printf("reference point:\n");
          for( j = 0; j < consdata->nquadvars; ++j )
             printf("%s = %g\n", SCIPvarGetName(var), ref[j]);
@@ -10094,10 +10096,20 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 #ifndef NDEBUG
    int                i;
 #endif
+#ifdef CONVSTAT
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int                nconvex;
+
+   nconvex = 0;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
+
+#ifdef CONVSTAT
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -10131,7 +10143,24 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
       /* tell SCIP that we have something nonlinear */
       if( SCIPconsIsAdded(conss[c]) && consdata->nquadvars > 0 )
          SCIPenableNLP(scip);
+
+#ifdef CONVSTAT
+      /* check how many convex constraints are */
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
+         nconvex++;
+      if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
+         nconvex++;
+#endif
    }
+
+#ifdef CONVSTAT
+   printf("Number of convex quadratic functions: %d\n", nconvex);
+   exit(0);
+#endif
 
    return SCIP_OKAY;
 }
