@@ -189,6 +189,12 @@ SCIP_RETCODE SCIPincludeReaderStp(
          NULL, FALSE, "",
          NULL, NULL) );
 
+   SCIP_CALL( SCIPaddStringParam(scip,
+         "stp/intlogfile",
+         "log file in DIMACS challenge format for intermediate solutions",
+         NULL, FALSE, "",
+         NULL, NULL) );
+
 
 
    return SCIP_OKAY;

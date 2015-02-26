@@ -84,6 +84,8 @@ struct SCIP_ProbData
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
    FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
+   FILE*                 intlogfile;         /**< logfile printing all intermediate solutions for DIMACS challenge */
+   FILE**                origintlogfile;     /**< pointer to original problem data intlogfile pointer */
 
    /** for FiberSCIP **/
    SCIP_Bool             ug;                 /**< inidicat if this ug dual bound is set or not */
@@ -252,6 +254,8 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->copy = FALSE;
    (*probdata)->logfile = NULL;
    (*probdata)->origlogfile = NULL;
+   (*probdata)->intlogfile = NULL;
+   (*probdata)->origintlogfile = NULL;
 
    (*probdata)->ug = FALSE;
    (*probdata)->nSolvers =0;
@@ -1237,6 +1241,8 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->bigt = sourcedata->bigt;
    (*targetdata)->logfile = sourcedata->logfile;
    (*targetdata)->origlogfile = &(sourcedata->logfile);
+   (*targetdata)->intlogfile = sourcedata->intlogfile;
+   (*targetdata)->origintlogfile = &(sourcedata->intlogfile);
 
    if( sourcedata->offsetvar != NULL )
    {
@@ -1478,6 +1484,19 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       *(probd->origlogfile) = NULL;
    }
 
+   if( probd->intlogfile != NULL )
+   {
+      int success = fclose(probd->intlogfile);
+      if( success != 0 )
+      {
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", probd->intlogfile);
+         return SCIP_FILECREATEERROR;
+      }
+
+      probd->intlogfile = NULL;
+      *(probd->origintlogfile) = NULL;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1522,6 +1541,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    char mode;
    char probtype[16];
    char printfs = FALSE;
+   char* intlogfilename;
    char* logfilename;
    char* tmpfilename;
    char* probname;
@@ -1549,6 +1569,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/bigt", &(probdata->bigt)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/printGraph", &print) );
    SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
+   SCIP_CALL( SCIPgetStringParam(scip, "stp/intlogfile", &intlogfilename) );
 
    if( logfilename != NULL && logfilename[0] != '\0' )
    {
@@ -1558,6 +1579,18 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          SCIPerrorMessage("cannot create file <%s> for writing\n", logfilename);
          SCIPprintSysError(logfilename);
+         return SCIP_FILECREATEERROR;
+      }
+   }
+
+   if( intlogfilename != NULL && intlogfilename[0] != '\0' )
+   {
+      probdata->intlogfile = fopen(intlogfilename, "w");
+
+      if( probdata->intlogfile == NULL )
+      {
+         SCIPerrorMessage("cannot create file <%s> for writing\n", intlogfilename);
+         SCIPprintSysError(intlogfilename);
          return SCIP_FILECREATEERROR;
       }
    }
@@ -2062,6 +2095,25 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
 
    return SCIP_OKAY;
 }
+
+
+/** writes the best solution to the intermediate solution file */
+SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+   probdata = SCIPgetProbData(scip);
+
+   if( probdata->intlogfile != NULL )
+   {
+      SCIP_CALL( SCIPprobdataWriteSolution(scip, probdata->intlogfile) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 
 /** writes the best solution to a file */
 SCIP_RETCODE SCIPprobdataWriteSolution(

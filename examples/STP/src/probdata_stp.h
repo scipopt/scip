@@ -153,6 +153,12 @@ SCIP_Bool SCIPprobdataIsBigt(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** writes the best solution to the intermediate solution file */
+extern
+SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** writes the best solution to a file */
 extern
 SCIP_RETCODE SCIPprobdataWriteSolution(
