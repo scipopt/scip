@@ -7460,12 +7460,12 @@ SCIP_RETCODE generateCutSol(
          bterm = 0;
          for( i = 0; i < consdata->nlinvars; i++ )
          {
-            bterm += (SCIPgetSolVal(scip, sol, consdata->linvars[i]) - consdata->interiorpoint[i]) * consdata->lincoefs[i];
+            bterm += (SCIPgetSolVal(scip, refsol, consdata->linvars[i]) - consdata->interiorpoint[i]) * consdata->lincoefs[i];
          }
          for( i = 0; i < consdata->nquadvars; i++ )
          {
             j = i + consdata->nlinvars;
-            bterm += (SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var) - consdata->interiorpoint[j]) * consdata->gaugelincoefs[i];
+            bterm += (SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var) - consdata->interiorpoint[j]) * consdata->gaugelincoefs[i];
          }
 
          /* compute cterm = x0^t A x0 */
@@ -7474,7 +7474,7 @@ SCIP_RETCODE generateCutSol(
          {
             SCIP_Real val;
 
-            val = SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var) - consdata->interiorpoint[i + consdata->nlinvars];
+            val = SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var) - consdata->interiorpoint[i + consdata->nlinvars];
             cterm += consdata->quadvarterms[i].sqrcoef * val * val;
          }
 
@@ -7488,8 +7488,8 @@ SCIP_RETCODE generateCutSol(
 
             var1 = consdata->bilinterms[i].var1;
             var2 = consdata->bilinterms[i].var2;
-            val1 = SCIPgetSolVal(scip, sol, var1) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var1)];
-            val2 = SCIPgetSolVal(scip, sol, var2) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var2)];
+            val1 = SCIPgetSolVal(scip, refsol, var1) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var1)];
+            val2 = SCIPgetSolVal(scip, refsol, var2) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var2)];
             cterm += consdata->bilinterms[i].coef * val1 * val2;
          }
          assert(bterm*bterm - 4*aterm*cterm >= 0);
