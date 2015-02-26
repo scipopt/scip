@@ -220,6 +220,8 @@ extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*,
 extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
 extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
+extern void   voronoi_pres(const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
+extern void   voronoi_dist(const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, PATH*);
 extern void   voronoi_radius(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
@@ -266,6 +268,8 @@ extern int    bd3_reduction(GRAPH*);
 extern int    nsv_reduction(SCIP*, GRAPH*, double*);
 extern int    nv_reduction_optimal(GRAPH*, double*, int);
 extern int    nv_reduction(GRAPH*, double*);
+extern int    nvX_reduction(GRAPH*, double*, int*, int*);
+extern int    sl_reduction(GRAPH*, double*, int*, int*);
 
 /* dirreduce.c
  */

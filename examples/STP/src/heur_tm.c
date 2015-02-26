@@ -206,8 +206,18 @@ SCIP_RETCODE do_prune(
    nnodes = g->knots;
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
    assert(layer == 0);
-   j = 0;
+   /*
+     printf("in \n");
+     if(connected[1053])
+     {
+     printf("connected 1053!! term? : %d\n", g->term[1053]);
+     for( j = g->outbeg[1053]; j != EAT_LAST; j = g->oeat[j] )
+     if( connected[g->head[j]] )
+     printf("out 1053: %d->%d \n", g->tail[j], g->head[j]);
 
+     }
+   */
+   j = 0;
    /* compute the MST */
    for( i = 0; i < nnodes; i++ )
    {
@@ -230,6 +240,19 @@ SCIP_RETCODE do_prune(
          result[mst[i].edge] = layer;
       }
    }
+   /*
+     if(connected[1053])
+     {
+     printf("connected 1053!! term? : %d\n", g->term[1053]);
+     for( j = g->outbeg[1053]; j != EAT_LAST; j = g->oeat[j] )
+     if( result[j] == 0 )
+     printf("out 1053: %d->%d \n", g->tail[j], g->head[j]);
+
+     for( j = g->inpbeg[1053]; j != EAT_LAST; j = g->ieat[j] )
+     if( result[j] == 0 )
+     printf("in 1053: %d->%d \n", g->tail[j], g->head[j]);
+     }
+   */
 
    /* prune */
    do
@@ -266,7 +289,8 @@ SCIP_RETCODE do_prune(
                   break;
                }
             }
-            assert(j != EAT_LAST);
+            if( g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+               assert(j != EAT_LAST);
          }
       }
    }
@@ -525,13 +549,14 @@ SCIP_RETCODE do_tmX(
       /* Gegen den Strom schwimmend alles markieren
        */
       k = old;
-
+      //printf("connect %d\n", old);
       while(k != newval)
       {
          e = pathedge[newval][k];
          k = g->tail[e];
          if (!connected[k])
          {
+	    //printf("connected (%d->)%d \n", g->head[e], k);
             connected[k] = TRUE;
             cluster[csize++] = k;
          }
@@ -542,6 +567,7 @@ SCIP_RETCODE do_tmX(
    SCIPdebug(fflush(stdout));
    SCIPfreeBufferArray(scip, &cluster);
 
+   //printf("TMX\n");
    for( e = 0; e < g->edges; e++ )
    {
       assert(cost[e] >= 0);
@@ -1310,8 +1336,11 @@ SCIP_RETCODE do_layer(
          mode = TM;
    }
 
+   if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      mode = TM;
    if( printfs )
       printf(" %d \n ", mode);
+
 
    if( graph->layers > 1 )
    {
@@ -1320,6 +1349,13 @@ SCIP_RETCODE do_layer(
    }
    else
    {
+#if 0
+      if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING && runs != heurdata->initruns )
+      {
+	 runs = graph->terms;
+	 printf("NO INITRUNS\n");
+      }
+#endif
       if( graph->stp_type == STP_DEG_CONS )
          mode = TM;
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
@@ -1528,11 +1564,11 @@ SCIP_RETCODE do_layer(
                   e = rootedges_t[k];
                   assert( e != UNKNOWN );
 #if TMX
-                     pathdist[graph->tail[e]][root] = cost[flipedge(e)];
-                     pathedge[graph->tail[e]][root] = e;
+                  pathdist[graph->tail[e]][root] = cost[flipedge(e)];
+                  pathedge[graph->tail[e]][root] = e;
 #else
-                     path[graph->tail[e]][root].dist = cost[flipedge(e)];
-                     path[graph->tail[e]][root].edge = e;
+                  path[graph->tail[e]][root].dist = cost[flipedge(e)];
+                  path[graph->tail[e]][root].edge = e;
 #endif
                }
                assert(edges_tz[perm[z]] != UNKNOWN);
@@ -1671,7 +1707,7 @@ SCIP_RETCODE do_layer(
                   min = obj;
                   *bestnewstart = start[r];
                   SCIPdebugMessage(" Objt=%.12e    ", objt);
-                  if( 1 || printfs )
+                  if( 0 || printfs )
                      printf(" Obj(run: %d, ncall: %d)=%.12e, count: %d  limit: %d \n", r, (int) nexecs, obj, edgecount, graph->hoplimit);
                   if( printfs )
                      printf(" Objt: %.12e\n", objt);
@@ -2278,7 +2314,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
       for( v = 0; v < nvars; v++ )
          pobj += graph->cost[v % nedges] * nval[v];
-      printf("validated\n");
+
       //assert(graph_valid2(scip, graph, cost));
 
       if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )

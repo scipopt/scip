@@ -22,11 +22,12 @@
  * in der Tabelle sein.
  */
 #define GRPHPATH_C
-
+#include <stdlib.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <assert.h>
 #include "portab.h"
-#include <stdlib.h>
+#include "scip/scip.h"
 
 #include "grph.h"
 
@@ -161,15 +162,16 @@ inline static void correct(
     */
    if (state[l] == UNKNOWN)
    {
+
       heap[++(*count)] = l;
       state[l]      = (*count);
    }
 
    /* Heap shift up
     */
+
    j = state[l];
    c = j / 2;
-
    while((j > 1) && GT(path[heap[c]].dist, path[heap[j]].dist))
    {
       t              = heap[c];
@@ -181,7 +183,6 @@ inline static void correct(
       c              = j / 2;
    }
 }
-
 
 
 /*---------------------------------------------------------------------------*/
@@ -431,7 +432,7 @@ void graph_path_exec(
          state[k] = CONNECT;
 
          //if( p->elimknots[k] < 0 )
-            //continue;
+         //continue;
 
          /* Verbunden Knoten berichtigen ...
           *
@@ -441,7 +442,7 @@ void graph_path_exec(
          for(i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i])
          {
             //if( p->elimedges[i] < 0 )
-               //continue;
+            //continue;
 
             m = p->head[i];
 
@@ -450,15 +451,14 @@ void graph_path_exec(
              */
             if ((state[m]) && (p->mark[m]))
             {
-
                /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
                 *    Wenn ja, dann muss die Entferung kuerzer sein.
                 */
                pathdist = ((mode == MST_MODE) ? cost[i] : (mode == FSP_MODE) ? (path[k].dist + cost[i]) :
-                     (path[k].dist + cost[Edge_anti(i)]));
+                  (path[k].dist + cost[Edge_anti(i)]));
                pathhops = path[k].hops + 1;
                if( GT(path[m].dist, pathdist) ||
-                     (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)))
+                  (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)))
 	       {
                   correct(heap, state, &count, path, m, k, i, (mode == BSP_MODE) ? cost[Edge_anti(i)] : cost[i], mode);
 	       }
@@ -978,7 +978,6 @@ SCIP_RETCODE voronoi_extend3(
    return SCIP_OKAY;
 }
 
-
 /*** build a voronoi region, w.r.t. shortest paths, for a given set of bases ***/
 void voronoi(
    SCIP* scip,
@@ -1070,6 +1069,225 @@ void voronoi(
 }
 
 
+/*** build a voronoi region in presolving, w.r.t. shortest paths, for terminals of degree > 0 ***/
+void voronoi_pres(
+   const GRAPH*  g,
+   SCIP_Real*    cost,
+   PATH*         path,
+   int*          vbase,
+   int*          heap,
+   int*          state
+   )
+{
+   int e;
+   int k;
+   int m;
+   int i;
+   int count = 0;
+   int nbases = 0;
+
+   assert(g      != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+   assert(heap   != NULL);
+   assert(state   != NULL);
+   if( g->knots == 0 )
+      return;
+
+   /* initialize */
+   for( i = 0; i < g->knots; i++ )
+   {
+      /* set the base of vertex i */
+      if( Is_term(g->term[i])  ) // && g->grad[i] > 0
+      {
+         nbases++;
+         if( g->knots > 1 )
+            heap[++count] = i;
+         vbase[i] = i;
+         path[i].dist = 0.0;
+         path[i].edge = UNKNOWN;
+         state[i] = count;
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i]     = UNKNOWN;
+      }
+   }
+   assert(nbases > 0);
+
+   for( e = 0; e < g->edges; e++)
+   {
+      assert(GE(g->cost[e], 0));
+   }
+
+   if( g->knots > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+         /* iterate over all outgoing edges of vertex k */
+         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         {
+            m = g->head[i];
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) && GT(path[m].dist, path[k].dist + cost[i]) )
+            {
+               correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+   return;
+}
+
+
+/*** build a voronoi region, w.r.t. shortest paths, for all terminal and the distance ***/
+void voronoi_dist(
+   const GRAPH*  g,
+   SCIP_Real*    cost,
+   double*       distance,
+   int*          vbase,
+   int*          minarc,
+   int*          heap,
+   int*          state,
+   PATH*         path
+   )
+{
+   char* minedgepred;
+   int e;
+   int k;
+   int m;
+   int i;
+   int pred;
+   int new;
+   int count = 0;
+   int nbases = 0;
+
+   assert(heap != NULL);
+   assert(state != NULL);
+   assert(g      != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+   assert(distance   != NULL);
+   if( g->knots == 0 )
+      return;
+#if 0
+   state = malloc( (size_t)g->knots * sizeof(int) );
+   heap  =  malloc( (size_t)g->knots * sizeof(int) );
+#endif
+   minedgepred = malloc((size_t)g->edges * sizeof(char));
+   assert(heap != NULL);
+   assert(state != NULL);
+   assert(minedgepred != NULL);
+
+   /* initialize */
+   for( i = 0; i < g->knots; i++ )
+   {
+      distance[i] = FARAWAY;
+      /* set the base of vertex i */
+      if( Is_term(g->term[i]) )
+      {
+         nbases++;
+         if( g->knots > 1 )
+            heap[++count] = i;
+         vbase[i] = i;
+         path[i].dist = 0.0;
+         path[i].edge = UNKNOWN;
+         state[i] = count;
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i]     = UNKNOWN;
+      }
+
+   }
+
+   assert(nbases == g->terms);
+
+   for( e = 0; e < g->edges; e++)
+   {
+      minedgepred[e] = FALSE;
+      assert(g->cost[i] = g->cost[Edge_anti(i)]);
+      assert(GE(g->cost[e], 0.0));
+   }
+
+   for( k = 0; k < g->terms; k++ )
+   {
+      if( minarc[k] != UNKNOWN )
+         minedgepred[minarc[k]] = TRUE;
+   }
+   if( g->knots > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+         // printf("edge: %d \n", path[k].edge);
+	 if( path[k].edge != UNKNOWN )
+	 {
+            assert(g->head[path[k].edge] == k);
+            pred = g->tail[path[k].edge];
+            assert(vbase[k] != UNKNOWN);
+            assert(vbase[pred] != UNKNOWN);
+            assert(vbase[pred] == vbase[k]);
+            if( !Is_term(g->term[pred]) )
+            {
+               assert(path[pred].edge != UNKNOWN);
+               minedgepred[path[k].edge] = minedgepred[path[pred].edge];
+            }
+	 }
+
+         //printf("get node %d \n ", k);
+         /* iterate over all outgoing edges of vertex k */
+         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         {
+            m = g->head[i];
+            assert(m < g->knots);
+            //    printf("m: %d\n", m);
+            if( state[m] == CONNECT && vbase[m] != vbase[k] )
+            {
+               if( minedgepred[i] || (path[k].edge != UNKNOWN && minedgepred[path[k].edge] ) )
+               {
+                  new = path[k].dist + g->cost[i] + path[m].dist;
+                  if( LT(new, distance[vbase[k]]) )
+                     distance[vbase[k]] = new;
+               }
+               if( minedgepred[Edge_anti(i)] || (path[m].edge != UNKNOWN && minedgepred[path[m].edge] ) )
+               {
+                  new = path[m].dist + g->cost[i] + path[k].dist;
+                  if( LT(new, distance[vbase[m]]) )
+                     distance[vbase[m]] = new;
+               }
+            }
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) && GT(path[m].dist, path[k].dist + cost[i] ) )
+            {
+               correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+   free(minedgepred);
+}
 
 /*** build a voronoi region, w.r.t. shortest paths, for a given set of bases and compute the radii ***/
 void voronoi_radius(
@@ -1156,12 +1374,12 @@ void voronoi_radius(
             m = g->head[i];
 	    if( state[m] == CONNECT && vbase[m] != vbase[k] )
 	    {
-	      if( SCIPisGT(scip, rad[vbase[k]], path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
-	         rad[vbase[k]] = path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i]);
-	      if( SCIPisGT(scip, rad[vbase[m]], path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i])) )
-	         rad[vbase[m]] = path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i]);
+               if( SCIPisGT(scip, rad[vbase[k]], path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+                  rad[vbase[k]] = path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i]);
+               if( SCIPisGT(scip, rad[vbase[m]], path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i])) )
+                  rad[vbase[m]] = path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i]);
 	    }
-	      /* check whether the path (to m) including k is shorter than the so far best known */
+            /* check whether the path (to m) including k is shorter than the so far best known */
 	    if( state[m] && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
             {
 	       assert(!base[m]);
@@ -1177,7 +1395,7 @@ void voronoi_radius(
 /*** build the voronoi regions for a directed graph. This calculates the inward and outward voronoi regions ***/
 void voronoi_inout(
    const GRAPH*   g
-      )
+   )
 {
    int   e;
    int   i;
@@ -1241,7 +1459,7 @@ void voronoi_inout(
 
    for( i = 0; i < g->terms; i++ )
       printf("Shortest Distance [%d]: %g %g %g\n", i, g->cost[minArc1[terms[i]]], g->cost[minArc2[terms[i]]],
-            outpath[g->tail[minArc1[terms[i]]]].dist + g->cost[minArc1[terms[i]]] + inpath[g->head[minArc1[terms[i]]]].dist);
+         outpath[g->tail[minArc1[terms[i]]]].dist + g->cost[minArc1[terms[i]]] + inpath[g->head[minArc1[terms[i]]]].dist);
 
    free(state);
    free(heap);
@@ -1269,12 +1487,9 @@ void voronoi_term(
    int            inward
    )
 {
-   int e;
    int k;
    int m;
    int i;
-   int p;
-   int q;
    int curr_edge;
    int nv;
    int nvedge;
@@ -1395,19 +1610,19 @@ void voronoi_term(
                      assert(g->grad[vregion[m]] > 0);
 
                      //printf("predecessor[path[k].edge]: %d, predecessor[path[m].edge]: %d, VR[k]: %d, VR[m]: %d, "
-                           //"k: %d, path[k].dist: %f, m: %d, path[m].dist: %f, cost[curr_edge]: %f, distance: %f, "
-                           //"(%d, %d)\n", predecessor[path[k].edge], predecessor[path[m].edge], vregion[k], vregion[m],
-                           //k, path[k].dist, m, path[m].dist, cost[curr_edge], distance[predecessor[path[k].edge]],
-                           //g->head[curr_edge], g->tail[curr_edge]);
+                     //"k: %d, path[k].dist: %f, m: %d, path[m].dist: %f, cost[curr_edge]: %f, distance: %f, "
+                     //"(%d, %d)\n", predecessor[path[k].edge], predecessor[path[m].edge], vregion[k], vregion[m],
+                     //k, path[k].dist, m, path[m].dist, cost[curr_edge], distance[predecessor[path[k].edge]],
+                     //g->head[curr_edge], g->tail[curr_edge]);
 
                      if( predecessor[k] != UNKNOWN )
                         distance[predecessor[k]] = MIN(distance[predecessor[k]],
-                              path[k].dist + cost[curr_edge] + path[m].dist);
+                           path[k].dist + cost[curr_edge] + path[m].dist);
 
 #if 0
                      if( predecessor[path[m].edge] != UNKNOWN )
                         distance[predecessor[path[m].edge]] = MIN(distance[predecessor[path[m].edge]],
-                              path[k].dist + cost[curr_edge] + path[m].dist);
+                           path[k].dist + cost[curr_edge] + path[m].dist);
 #endif
                   }
 
@@ -1455,12 +1670,9 @@ void voronoi_hop(
    int*           radiushops
    )
 {
-   int e;
    int k;
    int m;
    int i;
-   int p;
-   int q;
    int curr_edge;
    int nv;
    int nvedge;
@@ -1590,19 +1802,19 @@ void voronoi_hop(
                      assert(g->grad[vregion[m]] > 0);
 
                      //printf("predecessor[path[k].edge]: %d, predecessor[path[m].edge]: %d, VR[k]: %d, VR[m]: %d, "
-                           //"k: %d, path[k].dist: %f, m: %d, path[m].dist: %f, cost[curr_edge]: %f, distance: %f, "
-                           //"(%d, %d)\n", predecessor[path[k].edge], predecessor[path[m].edge], vregion[k], vregion[m],
-                           //k, path[k].dist, m, path[m].dist, cost[curr_edge], distance[predecessor[path[k].edge]],
-                           //g->head[curr_edge], g->tail[curr_edge]);
+                     //"k: %d, path[k].dist: %f, m: %d, path[m].dist: %f, cost[curr_edge]: %f, distance: %f, "
+                     //"(%d, %d)\n", predecessor[path[k].edge], predecessor[path[m].edge], vregion[k], vregion[m],
+                     //k, path[k].dist, m, path[m].dist, cost[curr_edge], distance[predecessor[path[k].edge]],
+                     //g->head[curr_edge], g->tail[curr_edge]);
 
                      if( predecessor[k] != UNKNOWN )
                         distance[predecessor[k]] = MIN(distance[predecessor[k]],
-                              path[k].dist + cost[curr_edge] + path[m].dist);
+                           path[k].dist + cost[curr_edge] + path[m].dist);
 
 #if 0
                      if( predecessor[path[m].edge] != UNKNOWN )
                         distance[predecessor[path[m].edge]] = MIN(distance[predecessor[path[m].edge]],
-                              path[k].dist + cost[curr_edge] + path[m].dist);
+                           path[k].dist + cost[curr_edge] + path[m].dist);
 #endif
                   }
 
@@ -1617,7 +1829,7 @@ void voronoi_hop(
                      edgecost = cost[curr_edge];
 
                   if( GT(radius[vregion[k]], path[k].dist + edgecost) ||
-                        (EQ(radius[vregion[k]], path[k].dist + edgecost) &&
+                     (EQ(radius[vregion[k]], path[k].dist + edgecost) &&
                         GT(radiushops[vregion[k]], path[k].hops + 1)) )
                   {
                      radius[vregion[k]] = path[k].dist + edgecost;
@@ -1625,7 +1837,7 @@ void voronoi_hop(
                   }
 
                   if( GT(radius[vregion[m]], path[m].dist + edgecost) ||
-                        (EQ(radius[vregion[m]], path[m].dist + edgecost) &&
+                     (EQ(radius[vregion[m]], path[m].dist + edgecost) &&
                         GT(radiushops[vregion[m]], path[m].hops + 1)) )
                   {
                      radius[vregion[m]] = path[m].dist + edgecost;

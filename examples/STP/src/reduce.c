@@ -79,6 +79,7 @@ static int degree_test(
 	       SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
 	    }
             graph_knot_contract(g, i1, i);
+	    count++;
 	    /*
               printf("con1 %d, %d\n", i1, i);
               for( e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
@@ -103,7 +104,6 @@ static int degree_test(
             if ((i1 < i) && (g->grad[i1] < 3))
                rerun = TRUE;
 
-            count++;
             continue;
          }
          if( g->grad[i] == 2 )
@@ -450,8 +450,6 @@ int bound_test(
    int         source;
    int         termcount;
    int         i;
-   int         j;
-   int         k;
    int         e;
    int         nnodes;
    int         nedges;
@@ -461,12 +459,8 @@ int bound_test(
    int     closeterms[3] = {-1, -1, -1};
    double  closetermsdist[3] = {FARAWAY, FARAWAY, FARAWAY};
    int     closetermshops[3] = {-1, -1, -1};
-   double  tempcost;
    double  lowerbound = FARAWAY;
    int     hopsbound = 0;
-
-   int temptype;
-
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -595,7 +589,7 @@ int bound_test(
          {
             e = graph->inpbeg[i];
             //if( Is_term(graph->term[graph->tail[e]]) )
-               //printf("Found terminal: %d\n", graph->tail[e]);
+            //printf("Found terminal: %d\n", graph->tail[e]);
             graph_edge_del(graph, e);
             SCIPindexListNodeFree(&(graph->ancestors[e]));
             graph->ancestors[e] = NULL;
@@ -608,7 +602,7 @@ int bound_test(
 
       /* computing the lower bound for node i */
       lowerbound = compute_node_lb(radius, closetermsdist, closetermshops, closeterms, radiushops, termcount,
-            graph->grad[i], graph->source[0], graph->stp_type, &hopsbound);
+         graph->grad[i], graph->source[0], graph->stp_type, &hopsbound);
 
       //if( i % 1000 == 0 )
       printf("node: %d, lowerbound: %f, grad: %d, vregion: %d\n", i, lowerbound, graph->grad[i], vregion[i]);
@@ -619,7 +613,7 @@ int bound_test(
          {
             e = graph->inpbeg[i];
             //if( Is_term(graph->term[graph->tail[e]]) )
-               //printf("Found terminal: %d\n", graph->tail[e]);
+            //printf("Found terminal: %d\n", graph->tail[e]);
             graph_edge_del(graph, e);
             SCIPindexListNodeFree(&(graph->ancestors[e]));
             graph->ancestors[e] = NULL;
@@ -1293,6 +1287,7 @@ static double level4(
    char    bd3 = FALSE;
    char    nsv = TRUE;
    char    nv = TRUE;
+   char    sl = TRUE;
    char    timebreak = FALSE;
    assert(g != NULL);
    //bound_test(scip, g);
@@ -1300,21 +1295,8 @@ static double level4(
    /* define the miimial number of edge/node eleminations for a reduction test to be continued */
    //edgebound = MAX(g->edges / 100, 5 );
    nodebound = MAX(g->knots / 500, 10);
-   //printf("edgebound: %d \n", edgebound );
-   //printf("nodebound: %d \n", nodebound );
 
    degree_test(g, &fixed);
-
-   //i = 0;
-   //while( nv_reduction(g, &fixed) > 0)
-   //{
-      //i++;
-      //if( i > 2 )
-         //break;
-      //degree_test(g, &fixed);
-   //}
-
-   //return fixed;
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1327,7 +1309,7 @@ static double level4(
    cost  = malloc((size_t)g->edges * sizeof(double));
    random  = malloc((size_t)g->edges * sizeof(double));
 
-   while(rerun && !SCIPisStopped(scip) )
+   while( rerun && !SCIPisStopped(scip) )
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1335,13 +1317,44 @@ static double level4(
       //printf("new presolving run \n");
       rerun = FALSE;
 
+      if( nv )
+      {
+         int nvelims = nvX_reduction(g, &fixed, heap, state);
+
+         if( nvelims == 0 )
+            nv = FALSE;
+         else if( nvelims > 0.5 * nodebound  )
+            rerun = TRUE;
+
+	 //printf("nv: %d", nvelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( sl )
+      {
+         int slelims = sl_reduction(g, &fixed, heap, state);
+         /* if( !(nv_reduction(g, &fixed) > nodebound) ) */
+         if( slelims == 0 )
+            sl = FALSE;
+         else if( slelims > nodebound )
+            rerun = TRUE;
+
+	 //printf("sl: %d", slelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
       if( sd )
       {
+         int x;
+	 sd = FALSE;
          for( i = 0; i < 4; i++ ) //TODO 6
          {
-            if( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, runnum) > nodebound )
-               rerun = TRUE;
+            if( (x = sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, runnum)) > nodebound )
+               sd = TRUE;
 
+            //printf("sd: %d   ", x);
             runnum++;
 
             if( SCIPgetTotalTime(scip) > timelimit )
@@ -1350,7 +1363,8 @@ static double level4(
                break;
             }
          }
-         sd = rerun;
+         if( sd )
+	    rerun = TRUE;
       }
 
       if( timebreak )
@@ -1358,7 +1372,6 @@ static double level4(
 
       if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
-
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
@@ -1384,34 +1397,10 @@ static double level4(
             break;
       }
 
-      if( nv )
-      {
-         /* if( !(nv_reduction(g, &fixed) > nodebound) ) */
-         if( !(nv_reduction(g, &fixed) > 0) )
-            nv = FALSE;
-         else
-            rerun = TRUE;
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
       if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
    }
-   /*
-     IDX* curr;
-     int es;
-     for(es = 0; es < g->edges; es++)
-     {
-     curr = g->ancestors[es];
-     while( curr != NULL )
-     {
-     printf("afterred %d->%d ancestor: %d->%d \n", g->tail[es], g->head[es], g->orgtail[curr->index], g->orghead[curr->index] );
-     curr = curr->parent;
-     }
-     }
-   */
+
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
    /*printf("Total Fixed: %f\n", fixed);*/
    free(sddist);
@@ -1799,7 +1788,7 @@ static double level5(
             break;
       }
 
-            if( degree_test(g, &fixed) > 0.5 * nodebound )
+      if( degree_test(g, &fixed) > 0.5 * nodebound )
          rerun = TRUE;
    }
 
@@ -1852,7 +1841,7 @@ double reduce(
       return fixed;
 
    //if( g->stp_type == STP_HOP_CONS )
-      //return fixed;
+   //return fixed;
 
    if( g->stp_type == STP_DEG_CONS )
       return fixed;

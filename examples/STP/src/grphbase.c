@@ -1846,7 +1846,7 @@ void graph_uncover(
 GRAPH *graph_pack(
    GRAPH* p)
 {
-   const char* msg1   = " ok\nKnots: %d  Edges: %d  Terminals: %d\n";
+   const char* msg1   = "Knots: %d  Edges: %d  Terminals: %d\n";
 
    GRAPH* q;
    int*   new;

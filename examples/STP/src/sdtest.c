@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+// sal/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*   Type....: Function                                                      */
 /*   File....: sdtest.c                                                      */
@@ -455,7 +455,7 @@ int sd_reduction(
    int     e;
    int     j;
    int     elimins = 0;
-   int     knotoffset;
+   int     knotoffset = 0;
 
    SCIPdebugMessage("SD-Reduktion: ");
    fflush(stdout);
@@ -525,7 +525,7 @@ int sd_reduction(
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
       if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
-               || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
+            || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
@@ -552,7 +552,7 @@ int sd_reduction(
          j = g->oeat[e];
 
          if (LT(g->cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e])
-               && LT(sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]))
+            && LT(sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]))
          {
 	    SCIPindexListNodeFree(&((g->ancestors)[e]));
 	    assert(g->ancestors[e] == NULL);
@@ -757,8 +757,8 @@ int sd_reduction_dir(
 
             //for( m = 0; m < outtermcount; m++ )
             //{
-               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
-               //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
+            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
+            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
             //}
          }
       }
@@ -989,7 +989,7 @@ int bd3_reduction(
       }
       else
       {
-        n1 = redirect_edge(g, e3, k3, k1, c3 + c1);
+         n1 = redirect_edge(g, e3, k3, k1, c3 + c1);
 	 SCIPindexListNodeFree(&(g->ancestors[n1]));
 	 SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
 	 SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[2]);
@@ -1460,46 +1460,46 @@ int nv_reduction_optimal(
       /* The knot is not a terminal so we can perform the short link test */
       //else
       //{
-         //for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
-         //{
-            //j = g->tail[e];
-            //if( vregion[i] != vregion[j] )
-            //{
-               //if( minArc1[vregion[i]] < 0 )
-                  //minArc1[vregion[i]] = e;
-               //else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
-               //{
-                  //minArc2[vregion[i]] = minArc1[vregion[i]];
-                  //minArc1[vregion[i]] = e;
-               //}
-            //}
-         //}
+      //for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+      //{
+      //j = g->tail[e];
+      //if( vregion[i] != vregion[j] )
+      //{
+      //if( minArc1[vregion[i]] < 0 )
+      //minArc1[vregion[i]] = e;
+      //else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
+      //{
+      //minArc2[vregion[i]] = minArc1[vregion[i]];
+      //minArc1[vregion[i]] = e;
+      //}
+      //}
+      //}
       //}
    }
 
    //for( k = 0; k < termcount; k++ )
    //{
-      //assert(terms[k] >= 0 && terms[k] < g->knots);
+   //assert(terms[k] >= 0 && terms[k] < g->knots);
 
-      //if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
-         //+ g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
-      //{
-         //e = minArc1[terms[k]];
-         //i = g->head[e];
-         //j = g->tail[e];
+   //if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
+   //+ g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
+   //{
+   //e = minArc1[terms[k]];
+   //i = g->head[e];
+   //j = g->tail[e];
 
-         //if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
-            //continue;
+   //if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
+   //continue;
 
-         //if( Is_term(g->term[i]) )
-	 //{
-	    //SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
-            //*fixed += g->cost[e];
-	 //}
-         //graph_knot_contract(g, j, i);
+   //if( Is_term(g->term[i]) )
+   //{
+   //SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+   //*fixed += g->cost[e];
+   //}
+   //graph_knot_contract(g, j, i);
 
-         //elimins++;
-      //}
+   //elimins++;
+   //}
    //}
 
    free(terms);
@@ -1522,6 +1522,314 @@ int nv_reduction_optimal(
 }
 
 
+
+int sl_reduction(
+   GRAPH*  g,
+   double* fixed,
+   int* heap,
+   int* state
+   )
+{
+   PATH*   vnoi;
+   double* mincost2;
+   int*    vbase;
+   int*    minedge1;
+   int*    minedgehead;
+   int*    minedgetail;
+   int     i;
+   int     k;
+   int     e;
+   int     j;
+   int     min1;
+   int     head;
+   int     tail;
+   int     nelims = 0;
+   int     nnodes;
+
+   assert(g != NULL);
+   nnodes = g->knots;
+
+   /* TODO ID, store vnoi, vbase globally*/
+   vbase = malloc((size_t)nnodes * sizeof(int));
+   vnoi = malloc((size_t)nnodes * sizeof(PATH));
+   minedge1 = malloc((size_t)nnodes * sizeof(int));
+   mincost2 = malloc((size_t)nnodes * sizeof(double));
+   minedgehead = malloc((size_t)nnodes * sizeof(int));
+   minedgetail = malloc((size_t)nnodes * sizeof(int));
+
+   assert(vbase != NULL);
+   assert(vnoi != NULL);
+   assert(minedge1 != NULL);
+   assert(mincost2 != NULL);
+   assert(minedgehead != NULL);
+   assert(minedgetail != NULL);
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      minedge1[k] = UNKNOWN;
+      mincost2[k] = FARAWAY;
+   }
+
+   voronoi_pres(g, g->cost, vnoi, vbase, heap, state);
+
+   for( i = 0; i < nnodes; i++ )
+   {
+      for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         if( vbase[g->tail[e]] != vbase[g->head[e]] )
+         {
+            k = vbase[g->tail[e]];
+            assert(k != UNKNOWN);
+
+            min1 = minedge1[k];
+
+            if( min1 == UNKNOWN )
+            {
+               minedge1[k] = e;
+            }
+            else if( LT(g->cost[e], g->cost[min1]) )
+	    {
+	       mincost2[k] = g->cost[min1];
+	       minedge1[k] = e;
+	    }
+            else if( LT(g->cost[e], mincost2[k]) )
+            {
+               mincost2[k] = g->cost[e];
+            }
+         }
+      }
+   }
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( !EQ(FARAWAY, mincost2[k]) )
+      {
+	 e = minedge1[k];
+	 assert(e >= 0);
+	 assert(LT(mincost2[k], FARAWAY));
+	 minedgetail[k] = g->tail[e];
+	 minedgehead[k] = g->head[e];
+      }
+      else
+      {
+	 minedgehead[k] = UNKNOWN;
+         minedgetail[k] = UNKNOWN;
+      }
+   }
+
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( !EQ(FARAWAY, mincost2[i]) )
+      {
+	 e = minedge1[i];
+	 assert(e >= 0);
+	 assert(LT(mincost2[i], FARAWAY));
+
+	 tail = g->tail[e];
+	 head = g->head[e];
+	 if( tail == minedgetail[i] && head == minedgehead[i] )
+	 {
+            if( GT(mincost2[i], vnoi[tail].dist + g->cost[e] + vnoi[head].dist) )
+            {
+               for( j = g->outbeg[tail]; j != EAT_LAST; j = g->oeat[j] )
+                  if( j == e )
+                     break;
+               if( j == EAT_LAST )
+                  continue;
+
+               for( j = g->inpbeg[head]; j != EAT_LAST; j = g->ieat[j] )
+                  if( j == e )
+                     break;
+               if( j == EAT_LAST )
+                  continue;
+               //assert(Is_term(g->term[i]));
+               nelims++;
+               *fixed += g->cost[e];
+               //printf("contrSL: %d-%d \n", tail, head);
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+	       graph_knot_contract(g, tail, head);
+	       /*
+                 if( Is_term(g->term[k]) )
+                 {
+                 graph_knot_contract(g, k, g->head[min1]);
+                 }
+                 else
+                 {
+                 graph_knot_contract(g, g->head[min1], k);
+                 }
+               */
+            }
+	 }
+	 else
+	 {
+	    //slfails++;
+	 }
+      }
+   }
+   free(minedge1);
+   free(mincost2);
+   free(vnoi);
+   free(vbase);
+   free(minedgehead);
+   free(minedgetail);
+   //printf("sl: nelims: %d \n", nelims);
+   return nelims;
+}
+
+
+
+int nvX_reduction(
+   GRAPH*  g,
+   double* fixed,
+   int* heap,
+   int* state
+   )
+{
+   PATH*   vnoi;
+   double* distance;
+   double* mincost2;
+   double  min1;
+   double  min2;
+   int*    vbase;
+   int*    minedge1;
+   int*    min1head;
+   int*    min1tail;
+   int     edge1;
+   int     nnodes;
+   int     termcount;
+   int     i;
+   int     j;
+   int     k;
+   int     e;
+   int     nelims;
+
+   nnodes = g->knots;
+
+   minedge1 = malloc((size_t)g->terms * sizeof(int));
+   mincost2 = malloc((size_t)g->terms * sizeof(double));
+
+   min1head = malloc((size_t)g->terms * sizeof(int));
+   min1tail = malloc((size_t)g->terms * sizeof(int));
+   distance = malloc((size_t)nnodes * sizeof(double));
+   vbase = malloc((size_t)nnodes * sizeof(int));
+   vnoi = malloc((size_t)nnodes * sizeof(PATH));
+   termcount = 0;
+   nelims = 0;
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+         edge1 = UNKNOWN;
+	 min2  = FARAWAY;
+	 if( g->grad[i] >= 2 )
+         {
+            min1  = FARAWAY;
+            for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               if( LE(g->cost[e], min1) )
+               {
+                  edge1 = e;
+                  min2 = min1;
+                  min1 = g->cost[e];
+               }
+               else if( LE(g->cost[e], min2) )
+               {
+                  min2 = g->cost[e];
+               }
+            }
+         }
+         minedge1[termcount] = edge1;
+
+	 mincost2[termcount] = min2;
+	 if( LT(min2, FARAWAY) )
+	 {
+	    assert(edge1 != UNKNOWN);
+	    min1head[termcount] = g->head[edge1];
+	    min1tail[termcount] = g->tail[edge1];
+	 }
+	 else
+	 {
+	    min1head[termcount] = UNKNOWN;
+	    min1tail[termcount] = UNKNOWN;
+	 }
+	 termcount++;
+      }
+   }
+   assert(termcount == g->terms);
+   voronoi_dist(g, g->cost, distance, vbase, minedge1, heap, state, vnoi);
+   for( i = 0; i < termcount; i++ )
+   {
+      min2 = mincost2[i];
+      if( EQ(min2, FARAWAY) )
+	 continue;
+      edge1 = minedge1[i];
+      assert(LT(min2, FARAWAY));
+      assert(edge1 != UNKNOWN);
+      j = min1tail[i];
+      k = min1head[i];
+      if( j == g->tail[edge1] && k == g->head[edge1] )
+      {
+         if( vbase[k] != j )
+         {
+            if( GE(min2, g->cost[edge1] + vnoi[k].dist) )
+            {
+               for( e = g->outbeg[j]; e != EAT_LAST; e = g->oeat[e] )
+                  if( e == edge1 )
+                     break;
+               if( e == EAT_LAST )
+                  continue;
+
+               for( e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+                  if( e == edge1 )
+                     break;
+               if( e == EAT_LAST )
+                  continue;
+
+               nelims++;
+
+               // printf("contr: %d-%d \n", j, k);
+               *fixed += g->cost[edge1];
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
+               graph_knot_contract(g, j, k);
+               //printf("contred \n");
+            }
+         }
+         else
+         {
+            if( GE(min2, distance[j]) )
+            {
+               for( e = g->outbeg[j]; e != EAT_LAST; e = g->oeat[e] )
+                  if( e == edge1 )
+                     break;
+               if( e == EAT_LAST )
+                  continue;
+
+               for( e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+                  if( e == edge1 )
+                     break;
+               if( e == EAT_LAST )
+                  continue;
+               // printf("contr2: %d-%d \n", j, k);
+               *fixed += g->cost[edge1];
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
+               graph_knot_contract(g, j, k);
+               nelims++;
+               //printf("contred \n");
+            }
+         }
+      }
+   }
+   free(min1head);
+   free(min1tail);
+   free(minedge1);
+   free(mincost2);
+   free(distance);
+   free(vnoi);
+   free(vbase);
+   assert(graph_valid(g));
+   //printf("nvx: nelims: %d \n", nelims);
+   return nelims;
+}
 
 /* T. Polzin
  *
@@ -1559,8 +1867,6 @@ int nv_reduction(
    int     shortarc;
    int     shortarctail;
    int     elimins = 0;
-   char    antiedgeexists;
-   char    termexists;
 
    SCIPdebugMessage("NSV-Reduction: ");
    fflush(stdout);
@@ -1692,7 +1998,7 @@ int nv_reduction(
             // distance is only given as a upper bound on the length of the path from i to the nearest terminal using
             // shortarc.
             if( (vregion[shortarctail] == vregion[i] && GE(min2, min1 + distance[i])) ||
-             (vregion[shortarctail] != vregion[i] && GE(min2, min1 + pathfromterm[shortarctail].dist)) )
+               (vregion[shortarctail] != vregion[i] && GE(min2, min1 + pathfromterm[shortarctail].dist)) )
             {
 
                assert(vregion[i] == i);
@@ -1709,7 +2015,7 @@ int nv_reduction(
                elimins++;
 
                //printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
-                  //   shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
+               //   shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
 
                voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
                calculate_distances(g, path, g->cost, FSP_MODE);
@@ -1744,8 +2050,8 @@ int nv_reduction(
       assert(terms[k] >= 0 && terms[k] < g->knots);
 
       if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && GE(g->cost[minArc2[terms[k]]],
-               pathfromterm[g->tail[minArc1[terms[k]]]].dist + g->cost[minArc1[terms[k]]]
-               + pathfromterm[g->head[minArc1[terms[k]]]].dist) )
+            pathfromterm[g->tail[minArc1[terms[k]]]].dist + g->cost[minArc1[terms[k]]]
+            + pathfromterm[g->head[minArc1[terms[k]]]].dist) )
       {
          e = minArc1[terms[k]];
          i = g->head[e];
@@ -1783,6 +2089,7 @@ int nv_reduction(
    free(path);
 
    assert(graph_valid(g));
+   printf("nv_reduction: %d Knots deleted\n", elimins);
    SCIPdebugMessage("nv_reduction: %d Knots deleted\n", elimins);
    /*printf("nv_reduction: %d Knots deleted\n", elimins);*/
 
