@@ -56,6 +56,7 @@
                                          *   viola(t)ed rows increasing, or (r)andom */
 #define DEFAULT_NOZEROFIXING      FALSE /**< should variables with a zero shifting value be delayed instead of being fixed? */
 #define DEFAULT_FIXBINLOCKS       TRUE  /**< should binary variables with no locks in one direction be fixed to that direction? */
+#define DEFAULT_BINLOCKSFIRST     TRUE  /**< should binary variables with no locks be preferred in the ordering? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
@@ -91,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Bool             preferbinaries;     /**< Should binary variables be shifted first? */
    SCIP_Bool             nozerofixing;       /**< should variables with a zero shifting value be delayed instead of being fixed? */
    SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
+   SCIP_Bool             binlocksfirst;      /**< should binary variables with no locks be preferred in the ordering? */
    SCIP_Bool             normalize;          /**< should coefficients and left/right hand sides be normalized by max row coeff? */
    SCIP_Bool             updateweights;      /**< should row weight be increased every time the row is violated? */
    SCIP_Bool             impliscontinuous;   /**< should implicit integer variables be treated as continuous variables? */
@@ -1722,7 +1724,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
 
    /* if binary variables without locks should be fixed, we want to treat them first, so we put them to the front */
-   if( heurdata->fixbinlocks )
+   if( heurdata->binlocksfirst )
    {
       SCIP_VAR* var;
       int nbinwithoutlocks = 0;
@@ -2366,6 +2368,8 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/fixbinlocks", "should binary variables with no locks in one direction be fixed to that direction?",
          &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/binlocksfirst", "should binary variables with no locks be preferred in the ordering?",
+         &heurdata->binlocksfirst, TRUE, DEFAULT_BINLOCKSFIRST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
          &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights", "should row weight be increased every time the row is violated?",
