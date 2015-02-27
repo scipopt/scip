@@ -388,6 +388,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_redvub.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
+			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \

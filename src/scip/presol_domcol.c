@@ -59,7 +59,6 @@
 #define DEFAULT_NUMMAXPAIRS      1048576     /**< maximal number of pair comparisons */
 
 #define DEFAULT_PREDBNDSTR         FALSE     /**< should predictive bound strengthening be applied? */
-#define DEFAULT_SINGCOLSTUFF        TRUE     /**< should singleton columns stuffing be applied? */
 
 /*
  * Data structures
@@ -73,9 +72,7 @@ struct SCIP_PresolData
    int                   numcurrentpairs;    /**< current number of pair comparisons */
 
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
-   SCIP_Bool             singcolstuffing;    /**< flag indicating if singleton columns stuffing should be applied */
 #ifdef SCIP_STATISTIC
-   int                   nfixingsstuffing;   /**< number of fixings done by singleton columns stuffing */
    int                   nfixingsdomcol;     /**< number of fixings only from dominated columns */
 #endif
 };
@@ -2706,301 +2703,6 @@ SCIP_RETCODE findDominancePairs(
    return SCIP_OKAY;
 }
 
-/** try to fix singleton column continuous variables */
-static
-SCIP_RETCODE singletonColumnStuffing(
-   SCIP*                 scip,               /**< SCIP main data structure */
-   CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   SCIP_Bool*            varsprocessed,      /**< array indicating that this variable has been processed */
-   FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
-   int*                  nfixings            /**< number of possible fixings */
-   )
-{
-   SCIP_VAR* var;
-   SCIP_Real* valpnt;
-   SCIP_Real* colratios;
-   SCIP_Real* colcoeffs;
-   SCIP_Bool* rowprocessed;
-   int* rowpnt;
-   int* rowend;
-   int* colindices;
-   int* colnozerolb;
-   SCIP_Real constant1;
-   SCIP_Real constant2;
-   SCIP_Real val;
-   SCIP_Real value;
-   SCIP_Real boundoffset;
-   SCIP_Bool tryfixing;
-   int idx;
-   int col;
-   int row;
-   int fillcnt;
-   int colidx;
-   int k;
-
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(varsprocessed != NULL);
-   assert(varstofix != NULL);
-   assert(nfixings != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &colindices, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &colratios, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &colcoeffs, matrix->ncols) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &colnozerolb, matrix->ncols) );
-   BMSclearMemoryArray(colnozerolb, matrix->ncols);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowprocessed, matrix->nrows) );
-   BMSclearMemoryArray(rowprocessed, matrix->nrows);
-
-   for( col = 0; col < matrix->ncols; col++ )
-   {
-      /* we look only at rows with minimal one continuous singleton column */
-      if( matrix->colmatcnt[col] == 1 && SCIPvarGetType(matrix->vars[col]) == SCIP_VARTYPE_CONTINUOUS )
-      {
-         row = *(matrix->colmatind + matrix->colmatbeg[col]);
-         if( rowprocessed[row] )
-            continue;
-
-         rowprocessed[row] = TRUE;
-
-         if( matrix->isrhsinfinite[row] )
-         {
-            /* case for >= relation: coeff<0 and obj<0 */
-            fillcnt = 0;
-            tryfixing = TRUE;
-            constant1 = 0.0;
-            constant2 = 0.0;
-
-            rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
-            rowend = rowpnt + matrix->rowmatcnt[row];
-            valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
-
-            for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
-            {
-               val = *valpnt;
-               colidx = *rowpnt;
-               var = matrix->vars[colidx];
-               assert(var != NULL);
-               assert(val != 0.0);
-
-               if( SCIPisGE(scip, SCIPvarGetLbGlobal(var), 0.0) )
-               {
-                  if( SCIPisNegative(scip, val) )
-                  {
-                     /* do we have a continuous singleton column */
-                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-                     {
-                        if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
-                        {
-                           constant1 += val * SCIPvarGetLbGlobal(var);
-                           constant2 += val * SCIPvarGetLbGlobal(var);
-                           colnozerolb[fillcnt] = 1;
-                        }
-
-                        if( SCIPisNegative(scip, SCIPvarGetObj(matrix->vars[colidx])) )
-                        {
-                           colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                           colindices[fillcnt] = colidx;
-                           colcoeffs[fillcnt] = val;
-                           fillcnt++;
-                        }
-                     }
-                     else
-                     {
-                        /* discrete variables or variables in more than one row are present */
-                        if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-                        {
-                           tryfixing = FALSE;
-                           break;
-                        }
-                        constant1 += val * SCIPvarGetUbGlobal(var);
-                        constant2 += val * SCIPvarGetLbGlobal(var);
-                     }
-                  }
-                  else if( SCIPisPositive(scip, val) )
-                  {
-                     constant1 += val * SCIPvarGetLbGlobal(var);
-                     constant2 += val * SCIPvarGetUbGlobal(var);
-                  }
-               }
-               else
-               {
-                  tryfixing = FALSE;
-                  break;
-               }
-            }
-
-            if( tryfixing )
-            {
-               SCIPsortRealRealIntInt(colratios, colcoeffs, colindices, colnozerolb, fillcnt);
-
-               /* try to fix continuous singleton columns by their ratio */
-               for( k = fillcnt - 1; k >= 0; k-- )
-               {
-                  boundoffset = 0.0;
-                  idx = colindices[k];
-                  value = colcoeffs[k] * SCIPvarGetUbGlobal(matrix->vars[idx]);
-
-                  if( colnozerolb[k] )
-                  {
-                     boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(matrix->vars[idx]);
-                  }
-
-                  assert(SCIPisNegative(scip, SCIPvarGetObj(matrix->vars[idx])));
-
-                  if( matrix->colmatcnt[idx] == 1 && SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
-                  {
-                     if( SCIPisGE(scip, value, matrix->lhs[row] - constant1 + boundoffset) )
-                     {
-                        varstofix[idx] = FIXATUB;
-                        varsprocessed[idx] = TRUE;
-                        (*nfixings)++;
-                     }
-                     else if( SCIPisGE(scip, matrix->lhs[row], constant2) )
-                     {
-                        varstofix[idx] = FIXATLB;
-                        varsprocessed[idx] = TRUE;
-                        (*nfixings)++;
-                     }
-
-                     constant1 += value;
-                     if( colnozerolb[k] )
-                        constant1 -= boundoffset;
-
-                     constant2 += value;
-                     if( colnozerolb[k] )
-                        constant2 -= boundoffset;
-                  }
-               }
-            }
-         }
-
-
-         if( matrix->isrhsinfinite[row] )
-         {
-            /* case for >= relation: coeff>0 and obj>0 */
-            fillcnt = 0;
-            tryfixing = TRUE;
-            constant1 = 0.0;
-            constant2 = 0.0;
-
-            rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
-            rowend = rowpnt + matrix->rowmatcnt[row];
-            valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
-
-            for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
-            {
-               val = *valpnt;
-               colidx = *rowpnt;
-               var = matrix->vars[colidx];
-               assert(var != NULL);
-               assert(val != 0.0);
-
-               if( SCIPisGE(scip, SCIPvarGetLbGlobal(var), 0.0) )
-               {
-                  if( SCIPisPositive(scip, val) )
-                  {
-                     /* do we have a continuous singleton column */
-                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
-                        SCIPisPositive(scip, SCIPvarGetObj(var)) )
-                     {
-                        if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
-                        {
-                           constant1 += val * SCIPvarGetLbGlobal(var);
-                           constant2 += val * SCIPvarGetLbGlobal(var);
-                           colnozerolb[fillcnt] = 1;
-                        }
-
-                        colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                        colindices[fillcnt] = colidx;
-                        colcoeffs[fillcnt] = val;
-                        fillcnt++;
-                     }
-                     else
-                     {
-                        /* discrete variables or variables which are present within
-                         * more than one row are estimated at their upper bound
-                         */
-                        if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-                        {
-                           tryfixing = FALSE;
-                           break;
-                        }
-                        constant1 += val * SCIPvarGetUbGlobal(var);
-                        constant2 += val * SCIPvarGetLbGlobal(var);
-                     }
-                  }
-                  else if( SCIPisNegative(scip, val) )
-                  {
-                     /* consider lower bound for negative coefficients */
-                     constant1 += val * SCIPvarGetLbGlobal(var);
-                     constant2 += val * SCIPvarGetUbGlobal(var);
-                  }
-               }
-               else
-               {
-                  tryfixing = FALSE;
-                  break;
-               }
-            }
-
-            if( tryfixing )
-            {
-               SCIPsortRealRealIntInt(colratios, colcoeffs, colindices, colnozerolb, fillcnt);
-
-               /* try to fix continuous singleton columns by their ratio */
-               for( k = 0; k < fillcnt; k++ )
-               {
-                  boundoffset = 0.0;
-                  idx = colindices[k];
-                  value = colcoeffs[k] * SCIPvarGetUbGlobal(matrix->vars[idx]);
-
-                  if( colnozerolb[k] )
-                  {
-                     boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(matrix->vars[idx]);
-                  }
-
-                  assert(SCIPisPositive(scip, SCIPvarGetObj(matrix->vars[idx])));
-
-                  if( matrix->colmatcnt[idx] == 1 && SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
-                  {
-                     if( SCIPisLE(scip, value, matrix->lhs[row] - constant1 + boundoffset) )
-                     {
-                        varstofix[idx] = FIXATUB;
-                        varsprocessed[idx] = TRUE;
-                        (*nfixings)++;
-                     }
-                     else if( SCIPisLE(scip, matrix->lhs[row], constant2) )
-                     {
-                        varstofix[idx] = FIXATLB;
-                        varsprocessed[idx] = TRUE;
-                        (*nfixings)++;
-                     }
-
-                     constant1 += value;
-                     if( colnozerolb[k] )
-                        constant1 -= boundoffset;
-
-                     constant2 += value;
-                     if( colnozerolb[k] )
-                        constant2 -= boundoffset;
-                  }
-               }
-            }
-         }
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &rowprocessed);
-   SCIPfreeBufferArray(scip, &colnozerolb);
-   SCIPfreeBufferArray(scip, &colcoeffs);
-   SCIPfreeBufferArray(scip, &colratios);
-   SCIPfreeBufferArray(scip, &colindices);
-
-   return SCIP_OKAY;
-}
 
 /*
  * Callback methods of presolver
@@ -3017,10 +2719,8 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreDomcol)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   printf("### Stuffing: %d fixings ###\n",presoldata->nfixingsstuffing);
    printf("### Domcol: %d fixings ###\n", presoldata->nfixingsdomcol);
 
-   presoldata->nfixingsstuffing = 0;
    presoldata->nfixingsdomcol = 0;
 
    return SCIP_OKAY;
@@ -3087,7 +2787,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( initialized )
    {
       int nfixings;
-      int nfixingsstuffing;
       SCIP_Longint ndomrelations;
       int v;
       int r;
@@ -3118,7 +2817,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       assert(SCIPgetNVars(scip) == matrix->ncols);
 
       nfixings = 0;
-      nfixingsstuffing = 0;
       ndomrelations = 0;
       nvars = matrix->ncols;
       nrows = matrix->nrows;
@@ -3151,19 +2849,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
       /* init pair comparision control */
       presoldata->numcurrentpairs = presoldata->nummaxpairs;
-
-
-      /* before doing dominated column presolving we stuff singleton continuous columns.
-       * this sometimes helps to do a more effective predictive bound analysis.
-       */
-      if( presoldata->singcolstuffing )
-      {
-         SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &nfixingsstuffing) );
-#ifdef SCIP_STATISTIC
-         presoldata->nfixingsstuffing += nfixingsstuffing;
-#endif
-      }
-
 
       /* 1.stage: we search for dominance relations only within parallel columns
        *          concerning equalities and ranged rows
@@ -3367,7 +3052,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       presoldata->nfixingsdomcol += nfixings;
 #endif
 
-      if( (nfixings + nfixingsstuffing) > 0 )
+      if( nfixings > 0 )
       {
          int oldnfixedvars = *nfixedvars;
 
@@ -3515,7 +3200,6 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDomcol) );
 
 #ifdef SCIP_STATISTIC
-   presoldata->nfixingsstuffing = 0;
    presoldata->nfixingsdomcol = 0;
    SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreDomcol) );
 #endif
@@ -3534,11 +3218,6 @@ SCIP_RETCODE SCIPincludePresolDomcol(
          "presolving/domcol/predbndstr",
          "should predictive bound strengthening be applied?",
          &presoldata->predbndstr, FALSE, DEFAULT_PREDBNDSTR, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/domcol/singcolstuffing",
-         "should singleton columns stuffing be applied?",
-         &presoldata->singcolstuffing, FALSE, DEFAULT_SINGCOLSTUFF, NULL, NULL) );
 
    return SCIP_OKAY;
 }
