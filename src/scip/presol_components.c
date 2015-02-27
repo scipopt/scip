@@ -985,6 +985,7 @@ SCIP_RETCODE splitProblem(
    int comp;
    int compvarsstart;
    int compconssstart;
+   int nfreevars = 0;
    int v;
    int c;
 
@@ -1058,8 +1059,11 @@ SCIP_RETCODE splitProblem(
       /* the dual fixing presolver will take care of the case ncompconss == 0 */
       assert(ncompconss > 0 || ncompvars == 1);
 
+      if( ncompconss == 0 )
+         nfreevars += ncompvars;
+
       /* we do not want to solve the component, if it is the last unsolved one */
-      if( ncompconss > 0 && ncompvars < SCIPgetNVars(scip) )
+      if( ncompconss > 0 && ncompvars + nfreevars < SCIPgetNVars(scip) )
       {
          SCIP_RESULT subscipresult;
 
