@@ -3945,7 +3945,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          consdata->isapproxadded = TRUE;
       }
 
-      if( presoltiming & SCIP_PRESOLTIMING_FAST != 0 )
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
       {
          SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
          switch( propresult )
