@@ -55,7 +55,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
-#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
@@ -3945,23 +3945,26 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          consdata->isapproxadded = TRUE;
       }
 
-      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
-      switch( propresult )
+      if( presoltiming & SCIP_PRESOLTIMING_FAST != 0 )
       {
-      case SCIP_DIDNOTRUN:
-      case SCIP_DIDNOTFIND:
-         break;
-      case SCIP_REDUCEDDOM:
-         *result = SCIP_SUCCESS;
-         break;
-      case SCIP_CUTOFF:
-         *result = SCIP_CUTOFF;
-         SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
-         return SCIP_OKAY;
-      default:
-         SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
-         return SCIP_ERROR;
-      } /*lint !e788*/
+         SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
+         switch( propresult )
+         {
+            case SCIP_DIDNOTRUN:
+            case SCIP_DIDNOTFIND:
+               break;
+            case SCIP_REDUCEDDOM:
+               *result = SCIP_SUCCESS;
+               break;
+            case SCIP_CUTOFF:
+               *result = SCIP_CUTOFF;
+               SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+               return SCIP_OKAY;
+            default:
+               SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
+               return SCIP_ERROR;
+         } /*lint !e788*/
+      }
    }
 
    return SCIP_OKAY;
