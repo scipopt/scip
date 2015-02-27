@@ -7446,10 +7446,12 @@ SCIP_RETCODE generateCutSol(
 
    /* if function is not convex, interior will not be computed
     * FIXME: this is a lousy fix, if interiorpoint is no longer interior, the it should
-    * be recomputed */
+    * be recomputed. also the if is horrible */
    if( consdata->interiorcomputed
          && (consdata->isconvex ? SCIPisNegative(scip, consdata->interiorpointval - consdata->rhs) :
-            SCIPisPositive(scip, consdata->interiorpointval - consdata->rhs)) )
+            SCIPisPositive(scip, consdata->interiorpointval - consdata->rhs))
+         && (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT)
+         && (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
    {
       int i;
 
