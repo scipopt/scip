@@ -154,12 +154,13 @@ struct SCIP_ConsData
    SCIP_Real*            factorleft;         /**< coefficients of left factor if constraint function is factorable */
    SCIP_Real*            factorright;        /**< coefficients of right factor if constraint function is factorable */
 
-   SCIP_Real*            gaugelincoefs;     /**< linear coefficients of quadratic variables for gauge function */
+   SCIP_Real*            gaugelincoefs;      /**< linear coefficients of quadratic variables for gauge function */
    SCIP_Real*            interiorpoint;      /**< interior point of the region defined by convex function */
    SCIP_Real             interiorpointval;   /**< function value of interior point */
    SCIP_HASHMAP*         varmap;             /**< map between variables and indices of interior point */
    unsigned int          interiorcomputed:1; /**< did we compute an interior point ? */
    unsigned int          recomputeinterior:1; /**< should we recompute an interior point ? */
+   unsigned int          isstrict:1;         /**< is convexity or concavity strict? */
 };
 
 /** quadratic constraint update method */
@@ -4410,11 +4411,13 @@ void checkCurvatureEasy(
       consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->iscurvchecked = TRUE;
+      consdata->isstrict      = !SCIPisZero(scip, consdata->quadvarterms[0].sqrcoef);
    }
    else if( nquadvars == 0 )
    {
       consdata->isconvex = TRUE;
       consdata->isconcave = TRUE;
+      consdata->isstrict = FALSE;
       consdata->iscurvchecked = TRUE;
    }
    else if( consdata->nbilinterms == 0 )
@@ -4428,6 +4431,7 @@ void checkCurvatureEasy(
       {
          consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
          consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
+         consdata->isstrict  = consdata->isstrict  && !SCIPisZero(scip, consdata->quadvarterms[v].sqrcoef);
       }
 
       consdata->iscurvchecked = TRUE;
@@ -4436,6 +4440,7 @@ void checkCurvatureEasy(
    {
       consdata->isconvex  = FALSE;
       consdata->isconcave = FALSE;
+      consdata->isstrict = FALSE;
       consdata->iscurvchecked = TRUE;
    }
    else
@@ -4477,7 +4482,10 @@ SCIP_RETCODE checkCurvature(
 
    /* if curvature was already detected stop */
    if( determined )
+   {
+      consdata->isstrict = consdata->nlinvars > 0 ? FALSE : consdata->isstrict;
       return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("Checking curvature of constraint <%s> with multivariate functions\n", SCIPconsGetName(cons));
 
@@ -4493,6 +4501,20 @@ SCIP_RETCODE checkCurvature(
          consdata->quadvarterms[0].sqrcoef <= 0 &&
          consdata->quadvarterms[1].sqrcoef <= 0 &&
          4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef >= consdata->bilinterms[0].coef * consdata->bilinterms[0].coef;
+      if( consdata->isconvex )
+      {
+         consdata->isstrict =
+         SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef) &&
+         SCIPisPositive(scip, 4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef - consdata->bilinterms[0].coef * consdata->bilinterms[0].coef);
+      }
+      if( consdata->isconcave )
+      {
+         consdata->isstrict =
+         SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef) &&
+         SCIPisPositive(scip, 4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef - consdata->bilinterms[0].coef * consdata->bilinterms[0].coef);
+      }
+
+      consdata->isstrict = consdata->nlinvars > 0 ? FALSE : consdata->isstrict;
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
    }
@@ -4504,6 +4526,7 @@ SCIP_RETCODE checkCurvature(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cons_quadratic - n is too large to check the curvature\n");
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
+      consdata->isstrict = FALSE;
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
    }
@@ -4534,6 +4557,7 @@ SCIP_RETCODE checkCurvature(
    {
       SCIPfreeBufferArray(scip, &matrix);
       SCIPhashmapFree(&var2index);
+      consdata->isstrict = FALSE;
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
    }
@@ -4562,6 +4586,7 @@ SCIP_RETCODE checkCurvature(
          SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
          consdata->isconvex = FALSE;
          consdata->isconcave = FALSE;
+         consdata->isstrict = FALSE;
       }
       else
       {
@@ -4575,6 +4600,10 @@ SCIP_RETCODE checkCurvature(
 #endif
          consdata->isconvex  &= !SCIPisNegative(scip, alleigval[0]);   /*lint !e514*/
          consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]); /*lint !e514*/
+         if( consdata->isconvex )
+            consdata->isstrict = SCIPisPositive(scip, alleigval[0]);
+         if( consdata->isconcave )
+            consdata->isstrict = SCIPisNegative(scip, alleigval[n-1]);
          consdata->iscurvchecked = TRUE;
 #ifdef DECONVEXIFY
          for( i = 0; i < consdata->nquadvars; ++i )
@@ -4590,6 +4619,7 @@ SCIP_RETCODE checkCurvature(
                consdata->quadvarterms[i].sqrcoef -= alleigval[0];
                consdata->quadvarterms[i].lincoef += alleigval[0];
             }
+            consdata->isstrict = FALSE;
          }
 
          if( !SCIPisInfinity(scip, consdata->lhs) && alleigval[n-1] < -0.1 && allbinary )
@@ -4600,6 +4630,7 @@ SCIP_RETCODE checkCurvature(
                consdata->quadvarterms[i].sqrcoef -= alleigval[n-1];
                consdata->quadvarterms[i].lincoef += alleigval[n-1];
             }
+            consdata->isstrict = FALSE;
          }
 #endif
       }
@@ -4610,9 +4641,11 @@ SCIP_RETCODE checkCurvature(
    {
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
+      consdata->isstrict = FALSE;
       consdata->iscurvchecked = TRUE; /* set to TRUE since it does not help to repeat this procedure again and again (that will not bring Ipopt in) */
    }
 
+   consdata->isstrict = consdata->nlinvars > 0 ? FALSE : consdata->isstrict;
    SCIPhashmapFree(&var2index);
    SCIPfreeBufferArray(scip, &matrix);
 
@@ -7409,7 +7442,7 @@ SCIP_RETCODE generateCutSol(
     * */
    SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
 
-   if( conshdlrdata->strongcuts && (
+   if( conshdlrdata->strongcuts && consdata->isstrict && (
             (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
             (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
    {
@@ -7449,11 +7482,15 @@ SCIP_RETCODE generateCutSol(
     * be recomputed. also the if is horrible */
    if( consdata->interiorcomputed
          && (consdata->isconvex ? SCIPisNegative(scip, consdata->interiorpointval - consdata->rhs) :
-            SCIPisPositive(scip, consdata->interiorpointval - consdata->rhs))
-         && (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT)
-         && (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
+            SCIPisPositive(scip, consdata->interiorpointval - consdata->lhs))
+         && ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT)
+            || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
    {
       int i;
+
+#ifdef SCIP_DEBUG_INT
+      printf("***********Computing gauge value at refsol********\n");
+#endif
 
       /* evaluate gauge function at x0 = (refsol - interior point) */
       /* compute aterm = function(interior point) - rhs */
@@ -7522,8 +7559,11 @@ SCIP_RETCODE generateCutSol(
       /* when it is called from addLinearizationCuts when a new solution is found
        * the gaugeval is going to be <= 1, since the solution is feasible
        * */
-      if( gaugeval < 1)
-         gaugeval = 1;
+#ifdef SCIP_DEBUG_INT
+      printf("gauge's value at refsol: %g\n", gaugeval);
+#endif
+      if( gaugeval < 1.0 )
+         gaugeval = 1.0;
 
       /* set reference as (refsol - interior point)/gaugeval + interior point */
       for( j = 0; j < consdata->nquadvars; ++j )
@@ -7543,12 +7583,12 @@ SCIP_RETCODE generateCutSol(
 
 #ifdef SCIP_DEBUG_INT
       printf("trying to separate:\n");
-      SCIPprintSol(scip, sol, NULL, TRUE);
+      SCIPprintSol(scip, refsol, NULL, TRUE);
 
-      printf("gauge function at sol - interiorpoint: %g\n", gaugeval);
+      printf("gauge function at refsol - interiorpoint: %g\n", gaugeval);
       printf("reference point:\n");
       for( j = 0; j < consdata->nquadvars; ++j )
-         printf("%s = %g\n", SCIPvarGetName(var), ref[j]);
+         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), ref[j]);
 #endif
    }
    else
@@ -10116,8 +10156,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 #ifdef CONVSTAT
    SCIP_CONSHDLRDATA* conshdlrdata;
    int                nconvex;
+   int                nstrict;
 
    nconvex = 0;
+   nstrict = 0;
 #endif
 
    assert(scip != NULL);
@@ -10171,11 +10213,19 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
          nconvex++;
       if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
          nconvex++;
+      if( consdata->isstrict )
+      {
+         assert((consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) ||
+               (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)));
+         nstrict++;
+      }
 #endif
    }
 
 #ifdef CONVSTAT
+   assert(nstrict <= nconvex);
    printf("Number of convex quadratic functions: %d\n", nconvex);
+   printf("Number of strictly convex quadratic functions: %d\n", nstrict);
    exit(0);
 #endif
 
@@ -11812,6 +11862,7 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
    targetconsdata = SCIPconsGetData(*cons);
    targetconsdata->isconvex      = consdata->isconvex;
    targetconsdata->isconcave     = consdata->isconcave;
+   targetconsdata->isstrict      = consdata->isstrict;
    targetconsdata->iscurvchecked = consdata->iscurvchecked;
 
  TERMINATE:
@@ -12759,6 +12810,7 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
    /* update flags and invalid activities */
    consdata->isconvex      = FALSE;
    consdata->isconcave     = FALSE;
+   consdata->isstrict      = FALSE;
    consdata->iscurvchecked = FALSE;
    consdata->ispropagated  = FALSE;
    consdata->ispresolved   = consdata->ispresolved && !SCIPisZero(scip, consdata->quadvarterms[pos].sqrcoef);
