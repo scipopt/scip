@@ -4426,6 +4426,7 @@ void checkCurvatureEasy(
 
       consdata->isconvex = TRUE;
       consdata->isconcave = TRUE;
+      consdata->isstrict = TRUE;
 
       for( v = nquadvars - 1; v >= 0; --v )
       {
