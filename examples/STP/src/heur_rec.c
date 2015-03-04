@@ -332,7 +332,7 @@ SCIP_RETCODE selectsols(
    {
       if( solselected[perm[i]] == FALSE )
       {
-         if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[perm[i]])), "rec") == 0 )
+         if( SCIPsolGetHeur(sols[perm[i]]) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[perm[i]])), "rec") == 0 )
             continue;
          //printf("p select sol %d found by: %s \n", perm[i], SCIPheurGetName(SCIPsolGetHeur(SCIPgetSols(scip)[perm[i]])) );
          selection[nselectedsols++] = perm[i];
