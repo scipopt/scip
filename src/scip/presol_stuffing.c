@@ -322,8 +322,9 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
       if( nfixings > 0 )
       {
          int v;
+         int oldnfixedvars;
 
-         *result = SCIP_SUCCESS;
+         oldnfixedvars = *nfixedvars;
 
          /* look for fixable variables */
          for( v = ncols - 1; v >= 0; --v )
@@ -332,7 +333,7 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
             SCIP_Bool fixed;
             SCIP_VAR* var;
 
-            var = SCIPmatrixGetVar(matrix,v);
+            var = SCIPmatrixGetVar(matrix, v);
 
             if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
                SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
@@ -381,6 +382,9 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
                (*nfixedvars)++;
             }
          }
+
+         if( *result != SCIP_CUTOFF && *nfixedvars > oldnfixedvars )
+            *result = SCIP_SUCCESS;
       }
 
       SCIPfreeBufferArray(scip, &varstofix);
