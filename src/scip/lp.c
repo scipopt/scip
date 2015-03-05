@@ -13404,28 +13404,22 @@ SCIP_RETCODE lpAlgorithm(
    assert(lperror != NULL);
 
    /* check if a time limit is set, and set time limit for LP solver accordingly */
+   lptimelimit = SCIPsetInfinity(set);
    if( set->istimelimitfinite )
-   {
       lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
-      success = FALSE;
-      if( lptimelimit > 0.0 )
-         SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
 
-      if( lptimelimit <= 0.0 || !success )
-      {
-         SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-         *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
-         *timelimit = TRUE;
-         return SCIP_OKAY;
-      }
-      SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
-   }
-#ifndef NDEBUG
-   else
+   success = FALSE;
+   if( lptimelimit > 0.0 )
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+
+   if( lptimelimit <= 0.0 || !success )
    {
-      SCIPdebugMessage("calling LP algorithm <%s> (with no time limit)\n", lpalgoName(lpalgo));
+      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
+      *timelimit = TRUE;
+      return SCIP_OKAY;
    }
-#endif
+   SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
