@@ -787,7 +787,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
       /* reduce new graph */
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
-	|| graph->stp_type == STP_HOP_CONS )
+         || graph->stp_type == STP_HOP_CONS )
          (void) reduce(solgraph, 0, scip);
       else
          (void) reduce(solgraph, 4, scip);
@@ -797,7 +797,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       ancestors = solgraph->ancestors;
       nsoledges = solgraph->edges;
       /* if graph reduction solved the whole problem, solgraph has only one node */
-      if( solgraph->knots > 1 )
+      if( solgraph->terms > 1 )
       {
          SCIP_Real mult;
          /* allocate memory */
@@ -940,7 +940,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
       {
-         if( solgraph->knots > 1 )
+         if( solgraph->terms > 1 )
          {
             /* retransform solution found by TM heuristic */
             for( e = 0; e < nsoledges; e++ )
@@ -974,7 +974,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             stnodes[i] = FALSE;
 
          /* retransform solution found by TM heuristic */
-         if( solgraph->knots > 1 )
+         if( solgraph->terms > 1 )
          {
             for( e = 0; e < nsoledges; e++ )
             {
