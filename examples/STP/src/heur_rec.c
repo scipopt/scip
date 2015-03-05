@@ -786,7 +786,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       graph_path_init(solgraph);
 
       /* reduce new graph */
-      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
+	|| graph->stp_type == STP_HOP_CONS )
          (void) reduce(solgraph, 0, scip);
       else
          (void) reduce(solgraph, 4, scip);
@@ -803,11 +804,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          SCIP_CALL( SCIPallocBufferArray(scip, &results, nsoledges) );
          SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
          SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
-         /*  for( i = 0; i < nsoledges; i++ )
-             {
-             assert(
-             cost[i] = solgraph->cost[i] / (1 + edgeweight[i] - 1
-             }*/
+
          BMScopyMemoryArray(cost, solgraph->cost, nsoledges);
 
          /* hop constraint problem? */
