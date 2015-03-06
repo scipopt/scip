@@ -20,6 +20,7 @@ features:
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 - added methods to compute strongly connected components with Tarjan's Algorithm
 - improved clique and variable bound heuristics
+- SoPlex interface can now (re)store dual steepest edge weights
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
