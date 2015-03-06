@@ -1296,6 +1296,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  * SCIP copy methods
  */
 
+/** returns true if the @p cut matches the selection criterium for copying */
 static
 SCIP_Bool takeCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1325,6 +1326,7 @@ SCIP_Bool takeCut(
          takecut = FALSE;
       break;
    }
+
    return takecut;
 }
 /** copy active and tight cuts from one SCIP instance to linear constraints of another SCIP instance */
