@@ -246,7 +246,7 @@ function chi_to_p(chi)
 
    while( chi > chi2[i] )
       i++;
-  printf(" -> p < %6.4f", p_val[i]);
+   printf(" -> p < %6.4f", p_val[i-1]);
 
    if( p_val[i-1] > 0.05 )
       printf("    X   ");
@@ -579,17 +579,16 @@ p_val[61] = 1.0000;
    while( z > z_val[i] )
       i++;
 #  printf(" -> %6.4f < p < %6.4f", p_val[i-1], p_val[i]);
-  printf(" -> p < %6.4f", p_val[i]);
+   printf(" -> p < %6.4f", p_val[i-1]);
 
-   if( p_val[i-1] < 0.95 &&  p_val[i-1] > 0.05)
+   if( p_val[i-1] < 0.95 && p_val[i-1] > 0.05)
       printf("    X   ");
-   else if( p_val[i-1] < 0.995 &&  p_val[i-1] > 0.005)
+   else if( p_val[i-1] < 0.995 && p_val[i-1] > 0.005)
       printf("    !   ");
-   else if( p_val[i-1] < 0.9995 &&  p_val[i-1] > 0.0005)
+   else if( p_val[i-1] < 0.9995 && p_val[i-1] > 0.0005)
       printf("   !!   ");
    else
       printf("  !!!   ");
-
 }
 
 
