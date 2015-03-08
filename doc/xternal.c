@@ -6023,6 +6023,68 @@
  *  \endcode
  *  As in the evaluation, the output contains the two additional columns of the solving time until the first and the best solution was found.
  *
+ *  @section STATISTICS Statistical tests
+ *
+ *  The \c allcmpres script also performs two statistical tests for comparing different settings: For deciding whether
+ *  more feasible solutions have been found or more instances have been solved to optimality or not, we use a McNemar
+ *  test. For comparing the running time and number of nodes, we use a variant of the Wilcoxon signed rank test. A
+ *  detailed explanation can be found in the PhD thesis of Timo Berthold (Heuristic algorithms in global MINLP solvers).
+ *
+ *  @subsection McNemar McNemar test
+ *
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to the number of instances solved to optimality
+ *  within the timelimit. The null hypothesis would be "Both settings lead to an equal number of instances being solved
+ *  to optimality", which we would like to disprove. Let \f$n_1\f$ be the number of instances solved by setting \c S1
+ *  but not by \c S2, and let \f$n_2\f$ be the number of instances solved by setting \c S2 but not by \c S1.  The
+ *  McNemar test statistic is
+ *  \f[
+ *    \chi^2 = \frac{(n_1 - n_2)^2}{n_1 + n_2}.
+ *  \f]
+ *  We now assume that \f$\chi^2\f$ is chi-squared distributed, which allows to compute the probability \f$p\f$ to reject the
+ *  null hypothesis. More explicitly, \c allcmpres uses the following evaluation:
+ *  - \f$0.05 < p\f$: The null hypothesis is accepted (marked by "X").
+ *  - \f$0.005 < p \leq 0.05\f$: The null hypothesis might be false (marked by "!").
+ *  - \f$0.0005 < p \leq 0.005\f$: The null hypothesis can be false (marked by "!!").
+ *  - \f$p \leq 0.0005\f$: The null hypothesis is very likely false (marked by "!!!").
+ *
+ *  As an example consider the following output:
+ *  \code
+ *    McNemar (feas)                               x2 0.00000 -> p < 1.0000    X
+ *    McNemar (opt)                                x2 6.00000 -> p < 0.0200    !
+ *  \endcode
+ *  Here, \c x2 represents \f$\chi^2\f$ (and \c p represents \f$p\f$).
+ *
+ *  In this case, the test with respect to the number of found feasible solutions is irrelevant, since their number is
+ *  equal. In particular, the null hypothesis gets accepted (i.e., there is no difference in the settings - marked by "X").
+ *
+ *  With respect to the number of instances solved to optimality within the timelimit, we have \f$p < 0.01\f$, which
+ *  leads to the classification that the null hypothesis is false (i.e., the settings perform differently). In the
+ *  concrete case, we have 230 instances, all of which are solved by setting \c S2, but only 224 by setting \c S1.
+ *
+ *  @subsection Wilcoxon Wilcoxon signed rank test
+ *
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to their solution times (within the timelimit). We
+ *  generate a sorted list of the ratios of the run times, where ratios that are within 1\% of 1.0 are discarded. We
+ *  then assign ranks 1 to \c N to the remaining \c N data points. This yields two groups \c G1 and \c G2 depending on
+ *  whether the ratios are smaller or larger than 1.0 (\c G1 contains the instances for which setting \c S1 is
+ *  faster). Then the sums of the ranks in groups \c G1 and \c G2 are computed, yielding \c R1 and \c R2, respectively.
+ *
+ *  The Wilcoxon test statistic is then
+ *  \f[
+ *     z = \frac{\min(R1, R2) - \frac{N(N+1)}{4}}{\sqrt{\frac{N(N+1)(2N+1)}{24}}},
+ *  \f]
+ *  which we assume to be (approximately) normally distributed (with zero mean) and allows to compute the probability
+ *  \f$p\f$ that one setting is faster than the other.
+ *
+ *  As an example consider the following output:
+ *  \code
+ *    Wilcoxon (time)                              z -3.25180 -> p < 0.0000  !!!
+ *    Wilcoxon (nodes)                             z -11.03982 -> p < 0.0000  !!!
+ *  \endcode
+ *  Here, the \f$z\f$ values are negative indicating that setting \c S1 is faster and uses less nodes than \c S2. This
+ *  tendency is very significant, i.e., the probability \f$p\f$ that setting \c S1 is slower than setting \c S2 is
+ *  negligible (this null hypothesis is rejected).
+ *
  *  @section SOLVER Testing and Evaluating for other solvers
  *
  *  Analogously to the target <code>test</code> there are further targets to run automated tests with other MIP solvers.
