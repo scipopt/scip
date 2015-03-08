@@ -2640,7 +2640,7 @@ SCIP_Bool checkNEntries(
  *
  * @note cliques can be processed several times by this method
  *
- * @TODO try to detect infeasible implications, e.g., x = 1 => (y = 0 && y = 1)
+ * @todo try to detect infeasible implications, e.g., x = 1 => (y = 0 && y = 1)
  */
 SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */

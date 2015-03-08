@@ -1399,17 +1399,18 @@ private:
     *       = py[0] * f'(x^0)
     * \f$
     *
-    * For p = 1, this means
-    * \f$
-    * %l=0:
-    *  px^0 = py[0] * \partial F^0    / \partial x^0) + py[1] * \partial F^1 / \partial x^0)
-    *       = py[0] * \partial f(x^0) / \partial x^0) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    * For p = 1, this means (for l = 0):
+    * \f[
+    *  px^0 = py[0] * \partial F^0    / \partial x^0 + py[1] * \partial F^1 / \partial x^0
+    *       = py[0] * \partial f(x^0) / \partial x^0 + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
     *       = py[0] * f'(x^0)                         + py[1] * f''(x^0) * x^1
-    * %l=1:
-    *  px^1 = py[0] * \partial F^0    / \partial x^1) + py[1] * \partial F^1 / \partial x^1)
-    *       = py[0] * \partial f(x^0) / \partial x^1) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    * \f]
+    * and (for l=1):
+    * \[
+    *  px^1 = py[0] * \partial F^0    / \partial x^1 + py[1] * \partial F^1 / \partial x^1
+    *       = py[0] * \partial f(x^0) / \partial x^1 + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
     *       = py[0] * 0                               + py[1] * f'(x^0)
-    * \f$
+    * \f]
     *
     * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k] and
     *   px^k = (px[k], px[(p+1)+k], px[2*(p+1)+k], ..., px[n*(p+1)+k], we get
