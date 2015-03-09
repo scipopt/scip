@@ -1300,7 +1300,7 @@ static double level4(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   heap  = malloc((size_t)g->knots * sizeof(int));
+   heap  = malloc((size_t)( 1 + g->knots) * sizeof(int));
    state = malloc((size_t)g->knots * sizeof(int));
    knotexamined = malloc((size_t)g->knots * sizeof(int));
    sddist = malloc((size_t)g->knots * sizeof(double));
