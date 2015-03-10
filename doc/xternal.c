@@ -6040,8 +6040,9 @@
  *  \f[
  *    \chi^2 = \frac{(n_1 - n_2)^2}{n_1 + n_2}.
  *  \f]
- *  We now assume that \f$\chi^2\f$ is chi-squared distributed with one degree of freedom, which allows to compute the
- *  probability \f$p\f$ of the null hypothesis. More explicitly, \c allcmpres uses the following evaluation:
+ *  Under the null hypothesis, \f$\chi^2\f$ is chi-squared distributed with one degree of freedom. This allows to compute
+ *  a \f$p\f$-value as the probability for obtaining a similar or even more extreme result under the null hypothesis.
+ *  More explicitly, \c allcmpres uses the following evaluation:
  *  - \f$0.05 < p\f$: The null hypothesis is accepted (marked by "X").
  *  - \f$0.005 < p \leq 0.05\f$: The null hypothesis might be false (marked by "!").
  *  - \f$0.0005 < p \leq 0.005\f$: The null hypothesis can be false (marked by "!!").
@@ -6065,10 +6066,13 @@
  *
  *  @subsection Wilcoxon Wilcoxon signed rank test
  *
- *  Assume that we compare two settings \c S1 and \c S2 with respect to their solution times (within the timelimit). We
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to their solution times (within the time limit). We
  *  generate a sorted list of the ratios of the run times, where ratios that are (absolutely or relatively) within 1\%
- *  of 1.0 are discarded. We then assign ranks 1 to \c N to the remaining \c N data points. This yields two groups \c G1
- *  and \c G2 depending on whether the ratios are smaller or larger than 1.0 (\c G1 contains the instances for which
+ *  of 1.0 are discarded, and ratios between 0.0 and 0.99 are replaced with their negative inverse in order to
+ *  obtain a symmetric distribution for the ratios around the origin.
+ *  We then assign ranks 1 to \c N to the remaining \c N data points in nondecreasing
+ *  order of their absolute ratio. This yields two groups \c G1
+ *  and \c G2 depending on whether the ratios are smaller than -1.0 or larger than 1.0 (\c G1 contains the instances for which
  *  setting \c S1 is faster). Then the sums of the ranks in groups \c G1 and \c G2 are computed, yielding values \c R1
  *  and \c R2, respectively.
  *
@@ -6085,8 +6089,8 @@
  *    Wilcoxon (time)                             z  -0.1285, 0.05 <= p          X
  *    Wilcoxon (nodes)                            z -11.9154, p < 0.0005       !!!
  *  \endcode
- *  Here, the \f$z\f$ values are negative indicating that setting \c S1 is faster and uses less nodes than \c S2. This
- *  tendency is very significant for the number of nodes, i.e., the probability \f$p\f$ that setting \c S1 uses more
+ *  While the \f$z\f$-value is close to zero for the run time, it is extremely negative regarding the solving nodes. This latter
+ *  tendency for the number of nodes is significant on a 0.05 % level, i.e., the probability \f$p\f$ that setting \c S1 uses more
  *  nodes than setting \c S2 is negligible (this null hypothesis is rejected - marked by "!!!").
  *
  *  However, the null hypothesis is not rejected with respect to the run time. In the concrete case, setting \c S1 has a
