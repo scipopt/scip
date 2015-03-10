@@ -348,6 +348,10 @@ function wilcoxon(ref_array, solver_array, problistlen, timelimit)
    w_minus = 0;
    w_plus = 0;
 
+   # avoid degenerate case
+   if ( problistlen == 0 )
+      return 0.0;
+
    # calculate difference
    for( i = 0; i < problistlen; i++ )
    {
