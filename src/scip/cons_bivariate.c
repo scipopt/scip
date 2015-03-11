@@ -7560,6 +7560,12 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
       int pos;
       int i;
 
+      /* needs to check curvature, which might be expensive */
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 && nquadvarterms > 10 )
+         return SCIP_OKAY;
+      if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 && nquadvarterms > 50 )
+         return SCIP_OKAY;
+
       /* check if we find at least one bilinear term for which we would create a bivariate constraint
        * thus, we search for a variable that has a square term and is involved in at least one bivariate term */
       for( i = 0; i < nquadvarterms; ++i )

@@ -63,7 +63,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
-#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
@@ -3824,7 +3824,8 @@ SCIP_RETCODE presolveUpgrade(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_Bool*            upgraded,           /**< buffer to store whether constraint was upgraded */
    int*                  nupgdconss,         /**< buffer to increase if constraint was upgraded */
-   int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
+   int*                  naddconss,          /**< buffer to increase with number of additional constraints created during upgrade */
+   SCIP_PRESOLTIMING     presoltiming        /**< current presolving timing */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3981,7 +3982,7 @@ SCIP_RETCODE presolveUpgrade(
 
       SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
             nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-            &nupgdconss_, upgdconss, upgdconsssize) );
+            &nupgdconss_, upgdconss, upgdconsssize, presoltiming) );
 
       while( nupgdconss_ < 0 )
       {
@@ -3992,7 +3993,7 @@ SCIP_RETCODE presolveUpgrade(
 
          SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
                nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-               &nupgdconss_, upgdconss, upgdconsssize) );
+               &nupgdconss_, upgdconss, upgdconsssize, presoltiming) );
 
          assert(nupgdconss_ != 0);
       }
@@ -10669,7 +10670,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
     * otherwise, we wait with these
     * @todo first do all usual presolving steps, then check SCIPisPresolveFinished(scip), and if true then do reformulations (and usual steps again)
     */
-   doreformulations = (nrounds > 0 || (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE)) && SCIPisPresolveFinished(scip);
+   doreformulations = nrounds > 0  && ((presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 || SCIPisPresolveFinished(scip));
    SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -10694,7 +10695,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       havechange = FALSE;
 #ifdef CHECKIMPLINBILINEAR
-      if( consdata->isimpladded && (presoltiming & SCIP_PRESOLTIMING_FAST) )
+      if( consdata->isimpladded && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
       {
          int nbilinremoved;
          SCIP_CALL( presolveApplyImplications(scip, conss[c], &nbilinremoved) );
@@ -10714,7 +10715,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       {
          SCIP_Bool upgraded;
 
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss, presoltiming) );
          if( upgraded )
          {
             *result = SCIP_SUCCESS;
@@ -10806,7 +10807,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          continue;
       }
 
-      if( !consdata->ispropagated )
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 && !consdata->ispropagated )
       {
          /* try domain propagation if there were bound changes or constraint has changed (in which case, processVarEvents may have set ispropagated to false) */
          SCIP_RESULT propresult;
@@ -10910,7 +10911,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       {
          SCIP_Bool upgraded;
 
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss, presoltiming) );
          if( upgraded )
          {
             *result = SCIP_SUCCESS;
