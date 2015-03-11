@@ -26,6 +26,7 @@ features:
   we refer to the SCIP documentation (e.g, SCIPcreateVar; SCIPcreateConsLinear) for their meaning;
   setting them 1 enables the flag (TRUE), setting them to 2 disables the flag (FALSE), not setting them or setting
   them to 0 will use a default value
+- the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
