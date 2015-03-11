@@ -40,9 +40,9 @@
 
 #define PRESOL_NAME            "redvub"
 #define PRESOL_DESC            "detect redundant variable bound constraints"
-#define PRESOL_PRIORITY         24000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY        -24000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define MAXPAIRCOMP                 1000     /**< maximal number of pairwise comparisons */
 
