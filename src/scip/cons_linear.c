@@ -5543,7 +5543,7 @@ SCIP_RETCODE tightenVarBounds(
 }
 
 #define MAXTIGHTENROUNDS 10
-#define MAXACTIVITYDELTATHR 1e6
+#define MAXACTIVITYDELTATHR 1e5
 
 /** tightens bounds of variables in constraint due to activity bounds */
 static
