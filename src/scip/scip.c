@@ -1296,6 +1296,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  * SCIP copy methods
  */
 
+/** returns true if the @p cut matches the selection criterium for copying */
 static
 SCIP_Bool takeCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1325,6 +1326,7 @@ SCIP_Bool takeCut(
          takecut = FALSE;
       break;
    }
+
    return takecut;
 }
 /** copy active and tight cuts from one SCIP instance to linear constraints of another SCIP instance */
@@ -4228,6 +4230,8 @@ SCIP_RETCODE SCIPsetEmphasis(
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
  *  auxiliary SCIP instances to avoid recursion
+ *
+ *  @note only deactivates plugins which could cause recursion, some plugins which use sub-SCIPs stay activated
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -39420,6 +39424,98 @@ SCIP_RETCODE SCIPreallocBufferSize(
    assert(ptr != NULL);
 
    SCIP_CALL( SCIPsetReallocBufferSize(scip->set, ptr, size) );
+
+   return SCIP_OKAY;
+}
+
+/** gets a memory buffer with at least size for num elements of size elemsize
+ *
+ *  checks for overflow of required size or negative number of elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPallocBufferArraySafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   void**                ptr,                /**< pointer to store the buffer */
+   int                   num,                /**< number of entries to allocate */
+   size_t                elemsize            /**< size of one element in the array */
+   )
+{
+   assert(scip != NULL);
+   assert(ptr != NULL);
+   assert(elemsize > 0);
+   assert(elemsize <= INT_MAX);
+
+   if( num < 0 || num > (int)(INT_MAX / elemsize) )
+   {
+      *ptr = NULL;
+      return SCIP_NOMEMORY;
+   }
+
+   SCIP_CALL( SCIPsetAllocBufferSize(scip->set, ptr, num * (int)elemsize) );
+
+   return SCIP_OKAY;
+}
+
+/** reallocates a memory buffer to have size for at least num elements of size elemsize
+ *
+ *  checks for overflow of required size or negative number of elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPreallocBufferArraySafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   void**                ptr,                /**< pointer to the buffer */
+   int                   num,                /**< number of entries to reallocate */
+   size_t                elemsize            /**< size of one element in the array */
+   )
+{
+   assert(scip != NULL);
+   assert(ptr != NULL);
+   assert(elemsize > 0);
+   assert(elemsize <= INT_MAX);
+
+   if( num < 0 || num > (int)(INT_MAX / elemsize) )
+   {
+      *ptr = NULL;
+      return SCIP_NOMEMORY;
+   }
+
+   SCIP_CALL( SCIPsetReallocBufferSize(scip->set, ptr, num * (int)elemsize) );
+
+   return SCIP_OKAY;
+}
+
+/** allocates a memory buffer with at least size for num elements of size elemsize and copies
+ *  the given memory into the buffer
+ *
+ *  checks for overflow of required size or negative number of elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPduplicateBufferArraySafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   void**                ptr,                /**< pointer to the buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
+   int                   num,                /**< number of entries to duplicate */
+   size_t                elemsize            /**< size of one element in the array */
+   )
+{
+   assert(scip != NULL);
+   assert(ptr != NULL);
+   assert(elemsize > 0);
+   assert(elemsize <= INT_MAX);
+
+   if( num < 0 || num > (int)(INT_MAX / elemsize) )
+   {
+      *ptr = NULL;
+      return SCIP_NOMEMORY;
+   }
+
+   SCIP_CALL( SCIPsetDuplicateBufferSize(scip->set, ptr, source, num * (int)elemsize) );
 
    return SCIP_OKAY;
 }

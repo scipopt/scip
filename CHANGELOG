@@ -20,8 +20,19 @@ features:
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 - added methods to compute strongly connected components with Tarjan's Algorithm
 - improved clique and variable bound heuristics
+- extended AMPL interface to allow for setting of constraint and variable properties via AMPL suffixes:
+  the following suffixes for constraints are recognized by interface: initial, separate, enforce, check, propagate,
+  dynamic, removable; additionally, for variables the suffixes initial and removable are recognized;
+  we refer to the SCIP documentation (e.g, SCIPcreateVar; SCIPcreateConsLinear) for their meaning;
+  setting them 1 enables the flag (TRUE), setting them to 2 disables the flag (FALSE), not setting them or setting
+  them to 0 will use a default value
+- the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
 
 parameters:
+- new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
+  (set to FALSE for static order) (default is FALSE)
+- new parameter "heuristics/shiftandpropagate/maxcutoffquot" to select a maximum percentage of allowed cutoffs before stopping the heuristic
+  (default is 0.0)
 - new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
 - new parameter "separating/cutselrestart" for cut selection during restart copy process ('a'ge, activity 'q'uotient) [default is 'a']
 - new parameter "separating/cutselsubscip" for cut selection for sub SCIPs ('a'ge, activity 'q'uotient) [default is 'a']
@@ -77,6 +88,7 @@ interface:
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
+- safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)

@@ -125,6 +125,7 @@
 #include "scip/presol_redvub.h"
 #include "scip/presol_trivial.h"
 #include "scip/presol_tworowbnd.h"
+#include "scip/presol_stuffing.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"

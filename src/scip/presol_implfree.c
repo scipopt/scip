@@ -929,6 +929,7 @@ void getMultiaggVars(
    int*                  multiaggequalities, /**< array holding aggregation equality row indices */
    SCIP_Bool*            consredundant,      /**< array indicating which constraint became redundant */
    SCIP_Bool*            lockedcons,         /**< constraints which could not be used for bound implication */
+   SCIP_Bool*            skipvars,           /**< array holding which variables should be investigated */
    int*                  maxactposhuge,      /**< max activity positive contribution counter */
    int*                  maxactneghuge,      /**< max activity negative contribution counter */
    int*                  minactposhuge,      /**< min activity positive contribution counter */
@@ -951,6 +952,8 @@ void getMultiaggVars(
    assert(nummultiaggvars != NULL);
    assert(multiaggequalities != NULL);
    assert(consredundant != NULL);
+   assert(lockedcons != NULL);
+   assert(skipvars != NULL);
 
    nrows = SCIPmatrixGetNRows(matrix);
 
@@ -985,7 +988,7 @@ void getMultiaggVars(
 
             /* search for a continuous variable for aggregation which is implied free,
                produces less fill-in and leads to numerical stability */
-            if( isVarImpliedFree(scip, matrix, *rowpnt, r, lockedcons, &tmpimpllbrowidx, &tmpimplubrowidx) )
+            if( !skipvars[*rowpnt] && isVarImpliedFree(scip, matrix, *rowpnt, r, lockedcons, &tmpimpllbrowidx, &tmpimplubrowidx) )
             {
                assert(tmpimpllbrowidx >= 0 && tmpimplubrowidx >= 0);
                aggrconst = SCIPmatrixGetRowRhs(matrix, r) / (*valpnt);
@@ -1020,6 +1023,10 @@ void getMultiaggVars(
                      }
                   }
                }
+            }
+            else
+            {
+               skipvars[*rowpnt] = TRUE;
             }
          }
 
@@ -1093,6 +1100,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       int nummultiaggvars;
       SCIP_Bool* consredundant;
       SCIP_Bool* lockedcons;
+      SCIP_Bool* skipvars;
       int nrows;
       int ncols;
       int* maxactposhuge;
@@ -1116,6 +1124,9 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       SCIP_CALL( SCIPallocBufferArray(scip, &lockedcons, nrows) );
       BMSclearMemoryArray(lockedcons, nrows);
 
+      SCIP_CALL( SCIPallocBufferArray(scip, &skipvars, ncols) );
+      BMSclearMemoryArray(skipvars, ncols);
+
       SCIP_CALL( SCIPallocBufferArray(scip, &maxactposhuge, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &maxactneghuge, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &minactposhuge, nrows) );
@@ -1125,7 +1136,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 
       nummultiaggvars = 0;
       getMultiaggVars(scip, matrix, isvartomultiagg,&nummultiaggvars, multiaggequalities,
-         consredundant, lockedcons, maxactposhuge, maxactneghuge, minactposhuge, minactneghuge);
+         consredundant, lockedcons, skipvars, maxactposhuge, maxactneghuge, minactposhuge, minactneghuge);
 
       if( nummultiaggvars > 0 )
       {
@@ -1246,6 +1257,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       SCIPfreeBufferArray(scip, &minactposhuge);
       SCIPfreeBufferArray(scip, &maxactneghuge);
       SCIPfreeBufferArray(scip, &maxactposhuge);
+      SCIPfreeBufferArray(scip, &skipvars);
       SCIPfreeBufferArray(scip, &lockedcons);
       SCIPfreeBufferArray(scip, &consredundant);
       SCIPfreeBufferArray(scip, &multiaggequalities);

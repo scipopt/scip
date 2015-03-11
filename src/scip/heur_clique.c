@@ -652,7 +652,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    if( i + 2 < heurdata->minfixingrate * nbinvars )
    {
-      printf("too few variables in nontrivial cliques: %d/%d (=%.1f%%)\n", i + 2, nbinvars, 100.0 * (i+2)/nbinvars);
       SCIPdebugMessage("--> too few variables in nontrivial cliques\n");
 
       goto TERMINATE;
