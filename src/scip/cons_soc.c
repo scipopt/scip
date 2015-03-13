@@ -2549,7 +2549,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
 
    assert(scip     != NULL);
    assert(lhsvars  != NULL);
-   assert(nlhsvars >= 2);
+   assert(nlhsvars >= 1);
    assert(lhscoefs != NULL);
    assert(lhsoffsets != NULL);
    assert(rhsvar   != NULL);
@@ -3939,7 +3939,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          continue;
       }
 
-      if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded )
+      if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded && consdata->nvars > 1 )
       {
          SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur, naddconss) );  /*lint !e613*/
          consdata->isapproxadded = TRUE;
