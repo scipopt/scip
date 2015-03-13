@@ -3261,11 +3261,11 @@ SCIP_RETCODE presolveTryAddAND(
       }
 #endif
 
-      /* create and constraint auxvar = x and y */
+      /* create AND-constraint auxvar = x and y, need to be enforced as not redundant */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
       SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, name, auxvar, 2, vars,
             SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-            SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+            SCIPconsIsSeparated(cons), TRUE, TRUE,
             SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, andcons) );
@@ -3596,12 +3596,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
             }
 #endif
 
-            /* add constraint z = x and y */
+            /* add constraint z = x and y; need to be enforced, as it is not redundant w.r.t. existing constraints */
             xvars[1] = y;
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsAnd(scip, &auxcons, name, auxvar, 2, xvars,
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsSeparated(cons), TRUE, TRUE,
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3707,14 +3707,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
              */
             if( SCIPisNegative(scip, SCIPintervalGetInf(xbndsone)) )
             {
-               /* add 0 <= z - xbndsone.inf * y constraint (as varbound constraint) */
+               /* add 0 <= z - xbndsone.inf * y constraint (as varbound constraint), need to be enforced as not redundant */
                if( nxvars == 1 )
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_1", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                else
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_1", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbndsone), 0.0, SCIPinfinity(scip),
                      SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
-                     SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsSeparated(cons), TRUE, TRUE,
                      SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3725,14 +3725,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
             }
             if( SCIPisPositive(scip, SCIPintervalGetSup(xbndsone)) )
             {
-               /* add z - xbndsone.sup * y <= 0 constraint (as varbound constraint) */
+               /* add z - xbndsone.sup * y <= 0 constraint (as varbound constraint), need to be enforced as not redundant */
                if( nxvars == 1 )
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_2", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                else
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_2", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbndsone), -SCIPinfinity(scip), 0.0,
                      SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
-                     SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsSeparated(cons), TRUE, TRUE,
                      SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3742,7 +3742,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                ++*naddconss;
             }
 
-            /* add xbndszero.inf <= sum_i a_i*x_i + xbndszero.inf * y - z constraint */
+            /* add xbndszero.inf <= sum_i a_i*x_i + xbndszero.inf * y - z constraint, need to be enforced as not redundant */
             xvars[nxvars]   = y;
             xvars[nxvars+1] = auxvar;
             xcoef[nxvars]   = SCIPintervalGetInf(xbndszero);
@@ -3754,7 +3754,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_3", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, SCIPintervalGetInf(xbndszero), SCIPinfinity(scip),
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsSeparated(cons), TRUE, TRUE,
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3763,7 +3763,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             ++*naddconss;
 
-            /* add sum_i a_i*x_i + xbndszero.sup * y - z <= xbndszero.sup constraint */
+            /* add sum_i a_i*x_i + xbndszero.sup * y - z <= xbndszero.sup constraint, need to be enforced as not redundant */
             xcoef[nxvars] = SCIPintervalGetSup(xbndszero);
 
             if( nxvars == 1 )
@@ -3772,7 +3772,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_4", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, -SCIPinfinity(scip), SCIPintervalGetSup(xbndszero),
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsSeparated(cons), TRUE, TRUE,
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -4141,8 +4141,8 @@ SCIP_RETCODE presolveDisaggregate(
       SCIP_CALL( SCIPcreateConsQuadratic2(scip, &auxconss[comp], name, 0, NULL, NULL, 0, NULL, 0, NULL,
             (SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : 0.0),
             (SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : 0.0),
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            TRUE, SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
       auxcoefs[comp] = SCIPinfinity(scip);

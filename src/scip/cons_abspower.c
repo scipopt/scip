@@ -748,13 +748,15 @@ SCIP_RETCODE presolveFindDuplicates(
                      TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-               /* create auxiliary constraint auxvar = sign(x+offset)|x+offset|^n */
+               /* create auxiliary constraint auxvar = sign(x+offset)|x+offset|^n
+                * as we introduced a new variable, the constraint that "defines" the value for this variable need to be enforced, that is, is not redundent
+                */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxcons_abspower%s_%g_%g", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset);
                SCIP_CALL( SCIPcreateConsAbspower(scip, &auxcons, name, consdata0->x, auxvar, consdata0->exponent, consdata0->xoffset, -1.0, 0.0, 0.0,
                      SCIPconsIsInitial(cons0) || SCIPconsIsInitial(cons1),
                      SCIPconsIsSeparated(cons0) || SCIPconsIsSeparated(cons1),
-                     SCIPconsIsEnforced(cons0) || SCIPconsIsEnforced(cons1),
-                     SCIPconsIsChecked(cons0) || SCIPconsIsChecked(cons1),
+                     TRUE,
+                     TRUE,
                      SCIPconsIsPropagated(cons0) || SCIPconsIsPropagated(cons1),
                      FALSE,
                      FALSE,
@@ -4457,8 +4459,8 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
             SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
             SCIPisInfinity(scip, -lhs) ? -SCIPinfinity(scip) : 0.0,
             SCIPisInfinity(scip,  rhs) ?  SCIPinfinity(scip) : 0.0,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            TRUE, SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCoefLinear(scip, upgdconss[*nupgdconss], auxvar, -1.0) );
@@ -4809,8 +4811,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
             SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
             SCIPisInfinity(scip, -lhs) ? -SCIPinfinity(scip) : 0.0,
             SCIPisInfinity(scip,  rhs) ?  SCIPinfinity(scip) : 0.0,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            TRUE, SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCoefLinear(scip, upgdconss[*nupgdconss], auxvar, -1.0) );
