@@ -1846,8 +1846,9 @@ void graph_uncover(
 GRAPH *graph_pack(
    GRAPH* p)
 {
+#if 0
    const char* msg1   = "Knots: %d  Edges: %d  Terminals: %d\n";
-
+#endif
    GRAPH* q;
    int*   new;
    int    knots = 0;
@@ -1857,9 +1858,9 @@ GRAPH *graph_pack(
 
    assert(p      != NULL);
    assert(graph_valid(p));
-
+#if 0
    (void)printf("Packing Graph: ");
-
+#endif
    new = malloc((size_t)p->knots * sizeof(new[0]));
 
    assert(new != NULL);
@@ -1884,8 +1885,9 @@ GRAPH *graph_pack(
    {
       free(new);
       new = NULL;
-
+#if 0
       printf(" Graph vanished!\n");
+#endif
       knots = 1;
    }
 

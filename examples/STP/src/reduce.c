@@ -10,6 +10,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 
 #define REDUCE_C
+//#define PRINT_TMP_PRESOL
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,7 @@
 #include "portab.h"
 #include "misc_stp.h"
 #include "scip/scip.h"
+#include "probdata_stp.h"
 
 /* Moeglichkeiten:
  *    a 1 b 2 c
@@ -1401,13 +1403,40 @@ static double level4(
    int     brednelims;
    int     degtnelims;
 
+#ifdef PRINT_TMP_PRESOL
+   SCIP_PROBDATA* probdata;
+   const char*   probname;
+   char   presolvetempfile[SCIP_MAXSTRLEN];
+   double offset;
+#endif
+
+   assert(scip != NULL);
+
+#ifdef PRINT_TMP_PRESOL
+   probdata = SCIPgetProbData(scip);
+   probname = SCIPgetProbName(scip);
+   (void)SCIPsnprintf(presolvetempfile, SCIP_MAXSTRLEN, "presol/%s-presolve-tmp.stp", probname);
+   offset = SCIPprobdataGetOffset(scip);
+#endif
+
+   assert(g != NULL);
+   //bound_test(scip, g);
+
+
    assert(g != NULL);
 
    assert(minelims >= 0);
 
+#ifdef PRINT_TMP_PRESOL
+   SCIPprobdataSetGraph(probdata, g);
+   SCIPprobdataSetOffset(probdata, offset + fixed);
+   /* Writing the problem to a temporary file */
+   SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
+
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   heap  = malloc((size_t)g->knots * sizeof(int));
+   heap  = malloc((size_t)( 1 + g->knots) * sizeof(int));
    state = malloc((size_t)g->knots * sizeof(int));
    knotexamined = malloc((size_t)g->knots * sizeof(int));
    sddist = malloc((size_t)g->knots * sizeof(double));
@@ -1473,6 +1502,13 @@ static double level4(
 	 free(vnoi);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
+
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
       }
 
       if( sl )
@@ -1491,6 +1527,13 @@ static double level4(
 	 free(vnoi);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
+
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
       }
 
       if( (i = degree_test(g, &fixed)) > 0.5 * reductbound )
@@ -1504,6 +1547,13 @@ static double level4(
             runnum++;
          }
 
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
+
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
          if( sdnelims <= reductbound )
@@ -1511,6 +1561,16 @@ static double level4(
       }
 
       degtnelims += degree_test(g, &fixed);
+
+#ifdef PRINT_TMP_PRESOL
+      SCIPprobdataSetGraph(probdata, g);
+      SCIPprobdataSetOffset(probdata, offset + fixed);
+      /* Writing the problem to a temporary file */
+      SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
 
       if( nsv )
       {
@@ -1520,6 +1580,13 @@ static double level4(
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
+
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
       }
 
       if( bd3 )
@@ -1530,7 +1597,15 @@ static double level4(
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
+
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
       }
+
 
       degtnelims += degree_test(g, &fixed);
 
@@ -1561,6 +1636,7 @@ static double levelm1(
    degree_test_dir(g, &fixed);
    return fixed;
 }
+
 static double levelm4(
    SCIP* scip,
    GRAPH* g
@@ -1594,6 +1670,23 @@ static double levelm4(
    char    sd = TRUE;
    char    nsv = TRUE;
    char    timebreak = FALSE;
+
+
+#ifdef PRINT_TMP_PRESOL
+   SCIP_PROBDATA* probdata;
+   const char*   probname;
+   char   presolvetempfile[SCIP_MAXSTRLEN];
+   double offset;
+#endif
+
+   assert(scip != NULL);
+
+#ifdef PRINT_TMP_PRESOL
+   probdata = SCIPgetProbData(scip);
+   probname = SCIPgetProbName(scip);
+   (void)SCIPsnprintf(presolvetempfile, SCIP_MAXSTRLEN, "presol/%s-presolve-tmp.stp", probname);
+   offset = SCIPprobdataGetOffset(scip);
+#endif
 
    assert(g != NULL);
    redbound = MAX(g->knots / 500, 8);
@@ -1632,6 +1725,12 @@ static double levelm4(
    }
 #endif
 
+#ifdef PRINT_TMP_PRESOL
+   SCIPprobdataSetGraph(probdata, g);
+   SCIPprobdataSetOffset(probdata, offset + fixed);
+   /* Writing the problem to a temporary file */
+   SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
    if( g->stp_type == STP_HOP_CONS )
    {
 #if 1
@@ -1661,6 +1760,13 @@ static double levelm4(
 
       SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    }
+
+#ifdef PRINT_TMP_PRESOL
+   SCIPprobdataSetOffset(probdata, offset + fixed);
+   SCIPprobdataSetGraph(probdata, g);
+   /* Writing the problem to a temporary file */
+   SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
 
    while(rerun && !SCIPisStopped(scip))
    {
@@ -1696,6 +1802,13 @@ static double levelm4(
             }
             else
                break;
+
+#ifdef PRINT_TMP_PRESOL
+            SCIPprobdataSetOffset(probdata, offset + fixed);
+            SCIPprobdataSetGraph(probdata, g);
+            /* Writing the problem to a temporary file */
+            SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
          }
       }
 
@@ -1704,6 +1817,13 @@ static double levelm4(
 
       if( degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;
+
+#ifdef PRINT_TMP_PRESOL
+      /* Writing the problem to a temporary file */
+      SCIPprobdataSetOffset(probdata, offset + fixed);
+      SCIPprobdataSetGraph(probdata, g);
+      SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1733,6 +1853,12 @@ static double levelm4(
                else
                   break;
             }
+#ifdef PRINT_TMP_PRESOL
+            /* Writing the problem to a temporary file */
+            SCIPprobdataSetOffset(probdata, offset + fixed);
+            SCIPprobdataSetGraph(probdata, g);
+            SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
          }
       }
 
@@ -1744,6 +1870,13 @@ static double levelm4(
 
       if (degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;
+
+#ifdef PRINT_TMP_PRESOL
+      /* Writing the problem to a temporary file */
+      SCIPprobdataSetOffset(probdata, offset + fixed);
+      SCIPprobdataSetGraph(probdata, g);
+      SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
 
@@ -1975,8 +2108,10 @@ double reduce(
    if( 0 && g->stp_type != STP_UNDIRECTED )
       return fixed;
 
+#if 0
    if( g->stp_type == STP_GRID )
       return fixed;
+#endif
 
    //if( g->stp_type == STP_HOP_CONS )
    //return fixed;
@@ -1984,7 +2119,7 @@ double reduce(
    if( g->stp_type == STP_DEG_CONS )
       return fixed;
 
-   if( g->stp_type != STP_UNDIRECTED )
+   if( g->stp_type != STP_UNDIRECTED && g->stp_type != STP_GRID && g->stp_type != STP_OBSTACLES_GRID )
       level = level * (-1);
 
    assert(g->layers == 1);

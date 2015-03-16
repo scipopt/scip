@@ -37,10 +37,24 @@ SCIP_RETCODE SCIPprobdataCreate(
    const char*           filename           /**< file name */
    );
 
+/** sets the probdata graph */
+extern
+void SCIPprobdataSetGraph(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   GRAPH*                graph
+   );
+
 /** returns the graph */
 extern
 GRAPH* SCIPprobdataGetGraph(
    SCIP_PROBDATA*        probdata            /**< problem data */
+   );
+
+/** sets the offset given by the fixed edges */
+extern
+void SCIPprobdataSetOffset(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Real             offset              /**< the offset value */
    );
 
 /** returns the array with all variables */

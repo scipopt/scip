@@ -79,8 +79,9 @@ struct key
 #define KEY_GRAPH_EDGES          2002
 #define KEY_GRAPH_E              2003
 #define KEY_GRAPH_A              2004
-#define KEY_GRAPH_OBSTACLES      2005
-#define KEY_GRAPH_HOPLIMIT       2006
+#define KEY_GRAPH_AA             2005
+#define KEY_GRAPH_OBSTACLES      2006
+#define KEY_GRAPH_HOPLIMIT       2007
 
 #define KEY_TERMINALS_END        3001
 #define KEY_TERMINALS_TERMINALS  3002
@@ -126,6 +127,10 @@ struct key
 #define KEY_OBSTACLES_RR         9000
 #define KEY_OBSTACLES_END        9001
 
+#define KEY_HOPCONS_LIM          10000
+#define KEY_HOPCONS_FACTOR       10001
+
+#define KEY_PRIZECOLL_E          11000
 
 
 static const struct key keyword_table[] =
@@ -154,12 +159,16 @@ static const struct key keyword_table[] =
       {  "coordinates.grid",         KEY_COORDINATES_GRID,       NULL        },
 
       {  "graph.a",                  KEY_GRAPH_A,                "nnn"       },
+      {  "graph.aa",                 KEY_GRAPH_AA,               "nnnn"      },
       {  "graph.e",                  KEY_GRAPH_E,                "nnn"       },
       {  "graph.edges",              KEY_GRAPH_EDGES,            "n"         },
       {  "graph.end",                KEY_END,                    NULL        },
       {  "graph.hoplimit",           KEY_GRAPH_HOPLIMIT,         "n"         },
       {  "graph.nodes",              KEY_GRAPH_NODES,            "n"         },
       {  "graph.obstacles",          KEY_GRAPH_OBSTACLES,        "n"         },
+
+      {  "hopconstraint.limit",      KEY_HOPCONS_LIM,            "n"         },
+      {  "hopconstraint.factor",     KEY_HOPCONS_FACTOR,         "nn"        },
 
       {  "maximumdegrees.end",       KEY_END,                    NULL        },
       {  "maximumdegrees.md",        KEY_MAXDEGS_MD,             "n"         },
@@ -181,6 +190,8 @@ static const struct key keyword_table[] =
       {  "presolve.orgnodes",        KEY_EOF,                    "n"         },
       {  "presolve.time",            KEY_PRESOLVE_TIME,          "n"         },
       {  "presolve.upper",           KEY_PRESOLVE_UPPER,         "n"         },
+
+      {  "prizecollect.edges",       KEY_PRIZECOLL_E,            "n"         },
 
       {  "solution.date",            KEY_SOLUTION_DATE,          "s"         },
       {  "solution.end",             KEY_END,                    NULL        },
@@ -813,6 +824,7 @@ GRAPH* graph_load(
    int          obstacle_counter = 0;
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
+   int          transformed = 0;
    assert(file != NULL);
 
    /* No section loaded so far.
@@ -1003,16 +1015,34 @@ GRAPH* graph_load(
                case KEY_COMMENT_NAME :
                case KEY_COMMENT_DATE :
                case KEY_COMMENT_CREATOR :
-	       case KEY_COMMENT_PROBLEM :
+               case KEY_COMMENT_PROBLEM :
                   (void)printf("Problem: [%s]\n", para[0].s);
-		  if( strcmp(para[0].s, "Maximum Node Weight Connected Subgraph") == 0 )
-		  {
-		     stp_type = STP_MAX_NODE_WEIGHT;
-		     printf("Maximum Node Weight Connect \n");
-		  }
+                  if( strcmp(para[0].s, "SPG") == 0 )
+                     stp_type = STP_UNDIRECTED;
+                  else if( strcmp(para[0].s, "PCSPG") == 0 )
+                     stp_type = STP_PRIZE_COLLECTING;
+                  else if( strcmp(para[0].s, "RPCST") == 0 )
+                     stp_type = STP_ROOTED_PRIZE_COLLECTING;
+                  else if( strcmp(para[0].s, "NWSPG") == 0 )
+                     stp_type = STP_NODE_WEIGHTS;
+                  else if( strcmp(para[0].s, "DCST") == 0 )
+                     stp_type = STP_DEG_CONS;
+                  else if( strcmp(para[0].s, "RSMT") == 0 )
+                     stp_type = STP_GRID;
+                  else if( strcmp(para[0].s, "OARSMT") == 0 )
+                     stp_type = STP_OBSTACLES_GRID;
+                  else if( strcmp(para[0].s, "Maximum Node Weight Connected Subgraph") == 0
+                     || strcmp(para[0].s, "MWCS") == 0 )
+                     stp_type = STP_MAX_NODE_WEIGHT;
+                  else if( strcmp(para[0].s, "HCDST") == 0 )
+                     stp_type = STP_HOP_CONS;
+                  else if( strcmp(para[0].s, "DIRECT") == 0 )
+                     stp_type = STP_DIRECTED;
                   break;
                case KEY_COMMENT_REMARK :
                   (void)printf("Comment: [%s]\n", para[0].s);
+                  if( strcmp(para[0].s, "Transformed") == 0 )
+                     transformed = 1;
                   break;
                case KEY_GRAPH_NODES :
                   nodes = (int)para[0].n;
@@ -1031,6 +1061,7 @@ GRAPH* graph_load(
                   edges = (int)para[0].n;
                   break;
                case KEY_GRAPH_A :
+               case KEY_GRAPH_AA :
                case KEY_GRAPH_E :
 		  if( (int)para[0].n > nodes || (int)para[1].n > nodes )
                   {
@@ -1182,26 +1213,29 @@ GRAPH* graph_load(
                      free(obstacle_coords[i]);
 		  free(obstacle_coords);
 		  break;
-	       case KEY_TERMINALS_END :
-		  if( stp_type == STP_MAX_NODE_WEIGHT )
-		  {
-		     assert(nodes == termcount);
-		     graph_maxweight_transform(g, maxnodeweights);
-		     free(maxnodeweights);
-		  }
-                  else if( stp_type == STP_PRIZE_COLLECTING )
-		  {
-		     assert(prize != NULL);
-                     graph_prize_transform(g, prize);
-		     free(prize);
-		  }
-                  else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
-		  {
-		     assert(prize != NULL);
-                     graph_rootprize_transform(g, prize);
-		     free(prize);
-		  }
-		  curf.section = &section_table[0];
+          case KEY_TERMINALS_END :
+        if( transformed == 0 )
+        {
+           if( stp_type == STP_MAX_NODE_WEIGHT )
+           {
+              assert(nodes == termcount);
+              graph_maxweight_transform(g, maxnodeweights);
+              free(maxnodeweights);
+           }
+           else if( stp_type == STP_PRIZE_COLLECTING )
+           {
+              assert(prize != NULL);
+              graph_prize_transform(g, prize);
+              free(prize);
+           }
+           else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
+           {
+              assert(prize != NULL);
+              graph_rootprize_transform(g, prize);
+              free(prize);
+           }
+        }
+           curf.section = &section_table[0];
                   break;
                case KEY_TERMINALS_TERMINALS :
 		  terms = (int)para[0].n;
@@ -1228,6 +1262,9 @@ GRAPH* graph_load(
                         (int)para[0].n, nodes);
                      ret = FAILURE;
                   }
+
+                  stp_type = STP_ROOT_KNOWN;
+
                   break;
 	       case KEY_TERMINALS_ROOTP :
 		  assert(g != NULL);
