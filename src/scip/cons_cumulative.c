@@ -1354,6 +1354,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_BESTSOLLIMIT:
+      case SCIP_STATUS_RESTARTLIMIT:
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
          return SCIP_INVALIDDATA;
       }

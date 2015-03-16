@@ -960,6 +960,9 @@ SCIP_RETCODE SCIPprintStatus(
    case SCIP_STATUS_BESTSOLLIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "solution improvement limit reached");
       break;
+   case SCIP_STATUS_RESTARTLIMIT:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "restart limit reached");
+      break;
    case SCIP_STATUS_OPTIMAL:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "optimal solution found");
       break;
@@ -13876,8 +13879,7 @@ SCIP_RETCODE SCIPsolve(
          return SCIP_INVALIDCALL;
       }  /*lint !e788*/
    }
-   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) 
-      && (scip->set->limit_restarts == -1 || scip->stat->nruns <= scip->set->limit_restarts ) );
+   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) );
 
    /* release the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )

@@ -3556,10 +3556,12 @@ SCIP_Bool restartAllowed(
    assert(set != NULL);
    assert(stat != NULL);
 
-   return (set->nactivepricers == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts));
+   return (set->nactivepricers == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+         && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts));
 }
 #else
-#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts))
+#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts) \
+                                                && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts))
 #endif
 
 /** solves the focus node */
@@ -4549,12 +4551,20 @@ SCIP_RETCODE SCIPsolveCIP(
        * another restart
        */
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
-      if( set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
+      if( restartAllowed(set, stat) && set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
                "(run %d, node %"SCIP_LONGINT_FORMAT") restarting: triggering parameter controlled restart)\n",
                stat->nruns, stat->nnodes);
-         *restart = TRUE ;
+         *restart = TRUE;
+      }
+      /* if restart limit was exceeded, change the status; if status is different from unknown, ie some other limit was
+       * hit, leave it unchanged
+       */
+      if( stat->status == SCIP_STATUS_UNKNOWN && set->limit_restarts >= 0 && stat->nruns > set->limit_restarts )
+      {
+         *restart = FALSE;
+         stat->status = SCIP_STATUS_RESTARTLIMIT;
       }
 
       /* display node information line */
