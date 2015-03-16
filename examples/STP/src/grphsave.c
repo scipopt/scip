@@ -25,6 +25,9 @@ void SCIPwriteStp(
    )
 {
    int i;
+   int e;
+   int root = g->source[0];
+   int hopfactor;
 
    assert(g  != NULL);
    assert(fp != NULL);
@@ -33,7 +36,49 @@ void SCIPwriteStp(
       STP_MAGIC, VERSION_MAJOR, VERSION_MINOR);
 
    fprintf(fp, "Section Comment\n");
-   fprintf(fp, "Name \"%s\"\n", "noname");
+   fprintf(fp, "Name ");
+   switch( g->stp_type )
+   {
+      case STP_UNDIRECTED:
+         fprintf(fp, "\"%s\"\n", "SPG");
+         break;
+
+      case STP_PRIZE_COLLECTING:
+         fprintf(fp, "\"%s\"\n", "UNKNOWN");
+         break;
+
+      case STP_ROOTED_PRIZE_COLLECTING:
+         fprintf(fp, "\"%s\"\n", "RPCST");
+         break;
+
+      case STP_NODE_WEIGHTS:
+         fprintf(fp, "\"%s\"\n", "NWSPG");
+         break;
+
+      case STP_DEG_CONS:
+         fprintf(fp, "\"%s\"\n", "UNKNOWN");
+         break;
+
+      case STP_GRID:
+         fprintf(fp, "\"%s\"\n", "RSMT");
+         break;
+
+      case STP_OBSTACLES_GRID:
+         fprintf(fp, "\"%s\"\n", "OARSMT");
+         break;
+
+      case STP_MAX_NODE_WEIGHT:
+         fprintf(fp, "\"%s\"\n", "UNKNOWN");
+         break;
+
+      case STP_HOP_CONS:
+         fprintf(fp, "\"%s\"\n", "UNKNOWN");
+         break;
+
+      default:
+         fprintf(fp, "\"%s\"\n", "UNKNOWN");
+   }
+   fprintf(fp, "Remark \"Transformed\"\n");
    fprintf(fp, "End\n\n");
 
    if( !SCIPisEQ(scip, offset, 0.0) )
@@ -53,19 +98,31 @@ void SCIPwriteStp(
       {
          assert(g->oeat[i] != EAT_FREE);
 
-         fprintf(fp, "E %d %d %g\n",
-            g->tail[i] + 1,
-            g->head[i] + 1,
-            g->cost[i]);
+         if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_DEG_CONS || g->stp_type == STP_GRID
+           || g->stp_type == STP_OBSTACLES_GRID )
+            fprintf(fp, "E ");
+         else
+            fprintf(fp, "AA ");
+
+         fprintf(fp, "%d %d ", g->tail[i] + 1, g->head[i] + 1);
+
+         if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_DEG_CONS || g->stp_type == STP_GRID
+           || g->stp_type == STP_OBSTACLES_GRID )
+            fprintf(fp, "%f\n", g->cost[i]);
+         else
+            fprintf(fp, "%f %f\n", g->cost[i], g->cost[Edge_anti(i)]);
       }
    }
    fprintf(fp, "End\n\n");
    fprintf(fp, "Section Terminals\n");
    fprintf(fp, "Terminals %d\n", g->terms);
 
+   if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      fprintf(fp, "Root %d\n", g->source[0] + 1);
+
    for(i = 0; i < g->knots; i++)
    {
-      if (Is_term(g->term[i]))
+      if (Is_term(g->term[i]) && (g->stp_type != STP_ROOTED_PRIZE_COLLECTING || i != g->source[0]))
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");
@@ -76,6 +133,42 @@ void SCIPwriteStp(
 
       for(i = 0; i < g->knots; i++)
          fprintf(fp, "DD %d %d %d\n", i + 1, g->xpos[i], g->ypos[i]);
+
+      fprintf(fp, "End\n\n");
+   }
+
+   /* Hop-Constrained STP */
+   if( g->stp_type == STP_HOP_CONS )
+   {
+      fprintf(fp, "Section Hop Constraint\n");
+      fprintf(fp, "limit %d\n", g->hoplimit);
+      for( e = 0; e < g->edges; e++ )
+      {
+         /* TODO: When presolving is used: MODIFY */
+         hopfactor = 1;
+         fprintf(fp, "HC %d %d\n", e + 1, hopfactor);
+      }
+      fprintf(fp, "End\n\n");
+   }
+
+   /* Degree-Constrained STP */
+   /* It is just enough to know that the degree constraint is required */
+   if( g->stp_type == STP_DEG_CONS )
+   {
+      fprintf(fp, "Section Degree Constraint\n");
+      fprintf(fp, "End\n\n");
+   }
+
+	 /* PRIZECOLLECTING STP */
+   if( g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT )
+   {
+      fprintf(fp, "Section Prize Collecting Constraint\n");
+
+      for( e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         if( !Is_term(g->term[g->head[e]]) )
+            fprintf(fp, "PC %d\n", e + 1);
+      }
 
       fprintf(fp, "End\n\n");
    }
