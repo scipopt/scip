@@ -1545,6 +1545,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    char* logfilename;
    char* tmpfilename;
    char* probname;
+   char presolvefilename[SCIP_MAXSTRLEN];
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1689,12 +1690,16 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* select a root node */
    if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING
-      && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS )
+      && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS
+      && graph->stp_type != STP_ROOT_KNOWN )
       graph->source[0] = central_terminal(graph, compcentral);
 
    /* print the graph */
    if( print )
       SCIP_CALL( probdataPrintGraph(graph, "OriginalGraph.gml", NULL) );
+
+   /* setting the offest to the fixed value given in the input file */
+   probdata->offset = presolinfo.fixed;
 
    /* presolving */
    offset = reduce(graph, reduction, scip);
@@ -1760,8 +1765,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 	 if( graph->stp_type == STP_DEG_CONS )
 	    SCIP_CALL( createDegreeConstraints(scip, probdata) );
 
-	 if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT)
-            SCIP_CALL( createPrizeConstraints(scip, probdata) );
+    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT)
+       SCIP_CALL( createPrizeConstraints(scip, probdata) );
       }
       else
       {
@@ -1785,14 +1790,29 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->xval = NULL;
    }
 
-   /* add the new offset (offset) and the offset that had already been part of the problem before it was read in (presolinfo.fixed) */
+   /* setting the offest to the fixed value given in the input file plus the fixings given by the reduction techniques */
    probdata->offset = presolinfo.fixed + offset;
 
    /* create and add initial variables */
    SCIP_CALL( createVariables(scip, probdata, probdata->offset ) );
 
+#if 0
+   (void)SCIPsnprintf(presolvefilename, SCIP_MAXSTRLEN, "presol/%s-presolve.stp", probname);
+   SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
+#endif
+
    return SCIP_OKAY;
 }
+
+/** sets the probdata graph */
+void SCIPprobdataSetGraph(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   GRAPH*                graph
+   )
+{
+   probdata->graph = graph;
+}
+
 
 /** returns the graph */
 GRAPH* SCIPprobdataGetGraph(
@@ -1800,6 +1820,16 @@ GRAPH* SCIPprobdataGetGraph(
    )
 {
    return probdata->graph;
+}
+
+
+/** sets the offset given by the fixed edges */
+void SCIPprobdataSetOffset(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Real             offset              /**< the offset value */
+   )
+{
+   probdata->offset = offset;
 }
 
 

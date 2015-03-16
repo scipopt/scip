@@ -17,7 +17,7 @@
 #include "scip/scip.h"
 
 #define KNOTFREQ 100
-#define KNOTLIMIT 1e+05
+#define KNOTLIMIT 1e+20
 
 /* Das Nachfolgende ist eine Implementierung von Dijkstras Algorithmus
  * mit einem Heap zur Verwaltung der aktiven Knoten.
@@ -1506,6 +1506,8 @@ int nv_reduction_optimal(
    free(minArc2);
    free(minArc1);
    free(pred);
+   free(state);
+   free(heap);
    free(hopscost);
    free(radius);
    free(distance);
