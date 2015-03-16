@@ -787,7 +787,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
       /* reduce new graph */
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
-         || graph->stp_type == STP_HOP_CONS )
+         || graph->stp_type == STP_HOP_CONS || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID )
          (void) reduce(solgraph, 0, scip);
       else
          (void) reduce(solgraph, 4, scip);
