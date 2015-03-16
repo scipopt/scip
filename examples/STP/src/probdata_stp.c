@@ -80,6 +80,7 @@ struct SCIP_ProbData
    int                   nnodes;             /**< number of nodes */
    int                   nvars;              /**< number of variables */
    int                   stp_type;           /**< STP type */
+   int                   minelims;           /**< minimal number of eliminations per reduction method */
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
@@ -753,16 +754,17 @@ SCIP_RETCODE createVariables(
 	    }
 	 }
 	 /* PRIZECOLLECTING STP */
-         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
 	 {
 	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
             {
                if( !Is_term(graph->term[graph->head[e]]) )
                {
+		 if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
                   SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
-                  /*printf("add to cons %d %d \n", graph->tail[e], graph->head[e] );*/
-		  /* variables are prefered to be branched on */
-		  SCIP_CALL( SCIPchgVarBranchPriority( scip, probdata->edgevars[e], 1) );
+
+		  /* variables are preferred to be branched on */
+		  SCIP_CALL( SCIPchgVarBranchPriority( scip, probdata->edgevars[e], 10) );
                }
             }
 	 }
@@ -941,7 +943,8 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       graph_mincut_init(graphcopy);
 
    SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
-
+   (*targetdata)->minelims = sourcedata->minelims;
+   (*targetdata)->offset = sourcedata->offset;
    (*targetdata)->mode = sourcedata->mode;
    (*targetdata)->bigt = sourcedata->bigt;
    (*targetdata)->nlayers = sourcedata->nlayers;
@@ -1238,6 +1241,8 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->emitgraph = sourcedata->emitgraph;
    (*targetdata)->nvars = sourcedata->nvars;
    (*targetdata)->mode = sourcedata->mode;
+   (*targetdata)->offset = sourcedata->offset;
+   (*targetdata)->minelims = sourcedata->minelims;
    (*targetdata)->bigt = sourcedata->bigt;
    (*targetdata)->logfile = sourcedata->logfile;
    (*targetdata)->origlogfile = &(sourcedata->logfile);
@@ -1562,9 +1567,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
    /* get parameters */
+
    SCIP_CALL( SCIPgetCharParam(scip, "stp/mode", &mode) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/compcentral", &compcentral) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/minelims", &(probdata->minelims)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/emitgraph", &(probdata->emitgraph)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/bigt", &(probdata->bigt)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/printGraph", &print) );
@@ -1697,7 +1704,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL( probdataPrintGraph(graph, "OriginalGraph.gml", NULL) );
 
    /* presolving */
-   offset = reduce(graph, reduction, scip);
+   offset = reduce(scip, graph, reduction, probdata->minelims);
 
    graph_path_exit(graph);
 

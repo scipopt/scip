@@ -231,8 +231,6 @@ SCIP_RETCODE do_prune(
    graph_path_exec(g, MST_MODE, g->source[layer], cost, mst);
    for( i = 0; i < nnodes; i++ )
    {
-
-
       if( connected[i] && (mst[i].edge != -1) )
       {
          assert(g->head[mst[i].edge] == i);
@@ -290,7 +288,11 @@ SCIP_RETCODE do_prune(
                }
             }
             if( g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+	    {
+	       if( j == EAT_LAST )
+		   printf("in %d \n", i);
                assert(j != EAT_LAST);
+	    }
          }
       }
    }
@@ -299,7 +301,6 @@ SCIP_RETCODE do_prune(
    SCIPfreeBufferArray(scip, &mst);
 
    return SCIP_OKAY;
-
 }
 
 
@@ -1469,6 +1470,7 @@ SCIP_RETCODE do_layer(
       assert(graph->layers == 1);
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
       {
+	 SCIP_Bool firstrun;
          int root;
          int rootedge;
          int t;
@@ -1476,14 +1478,13 @@ SCIP_RETCODE do_layer(
          int nzterms;
          int* perm;
          int* edges_tz;
-         int* rootedges_t; // = heurdata->rootedges_t;
-         int* rootedges_z; //= heurdata->rootedges_z;
+         int* rootedges_t;
+         int* rootedges_z;
          k = 0;
          r = 0;
          z = 0;
          nzterms = 0;
          root = graph->source[0];
-         //printf("nterms: %d\n", graph->terms);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &(rootedges_t), graph->terms - 1) );
          SCIP_CALL( SCIPallocBufferArray(scip, &(rootedges_z), graph->terms - 1) );
@@ -1511,11 +1512,20 @@ SCIP_RETCODE do_layer(
 		  }
                   else
 		  {
-		     assert(costrev[e] == 0);
-		     assert(cost[flipedge(e)] == 0);
-		     edges_tz[z] = e;
+
+		     if( SCIPisEQ(scip, costrev[e], 0.0) )
+		     {
+		      assert(costrev[e] == 0);
+		      assert(cost[flipedge(e)] == 0);
+		      edges_tz[z] = e;
+		     }
+                     else
+		     {
+		        edges_tz[z] = UNKNOWN;
+			printf("costrevnorm %d: %f\n", e, costrev[e] );
+		     }
                      t = graph->head[e];
-                     //  printf("t: %d\n", t);
+
                   }
                }
                if( t != UNKNOWN )
@@ -1544,20 +1554,26 @@ SCIP_RETCODE do_layer(
          if( runs < nzterms )
             SCIPpermuteIntArray(perm, 0, nterms - 1, &(heurdata->randseed));
          z = 0;
+	 firstrun = TRUE;
          for( r = 0; r < runs; r++ )
          {
             while( rootedges_z[perm[z]] == UNKNOWN && z < nterms - 2 )
                z++;
             assert(z <= nterms - 2);
+
+	    /* if the edge has been fixed, continue*/
+	    if( edges_tz[perm[z]] == UNKNOWN )
+	       continue;
+
             rootedge = rootedges_z[perm[z]];
 
             costrev[rootedge] = 0.0;
             cost[flipedge(rootedge)] = 0.0;
-            //printf("rootedge %d->%d \n", graph->tail[rootedge], graph->head[rootedge]);
+
             for( e = 0; e < nedges; e++ )
                result[e] = UNKNOWN;
-            //printf("run, nzterms:  %d\n", nzterms);
-            if( r != 0 )
+
+            if( !firstrun )
             {
                for( k = 0; k < nterms - 1; k++ )
                {
@@ -1592,6 +1608,7 @@ SCIP_RETCODE do_layer(
                SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, 0, node_dist, root, result, vcount,
                      nodenterms, node_base, node_edge, (r == 0), connected) );
 
+            firstrun = FALSE;
             obj = 0.0;
 
             /* here another measure than in the do_(...) heuristics is being used*/
@@ -1971,7 +1988,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real* costrev;
    SCIP_Real* nval;
    SCIP_Real* xval;
-   SCIP_Real maxcost = 0;
+   SCIP_Real maxcost = 0.0;
    int* results;
    SCIP_Real pobj;
    int best_start = -1;
@@ -2079,12 +2096,16 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    else
    {
       SCIP_Real rand;
+      SCIP_Real randupper;
+      SCIP_Real randlower;
+      randupper = SCIPgetRandomReal(1.1, 2.5, &(heurdata->randseed));
+      randlower = SCIPgetRandomReal(1.1, randupper, &(heurdata->randseed));
+
       for( layer = 0; layer < 1; layer++ ) /*graph->layers */
       {
          if( xval == NULL )
          {
             int fixed = 0;
-            maxcost = 0.0;
             BMScopyMemoryArray(cost, graph->cost, nedges);
 
             /* hop constraint problem? */
@@ -2110,7 +2131,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                {
                   if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )
                   {
-                     costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     costrev[e] = 1e+10;
                      cost[e + 1] = 1e+10;
                      fixed++;
                   }
@@ -2123,7 +2144,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   if( SCIPvarGetUbGlobal(vars[layer * nedges + e]) < 0.5 )
                   {
                      fixed++;
-                     costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     costrev[e + 1] = 1e+10;
                      cost[e] = 1e+10;
                   }
                   else
@@ -2137,46 +2158,13 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          }
          else
          {
-            if( 0 && (graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING) )
-            {
-               int root = graph->source[0];
-               assert(root >= 0);
-               /* swap costs; set a high cost if the variable is fixed to 0 */
-               for( e = 0; e < nedges; e += 2)
-               {
-                  if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
-                  {
-                     costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                     cost[e + 1] = 1e+10;
-                  }
-                  else
-                  {
-                     costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
-                     cost[e + 1] = costrev[e];
-                  }
-
-                  if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
-                  {
-                     costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
-                     cost[e] = 1e+10;
-                  }
-                  else
-                  {
-                     if( 0 && graph->tail[e] == root && !Is_term(graph->term[graph->head[e]]) )
-                     {
-                        costrev[e + 1] = ((1.0 - xval[layer * nedges + e]));
-                        cost[e] = costrev[e + 1];
-                     }
-                     else
-                     {
-                        //TODO: chg s.t. original zero edges are also changed
-                        costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
-                        cost[e] = costrev[e + 1];
-                     }
-                  }
-               }
-            }
-            else if( graph->stp_type == STP_HOP_CONS )
+	   /*
+	    if( heurdata->nexecs % 10 == 0 )
+	       printf("tm totally randomized: \n\n");
+	    if( heurdata->nexecs % 4 == 0 )
+	       printf("tm partly randomized: (%f  %f)\n\n", randlower, randupper);
+	    */
+            if( graph->stp_type == STP_HOP_CONS )
             {
 
                for( e = 0; e < nedges; e++)
@@ -2187,9 +2175,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   }
                   else
                   {
-                     if( heurdata->nexecs % 8 == 0 )
+                     if( heurdata->nexecs % 10 == 0 )
                      {
-                        rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
+                        rand = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
                         cost[e] = graph->cost[e] * rand;
                      }
                      else
@@ -2197,9 +2185,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                         cost[e] = ((1.0 - xval[e]) * graph->cost[e]);
                      }
                   }
-                  if( heurdata->nexecs % 3 == 0 )
+                  if( heurdata->nexecs % 4 == 0 )
                   {
-                     rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
+                     rand = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
                      cost[e] = cost[e] * rand;
                   }
                   /* TODO graphcost to cost*/
@@ -2215,21 +2203,21 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                /* swap costs; set a high cost if the variable is fixed to 0 */
                for( e = 0; e < nedges; e += 2)
                {
-                  rand = SCIPgetRandomReal(1.0, 1.3, &(heurdata->randseed));
+                  rand = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
 
                   if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
                   {
-                     costrev[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     costrev[e] = 1e+10;
                      cost[e + 1] = 1e+10;
                   }
                   else
                   {
-                     if( heurdata->nexecs % 8 == 0 )
+                     if( heurdata->nexecs % 10 == 0 )
                         costrev[e] = graph->cost[e + 1] * rand;
                      else
                         costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
 
-                     if( heurdata->nexecs % 3 == 0 )
+                     if( heurdata->nexecs % 4 == 0 )
                      {
                         costrev[e] = costrev[e] * rand;
                      }
@@ -2238,17 +2226,17 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
                   if( SCIPvarGetUbLocal(vars[layer * nedges + e]) < 0.5 )
                   {
-                     costrev[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+                     costrev[e + 1] = 1e+10;
                      cost[e] = 1e+10;
                   }
                   else
                   {
-                     if( heurdata->nexecs % 8 == 0 )
+                     if( heurdata->nexecs % 10 == 0 )
                         costrev[e + 1] = graph->cost[e] * rand;
                      else
                         costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
 
-                     if( heurdata->nexecs % 3 == 0 )
+                     if( heurdata->nexecs % 4 == 0 )
                         costrev[e + 1] = costrev[e + 1]  * rand;
                      cost[e] = costrev[e + 1];
                   }
@@ -2316,7 +2304,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          pobj += graph->cost[v % nedges] * nval[v];
 
       //assert(graph_valid2(scip, graph, cost));
-
+      // printf("tm: %f \n", pobj + SCIPprobdataGetOffset(scip));
       if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
       {
          heurdata->beststartnode = best_start;

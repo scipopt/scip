@@ -165,6 +165,7 @@ typedef struct voronoi_path
 #define CONNECT      0
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
+#define FIXEDVAL     1e13
 
 #define MST_MODE   0
 #define FSP_MODE   1
@@ -222,7 +223,7 @@ extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_pres(const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_dist(const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, PATH*);
-extern void   voronoi_radius(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
+extern void   voronoi_radius(SCIP* scip, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   voronoi_hop(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int*);
@@ -258,18 +259,18 @@ extern void graph_boxcoord(GRAPH* g);
 
 /* reduce.c
  */
-extern double reduce(GRAPH*, int, SCIP*);
+extern double reduce(SCIP*, GRAPH*, int, int);
 
 /* sdtest.c
  */
 extern int    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int*, int);
 extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*);
-extern int    bd3_reduction(GRAPH*);
+extern int    bd3_reduction(SCIP*, GRAPH*, double*, double*, int*, int*);
 extern int    nsv_reduction(SCIP*, GRAPH*, double*);
 extern int    nv_reduction_optimal(GRAPH*, double*, int);
 extern int    nv_reduction(GRAPH*, double*);
-extern int    nvX_reduction(GRAPH*, double*, int*, int*);
-extern int    sl_reduction(GRAPH*, double*, int*, int*);
+extern int    nvX_reduction(GRAPH*, PATH*,double*, int*, int*, int*);
+extern int    sl_reduction(GRAPH*, PATH*, double*, int*, int*, int*);
 
 /* dirreduce.c
  */

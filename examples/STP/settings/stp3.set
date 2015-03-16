@@ -1,8 +1,19 @@
 # SCIP version 3.1.0.1
+#stp/logfile = "X3"
+#limits/time = 2
+#stp/reduction = 0
 
 # frequency for displaying node information lines
 # [type: int, range: [-1,2147483647], default: 100]
 display/freq = 1
+
+# maximal number of solutions to store in the solution storage
+# [type: int, range: [1,2147483647], default: 100]
+limits/maxsol = 400
+
+# maximal number of solutions candidates to store in the solution storage of the original problem
+# [type: int, range: [0,2147483647], default: 10]
+limits/maxorigsol = 10
 
 # maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)
 # [type: int, range: [-1,2147483647], default: 10]

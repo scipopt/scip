@@ -1858,7 +1858,7 @@ GRAPH *graph_pack(
    assert(p      != NULL);
    assert(graph_valid(p));
 
-   /*(void)printf("Packing Graph: ");*/
+   (void)printf("Packing Graph: ");
 
    new = malloc((size_t)p->knots * sizeof(new[0]));
 
@@ -2005,9 +2005,9 @@ GRAPH *graph_pack(
          q->source[q->term[i]] = i;
 #endif
    assert(q->source[0] >= 0);
-
+#if 0
    (void)printf(msg1, q->knots, q->edges, q->terms);
-
+#endif
    return(q);
 }
 

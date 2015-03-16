@@ -46,6 +46,7 @@
 #define   DEFAULT_COMPCENTRAL  1
 #define   DEFAULT_EMITGRAPH    FALSE
 #define   DEFAULT_REDUCTION    4
+#define   DEFAULT_MINELIMS     5
 
 #define STP_MODES "cfp" /* valid values for user parameter 'stp/mode' */
 
@@ -164,6 +165,11 @@ SCIP_RETCODE SCIPincludeReaderStp(
          "stp/reduction",
          "Reduction: 0 disable, 5 maximum",
          NULL, FALSE, DEFAULT_REDUCTION, 0, 5, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/minelims",
+         "minimal number of eliminations per reduction method",
+         NULL, FALSE, DEFAULT_MINELIMS, 0, 10000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "stp/emitgraph",

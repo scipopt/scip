@@ -55,7 +55,7 @@ void SCIPindexListNodeInsert(
 {
    IDX* curr;
    curr = *node;
-   //printf("add element\n!");
+
    *node = malloc((size_t)sizeof(IDX));
    (*node)->index = index;
 
@@ -131,6 +131,7 @@ void SCIPlinkcuttreeLink(
    )
 {
    assert(v->parent == NULL);
+   assert(v->edge == -1);
    v->parent = w;
    v->edge = edge;
 }
@@ -151,9 +152,10 @@ NODE* SCIPlinkcuttreeFindMax(
    )
 {
    NODE* p = v;
-   NODE* q = NULL;
+   NODE* q = v;
    SCIP_Real max = -1;
-   while( p != NULL )
+
+   while( p->parent != NULL )
    {
       assert(p->edge >= 0);
       if( SCIPisGE(scip, cost[p->edge], max) )
@@ -183,7 +185,10 @@ void SCIPlinkcuttreeEvert(
    {
       r = q->parent;
       tmpval =  q->edge;
-      q->edge = (val >= 0) ? flipedge(val) : val;
+      if( val != -1 )
+	 q->edge = flipedge(val);
+      else
+         q->edge = -1;
       val = tmpval;
       q->parent = p;
       p = q;
