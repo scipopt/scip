@@ -30,6 +30,7 @@ features:
 - we can now upgrade quadratic constraints with one bilinear term to SOC constraints
 - new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output in the orignal space
 - new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
+- new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?

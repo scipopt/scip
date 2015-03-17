@@ -330,6 +330,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
 			scip/heur_actconsdiving.o \
+			scip/heur_bound.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
