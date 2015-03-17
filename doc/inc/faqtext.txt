@@ -321,6 +321,23 @@ SECTION: Using SCIP as a standalone solver
         you plenty of extra information about the solving process.<br>
         (Typing <code>display heuristics</code> gives you a list of the heuristics including their letters.)
     </p>
+    
+    QUESTION: Why does SCIP claim that it could not find the user parameters "scip.set"? Where can I get such a file?
+    LABEL:whereareuserparameters
+    ANSWER:
+    <p>
+    SCIP comes with default settings that are automatically active when you start the interactive shell.
+    However, you have the possibility to save customized settings via the <code>set save</code> and <code>set diffsave</code> commands.
+    Both commands will prompt you to enter a file name and save either all or customized parameters only to the specified file.
+
+    A user parameter file that you save as "scip.set" has a special meaning; Whenever you invoke SCIP from a directory containing a file named "scip.set",
+    the settings therein overwrite the default settings. For more information about customized settings, see the <a href="PATHTODOC/SHELL.LINKEXT">
+    Tutorial on the interactive shell</a>.
+
+    Settings files can become incompatible with later releases if we decide to rename/delete a parameter.
+    Information about this can be found in the CHANGELOG for every release, see also <a href="#versionchange">this related question</a>.
+
+    </p>
 
     QUESTION: How do I change the behavior of SCIP?
     LABEL:howtochangebehaviour

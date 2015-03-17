@@ -380,6 +380,25 @@ you plenty of extra information about the solving process.<br>
     </div>
   </li>
     <li>
+    <div id="whereareuserparameters" class="reveal">
+      Why does SCIP claim that it could not find the user parameters "scip.set"? Where can I get such a file?    </div>
+    <div id="whereareuserparameters_ans" class="answer">
+       <p>
+SCIP comes with default settings that are automatically active when you start the interactive shell.
+However, you have the possibility to save customized settings via the <code>set save</code> and <code>set diffsave</code> commands.
+Both commands will prompt you to enter a file name and save either all or customized parameters only to the specified file.
+
+A user parameter file that you save as "scip.set" has a special meaning; Whenever you invoke SCIP from a directory containing a file named "scip.set",
+the settings therein overwrite the default settings. For more information about customized settings, see the <a href="./SHELL.shtml">
+Tutorial on the interactive shell</a>.
+
+Settings files can become incompatible with later releases if we decide to rename/delete a parameter.
+Information about this can be found in the CHANGELOG for every release, see also <a href="#versionchange">this related question</a>.
+
+</p>
+    </div>
+  </li>
+    <li>
     <div id="howtochangebehaviour" class="reveal">
       How do I change the behavior of SCIP?    </div>
     <div id="howtochangebehaviour_ans" class="answer">
@@ -980,21 +999,25 @@ when entering a new node. How can I do that?    </div>
        <p>
 This can be done by creating a new constraint handler with constraint data that can store the information and
 do/undo changes in the pricer's data structures.
+<p>
+Once you have such a constraint handler, just create constraints of this type and add them to the child nodes of
+your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag to TRUE in order to
+prevent SCIP from moving the constraint around in the tree.
+</p>
 </p>
 In general, all methods of the constraint handler (check, enforcing, separation, ...) should be empty (which means
 that they always return the status SCIP_FEASIBLE for the fundamental callbacks), just as if all constraints of this type
-are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods.
+are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods for communicating the
+constraints along the active path to your pricer, and the CONSDELETE callback for deleting data of constraints at nodes
+which became obsolete.
 <p>
 The CONSACTIVE method is always called when a node is entered on which the constraint has been added. Here, you
 need to apply the changes to your pricing data structures. The CONSDEACTIVE method will be called if the node is
 left again. Since the CONSACTIVE and CONSDEACTIVE methods of different constraints are always called in a
 stack-like fashion, this should be exactly what you need.
 </p>
-
 <p>
-If you have such a constraint handler, just create constraints of this type and add them to the child nodes of
-your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag to TRUE in order to
-prevent SCIP from moving the constraint around in the tree.
+All data of a constraint need to be freed by implementing an appropriate CONSDELETE callback.
 </p>
 <p>
 If you need to fix variables for enforcing your branching decision, this can be done in the propagation callback
@@ -1153,7 +1176,7 @@ be sufficient for most branch-and-price applications. Note that set covering con
 <p>
 Instead of deleting a variable completely, you can also remove it from the problem by either fixing the variable to zero
 using <code>SCIPfixVar()</code>, which fixes the variable globally or using <code>SCIPchgVarUbNode()</code> and
-<code>SCIPchgVarLBNode()</code>, which changes the bounds only for the current subtree.
+<code>SCIPchgVarLbNode()</code>, which changes the bounds only for the current subtree.
 </p>
     </div>
   </li>
