@@ -884,7 +884,7 @@ SCIP_RETCODE voronoi_extend2(
 }
 
 
-
+#if 0
 /* extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend3(
    SCIP* scip,
@@ -977,7 +977,7 @@ SCIP_RETCODE voronoi_extend3(
    }
    return SCIP_OKAY;
 }
-
+#endif
 /*** build a voronoi region, w.r.t. shortest paths, for a given set of bases ***/
 void voronoi(
    SCIP* scip,
@@ -1098,7 +1098,7 @@ void voronoi_pres(
    for( i = 0; i < g->knots; i++ )
    {
       /* set the base of vertex i */
-      if( Is_term(g->term[i])  ) // && g->grad[i] > 0
+      if( Is_term(g->term[i]) ) // g->grad[i] > 0
       {
          nbases++;
          if( g->knots > 1 )
@@ -1359,9 +1359,8 @@ void voronoi_radius(
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
             m = g->head[i];
-	    if( !g->mark[m] )
-	       continue;
-	    if( state[m] == CONNECT && vbase[m] != vbase[k] )
+
+	    if( state[m] == CONNECT && vbase[m] != vbase[k] && g->mark[m] )
 	    {
                if( SCIPisGT(scip, rad[vbase[k]], path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
                   rad[vbase[k]] = path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i]);
@@ -1369,7 +1368,7 @@ void voronoi_radius(
                   rad[vbase[m]] = path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i]);
 	    }
             /* check whether the path (to m) including k is shorter than the so far best known */
-	    if( state[m] && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+	    if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
             {
 	       assert(!Is_term(g->term[m]));
                correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]), FSP_MODE);

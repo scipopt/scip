@@ -342,7 +342,18 @@ SCIP_RETCODE selectsols(
       SCIPsortRealInt(soltimes, perm, nsols);
       i = nsols - 1;
       //printf("(maxnsols: %d) real soltime 0:  %d \n", maxnsols, SCIPsolGetIndex(sols[perm[i]]));
-      *newsol = (sols[perm[i]]);
+
+      /* has the latest solution already been tried? */
+      if( heurdata->lastsolindex != SCIPsolGetIndex(sols[perm[i]]) )
+      {
+         *newsol = sols[perm[i]];
+      }
+      else
+      {
+	 printf("last solution has already been used \n");
+	 i = SCIPgetRandomInt(0, nsols - 1, &(heurdata->randseed));
+	 *newsol = sols[perm[i]];
+      }
       solselected[perm[i]] = TRUE;
       selection[nselectedsols++] = perm[i];
 
@@ -793,7 +804,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int nnodes;
    int count;
    int nsoledges;
-   //int nimprovs;
    int nheurs;
    int best_start;
    int* perm;
@@ -840,8 +850,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    /* suspend heuristic? */
    if( SCIPisLT(scip, nsols, heurdata->nlastsols + heurdata->nwaitingsols + heurdata->nfailures) && heurdata->ncalls > 0 )
       return SCIP_OKAY;
-
-   //if( heurdata->lastsolindex = SCIPsolGetIndex(sols[index]);
 
    heurdata->ncalls++;
    *result = SCIP_DIDNOTRUN;
@@ -951,7 +959,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          || graph->stp_type == STP_HOP_CONS )
          (void) reduce(scip, solgraph, 0, 0);
       else
-         (void) reduce(scip, solgraph, 4, 3);
+         (void) reduce(scip, solgraph, 4, 2);
       graph_path_exit(solgraph);
 
       solgraph = graph_pack(solgraph);
@@ -1285,8 +1293,9 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       heurdata->nfailures = 0;
    else
       heurdata->nfailures++;
+
+   /* save last solution index */
    index = 0;
-   /* */
    nsols = SCIPgetNSols(scip);
    assert(nsols > 0);
    sols = SCIPgetSols(scip);

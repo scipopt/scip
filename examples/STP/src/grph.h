@@ -233,7 +233,6 @@ extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*,
 extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, char*, UF*, PATH*);
 extern SCIP_RETCODE  voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE  voronoi_extend2(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
-extern SCIP_RETCODE  voronoi_extend3(SCIP*, const GRAPH*, const double*, PATH*, GNODE***, int**, int**, char*, int*, int*, int*, int, int, int);
 
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
@@ -269,9 +268,9 @@ extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, d
 extern int    bd3_reduction(SCIP*, GRAPH*, double*, double*, int*, int*);
 extern int    nsv_reduction(SCIP*, GRAPH*, double*);
 extern int    nv_reduction_optimal(GRAPH*, double*, int);
-extern int    nv_reduction(GRAPH*, double*);
-extern int    nvX_reduction(GRAPH*, PATH*,double*, int*, int*, int*);
+extern int    nv_reduction(GRAPH*, PATH*,double*, int*, int*, int*);
 extern int    sl_reduction(GRAPH*, PATH*, double*, int*, int*, int*);
+extern int    ledge_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*);
 
 /* dirreduce.c
  */

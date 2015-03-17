@@ -54,6 +54,91 @@ static int compare(
    return(LT(pathtran[a], pathtran[b]) ? -1 : 1);
 }
 #endif
+
+
+#if 0
+/** for debug purposes only */
+static
+SCIP_RETCODE printGraph(
+   SCIP* scip,
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           filename,           /**< Name of the output file */
+   int*                  result
+   )
+{
+   char label[SCIP_MAXSTRLEN];
+   FILE* file;
+   int e;
+   int n;
+   int m;
+   char* stnodes;
+   SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
+
+   assert(graph != NULL);
+   file = fopen((filename != NULL) ? filename : "graphX.gml", "w");
+
+   for( e = 0; e < graph->knots; e++ )
+   {
+      stnodes[e] = FALSE;
+   }
+   for( e = 0; e < graph->edges; e++ )
+   {
+      if( 1 )
+      {
+	 stnodes[graph->tail[e]] = TRUE;
+	 stnodes[graph->head[e]] = TRUE;
+      }
+   }
+
+   /* write GML format opening, undirected */
+   SCIPgmlWriteOpening(file, FALSE);
+
+   /* write all nodes, discriminate between root, terminals and the other nodes */
+   e = 0;
+   m = 0;
+   for( n = 0; n < graph->knots; ++n )
+   {
+      if( stnodes[n] )
+      {
+         if( n == graph->source[0] )
+         {
+            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
+            SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
+            m = 1;
+         }
+         else if( graph->term[n] == 0 )
+         {
+            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
+            SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#ff0000", NULL);
+            e += 1;
+         }
+         else
+         {
+            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
+            SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
+         }
+
+      }
+   }
+
+   /* write all edges (undirected) */
+   for( e = 0; e < graph->edges; e ++ )
+   {
+      if( 1 )
+      {
+         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
+	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
+      }
+   }
+   SCIPfreeBufferArray(scip, &stnodes);
+   /* write GML format closing */
+   SCIPgmlWriteClosing(file);
+
+   return SCIP_OKAY;
+}
+
+#endif
+
 static int issmaller(
    const double* pathdist,
    const double* pathtran,
@@ -1538,9 +1623,7 @@ int sl_reduction(
    int* vbase
    )
 {
-   //PATH*   vnoi;
    double* mincost2;
-   //int*    vbase;
    int*    minedge1;
    int*    minedgehead;
    int*    minedgetail;
@@ -1555,6 +1638,11 @@ int sl_reduction(
    int     nnodes;
 
    assert(g != NULL);
+   assert(vnoi != NULL);
+   assert(heap != NULL);
+   assert(state != NULL);
+   assert(vbase != NULL);
+
    nnodes = g->knots;
 
    /* TODO ID */
@@ -1660,8 +1748,6 @@ int sl_reduction(
    }
    free(minedge1);
    free(mincost2);
-   //free(vnoi);
-   //free(vbase);
    free(minedgehead);
    free(minedgetail);
    //printf("sl: nelims: %d \n", nelims);
@@ -1670,7 +1756,7 @@ int sl_reduction(
 
 
 /* NV reduction from T. Polzin's "Algorithms for the Steiner problem in networks" */
-int nvX_reduction(
+int nv_reduction(
    GRAPH*  g,
    PATH*   vnoi,
    double* fixed,
@@ -1679,12 +1765,10 @@ int nvX_reduction(
    int* vbase
    )
 {
-   //PATH*   vnoi;
    double* distance;
    double* mincost2;
    double  min1;
    double  min2;
-   //int*    vbase;
    int*    minedge1;
    int*    min1head;
    int*    min1tail;
@@ -1697,6 +1781,12 @@ int nvX_reduction(
    int     e;
    int     nelims;
 
+   assert(g != NULL);
+   assert(vnoi != NULL);
+   assert(heap != NULL);
+   assert(state != NULL);
+   assert(vbase != NULL);
+
    nnodes = g->knots;
 
    minedge1 = malloc((size_t)g->terms * sizeof(int));
@@ -1705,8 +1795,7 @@ int nvX_reduction(
    min1head = malloc((size_t)g->terms * sizeof(int));
    min1tail = malloc((size_t)g->terms * sizeof(int));
    distance = malloc((size_t)nnodes * sizeof(double));
-   //vbase = malloc((size_t)nnodes * sizeof(int));
-   //vnoi = malloc((size_t)nnodes * sizeof(PATH));
+
    termcount = 0;
    nelims = 0;
    for( i = 0; i < nnodes; i++ )
@@ -1781,11 +1870,9 @@ int nvX_reduction(
 
                nelims++;
 
-               // printf("contr: %d-%d \n", j, k);
                *fixed += g->cost[edge1];
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
                graph_knot_contract(g, j, k);
-               //printf("contred \n");
             }
          }
          else
@@ -1803,12 +1890,10 @@ int nvX_reduction(
                      break;
                if( e == EAT_LAST )
                   continue;
-               // printf("contr2: %d-%d \n", j, k);
                *fixed += g->cost[edge1];
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
                graph_knot_contract(g, j, k);
                nelims++;
-               //printf("contred \n");
             }
          }
       }
@@ -1818,12 +1903,186 @@ int nvX_reduction(
    free(minedge1);
    free(mincost2);
    free(distance);
-   //free(vnoi);
-   //free(vbase);
+
    assert(graph_valid(g));
-   //printf("nvx: nelims: %d \n", nelims);
+   //printf("nv: nelims: %d \n", nelims);
    return nelims;
 }
+
+/*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20) */
+int ledge_reduction(
+   SCIP*   scip,
+   GRAPH*  g,
+   PATH*   vnoi,
+   int* heap,
+   int* state,
+   int* vbase
+   )
+{
+   GRAPH* netgraph;
+   PATH* mst;
+   SCIP_Real cost;
+   SCIP_Real maxcost;
+   int v1;
+   int v2;
+   int k;
+   int e;
+   int ne;
+   int nedges;
+   int nnodes;
+   int nterms;
+   int nelims;
+   int maxnedges;
+   int netnnodes;
+   int* nodesid;
+
+   assert(g != NULL);
+   assert(vnoi != NULL);
+   assert(heap != NULL);
+   assert(state != NULL);
+   assert(vbase != NULL);
+
+   nelims = 0;
+   nedges = g->edges;
+   nnodes = g->knots;
+   nterms = g->terms;
+
+   if( nnodes <= 1 || nedges == 0 )
+      return 0;
+
+   voronoi_pres(g, g->cost, vnoi, vbase, heap, state);
+
+   if( SCIPisGT(scip, nedges, (nterms - 1) * nterms) )
+      maxnedges = (nterms - 1) * nterms;
+   else
+      maxnedges = nedges;
+
+   //printf(" size0: %d, maxnedges: %d \n", nterms, maxnedges);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
+
+   /* initialize the new graph */
+   netgraph = graph_init(nterms, maxnedges, 1, 0);
+
+   e = 0;
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && g->grad[k] > 0 )
+      {
+         netgraph->mark[e] = TRUE;
+	 nodesid[k] = e++;
+	 if( e == 1)
+            graph_knot_add(netgraph, 0, 0, 0);
+         else
+            graph_knot_add(netgraph, -1, 0, 0);
+      }
+      else
+      {
+	 nodesid[k] = UNKNOWN;
+      }
+   }
+
+   netnnodes = netgraph->knots;
+   assert(netnnodes == e);
+   if( netnnodes == 0 )
+   {
+      graph_free(netgraph, TRUE);
+      SCIPfreeBufferArray(scip, &nodesid);
+      return 0;
+   }
+   for( k = 0; k < nnodes; k++ )
+   {
+      v1 = vbase[k];
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         /* TODO */
+         assert(k == g->tail[e]);
+
+	 if( vbase[g->head[e]] != v1 )
+	 {
+            v2 = vbase[g->head[e]];
+            for( ne = netgraph->outbeg[nodesid[v1]]; ne != EAT_LAST; ne = netgraph->oeat[ne] )
+               if( netgraph->head[ne] == nodesid[v2] )
+                  break;
+
+	    cost = g->cost[e] + vnoi[g->head[e]].dist + vnoi[g->tail[e]].dist;
+	    /* edge exists? */
+	    if( ne != EAT_LAST )
+	    {
+               if( SCIPisGT(scip, netgraph->cost[ne], cost) )
+               {
+                  netgraph->cost[ne]            = cost;
+                  netgraph->cost[Edge_anti(ne)] = cost;
+		  assert(ne <= maxnedges);
+               }
+	    }
+	    else
+	    {
+	       graph_edge_add(netgraph, nodesid[v1], nodesid[v2], cost, cost);
+	       assert(netgraph->edges <= maxnedges);
+	    }
+	 }
+      }
+   }
+   netgraph->source[0] = 0;
+   /*
+     if( !graph_valid(netgraph ) )
+     {
+     SCIP_CALL( printGraph(scip, g, "AX.gml", NULL) );
+     SCIP_CALL( printGraph(scip, netgraph, "BX.gml", NULL) );
+     }
+   */
+   assert( graph_valid(netgraph ) );
+
+   /* compute a MST on netgraph */
+   SCIP_CALL( SCIPallocBufferArray(scip, &mst, netnnodes) );
+   graph_path_init(netgraph);
+   graph_path_exec(netgraph, MST_MODE, 0, netgraph->cost, mst);
+
+   maxcost = 0.0;
+   for( k = 1; k < netnnodes; k++ )
+   {
+      e = mst[k].edge;
+      assert(e >= 0);
+      cost = netgraph->cost[e];
+      if( SCIPisGT(scip, cost, maxcost) )
+         maxcost = cost;
+   }
+
+   //printf("maxcost: %f \n", maxcost);
+   for( k = 0; k < nnodes; k++ )
+   {
+      e = g->outbeg[k];
+      while( e != EAT_LAST )
+      {
+         assert(e >= 0);
+         //printf("e: %d->%d\n", graph->tail[e], graph->head[e]);
+         if( SCIPisGT(scip, g->cost[e], maxcost) )
+         {
+            nelims++;
+            SCIPindexListNodeFree(&((g->ancestors)[e]));
+            SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e)]));
+	    v1 = g->oeat[e];
+	    //printf("LE: elim: %d->%d (%d) \n", g->tail[e], g->head[e], g->oeat[e]);
+            graph_edge_del(g, e);
+            e = v1;
+         }
+         else
+	 {
+            e = g->oeat[e];
+	 }
+      }
+   }
+
+   /* free netgraph and  MST data structure */
+   graph_path_exit(netgraph);
+   graph_free(netgraph, TRUE);
+   SCIPfreeBufferArray(scip, &mst);
+   SCIPfreeBufferArray(scip, &nodesid);
+   //printf("LE elims: %d \n", nelims);
+   return nelims;
+}
+#if 0
 
 /* T. Polzin
  *
@@ -2089,3 +2348,4 @@ int nv_reduction(
 
    return(elimins);
 }
+#endif
