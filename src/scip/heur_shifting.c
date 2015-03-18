@@ -487,6 +487,9 @@ void addFracCounter(
       assert(nfracsinrow[rowidx] >= 0);
       theviolrowpos = violrowpos[rowidx];
 
+      if( SCIProwIsLocal(rows[r]) )
+         continue;
+
       /* swap positions in violrows array if fractionality has changed to 0 */
       if( theviolrowpos >= 0 )
       {
