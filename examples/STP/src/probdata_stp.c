@@ -697,7 +697,7 @@ SCIP_RETCODE createVariables(
       int nnodes = graph->knots;
       SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
-      assert(nedges = graph->edges);
+      assert(nedges == graph->edges);
 
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->xval, nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->edgevars, nvars) );

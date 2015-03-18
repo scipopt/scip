@@ -2034,7 +2034,6 @@ static double level5(
 #endif
    assert(scip != NULL);
    assert(g != NULL);
-   assert(minelims >= 0);
 
    nnodes = g->knots;
    nedges = g->edges;
@@ -2239,6 +2238,7 @@ SCIP_RETCODE reduce(
    assert(g      != NULL);
    assert(g->fixedges == NULL);
    assert(level  >= 0 || level == -4);
+   assert(minelims >= 0);
 
    *offset = 0.0;
 

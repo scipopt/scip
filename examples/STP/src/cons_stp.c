@@ -52,6 +52,12 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cuts separated per separation round in the root node */
+
+
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 #define DEFAULT_BACKCUT       FALSE /**< Try Back-Cuts */
@@ -96,6 +102,11 @@ struct SCIP_ConshdlrData
    SCIP_Bool disjunctcut;
    SCIP_Bool nestedcut;
    SCIP_Bool flowsep;
+   int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
+   int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
+
 };
 
 
@@ -112,6 +123,8 @@ static int cut_add(
    const int     layer,
    const int     type,
    const double* xval,
+   int* capa,
+   const int updatecapa,
    int* ncuts
    )
 {
@@ -121,6 +134,7 @@ static int cut_add(
    double  sum   = 0.0;
    SCIP_ROW* row;
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   SCIP_Bool inccapa = FALSE;
 
    assert(scip != NULL);
    assert(g         != NULL);
@@ -138,6 +152,22 @@ static int cut_add(
        && (g->mark[g->tail[i]] != g->mark[g->head[i]]))
       {
          ind = layer * g->edges + i;
+
+         if( updatecapa )
+         {
+            if( capa[i] < FLOW_FACTOR )
+               inccapa = TRUE;
+
+            SCIPdebugMessage("set capa[%d] from %6d to %6d\n", i, capa[i], FLOW_FACTOR);
+            capa[i] = FLOW_FACTOR;
+
+            if( !inccapa )
+            {
+               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+               return 0;
+            }
+         }
 
          if (xval != NULL)
          {
@@ -162,6 +192,8 @@ static int cut_add(
    {
       SCIP_Bool infeasible;
 
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+
       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
       (*ncuts)++;
       ret = 1;
@@ -177,7 +209,7 @@ static int graph_next_term(
    int*          term,
    const int*    w)
 {
-   int wmax = 1;
+   int wmax = 0;
    int i;
    int k    = -1;
    int t;
@@ -250,6 +282,7 @@ int sep_flow(
    SCIP_CONSHDLR* conshdlr,
    SCIP_CONSHDLRDATA* conshdlrdata,
    SCIP_CONSDATA* consdata,
+   int           maxcuts,
    int* ncuts
    )
 {
@@ -272,7 +305,6 @@ int sep_flow(
 
    vars = SCIPprobdataGetVars(scip);
    flowsep = conshdlrdata->flowsep;
-
 
    g = consdata->graph;
    assert(g != NULL);
@@ -316,6 +348,9 @@ int sep_flow(
 
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
                count++;
+
+               if( *ncuts + count >= maxcuts )
+                  goto TERMINATE;
             }
 
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -356,6 +391,9 @@ int sep_flow(
 
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
                count++;
+
+               if( *ncuts + count >= maxcuts )
+                  goto TERMINATE;
             }
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -389,6 +427,9 @@ int sep_flow(
 
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
             count++;
+
+            if( *ncuts + count >= maxcuts )
+               goto TERMINATE;
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -424,11 +465,18 @@ int sep_flow(
 
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
             count++;
+
+            if( *ncuts + count >= maxcuts )
+               goto TERMINATE;
          }
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
    }
+
+ TERMINATE:
    SCIPdebugMessage("In/Out Separator: %d Inequalities added\n", count);
+
+   *ncuts += count;
 
    return(count);
 }
@@ -440,6 +488,7 @@ int sep_2cut(
    SCIP_CONSHDLR* conshdlr,
    SCIP_CONSHDLRDATA* conshdlrdata,
    SCIP_CONSDATA* consdata,
+   int           maxcuts,
    int* ncuts
    )
 {
@@ -553,8 +602,13 @@ int sep_2cut(
             for(k = 0; k < g->knots; k++)
                g->mark[k] = (w[k] != 0);
 
-            if (cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, ncuts))
+            if (cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts))
+            {
                count++;
+
+               if( *ncuts >= maxcuts )
+                  goto TERMINATE;
+            }
             else
                break;
 #if 0
@@ -600,8 +654,13 @@ int sep_2cut(
                for(k = 0; k < g->knots; k++)
                   g->mark[k] = (w[k] != 0) ? 1 : 0;
 
-               if (cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, ncuts))
+               if (cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts))
+               {
                   count++;
+
+                  if( *ncuts >= maxcuts )
+                     goto TERMINATE;
+               }
                else
                   break;
 #if 0
@@ -618,6 +677,8 @@ int sep_2cut(
          }
       }
    }
+
+ TERMINATE:
    free(path);
    free(term);
    free(w);
@@ -727,6 +788,7 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpStp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int maxcuts;
    int ncuts = 0;
    int i;
 
@@ -735,15 +797,18 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   maxcuts = SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 ?
+      conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CONSDATA* consdata;
 
       consdata = SCIPconsGetData(conss[i]);
 
-      sep_flow(scip, conshdlr, conshdlrdata, consdata, &ncuts);
+      sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts);
 
-      sep_2cut(scip, conshdlr, conshdlrdata, consdata, &ncuts);
+      sep_2cut(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts);
    }
 
    if( ncuts > 0 )
@@ -928,6 +993,22 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
          &conshdlrdata->nestedcut, TRUE, DEFAULT_NESTEDCUT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/flowsep", "Try Flow-Cuts",
          &conshdlrdata->flowsep, TRUE, DEFAULT_FLOWSEP, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/"CONSHDLR_NAME"/maxrounds",
+         "maximal number of separation rounds per node (-1: unlimited)",
+         &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/"CONSHDLR_NAME"/maxroundsroot",
+         "maximal number of separation rounds per node in the root node (-1: unlimited)",
+         &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/"CONSHDLR_NAME"/maxsepacuts",
+         "maximal number of cuts separated per separation round",
+         &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/"CONSHDLR_NAME"/maxsepacutsroot",
+         "maximal number of cuts separated per separation round in the root node",
+         &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
 
    return SCIP_OKAY;
