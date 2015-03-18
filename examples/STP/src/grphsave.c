@@ -126,7 +126,7 @@ void SCIPwriteStp(
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");
-
+/*
    if (g->flags & GRAPH_HAS_COORDINATES)
    {
       fprintf(fp, "Section Coordinates\n");
@@ -136,7 +136,7 @@ void SCIPwriteStp(
 
       fprintf(fp, "End\n\n");
    }
-
+*/
    /* Hop-Constrained STP */
    if( g->stp_type == STP_HOP_CONS )
    {
@@ -228,7 +228,7 @@ static void stp_save(
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");
-
+/*
    if (g->flags & GRAPH_HAS_COORDINATES)
    {
       fprintf(fp, "Section Coordinates\n");
@@ -238,7 +238,7 @@ static void stp_save(
 
       fprintf(fp, "End\n\n");
    }
-
+*/
    fprintf(fp, "EOF\n");
 }
 

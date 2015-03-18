@@ -1550,7 +1550,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    char* logfilename;
    char* tmpfilename;
    char* probname;
-   char presolvefilename[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
 
    presolinfo.fixed = 0;
@@ -1709,11 +1709,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->offset = presolinfo.fixed;
 
    /* presolving */
-   offset = reduce(scip, graph, reduction, probdata->minelims);
+   SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims) );
 
    graph_path_exit(graph);
 
-   probdata->graph = graph_pack(graph);
+   probdata->graph = graph_pack(graph, TRUE);
 
    graph = probdata->graph;
 

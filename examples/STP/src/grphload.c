@@ -1077,7 +1077,7 @@ GRAPH* graph_load(
                      assert(g != NULL);
                      assert(g->source[0] == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
-                        graph_knot_add(g, -1, 0, 0);
+                        graph_knot_add(g, -1);
 
 		     /*
                        if( stp_type == -1 )
@@ -1254,7 +1254,7 @@ GRAPH* graph_load(
                   if ((int)para[0].n <= nodes)
 		  {
                      g->source[0] = (int)para[0].n - 1;
-		     graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+		     graph_knot_chg(g, (int)para[0].n - 1, 0);
 		  }
                   else
                   {
@@ -1270,7 +1270,7 @@ GRAPH* graph_load(
 		  assert(g != NULL);
 		  assert(terms > 0);
 		  g->source[0] = (int)para[0].n - 1;
-		  graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+		  graph_knot_chg(g, (int)para[0].n - 1, 0);
 		  assert(prize == NULL);
 		  stp_type = STP_ROOTED_PRIZE_COLLECTING;
 		  prize = malloc((size_t)nodes * sizeof(double));
@@ -1287,10 +1287,10 @@ GRAPH* graph_load(
 		     termcount++;
 		  }
 		  else
-                     graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+                     graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
 	       case KEY_TERMINALS_TP :
-                  graph_knot_chg(g, (int)para[0].n - 1, 0, NO_CHANGE, NO_CHANGE);
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
 		  if( stp_type != STP_PRIZE_COLLECTING && stp_type != STP_ROOTED_PRIZE_COLLECTING )
 		  {
 		     assert(prize == NULL);

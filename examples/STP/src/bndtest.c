@@ -120,7 +120,7 @@ double compute_node_lb(
 }
 
 
-
+#if 0
 SCIP_RETCODE bound_reduction(
       SCIP* scip,
       double bestbound,
@@ -394,3 +394,4 @@ SCIP_RETCODE bound_reduction(
 
    return SCIP_OKAY;
 }
+#endif

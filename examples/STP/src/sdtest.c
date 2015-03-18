@@ -929,20 +929,21 @@ static int redirect_edge(
  *
  * Bottleneck Degree 3 Test
  */
-int bd3_reduction(
+SCIP_RETCODE bd3_reduction(
    SCIP* scip,
    GRAPH* g,
    double* pathdist1,
    double* pathtran1,
    int* heap,
-   int*  state
+   int*  state,
+   int*  nelims
    )
 {
    IDX** ancestors;
    IDX** revancestors;
-   double* pathdist2;
-   double* pathtran2;
-   double* pathrand;
+   SCIP_Real* pathdist2;
+   SCIP_Real* pathtran2;
+   SCIP_Real* pathrand;
 
    int     count = 0;
    int    i;
@@ -954,24 +955,34 @@ int bd3_reduction(
    int    e1;
    int    e2;
    int    e3;
-   int    elimins = 0;
-   double c1;
-   double c2;
-   double c3;
-   double c123;
+   SCIP_Real c1;
+   SCIP_Real c2;
+   SCIP_Real c3;
+   SCIP_Real c123;
 
    SCIPdebugMessage("BD3-Reduction: ");
    fflush(stdout);
-   ancestors = malloc((size_t)(3) * sizeof(IDX*));
-   revancestors = malloc((size_t)(3) * sizeof(IDX*));
 
    assert(heap  != NULL);
    assert(state != NULL);
+   assert(nelims != NULL);
 
-   pathdist2 = malloc((size_t)g->knots * sizeof(double));
-   pathtran2 = malloc((size_t)g->knots * sizeof(double));
-   pathrand  = malloc((size_t)g->knots * sizeof(double));
-   for(i = 0; i < 3; i++)
+   SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathdist2, g->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathtran2, g->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathrand, g->knots) );
+
+   /*
+     ancestors = malloc((size_t)(3) * sizeof(IDX*));
+     revancestors = malloc((size_t)(3) * sizeof(IDX*));
+     pathdist2 = malloc((size_t)g->knots * sizeof(double));
+     pathtran2 = malloc((size_t)g->knots * sizeof(double));
+     pathrand  = malloc((size_t)g->knots * sizeof(double));
+   */
+   *nelims = 0;
+
+   for( i = 0; i < 3; i++ )
    {
       ancestors[i] = NULL;
       revancestors[i] = NULL;
@@ -1036,7 +1047,7 @@ int bd3_reduction(
          && GT(pathdist1[k3] + pathdist2[k3], c123))
          continue;
 
-      elimins++;
+      (*nelims)++;
 
       if (LT(pathdist1[k2], c1 + c2))
       {
@@ -1103,18 +1114,20 @@ int bd3_reduction(
 
       assert(g->grad[i] == 0);
    }
-   free(ancestors);
-   free(revancestors);
 
-   free(pathdist2);
-   free(pathtran2);
+   SCIPfreeBufferArray(scip, &ancestors);
+   SCIPfreeBufferArray(scip, &revancestors);
+   SCIPfreeBufferArray(scip, &pathdist2);
+   SCIPfreeBufferArray(scip, &pathtran2);
+   SCIPfreeBufferArray(scip, &pathrand);
+
    assert(graph_valid(g));
    /*
-     printf(" Knots deleted %d\n", elimins);
+     printf(" Knots deleted %d\n", nelims);
    */
-   SCIPdebugMessage("bd3: %d Knots deleted\n", elimins);
+   SCIPdebugMessage("bd3: %d Knots deleted\n", *nelims);
 
-   return(elimins);
+   return SCIP_OKAY;
 }
 
 
@@ -1141,10 +1154,12 @@ inline static double mst_cost(
  *
  * Nearest Special Vertex 3 Test
  */
-int nsv_reduction(
+SCIP_RETCODE nsv_reduction(
    SCIP*   scip,
    GRAPH*  g,
-   double* fixed)
+   double* fixed,
+   int* nelims
+   )
 {
    SCIP_Real redstarttime;
    SCIP_Real timelimit;
@@ -1161,13 +1176,14 @@ int nsv_reduction(
    double  min2;
    double  cost1;
    double  cost2;
-   int     elimins = 0;
 
    SCIPdebugMessage("NSV-Reduction: ");
    fflush(stdout);
    /*
      graph_show(g);
    */
+   *nelims = 0;
+
    path = malloc((size_t)g->knots * sizeof(PATH*));
 
    assert(path != NULL);
@@ -1204,7 +1220,7 @@ int nsv_reduction(
       if( i % 100 == 0 && SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+      if( i % 100 == 0 && (*nelims) == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
       if (!(i % 100))
@@ -1283,7 +1299,7 @@ int nsv_reduction(
          SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
          graph_knot_contract(g, i, k);
 
-         elimins++;
+         (*nelims)++;
 
          calculate_distances(g, path, g->cost, FSP_MODE);
 
@@ -1307,10 +1323,10 @@ int nsv_reduction(
 
    assert(graph_valid(g));
 
-   SCIPdebugMessage(" %d Knots deleted\n", elimins);
+   SCIPdebugMessage(" %d Knots deleted\n", *nelims);
    /*printf("nsv_reduction: %d Knots deleted\n", elimins);*/
 
-   return(elimins);
+   return SCIP_OKAY;
 }
 
 
@@ -1614,13 +1630,15 @@ int nv_reduction_optimal(
 
 
 
-int sl_reduction(
+SCIP_RETCODE sl_reduction(
+   SCIP*   scip,
    GRAPH*  g,
    PATH*   vnoi,
    double* fixed,
    int* heap,
    int* state,
-   int* vbase
+   int* vbase,
+   int* nelims
    )
 {
    double* mincost2;
@@ -1634,7 +1652,6 @@ int sl_reduction(
    int     min1;
    int     head;
    int     tail;
-   int     nelims = 0;
    int     nnodes;
 
    assert(g != NULL);
@@ -1643,14 +1660,20 @@ int sl_reduction(
    assert(state != NULL);
    assert(vbase != NULL);
 
+   *nelims = 0;
    nnodes = g->knots;
 
    /* TODO ID */
-   minedge1 = malloc((size_t)nnodes * sizeof(int));
-   mincost2 = malloc((size_t)nnodes * sizeof(double));
-   minedgehead = malloc((size_t)nnodes * sizeof(int));
-   minedgetail = malloc((size_t)nnodes * sizeof(int));
-
+   SCIP_CALL( SCIPallocBufferArray(scip, &minedge1, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mincost2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minedgehead, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minedgetail, nnodes) );
+   /*
+     minedge1 = malloc((size_t)nnodes * sizeof(int));
+     mincost2 = malloc((size_t)nnodes * sizeof(double));
+     minedgehead = malloc((size_t)nnodes * sizeof(int));
+     minedgetail = malloc((size_t)nnodes * sizeof(int));
+   */
    assert(vbase != NULL);
    assert(vnoi != NULL);
    assert(minedge1 != NULL);
@@ -1681,12 +1704,12 @@ int sl_reduction(
             {
                minedge1[k] = e;
             }
-            else if( LT(g->cost[e], g->cost[min1]) )
+            else if( SCIPisLT(scip, g->cost[e], g->cost[min1]) )
 	    {
 	       mincost2[k] = g->cost[min1];
 	       minedge1[k] = e;
 	    }
-            else if( LT(g->cost[e], mincost2[k]) )
+            else if( SCIPisLT(scip, g->cost[e], mincost2[k]) )
             {
                mincost2[k] = g->cost[e];
             }
@@ -1696,7 +1719,7 @@ int sl_reduction(
 
    for( k = 0; k < nnodes; k++ )
    {
-      if( !EQ(FARAWAY, mincost2[k]) )
+      if( !SCIPisEQ(scip, FARAWAY, mincost2[k]) )
       {
 	 e = minedge1[k];
 	 assert(e >= 0);
@@ -1713,7 +1736,7 @@ int sl_reduction(
 
    for( i = 0; i < nnodes; i++ )
    {
-      if( !EQ(FARAWAY, mincost2[i]) )
+      if( !SCIPisEQ(scip, FARAWAY, mincost2[i]) )
       {
 	 e = minedge1[i];
 	 assert(e >= 0);
@@ -1723,7 +1746,7 @@ int sl_reduction(
 	 head = g->head[e];
 	 if( tail == minedgetail[i] && head == minedgehead[i] )
 	 {
-            if( GT(mincost2[i], vnoi[tail].dist + g->cost[e] + vnoi[head].dist) )
+            if( SCIPisGT(scip, mincost2[i], vnoi[tail].dist + g->cost[e] + vnoi[head].dist) )
             {
                for( j = g->outbeg[tail]; j != EAT_LAST; j = g->oeat[j] )
                   if( j == e )
@@ -1737,7 +1760,7 @@ int sl_reduction(
                if( j == EAT_LAST )
                   continue;
                //assert(Is_term(g->term[i]));
-               nelims++;
+               (*nelims)++;
                *fixed += g->cost[e];
                //printf("contrSL: %d-%d \n", tail, head);
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
@@ -1746,23 +1769,32 @@ int sl_reduction(
 	 }
       }
    }
-   free(minedge1);
-   free(mincost2);
-   free(minedgehead);
-   free(minedgetail);
+   /*
+     free(minedge1);
+     free(mincost2);
+     free(minedgehead);
+     free(minedgetail);
+   */
+
+   SCIPfreeBufferArray(scip, &minedge1);
+   SCIPfreeBufferArray(scip, &mincost2);
+   SCIPfreeBufferArray(scip, &minedgehead);
+   SCIPfreeBufferArray(scip, &minedgetail);
    //printf("sl: nelims: %d \n", nelims);
-   return nelims;
+   return SCIP_OKAY;
 }
 
 
 /* NV reduction from T. Polzin's "Algorithms for the Steiner problem in networks" */
 int nv_reduction(
+   SCIP*   scip,
    GRAPH*  g,
    PATH*   vnoi,
    double* fixed,
    int* heap,
    int* state,
-   int* vbase
+   int* vbase,
+   int* nelims
    )
 {
    double* distance;
@@ -1774,12 +1806,12 @@ int nv_reduction(
    int*    min1tail;
    int     edge1;
    int     nnodes;
+   int     nterms;
    int     termcount;
    int     i;
    int     j;
    int     k;
    int     e;
-   int     nelims;
 
    assert(g != NULL);
    assert(vnoi != NULL);
@@ -1787,17 +1819,22 @@ int nv_reduction(
    assert(state != NULL);
    assert(vbase != NULL);
 
-   nnodes = g->knots;
-
-   minedge1 = malloc((size_t)g->terms * sizeof(int));
-   mincost2 = malloc((size_t)g->terms * sizeof(double));
-
-   min1head = malloc((size_t)g->terms * sizeof(int));
-   min1tail = malloc((size_t)g->terms * sizeof(int));
-   distance = malloc((size_t)nnodes * sizeof(double));
-
    termcount = 0;
-   nelims = 0;
+   *nelims = 0;
+   nnodes = g->knots;
+   nterms = g->terms;
+   SCIP_CALL( SCIPallocBufferArray(scip, &minedge1, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mincost2, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &min1head, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &min1tail, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &distance, nnodes) );
+   /*
+     minedge1 = malloc((size_t) * sizeof(int));
+     mincost2 = malloc((size_t)g->terms * sizeof(double));
+     min1head = malloc((size_t)g->terms * sizeof(int));
+     min1tail = malloc((size_t)g->terms * sizeof(int));
+     distance = malloc((size_t)nnodes * sizeof(double));
+   */
    for( i = 0; i < nnodes; i++ )
    {
       if( Is_term(g->term[i]) )
@@ -1809,13 +1846,13 @@ int nv_reduction(
             min1  = FARAWAY;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
             {
-               if( LE(g->cost[e], min1) )
+               if( SCIPisLE(scip, g->cost[e], min1) )
                {
                   edge1 = e;
                   min2 = min1;
                   min1 = g->cost[e];
                }
-               else if( LE(g->cost[e], min2) )
+               else if( SCIPisLE(scip, g->cost[e], min2) )
                {
                   min2 = g->cost[e];
                }
@@ -1824,7 +1861,7 @@ int nv_reduction(
          minedge1[termcount] = edge1;
 
 	 mincost2[termcount] = min2;
-	 if( LT(min2, FARAWAY) )
+	 if( SCIPisLT(scip, min2, FARAWAY) )
 	 {
 	    assert(edge1 != UNKNOWN);
 	    min1head[termcount] = g->head[edge1];
@@ -1843,7 +1880,7 @@ int nv_reduction(
    for( i = 0; i < termcount; i++ )
    {
       min2 = mincost2[i];
-      if( EQ(min2, FARAWAY) )
+      if( SCIPisEQ(scip, min2, FARAWAY) )
 	 continue;
       edge1 = minedge1[i];
       assert(LT(min2, FARAWAY));
@@ -1854,7 +1891,7 @@ int nv_reduction(
       {
          if( vbase[k] != j )
          {
-            if( GE(min2, g->cost[edge1] + vnoi[k].dist) )
+            if( SCIPisGE(scip, min2, g->cost[edge1] + vnoi[k].dist) )
             {
                for( e = g->outbeg[j]; e != EAT_LAST; e = g->oeat[e] )
                   if( e == edge1 )
@@ -1868,7 +1905,7 @@ int nv_reduction(
                if( e == EAT_LAST )
                   continue;
 
-               nelims++;
+               (*nelims)++;
 
                *fixed += g->cost[edge1];
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
@@ -1877,7 +1914,7 @@ int nv_reduction(
          }
          else
          {
-            if( GE(min2, distance[j]) )
+            if( SCIPisGE(scip, min2, distance[j]) )
             {
                for( e = g->outbeg[j]; e != EAT_LAST; e = g->oeat[e] )
                   if( e == edge1 )
@@ -1893,30 +1930,38 @@ int nv_reduction(
                *fixed += g->cost[edge1];
                SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
                graph_knot_contract(g, j, k);
-               nelims++;
+               (*nelims)++;
             }
          }
       }
    }
-   free(min1head);
-   free(min1tail);
-   free(minedge1);
-   free(mincost2);
-   free(distance);
+   /*
+     free(min1head);
+     free(min1tail);
+     free(minedge1);
+     free(mincost2);
+     free(distance);
+   */
+   SCIPfreeBufferArray(scip, &min1head);
+   SCIPfreeBufferArray(scip, &min1tail);
+   SCIPfreeBufferArray(scip, &minedge1);
+   SCIPfreeBufferArray(scip, &mincost2);
+   SCIPfreeBufferArray(scip, &distance);
 
    assert(graph_valid(g));
    //printf("nv: nelims: %d \n", nelims);
-   return nelims;
+   return SCIP_OKAY;
 }
 
 /*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20) */
-int ledge_reduction(
+SCIP_RETCODE ledge_reduction(
    SCIP*   scip,
    GRAPH*  g,
    PATH*   vnoi,
    int* heap,
    int* state,
-   int* vbase
+   int* vbase,
+   int* nelims
    )
 {
    GRAPH* netgraph;
@@ -1931,7 +1976,6 @@ int ledge_reduction(
    int nedges;
    int nnodes;
    int nterms;
-   int nelims;
    int maxnedges;
    int netnnodes;
    int* nodesid;
@@ -1942,13 +1986,13 @@ int ledge_reduction(
    assert(state != NULL);
    assert(vbase != NULL);
 
-   nelims = 0;
+   *nelims = 0;
    nedges = g->edges;
    nnodes = g->knots;
    nterms = g->terms;
 
    if( nnodes <= 1 || nedges == 0 )
-      return 0;
+      return SCIP_OKAY;
 
    voronoi_pres(g, g->cost, vnoi, vbase, heap, state);
 
@@ -1972,9 +2016,9 @@ int ledge_reduction(
          netgraph->mark[e] = TRUE;
 	 nodesid[k] = e++;
 	 if( e == 1)
-            graph_knot_add(netgraph, 0, 0, 0);
+            graph_knot_add(netgraph, 0);
          else
-            graph_knot_add(netgraph, -1, 0, 0);
+            graph_knot_add(netgraph, -1);
       }
       else
       {
@@ -1988,7 +2032,7 @@ int ledge_reduction(
    {
       graph_free(netgraph, TRUE);
       SCIPfreeBufferArray(scip, &nodesid);
-      return 0;
+      return SCIP_OKAY;
    }
    for( k = 0; k < nnodes; k++ )
    {
@@ -2059,7 +2103,7 @@ int ledge_reduction(
          //printf("e: %d->%d\n", graph->tail[e], graph->head[e]);
          if( SCIPisGT(scip, g->cost[e], maxcost) )
          {
-            nelims++;
+            (*nelims)++;
             SCIPindexListNodeFree(&((g->ancestors)[e]));
             SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e)]));
 	    v1 = g->oeat[e];
@@ -2079,8 +2123,8 @@ int ledge_reduction(
    graph_free(netgraph, TRUE);
    SCIPfreeBufferArray(scip, &mst);
    SCIPfreeBufferArray(scip, &nodesid);
-   //printf("LE elims: %d \n", nelims);
-   return nelims;
+   //printf("LE elims: %d \n", *nelims);
+   return SCIP_OKAY;
 }
 #if 0
 

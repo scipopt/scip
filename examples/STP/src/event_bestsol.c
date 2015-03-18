@@ -80,7 +80,6 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_SOL* bestsol;
    SCIP_Real solvalue;
    SCIP_Real factor = 1.0;
-   int elimins = 0;
 
    if( SCIPprobdataGetType(scip) ==  STP_MAX_NODE_WEIGHT )
       factor = -1.0;

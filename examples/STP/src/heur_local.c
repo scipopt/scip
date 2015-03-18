@@ -1057,7 +1057,7 @@ SCIP_RETCODE do_local(
                   {
                      supernodesid[supernodes[k]] = k;
                      //printf("adding node %d (org: %d) \n ", k , supernodes[k]);
-                     graph_knot_add(supergraph, graph->term[supernodes[k]], 0, 0);
+                     graph_knot_add(supergraph, graph->term[supernodes[k]]);
                   }
 
                   /* the (super-) vertex representing the current root-component of the ST */

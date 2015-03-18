@@ -431,9 +431,6 @@ void graph_path_exec(
           */
          state[k] = CONNECT;
 
-         //if( p->elimknots[k] < 0 )
-         //continue;
-
          /* Verbunden Knoten berichtigen ...
           *
           * Wenn ein Knoten noch nicht erledigt ist
@@ -441,8 +438,6 @@ void graph_path_exec(
           */
          for(i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i])
          {
-            //if( p->elimedges[i] < 0 )
-            //continue;
 
             m = p->head[i];
 
@@ -1051,7 +1046,7 @@ void voronoi(
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-         //printf("get node %d \n ", k);
+
          /* iterate over all outgoing edges of vertex k */
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
@@ -1212,7 +1207,6 @@ void voronoi_dist(
          path[i].edge = UNKNOWN;
          state[i]     = UNKNOWN;
       }
-
    }
 
    assert(nbases == g->terms);
@@ -1538,10 +1532,6 @@ void voronoi_term(
          /* mark vertex k as scanned */
          state[k] = CONNECT;
 
-         /* only process the node if it has not been eliminated in a reduction test */
-         if( g->elimknots[k] < 0 )
-            continue;
-
          /* iterate over all ingoing edges of vertex k.
           * working in reverse from the terminal nodes.
           * For the undirected case this does not make any difference,
@@ -1555,9 +1545,6 @@ void voronoi_term(
 
          for( i = g->inpbeg[k]; i != EAT_LAST; i = g->ieat[i] )
          {
-            /* only process the edge if it has not been eliminated in a reduction test */
-            if( g->elimedges[i] < 0 )
-               continue;
 
             m = g->tail[i];
             if( inward > 0 )
@@ -1731,10 +1718,6 @@ void voronoi_hop(
          /* mark vertex k as scanned */
          state[k] = CONNECT;
 
-         /* only process the node if it has not been eliminated in a reduction test */
-         if( g->elimknots[k] < 0 )
-            continue;
-
          /* iterate over all ingoing edges of vertex k.
           * We traverse the graph in two different directions, out from the source and in to the terminals.
           * This is required for the hop constained problems because each of the terminals are leaves of the steiner
@@ -1747,10 +1730,6 @@ void voronoi_hop(
 
          for( i = g->inpbeg[k]; i != EAT_LAST; i = g->ieat[i] )
          {
-            /* only process the edge if it has not been eliminated in a reduction test */
-            if( g->elimedges[i] < 0 )
-               continue;
-
             m = g->tail[i];
             if( vregion[k] == source )
                curr_edge = Edge_anti(i);

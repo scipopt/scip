@@ -84,13 +84,13 @@ GRAPH* graph_init(
 
    p->ieat  = malloc((size_t)esize * sizeof(int));
    p->oeat  = malloc((size_t)esize * sizeof(int));
-
+#if 0
    p->xpos  = malloc((size_t)ksize * sizeof(int));
    p->ypos  = malloc((size_t)ksize * sizeof(int));
 
    p->elimknots = malloc((size_t)ksize * sizeof(int));
    p->elimedges = malloc((size_t)esize * sizeof(int));
-
+#endif
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;
    p->grid_ncoords = NULL;
@@ -107,11 +107,12 @@ GRAPH* graph_init(
 
    p->path_heap = NULL;
    p->path_state = NULL;
-
+#if 0
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
    assert(p->elimknots != NULL);
    assert(p->elimedges != NULL);
+#endif
    assert(p->locals != NULL);
    assert(p->source != NULL);
    assert(p->term   != NULL);
@@ -196,9 +197,12 @@ void graph_resize(
       p->grad   = realloc(p->grad,   (size_t)ksize * sizeof(int));
       p->inpbeg = realloc(p->inpbeg, (size_t)ksize * sizeof(int));
       p->outbeg = realloc(p->outbeg, (size_t)ksize * sizeof(int));
+#if 0
       p->xpos   = realloc(p->xpos,   (size_t)ksize * sizeof(int));
       p->ypos   = realloc(p->ypos,   (size_t)ksize * sizeof(int));
+
       p->elimknots = realloc(p->elimknots, (size_t)ksize * sizeof(int));
+#endif
    }
    if ((esize > 0) && (esize != p->esize))
    {
@@ -211,7 +215,9 @@ void graph_resize(
       */
       p->ieat  = realloc(p->ieat, (size_t)esize * sizeof(int));
       p->oeat  = realloc(p->oeat, (size_t)esize * sizeof(int));
+#if 0
       p->elimedges = realloc(p->elimedges, (size_t)esize * sizeof(int));
+#endif
    }
    if( p->stp_type == STP_GRID )
    {
@@ -230,10 +236,12 @@ void graph_resize(
    assert(p->head   != NULL);
    assert(p->ieat   != NULL);
    assert(p->oeat   != NULL);
+#if 0
    assert(p->xpos   != NULL);
    assert(p->ypos   != NULL);
    assert(p->elimknots != NULL);
    assert(p->elimedges != NULL);
+#endif
 }
 
 
@@ -485,7 +493,7 @@ GRAPH* graph_obstgrid_create(
 
    /* add nodes */
    for( i = 0; i < nnodes; i++ )
-      graph_knot_add(graph, -1, -1, -1);
+      graph_knot_add(graph, -1);
    /*for( i = 0; i < nnodes; i++ )
      printf("deg: %d\n", graph->grad[i] );*/
 
@@ -535,10 +543,10 @@ GRAPH* graph_obstgrid_create(
       }
 
       /* make a terminal out of the node */
-      graph_knot_chg(graph, k, 0, -1, -1);
+      graph_knot_chg(graph, k, 0);
    }
 
-   graph = graph_pack(graph);
+   graph = graph_pack(graph, TRUE);
    graph->stp_type = STP_OBSTACLES_GRID;
 
    for( i = 0; i < grid_dim; i++ )
@@ -554,7 +562,6 @@ GRAPH* graph_obstgrid_create(
    free(ncoords);
    free(currcoord);
    return graph;
-
 }
 
 
@@ -658,7 +665,7 @@ GRAPH* graph_grid_create(
 
    /* add nodes */
    for( i = 0; i < nnodes; i++ )
-      graph_knot_add(graph, -1, -1, -1);
+      graph_knot_add(graph, -1);
 
    /* add edges */
    for( i = 0; i < nedges; i++ )
@@ -702,7 +709,7 @@ GRAPH* graph_grid_create(
       }
 
       /* make a terminal out of the node */
-      graph_knot_chg(graph, k, 0, -1, -1);
+      graph_knot_chg(graph, k, 0);
    }
 
    graph->stp_type = STP_GRID;
@@ -787,13 +794,13 @@ graph_prize_transform(
    for( k = 0; k < nterms; ++k )
    {
       /* create a new node */
-      graph_knot_add(graph, -1, -1, -1);
+      graph_knot_add(graph, -1);
    }
 
 
    /* new root */
    root = graph->knots;
-   graph_knot_add(graph, 0, -1, -1);
+   graph_knot_add(graph, 0);
    nterms = 0;
    graph->source[0] = root;
    for( k = 0; k < nnodes; ++k )
@@ -850,7 +857,7 @@ graph_rootprize_transform(
    for( k = 0; k < nterms - 1; ++k )
    {
       /* create a new node */
-      graph_knot_add(graph, -1, -1, -1);
+      graph_knot_add(graph, -1);
    }
    /* new root */
 
@@ -916,7 +923,7 @@ graph_maxweight_transform(
       else
       {
 	 //printf("term:  %d \n", i);
-	 graph_knot_chg(graph, i, 0, -1, -1);
+	 graph_knot_chg(graph, i, 0);
 	 nterms++;
       }
    }
@@ -1130,11 +1137,12 @@ void graph_free(
    }
    free(p->ieat);
    free(p->oeat);
+#if 0
    free(p->xpos);
    free(p->ypos);
-
    free(p->elimknots);
    free(p->elimedges);
+#endif
 
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
@@ -1158,8 +1166,12 @@ GRAPH* graph_copy(
    g = graph_init(p->ksize, p->esize, p->layers, p->flags);
 
    assert(g         != NULL);
+#if 0
    assert(g->xpos   != NULL);
    assert(g->ypos   != NULL);
+   assert(g->elimknots != NULL);
+   assert(g->elimedges != NULL);
+#endif
    assert(g->locals != NULL);
    assert(g->source != NULL);
    assert(g->term   != NULL);
@@ -1172,8 +1184,7 @@ GRAPH* graph_copy(
    assert(g->head   != NULL);
    assert(g->ieat   != NULL);
    assert(g->oeat   != NULL);
-   assert(g->elimknots != NULL);
-   assert(g->elimedges != NULL);
+
 
    g->norgmodeledges = p->norgmodeledges;
    g->norgmodelknots = p->norgmodelknots;
@@ -1236,17 +1247,14 @@ GRAPH* graph_copy(
    memcpy(g->cost,   p->cost,   p->esize  * sizeof(*p->cost));
    memcpy(g->tail,   p->tail,   p->esize  * sizeof(*p->tail));
    memcpy(g->head,   p->head,   p->esize  * sizeof(*p->head));
-   // memcpy(g->orgtail,   p->orgtail,   p->esize  * sizeof(*p->orgtail));
-   // memcpy(g->orghead,   p->orghead,   p->esize  * sizeof(*p->orghead));
    memcpy(g->ieat,   p->ieat,   p->esize  * sizeof(*p->ieat));
    memcpy(g->oeat,   p->oeat,   p->esize  * sizeof(*p->oeat));
-
+#if 0
    memcpy(g->xpos,   p->xpos,   p->ksize  * sizeof(*p->xpos));
    memcpy(g->ypos,   p->ypos,   p->ksize  * sizeof(*p->ypos));
-
    memcpy(g->elimknots,   p->elimknots,   p->ksize  * sizeof(*p->elimknots));
    memcpy(g->elimedges,   p->elimedges,   p->esize  * sizeof(*p->elimedges));
-
+#endif
    if( g->stp_type == STP_DEG_CONS )
    {
       assert(p->maxdeg != NULL);
@@ -1328,9 +1336,7 @@ void graph_ident(
 /* ARGSUSED */
 void graph_knot_add(
    GRAPH* p,
-   int    term,
-   int    xpos,
-   int    ypos)
+   int    term)
 {
    assert(p        != NULL);
    assert(p->ksize >  p->knots);
@@ -1341,11 +1347,9 @@ void graph_knot_add(
    p->grad  [p->knots] = 0;
    p->inpbeg[p->knots] = EAT_LAST;
    p->outbeg[p->knots] = EAT_LAST;
-   p->xpos  [p->knots] = xpos;
-   p->ypos  [p->knots] = ypos;
-
+#if 0
    p->elimknots[p->knots] = p->knots;
-
+#endif
    if (Is_term(term))
    {
       p->terms++;
@@ -1358,9 +1362,7 @@ void graph_knot_add(
 void graph_knot_chg(
    GRAPH* p,
    int    knot,
-   int    term,
-   int    xpos,
-   int    ypos)
+   int    term)
 {
    assert(p      != NULL);
    assert(knot   >= 0);
@@ -1385,11 +1387,6 @@ void graph_knot_chg(
          }
       }
    }
-   if (xpos >= 0)
-      p->xpos[knot] = xpos;
-
-   if (ypos >= 0)
-      p->ypos[knot] = ypos;
 }
 
 
@@ -1437,7 +1434,9 @@ void graph_knot_contract(
    /* Feindliche Uebernahme des Terminals.
     */
    if (Is_term(p->term[s]))
-      graph_knot_chg(p, t, p->term[s], -1, -1);
+      graph_knot_chg(p, t, p->term[s]);
+
+   /* TODO modify TERMINAL property of s */
 
    /* Die Quelle darf nicht versiegen !
     */
@@ -1666,7 +1665,6 @@ void graph_edge_add(
    p->oeat[e]           = p->outbeg[tail];
    p->inpbeg[head]      = e;
    p->outbeg[tail]      = e;
-   p->elimedges[e]      = e;
 
    e++;
 
@@ -1677,7 +1675,6 @@ void graph_edge_add(
    p->oeat[e]           = p->outbeg[head];
    p->inpbeg[tail]      = e;
    p->outbeg[head]      = e;
-   p->elimedges[e]      = e;
 
    p->edges += 2;
 }
@@ -1844,11 +1841,11 @@ void graph_uncover(
 }
 
 GRAPH *graph_pack(
-   GRAPH* p)
+   GRAPH* p,
+   SCIP_Bool verbose)
 {
-#if 0
    const char* msg1   = "Knots: %d  Edges: %d  Terminals: %d\n";
-#endif
+
    GRAPH* q;
    int*   new;
    int    knots = 0;
@@ -1858,9 +1855,9 @@ GRAPH *graph_pack(
 
    assert(p      != NULL);
    assert(graph_valid(p));
-#if 0
-   (void)printf("Packing Graph: ");
-#endif
+   if( verbose )
+      printf("Packing graph: ");
+
    new = malloc((size_t)p->knots * sizeof(new[0]));
 
    assert(new != NULL);
@@ -1885,9 +1882,9 @@ GRAPH *graph_pack(
    {
       free(new);
       new = NULL;
-#if 0
-      printf(" Graph vanished!\n");
-#endif
+      if( verbose )
+         printf(" graph vanished!\n");
+
       knots = 1;
    }
 
@@ -1923,7 +1920,7 @@ GRAPH *graph_pack(
    {
       q->ancestors = NULL;
       graph_free(p, FALSE);
-      graph_knot_add(q, 0, -1, -1);
+      graph_knot_add(q, 0);
       q->source[0] = 0;
       return q;
    }
@@ -1945,7 +1942,7 @@ GRAPH *graph_pack(
       }
 #endif
       if( p->grad[i] > 0 )
-         graph_knot_add(q, p->term[i], p->xpos[i], p->ypos[i]);
+         graph_knot_add(q, p->term[i]);
    }
 
    /* Kanten umladen
@@ -2007,9 +2004,9 @@ GRAPH *graph_pack(
          q->source[q->term[i]] = i;
 #endif
    assert(q->source[0] >= 0);
-#if 0
-   (void)printf(msg1, q->knots, q->edges, q->terms);
-#endif
+   if( verbose )
+      printf(msg1, q->knots, q->edges, q->terms);
+
    return(q);
 }
 

@@ -553,7 +553,7 @@ SCIP_RETCODE buildsolgraph(
 
    /* initialize new graph */
    newgraph = graph_init(nsolnodes, 2 * nsoledges, 1, 0);
-   if( graph->stp_type == STP_GRID )
+   if( graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID )
       newgraph->stp_type = STP_UNDIRECTED;
    else
       newgraph->stp_type = graph->stp_type;
@@ -566,9 +566,9 @@ SCIP_RETCODE buildsolgraph(
       {
          dnodemap[i] = j++;
          if( Is_term(graph->term[i]) )
-            graph_knot_add(newgraph, 0, -1, -1);
+            graph_knot_add(newgraph, 0);
          else
-            graph_knot_add(newgraph, -1, -1, -1);
+            graph_knot_add(newgraph, -1);
       }
    }
    /* set root */
@@ -957,12 +957,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       /* reduce new graph */
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
          || graph->stp_type == STP_HOP_CONS )
-         (void) reduce(scip, solgraph, 0, 0);
+         SCIP_CALL( reduce(scip, solgraph, &pobj, 0, 0) );
       else
-         (void) reduce(scip, solgraph, 4, 2);
+         SCIP_CALL( reduce(scip, solgraph, &pobj, 4, 2) );
       graph_path_exit(solgraph);
 
-      solgraph = graph_pack(solgraph);
+      solgraph = graph_pack(solgraph, FALSE);
       ancestors = solgraph->ancestors;
       nsoledges = solgraph->edges;
       /* if graph reduction solved the whole problem, solgraph has only one node */
