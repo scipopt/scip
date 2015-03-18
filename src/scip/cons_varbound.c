@@ -2954,6 +2954,12 @@ SCIP_RETCODE applyFixings(
       SCIPdebugMessage("resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, newcons, NULL);
 
+      /* we want to link the original and the new constraint */
+      assert(SCIPconsGetTransorig(cons) != NULL);
+      assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+
+      SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
       redundant = TRUE;
@@ -3527,6 +3533,12 @@ SCIP_RETCODE upgradeConss(
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMessage("upgraded varbound constraint <%s> to a set-packing constraint\n", SCIPconsGetName(cons));
 	 SCIPdebugPrintCons(scip, newcons, NULL);
+
+	 /* we want to link the original and the new constraint */
+                          assert(SCIPconsGetTransorig(cons) != NULL);
+                          assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+
+                          SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
 
 	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 	 ++(*naddconss);

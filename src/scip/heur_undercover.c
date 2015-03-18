@@ -2155,7 +2155,7 @@ SCIP_RETCODE solveSubproblem(
    if( heurdata->copycuts )
    {
       /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, heurdata->globalbounds, NULL) );
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, heurdata->globalbounds, NULL) );
    }
 
    SCIPdebugMessage("problem copied, copy %svalid\n", *validsolved ? "" : "in");

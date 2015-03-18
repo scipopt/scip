@@ -39,6 +39,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_prop.h"
 #include "scip/type_implics.h"
+#include "scip/type_basisstore.h"
 #include "scip/pub_tree.h"
 
 #ifndef NDEBUG
@@ -540,7 +541,8 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                  /**< current LP data */
+   SCIP_BASISSTORE*      basestore           /**< starting basis storage */
    );
 
 /** calculates the node selection priority for moving the given variable's LP value to the given target value;

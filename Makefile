@@ -443,7 +443,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o
 
-SCIPLIBOBJ	=	scip/branch.o \
+SCIPLIBOBJ	=	scip/basisstore.o \
+			scip/branch.o \
 			scip/clock.o \
 			scip/conflict.o \
 			scip/cons.o \

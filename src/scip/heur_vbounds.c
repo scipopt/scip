@@ -700,7 +700,7 @@ SCIP_RETCODE applyVbounds(
       if( heurdata->copycuts )
       {
          /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, FALSE, NULL) );
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );

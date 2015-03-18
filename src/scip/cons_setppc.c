@@ -1862,6 +1862,13 @@ SCIP_RETCODE applyFixings(
 
                SCIPdebugMessage("added linear constraint: ");
                SCIPdebugPrintCons(scip, newcons, NULL);
+
+               /* we want to link the original and the new constraint */
+               assert(SCIPconsGetTransorig(cons) != NULL);
+               assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+
+               SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
                SCIPfreeBufferArray(scip, &consvals);

@@ -43,9 +43,9 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/basisstore.h"
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
-
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
 #define MAXREPROPMARK       511  /**< maximal subtree repropagation marker; must correspond to node data structure */
@@ -3399,12 +3399,14 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BASISSTORE*      basestore           /**< starting basis storage */
    )
 {
    SCIP_NODE* lpstatefork;
    SCIP_Bool updatefeas;
    SCIP_Bool checkbdchgs;
+   SCIP_Bool loadedbasis;
    int lpstateforkdepth;
    int d;
 
@@ -3428,6 +3430,39 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 
    lpstatefork = tree->focuslpstatefork;
 
+   loadedbasis = FALSE;
+
+   if( SCIPbasisstoreGetNBasis(basestore) > 0 && stat->npresoladdconss == 0 )
+   {
+      SCIP_BASIS* basis;
+      SCIP_VAR** vars = NULL;
+      SCIP_CONS** conss = NULL;
+      int* vstat = NULL;
+      int* cstat = NULL;
+      SCIP_Bool success;
+      int nvars = 0;
+      int nconss = 0;
+
+      /* get the basis */
+      basis = SCIPbasestoreGetBasis(basestore);
+      assert(basis != NULL);
+
+      /* get variables, constraints and the corresponding basis status */
+      SCIPbaseGetData(basis, &vars, &conss, &vstat, &cstat, &nvars, &nconss);
+      assert(vars != NULL);
+      assert(conss != NULL);
+      assert(vstat != NULL);
+      assert(cstat != NULL);
+
+      SCIP_CALL( SCIPlpSetBasis(lp, set, vars, conss, vstat, cstat, nvars, nconss, blkmem, &success) );
+
+      SCIPdebugMessage("%sset starting basis\n", success ? "" : "cannot ");
+      loadedbasis = success;
+
+      /* delete the stored basis */
+      SCIPbasestoreRemoveBasis(basestore);
+   }
+
    /* if there is no LP state defining fork, nothing can be done */
    if( lpstatefork == NULL )
       return SCIP_OKAY;
@@ -3443,7 +3478,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    assert(tree->pathnlprows[tree->correctlpdepth] >= tree->pathnlprows[lpstateforkdepth]); /* LP can only grow */
 
    /* load LP state */
-   if( tree->focuslpstateforklpcount != stat->lpcount )
+   if( tree->focuslpstateforklpcount != stat->lpcount && !loadedbasis )
    {
       if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
       {

@@ -17,7 +17,7 @@
  * @brief  LNS heuristic that finds the optimal rounding to a given point
  * @author Timo Berthold
  */
-
+#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -415,20 +415,24 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
    )
 {
-   SCIP* subscip;                            /* the subproblem created by RENS                  */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_VAR** vars;                          /* original problem's variables                    */
-   SCIP_VAR** subvars;                       /* subproblem's variables                          */
-   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure              */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP* subscip;                            /* the subproblem created by RENS                      */
+   SCIP_HASHMAP* consmapfw;                  /* mapping of SCIP constraints to sub-SCIP constraints */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables     */
+   SCIP_VAR** vars;                          /* original problem's variables                        */
+   SCIP_VAR** subvars;                       /* subproblem's variables                              */
+   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure                  */
+   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                         */
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
+   int nsourcerows = 0;
 
-   SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   SCIP_Real timelimit;                      /* time limit for RENS subproblem                  */
-   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                */
-   SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
-   SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
+   SCIP_Real timelimit;                      /* time limit for RENS subproblem                      */
+   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                    */
+   SCIP_Real allfixingrate;                  /* percentage of all variables fixed                   */
+   SCIP_Real intfixingrate;                  /* percentage of integer variables fixed               */
 
-   int nvars;                                /* number of original problem's variables          */
+   int nvars;                                /* number of original problem's variables              */
    int i;
 
    SCIP_Bool success;
@@ -491,6 +495,9 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
+   /* create the constraint mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+
    eventhdlr = NULL;
 
    /* different methods to create sub-problem: either copy LP relaxation or the CIP with all constraints */
@@ -517,12 +524,18 @@ SCIP_RETCODE SCIPapplyRens(
       valid = FALSE;
 
       /* copy complete SCIP instance */
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "rens", TRUE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
+         int sourcerowssize = SCIPgetNLPRows(scip);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
          /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+         assert(nsourcerows <= sourcerowssize);
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -539,12 +552,28 @@ SCIP_RETCODE SCIPapplyRens(
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
-
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, startsol, binarybounds, uselprows) );
    SCIPdebugMessage("RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+
+   if( !uselprows )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows) );
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &sourcerows);
+      SCIPfreeBufferArray(scip, &targetconss);
+   }
+   else
+      assert(targetconss == NULL);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+   SCIPhashmapFree(&consmapfw);
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -573,6 +602,8 @@ SCIP_RETCODE SCIPapplyRens(
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+      SCIP_CALL( SCIPsetIntParam(subscip, "propagating/maxroundsroot", 0) );
 
       /* use best estimate node selection */
       if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )

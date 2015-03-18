@@ -6365,6 +6365,23 @@ void SCIPconsSetNamePointer(
    cons->name = (char*)name;
 }
 
+/* link the original and the upgraded constraint */
+void SCIPconsSetUpgradedCons(
+   SCIP_CONS*            origcons,
+   SCIP_CONS*            upgdcons
+   )
+{
+   assert(origcons != NULL);
+   assert(upgdcons != NULL);
+
+   /* set the current link to the original to NULL */
+   origcons->transorigcons->transorigcons = NULL;
+
+   /* link the constraints */
+   origcons->transorigcons = upgdcons;
+   upgdcons->transorigcons = origcons;
+}
+
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
  *  exists
  */
@@ -6374,6 +6391,16 @@ SCIP_CONS* SCIPconsGetTransformed(
 {
    assert(cons->original);
 
+   return cons->transorigcons;
+}
+
+/** gets associated transformed or original constraint, or NULL if no associated constraint
+ *  exists
+ */
+SCIP_CONS* SCIPconsGetTransorig(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
    return cons->transorigcons;
 }
 

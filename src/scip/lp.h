@@ -1034,6 +1034,21 @@ SCIP_RETCODE SCIPlpFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** load a starting basis */
+extern
+SCIP_RETCODE SCIPlpSetBasis(
+   SCIP_LP*             lp,
+   SCIP_SET*            set,
+   SCIP_VAR**           vars,
+   SCIP_CONS**          conss,
+   int*                 vstat,
+   int*                 cstat,
+   int                  nvars,
+   int                  nconss,
+   BMS_BLKMEM*          blkmem,
+   SCIP_Bool*           success
+   );
+
 /** stores pricing norms into LP norms object */
 extern
 SCIP_RETCODE SCIPlpGetNorms(

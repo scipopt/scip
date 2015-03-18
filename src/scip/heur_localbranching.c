@@ -502,7 +502,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       if( heurdata->copycuts )
       {
          /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
       }
 
       /* create event handler for LP events */

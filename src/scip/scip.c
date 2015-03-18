@@ -62,6 +62,7 @@
 #include "scip/primal.h"
 #include "scip/reopt.h"
 #include "scip/tree.h"
+#include "scip/basisstore.h"
 #include "scip/pricestore.h"
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
@@ -104,6 +105,14 @@
 #include "scip/heur_reoptsols.h"
 #include "scip/heur_trivialnegation.h"
 #include "scip/heur_ofins.h"
+
+/* We include this three constraint handlers because for storing a starting base we need to verify the
+ * base status of the corresponding rows. */
+#include "scip/cons_setppc.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_varbound.h"
+
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -718,6 +727,7 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->tree = NULL;
    (*scip)->conflict = NULL;
    (*scip)->transprob = NULL;
+   (*scip)->basesstore = NULL;
    (*scip)->pricestore = NULL;
    (*scip)->sepastore = NULL;
    (*scip)->cutpool = NULL;
@@ -1339,6 +1349,42 @@ SCIP_Bool takeCut(
 
    return takecut;
 }
+
+/** gets number of active and tight cuts from one SCIP instance that should be copied */
+static
+int getNCopyCuts(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_CUT**            cuts,               /**< cuts to copy */
+   int                   ncuts               /**< number of cuts to copy */
+   )
+{
+   int ncopycuts;
+   int c;
+
+   assert(sourcescip != NULL);
+   assert(cuts != NULL || ncuts == 0);
+   assert(!SCIPisInRestart(sourcescip));
+
+   ncopycuts = 0;
+
+   for( c = 0; c < ncuts; ++c )
+   {
+      SCIP_ROW* row;
+
+      row = SCIPcutGetRow(cuts[c]); /*lint !e613*/
+      assert(!SCIProwIsLocal(row));
+      assert(!SCIProwIsModifiable(row));
+
+      /* in case of a restart, convert the cuts with a good LP activity quotient; in other cases, e.g., when heuristics
+       * copy cuts into subscips, take only currently active ones
+       */
+      if( takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselsubscip) )
+         ++ncopycuts;
+   }
+
+   return ncopycuts;
+}
+
 /** copy active and tight cuts from one SCIP instance to linear constraints of another SCIP instance */
 static
 SCIP_RETCODE copyCuts(
@@ -1350,6 +1396,8 @@ SCIP_RETCODE copyCuts(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
    SCIP_Bool             global,             /**< create a global or a local copy? */
    int*                  ncutsadded          /**< pointer to store number of copied cuts */
    )
@@ -1360,8 +1408,6 @@ SCIP_RETCODE copyCuts(
    assert(targetscip != NULL);
    assert(cuts != NULL || ncuts == 0);
    assert(ncutsadded != NULL);
-
-   *ncutsadded = 0;
 
    for( c = 0; c < ncuts; ++c )
    {
@@ -1428,6 +1474,17 @@ SCIP_RETCODE copyCuts(
                TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(targetscip, cons) );
 
+         if( sourcerows != NULL )
+         {
+            assert(targetconss != NULL);
+
+            sourcerows[*ncutsadded] = row;
+            targetconss[*ncutsadded] = cons;
+
+            SCIP_CALL( SCIPcaptureRow(sourcescip, row) );
+            SCIP_CALL( SCIPcaptureCons(targetscip, cons) );
+         }
+
          SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
          SCIPdebugPrintCons(targetscip, cons, NULL);
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
@@ -1438,6 +1495,193 @@ SCIP_RETCODE copyCuts(
          ++(*ncutsadded);
       }
    }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_BASESTAT getBasestatVar(
+   SCIP_VAR*             var
+   )
+{
+   /* get variable and the corresponding column */
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIPcolGetBasisStatus(SCIPvarGetCol(var));
+   else
+      return SCIP_BASESTAT_ZERO;
+}
+
+static
+SCIP_BASESTAT getBasestatCons(
+   SCIP*                 scip,
+   SCIP_CONS*            cons,
+   SCIP_Bool*            success
+   )
+{
+   SCIP_ROW* row = NULL;
+   SCIP_CONSHDLR* conshdlr;
+
+   /* get the corresponding row (if it exists) */
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+
+   /* check the constraint type */
+   if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
+      row = SCIPgetRowLinear(NULL, cons);
+   else if( strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0 )
+      row = SCIPgetRowLogicor(NULL, cons);
+   else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
+      row = SCIPgetRowKnapsack(NULL, cons);
+   else if( strcmp(SCIPconshdlrGetName(conshdlr), "setppc") == 0 )
+      row = SCIPgetRowSetppc(NULL, cons);
+   else if( strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0 )
+      row = SCIPgetRowVarbound(NULL, cons);
+   else
+   {
+      SCIPdebugMessage("cannot return basis status for constraint of type <%s>\n", SCIPconshdlrGetName(conshdlr));
+
+      (*success) = FALSE;
+      return SCIP_BASESTAT_ZERO;
+   }
+
+   (*success) = TRUE;
+
+   /* the constraint is not part of the LP */
+   if( row == NULL )
+      return SCIP_BASESTAT_ZERO;
+   else
+      return SCIProwGetBasisStatus(row);
+}
+
+static
+void getBasis(
+   SCIP*                 scip,
+   SCIP_VAR**            vars,
+   SCIP_CONS**           conss,
+   int*                  vstat,
+   int*                  cstat,
+   int                   nvars,
+   int                   nconss,
+   SCIP_Bool*            success
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(conss != NULL);
+   assert(vstat != NULL);
+   assert(cstat != NULL);
+
+   (*success) = TRUE;
+
+   /* get basis status of columns */
+   for( i = 0; i < nvars; i++ )
+   {
+      vstat[i] = getBasestatVar(vars[i]);
+   }
+
+   /* get the basis status of rows */
+   for( i = 0; i < nconss; i++ )
+   {
+      cstat[i] = getBasestatCons(scip, conss[i], success);
+
+      if( !(*success) )
+         return;
+   }
+}
+
+static
+SCIP_RETCODE copyBasis(
+   SCIP*                 sourcescip,
+   SCIP*                 targetscip,
+   SCIP_HASHMAP*         varmap,
+   SCIP_HASHMAP*         consmap,
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   nsourcerows
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR** tvars;
+   SCIP_CONS** conss;
+   SCIP_CONS** tconss;
+   int* vstat;
+   int* cstat;
+   SCIP_Bool success;
+   int ntconss;
+   int nvars;
+   int nconss;
+   int i;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(sourcescip != targetscip);
+
+   /* initialize the basisstore of target-SCIP */
+   if( targetscip->basesstore == NULL )
+   {
+      SCIPbasisstoreCreate(&targetscip->basesstore);
+   }
+
+   vars = sourcescip->transprob->vars;
+   conss = sourcescip->transprob->conss;
+   nvars = sourcescip->transprob->nvars;
+   nconss = sourcescip->transprob->nconss;
+   ntconss = nconss + nsourcerows;
+
+   /* allocate buffer */
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &vstat, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &cstat, ntconss) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &tvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &tconss, ntconss) );
+
+   /* match the basis status of source-variables */
+   for( i = 0; i < nvars; i++ )
+   {
+      assert(SCIPhashmapExists(varmap, vars[i]));
+
+      tvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      SCIP_CALL( SCIPhashmapRemove(varmap, vars[i]) );
+      vstat[i] = getBasestatVar(vars[i]);
+   }
+
+   /* match the basis status of source-constraints */
+   for( i = 0; i < nconss; i++ )
+   {
+      assert(SCIPhashmapExists(consmap, conss[i]));
+
+      tconss[i] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
+      cstat[i] = getBasestatCons(sourcescip, conss[i], &success);
+      if( !success )
+      {
+         SCIPdebugMessage("copying basis failed for constraint <%s>\n", SCIPconsGetName(conss[i]));
+         goto TERMINATE;
+      }
+   }
+
+   /* match the basis status of source-constraints */
+   for( i = 0; i < nsourcerows; i++ )
+   {
+      assert(sourcerows[i] != NULL);
+      assert(nconss + i < ntconss);
+
+      tconss[nconss + i] = targetconss[i];
+      cstat[nconss + i] = SCIProwGetBasisStatus(sourcerows[i]);
+   }
+
+   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetscip->mem->probmem, tvars, tconss, vstat, cstat, nvars, ntconss) );
+
+   SCIPdebugMessage("basis copied\n");
+
+   /* free buffer */
+  TERMINATE:
+   SCIPfreeBufferArray(sourcescip, &tconss);
+   SCIPfreeBufferArray(sourcescip, &tvars);
+   SCIPfreeBufferArray(sourcescip, &cstat);
+   SCIPfreeBufferArray(sourcescip, &vstat);
 
    return SCIP_OKAY;
 }
@@ -2810,7 +3054,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
       return SCIP_OKAY;
 
    /* create out of all active cuts in cutpool linear constraints in targetscip */
-   SCIP_CALL( SCIPcopyCuts(scip, scip, varmap, consmap, global, ncutsadded) );
+   SCIP_CALL( SCIPcopyCuts(scip, scip, varmap, consmap, NULL, NULL, 0, global, ncutsadded) );
 
    return SCIP_OKAY;
 }
@@ -2856,6 +3100,9 @@ SCIP_RETCODE SCIPcopyCuts(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_ROW**            sourcerows,         /**< array to store the rows of the source SCIP (or NULL) */
+   SCIP_CONS**           targetconss,        /**< array to store the constraints of the target SCIP (or NULL) */
+   int                   sourcerowssize,     /**< array size of source rows */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    )
@@ -2866,6 +3113,10 @@ SCIP_RETCODE SCIPcopyCuts(
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
+   assert(sourcerowssize >= 0);
+   assert(sourcerowssize == 0 || sourcerows != NULL);
+   assert(sourcerowssize == 0 || targetconss != NULL);
+   assert(sourcerowssize == 0 || ncutsadded != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -2885,14 +3136,30 @@ SCIP_RETCODE SCIPcopyCuts(
       return SCIP_OKAY;
    }
 
+   /* count number of cuts to copy and check that given arrays are large enough */
+   if( sourcerowssize > 0 )
+   {
+      /* get cuts from global cut pool */
+      cuts = SCIPgetPoolCuts(sourcescip);
+      ncuts = SCIPgetNPoolCuts(sourcescip);
+
+      *ncutsadded = getNCopyCuts(sourcescip, cuts, ncuts);
+
+      /* get delayed cuts from global delayed cut pool */
+      cuts = SCIPgetDelayedPoolCuts(sourcescip);
+      ncuts = SCIPgetNDelayedPoolCuts(sourcescip);
+
+      *ncutsadded += getNCopyCuts(sourcescip, cuts, ncuts);
+
+      if( *ncutsadded > sourcerowssize )
+         return SCIP_OKAY;
+   }
+
    /* convert cut from global cut pool */
    cuts = SCIPgetPoolCuts(sourcescip);
    ncuts = SCIPgetNPoolCuts(sourcescip);
 
-   SCIP_CALL( copyCuts(sourcescip, targetscip, cuts, ncuts, varmap, consmap, global, &nlocalcutsadded) );
-
-   if( ncutsadded != NULL )
-      *ncutsadded = nlocalcutsadded;
+   SCIP_CALL( copyCuts(sourcescip, targetscip, cuts, ncuts, varmap, consmap, sourcerows, targetconss, global, &nlocalcutsadded) );
 
    SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
 
@@ -2900,10 +3167,12 @@ SCIP_RETCODE SCIPcopyCuts(
    cuts = SCIPgetDelayedPoolCuts(sourcescip);
    ncuts = SCIPgetNDelayedPoolCuts(sourcescip);
 
-   SCIP_CALL( copyCuts(sourcescip, targetscip, cuts, ncuts, varmap, consmap, global, &nlocalcutsadded) );
+   SCIP_CALL( copyCuts(sourcescip, targetscip, cuts, ncuts, varmap, consmap, sourcerows, targetconss, global, &nlocalcutsadded) );
 
    if( ncutsadded != NULL )
-      *ncutsadded += nlocalcutsadded;
+      *ncutsadded = nlocalcutsadded;
+
+   assert(sourcerowssize == 0 || *ncutsadded <= sourcerowssize);
 
    SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
 
@@ -13872,6 +14141,12 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
    /* initialize solution process data structures */
+   if( scip->basesstore == NULL )
+   {
+      /* if we are in a subscip and the basestore is not NULL, we have already stored a starting basis */
+      SCIP_CALL( SCIPbasisstoreCreate(&scip->basesstore) );
+   }
+
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
@@ -14017,6 +14292,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
+   SCIP_CALL( SCIPbasisstoreFree(&scip->basesstore, scip->mem->probmem) );
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
@@ -14686,7 +14962,7 @@ SCIP_RETCODE SCIPsolve(
 
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->basesstore, scip->pricestore, scip->sepastore,
                scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, scip->cliquetable, &restart) );
 
          /* detect, whether problem is solved */
@@ -26387,7 +26663,7 @@ SCIP_RETCODE SCIPconstructLP(
    SCIP_CALL( checkStage(scip, "SCIPconstructLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->tree, scip->reopt, scip->lp, scip->basesstore, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, FALSE, cutoff) );
 
    return SCIP_OKAY;
@@ -27151,7 +27427,7 @@ SCIP_RETCODE SCIPwriteLP(
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue,
+            scip->tree, scip->reopt, scip->lp, scip->basesstore, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue,
             scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
    }
 
@@ -27233,6 +27509,91 @@ SCIP_RETCODE SCIPgetLPI(
    SCIP_CALL( checkStage(scip, "SCIPgetLPI", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    *lpi = SCIPlpGetLPI(scip->lp);
+
+   return SCIP_OKAY;
+}
+
+/* store the basis of the last solved lp */
+SCIP_RETCODE SCIPstoreBasis(
+   SCIP*                 scip               /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->basesstore != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPstoreBasis", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   printf("try to store basis:\n");
+
+   if( scip->lp->solved )
+   {
+      SCIP_VAR** vars;
+      SCIP_CONS** conss;
+      SCIP_Bool success;
+      int* vstat;
+      int* cstat;
+      int nvars;
+      int nconss;
+
+      printf("-> LP is solved, solution is basic.\n");
+
+      /* get memory for the basis status */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vstat, scip->transprob->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &cstat, scip->transprob->nconss) );
+
+      vars = scip->transprob->vars;
+      conss = scip->transprob->conss;
+      nvars = scip->transprob->nvars;
+      nconss = scip->transprob->nconss;
+
+      getBasis(scip, vars, conss, vstat, cstat, nvars, nconss, &success);
+
+      if( success )
+      {
+         SCIP_CALL( SCIPbasisstoreAddBasis(scip->basesstore, scip->mem->probmem, vars, conss, vstat, cstat, nvars, nconss) );
+      }
+
+      /* free buffer */
+      SCIPfreeBufferArrayNull(scip, &cstat);
+      SCIPfreeBufferArrayNull(scip, &vstat);
+   }
+   else
+      printf("-> LP is not solved.\n");
+
+   return SCIP_OKAY;
+}
+
+/** return the number of stored basis */
+int SCIPgetNBasis(
+   SCIP*              scip
+   )
+{
+   assert(scip != NULL);
+
+   if( scip->basesstore != NULL )
+      return SCIPbasisstoreGetNBasis(scip->basesstore);
+
+   return 0;
+}
+
+/** copy the stored starting basis */
+SCIP_RETCODE SCIPcopyBasis(
+   SCIP*                 sourcescip,
+   SCIP*                 targetscip,
+   SCIP_HASHMAP*         varmap,
+   SCIP_HASHMAP*         consmap,
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   nsourcerows
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   if( sourcescip == targetscip )
+      return SCIP_OKAY;
+
+   SCIP_CALL( copyBasis(sourcescip, targetscip, varmap, consmap, sourcerows, targetconss, nsourcerows) );
 
    return SCIP_OKAY;
 }

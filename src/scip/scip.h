@@ -1024,6 +1024,9 @@ SCIP_RETCODE SCIPcopyCuts(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_ROW**            sourcerows,         /**< array to store the rows of the source SCIP (or NULL) */
+   SCIP_CONS**           targetconss,        /**< array to store the constraints of the target SCIP (or NULL) */
+   int                   sourcerowssize,     /**< array size of source rows */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    );
@@ -11951,6 +11954,31 @@ SCIP_RETCODE SCIPgetLPI(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
    );
+
+/* store the basis of the last solved lp */
+EXTERN
+SCIP_RETCODE SCIPstoreBasis(
+   SCIP*                 scip               /**< SCIP data structure */
+   );
+
+/** return the number of stored basis */
+EXTERN
+int SCIPgetNBasis(
+   SCIP*              scip
+   );
+
+/** copy the stored starting basis */
+EXTERN
+SCIP_RETCODE SCIPcopyBasis(
+   SCIP*                 sourcescip,
+   SCIP*                 targetscip,
+   SCIP_HASHMAP*         varmap,
+   SCIP_HASHMAP*         consmap,
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   nsourcerows
+   );
+
 
 /** Displays quality information about the current LP solution. An LP solution need to be available. Information printed
  *  is subject to what the LP solver supports
