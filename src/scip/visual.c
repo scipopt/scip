@@ -86,7 +86,6 @@ SCIP_RETCODE SCIPvisualCreate(
    (*visual)->timestep = 0;
    (*visual)->lastnode = NULL;
    (*visual)->lastcolor = SCIP_VBCCOLOR_NONE;
-   (*visual)->firstnode = TRUE;
    (*visual)->userealtime = FALSE;
 
    return SCIP_OKAY;
@@ -129,7 +128,6 @@ SCIP_RETCODE SCIPvisualInit(
       visual->timestep = 0;
       visual->lastnode = NULL;
       visual->lastcolor = SCIP_VBCCOLOR_NONE;
-      visual->firstnode = TRUE;
       visual->userealtime = set->visual_realtime;
 
       if( visual->vbcfile == NULL )
@@ -155,7 +153,6 @@ SCIP_RETCODE SCIPvisualInit(
       visual->timestep = 0;
       visual->lastnode = NULL;
       visual->lastcolor = SCIP_VBCCOLOR_NONE;
-      visual->firstnode = TRUE;
       visual->userealtime = set->visual_realtime;
 
       if ( visual->bakfile == NULL )
