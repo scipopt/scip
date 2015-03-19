@@ -322,31 +322,7 @@ SCIP_RETCODE SCIPvisualNewChild(
       }
    }
 
-   if ( visual->bakfile != NULL )
-   {
-      if ( visual->firstnode )
-      {
-         printTime(visual, stat, FALSE);
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "candidate 1 0 M %f %f %d\n", lowerbound, 0.0, 0);
-         visual->firstnode = FALSE;
-      }
-      else if ( branchvar != NULL )
-      {
-         char t;
-
-         /* todo: get information about fractionalities */
-         t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
-         printTime(visual, stat, FALSE);
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "candidate %d %d %c %f %f %d\n", (int)nodenum, (int)parentnodenum, t,
-            lowerbound, 0.0, 0);
-      }
-      else
-      {
-         printTime(visual, stat, FALSE);
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "candidate %d %d M %f %f %d\n", (int)nodenum, (int)parentnodenum,
-            lowerbound, 0.0, 0);
-      }
-   }
+   /* For BAK, not all available information is available here. Use SCIPvisualUpdateChild() instead */
 
    return SCIP_OKAY;
 }
@@ -412,16 +388,10 @@ SCIP_RETCODE SCIPvisualUpdateChild(
       size_t parentnodenum;
       SCIP_Real* lpcandsfrac;
       SCIP_Real sum = 0.0;
-      int nlpcands;
+      int nlpcands = 0;
       char t = 'M';
+      const char* nodeinfo;
       int j;
-
-      if ( visual->firstnode )
-      {
-         printTime(visual, stat, FALSE);
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "branched 1 0 M %f %f %d\n", lowerbound, 0.0, 0);
-         visual->firstnode = FALSE;
-      }
 
       /* determine branching type */
       if ( branchvar != NULL )
@@ -431,13 +401,31 @@ SCIP_RETCODE SCIPvisualUpdateChild(
       parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, node->parent) : 0);
       assert(node->parent == NULL || parentnodenum > 0);
 
-      SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
-      for (j = 0; j < nlpcands; ++j)
-         sum += lpcandsfrac[j];
+      /* update info depending on the node type */
+      switch( SCIPnodeGetType(node) )
+      {
+      case SCIP_NODETYPE_CHILD:
+         /* the child is a new candidate */
+         nodeinfo = "candidate";
+         break;
+      case SCIP_NODETYPE_FOCUSNODE:
+         /* the focus node is updated to a branch node */
+         nodeinfo = "branched";
 
+         /* calculate infeasibility information */
+         SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
+         for (j = 0; j < nlpcands; ++j)
+            sum += lpcandsfrac[j];
+
+         break;
+      default:
+         SCIPerrorMessage("Error: Unexpected node type <%d> in Update Child Method", SCIPnodeGetType(node));
+         return SCIP_INVALIDDATA;
+      }
+      /* append new status line with updated node information to the bakfile */
       printTime(visual, stat, FALSE);
-      SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "branched %d %d %c %f %f %d\n", (int)nodenum, (int)parentnodenum, t,
-         lowerbound, sum, nlpcands);
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "%s %d %d %c %f %f %d\n", nodeinfo, (int)nodenum, (int)parentnodenum, t,
+            lowerbound, sum, nlpcands);
    }
 
    return SCIP_OKAY;

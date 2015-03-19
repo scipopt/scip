@@ -974,6 +974,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* output node creation to visualization file */
    SCIP_CALL( SCIPvisualNewChild(stat->visual, set, stat, *node) );
 
+
    SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %u (prio: %g)\n",
       SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
 
@@ -5093,6 +5094,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
+   /* update the information for the focus node before creating children */
+   SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, tree->focusnode) );
+
    /* get value of variable in current LP or pseudo solution */
    lpval = SCIPvarGetSol(var, tree->focusnodehaslp);
 
@@ -5324,6 +5328,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       if( upchild != NULL )
          *upchild = node;
    }
+
 
    return SCIP_OKAY;
 }
