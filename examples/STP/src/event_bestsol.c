@@ -101,7 +101,8 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_CALL( SCIPprobdataWriteIntermediateSolution(scip) );
 
    /* Calling the bound-based reduction tests */
-   //SCIP_CALL(bound_reduction(scip, solvalue, &elimins));
+   /* SCIP_CALL(bound_reduction(scip, solvalue, &elimins));
+    */
 
    return SCIP_OKAY;
 }

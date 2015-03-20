@@ -364,7 +364,6 @@ static void compute_sd(
                 * - tran measures the distance between two terminals.
                 * - dist stores the current longest elementary path.
                 */
-               //tran = Is_term(p->term[m]) ? 0.0 : pathtran[k] + cost[i];
                if( Is_term(p->term[m]) )
                {
                   tran = 0.0;
@@ -776,8 +775,6 @@ int sd_reduction_dir(
          assert(g->tail[e] == i);
          l = g->head[e];
 
-         //printf("Special Distance between %d and %d: %g\n", i, g->head[e], sd[g->head[e]].dist);
-
          j = g->oeat[e];
 
          if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && l == g->source[0] )
@@ -796,7 +793,6 @@ int sd_reduction_dir(
             {
                if( (LT(sd_indist[k][i], FARAWAY) || LT(sd_outdist[k][i], FARAWAY)) && LT(sd_outdist[k][l], FARAWAY) )
                {
-                  //printf("Distances: %g %g %g", sd_in[k][i].dist, sd_out[k][i].dist, sd_out[k][l].dist);
                   if( !LT(sd_indist[k][i], FARAWAY) )
                      tempsd = sd_outdist[k][i];
                   else if( !LT(sd_outdist[k][i], FARAWAY) )
@@ -815,7 +811,6 @@ int sd_reduction_dir(
             {
                if( LT(sd_indist[k][i], FARAWAY) && LT(sd_outdist[k][l], FARAWAY) )
                {
-                  //printf("Distances: %g %g %g", sd_in[k][i].dist, sd_out[k][i].dist, sd_out[k][l].dist);
                   tempsd = sd_indist[k][i];
 
                   if( GT(sd_outdist[k][l], tempsd) )
@@ -826,7 +821,6 @@ int sd_reduction_dir(
             if( LT(tempsd, specialdist) )
                specialdist = tempsd;
          }
-         //printf("SD Test Knot %d %d %g %g\n", i, l, specialdist, cost[e]);
 
          if (LT(cost[e], FARAWAY) && LT(specialdist, cost[e]))
          {
@@ -839,12 +833,6 @@ int sd_reduction_dir(
                graph_edge_del(g, e);
 
             elimins++;
-
-            //for( m = 0; m < outtermcount; m++ )
-            //{
-            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_indist[m], sd_intran[m], TRUE);
-            //compute_sd_dir(g, outterms[m], cost, heap, state, &count, sd_outdist[m], sd_outtran[m], FALSE);
-            //}
          }
       }
    }
@@ -956,8 +944,11 @@ SCIP_RETCODE bd3_reduction(
    int    e2;
    int    e3;
    SCIP_Real c1;
+   SCIP_Real c1a;
    SCIP_Real c2;
+   SCIP_Real c2a;
    SCIP_Real c3;
+   SCIP_Real c3a;
    SCIP_Real c123;
 
    SCIPdebugMessage("BD3-Reduction: ");
@@ -1003,6 +994,41 @@ SCIP_RETCODE bd3_reduction(
       if (Is_term(g->term[i]))
          continue;
 
+      e1 = g->outbeg[i];
+
+      assert(e1 != EAT_LAST);
+
+      k1 = g->head[e1];
+      c1 = g->cost[e1];
+      c1a = g->cost[Edge_anti(e1)];
+      e2 = g->oeat[e1];
+
+      assert(e2 != EAT_LAST);
+
+      k2 = g->head[e2];
+      c2 = g->cost[e2];
+      c2a = g->cost[Edge_anti(e2)];
+      e3 = g->oeat[e2];
+      assert(e3 != EAT_LAST);
+
+      k3 = g->head[e3];
+      c3 = g->cost[e3];
+      c3a = g->cost[Edge_anti(e3)];
+
+      assert(g->oeat[e3] == EAT_LAST);
+
+      /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
+      if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) &&
+         (g->head[e1] == g->source[0] || g->head[e2] == g->source[0] || g->head[e3] == g->source[0]))
+         continue;
+
+      if( !(EQ(c1, c1a) && EQ(c2, c2a) && EQ(c3, c3a)) )
+         continue;
+
+      if( !(LT(c1, FARAWAY) && LT(c2, FARAWAY) && LT(c3, FARAWAY) &&
+          LT(c1a, FARAWAY) && LT(c2a, FARAWAY) && LT(c3a, FARAWAY)) )
+         continue;
+
       for(k = 0; k < 3; k++)
       {
 	 SCIPindexListNodeFree(&(ancestors[k]));
@@ -1011,31 +1037,14 @@ SCIP_RETCODE bd3_reduction(
          assert(revancestors[k] == NULL);
       }
 
-      e1 = g->outbeg[i];
       SCIPindexListNodeAppendCopy(&(ancestors[0]), g->ancestors[e1]);
       SCIPindexListNodeAppendCopy(&(revancestors[0]), g->ancestors[Edge_anti(e1)]);
 
-      assert(e1 != EAT_LAST);
-
-      k1 = g->head[e1];
-      c1 = g->cost[e1];
-      e2 = g->oeat[e1];
       SCIPindexListNodeAppendCopy(&(ancestors[1]), g->ancestors[e2]);
       SCIPindexListNodeAppendCopy(&(revancestors[1]), g->ancestors[Edge_anti(e2)]);
 
-      assert(e2 != EAT_LAST);
-
-      k2 = g->head[e2];
-      c2 = g->cost[e2];
-      e3 = g->oeat[e2];
       SCIPindexListNodeAppendCopy(&(ancestors[2]), g->ancestors[e3]);
       SCIPindexListNodeAppendCopy(&(revancestors[2]), g->ancestors[Edge_anti(e3)]);
-      assert(e3 != EAT_LAST);
-
-      k3 = g->head[e3];
-      c3 = g->cost[e3];
-
-      assert(g->oeat[e3] == EAT_LAST);
 
       compute_sd(g, k1, g->cost, g->cost, heap, state, &count, pathdist1, pathtran1, pathrand);
       compute_sd(g, k2, g->cost, g->cost, heap, state, &count, pathdist2, pathtran2, pathrand);
@@ -1472,9 +1481,6 @@ int nv_reduction_optimal(
    /* computing the shortest hops paths from the source node */
    graph_path_exec(g, FSP_MODE, g->source[0], hopscost, pathhops);
 
-   /* computing the shortest paths from each terminal to every other node */
-   //calculate_distances(g, path, g->cost, FSP_MODE);
-
    /* this is the offset used to minimise the number of knots to examine in large graphs. */
    srand(runnum*100);
    knotoffset = rand() % KNOTFREQ;
@@ -1559,53 +1565,56 @@ int nv_reduction_optimal(
 
             /* computing the shortest paths from the source node */
             graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
-            //calculate_distances(g, path, g->cost, FSP_MODE);
          }
       }
       /* The knot is not a terminal so we can perform the short link test */
-      //else
-      //{
-      //for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
-      //{
-      //j = g->tail[e];
-      //if( vregion[i] != vregion[j] )
-      //{
-      //if( minArc1[vregion[i]] < 0 )
-      //minArc1[vregion[i]] = e;
-      //else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
-      //{
-      //minArc2[vregion[i]] = minArc1[vregion[i]];
-      //minArc1[vregion[i]] = e;
-      //}
-      //}
-      //}
-      //}
+#if 0
+      else
+      {
+         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         {
+            j = g->tail[e];
+            if( vregion[i] != vregion[j] )
+            {
+               if( minArc1[vregion[i]] < 0 )
+                  minArc1[vregion[i]] = e;
+               else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
+               {
+                  minArc2[vregion[i]] = minArc1[vregion[i]];
+                  minArc1[vregion[i]] = e;
+               }
+            }
+         }
+      }
+#endif
    }
 
-   //for( k = 0; k < termcount; k++ )
-   //{
-   //assert(terms[k] >= 0 && terms[k] < g->knots);
+#if 0
+   for( k = 0; k < termcount; k++ )
+   {
+      assert(terms[k] >= 0 && terms[k] < g->knots);
 
-   //if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
-   //+ g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
-   //{
-   //e = minArc1[terms[k]];
-   //i = g->head[e];
-   //j = g->tail[e];
+      if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
+         + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
+      {
+         e = minArc1[terms[k]];
+         i = g->head[e];
+         j = g->tail[e];
 
-   //if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
-   //continue;
+         if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && (i == g->source[0] || j == g->source[0]) )
+            continue;
 
-   //if( Is_term(g->term[i]) )
-   //{
-   //SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
-   //*fixed += g->cost[e];
-   //}
-   //graph_knot_contract(g, j, i);
+         if( Is_term(g->term[i]) )
+         {
+            SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+            *fixed += g->cost[e];
+         }
+         graph_knot_contract(g, j, i);
 
-   //elimins++;
-   //}
-   //}
+         elimins++;
+      }
+   }
+#endif
 
    free(terms);
    free(minArc2);
@@ -1949,7 +1958,6 @@ int nv_reduction(
    SCIPfreeBufferArray(scip, &distance);
 
    assert(graph_valid(g));
-   //printf("nv: nelims: %d \n", nelims);
    return SCIP_OKAY;
 }
 

@@ -10,7 +10,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 
 #define REDUCE_C
-//#define PRINT_TMP_PRESOL
+/*#define PRINT_TMP_PRESOL */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1702,6 +1702,7 @@ static double levelm4(
    int     runnum = 0;
    char    sd = TRUE;
    char    nsv = TRUE;
+   char    bd3 = TRUE;
    char    timebreak = FALSE;
 
 
@@ -1723,6 +1724,8 @@ static double levelm4(
 
    assert(g != NULL);
    redbound = MAX(g->knots / 500, 8);
+   /* redbound = 0;
+    */
    printf("redbound: %d \n", redbound );
    heap        = malloc((size_t)g->knots * sizeof(int));
    state       = malloc((size_t)g->knots * sizeof(int));
@@ -1786,9 +1789,6 @@ static double levelm4(
    }
    else
    {
-
-      //voronoi_inout(g);
-
       degree_test_dir(g, &fixed);
 
       SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1898,8 +1898,23 @@ static double levelm4(
       if( timebreak )
          break;
 
-      //if (bd3_reduction(g))
-      //rerun = TRUE;
+      if( bd3 )
+      {
+         SCIP_CALL( bd3_reduction(scip, g, sddist, sdtrans, heap, state, &numelim) );
+         if( numelim <= redbound )
+            bd3 = FALSE;
+
+         printf("BD3 Reduction: %d\n", numelim);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
+      }
 
       if (degree_test_dir(g, &fixed) > redbound / 2 )
          rerun = TRUE;

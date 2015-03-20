@@ -49,6 +49,7 @@
 #define MODE_FLOW   1
 #define MODE_PRICE  2
 
+/*#define PRINT_PRESOL */
 
 
 /** @brief Problem data which is accessible in all places
@@ -1550,6 +1551,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    char* logfilename;
    char* tmpfilename;
    char* probname;
+#ifdef PRINT_PRESOL
+   char presolvefilename[SCIP_MAXSTRLEN];
+#endif
 
    assert(scip != NULL);
 
@@ -1803,7 +1807,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* create and add initial variables */
    SCIP_CALL( createVariables(scip, probdata, probdata->offset ) );
 
-#if 0
+#ifdef PRINT_PRESOL
    (void)SCIPsnprintf(presolvefilename, SCIP_MAXSTRLEN, "presol/%s-presolve.stp", probname);
    SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
 #endif

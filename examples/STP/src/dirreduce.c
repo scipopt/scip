@@ -114,22 +114,19 @@ int degree_test_dir(
                   /* both the edges are outgoing from node i
                    * need to ensure that the flow of the edge costs is correct
                    * Edge_anti(e2) -> e1 and Edge_anti(e1) -> e2  */
-		  if( !Is_term(g->term[i2]) )
-		  {
+                  if( !Is_term(g->term[i2]) )
+                  {
                      g->cost[e1]            += g->cost[Edge_anti(e2)];
-                     g->cost[Edge_anti(e1)] += g->cost[e2];
+                     g->cost[e2]            += g->cost[Edge_anti(e1)];
+                     /*g->cost[Edge_anti(e1)] += g->cost[e2];
+                      */
                      graph_knot_contract(g, i2, i);
 
                      count++;
-		  }
+                  }
                   break;
                }
                assert(Is_term(g->term[i]));
-
-               // this avoids the degree two test for terminals. There is a bug, so the "if 0" is stopping that test
-               // from occurring.
-               //if (g->cost[g->outbeg[i]] != g->cost[g->inpbeg[i]])
-                  //break;
 
                /* At present the degree two test for terminals does not work.
                 * Needs to be researched and updated. */

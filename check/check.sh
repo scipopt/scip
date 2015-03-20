@@ -63,6 +63,7 @@ MEMFORMAT="kB"
 
 INIT="true"
 COUNT=0
+MAXJOBS=4
 for INSTANCE in `cat testset/$TSTNAME.test` DONE
 do
     COUNT=`expr $COUNT + 1`
@@ -70,6 +71,12 @@ do
     # loop over settings
     for SETNAME in ${SETTINGSLIST[@]}
     do
+       while [ `jobs -r|wc -l` -ge $MAXJOBS ]
+       do
+          sleep 10
+          echo "Waiting for jobs to finish."
+       done
+
     # infer the names of all involved files from the arguments
         p=0 # currently, noone uses permutations here
         PERMUTE=0
@@ -79,6 +86,7 @@ do
 
         if test "$INSTANCE" = "DONE"
         then
+            wait
             #echo $EVALFILE
             ./evalcheck_cluster.sh -r $EVALFILE
             continue
@@ -105,7 +113,8 @@ do
         export FILENAME=$INSTANCE
         export CLIENTTMPDIR
         echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
-        bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
+        #bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f unlimited; ulimit -s unlimited;
+        ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f unlimited; ulimit -s unlimited; ./run.sh &
         #./runcluster.sh
     done
     INIT="false"
