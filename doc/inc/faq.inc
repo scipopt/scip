@@ -342,13 +342,24 @@ should be the only case of 'duplicate methods'. If you find, however, another on
       Is there a way to visualize the branch and bound tree?    </div>
     <div id="visualizebranchandbound_ans" class="answer">
        <p>
-Yes, there is. SCIP can optionally write tree information to a specified file which can
-be read and visualized via the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>.
-In order to trigger vbc output, specify a file name via <code>set vbc filename somefilename.vbc</code>.
-the viewer has an option to uncover the nodes one-by-one (each time you
-hit the space key). Besides that, SCIP has a parameter which also solves
-that issue: <code>set vbc realtime FALSE</code>.
-In case of the callable library, the parameter names are "vbc/filename" and "vbc/realtime".
+Yes, currently there are two tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
+and the <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">Branch-and-Bound Analysis Kit</a>.
+The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
+hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
+context menu. The BAK is a command line tool written in the Python programming language. It offers several
+noninteractive visualizations of the tree at a user-defined frequency.
+</p>
+<p>
+For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code> and
+<code>set visual bakfilename somefilename.dat</code>.
+</p>
+<p>
+For those who want to use the step-by-step functionality of vbctool,
+it is necessary to use a time-step counter for the visualization instead of the real time. The corresponding parameter
+is changed via <code>set visual realtime FALSE</code>.
+</p>
+For users of the callable library, the corresponding parameters are called "visual/bakfilename", "visual/vbcfilename", and
+"visual/realtime".
 </p>
     </div>
   </li>
