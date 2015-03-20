@@ -392,7 +392,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
 
       /* determine branching type */
       if ( branchvar != NULL )
-         t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
+         t = (branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L');
 
       /* get nodenum of parent node from hash map */
       parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, node->parent) : 0);
@@ -574,13 +574,11 @@ void SCIPvisualCutoffNode(
    if ( visual->bakfile != NULL )
    {
       size_t parentnodenum;
-      char t;
+      char t = 'M';
 
       /* determine branching type */
       if ( branchvar != NULL )
-         t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
-      else
-         t = 'M';
+         t = (branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L');
 
       /* get nodenum of parent node from hash map */
       parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, node->parent) : 0);
@@ -709,7 +707,7 @@ void SCIPvisualFoundSolution(
 
             /* determine branching type */
             if ( branchvar != NULL )
-               t = branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L';
+               t = (branchtype == SCIP_BOUNDTYPE_LOWER ? 'R' : 'L');
 
             printTime(visual, stat, FALSE);
             SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "integer %d %d %c %f\n", (int)nodenum, (int)parentnodenum, t, obj);
