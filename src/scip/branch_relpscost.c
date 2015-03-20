@@ -752,7 +752,7 @@ SCIP_RETCODE execRelpscost(
                            SCIP_BRANCHDIR_UPWARDS, clevel) )
                   skipsb = TRUE;
             }
-            /* the currently best candidate is also a pseudo-candidate; apply significancy test and skip candidate if it
+            /* the currently best candidate is also a pseudo-candidate; apply significance test and skip candidate if it
              * is significantly worse in at least one direction
              */
             else if( bestpscand != -1 && bestpsscore > bestuninitsbscore )
