@@ -7460,20 +7460,31 @@ SCIP_RETCODE generateCutSol(
          SCIP_CALL( computeInteriorPoint(scip, cons) );
 
 #ifdef SCIP_DEBUG_INT
-         printf("interior point compution done:\n");
-         for( j = 0; j < consdata->nlinvars; j++ )
-            printf("%s = %g\n", SCIPvarGetName(consdata->linvars[j]), consdata->interiorpoint[j]);
-         for( j = 0; j < consdata->nquadvars; j++ )
-            printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->interiorpoint[j + consdata->nlinvars]);
-         printf("function value: %g\n", consdata->interiorpointval);
-         if( consdata->isconvex )
-            printf("rhs: %g\n", consdata->rhs);
-         else
-            printf("lhs: %g\n", consdata->lhs);
+         if( consdata->interiorcomputed )
+         {
+            printf("interior point compution done:\n");
+            for( j = 0; j < consdata->nlinvars; j++ )
+               printf("%s = %g\n", SCIPvarGetName(consdata->linvars[j]), consdata->interiorpoint[j]);
+            for( j = 0; j < consdata->nquadvars; j++ )
+               printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->interiorpoint[j + consdata->nlinvars]);
+            printf("function value: %g\n", consdata->interiorpointval);
+            if( consdata->isconvex )
+               printf("rhs: %g\n", consdata->rhs);
+            else
+               printf("lhs: %g\n", consdata->lhs);
 
-         printf("gauge's linear coef of quadratic vars:\n");
-         for( j = 0; j < consdata->nquadvars; j++ )
-            printf("%s * %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugelincoefs[j]);
+            printf("gauge's linear coef of quadratic vars:\n");
+            for( j = 0; j < consdata->nquadvars; j++ )
+               printf("%s * %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugelincoefs[j]);
+         }
+         else
+         {
+            printf("#### failed to compute interior, ran with SCIP_DEBUG for more info\n");
+            /* instance camshape100 says that there is no interior point (interior empty)
+             * is there something intelligent that can be said?
+             * */
+         }
+
 #endif
       }
    }
