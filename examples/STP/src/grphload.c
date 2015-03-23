@@ -769,6 +769,7 @@ static void scale_coords(
 /*--- Returns  : 0 for success, < 0 for failure                           ---*/
 /*---------------------------------------------------------------------------*/
 GRAPH* graph_load(
+   SCIP*        scip,
    const char*  file,
    PRESOL*      presol)
 {
@@ -1208,7 +1209,7 @@ GRAPH* graph_load(
 
                      }*/
                   assert(g == NULL);
-                  g = graph_obstgrid_create(scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
+                  g = graph_obstgrid_create(scip, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
                   for( i = 0; i < 4; i++ )
                      free(obstacle_coords[i]);
 		  free(obstacle_coords);

@@ -1293,12 +1293,15 @@ void voronoi_radius(
    SCIP_Real*    costrev,
    int*          vbase,
    int*          heap,
-   int*          state
+   int*          state,
+   int*          radedge
    )
 {
    int i;
    int k;
    int m;
+   int vbm;
+   int vbk;
    int root;
    int count = 0;
 
@@ -1309,6 +1312,7 @@ void voronoi_radius(
    assert(cost   != NULL);
    assert(costrev   != NULL);
    assert(rad != NULL);
+   assert(radedge != NULL);
    assert(vbase != NULL);
    if( g->knots == 0 || g->terms == 0 )
       return;
@@ -1318,7 +1322,7 @@ void voronoi_radius(
    for( i = 0; i < g->knots; i++ )
    {
       rad[i] = FARAWAY;
-
+      radedge[i] = UNKNOWN;
       /* set the base of vertex i */
       if( Is_term(g->term[i]) && g->mark[i] )
       {
@@ -1353,20 +1357,28 @@ void voronoi_radius(
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
             m = g->head[i];
+            vbm = vbase[m];
+	    vbk = vbase[k];
 
-	    if( state[m] == CONNECT && vbase[m] != vbase[k] && g->mark[m] )
+	    if( state[m] == CONNECT && vbm != vbk && g->mark[m] )
 	    {
-               if( SCIPisGT(scip, rad[vbase[k]], path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
-                  rad[vbase[k]] = path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i]);
-               if( SCIPisGT(scip, rad[vbase[m]], path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i])) )
-                  rad[vbase[m]] = path[m].dist + ((vbase[m] == root)? costrev[i] : cost[i]);
+               if( SCIPisGT(scip, rad[vbk], path[k].dist + ((vbk == root)? cost[i] : costrev[i])) )
+	       {
+		  radedge[vbk] = i;
+                  rad[vbk] = path[k].dist + ((vbk == root)? cost[i] : costrev[i]);
+	       }
+               if( SCIPisGT(scip, rad[vbm], path[m].dist + ((vbm == root)? costrev[i] : cost[i])) )
+	       {
+		  radedge[vbm] = flipedge(i);
+                  rad[vbm] = path[m].dist + ((vbm == root)? costrev[i] : cost[i]);
+	       }
 	    }
             /* check whether the path (to m) including k is shorter than the so far best known */
-	    if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+	    if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbk == root)? cost[i] : costrev[i])) )
             {
 	       assert(!Is_term(g->term[m]));
-               correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]), FSP_MODE);
-               vbase[m] = vbase[k];
+               correct(heap, state, &count, path, m, k, i, ((vbk == root)? cost[i] : costrev[i]), FSP_MODE);
+               vbase[m] = vbk;
             }
          }
       }

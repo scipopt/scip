@@ -48,26 +48,29 @@ int GNODECmpByDist(void *first_arg, void *second_arg )
 }
 
 
-void SCIPindexListNodeInsert(
-      IDX** node,
-      int   index
-	)
+SCIP_RETCODE SCIPindexListNodeInsert(
+   SCIP* scip,
+   IDX** node,
+   int   index
+   )
 {
    IDX* curr;
    curr = *node;
 
+   //SCIP_CALL( SCIPallocMemory(scip, node) );
    *node = malloc((size_t)sizeof(IDX));
    (*node)->index = index;
-
    (*node)->parent = (curr);
 
+   return SCIP_OKAY;
 }
 
 
-void SCIPindexListNodeAppendCopy(
-      IDX** node1,
-      IDX* node2
-	)
+SCIP_RETCODE SCIPindexListNodeAppendCopy(
+   SCIP* scip,
+   IDX** node1,
+   IDX* node2
+   )
 {
    IDX* curr1;
    IDX* curr2;
@@ -75,36 +78,73 @@ void SCIPindexListNodeAppendCopy(
 
    curr1 = *node1;
    if( curr1 != NULL )
-   while( curr1->parent != NULL )
-      curr1 = curr1->parent;
+   {
+      // printf("not null \n");
+      while( curr1->parent != NULL )
+         curr1 = curr1->parent;
+   }
+   //else
+   // printf("null \n");
 
    curr2 = node2;
    while( curr2 != NULL )
    {
-      new = malloc((size_t)sizeof(IDX));
-      new->index = curr2->index;
+      //printf("%d curr2 index: %d\n ", i++, curr2->index);
       if( curr1 != NULL )
+      {
+	 new = malloc((size_t)sizeof(IDX));
+	 //SCIP_CALL( SCIPallocMemory(scip, &new) );
          curr1->parent = new;
+      }
       else
-	 *node1 = new;
+      {
+         // printf("reserve! \n");
+	 //SCIP_CALL( SCIPallocMemory(scip, node1) );
+	 *node1 = malloc((size_t)sizeof(IDX));
+	 new = *node1;
+      }
+      new->index = curr2->index; /*TODO error in e04 */
       curr1 = new;
       curr2 = curr2->parent;
    }
    if( new != NULL )
       new->parent = NULL;
+   //*node1 = new
+   curr1 = *node1;
+#if 0
+   if( 0 && i > 150)
+   {
+      int z = 0;
+
+      while( curr1->parent != NULL && z < i + 5 )
+      {
+         if( z > i -3 )
+            //printf("%d index %d \n ",z, curr1->index);
+            z++;
+         curr1 = curr1->parent;
+      }
+      assert(0);
+   }
+#endif
+   return SCIP_OKAY;
 }
 
 
 void SCIPindexListNodeFree(
+   SCIP* scip,
    IDX** node
-     )
+   )
 {
    IDX* curr;
    curr = *node;
+
    while( curr != NULL )
    {
+      //SCIPfreeMemory(scip, node);
       *node = curr->parent;
       free(curr);
+      //printf("delete \n");
+      //SCIPfreeMemory(scip, &curr);
       curr = *node;
    }
    assert(*node == NULL);

@@ -28,9 +28,12 @@
  *    t---t---o   : Kontraktion entlang 1, b -> a, wenn c(1) <= c(2)
  *    o---t---t   : Kontraktion entlang 2, b -> c, wenn c(2) <= c(1)
  */
-int degree_test_dir(
+SCIP_RETCODE degree_test_dir(
+   SCIP* scip,
    GRAPH*  g,
-   double* fixed)
+   double* fixed,
+   int*    count
+  )
 {
    int i;
    int i1;
@@ -39,11 +42,12 @@ int degree_test_dir(
    int e2;
    int rerun = TRUE;
    int done  = TRUE;
-   int count = 0;
 
    assert(g      != NULL);
    assert(fixed  != NULL);
+   assert(count != NULL);
 
+   *count = 0;
    SCIPdebugMessage("Degree Test: ");
    fflush(stdout);
 
@@ -69,11 +73,11 @@ int degree_test_dir(
 
             if (Is_term(g->term[i]))
 	    {
-	       SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
+	       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1]) );
                *fixed += g->cost[e1];
 	    }
 
-            graph_knot_contract(g, i1, i);
+            SCIP_CALL( graph_knot_contract(scip, g, i1, i) );
 
             assert(g->grad[i] == 0);
 
@@ -87,7 +91,7 @@ int degree_test_dir(
             if ((i1 < i) && (g->grad[i1] < 3))
                rerun = TRUE;
 
-            count++;
+            (*count)++;
 
             continue;
          }
@@ -118,9 +122,9 @@ int degree_test_dir(
 		  {
                      g->cost[e1]            += g->cost[Edge_anti(e2)];
                      g->cost[Edge_anti(e1)] += g->cost[e2];
-                     graph_knot_contract(g, i2, i);
+                     SCIP_CALL( graph_knot_contract(scip, g, i2, i) );
 
-                     count++;
+                     (*count)++;
 		  }
                   break;
                }
@@ -187,9 +191,9 @@ int degree_test_dir(
          }
       }
    }
-   SCIPdebugMessage(" %d Knots deleted\n", count);
-   printf("dirdeg %d Knots deleted\n", count);
+   SCIPdebugMessage(" %d Knots deleted\n", *count);
+   printf("dirdeg %d Knots deleted\n", *count);
    assert(graph_valid(g));
 
-   return(count);
+   return SCIP_OKAY;
 }

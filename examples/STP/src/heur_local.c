@@ -184,7 +184,7 @@ char nodeIsCrucial(
 
    return TRUE;
 }
-
+#if 0
 /** node degree (w.r.t. the steinertree) */
 static
 int stdeg(
@@ -216,7 +216,7 @@ int stdeg(
    return counter;
 }
 
-
+#endif
 /** for debug purposes only */
 static
 SCIP_RETCODE printGraph(
@@ -311,6 +311,7 @@ SCIP_RETCODE do_local(
    int e;
    int i;
    int k;
+   int artroot;
    int root;
    int totalruns;
    int nnodes;
@@ -356,7 +357,7 @@ SCIP_RETCODE do_local(
 
       /** VERTEX  INSERTION */
       newnverts = 0;
-      if( 1 )  /* TODO adapt function to directed graph */
+      if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID )  /* TODO adapt function to directed graph */
       {
          int newnode = 0;
          int oedge;
@@ -379,14 +380,16 @@ SCIP_RETCODE do_local(
          for( ;; )
          {
             /* if vertex i is not in the current ST and has at least two adjacent nodes, it might be added */
-            if( !steinertree[i] )
+            if( !steinertree[i] && graph->grad[i] > 1
+               && ( (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?
+                  !Is_term(graph->term[i]) : TRUE ) )
             {
                insertcount = 0;
-               assert(graph->grad[i] > 1);
 
                /* if an outgoing edge of vertex i points to the current ST, SCIPlinkcuttreeLink the edge to a list */
                for( oedge = graph->outbeg[i]; oedge != EAT_LAST; oedge = graph->oeat[oedge] )
-                  if( steinertree[graph->head[oedge]] )
+                  if( steinertree[graph->head[oedge]] && ( (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?
+                        !Is_term(graph->term[graph->head[oedge]]) : TRUE ) )
                      insert[insertcount++] = oedge;
 
                /* if there are at least two edges connecting node i and the current tree, start the insertion process */
@@ -490,6 +493,7 @@ SCIP_RETCODE do_local(
                      }
 #endif
                      /* TODO adjust tree st we only have to adjust best_result for the new edges*/
+
                   }
                }
             }
@@ -501,18 +505,33 @@ SCIP_RETCODE do_local(
 
             if( newnode == i )
                break;
-/*
-            if( i == 0 )
-               printf("VertInsert newrun \n");
+            /*
+              if( i == 0 )
+              printf("VertInsert newrun \n");
 	    */
          }
+         artroot = root;
+         if( graph->stp_type == STP_PRIZE_COLLECTING && newnverts > 0  )
+         {
+	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+	       if( !Is_term(graph->term[graph->head[e]]) && best_result[e] == CONNECT )
+                  artroot = graph->head[e];
+	    assert(artroot != root);
+	 }
 
          for( e = 0; e < nedges; e++ )
             best_result[e] = -1;
 
-         if( newnverts > 0 )
+         if( newnverts > 0  )
          {
-            do_prune(scip, graph, graph->cost, 0, best_result, steinertree);
+	    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+	    {
+	       do_pcprune(scip, graph, graph->cost, best_result, artroot, steinertree);
+	    }
+	    else
+	    {
+	       do_prune(scip, graph, graph->cost, 0, best_result, steinertree);
+	    }
 
             for( i = 0; i < nnodes; i++ )
                SCIPlinkcuttreeInit(&nodes[i]);
@@ -550,8 +569,8 @@ SCIP_RETCODE do_local(
          //printf(" ObjAfterVertexInsertion=%.12e\n", obj);
       }
 
-   //   if( newnverts > 0 && totalruns != 0 )
-//        printf(" second run! nverts: %d \n", newnverts);
+      //   if( newnverts > 0 && totalruns != 0 )
+      //        printf(" second run! nverts: %d \n", newnverts);
       /* Key-Vertex Elimination & Key-Path Exchange */
       if( 1 && (newnverts > 0 || totalruns == 0) )
       {
@@ -668,6 +687,7 @@ SCIP_RETCODE do_local(
             /* find a DFS order of the ST nodes */
             nstnodes = 0;
             dfsorder(graph, best_result, &(root), &nstnodes, dfstree);
+            assert(root == graph->source[0]);
 
             SCIP_CALL( SCIPallocBufferArray(scip, &supernodes, nstnodes) );
             SCIP_CALL( SCIPallocBufferArray(scip, &kpnodes, nstnodes) );
@@ -701,6 +721,31 @@ SCIP_RETCODE do_local(
                blists_start[vbase[k]] = blists_curr;
             }
 
+            if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+	    {
+               for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+                  k = graph->head[e];
+                  if( Is_term(graph->term[k]) )
+                  {
+                     //printf("term: %d \n", k);
+                     graphmark[k] = FALSE;
+                     for( l = graph->outbeg[k]; l != EAT_LAST; l = graph->oeat[l] )
+                     {
+                        if( !Is_term(graph->term[graph->head[l]]) )
+                        {
+                           assert(graph->head[l] != root);
+                           pinned[graph->head[l]] = TRUE;
+                           //	printf("dummy term: %d \n", graph->head[l]);
+                        }
+                     }
+                  }
+
+               }
+	       if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+	          graphmark[root] = FALSE;
+	    }
+
             /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
             for( e = 0; e < nedges; e += 2 )
             {
@@ -710,7 +755,7 @@ SCIP_RETCODE do_local(
                newedges[e + 1] = UNKNOWN;
 
                /* is edge 'e' a boundary-edge? */
-               if( vbase[node] != vbase[adjnode] )
+               if( vbase[node] != vbase[adjnode] && graphmark[node] && graphmark[adjnode] )
                {
                   edgecost = vnoi[node].dist + graph->cost[e] + vnoi[adjnode].dist;
                   //printf("put in pairheap[%d]: %d_%d cost : %f bases: %d %d \n ", vbase[node], node, adjnode, edgecost, vbase[graph->tail[e]], vbase[graph->head[e]] );
@@ -1056,13 +1101,14 @@ SCIP_RETCODE do_local(
                   for( k = 0; k < nsupernodes; k++ )
                   {
                      supernodesid[supernodes[k]] = k;
-                     //printf("adding node %d (org: %d) \n ", k , supernodes[k]);
+		     if( debg )
+                        printf("adding node %d (org: %d) \n ", k , supernodes[k]);
                      graph_knot_add(supergraph, graph->term[supernodes[k]]);
                   }
 
                   /* the (super-) vertex representing the current root-component of the ST */
                   k = supernodes[nsupernodes - 1];
-
+                  //printf("root: %d\n", root);
                   /* add edges to the supergraph */
                   for( l = 0; l < nboundedges; l++ )
                   {
@@ -1076,6 +1122,8 @@ SCIP_RETCODE do_local(
                      node = ((nodesmark[node])? node : k);
                      adjnode = ((nodesmark[adjnode])? adjnode : k);
 
+		     if( debg )
+                        printf("adding edge %d %d \n ", supernodesid[node], supernodesid[adjnode] );
                      /* compute the cost of the boundary-path pertaining to the boundary-edge 'edge' */
                      edgecost = vnoi[graph->tail[edge]].dist + graph->cost[edge] + vnoi[graph->head[edge]].dist;
                      graph_edge_add(supergraph, supernodesid[node], supernodesid[adjnode], edgecost, edgecost);
@@ -1102,6 +1150,8 @@ SCIP_RETCODE do_local(
                         edge = flipedge(boundedges[mst[l].edge / 2 ]);
 
                      mstcost += graph->cost[edge];
+                     //   printf("crucnode: %d \n", crucnode);
+                     //  printf("edge: %d %d \n", graph->tail[edge], graph->head[edge] );
                      assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
 
                      /* mark the edge (in the original graph) as visited */
@@ -1422,7 +1472,7 @@ SCIP_RETCODE do_local(
 
                   /* free the supergraph and the MST data structure */
                   graph_path_exit(supergraph);
-                  graph_free(supergraph, TRUE);
+                  graph_free(scip, supergraph, TRUE);
                   SCIPfreeBufferArray(scip, &mst);
 
                   /* unmark the descendant supervertices */
@@ -2151,6 +2201,9 @@ SCIP_RETCODE do_local(
          //assert(0);
          //assert(SS < 4);
       }
+      if( 0 && graph->stp_type == STP_UNDIRECTED )
+         assert(graph_sol_valid(graph, best_result));
+
       assert(graph_sol_valid(graph, best_result));
       SCIPfreeBufferArray(scip, &nodes);
       SCIPfreeBufferArray(scip, &steinertree);
@@ -2274,15 +2327,14 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    *result = SCIP_DIDNOTRUN;
 
    /* the local heuristics may not work correctly for problems other than undirected STPs */
-   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID )
+   if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID &&
+      graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
       return SCIP_OKAY;
 
    /* don't run local in a Subscip */
    if( SCIPgetSubscipDepth(scip) > 0 )
-   {
-      //printf("no local in Sub\n");
       return SCIP_OKAY;
-   }
+
 
    /* only process each solution once */
    bestsol = SCIPgetBestSol(scip);
@@ -2293,9 +2345,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    sols = SCIPgetSols(scip);
    assert(heurdata->bestnsols >= 0);
    min = MIN(heurdata->bestnsols, nsols);
-  /* for( v = 0; v < min; v++ )
+   /* for( v = 0; v < min; v++ )
       printf("%d  " , lastsolindices[v]);
-   printf(" before \n");*/
+      printf(" before \n");*/
 
    for( v = 0; v < min; v++ )
    {
@@ -2324,11 +2376,11 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    bestsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(bestsol);
-/*
-   for( i = 0; i < min; i++ )
-      printf("%d  " , lastsolindices[i]);
-   printf(" after \n");
-*/
+   /*
+     for( i = 0; i < min; i++ )
+     printf("%d  " , lastsolindices[i]);
+     printf(" after \n");
+   */
    /* has the new solution been found by this very heuristic? */
    if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
       return SCIP_OKAY;

@@ -518,7 +518,7 @@ static void compute_sd_dir(
  *
  * Special Distance Test
  */
-int sd_reduction(
+SCIP_RETCODE sd_reduction(
    SCIP* scip,
    GRAPH* g,
    double*  sddist,
@@ -529,6 +529,7 @@ int sd_reduction(
    int*    heap,
    int*    state,
    int*    knotexamined,
+   int*    elimins,
    int     runnum
    )
 {
@@ -539,7 +540,6 @@ int sd_reduction(
    int     i;
    int     e;
    int     j;
-   int     elimins = 0;
    int     knotoffset = 0;
 
    SCIPdebugMessage("SD-Reduktion: ");
@@ -563,6 +563,7 @@ int sd_reduction(
 
    assert(knotexamined != NULL);
 
+   *elimins = 0;
    redstarttime = SCIPgetTotalTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    stalltime = timelimit*0.1; /* this should be set as a parameter */
@@ -593,7 +594,7 @@ int sd_reduction(
 
    for(i = 0; i < g->knots; i++)
    {
-      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+      if( i % 100 == 0 && *elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
       if (!(i % 100))
@@ -639,10 +640,11 @@ int sd_reduction(
          if (LT(g->cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e])
             && LT(sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]))
          {
-	    SCIPindexListNodeFree(&((g->ancestors)[e]));
+	    SCIPindexListNodeFree(scip, &((g->ancestors)[e]));
+	    SCIPindexListNodeFree(scip, &((g->ancestors)[flipedge(e)]));
 	    assert(g->ancestors[e] == NULL);
             graph_edge_del(g, e);
-            elimins++;
+            (*elimins)++;
          }
       }
    }
@@ -658,9 +660,9 @@ int sd_reduction(
 #endif
    assert(graph_valid(g));
 
-   SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
+   SCIPdebugMessage("%d Edges deleted\n", *elimins * 2);
    /*printf("%d SD: Edges deleted\n", elimins * 2);*/
-   return(elimins);
+   return SCIP_OKAY;
 }
 
 /* C. W. Duin and A. Volganant
@@ -671,7 +673,8 @@ int sd_reduction(
  *
  * Special Distance Test for directed graphs
  */
-int sd_reduction_dir(
+SCIP_RETCODE sd_reduction_dir(
+   SCIP*    scip,
    GRAPH*   g,
    double** sd_indist,
    double** sd_intran,
@@ -680,7 +683,8 @@ int sd_reduction_dir(
    double*  cost,
    int*     heap,
    int*     state,
-   int*     outterms
+   int*     outterms,
+   int*     elimins
    )
 {
    int*    sourceadj;
@@ -691,7 +695,6 @@ int sd_reduction_dir(
    int     j;
    int     k;
    int     l;
-   int     elimins = 0;
    double  tempsd;
    double  specialdist;
 
@@ -702,7 +705,9 @@ int sd_reduction_dir(
    assert(cost       != NULL);
    assert(heap       != NULL);
    assert(state      != NULL);
+   assert(elimins     != NULL);
 
+   *elimins = 0;
    SCIPdebugMessage("SD-Reduktion: ");
    fflush(stdout);
 
@@ -838,7 +843,7 @@ int sd_reduction_dir(
             else
                graph_edge_del(g, e);
 
-            elimins++;
+            (*elimins)++;
 
             //for( m = 0; m < outtermcount; m++ )
             //{
@@ -849,14 +854,13 @@ int sd_reduction_dir(
       }
    }
 
-
    assert(graph_valid(g));
 
-   SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
+   SCIPdebugMessage("%d Edges deleted\n", *elimins * 2);
 
    free(sourceadj);
 
-   return(elimins);
+   return SCIP_OKAY;
 }
 
 static int redirect_edge(
@@ -1005,31 +1009,31 @@ SCIP_RETCODE bd3_reduction(
 
       for(k = 0; k < 3; k++)
       {
-	 SCIPindexListNodeFree(&(ancestors[k]));
-	 SCIPindexListNodeFree(&(revancestors[k]));
+	 SCIPindexListNodeFree(scip, &(ancestors[k]));
+	 SCIPindexListNodeFree(scip, &(revancestors[k]));
          assert(ancestors[k] == NULL);
          assert(revancestors[k] == NULL);
       }
 
       e1 = g->outbeg[i];
-      SCIPindexListNodeAppendCopy(&(ancestors[0]), g->ancestors[e1]);
-      SCIPindexListNodeAppendCopy(&(revancestors[0]), g->ancestors[Edge_anti(e1)]);
+      SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(ancestors[0]), g->ancestors[e1]) );
+      SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(revancestors[0]), g->ancestors[Edge_anti(e1)]) );
 
       assert(e1 != EAT_LAST);
 
       k1 = g->head[e1];
       c1 = g->cost[e1];
       e2 = g->oeat[e1];
-      SCIPindexListNodeAppendCopy(&(ancestors[1]), g->ancestors[e2]);
-      SCIPindexListNodeAppendCopy(&(revancestors[1]), g->ancestors[Edge_anti(e2)]);
+      SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(ancestors[1]), g->ancestors[e2]) );
+      SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(revancestors[1]), g->ancestors[Edge_anti(e2)]) );
 
       assert(e2 != EAT_LAST);
 
       k2 = g->head[e2];
       c2 = g->cost[e2];
       e3 = g->oeat[e2];
-      SCIPindexListNodeAppendCopy(&(ancestors[2]), g->ancestors[e3]);
-      SCIPindexListNodeAppendCopy(&(revancestors[2]), g->ancestors[Edge_anti(e3)]);
+      SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(ancestors[2]), g->ancestors[e3]) );
+      SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(revancestors[2]), g->ancestors[Edge_anti(e3)]) );
       assert(e3 != EAT_LAST);
 
       k3 = g->head[e3];
@@ -1051,8 +1055,8 @@ SCIP_RETCODE bd3_reduction(
 
       if (LT(pathdist1[k2], c1 + c2))
       {
-	 SCIPindexListNodeFree(&((g->ancestors)[e1]));
-	 SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e1)]));
+	 SCIPindexListNodeFree(scip, &((g->ancestors)[e1]));
+	 SCIPindexListNodeFree(scip, &((g->ancestors)[Edge_anti(e1)]));
          graph_edge_del(g, e1);
       }
       else
@@ -1060,20 +1064,20 @@ SCIP_RETCODE bd3_reduction(
 	 n1 = redirect_edge(g, e1, k1, k2, c1 + c2);
          if( n1 >= 0 )
 	 {
-            SCIPindexListNodeFree(&(g->ancestors[n1]));
-            SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
-            SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[0]);
-            SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), ancestors[1]);
+            SCIPindexListNodeFree(scip, &(g->ancestors[n1]));
+            SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[0]) );
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[1]) );
 
-            SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), ancestors[0]);
-            SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), revancestors[1]);
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[0]) );
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[1]) );
 	 }
       }
 
       if (LT(pathdist2[k3], c2 + c3))
       {
-	 SCIPindexListNodeFree(&((g->ancestors)[e2]));
-	 SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e2)]));
+	 SCIPindexListNodeFree(scip, &((g->ancestors)[e2]));
+	 SCIPindexListNodeFree(scip, &((g->ancestors)[Edge_anti(e2)]));
          graph_edge_del(g, e2);
       }
       else
@@ -1081,20 +1085,20 @@ SCIP_RETCODE bd3_reduction(
 	 n1 = redirect_edge(g, e2, k2, k3, c2 + c3);
 	 if( n1 >= 0 )
 	 {
-            SCIPindexListNodeFree(&(g->ancestors[n1]));
-            SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
-            SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[1]);
-            SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), ancestors[2]);
+            SCIPindexListNodeFree(scip, &(g->ancestors[n1]));
+            SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[1]) );
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[2]) );
 
-            SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), ancestors[1]);
-            SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), revancestors[2]);
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[1]) );
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[2]) );
 	 }
       }
 
       if (LT(pathdist1[k3], c1 + c3))
       {
-	 SCIPindexListNodeFree(&((g->ancestors)[e3]));
-	 SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e3)]));
+	 SCIPindexListNodeFree(scip, &((g->ancestors)[e3]));
+	 SCIPindexListNodeFree(scip, &((g->ancestors)[Edge_anti(e3)]));
          graph_edge_del(g, e3);
       }
       else
@@ -1102,19 +1106,26 @@ SCIP_RETCODE bd3_reduction(
          n1 = redirect_edge(g, e3, k3, k1, c3 + c1);
          if( n1 >= 0 )
 	 {
-            SCIPindexListNodeFree(&(g->ancestors[n1]));
-            SCIPindexListNodeFree(&(g->ancestors[Edge_anti(n1)]));
-            SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), revancestors[2]);
-            SCIPindexListNodeAppendCopy(&(g->ancestors[n1]), ancestors[0]);
+            SCIPindexListNodeFree(scip, &(g->ancestors[n1]));
+            SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[2]) );
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[0]) );
 
-            SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), ancestors[2]);
-            SCIPindexListNodeAppendCopy(&(g->ancestors[Edge_anti(n1)]), revancestors[0]);
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[2]) );
+            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[0]) );
 	 }
       }
 
       assert(g->grad[i] == 0);
    }
 
+   for(k = 0; k < 3; k++)
+   {
+      SCIPindexListNodeFree(scip, &(ancestors[k]));
+      SCIPindexListNodeFree(scip, &(revancestors[k]));
+      assert(ancestors[k] == NULL);
+      assert(revancestors[k] == NULL);
+   }
    SCIPfreeBufferArray(scip, &ancestors);
    SCIPfreeBufferArray(scip, &revancestors);
    SCIPfreeBufferArray(scip, &pathdist2);
@@ -1157,6 +1168,7 @@ inline static double mst_cost(
 SCIP_RETCODE nsv_reduction(
    SCIP*   scip,
    GRAPH*  g,
+   double* cost,
    double* fixed,
    int* nelims
    )
@@ -1167,7 +1179,6 @@ SCIP_RETCODE nsv_reduction(
    PATH**  path;
    PATH*   mst1;
    PATH*   mst2;
-   double* cost;
    int     i;
    int     e;
    int     k;
@@ -1193,9 +1204,6 @@ SCIP_RETCODE nsv_reduction(
 
    assert(mst1 != NULL);
    assert(mst2 != NULL);
-
-   cost = malloc((size_t)g->edges * sizeof(double));
-
    assert(cost != NULL);
 
    redstarttime = SCIPgetTotalTime(scip);
@@ -1296,8 +1304,8 @@ SCIP_RETCODE nsv_reduction(
            e, i, k, min1, min2, cost1, cost2);
          */
          *fixed += g->cost[e];
-         SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
-         graph_knot_contract(g, i, k);
+         SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
+         SCIP_CALL( graph_knot_contract(scip, g, i, k) );
 
          (*nelims)++;
 
@@ -1319,7 +1327,6 @@ SCIP_RETCODE nsv_reduction(
    free(mst1);
    free(mst2);
    free(path);
-   free(cost);
 
    assert(graph_valid(g));
 
@@ -1359,9 +1366,11 @@ SCIP_RETCODE nsv_reduction(
  *
  * This is only called for the directed Steiner tree problem
  */
-int nv_reduction_optimal(
+SCIP_RETCODE nv_reduction_optimal(
+   SCIP*   scip,
    GRAPH*  g,
    double* fixed,
+   int* elimins,
    int runnum)
 {
    PATH**  path;
@@ -1386,7 +1395,6 @@ int nv_reduction_optimal(
    int     minhops;
    int     shortarc;
    int     shortarctail;
-   int     elimins = 0;
    char    antiedgeexists;
    int     knotoffset;
 
@@ -1429,6 +1437,7 @@ int nv_reduction_optimal(
    assert(heap != NULL);
    assert(state != NULL);
 
+   *elimins = 0;
    pred = malloc((size_t)g->edges * sizeof(int));
    minArc1 = malloc((size_t)g->knots * sizeof(int));
    minArc2 = malloc((size_t)g->knots * sizeof(int));
@@ -1538,15 +1547,15 @@ int nv_reduction_optimal(
 
                      }
                   }
-                  elimins++;
+                  (*elimins)++;
                }
             }
             else
             {
                *fixed += min1;
-               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
-                                                                                       shortarc instead of shortarctail */
-               graph_knot_contract(g, i, shortarctail);
+               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc]) ); /* I think that this should be
+                                                                                                           shortarc instead of shortarctail */
+               SCIP_CALL( graph_knot_contract(scip, g, i, shortarctail) );
 
                if( g->stp_type == STP_HOP_CONS )
                {
@@ -1554,7 +1563,7 @@ int nv_reduction_optimal(
                      g->cost[e] = FARAWAY;
                }
 
-               elimins++;
+               (*elimins)++;
             }
 
             /* computing the shortest paths from the source node */
@@ -1598,10 +1607,10 @@ int nv_reduction_optimal(
 
    //if( Is_term(g->term[i]) )
    //{
-   //SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+   //SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]);
    //*fixed += g->cost[e];
    //}
-   //graph_knot_contract(g, j, i);
+   //graph_knot_contract(scip, g, j, i);
 
    //elimins++;
    //}
@@ -1623,9 +1632,9 @@ int nv_reduction_optimal(
    free(path);
 
    assert(graph_valid(g));
-   SCIPdebugMessage(" %d Knots deleted\n", elimins);
+   SCIPdebugMessage(" %d Knots deleted\n", *elimins);
 
-   return(elimins);
+   return SCIP_OKAY;
 }
 
 
@@ -1763,8 +1772,9 @@ SCIP_RETCODE sl_reduction(
                (*nelims)++;
                *fixed += g->cost[e];
                //printf("contrSL: %d-%d \n", tail, head);
-               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
-	       graph_knot_contract(g, tail, head);
+	       printf("slcontract: %d-%d\n", g->tail[e], g->head[e]);
+               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
+	       SCIP_CALL( graph_knot_contract(scip, g, tail, head) );
             }
 	 }
       }
@@ -1906,10 +1916,10 @@ int nv_reduction(
                   continue;
 
                (*nelims)++;
-
+               printf("nvcontract: %d %d\n", g->tail[edge1], g->head[edge1]);
                *fixed += g->cost[edge1];
-               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
-               graph_knot_contract(g, j, k);
+               SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
+               SCIP_CALL( graph_knot_contract(scip, g, j, k) );
             }
          }
          else
@@ -1928,8 +1938,9 @@ int nv_reduction(
                if( e == EAT_LAST )
                   continue;
                *fixed += g->cost[edge1];
-               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[edge1]);
-               graph_knot_contract(g, j, k);
+	       printf("nvcontract2: %d %d\n", g->tail[edge1], g->head[edge1]);
+               SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
+               SCIP_CALL( graph_knot_contract(scip, g, j, k) );
                (*nelims)++;
             }
          }
@@ -2030,7 +2041,7 @@ SCIP_RETCODE ledge_reduction(
    assert(netnnodes == e);
    if( netnnodes == 0 )
    {
-      graph_free(netgraph, TRUE);
+      graph_free(scip, netgraph, TRUE);
       SCIPfreeBufferArray(scip, &nodesid);
       return SCIP_OKAY;
    }
@@ -2104,8 +2115,8 @@ SCIP_RETCODE ledge_reduction(
          if( SCIPisGT(scip, g->cost[e], maxcost) )
          {
             (*nelims)++;
-            SCIPindexListNodeFree(&((g->ancestors)[e]));
-            SCIPindexListNodeFree(&((g->ancestors)[Edge_anti(e)]));
+            SCIPindexListNodeFree(scip, &((g->ancestors)[e]));
+            SCIPindexListNodeFree(scip, &((g->ancestors)[Edge_anti(e)]));
 	    v1 = g->oeat[e];
 	    //printf("LE: elim: %d->%d (%d) \n", g->tail[e], g->head[e], g->oeat[e]);
             graph_edge_del(g, e);
@@ -2120,7 +2131,7 @@ SCIP_RETCODE ledge_reduction(
 
    /* free netgraph and  MST data structure */
    graph_path_exit(netgraph);
-   graph_free(netgraph, TRUE);
+   graph_free(scip, netgraph, TRUE);
    SCIPfreeBufferArray(scip, &mst);
    SCIPfreeBufferArray(scip, &nodesid);
    //printf("LE elims: %d \n", *nelims);
@@ -2303,93 +2314,93 @@ int nv_reduction(
                assert(min2 < FARAWAY);
 
                *fixed += min1;
-               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
-                                                                                       shortarc instead of shortarctail */
+               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
+                                                                                                         shortarc instead of shortarctail */
 
-               graph_knot_contract(g, shortarctail, i);
-               //graph_knot_contract(g, i, shortarctail);
+                  graph_knot_contract(scip, g, shortarctail, i);
+                  //graph_knot_contract(scip, g, i, shortarctail);
 
-               elimins++;
+                  elimins++;
 
-               //printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
-               //   shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
+                  //printf("i: %d, shortarctail: %d, isterm: %d, radius[i]: %f, radius[shortarctail] %f\n", i,
+                  //   shortarctail, g->term[i], radius[vregion[i]], radius[vregion[shortarctail]]);
 
-               voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
-               calculate_distances(g, path, g->cost, FSP_MODE);
+                  voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
+                  calculate_distances(g, path, g->cost, FSP_MODE);
+                  }
             }
          }
-      }
 #if 0
-      /* The knot is not a terminal so we can perform the short link test */
-      else if ( !Is_term(g->term[i]) )
-      {
-         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+         /* The knot is not a terminal so we can perform the short link test */
+         else if ( !Is_term(g->term[i]) )
          {
-            j = g->tail[e];
-            if( vregion[i] != vregion[j] )
+            for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
             {
-               if( minArc1[vregion[i]] < 0 )
-                  minArc1[vregion[i]] = e;
-               else if( LE(g->cost[e], g->cost[minArc1[vregion[i]]]) )
+               j = g->tail[e];
+               if( vregion[i] != vregion[j] )
                {
-                  minArc2[vregion[i]] = minArc1[vregion[i]];
-                  minArc1[vregion[i]] = e;
+                  if( minArc1[vregion[i]] < 0 )
+                     minArc1[vregion[i]] = e;
+                  else if( LE(g->cost[e], g->cost[minArc1[vregion[i]]]) )
+                  {
+                     minArc2[vregion[i]] = minArc1[vregion[i]];
+                     minArc1[vregion[i]] = e;
+                  }
                }
             }
          }
-      }
 #endif
-   }
+      }
 
 #if 0
-   for( k = 0; k < termcount; k++ )
-   {
-      assert(terms[k] >= 0 && terms[k] < g->knots);
-
-      if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && GE(g->cost[minArc2[terms[k]]],
-            pathfromterm[g->tail[minArc1[terms[k]]]].dist + g->cost[minArc1[terms[k]]]
-            + pathfromterm[g->head[minArc1[terms[k]]]].dist) )
+      for( k = 0; k < termcount; k++ )
       {
-         e = minArc1[terms[k]];
-         i = g->head[e];
-         j = g->tail[e];
+         assert(terms[k] >= 0 && terms[k] < g->knots);
 
-         if( !Is_term(g->term[i]) && !Is_term(g->term[j]) )
+         if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && GE(g->cost[minArc2[terms[k]]],
+               pathfromterm[g->tail[minArc1[terms[k]]]].dist + g->cost[minArc1[terms[k]]]
+               + pathfromterm[g->head[minArc1[terms[k]]]].dist) )
          {
-            SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
-            *fixed += g->cost[e];
-            graph_knot_contract(g, j, i);
+            e = minArc1[terms[k]];
+            i = g->head[e];
+            j = g->tail[e];
 
-            elimins++;
+            if( !Is_term(g->term[i]) && !Is_term(g->term[j]) )
+            {
+               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]);
+                  *fixed += g->cost[e];
+                  graph_knot_contract(scip, g, j, i);
+
+                  elimins++;
+                  }
+            }
          }
-      }
-   }
 #endif
 
-   for( i = g->knots - 1; i >= 0; i-- )
-   {
-      if( path[i] != NULL )
-         free(path[i]);
-   }
+         for( i = g->knots - 1; i >= 0; i-- )
+         {
+            if( path[i] != NULL )
+               free(path[i]);
+         }
 
-   free(terms);
-   free(minArc2);
-   free(minArc1);
-   free(pred);
-   free(state);
-   free(heap);
-   free(vregion);
-   free(radius);
-   free(distance);
-   free(pathfromsource);
-   free(pathfromterm);
-   free(path);
+         free(terms);
+         free(minArc2);
+         free(minArc1);
+         free(pred);
+         free(state);
+         free(heap);
+         free(vregion);
+         free(radius);
+         free(distance);
+         free(pathfromsource);
+         free(pathfromterm);
+         free(path);
 
-   assert(graph_valid(g));
-   printf("nv_reduction: %d Knots deleted\n", elimins);
-   SCIPdebugMessage("nv_reduction: %d Knots deleted\n", elimins);
-   /*printf("nv_reduction: %d Knots deleted\n", elimins);*/
+         assert(graph_valid(g));
+         printf("nv_reduction: %d Knots deleted\n", elimins);
+         SCIPdebugMessage("nv_reduction: %d Knots deleted\n", elimins);
+         /*printf("nv_reduction: %d Knots deleted\n", elimins);*/
 
-   return(elimins);
-}
+         return(elimins);
+      }
 #endif

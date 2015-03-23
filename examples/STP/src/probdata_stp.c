@@ -760,8 +760,8 @@ SCIP_RETCODE createVariables(
             {
                if( !Is_term(graph->term[graph->head[e]]) )
                {
-		 if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
-                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
+                  if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+                     SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
 
 		  /* variables are preferred to be branched on */
 		  SCIP_CALL( SCIPchgVarBranchPriority( scip, probdata->edgevars[e], 10) );
@@ -1206,7 +1206,7 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
       graph_path_exit((*probdata)->graph);
 
-      graph_free((*probdata)->graph, TRUE);
+      graph_free(scip, (*probdata)->graph, TRUE);
    }
 
    /* free the (original) probdata */
@@ -1556,7 +1556,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    presolinfo.fixed = 0;
 
    /* create graph */
-   graph = graph_load(filename, &presolinfo);
+   graph = graph_load(scip, filename, &presolinfo);
    if( printfs )
       printf("load type :: %d \n\n", graph->stp_type);
    if( graph == NULL )
@@ -1691,9 +1691,6 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->mode = MODE_CUT;
 
    assert(graph != NULL );
-   /* init shortest path algorithm (needed for reduction) */
-
-   graph_path_init(graph);
 
    /* select a root node */
    if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING
@@ -1709,13 +1706,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->offset = presolinfo.fixed;
 
    /* presolving */
-   SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims) );
+   SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims) );
 
-   graph_path_exit(graph);
+   graph = graph_pack(scip, graph, TRUE);
 
-   probdata->graph = graph_pack(graph, TRUE);
-
-   graph = probdata->graph;
+   probdata->graph = graph;
 
    /* */
    if( graph != NULL )
@@ -1772,8 +1767,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 	 if( graph->stp_type == STP_DEG_CONS )
 	    SCIP_CALL( createDegreeConstraints(scip, probdata) );
 
-    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT)
-       SCIP_CALL( createPrizeConstraints(scip, probdata) );
+         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT)
+            SCIP_CALL( createPrizeConstraints(scip, probdata) );
       }
       else
       {

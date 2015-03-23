@@ -180,14 +180,14 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 /* grphbase.c
  */
 extern GRAPH* graph_init(int, int, int, int);
-extern void   graph_init_history(GRAPH*, int**,int**, IDX***);
+extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*, int**,int**, IDX***);
 extern void   graph_resize(GRAPH*, int, int, int);
-extern void   graph_free(GRAPH*, char);
+extern void   graph_free(SCIP*, GRAPH*, char);
 extern void   graph_prize_transform(GRAPH*, double*);
 extern void   graph_rootprize_transform(GRAPH*, double*);
 extern void   graph_maxweight_transform(GRAPH*, double*);
 extern GRAPH* graph_grid_create(int**, int, int, int);
-extern GRAPH* graph_obstgrid_create(int**, int**, int, int, int, int);
+extern GRAPH* graph_obstgrid_create(SCIP*, int**, int**, int, int, int, int);
 extern void   graph_grid_coordinates(int**, int**, int*, int, int);
 extern GRAPH* graph_copy(const GRAPH*);
 extern void   graph_flags(GRAPH*, int);
@@ -195,13 +195,13 @@ extern void   graph_show(const GRAPH*);
 extern void   graph_ident(const GRAPH*);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
-extern void   graph_knot_contract(GRAPH*, int, int);
+extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int, int);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
 extern void   graph_edge_add(GRAPH*, int, int, double, double);
 extern void   graph_edge_del(GRAPH*, int);
 extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_uncover(GRAPH*);
-extern GRAPH* graph_pack(GRAPH*, SCIP_Bool);
+extern GRAPH* graph_pack(SCIP*, GRAPH*, SCIP_Bool);
 extern void   graph_trail(const GRAPH*, int);
 extern int    graph_valid(const GRAPH*);
 extern char    graph_valid2(SCIP*, const GRAPH*, SCIP_Real*);
@@ -218,7 +218,7 @@ extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   voronoi_pres(const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_dist(const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, PATH*);
-extern void   voronoi_radius(SCIP* scip, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
+extern void   voronoi_radius(SCIP* scip, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   voronoi_hop(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int*);
@@ -238,7 +238,7 @@ extern void   graph_mincut_exec(GRAPH*, int, int, const int*, int*, int);
 
 /* grphload.c
  */
-extern GRAPH* graph_load(const char*, PRESOL*);
+extern GRAPH* graph_load(SCIP*, const char*, PRESOL*);
 
 /* grphsave.c
  */
@@ -253,22 +253,22 @@ extern void graph_boxcoord(GRAPH* g);
 
 /* reduce.c
  */
-extern SCIP_RETCODE reduce(SCIP*, GRAPH*, SCIP_Real*, int, int);
+extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int);
 
 /* sdtest.c
  */
-extern int    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int*, int);
-extern int    sd_reduction_dir(GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*);
+extern SCIP_RETCODE    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE    sd_reduction_dir(SCIP*, GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    bd3_reduction(SCIP*, GRAPH*, double*, double*, int*, int*, int*);
-extern SCIP_RETCODE    nsv_reduction(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern int    nv_reduction_optimal(GRAPH*, double*, int);
+extern SCIP_RETCODE    nsv_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*);
+extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
 extern SCIP_RETCODE    nv_reduction(SCIP*, GRAPH*, PATH*,double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sl_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    ledge_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
 
 /* dirreduce.c
  */
-extern int degree_test_dir(GRAPH*, double*);
+extern SCIP_RETCODE degree_test_dir(SCIP*, GRAPH*, double*, int*);
 
 /* bndtest.c
  */

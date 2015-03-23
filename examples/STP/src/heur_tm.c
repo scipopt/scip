@@ -187,8 +187,151 @@ SCIP_RETCODE printGraph(
 }
 
 #endif
-/* prune the Steiner Tree in such a way that all leaves are terminals */
 
+
+/* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
+SCIP_RETCODE do_pcprune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   SCIP_Real*            cost,               /**< edge costs */
+   int*                  result,             /**< ST edges */
+   int                   root,
+   char*                 connected           /**< ST nodes */
+   )
+{
+   PATH*  mst;
+   int i;
+   int j;
+   int e1;
+   int e2;
+   int k1;
+   int k2;
+   int count;
+   int nnodes;
+   nnodes = g->knots;
+   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
+
+   /* compute the MST, exclude all terminals */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( connected[i] && !Is_term(g->term[i]) )
+         g->mark[i] = TRUE;
+      else
+         g->mark[i] = FALSE;
+   }
+
+   if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+   {
+      root = g->source[0];
+      g->mark[root] = TRUE;
+   }
+
+   assert(root >= 0);
+   assert(root < nnodes);
+
+   graph_path_exec(g, MST_MODE, root, cost, mst);
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( g->mark[i] && (mst[i].edge != -1) )
+      {
+         assert(g->head[mst[i].edge] == i);
+         assert(result[mst[i].edge] == -1);
+         result[mst[i].edge] = CONNECT;
+      }
+   }
+
+   /* connect all terminals */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) && i != g->source[0] )
+      {
+         e1 = g->inpbeg[i];
+         assert(e1 >= 0);
+         e2 = g->ieat[e1];
+
+         if( e2 == EAT_LAST )
+         {
+            result[e1] = CONNECT;
+            continue;
+         }
+         assert(e2 >= 0);
+
+         assert(g->ieat[e2] == EAT_LAST);
+         k1 = g->tail[e1];
+         k2 = g->tail[e2];
+         assert(k1 == g->source[0] || k2 == g->source[0]);
+         if( k1 != g->source[0] && connected[k1] )
+         {
+            result[e1] = CONNECT;
+         }
+         else if( k2 != g->source[0] && connected[k2] )
+         {
+            result[e2] = CONNECT;
+         }
+         else if( k1 == g->source[0] )
+         {
+            result[e1] = CONNECT;
+         }
+         else if( k2 == g->source[0] )
+         {
+            result[e2] = CONNECT;
+	 }
+      }
+   }
+   /* prune */
+   do
+   {
+      SCIPdebug(fputc('C', stdout));
+      SCIPdebug(fflush(stdout));
+
+      count = 0;
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( !g->mark[i] )
+            continue;
+
+         if( g->term[i] == 0 )
+            continue;
+
+         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
+            if( result[j] == CONNECT )
+               break;
+
+         if( j == EAT_LAST )
+         {
+            /* there has to be exactly one incoming edge
+             */
+            for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
+            {
+               if( result[j] == 0 )
+               {
+		  printf("pruned! \n");
+                  result[j]    = -1;
+                  g->mark[i]   = FALSE;
+                  connected[i] = FALSE;
+                  count++;
+                  break;
+               }
+            }
+            //  if( g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+            // {
+            if( j == EAT_LAST )
+               printf("in %d \n", i);
+            //assert(j != EAT_LAST);
+            // }
+         }
+      }
+   }
+   while( count > 0 );
+
+   SCIPfreeBufferArray(scip, &mst);
+
+   return SCIP_OKAY;
+}
+
+
+/* prune the Steiner Tree in such a way that all leaves are terminals */
 SCIP_RETCODE do_prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -238,19 +381,6 @@ SCIP_RETCODE do_prune(
          result[mst[i].edge] = layer;
       }
    }
-   /*
-     if(connected[1053])
-     {
-     printf("connected 1053!! term? : %d\n", g->term[1053]);
-     for( j = g->outbeg[1053]; j != EAT_LAST; j = g->oeat[j] )
-     if( result[j] == 0 )
-     printf("out 1053: %d->%d \n", g->tail[j], g->head[j]);
-
-     for( j = g->inpbeg[1053]; j != EAT_LAST; j = g->ieat[j] )
-     if( result[j] == 0 )
-     printf("in 1053: %d->%d \n", g->tail[j], g->head[j]);
-     }
-   */
 
    /* prune */
    do
@@ -290,7 +420,7 @@ SCIP_RETCODE do_prune(
             if( g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
 	    {
 	       if( j == EAT_LAST )
-		   printf("in %d \n", i);
+                  printf("in %d \n", i);
                assert(j != EAT_LAST);
 	    }
          }
@@ -446,6 +576,7 @@ SCIP_RETCODE do_tmX(
    SCIP_Real*            costrev,
    SCIP_Real**           pathdist,
    int                   start,
+   int                   artroot,
    int*                  result,
    int**                 pathedge,
    char*                 connected
@@ -568,14 +699,16 @@ SCIP_RETCODE do_tmX(
    SCIPdebug(fflush(stdout));
    SCIPfreeBufferArray(scip, &cluster);
 
-   //printf("TMX\n");
    for( e = 0; e < g->edges; e++ )
    {
       assert(cost[e] >= 0);
       if( SCIPisLT(scip, cost[e], 1e+9) )
          cost[e] = g->cost[e];
    }
+   // if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_GRID || g->stp_type == STP_OBSTACLES_GRID )
    SCIP_CALL( do_prune(scip, g, cost, 0, result, connected) );
+   // else
+
    for( e = 0; e < g->edges; e++ )
       cost[e] = costrev[flipedge(e)];
 
@@ -1255,6 +1388,7 @@ SCIP_RETCODE do_layer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,
    const GRAPH*          graph,
+   int*          starts,
    int*          bestnewstart,
    int*          best_result,
    int           runs,
@@ -1342,7 +1476,6 @@ SCIP_RETCODE do_layer(
    if( printfs )
       printf(" %d \n ", mode);
 
-
    if( graph->layers > 1 )
    {
       /*  SCIP_CALL( do_heuristic(scip, graph, layer, best_result, graph->source[layer], connected, cost, costrev, path) );*/
@@ -1365,13 +1498,16 @@ SCIP_RETCODE do_layer(
 	    runs = nterms - 1;
 	 mode = TM;
       }
-      /* if we run over all nodes, we do not need to do the following */
+      else if( starts != NULL )
+      {
+	 for( k = 0; k < MIN(runs, nnodes); k++ )
+	    start[k] = starts[k];
+      }
       else if( runs < nnodes )
       {
 	 int* perm = NULL; /* permutation array */
 	 if( SCIPgetRandomInt(0, 2, &(heurdata->randseed)) == 2 || best == -1 )
 	    best = graph->source[0];
-
 
          r = 0;
 
@@ -1380,7 +1516,6 @@ SCIP_RETCODE do_layer(
          for( k = 0; k < nnodes; k++ )
             perm[k] = k;
          SCIPpermuteIntArray(perm, 0, nnodes, &(heurdata->randseed));
-
 
          /* use terminals (randomly permutated) as starting points for TM heuristic */
          for( k = 0; k < nnodes; k++ )
@@ -1411,8 +1546,6 @@ SCIP_RETCODE do_layer(
             }
 	 }
 
-         /* for( r = 0; r < runs; r++ )
-            printf(" start[%d): %d \n", r, start[r]);*/
          /* check whether we have a already selected the best starting node */
          for( r = 0; r < runs; r++ )
 	 {
@@ -1515,14 +1648,14 @@ SCIP_RETCODE do_layer(
 
 		     if( SCIPisEQ(scip, costrev[e], 0.0) )
 		     {
-		      assert(costrev[e] == 0);
-		      assert(cost[flipedge(e)] == 0);
-		      edges_tz[z] = e;
+                        assert(costrev[e] == 0);
+                        assert(cost[flipedge(e)] == 0);
+                        edges_tz[z] = e;
 		     }
                      else
 		     {
 		        edges_tz[z] = UNKNOWN;
-			printf("costrevnorm %d: %f\n", e, costrev[e] );
+			//printf("costrevnorm %d: %f\n", e, costrev[e] );
 		     }
                      t = graph->head[e];
 
@@ -1598,15 +1731,12 @@ SCIP_RETCODE do_layer(
 #endif
                //  assert(graph->head[rootedge + 2] == root);
             }
-            if( mode == TM )
 #if TMX
-               SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, root, result, pathedge, connected) );
+            SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, root, graph->tail[rootedge], result, pathedge, connected) );
 #else
             SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, root, result, connected) );
 #endif
-            else
-               SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, 0, node_dist, root, result, vcount,
-                     nodenterms, node_base, node_edge, (r == 0), connected) );
+
 
             firstrun = FALSE;
             obj = 0.0;
@@ -1696,7 +1826,7 @@ SCIP_RETCODE do_layer(
             }
             else if( mode == TM )
 #if TMX
-               SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], result, pathedge, connected) );
+               SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], -1, result, pathedge, connected) );
 #else
             SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, start[r], result, connected) );
 #endif
@@ -2158,11 +2288,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          }
          else
          {
-	   /*
-	    if( heurdata->nexecs % 10 == 0 )
-	       printf("tm totally randomized: \n\n");
-	    if( heurdata->nexecs % 4 == 0 )
-	       printf("tm partly randomized: (%f  %f)\n\n", randlower, randupper);
+            /*
+              if( heurdata->nexecs % 10 == 0 )
+              printf("tm totally randomized: \n\n");
+              if( heurdata->nexecs % 4 == 0 )
+              printf("tm partly randomized: (%f  %f)\n\n", randlower, randupper);
 	    */
             if( graph->stp_type == STP_HOP_CONS )
             {
@@ -2257,7 +2387,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
            }
            hop constraint problem? */
          /* can we connect the network */
-         SCIP_CALL( do_layer(scip, heurdata, graph, &best_start, results, runs, heurdata->beststartnode, cost, costrev, maxcost) );
+         SCIP_CALL( do_layer(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode, cost, costrev, maxcost) );
 #if 0
          /* take the path */
          if( graph->layers > 1 )
@@ -2304,7 +2434,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          pobj += graph->cost[v % nedges] * nval[v];
 
       //assert(graph_valid2(scip, graph, cost));
-      // printf("tm: %f \n", pobj + SCIPprobdataGetOffset(scip));
+      printf("tm: %f \n", pobj + SCIPprobdataGetOffset(scip));
       if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
       {
          heurdata->beststartnode = best_start;
@@ -2360,7 +2490,14 @@ SCIP_RETCODE SCIPincludeHeurTM(
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolTM) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolTM) );
 #endif
+   heurdata->ncalls = 0;
+   heurdata->nexecs = 0;
 
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#else
+   heurdata->randseed = 0;
+#endif
    /* add TM primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/evalruns",
          "number of runs for eval",

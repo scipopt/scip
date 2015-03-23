@@ -78,19 +78,22 @@ extern "C" {
    }PHNODE;
 
    extern
-   void SCIPindexListNodeAppendCopy(
+   SCIP_RETCODE SCIPindexListNodeAppendCopy(
+      SCIP* scip,
       IDX** node1,
       IDX* node2
 	);
 
    extern
-   void SCIPindexListNodeInsert(
+   SCIP_RETCODE SCIPindexListNodeInsert(
+      SCIP* scip,
       IDX** node,
       int   index
 	);
 
    extern
    void SCIPindexListNodeFree(
+      SCIP* scip,
       IDX** node
 	);
 

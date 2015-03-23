@@ -54,6 +54,7 @@ extern "C" {
       SCIP*                 scip,               /**< SCIP data structure */
       SCIP_HEURDATA* heurdata,
       const GRAPH*  graph,
+      int*          starts,
       int*          bestnewstart,
       int*          best_result,
       int           runs,
@@ -69,6 +70,16 @@ extern "C" {
       SCIP_Real*            cost,               /**< edge costs */
       int                   layer,
       int*                  result,             /**< ST edges */
+      char*                 connected           /**< ST nodes */
+      );
+
+   extern
+   SCIP_RETCODE do_pcprune(
+      SCIP*                 scip,               /**< SCIP data structure */
+      const GRAPH*          g,                  /**< graph structure */
+      SCIP_Real*            cost,               /**< edge costs */
+      int*                  result,             /**< ST edges */
+      int                   root,
       char*                 connected           /**< ST nodes */
       );
 
