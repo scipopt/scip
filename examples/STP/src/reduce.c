@@ -10,7 +10,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 
 #define REDUCE_C
-//#define PRINT_TMP_PRESOL
+/*#define PRINT_TMP_PRESOL */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1866,12 +1866,14 @@ static double levelm4(
    int*    state;
    int*    knotexamined;
    int*     outterms;
+   int     bd3nelims;
    int     runnum = 0;
    int     sdnelims;
    int     nvnelims;
    int     degnelims;
    char    sd = TRUE;
    char    nsv = TRUE;
+   char    bd3 = TRUE;
    char    timebreak = FALSE;
 
 
@@ -1893,6 +1895,8 @@ static double levelm4(
 
    assert(g != NULL);
    redbound = MAX(g->knots / 500, 8);
+   /* redbound = 0;
+    */
    printf("redbound: %d \n", redbound );
    heap        = malloc((size_t)g->knots * sizeof(int));
    state       = malloc((size_t)g->knots * sizeof(int));
@@ -1956,8 +1960,6 @@ static double levelm4(
    }
    else
    {
-      //voronoi_inout(g);
-
       SCIP_CALL( degree_test_dir(scip, g, &fixed, &degnelims) );
 
       SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1978,6 +1980,7 @@ static double levelm4(
       sdnelims = 0;
       nvnelims = 0;
       degnelims = 0;
+      bd3nelims = 0;
       rerun = FALSE;
       if( sd )
       {
@@ -2068,8 +2071,23 @@ static double levelm4(
       if( timebreak )
          break;
 
-      //if (bd3_reduction(g))
-      //rerun = TRUE;
+      if( bd3 )
+      {
+         SCIP_CALL( bd3_reduction(scip, g, sddist, sdtrans, heap, state, &bd3nelims) );
+         if( bd3nelims <= redbound )
+            bd3 = FALSE;
+
+         printf("BD3 Reduction: %d\n", bd3nelims);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+#ifdef PRINT_TMP_PRESOL
+         SCIPprobdataSetGraph(probdata, g);
+         SCIPprobdataSetOffset(probdata, offset + fixed);
+         /* Writing the problem to a temporary file */
+         SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
+#endif
+      }
 
       SCIP_CALL( degree_test_dir(scip, g, &fixed, &i) );
       degnelims += i;
@@ -2080,7 +2098,7 @@ static double levelm4(
       SCIPprobdataSetGraph(probdata, g);
       SCIP_CALL( SCIPwriteOrigProblem(scip, presolvetempfile, NULL, FALSE) );
 #endif
-      if( degnelims + sdnelims + nvnelims > redbound )
+      if( degnelims + sdnelims + nvnelims + bd3nelims > redbound )
 	 rerun = TRUE;
    }
    SCIPdebugMessage("Reduction Level 4: Fixed Cost = %.12e\n", fixed);
@@ -2174,6 +2192,7 @@ SCIP_RETCODE reduce(
    assert((*graph)      != NULL);
    assert((*graph)->fixedges == NULL);
    assert(level  >= 0 || level == -4);
+   assert(minelims >= 0);
 
    *offset = 0.0;
 
