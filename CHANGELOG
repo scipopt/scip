@@ -11,6 +11,7 @@ fixed bugs:
 - fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
 - fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
 - fixed bug that led to an erroneous warning about the clock type
+- fixed bug in heur_nlpdiving.c: wrong counting of fix variables
 
 misc:
 - moved assertions in comparison methods from scip.c to set.c
