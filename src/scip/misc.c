@@ -135,6 +135,33 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    return tresult;
 }
 
+/** returns the value of the Gauss error function evaluated at a given point */
+SCIP_Real SCIPerf(
+   SCIP_Real             x                   /**< value to evaluate */
+   )
+{
+#if defined(_WIN32) || defined(_WIN64)
+   SCIP_Real a1, a2, a3, a4, a5, p, t, y;
+   int sign;
+
+   a1 =  0.254829592;
+   a2 = -0.284496736;
+   a3 =  1.421413741;
+   a4 = -1.453152027;
+   a5 =  1.061405429;
+   p  =  0.3275911;
+
+   sign = (x >= 0) ? 1 : -1;
+   x = REALABS(x);
+
+   t = 1.0/(1.0 + p*x);
+   y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
+   return sign * y;
+#else
+   return erf(x);
+#endif
+}
+
 /** get critical value of a standard normal distribution  at a given confidence level */
 SCIP_Real SCIPnormalGetCriticalValue(
    SCIP_CONFIDENCELEVEL  clevel              /**< (one-sided) confidence level */
@@ -147,7 +174,7 @@ SCIP_Real SCIPnormalGetCriticalValue(
  *  random variable x takes a value between -infinity and parameter \p value.
  *
  *  The distribution is given by the respective mean and deviation. This implementation
- *  uses the error function erf().
+ *  uses the error function SCIPerf().
  */
 SCIP_Real SCIPnormalCDF(
    SCIP_Real             mean,               /**< the mean value of the distribution */
@@ -175,13 +202,13 @@ SCIP_Real SCIPnormalCDF(
    }
    assert( std != 0.0 ); /* for lint */
 
-   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
    normvalue = (value - mean)/(std * SQRTOFTWO);
 
    SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
-   /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate
-    * the normvalue and use the oddness of the erf()-function; special treatment for values close to zero.
+   /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate the normvalue and
+    * use the oddness of the SCIPerf()-function; special treatment for values close to zero.
     */
    if( normvalue < 1e-9 && normvalue > -1e-9 )
       return .5;
@@ -189,14 +216,14 @@ SCIP_Real SCIPnormalCDF(
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(normvalue);
+      erfresult = SCIPerf(normvalue);
       return  erfresult / 2.0 + 0.5;
    }
    else
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(-normvalue);
+      erfresult = SCIPerf(-normvalue);
 
       return 0.5 - erfresult / 2.0;
    }

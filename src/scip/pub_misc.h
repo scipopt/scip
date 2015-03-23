@@ -84,6 +84,12 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    SCIP_Real             county              /**< number of samples of y */
    );
 
+/** returns the value of the Gauss error function evaluated at a given point */
+EXTERN
+SCIP_Real SCIPerf(
+   SCIP_Real             x                   /**< value to evaluate */
+   );
+
 /** get critical value of a standard normal distribution  at a given confidence level */
 EXTERN
 SCIP_Real SCIPnormalGetCriticalValue(
