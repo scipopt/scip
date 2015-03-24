@@ -1465,7 +1465,6 @@ SCIP_RETCODE graph_knot_contract(
    {
       assert(p->tail[es] == s);
 
-
       if( p->head[es] != t )
       {
          /*
@@ -1547,7 +1546,7 @@ SCIP_RETCODE graph_knot_contract(
           * Need to adjust the out and in costs of the edge
           */
          //  printf("A2\n");
-         if( GT(p->cost[et], slp[i].outcost) )
+         if( SCIPisGT(scip, p->cost[et], slp[i].outcost) )
 	 {
 	    SCIPindexListNodeFree(scip, &((p->ancestors)[et]));
 	    assert(p->ancestors[et] == NULL);
@@ -1556,7 +1555,7 @@ SCIP_RETCODE graph_knot_contract(
             p->cost[et] = slp[i].outcost;
 	 }
          //printf("A3\n");
-         if( GT(p->cost[Edge_anti(et)], slp[i].incost) )
+         if( SCIPisGT(scip, p->cost[Edge_anti(et)], slp[i].incost) )
 	 {
 	    anti = Edge_anti(et);
 	    SCIPindexListNodeFree(scip, &(p->ancestors[anti]));

@@ -443,7 +443,7 @@ SCIP_RETCODE do_prune(
                   break;
                }
             }
-            if( g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+            if( g->stp_type == STP_UNDIRECTED )
 	    {
 	       if( j == EAT_LAST )
                   printf("in %d \n", i);
@@ -2460,7 +2460,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          pobj += graph->cost[v % nedges] * nval[v];
 
       //assert(graph_valid2(scip, graph, cost));
-      printf("tm: %f \n", pobj + SCIPprobdataGetOffset(scip));
+      //printf("tm: %f \n", pobj + SCIPprobdataGetOffset(scip));
       if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
       {
          heurdata->beststartnode = best_start;

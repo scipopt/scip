@@ -1690,12 +1690,7 @@ SCIP_RETCODE sl_reduction(
    SCIP_CALL( SCIPallocBufferArray(scip, &mincost2, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &minedgehead, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &minedgetail, nnodes) );
-   /*
-     minedge1 = malloc((size_t)nnodes * sizeof(int));
-     mincost2 = malloc((size_t)nnodes * sizeof(double));
-     minedgehead = malloc((size_t)nnodes * sizeof(int));
-     minedgetail = malloc((size_t)nnodes * sizeof(int));
-   */
+
    assert(vbase != NULL);
    assert(vnoi != NULL);
    assert(minedge1 != NULL);
@@ -1781,23 +1776,15 @@ SCIP_RETCODE sl_reduction(
                      break;
                if( j == EAT_LAST )
                   continue;
-               //assert(Is_term(g->term[i]));
                (*nelims)++;
                *fixed += g->cost[e];
                //printf("contrSL: %d-%d \n", tail, head);
-	       printf("slcontract: %d-%d\n", g->tail[e], g->head[e]);
                SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
 	       SCIP_CALL( graph_knot_contract(scip, g, tail, head) );
             }
 	 }
       }
    }
-   /*
-     free(minedge1);
-     free(mincost2);
-     free(minedgehead);
-     free(minedgetail);
-   */
 
    SCIPfreeBufferArray(scip, &minedge1);
    SCIPfreeBufferArray(scip, &mincost2);
@@ -1929,7 +1916,6 @@ int nv_reduction(
                   continue;
 
                (*nelims)++;
-               printf("nvcontract: %d %d\n", g->tail[edge1], g->head[edge1]);
                *fixed += g->cost[edge1];
                SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
                SCIP_CALL( graph_knot_contract(scip, g, j, k) );
@@ -1951,7 +1937,6 @@ int nv_reduction(
                if( e == EAT_LAST )
                   continue;
                *fixed += g->cost[edge1];
-	       printf("nvcontract2: %d %d\n", g->tail[edge1], g->head[edge1]);
                SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
                SCIP_CALL( graph_knot_contract(scip, g, j, k) );
                (*nelims)++;
@@ -1959,13 +1944,7 @@ int nv_reduction(
          }
       }
    }
-   /*
-     free(min1head);
-     free(min1tail);
-     free(minedge1);
-     free(mincost2);
-     free(distance);
-   */
+
    SCIPfreeBufferArray(scip, &min1head);
    SCIPfreeBufferArray(scip, &min1tail);
    SCIPfreeBufferArray(scip, &minedge1);

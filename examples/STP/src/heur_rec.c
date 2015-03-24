@@ -1055,7 +1055,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
         heurdata->nusedsols = 4;
         }
       */
-      else if( perm[count] <= 1 )
+      if( perm[count] <= 1 )
       {
          heurdata->nusedsols = 2;
 	 if( SCIPgetRandomInt(0, 1, &(heurdata->randseed)) == 1 )
@@ -1103,7 +1103,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          /* reduce new graph */
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
             || graph->stp_type == STP_HOP_CONS )
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 0) );
+            SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 2) );
          else
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 4, 2) );
 
@@ -1249,7 +1249,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT )
                SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
 
-            //assert(graph_sol_valid(solgraph, results));
+            assert(graph_sol_valid(solgraph, results));
 
             graph_path_exit(solgraph);
          }

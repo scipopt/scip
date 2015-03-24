@@ -74,17 +74,17 @@ SCIP_RETCODE SCIPindexListNodeAppendCopy(
 {
    IDX* curr1;
    IDX* curr2;
+   IDX* curr3 = NULL;
+   IDX* last = NULL;
    IDX* new = NULL;
 
    curr1 = *node1;
    if( curr1 != NULL )
    {
-      // printf("not null \n");
       while( curr1->parent != NULL )
          curr1 = curr1->parent;
+      last = curr1;
    }
-   //else
-   // printf("null \n");
 
    curr2 = node2;
    while( curr2 != NULL )
@@ -92,40 +92,39 @@ SCIP_RETCODE SCIPindexListNodeAppendCopy(
       //printf("%d curr2 index: %d\n ", i++, curr2->index);
       if( curr1 != NULL )
       {
-	 new = malloc((size_t)sizeof(IDX));
-	 //SCIP_CALL( SCIPallocMemory(scip, &new) );
-         curr1->parent = new;
+	 curr3 = *node1;
+	 while( curr3 != last )
+	 {
+	    if( curr3->index == curr2->index )
+	       break;
+	    curr3 = curr3->parent;
+	 }
+	 if( curr3 == last && curr3->index != curr2->index  )
+	 {
+	    curr3 = NULL;
+            new = malloc((size_t)sizeof(IDX));
+            //SCIP_CALL( SCIPallocMemory(scip, &new) );
+            curr1->parent = new;
+	 }
       }
       else
       {
-         // printf("reserve! \n");
+	 curr3 = NULL;
 	 //SCIP_CALL( SCIPallocMemory(scip, node1) );
 	 *node1 = malloc((size_t)sizeof(IDX));
 	 new = *node1;
+	 last = *node1;
       }
-      new->index = curr2->index; /*TODO error in e04 */
-      curr1 = new;
+      if( curr3 == NULL )
+      {
+         new->index = curr2->index;
+         curr1 = new;
+      }
       curr2 = curr2->parent;
    }
    if( new != NULL )
       new->parent = NULL;
-   //*node1 = new
-   curr1 = *node1;
-#if 0
-   if( 0 && i > 150)
-   {
-      int z = 0;
 
-      while( curr1->parent != NULL && z < i + 5 )
-      {
-         if( z > i -3 )
-            //printf("%d index %d \n ",z, curr1->index);
-            z++;
-         curr1 = curr1->parent;
-      }
-      assert(0);
-   }
-#endif
    return SCIP_OKAY;
 }
 

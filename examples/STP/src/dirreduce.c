@@ -41,7 +41,6 @@ SCIP_RETCODE degree_test_dir(
    int e1;
    int e2;
    int rerun = TRUE;
-   int done  = TRUE;
 
    assert(g      != NULL);
    assert(fixed  != NULL);
@@ -80,8 +79,7 @@ SCIP_RETCODE degree_test_dir(
 
             assert(g->grad[i] == 0);
 
-            /* Ist es etwa der Letzte gewesen ?
-             */
+            /* the last node? */
             if (g->grad[i1] == 0)
             {
                rerun = FALSE;
@@ -108,81 +106,74 @@ SCIP_RETCODE degree_test_dir(
             assert(e1 >= 0);
             assert(e2 >= 0);
 
-            do
+
+            if (!Is_term(g->term[i]) )
             {
-               done = TRUE;
-
-               if (!Is_term(g->term[i]) )
+               /* both the edges are outgoing from node i
+                * need to ensure that the flow of the edge costs is correct
+                * Edge_anti(e2) -> e1 and Edge_anti(e1) -> e2  */
+               if( !Is_term(g->term[i2]) && !Is_term(g->term[i1]) )
                {
-                  /* both the edges are outgoing from node i
-                   * need to ensure that the flow of the edge costs is correct
-                   * Edge_anti(e2) -> e1 and Edge_anti(e1) -> e2  */
-                  if( !Is_term(g->term[i2]) )
-                  {
-                     g->cost[e1] += g->cost[Edge_anti(e2)];
-                     g->cost[Edge_anti(e1)] += g->cost[e2];
-                     SCIP_CALL( graph_knot_contract(scip, g, i2, i) );
+                  g->cost[e1] += g->cost[Edge_anti(e2)];
+                  g->cost[Edge_anti(e1)] += g->cost[e2];
+                  SCIP_CALL( graph_knot_contract(scip, g, i2, i) );
+                  (*count)++;
 
-                     (*count)++;
-                  }
+                  if (!Is_term(g->term[i2]) && (((i1 < i) && (g->grad[i1] < 3))
+                        || ((i2 < i) && (g->grad[i2] < 3))))
+                     rerun = TRUE;
 
-                  break;
                }
-               assert(Is_term(g->term[i]));
 
-               /* At present the degree two test for terminals does not work.
-                * Needs to be researched and updated. */
+            }
+
+            /* At present the degree two test for terminals does not work.
+             * Needs to be researched and updated. */
 #if 0
-               if (Is_term(g->term[i1]) && Is_term(g->term[i2]))
+            if (Is_term(g->term[i1]) && Is_term(g->term[i2]))
+            {
+               if (LT(g->cost[e1], g->cost[e2]))
                {
-                  if (LT(g->cost[e1], g->cost[e2]))
-                  {
-		     SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
-                     *fixed += g->cost[e1];
-                     graph_knot_contract(g, i1, i);
-                  }
-                  else
-                  {
-		     SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e2]);
-                     *fixed += g->cost[e2];
-                     graph_knot_contract(g, i2, i);
-                  }
-                  count++;
-
-                  break;
-               }
-               if (Is_term(g->term[i1]) && !Is_term(g->term[i2]) && LE(g->cost[e1], g->cost[e2]))
-               {
-		  SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
+                  SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
                   *fixed += g->cost[e1];
                   graph_knot_contract(g, i1, i);
-
-                  count++;
-
-                  break;
                }
-               if (Is_term(g->term[i2]) && !Is_term(g->term[i1]) && LE(g->cost[e2], g->cost[e1]))
+               else
                {
-		  SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e2]);
+                  SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e2]);
                   *fixed += g->cost[e2];
                   graph_knot_contract(g, i2, i);
-
-                  count++;
-
-                  break;
                }
-#endif
-               done = FALSE;
+               count++;
+
+               break;
             }
+            if (Is_term(g->term[i1]) && !Is_term(g->term[i2]) && LE(g->cost[e1], g->cost[e2]))
+            {
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e1]);
+               *fixed += g->cost[e1];
+               graph_knot_contract(g, i1, i);
+
+               count++;
+
+               break;
+            }
+            if (Is_term(g->term[i2]) && !Is_term(g->term[i1]) && LE(g->cost[e2], g->cost[e1]))
+            {
+               SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e2]);
+               *fixed += g->cost[e2];
+               graph_knot_contract(g, i2, i);
+
+               count++;
+
+               break;
+            }
+#endif
+
             /* CONSTCOND */
             /*lint -save -e717 */
-            while(FALSE);
-            /*lint -restore */
 
-            if (done
-               && !Is_term(g->term[i2]) && (((i1 < i) && (g->grad[i1] < 3))
-                  || ((i2 < i) && (g->grad[i2] < 3))))
-               rerun = TRUE;
+            /*lint -restore */
          }
       }
    }

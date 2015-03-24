@@ -200,7 +200,7 @@ SCIP_RETCODE nvsl_reduction(
    int slelims;
    int degelims;
    int totalelims;
-   IDX* curr1;
+   //IDX* curr1;
    assert(g != NULL);
    assert(heap != NULL);
    assert(state != NULL);
@@ -210,46 +210,50 @@ SCIP_RETCODE nvsl_reduction(
 
    *nelims = 0;
    totalelims = 0;
-
+/*
    curr1 = g->ancestors[1482];
    while( curr1 != NULL )
    {
       printf("1482 edge: %d\n", curr1->index);
       curr1 = curr1->parent;
-   }
 
+   }
+*/
    do
    {
+
       elims = 0;
-      printf("befnv\n");
+
       /* NV-reduction */
       SCIP_CALL( nv_reduction(scip, g, vnoi, fixed, heap, state, vbase, &nvelims) );
       elims += nvelims;
 
       SCIPdebugMessage("NV-reduction (in NVSL): %d \n", nvelims);
-
+/*
       printf("aftnv 1482 is edge: %d->%d:\n", g->tail[1482], g->head[1482] );
       curr1 = g->ancestors[1482];
       while( curr1 != NULL )
       {
          printf("aftnv 1482 edge: %d\n", curr1->index);
          curr1 = curr1->parent;
+	     //  if( i++ > 30 )
+	// assert(0);
       }
-
+*/
       /* SL-reduction */
       SCIP_CALL( sl_reduction(scip, g, vnoi, fixed, heap, state, vbase, &slelims) );
       elims += slelims;
 
       SCIPdebugMessage("SL-reduction (in NVSL): %d \n", slelims);
 
-      printf("aftsl 1482 is edge: %d->%d:\n", g->tail[1482], g->head[1482] );
+      /*printf("aftsl 1482 is edge: %d->%d:\n", g->tail[1482], g->head[1482] );
       curr1 = g->ancestors[1482];
       while( curr1 != NULL )
       {
          printf("aftsl 1482 edge: %d\n", curr1->index);
          curr1 = curr1->parent;
       }
-
+*/
       /* trivial reduction */
       if( elims > 0 )
          degelims = degree_test(scip, g, fixed);
@@ -257,7 +261,7 @@ SCIP_RETCODE nvsl_reduction(
          degelims = 0;
 
       elims += degelims;
-
+/*
       printf("aftdeg 1482 is edge: %d->%d:\n", g->tail[1482], g->head[1482] );
       curr1 = g->ancestors[1482];
       while( curr1 != NULL )
@@ -265,11 +269,11 @@ SCIP_RETCODE nvsl_reduction(
          printf("aftdeg 1482 edge: %d\n", curr1->index);
          curr1 = curr1->parent;
       }
-
+*/
       SCIPdebugMessage("Degree Test-reduction (in NVSL): %d \n", degelims);
 
       totalelims += elims;
-      printf("elims %d\n ", elims);
+      //printf("elims %d\n ", elims);
    }while( elims > minelims );
 
    *nelims = totalelims;
@@ -500,7 +504,6 @@ SCIP_RETCODE bound_reduce(
    int nterms;
    int v;
    int r;
-   unsigned int seed = 0;
    int runs;
    int skip;
    int nnodes;
@@ -508,16 +511,17 @@ SCIP_RETCODE bound_reduce(
    int nheurs;
    int nskips;
    int best_start = 0;
+   unsigned int seed = 0;
    char* blocked;
    *nelims = 0;
    nedges = graph->edges;
    nnodes = graph->knots;
-   if( nnodes <= 1 )
-      return SCIP_OKAY;
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
+   /* debug, TODO delete */
    SCIP_CALL( SCIPallocBufferArray(scip, &radedges, nnodes) );
+   /* debug, TODO delete */
    SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &starts, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
@@ -602,7 +606,6 @@ SCIP_RETCODE bound_reduce(
    radiisum = 0.0;
    e = 0;
 
-   //   assert(k == graph->terms);
    for( e = 0; e < nterms - 2; e++ )
    {
       assert( SCIPisGT(scip, FARAWAY, radius[e]) );
@@ -637,12 +640,11 @@ SCIP_RETCODE bound_reduce(
    for( e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
          obj += graph->cost[e];
-   printf("obj: %f\n", obj);
+   //printf("obj: %f\n", obj);
 
    nskips = 0;
    for( k = 0; k < nnodes; k++ )
    {
-      //printf("k: %d\n", k);
       e = graph->outbeg[k];
       while( e != EAT_LAST )
       {
@@ -651,6 +653,7 @@ SCIP_RETCODE bound_reduce(
          if( SCIPisGT(scip, graph->cost[e] + vnoi[graph->head[e]].dist + vnoi[graph->tail[e]].dist + radiisum, obj) )
          {
             //printf("e: %d->%d outbeg: %d \n", graph->tail[e], graph->head[e], graph->oeat[e]);
+	   /* debug, TODO delete */
             skip = FALSE;
             if( blocked[e] )
             {
@@ -699,8 +702,6 @@ SCIP_RETCODE bound_reduce(
                SCIPindexListNodeFree(scip, &((graph->ancestors)[Edge_anti(e)]));
                etemp = graph->oeat[e];
                graph_edge_del(graph, e);
-               //printf("eliminated: %d->%d  \n", graph->tail[e], graph->head[e]);
-               //break;
                e = etemp;
             }
          }
@@ -708,28 +709,6 @@ SCIP_RETCODE bound_reduce(
          {
             e = graph->oeat[e];
          }
-      }
-      if( 0 && e != EAT_LAST )
-      {
-         for( k = 0; k < nnodes; k++ )
-            graph->mark[k] = (graph->grad[k] > 0);
-
-         voronoi_radius(scip, graph, vnoi, radius, graph->cost, graph->cost, vbase, heap, state, radedges);
-
-         SCIPsortReal(radius, nnodes);
-         radiisum = 0.0;
-         k = 0;
-         for( e = 0; e < nnodes; e++ )
-            if( graph->grad[e] > 0 && Is_term(graph->term[e]) )
-               k++;
-         assert(k == graph->terms);
-         for( e = 0; e < k - 2; e++ )
-         {
-            assert( SCIPisGT(scip, FARAWAY, radius[e]) );
-            radiisum += radius[e];
-            // printf("rad: %f\n", radius[e]);
-         }
-         k = -1;
       }
    }
 
@@ -1622,7 +1601,7 @@ static double level4(
    char    sd = TRUE;
    char    bd3 = TRUE;
    char    nsv = TRUE;
-   char    nvsl = !TRUE;
+   char    nvsl = TRUE;
    char    bred;
    char    rerun = TRUE;
 
@@ -1700,13 +1679,12 @@ static double level4(
 
       if( nvsl )
       {
-         printf("bef nvsl: %d \n", nvslnelims);
-         SCIP_CALL( nvsl_reduction(scip, g, vnoi, fixed, heap, state, vbase, &nvslnelims, 0.5 * reductbound) );
+         SCIP_CALL( nvsl_reduction(scip, g, vnoi, fixed, heap, state, vbase, &nvslnelims, reductbound) );
 
          if( nvslnelims <= 0.3 * reductbound )
             nvsl = FALSE;
 
-         printf("nvsl: %d \n", nvslnelims);
+         //printf("nvsl: %d \n", nvslnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1826,14 +1804,16 @@ static double level4(
 
    return SCIP_OKAY;
 }
-#if 0
+#if 1
 static double levelm1(
    SCIP* scip,
    GRAPH* g
    )
 {
    double fixed = 0.0;
-   degree_test_dir(g, &fixed);
+   int degnelims;
+   SCIP_CALL( degree_test_dir(scip, g, &fixed, &degnelims) );
+   printf("level1 nelims: %d \n", degnelims);
    return fixed;
 }
 #endif
@@ -2228,9 +2208,11 @@ SCIP_RETCODE reduce(
 
    if (level == 3)
       fixed = level3((*graph));
+
+#endif
    if( level == -1 )
       *offset = levelm1(scip, (*graph));
-#endif
+
    if( level == 4 )
       SCIP_CALL( level4(scip, (graph), offset, minelims) );
 

@@ -536,7 +536,6 @@ SCIP_RETCODE do_local(
             for( i = 0; i < nnodes; i++ )
                SCIPlinkcuttreeInit(&nodes[i]);
 
-
             /* create a link-cut tree representing the current Steiner tree */
             for( e = 0; e < nedges; e++ )
             {
@@ -569,8 +568,6 @@ SCIP_RETCODE do_local(
          //printf(" ObjAfterVertexInsertion=%.12e\n", obj);
       }
 
-      //   if( newnverts > 0 && totalruns != 0 )
-      //        printf(" second run! nverts: %d \n", newnverts);
       /* Key-Vertex Elimination & Key-Path Exchange */
       if( 1 && (newnverts > 0 || totalruns == 0) )
       {
@@ -1185,8 +1182,8 @@ SCIP_RETCODE do_local(
 
                   if( SCIPisLT(scip, mstcost, kpcost) )
                   {
-                     int added = 0;
-                     int removed = 0;
+                     SCIP_Real added = 0.0;
+                     SCIP_Real removed = 0.0;
 
                      localmoves++;
                      nimprovements++;
@@ -2304,6 +2301,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    int min;
    int nvars;
    int nsols;                                /* number of all solutions found so far */
+   int nedges;
    int* results;
    int* lastsolindices;
    assert(heur != NULL);
@@ -2341,6 +2339,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       return SCIP_OKAY;
 
    nsols = SCIPgetNSols(scip);
+   nedges = graph->edges;
    sols = SCIPgetSols(scip);
    assert(heurdata->bestnsols >= 0);
    min = MIN(heurdata->bestnsols, nsols);
@@ -2396,9 +2395,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    nvars = SCIPprobdataGetNVars(scip);
    vars = SCIPprobdataGetVars(scip);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, graph->edges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, graph->edges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &results, graph->edges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
@@ -2409,9 +2408,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    if( xval == NULL )
    {
-      BMScopyMemoryArray(cost, graph->cost, graph->edges);
+      BMScopyMemoryArray(cost, graph->cost, nedges);
       /* TODO chg. for directed assym graphs */
-      for( e = 0; e < graph->edges; e += 2 )
+      for( e = 0; e < nedges; e += 2 )
       {
          costrev[e] = cost[e + 1];
          costrev[e + 1] = cost[e];
@@ -2419,13 +2418,15 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
    else
    {
-      for( e = 0; e < graph->edges; e++ )
+      for( e = 0; e < nedges; e++ )
       {
-         //printf("do: %f \n", xval[e]);
-         results[e] = (int) xval[e] - 1;
+	 if( SCIPisEQ(scip, xval[e], 1) )
+            results[e] = CONNECT;
+	 else
+	    results[e] = UNKNOWN;
       }
       /* swap costs; set a high cost if the variable is fixed to 0 */
-      for( e = 0; e < graph->edges; e += 2)
+      for( e = 0; e < nedges; e += 2)
       {
          if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
          {
@@ -2451,19 +2452,53 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
    }
 
+   /* pruning necessary? */
+   if( SCIPsolGetHeur(bestsol) == NULL ||
+      !(strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "rec") == 0 ||
+         strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "TM") == 0) )
+   {
+      int artroot;
+      int root = graph->source[0];
+      char* steinertree;
+      SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, graph->knots) );
+      artroot = root;
+      if( graph->stp_type == STP_PRIZE_COLLECTING  )
+      {
+         for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+            if( !Is_term(graph->term[graph->head[e]]) && results[e] == CONNECT )
+               artroot = graph->head[e];
+         assert(artroot != root);
+      }
+      for( e = 0; e < nedges; e++ )
+      {
+         if( results[e] == CONNECT )
+         {
+            steinertree[graph->tail[e]] = TRUE;
+            steinertree[graph->head[e]] = TRUE;
+	 }
+         results[e] = UNKNOWN;
+      }
+
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+         do_pcprune(scip, graph, graph->cost, results, artroot, steinertree);
+      else
+         do_prune(scip, graph, graph->cost, 0, results, steinertree);
+      SCIPfreeBufferArray(scip, &steinertree);
+   }
+
    /* execute local heuristics */
    SCIP_CALL( do_local(scip, graph, cost, costrev, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
-      nval[v] = (results[v % graph->edges] == (v / graph->edges)) ? 1.0 : 0.0;
+      nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
    if( validate(graph, nval) )
    {
       pobj = 0.0;
 
       for( v = 0; v < nvars; v++ )
-         pobj += graph->cost[v % graph->edges] * nval[v];
+         pobj += graph->cost[v % nedges] * nval[v];
 
       /*if( SCIPisLT(scip, pobj, SCIPgetPrimalbound(scip)) )*/
       if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
