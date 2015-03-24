@@ -54,8 +54,8 @@
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cuts separated per separation round in the root node */
+#define DEFAULT_MAXSEPACUTS     INT_MAX /**< maximal number of cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT INT_MAX /**< maximal number of cuts separated per separation round in the root node */
 
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
