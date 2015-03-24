@@ -2240,9 +2240,6 @@ SCIP_RETCODE reduce(
    if( level == -4 )
       *offset = levelm4(scip, (*graph));
 
-
-
-
    graph_path_exit((*graph));
 
    return SCIP_OKAY;

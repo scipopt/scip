@@ -61,11 +61,10 @@ SCIP_RETCODE degree_test_dir(
       for(i = 0; i < g->knots; i++)
       {
          assert(g->grad[i] >= 0);
-         if (g->grad[i] == 1 && g->cost[g->inpbeg[i]] < FARAWAY )
+         if( g->grad[i] == 1 && g->cost[g->outbeg[i]] < FARAWAY && g->cost[g->inpbeg[i]] < FARAWAY )
          {
             e1  = g->inpbeg[i];
             i1  = g->tail[e1];
-
             assert(e1 >= 0);
             assert(e1 == Edge_anti(g->outbeg[i]));
             assert(g->ieat[e1] == EAT_LAST);
@@ -120,8 +119,8 @@ SCIP_RETCODE degree_test_dir(
                    * Edge_anti(e2) -> e1 and Edge_anti(e1) -> e2  */
                   if( !Is_term(g->term[i2]) )
                   {
-                     g->cost[e1]            += g->cost[Edge_anti(e2)];
-                     g->cost[e2]            += g->cost[Edge_anti(e1)];
+                     g->cost[e1] += g->cost[Edge_anti(e2)];
+                     g->cost[Edge_anti(e1)] += g->cost[e2];
                      SCIP_CALL( graph_knot_contract(scip, g, i2, i) );
 
                      (*count)++;
