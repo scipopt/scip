@@ -912,11 +912,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int i;
    int e;
    int v;
+   int artroot;
    int nsols;                                /* number of all solutions found so far */
    int nedges;
    int index;
    int nnodes;
    int count;
+   int head;
+   int tail;
    int nsoledges;
    int nheurs;
    int runs;
@@ -983,7 +986,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    heurdata->ncalls++;
    *result = SCIP_DIDNOTRUN;
 
-
    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
       || graph->stp_type == STP_HOP_CONS )
       runs = 8;
@@ -999,12 +1001,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       perm[v] = v;
    //SCIPpermuteIntArray(perm, 0, 8, &(heurdata->randseed));
 
-   /*if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
-     || graph->stp_type == STP_HOP_CONS )
-     {
-     newsol = (SCIPgetSols(scip))[0];//(SCIPgetSols(scip))[SCIPgetRandomInt(0, 1, &(heurdata->randseed))];
-     }
-     else*/ if( heurdata->lastsolindex == -1 )
+   if( graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_HOP_CONS )
+   {
+      newsol = (SCIPgetSols(scip))[0];//(SCIPgetSols(scip))[SCIPgetRandomInt(0, 1, &(heurdata->randseed))];
+   }
+   else if( heurdata->lastsolindex == -1 )
    {
       newsol = (SCIPgetSols(scip))[SCIPgetRandomInt(0, heurdata->nusedsols - 1, &(heurdata->randseed))];
       //printf("selecting random best sol! \n");
@@ -1248,15 +1249,15 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT )
                SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
 
-            assert(graph_sol_valid(solgraph, results));
+            //assert(graph_sol_valid(solgraph, results));
 
             graph_path_exit(solgraph);
          }
 
          for( i = 0; i < nedges; i++ )
             orgresults[i] = UNKNOWN;
-
-         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+         artroot = graph->source[0];
+         if( 0 )// )graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
          {
             if( solgraph->terms > 1 )
             {
@@ -1282,6 +1283,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                orgresults[edgeancestor[curr->index]] = CONNECT;
                curr = curr->parent;
             }
+            /* prune solution (in the original graph) */
+            SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
          }
          else
          {
@@ -1303,8 +1306,21 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                      while( curr != NULL )
                      {
                         i = edgeancestor[curr->index];
-                        stnodes[graph->tail[i]] = TRUE;
-                        stnodes[graph->head[i]] = TRUE;
+			head = graph->head[i];
+			tail = graph->tail[i];
+                        stnodes[tail] = TRUE;
+                        stnodes[head] = TRUE;
+			if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+			{
+			   if( head == graph->source[0] && !Is_term(graph->term[tail]) )
+                           {
+                              artroot = tail;
+                           }
+                           else if( tail == graph->source[0] && !Is_term(graph->term[head]) )
+                           {
+                              artroot = head;
+                           }
+                        }
                         curr = curr->parent;
                      }
                   }
@@ -1316,13 +1332,29 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             while( curr != NULL )
             {
                i = edgeancestor[curr->index];
-               stnodes[graph->tail[i]] = TRUE;
-               stnodes[graph->head[i]] = TRUE;
+               head = graph->head[i];
+               tail = graph->tail[i];
+               stnodes[tail] = TRUE;
+               stnodes[head] = TRUE;
+               if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+               {
+                  if( head == graph->source[0] && !Is_term(graph->term[tail]) )
+                  {
+                     artroot = tail;
+                  }
+                  else if( tail == graph->source[0] && !Is_term(graph->term[head]) )
+                  {
+                     artroot = head;
+                  }
+               }
                curr = curr->parent;
             }
 
             /* prune solution (in the original graph) */
-            SCIP_CALL( do_prune(scip, graph, graph->cost, 0, orgresults, stnodes) );
+            if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+               SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
+            else
+               SCIP_CALL( do_prune(scip, graph, graph->cost, 0, orgresults, stnodes) );
 
             SCIPfreeBufferArray(scip, &stnodes);
          }
@@ -1390,7 +1422,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       else
       {
          count++;
-	 //printf("no success in merge \n");
+         //printf("no success in merge \n");
       }
    }
 

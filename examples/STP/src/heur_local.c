@@ -2204,7 +2204,6 @@ SCIP_RETCODE do_local(
       if( 0 && graph->stp_type == STP_UNDIRECTED )
          assert(graph_sol_valid(graph, best_result));
 
-      assert(graph_sol_valid(graph, best_result));
       SCIPfreeBufferArray(scip, &nodes);
       SCIPfreeBufferArray(scip, &steinertree);
    }

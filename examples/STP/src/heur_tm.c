@@ -104,7 +104,7 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 }
 
 
-#if 0
+#if 1
 /** for debug purposes only */
 static
 SCIP_RETCODE printGraph(
@@ -188,7 +188,6 @@ SCIP_RETCODE printGraph(
 
 #endif
 
-
 /* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
 SCIP_RETCODE do_pcprune(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -225,15 +224,21 @@ SCIP_RETCODE do_pcprune(
       root = g->source[0];
       g->mark[root] = TRUE;
    }
-
+   else
+   {
+      assert(!Is_term(g->term[root]));
+   }
+   //printf("root: %d, \n", root);
    assert(root >= 0);
    assert(root < nnodes);
 
    graph_path_exec(g, MST_MODE, root, cost, mst);
+
    for( i = 0; i < nnodes; i++ )
    {
       if( g->mark[i] && (mst[i].edge != -1) )
       {
+	 assert(g->path_state[i] == CONNECT);
          assert(g->head[mst[i].edge] == i);
          assert(result[mst[i].edge] == -1);
          result[mst[i].edge] = CONNECT;
@@ -252,32 +257,49 @@ SCIP_RETCODE do_pcprune(
          if( e2 == EAT_LAST )
          {
             result[e1] = CONNECT;
-            continue;
          }
-         assert(e2 >= 0);
+         else
+	 {
+            assert(e2 >= 0);
 
-         assert(g->ieat[e2] == EAT_LAST);
-         k1 = g->tail[e1];
-         k2 = g->tail[e2];
-         assert(k1 == g->source[0] || k2 == g->source[0]);
-         if( k1 != g->source[0] && connected[k1] )
-         {
-            result[e1] = CONNECT;
-         }
-         else if( k2 != g->source[0] && connected[k2] )
-         {
-            result[e2] = CONNECT;
-         }
-         else if( k1 == g->source[0] )
-         {
-            result[e1] = CONNECT;
-         }
-         else if( k2 == g->source[0] )
-         {
-            result[e2] = CONNECT;
+            assert(g->ieat[e2] == EAT_LAST);
+            k1 = g->tail[e1];
+            k2 = g->tail[e2];
+            assert(k1 == g->source[0] || k2 == g->source[0]);
+            if( k1 != g->source[0] && g->path_state[k1] == CONNECT )
+            {
+               result[e1] = CONNECT;
+            }
+            else if( k2 != g->source[0] && g->path_state[k2] == CONNECT )
+            {
+               result[e2] = CONNECT;
+            }
+            else if( k1 == g->source[0] )
+            {
+               result[e1] = CONNECT;
+            }
+            else if( k2 == g->source[0] )
+            {
+               result[e2] = CONNECT;
+            }
 	 }
       }
+      else if( i == root && g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+      {
+	 for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
+            if( g->tail[e1] == g->source[0] )
+               break;
+	 assert(e1 != EAT_LAST);
+	 result[e1] = CONNECT;
+      }
    }
+   if( 0 )
+   {
+      char varname[SCIP_MAXSTRLEN];
+      (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "AA%d.gml", 0);
+      SCIP_CALL( printGraph(scip, g, varname, result) );
+   }
+
    /* prune */
    do
    {
@@ -290,8 +312,10 @@ SCIP_RETCODE do_pcprune(
       {
          if( !g->mark[i] )
             continue;
+         if( g->path_state[i] != CONNECT )
+            continue;
 
-         if( g->term[i] == 0 )
+         if( Is_term(g->term[i]) )
             continue;
 
          for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
@@ -306,25 +330,27 @@ SCIP_RETCODE do_pcprune(
             {
                if( result[j] == 0 )
                {
-		  printf("pruned! \n");
                   result[j]    = -1;
                   g->mark[i]   = FALSE;
+		  //printf("disconned %d (term %d)\n", i, g->term[i] );
                   connected[i] = FALSE;
                   count++;
                   break;
                }
             }
-            //  if( g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
-            // {
+
             if( j == EAT_LAST )
-               printf("in %d \n", i);
-            //assert(j != EAT_LAST);
-            // }
+	    {
+               /* (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "AA1%d.gml", rruns);
+                  SCIP_CALL( printGraph(scip, g, varname, result) );*/
+               //printf("in %d \n", i);
+	    }
+            assert(j != EAT_LAST);
          }
       }
    }
    while( count > 0 );
-
+   //assert(graph_sol_valid(g, result));
    SCIPfreeBufferArray(scip, &mst);
 
    return SCIP_OKAY;
@@ -681,14 +707,14 @@ SCIP_RETCODE do_tmX(
       /* Gegen den Strom schwimmend alles markieren
        */
       k = old;
-      //printf("connect %d\n", old);
+      //printf("connect from %d\n", old);
       while(k != newval)
       {
          e = pathedge[newval][k];
          k = g->tail[e];
          if (!connected[k])
          {
-	    //printf("connected (%d->)%d \n", g->head[e], k);
+            //printf("connected (%d->)%d  cost: %f (rev) %f\n", g->head[e], k, cost[k], costrev[k] );
             connected[k] = TRUE;
             cluster[csize++] = k;
          }
@@ -705,10 +731,10 @@ SCIP_RETCODE do_tmX(
       if( SCIPisLT(scip, cost[e], 1e+9) )
          cost[e] = g->cost[e];
    }
-   // if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_GRID || g->stp_type == STP_OBSTACLES_GRID )
-   SCIP_CALL( do_prune(scip, g, cost, 0, result, connected) );
-   // else
-
+   if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_GRID || g->stp_type == STP_OBSTACLES_GRID )
+      SCIP_CALL( do_prune(scip, g, cost, 0, result, connected) );
+   else
+      SCIP_CALL( do_pcprune(scip, g, cost, result, artroot, connected) );
    for( e = 0; e < g->edges; e++ )
       cost[e] = costrev[flipedge(e)];
 
