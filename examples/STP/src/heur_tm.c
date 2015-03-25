@@ -2322,16 +2322,16 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 	    if( (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) && SCIPgetRandomInt(0, 3, &(heurdata->randseed)) != 1 )
                || SCIPgetRandomInt(0, 10, &(heurdata->randseed)) == 5 )
                partrand = TRUE;
-
+/*
             if( partrand )
                printf("tm partly randomized: \n\n");
-
+*/
 	    if( !partrand && (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) || SCIPgetRandomInt(0, 25, &(heurdata->randseed)) == 10) )
                totalrand = TRUE;
-
+/*
             if( totalrand )
                printf("tm totally randomized: \n\n");
-
+*/
 
             if( graph->stp_type == STP_HOP_CONS )
             {
