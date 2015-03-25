@@ -66,6 +66,7 @@ int getUgRank();
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_Longint nlpiterations;
    SCIP_Longint ncalls;
    SCIP_Longint nexecs;
    SCIP_Real hopfactor;
@@ -2064,6 +2065,7 @@ SCIP_DECL_HEURINIT(heurInitTM)
    }
    heurdata->beststartnode = -1;
    heurdata->ncalls = 0;
+   heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
 
 #ifdef WITH_UG
@@ -2314,12 +2316,23 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          }
          else
          {
-            /*
-              if( heurdata->nexecs % 10 == 0 )
-              printf("tm totally randomized: \n\n");
-              if( heurdata->nexecs % 4 == 0 )
-              printf("tm partly randomized: (%f  %f)\n\n", randlower, randupper);
-	    */
+            SCIP_Bool partrand = FALSE;
+	    SCIP_Bool totalrand = FALSE;
+
+	    if( (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) && SCIPgetRandomInt(0, 3, &(heurdata->randseed)) != 1 )
+               || SCIPgetRandomInt(0, 10, &(heurdata->randseed)) == 5 )
+               partrand = TRUE;
+
+            if( partrand )
+               printf("tm partly randomized: \n\n");
+
+	    if( !partrand && (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) || SCIPgetRandomInt(0, 25, &(heurdata->randseed)) == 10) )
+               totalrand = TRUE;
+
+            if( totalrand )
+               printf("tm totally randomized: \n\n");
+
+
             if( graph->stp_type == STP_HOP_CONS )
             {
 
@@ -2331,7 +2344,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   }
                   else
                   {
-                     if( heurdata->nexecs % 10 == 0 )
+                     if( totalrand )
                      {
                         rand = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
                         cost[e] = graph->cost[e] * rand;
@@ -2341,7 +2354,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                         cost[e] = ((1.0 - xval[e]) * graph->cost[e]);
                      }
                   }
-                  if( heurdata->nexecs % 4 == 0 )
+                  if( partrand )
                   {
                      rand = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
                      cost[e] = cost[e] * rand;
@@ -2368,12 +2381,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   }
                   else
                   {
-                     if( heurdata->nexecs % 10 == 0 )
+                     if( totalrand )
                         costrev[e] = graph->cost[e + 1] * rand;
                      else
                         costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
 
-                     if( heurdata->nexecs % 4 == 0 )
+                     if( partrand )
                      {
                         costrev[e] = costrev[e] * rand;
                      }
@@ -2387,12 +2400,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   }
                   else
                   {
-                     if( heurdata->nexecs % 10 == 0 )
+                     if( totalrand )
                         costrev[e + 1] = graph->cost[e] * rand;
                      else
                         costrev[e + 1] = ((1.0 - xval[layer * nedges + e]) * graph->cost[e]);
 
-                     if( heurdata->nexecs % 4 == 0 )
+                     if( partrand )
                         costrev[e + 1] = costrev[e + 1]  * rand;
                      cost[e] = costrev[e + 1];
                   }
@@ -2414,22 +2427,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
            hop constraint problem? */
          /* can we connect the network */
          SCIP_CALL( do_layer(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode, cost, costrev, maxcost) );
-#if 0
-         /* take the path */
-         if( graph->layers > 1 )
-         {
-            for( e = 0; e < nedges; e += 2)
-            {
-               if( (results[e] == layer) || (results[e + 1] == layer) )
-                  graph_edge_hide(graph, e);
-            }
-         }
-#endif
       }
-#if 0
-      if( graph->layers > 1 )
-         graph_uncover(graph);
-#endif
    }
    edgecount = 0;
    for( v = 0; v < nvars; v++ )
@@ -2454,6 +2452,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    }
    if( validate(graph, nval) )
    {
+      SCIP_Bool success;
       pobj = 0.0;
 
       for( v = 0; v < nvars; v++ )
@@ -2465,17 +2464,13 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       {
          heurdata->beststartnode = best_start;
       }
-      if( 1 || SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) ) /* best_start != graph->source[0] || */
-      {
-         SCIP_Bool success;
 
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
-         if( success )
-            *result = SCIP_FOUNDSOL;
-      }
+      if( success )
+         *result = SCIP_FOUNDSOL;
    }
-
+   heurdata->nlpiterations = SCIPgetNLPIterations(scip);
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
    SCIPfreeBufferArray(scip, &cost);
@@ -2517,6 +2512,7 @@ SCIP_RETCODE SCIPincludeHeurTM(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolTM) );
 #endif
    heurdata->ncalls = 0;
+   heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
 
 #ifdef WITH_UG
