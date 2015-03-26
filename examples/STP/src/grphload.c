@@ -1264,7 +1264,7 @@ GRAPH* graph_load(
                      ret = FAILURE;
                   }
 
-                  stp_type = STP_ROOT_KNOWN;
+                  /*stp_type = STP_ROOT_KNOWN;*/
 
                   break;
 	       case KEY_TERMINALS_ROOTP :

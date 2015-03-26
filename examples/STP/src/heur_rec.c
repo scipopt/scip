@@ -43,7 +43,7 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNSOLS       40             /* maximum number of (good) solutions be regarded in the subproblem                   */
+#define DEFAULT_MAXNSOLS       50             /* maximum number of (good) solutions be regarded in the subproblem                   */
 #define DEFAULT_NUSEDSOLS     4              /* number of solutions that will be taken into account                   */
 #define DEFAULT_RANDSEED       0              /* random seed                                                               */
 #define DEFAULT_NTMRUNS       50             /**< number of runs in TM heuristic        */
@@ -320,7 +320,6 @@ SCIP_RETCODE selectdiffsols(
       SCIPsortRealInt(soltimes, perm, nsols);
       i = nsols - 1;
       //printf("(maxnsols: %d) real soltime 0:  %d \n", maxnsols, SCIPsolGetIndex(sols[perm[i]]));
-
       /* has the latest solution already been tried? */
       if( heurdata->lastsolindex != SCIPsolGetIndex(sols[perm[i]]) )
       {
@@ -431,7 +430,6 @@ SCIP_RETCODE selectsols(
    SCIP_SOL**            newsol,
    int*                  selection,
    SCIP_Bool             random
-
    )
 {
    SCIP_Real* soltimes;
@@ -446,7 +444,6 @@ SCIP_RETCODE selectsols(
    int* perm;
    int* solselected;
 
-   //assert(newsoledge != NULL);
    assert(selection != NULL);
 
    /* get solution data */
@@ -477,7 +474,7 @@ SCIP_RETCODE selectsols(
       SCIPsortRealInt(soltimes, perm, nsols);
       i = nsols - 1;
       //printf("(maxnsols: %d) real soltime 0:  %d \n", maxnsols, SCIPsolGetIndex(sols[perm[i]]));
-
+      //printf(" lastsolindex:%d new: %d\n", heurdata->lastsolindex, SCIPsolGetIndex(sols[perm[i]]));
       /* has the latest solution already been tried? */
       if( heurdata->lastsolindex != SCIPsolGetIndex(sols[perm[i]]) )
       {
@@ -485,7 +482,7 @@ SCIP_RETCODE selectsols(
       }
       else
       {
-	 printf("last solution has already been used \n");
+	 //printf("last solution has already been used \n");
 	 i = SCIPgetRandomInt(0, nsols - 1, &(heurdata->randseed));
       }
       *newsol = sols[perm[i]];
@@ -501,14 +498,14 @@ SCIP_RETCODE selectsols(
 	 if( *newsol == sols[i] )
             break;
       assert(i < nsols);
+      if( nsols >= nsols )
+	 i = 0;
       solselected[i] = TRUE;
       selection[nselectedsols++] = i;
       //  printf("soltime 0:  %f \n", SCIPgetSolTime(scip, sols[perm[i]]));
    }
 
-
    //   printf("(maxnsols: %d) newsol: found by: %s %d\n",  maxnsols, SCIPheurGetName(SCIPsolGetHeur(*newsol)), SCIPsolGetIndex(*newsol));
-
    if( !random )
    {
       end = (int) ((SCIPgetRandomReal(1, nusedsols - 1, &(heurdata->randseed))) );
@@ -913,7 +910,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int e;
    int v;
    int artroot;
-   int nsols;                                /* number of all solutions found so far */
+   SCIP_Longint nsols;                                /* number of all solutions found so far */
    int nedges;
    int index;
    int nnodes;
@@ -1005,6 +1002,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    {
       newsol = (SCIPgetSols(scip))[0];//(SCIPgetSols(scip))[SCIPgetRandomInt(0, 1, &(heurdata->randseed))];
    }
+   /* first run? */
    else if( heurdata->lastsolindex == -1 )
    {
       newsol = (SCIPgetSols(scip))[SCIPgetRandomInt(0, heurdata->nusedsols - 1, &(heurdata->randseed))];
@@ -1048,13 +1046,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             break;
 	 }
       }
-      /*
-        if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
-        || graph->stp_type == STP_HOP_CONS )
-        {
-        heurdata->nusedsols = 4;
-        }
-      */
       if( perm[count] <= 1 )
       {
          heurdata->nusedsols = 2;
@@ -1243,13 +1234,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             /* run TM heuristic */
             SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns, solgraph->source[0], cost, costrev, maxcost) );
 
-            //assert(graph_sol_valid(solgraph, results));
-
             /* run local heuristic */
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT )
                SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
 
-            assert(graph_sol_valid(solgraph, results));
+	    if( graph->stp_type == STP_UNDIRECTED )
+               assert(graph_sol_valid(solgraph, results));
 
             graph_path_exit(solgraph);
          }
@@ -1257,107 +1247,77 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          for( i = 0; i < nedges; i++ )
             orgresults[i] = UNKNOWN;
          artroot = graph->source[0];
-         if( 0 )// )graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+
+         /* allocate memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nedges) );
+
+         for( i = 0; i < nnodes; i++ )
+            stnodes[i] = FALSE;
+
+         /* retransform solution found by TM heuristic */
+         if( solgraph->terms > 1 )
          {
-            if( solgraph->terms > 1 )
+            for( e = 0; e < nsoledges; e++ )
             {
-               /* retransform solution found by TM heuristic */
-               for( e = 0; e < nsoledges; e++ )
+               if( results[e] == CONNECT )
                {
-                  if( results[e] == CONNECT )
+                  /* iterate through list of ancestors */
+                  curr = ancestors[e];
+                  while( curr != NULL )
                   {
-                     /* iterate through list of ancestors */
-                     curr = ancestors[e];
-                     while( curr != NULL )
+                     i = edgeancestor[curr->index];
+                     head = graph->head[i];
+                     tail = graph->tail[i];
+                     stnodes[tail] = TRUE;
+                     stnodes[head] = TRUE;
+                     if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
                      {
-                        orgresults[edgeancestor[curr->index]] = CONNECT;
-                        curr = curr->parent;
-                     }
-                  }
-               }
-            }
-
-            /* retransform edges fixed during graph reduction */
-            while( curr != NULL )
-            {
-               orgresults[edgeancestor[curr->index]] = CONNECT;
-               curr = curr->parent;
-            }
-            /* prune solution (in the original graph) */
-            SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
-         }
-         else
-         {
-            /* allocate memory */
-            SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nedges) );
-
-            for( i = 0; i < nnodes; i++ )
-               stnodes[i] = FALSE;
-
-            /* retransform solution found by TM heuristic */
-            if( solgraph->terms > 1 )
-            {
-               for( e = 0; e < nsoledges; e++ )
-               {
-                  if( results[e] == CONNECT )
-                  {
-                     /* iterate through list of ancestors */
-                     curr = ancestors[e];
-                     while( curr != NULL )
-                     {
-                        i = edgeancestor[curr->index];
-			head = graph->head[i];
-			tail = graph->tail[i];
-                        stnodes[tail] = TRUE;
-                        stnodes[head] = TRUE;
-			if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
-			{
-			   if( head == graph->source[0] && !Is_term(graph->term[tail]) )
-                           {
-                              artroot = tail;
-                           }
-                           else if( tail == graph->source[0] && !Is_term(graph->term[head]) )
-                           {
-                              artroot = head;
-                           }
+                        if( head == graph->source[0] && !Is_term(graph->term[tail]) )
+                        {
+                           artroot = tail;
                         }
-                        curr = curr->parent;
+                        else if( tail == graph->source[0] && !Is_term(graph->term[head]) )
+                        {
+                           artroot = head;
+                        }
                      }
+                     curr = curr->parent;
                   }
                }
             }
-
-            /* retransform edges fixed during graph reduction */
-            curr = solgraph->fixedges;
-            while( curr != NULL )
-            {
-               i = edgeancestor[curr->index];
-               head = graph->head[i];
-               tail = graph->tail[i];
-               stnodes[tail] = TRUE;
-               stnodes[head] = TRUE;
-               if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
-               {
-                  if( head == graph->source[0] && !Is_term(graph->term[tail]) )
-                  {
-                     artroot = tail;
-                  }
-                  else if( tail == graph->source[0] && !Is_term(graph->term[head]) )
-                  {
-                     artroot = head;
-                  }
-               }
-               curr = curr->parent;
-            }
-
-            /* prune solution (in the original graph) */
-            if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
-               SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
-            else
-               SCIP_CALL( do_prune(scip, graph, graph->cost, 0, orgresults, stnodes) );
-
-            SCIPfreeBufferArray(scip, &stnodes);
          }
+
+         /* retransform edges fixed during graph reduction */
+         curr = solgraph->fixedges;
+         while( curr != NULL )
+         {
+            i = edgeancestor[curr->index];
+            head = graph->head[i];
+            tail = graph->tail[i];
+            stnodes[tail] = TRUE;
+            stnodes[head] = TRUE;
+            if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+            {
+               if( head == graph->source[0] && !Is_term(graph->term[tail]) )
+               {
+                  artroot = tail;
+               }
+               else if( tail == graph->source[0] && !Is_term(graph->term[head]) )
+               {
+                  artroot = head;
+               }
+            }
+            curr = curr->parent;
+         }
+
+         /* prune solution (in the original graph) */
+         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+            SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
+         else
+            SCIP_CALL( do_prune(scip, graph, graph->cost, 0, orgresults, stnodes) );
+
+         SCIPfreeBufferArray(scip, &stnodes);
+
          pobj = 0.0;
          //newsolval = 0.0;
          for( e = 0; e < graph->edges; e++ )
@@ -1396,6 +1356,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   if( SCIPisGT(scip, SCIPgetSolTime(scip, sols[i]), SCIPgetSolTime(scip, sols[index])) )
                      index = i;
                newsol = sols[index];
+	       assert(graph_sol_valid(graph, orgresults));
             }
             else
             {
@@ -1407,8 +1368,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          {
             count++;
          }
-         assert(graph_sol_valid(graph, orgresults));
 
+         //assert(graph_sol_valid(graph, orgresults));
          /* free memory */
          SCIPfreeBufferArrayNull(scip, &results);
          SCIPfreeMemoryArray(scip, &edgeancestor);

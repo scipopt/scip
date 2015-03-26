@@ -440,7 +440,6 @@ void graph_path_exec(
          {
 
             m = p->head[i];
-
             /* 1. Ist der Knoten noch nicht festgelegt ?
              *    Ist der wohlmoeglich tabu ?
              */
@@ -453,7 +452,7 @@ void graph_path_exec(
                   (path[k].dist + cost[Edge_anti(i)]));
                pathhops = path[k].hops + 1;
                if( GT(path[m].dist, pathdist) ||
-                  (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)))
+                  (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)) )
 	       {
                   correct(heap, state, &count, path, m, k, i, (mode == BSP_MODE) ? cost[Edge_anti(i)] : cost[i], mode);
 	       }
@@ -1114,9 +1113,7 @@ void voronoi_pres(
    assert(nbases > 0);
 
    for( e = 0; e < g->edges; e++)
-   {
       assert(GE(g->cost[e], 0));
-   }
 
    if( g->knots > 1 )
    {

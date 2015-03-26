@@ -721,7 +721,7 @@ SCIP_RETCODE bound_reduce(
    assert(graph_valid(graph));
    return SCIP_OKAY;
 }
-#if 0
+#if 1
 static
 int bound_test(
    SCIP*  scip,
@@ -902,7 +902,7 @@ int bound_test(
          graph->grad[i], graph->source[0], graph->stp_type, &hopsbound);
 
       //if( i % 1000 == 0 )
-      printf("node: %d, lowerbound: %f, grad: %d, vregion: %d\n", i, lowerbound, graph->grad[i], vregion[i]);
+      //printf("node: %d, lowerbound: %f, grad: %d, vregion: %d\n", i, lowerbound, graph->grad[i], vregion[i]);
 
       if( GT(lowerbound, graph->hoplimit) )
       {
@@ -1599,7 +1599,7 @@ SCIP_RETCODE level4(
    int     degtnelims;
    int     reductbound;
 
-   char    le = TRUE;
+   char    le = !TRUE;
    char    sd = TRUE;
    char    bd3 = TRUE;
    char    nsv = TRUE;
@@ -1922,18 +1922,18 @@ static double levelm4(
 #endif
    if( g->stp_type == STP_HOP_CONS )
    {
-#if 0
+#if 1
       do
       {
          printf("Bound test\n");
          bound_test(scip, g, &nelims);
          printf("Num elimins: %d\n", nelims);
 
-         degree_test_dir(g, &fixed);
+         //degree_test_dir(g, &fixed);
 
-         nelims += nv_reduction_optimal(g, &fixed, runnum);
-
-         nelims += sd_reduction_dir(g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms);
+         SCIP_CALL( sd_reduction_dir(scip, g, sd_indist, sd_intran, sd_outdist, sd_outtran, cost, heap, state, outterms, &sdnelims) );
+	 nelims += sdnelims;
+	 SCIP_CALL( nv_reduction_optimal(scip, g, &fixed, &nelims, runnum) );
          printf("Num elimins: %d\n", nelims);
       } while(nelims > 0);
 #endif
@@ -2186,7 +2186,7 @@ SCIP_RETCODE level5(
    int     degtnelims;
    int     reductbound;
 
-   char    le = TRUE;
+   char    le = !TRUE;
    char    sd = TRUE;
    char    bd3 = TRUE;
    char    nsv = TRUE;
@@ -2244,7 +2244,9 @@ SCIP_RETCODE level5(
    /* define minimal number of edge/node eliminations for a reduction test to be continued */
    reductbound = 0;
    //printf("BOUND: %d \n", reductbound);
+SCIP_CALL( ledge_reduction(scip, g, vnoi, heap, state, vbase, &lenelims) );
 
+assert(0);
    degree_test(scip, g, fixed);
 
    if( bred )
@@ -2418,10 +2420,9 @@ SCIP_RETCODE level5(
          assert(((*graph)->ancestors[i])->parent == NULL );
       }
       printf("level: %d \n", level);
-#endif
-
-      if( 0 && (*graph)->stp_type != STP_UNDIRECTED )
+       if( 0 && (*graph)->stp_type != STP_UNDIRECTED )
          return SCIP_OKAY;
+#endif
 
       if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID )
          return SCIP_OKAY;
