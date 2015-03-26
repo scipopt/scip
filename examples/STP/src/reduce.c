@@ -1653,6 +1653,9 @@ SCIP_RETCODE level4(
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
+   for( i = 0; i < g->knots; i++ )
+      knotexamined[i] = -1;
+
    runnum = 0;
 
    /* define minimal number of edge/node eliminations for a reduction test to be continued */
