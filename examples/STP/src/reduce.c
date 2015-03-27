@@ -1628,9 +1628,14 @@ SCIP_RETCODE level4(
    nedges = g->edges;
 
    if( SCIPisLE(scip, (double) g->terms / (double) g->knots, 0.03 ) )
+   {
       bred = TRUE;
+      le = TRUE;
+   }
    else
+   {
       bred = FALSE;
+   }
 
 #ifdef PRINT_TMP_PRESOL
    SCIPprobdataSetGraph(probdata, g);
@@ -1709,7 +1714,7 @@ SCIP_RETCODE level4(
       if( sd )
       {
 	 nelims = 0;
-         for( i = 0; i < 6; i++ )
+         for( i = 0; i < 4; i++ ) /* TODO 6*/
          {
             SCIP_CALL( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, &nelims, runnum) );
             runnum++;
@@ -1938,7 +1943,7 @@ static double levelm4(
 	 nelims += sdnelims;
 	 SCIP_CALL( nv_reduction_optimal(scip, g, &fixed, &nelims, runnum) );
          printf("Num elimins: %d\n", nelims);
-      } while(nelims > 0);
+      } while(nelims > redbound);
 #endif
 
       rerun = FALSE;

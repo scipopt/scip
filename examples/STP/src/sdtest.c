@@ -1032,7 +1032,7 @@ SCIP_RETCODE bd3_reduction(
          continue;
 
       if( !(LT(c1, FARAWAY) && LT(c2, FARAWAY) && LT(c3, FARAWAY) &&
-          LT(c1a, FARAWAY) && LT(c2a, FARAWAY) && LT(c3a, FARAWAY)) )
+            LT(c1a, FARAWAY) && LT(c2a, FARAWAY) && LT(c3a, FARAWAY)) )
          continue;
 
       for(k = 0; k < 3; k++)
@@ -1043,14 +1043,14 @@ SCIP_RETCODE bd3_reduction(
          assert(revancestors[k] == NULL);
       }
 
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[0]), g->ancestors[e1]) );
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[0]), g->ancestors[Edge_anti(e1)]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[0]), g->ancestors[e1]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[0]), g->ancestors[Edge_anti(e1)]) );
 
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[1]), g->ancestors[e2]) );
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[1]), g->ancestors[Edge_anti(e2)]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[1]), g->ancestors[e2]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[1]), g->ancestors[Edge_anti(e2)]) );
 
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[2]), g->ancestors[e3]) );
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[2]), g->ancestors[Edge_anti(e3)]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[2]), g->ancestors[e3]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[2]), g->ancestors[Edge_anti(e3)]) );
 
       compute_sd(g, k1, g->cost, g->cost, heap, state, &count, pathdist1, pathtran1, pathrand);
       compute_sd(g, k2, g->cost, g->cost, heap, state, &count, pathdist2, pathtran2, pathrand);
@@ -1967,7 +1967,7 @@ SCIP_RETCODE ledge_reduction(
    )
 {
    GRAPH* netgraph;
-   GRAPH* dg;
+  // GRAPH* dg;
    PATH* mst;
    SCIP_Real cost;
    SCIP_Real maxcost;
@@ -1981,12 +1981,12 @@ SCIP_RETCODE ledge_reduction(
    int nterms;
    int maxnedges;
    int netnnodes;
-   int ledge;
+   //int ledge;
    int* nodesid;
- int* edgerev;
-char* blocked;
- SCIP_CALL( SCIPallocBufferArray(scip, &blocked, g->edges) );
- SCIP_CALL( SCIPallocBufferArray(scip, &edgerev, g->edges) );
+   ////int* edgerev;
+  // char* blocked;
+  // SCIP_CALL( SCIPallocBufferArray(scip, &blocked, g->edges) );
+  // SCIP_CALL( SCIPallocBufferArray(scip, &edgerev, g->edges) );
    assert(g != NULL);
    assert(vnoi != NULL);
    assert(heap != NULL);
@@ -1996,39 +1996,29 @@ char* blocked;
    *nelims = 0;
    nedges = g->edges;
    nnodes = g->knots;
-   //nterms = g->terms;
    assert(graph_valid(g));
 
    nterms = 0;
    for( k = 0; k < nnodes; k++ )
-     if( Is_term(g->term[k]) && g->grad[k] > 0 )
-        nterms++;
+      if( Is_term(g->term[k]) && g->grad[k] > 0 )
+         nterms++;
 
    if( nterms <= 1 )
-     return SCIP_OKAY;
+      return SCIP_OKAY;
 
    voronoi_pres(g, g->cost, vnoi, vbase, heap, state);
-   for( k = 0; k < nnodes; k++ )
-   {
-   //  if(state[k] != CONNECT)
-     //  printf("k: %d . term: %d , grad %d\n", k, g->term[k], g->grad[k]);
-     if( g->grad[k] > 0 )
-      assert(state[k] == CONNECT);
-   }
-//assert(0);
+
    if( SCIPisGT(scip, nedges, (nterms - 1) * nterms) )
       maxnedges = (nterms - 1) * nterms;
    else
       maxnedges = nedges;
-
-   //printf(" size0: %d, maxnedges: %d \n", nterms, maxnedges);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
 
    /* initialize the new graph */
    netgraph = graph_init(nterms, maxnedges, 1, 0);
 
-   dg = graph_init(nnodes, nedges, 1, 0);
+   //dg = graph_init(nnodes, 2 * nedges, 1, 0);
 
    e = 0;
    for( k = 0; k < nnodes; k++ )
@@ -2042,27 +2032,26 @@ char* blocked;
             graph_knot_add(netgraph, -1);
 	 netgraph->mark[e] = TRUE;
 	 nodesid[k] = e++;
-	 graph_knot_add(dg, 0);
       }
       else
       {
 	 nodesid[k] = UNKNOWN;
-	 graph_knot_add(dg, -1);
       }
+    //  graph_knot_add(dg, 0);
    }
-printf("nterms: %d\n\n", e);
+   //printf("nterms: %d\n\n", e);
 
-dg->source[0] = g->source[0];
-assert(Is_term(dg->term[g->source[0]]));
+  // dg->source[0] = g->source[0];
+  // assert(Is_term(dg->term[g->source[0]]));
 
    netnnodes = netgraph->knots;
    assert(netnnodes == e);
    assert(netnnodes == nterms);
-      for( e = 0; e < nedges; e++ )
-   {
-      blocked[e] = FALSE;
-      edgerev[e] = UNKNOWN;
-}
+   //for( e = 0; e < nedges; e++ )
+  // {
+    //  blocked[e] = FALSE;
+     // edgerev[e] = UNKNOWN;
+   //}
    for( k = 0; k < nnodes; k++ )
    {
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
@@ -2095,15 +2084,15 @@ assert(Is_term(dg->term[g->source[0]]));
                {
                   netgraph->cost[ne]            = cost;
                   netgraph->cost[Edge_anti(ne)] = cost;
-		  edgerev[ne] = e;
-		  edgerev[flipedge(ne)] = flipedge(e);
+		//  edgerev[ne] = e;
+		 // edgerev[flipedge(ne)] = flipedge(e);
 		  assert(ne <= maxnedges);
                }
 	    }
 	    else
 	    {
-	       edgerev[netgraph->edges] = e;
-	        edgerev[flipedge(netgraph->edges)] = flipedge(e);
+	    //   edgerev[netgraph->edges] = e;
+             //  edgerev[flipedge(netgraph->edges)] = flipedge(e);
 	       graph_edge_add(netgraph, nodesid[v1], nodesid[v2], cost, cost);
 	       assert(netgraph->edges <= maxnedges);
 	    }
@@ -2111,13 +2100,7 @@ assert(Is_term(dg->term[g->source[0]]));
       }
    }
    netgraph->source[0] = 0;
-   /*
-     if( !graph_valid(netgraph ) )
-     {
-     SCIP_CALL( printGraph(scip, g, "AX.gml", NULL) );
-     SCIP_CALL( printGraph(scip, netgraph, "BX.gml", NULL) );
-     }
-   */
+
    assert( graph_valid(netgraph ) );
 
    /* compute a MST on netgraph */
@@ -2127,73 +2110,71 @@ assert(Is_term(dg->term[g->source[0]]));
 
    maxcost = -1;
    assert(mst[0].edge == -1);
-   ledge = -1;
+
    for( k = 1; k < netnnodes; k++ )
    {
-      assert(g->path_state[k] == CONNECT);
+      assert(netgraph->path_state[k] == CONNECT);
       e = mst[k].edge;
       assert(e >= 0);
       cost = netgraph->cost[e];
       if( SCIPisGT(scip, cost, maxcost) )
       {
          maxcost = cost;
-	 ledge = e;
       }
    }
-
-
-
-for( k = 1; k < netnnodes; k++ )
+#if 0
+   ledge = -1;
+   for( k = 1; k < netnnodes; k++ )
    {
 
       ledge = edgerev[mst[k].edge];
       assert(ledge >= 0);
-   v1 = g->tail[ledge];
-   v2 = g->head[ledge];
-   printf("e: %d->%d \n", v1,v2);
-blocked[ledge] = TRUE;
+      v1 = g->tail[ledge];
+      v2 = g->head[ledge];
+      // printf("e: %d->%d \n", v1,v2);
+      blocked[ledge] = TRUE;
 
-graph_edge_add(dg, v1, v2, 1, 1);
-   int k1 = v1;
-   int k2 = v2;
+      graph_edge_add(dg, v1, v2, 1, 1);
+      int k1 = v1;
+      int k2 = v2;
 
-SCIP_Real obj = g->cost[ledge];
+      SCIP_Real obj = g->cost[ledge];
 
-   printf("k1: %d, %d\n",k1,k2);
+      // printf("k1: %d, %d\n",k1,k2);
+      assert(Is_term(g->term[vbase[k1]]));
+      assert(Is_term(g->term[vbase[k2]]));
+      assert(vbase[k1] != vbase[k2]);
+      while( k1 != vbase[k1] )
+      {
+         //  printf("et: %d->%d \n", k1, g->tail[vnoi[k1].edge] );
+         blocked[vnoi[k1].edge] = TRUE;
+         obj += g->cost[vnoi[k1].edge];
+         graph_edge_add(dg, k1, g->tail[vnoi[k1].edge], 1, 1);
+         k1 = g->tail[vnoi[k1].edge];
+      }
+      assert(k1 == vbase[k1]);
 
-   assert(Is_term(g->term[vbase[k1]]));
-    assert(Is_term(g->term[vbase[k2]]));
-     assert(vbase[k1] != vbase[k2]);
-   while( k1 != vbase[k1] )
-   {
-     printf("et: %d->%d \n", k1, g->tail[vnoi[k1].edge] );
-     blocked[vnoi[k1].edge] = TRUE;
-     obj += g->cost[vnoi[k1].edge];
-     graph_edge_add(dg, k1, g->tail[vnoi[k1].edge], 1, 1);
-     k1 = g->tail[vnoi[k1].edge];
+      while( k2 != vbase[k2] )
+      {
+         // printf("eh: %d->%d \n", k2, g->tail[vnoi[k2].edge] );
+         blocked[vnoi[k2].edge] = TRUE;
+         obj += g->cost[vnoi[k2].edge];
+         graph_edge_add(dg, k2, g->tail[vnoi[k2].edge], 1, 1);
+         k2 = g->tail[vnoi[k2].edge];
+      }
+
+      assert(k1 != k2);
+      nodesid[k1] = UNKNOWN;
+      nodesid[k2] = UNKNOWN;
+      assert(SCIPisEQ(scip, obj, netgraph->cost[mst[k].edge]));
    }
-   assert(k1 == vbase[k1]);
 
-    while( k2 != vbase[k2] )
-   {
-     printf("eh: %d->%d \n", k2, g->tail[vnoi[k2].edge] );
-     blocked[vnoi[k2].edge] = TRUE;
-     obj += g->cost[vnoi[k2].edge];
-     graph_edge_add(dg, k2, g->tail[vnoi[k2].edge], 1, 1);
-     k2 = g->tail[vnoi[k2].edge];
-   }
-
-   assert(k1 != k2);
-   nodesid[k1] = UNKNOWN;
-   nodesid[k2] = UNKNOWN;
-   assert(SCIPisEQ(scip, obj, netgraph->cost[mst[k].edge]));
-}
-
-assert(graph_valid(dg));
-   printf("maxcost: %f \n", maxcost);
+   assert(graph_valid(dg));
+#endif
+   // printf("maxcost: %f \n", maxcost);
    for( k = 0; k < nnodes; k++ )
    {
-     assert(nodesid[k] == UNKNOWN);
+      //assert(nodesid[k] == UNKNOWN);
       e = g->outbeg[k];
       while( e != EAT_LAST )
       {
@@ -2204,12 +2185,12 @@ assert(graph_valid(dg));
             SCIPindexListNodeFree(scip, &((g->ancestors)[e]));
             SCIPindexListNodeFree(scip, &((g->ancestors)[Edge_anti(e)]));
 	    v1 = g->oeat[e];
-	    printf("LE: elim: %d->%d (%d) %f \n", g->tail[e], g->head[e], e, g->cost[e]);
-	    if( blocked[e] || blocked[flipedge(e)] )
-	      assert(0);
+            // printf("LE: elim: %d->%d (%d) %f \n", g->tail[e], g->head[e], e, g->cost[e]);
+	 //   if( blocked[e] || blocked[flipedge(e)] )
+          //     assert(0);
             graph_edge_del(g, e);
             e = v1;
-	    assert(graph_valid(g));
+            //	    assert(graph_valid(g));
          }
          else
 	 {
@@ -2217,12 +2198,41 @@ assert(graph_valid(dg));
 	 }
       }
    }
-assert(0);
+
+   if( *nelims > 0 )
+   {
+      int count = 0;
+      for(k = 0; k < g->knots; k++)
+         g->mark[k] = FALSE;
+
+      graph_trail(g, g->source[0]);
+
+      for( k = 0; k < g->knots; k++ )
+      {
+         if( !g->mark[k] && (g->grad[k] > 0) )
+	 {
+	    assert(!Is_term(g->term[k]));
+	    e = g->inpbeg[k];
+	    while( e != EAT_LAST )
+            {
+               graph_edge_del(g, e);
+               SCIPindexListNodeFree(scip, &(g->ancestors[e]));
+               SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(e)]));
+               (count)++;
+               e = g->inpbeg[k];
+            }
+	 }
+      }
+      //printf("ndeletes: %d \n", count);
+   }
    /* free netgraph and  MST data structure */
    graph_path_exit(netgraph);
    graph_free(scip, netgraph, TRUE);
+   //graph_free(scip, dg, TRUE);
    SCIPfreeBufferArray(scip, &mst);
    SCIPfreeBufferArray(scip, &nodesid);
+  // SCIPfreeBufferArray(scip, &blocked);
+   //SCIPfreeBufferArray(scip, &edgerev);
    //printf("LE elims: %d \n", *nelims);
    assert(graph_valid(g));
    return SCIP_OKAY;

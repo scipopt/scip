@@ -652,7 +652,7 @@ SCIP_RETCODE buildsolgraph(
             }
          }
       }
-      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
       {
          for( i = graph->outbeg[graph->source[0]]; i != EAT_LAST; i = graph->oeat[i] )
          {
@@ -1230,10 +1230,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             /* set (edge) result array to default */
             for( e = 0; e < nsoledges; e++ )
                results[e] = UNKNOWN;
-
             /* run TM heuristic */
             SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns, solgraph->source[0], cost, costrev, maxcost) );
-
             /* run local heuristic */
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT )
                SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
@@ -1309,7 +1307,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             }
             curr = curr->parent;
          }
-
          /* prune solution (in the original graph) */
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
             SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
@@ -1317,7 +1314,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             SCIP_CALL( do_prune(scip, graph, graph->cost, 0, orgresults, stnodes) );
 
          SCIPfreeBufferArray(scip, &stnodes);
-
          pobj = 0.0;
          //newsolval = 0.0;
          for( e = 0; e < graph->edges; e++ )
