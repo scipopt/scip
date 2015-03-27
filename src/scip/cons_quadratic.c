@@ -154,12 +154,11 @@ struct SCIP_ConsData
    SCIP_Real*            factorleft;         /**< coefficients of left factor if constraint function is factorable */
    SCIP_Real*            factorright;        /**< coefficients of right factor if constraint function is factorable */
 
-   SCIP_Real*            gaugelincoefs;      /**< linear coefficients of quadratic variables for gauge function */
-   SCIP_Real*            interiorpoint;      /**< interior point of the region defined by convex function */
-   SCIP_Real             interiorpointval;   /**< function value of interior point */
-   SCIP_HASHMAP*         varmap;             /**< map between variables and indices of interior point */
-   unsigned int          interiorcomputed:1; /**< did we compute an interior point ? */
-   unsigned int          recomputeinterior:1; /**< should we recompute an interior point ? */
+   SCIP_Real*            gaugecoefs;         /**< coefficients of the gauge function */
+   SCIP_Real             gaugeconst;         /**< constant of the gauge function */
+   SCIP_Real*            interiorpoint;      /**< interior point of the region defined by the convex function */
+   SCIP_Real             interiorpointval;   /**< function value at interior point */
+   unsigned int          isgaugeavailable:1; /**< is the gauge function computed? */
 };
 
 /** quadratic constraint update method */
@@ -191,7 +190,7 @@ struct SCIP_ConshdlrData
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
-   SCIP_Bool             strongcuts;         /**< should convex quadratics generated strong cuts? */
+   SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
                                               * SCIP might declare sub-optimal solutions optimal or feasible instances
@@ -1152,8 +1151,7 @@ SCIP_RETCODE consdataCreateEmpty(
    (*consdata)->minlinactivityinf = -1;
    (*consdata)->maxlinactivityinf = -1;
 
-   (*consdata)->interiorcomputed = FALSE;
-   (*consdata)->recomputeinterior = TRUE;
+   (*consdata)->isgaugeavailable = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1273,8 +1271,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhsviol  = SCIPisInfinity(scip, -lhs) ? 0.0 : SCIP_INVALID;
    (*consdata)->rhsviol  = SCIPisInfinity(scip,  rhs) ? 0.0 : SCIP_INVALID;
 
-   (*consdata)->interiorcomputed = FALSE;
-   (*consdata)->recomputeinterior = TRUE;
+   (*consdata)->isgaugeavailable = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1331,12 +1328,8 @@ SCIP_RETCODE consdataFree(
    }
 
    /* free interior point information */
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->interiorpoint, (*consdata)->nlinvars + (*consdata)->nquadvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->gaugelincoefs, (*consdata)->nquadvars);
-   if( (*consdata)->varmap != NULL )
-   {
-      SCIPhashmapFree(&(*consdata)->varmap);
-   }
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->interiorpoint, (*consdata)->nquadvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->gaugecoefs, (*consdata)->nquadvars);
 
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
@@ -7140,45 +7133,95 @@ SCIP_RETCODE generateCut(
 }
 
 
-/** computes an interior point for the convex constraint
+/** computes an interior point for the quadratic part of the convex constraint
+ * TODO: maybe this should be called on INITSOL? the activities might change during the tree
  */
 static
 SCIP_RETCODE computeInteriorPoint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool*            success             /**< buffer to store if an interior point was found */
 )
 {
    SCIP_CONSDATA* consdata;
    SCIP_QUADELEM* nlrowquadelems;
-   SCIP_QUADELEM* quadelems;
    SCIP_NLPIPROBLEM* prob;
-   SCIP_HASHMAP* varmap;
-   SCIP_VAR** nlrowlinvars;
    SCIP_VAR** nlrowquadvars;
    SCIP_NLPI* nlpi;
-   SCIP_Real* nlrowlincoefs;
    SCIP_Real* interiorpoint;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
+   SCIP_Real* lincoefs;
    SCIP_Real nlpiside;
    char probname[SCIP_MAXSTRLEN];
    int* lininds;
-   int nlrownlinvars;
    int nlrownquadelems;
+   int nquadvars;
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(cons != NULL);
 
+   assert(success != NULL);
+   *success = FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->nlrow != NULL);
-
-   consdata->recomputeinterior = FALSE;
 
    if( !SCIPisIpoptAvailableIpopt() )
       return SCIP_OKAY;
+
+   /* definition of interior point:
+    * in the convex case, we try to find an interior point of
+    * x^T A x + b^T x <= rhs - maximum activity linear part
+    * in the concave case; lhs - minimum activity linear part <= x^T A x + b^T x
+    * we compute activities ourselves, since consdata->max(min)linactivity
+    * are only computed when lhs (rhs) is finity. most likely, this never holds for us
+    * we now compute the correct side
+    */
+   if( consdata->isconvex )
+   {
+      /* compute maximum activity */
+      nlpiside = 0;
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         if( consdata->lincoefs[i] >= 0.0 )
+            nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         else
+            nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+
+         if( SCIPisInfinity(scip,  nlpiside) )
+         {
+            SCIPdebugMessage("maximum activity is infinity: there is no interior point for rhs - maxlinactivity!\n");
+            return SCIP_OKAY;
+         }
+      }
+      nlpiside = consdata->rhs - nlpiside;
+   }
+   else
+   {
+      assert(consdata->isconcave);
+
+      /* compute minimum activity */
+      nlpiside = 0;
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         if( consdata->lincoefs[i] >= 0.0 )
+            nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         else
+            nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+
+         if( SCIPisInfinity(scip,  -nlpiside) )
+         {
+            SCIPdebugMessage("maximum activity is infinity: there is no interior point for rhs - maxlinactivity!\n");
+            return SCIP_OKAY;
+         }
+      }
+      nlpiside = consdata->lhs - nlpiside;
+   }
+
+   /* if this fails, ask constraint to build nlrow */
+   assert(consdata->nlrow != NULL);
 
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
@@ -7186,67 +7229,53 @@ SCIP_RETCODE computeInteriorPoint(
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subquad", SCIPgetProbName(scip));
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &prob, probname) );
 
-   /* add variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, consdata->nquadvars + consdata->nbilinterms) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, consdata->nlinvars + consdata->nquadvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, consdata->nlinvars + consdata->nquadvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, consdata->nlinvars + consdata->nquadvars) );
+   /* ask memory to store data needed to create vars and linear coefficients */
+   nquadvars = consdata->nquadvars;
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nquadvars) );
 
-   SCIP_CALL( SCIPhashmapCreate(&(consdata->varmap), SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars + consdata->nlinvars)) );
-   varmap = consdata->varmap;
-
-   for( i = 0; i < consdata->nlinvars; i++ )
+   /* get bounds and linear coefficients */
+   for( i = 0; i < nquadvars; i++ )
    {
-      lbs[i] = SCIPvarGetLbGlobal(consdata->linvars[i]);
-      ubs[i] = SCIPvarGetUbGlobal(consdata->linvars[i]);
+      lbs[i] = SCIPvarGetLbGlobal(consdata->quadvarterms[i].var);
+      ubs[i] = SCIPvarGetUbGlobal(consdata->quadvarterms[i].var);
 
-      SCIPhashmapInsert(varmap, (void *)consdata->linvars[i], (void *) (size_t) i);
+      lincoefs[i] = consdata->quadvarterms[i].lincoef;
+      lininds[i] = i;
    }
 
-   for( i = 0; i < consdata->nquadvars; i++ )
-   {
-      lbs[i + consdata->nlinvars] = SCIPvarGetLbGlobal(consdata->quadvarterms[i].var);
-      ubs[i + consdata->nlinvars] = SCIPvarGetUbGlobal(consdata->quadvarterms[i].var);
+   /* add vars */
+   SCIP_CALL( SCIPnlpiAddVars(nlpi, prob, nquadvars, lbs, ubs, NULL) );
 
-      SCIPhashmapInsert(varmap, consdata->quadvarterms[i].var, (void*)(size_t)(i + consdata->nlinvars));
-   }
-
-   SCIP_CALL( SCIPnlpiAddVars(nlpi, prob, consdata->nlinvars + consdata->nquadvars, lbs, ubs, NULL) );
-
-   /* add constraint */
-   nlrownlinvars = SCIPnlrowGetNLinearVars(consdata->nlrow);
-   nlrowlinvars = SCIPnlrowGetLinearVars(consdata->nlrow);
-   nlrowlincoefs = SCIPnlrowGetLinearCoefs(consdata->nlrow);
+   /* get nlrow info */
    nlrowquadvars = SCIPnlrowGetQuadVars(consdata->nlrow);
    nlrownquadelems = SCIPnlrowGetNQuadElems(consdata->nlrow);
    nlrowquadelems = SCIPnlrowGetQuadElems(consdata->nlrow);
 
-   for( i = 0; i < nlrownlinvars; i++ )
+#ifndef NDEBUG
+   for( i = 0; i < nlrownquadelems; i++ )
    {
-      lininds[i] = (int)(size_t)SCIPhashmapGetImage(varmap, nlrowlinvars[i]);
+      assert(nlrowquadvars[nlrowquadelems[i].idx1] == consdata->quadvarterms[nlrowquadelems[i].idx1].var);
+      assert(nlrowquadvars[nlrowquadelems[i].idx2] == consdata->quadvarterms[nlrowquadelems[i].idx2].var);
    }
-   for( i = 0; i < SCIPnlrowGetNQuadElems(consdata->nlrow); i++ )
-   {
-      quadelems[i].idx1 = (int)(size_t)SCIPhashmapGetImage(varmap, nlrowquadvars[nlrowquadelems[i].idx1]);
-      quadelems[i].idx2 = (int)(size_t)SCIPhashmapGetImage(varmap, nlrowquadvars[nlrowquadelems[i].idx2]);
-      quadelems[i].coef = nlrowquadelems[i].coef;
-   }
+#endif
 
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(cons));
 
+   /* add constraint */
    if( consdata->isconvex )
    {
-      nlpiside = consdata->rhs - INTERIOR_EPS;
-      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, NULL, &nlpiside, &nlrownlinvars, &lininds, &nlrowlincoefs,
-               &nlrownquadelems, &quadelems, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, NULL, &nlpiside, &nquadvars, &lininds, &lincoefs,
+               &nlrownquadelems, &nlrowquadelems, NULL, NULL, NULL) );
    }
    else
    {
       assert(consdata->isconcave);
 
-      nlpiside = consdata->lhs + INTERIOR_EPS;
-      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, &nlpiside, NULL, &nlrownlinvars, &lininds, &nlrowlincoefs,
-               &nlrownquadelems, &quadelems, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, &nlpiside, NULL, &nquadvars, &lininds, &lincoefs,
+               &nlrownquadelems, &nlrowquadelems, NULL, NULL, NULL) );
    }
 
    /* solve NLP problem */
@@ -7287,34 +7316,171 @@ SCIP_RETCODE computeInteriorPoint(
          assert(0);
    }
 
-   /* fetch solution and compute gauge's linear part */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->interiorpoint), consdata->nlinvars + consdata->nquadvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->gaugelincoefs), consdata->nquadvars) );
-
-   /* nlpi get solution (at least for ipopt) makes interiorpoint to point to
-    * the internal solution stored in the nlpi problem data structure.
-    * we need to copy it here if we don't want it to be destroyed when
-    * freeing the problem
-    * */
+   /* fetch solution */
+   /* nlpi get solution (at least for ipopt) makes interiorpoint point
+    * to the internal solution stored in the nlpi problem data structure.
+    * we need to copy it here because it will be destroyed once the problem is free'd
+    */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL) );
 
-   consdata->interiorpointval = 0;
-   for( i = 0; i < consdata->nlinvars; i++ )
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+
+   for( i = 0; i < nquadvars; i++ )
    {
       consdata->interiorpoint[i] = interiorpoint[i];
-      consdata->interiorpointval += interiorpoint[i] * consdata->lincoefs[i];
    }
 
+   *success = TRUE;
+
+TERMINATE:
+
+#ifdef SCIP_DEBUG_INT
+   if( *success )
+   {
+      printf("computed interior point:\n");
+      for( i = 0; i < nquadvars; i++ )
+         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+   }
+   else
+   {
+      printf("cons <%s>: failed to find an interior point.  nlp soltat: %d, termstat: %d\n",
+               SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
+      printf("run with SCIP_DEBUG for more info\n");
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+      SCIPinfoMessage(scip, NULL, ";\n");
+      assert(0);
+      /* FIXME: instance camshape100 says that there is no interior point (interior empty)
+       * is there something intelligent that can be said?
+       */
+   }
+#endif
+
+   /* free memory */
+   SCIPfreeBufferArrayNull(scip, &lbs);
+   SCIPfreeBufferArrayNull(scip, &ubs);
+   SCIPfreeBufferArrayNull(scip, &lininds);
+   SCIPfreeBufferArrayNull(scip, &lincoefs);
+   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
+   SCIP_CALL( SCIPnlpiFree(&nlpi) );
+
+   return SCIP_OKAY;
+}
+
+/** compute gauge function of the set S - s_0
+ * where \f$ S = \{ x : f(x) \le c \}\f$ and \f$ s_0 \in \mathring S\f.
+ * Here, \f$ f(x) \f$ is a purely quadratic (i.e, all \f$x\f$ variables
+ * appear in a bilinear or quadratic term).
+ * Explicitly, \f$ f(x) = \pm x^T A x \pm b^T x \f$ depending whether \f$A\f$
+ * is semidefinite positive (+) or semidefinite negative (-).
+ * The constant \f$c\f$ is rhs - minimum activity of the purely linear part of the constraint
+ * if \f$A \succcurlyeq 0\f$ and minimum activity - lhs if \f$A \precurlyeq 0\f$.
+ * this is computed only at INITSOL
+ */
+static
+SCIP_RETCODE computeGauge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_HASHMAP* varmap;
+   SCIP_Bool success;
+   SCIP_Bool convex;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( !conshdlrdata->gaugecuts )
+      return SCIP_OKAY;
+
+   /* 1. check convexity
+    * 2. compute interior point
+    * 3. compute gauge function
+    */
+   /* 1. */
+   SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkcurvature) );
+
+   /* function has to be convex with finite rhs or concave with finite lhs */
+   convex = consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs);
+   assert(convex || (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
+
+   SCIPdebugMessage("cons %s: is %s\n", SCIPconsGetName(cons), convex ? "convex" : "concave");
+
+#ifdef SCIP_DEBUG_INT
+   if( convex )
+   {
+      SCIPdebugMessage("computing interior point with rhs -> rhs - maximum activity of linear part\n");
+   }
+   else
+   {
+      SCIPdebugMessage("computing interior point with lhs -> lhs - minimum activity of linear part\n");
+   }
+#endif
+
+   /* 2. */
+   SCIP_CALL( computeInteriorPoint(scip, cons, &success) );
+
+   /* if success, compute gaugecoefs (b_gauge) and gaugeconst (c_gauge) */
+   if( !success )
+   {
+      SCIPdebugMessage("failed to compute gauge function\n");
+      consdata->isgaugeavailable = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* 3. */
+   /* we are going to evaluate the function at interiorpoint. for this, we need
+    * to evaluate interiorpoint^T A interiorpoint.
+    * therefore, we need a mechanism that given a variable, can give us its interior point value
+    */
+   /* prepare map variable -> its idx such that in interiorpoint[idx] is its interior point value */
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars)) );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
+
+   /* compute value of quadratic part at interior point,
+    * build map and compute gaugeconst (c_gauge) */
+   consdata->interiorpointval = 0;
+   consdata->gaugeconst = 0;
    for( i = 0; i < consdata->nquadvars; i++ )
    {
       SCIP_Real val;
 
-      val = interiorpoint[i + consdata->nlinvars];
-      consdata->interiorpoint[i + consdata->nlinvars] = val;
+      val = consdata->interiorpoint[i];
       consdata->interiorpointval += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val) * val;
+      consdata->gaugeconst += consdata->quadvarterms[i].sqrcoef * val * val;
+      SCIPhashmapInsert(varmap, consdata->quadvarterms[i].var, (void *)(size_t)i);
+   }
 
-      /* compute gauge's linear part */
-      consdata->gaugelincoefs[i] = consdata->quadvarterms[i].lincoef + 2 * consdata->quadvarterms[i].sqrcoef * val;
+   for( i = 0; i < consdata->nbilinterms; i++ )
+   {
+      SCIP_Real val1;
+      SCIP_Real val2;
+
+      val1 = consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var1)];
+      val2 = consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var2)];
+      consdata->interiorpointval += consdata->bilinterms[i].coef * val1 * val2;
+      consdata->gaugeconst += consdata->bilinterms[i].coef * val1 * val2;
+   }
+
+   /* compute gaugecoefs (b_gauge) */
+   for( i = 0; i < consdata->nquadvars; i++ )
+   {
+      SCIP_Real val;
+
+      val = consdata->interiorpoint[i];
+      consdata->gaugecoefs[i] = consdata->quadvarterms[i].lincoef + 2 * consdata->quadvarterms[i].sqrcoef * val;
       for( j = 0; j < consdata->quadvarterms[i].nadjbilin; j++ )
       {
          SCIP_BILINTERM bilinterm;
@@ -7332,30 +7498,268 @@ SCIP_RETCODE computeInteriorPoint(
             var = bilinterm.var1;
          }
 
-         consdata->gaugelincoefs[i] += bilinterm.coef * interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var)];
+         consdata->gaugecoefs[i] += bilinterm.coef * consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var)];
       }
+   }
+
+#ifdef SCIP_DEBUG_INT
+   printf("quadratic part at interior point: %g\n", consdata->interiorpointval);
+   if( convex )
+      printf("rhs: %g\n", consdata->rhs - consdata->maxlinactivity);
+   else
+      printf("lhs: %g\n", consdata->lhs - consdata->minlinactivity);
+
+   for( j = 0; j < consdata->nquadvars; j++ )
+      printf("b_gauge[%s] = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugecoefs[j]);
+   printf("c_gauge = %g\n", consdata->gaugeconst);
+#endif
+
+   SCIPhashmapFree(&varmap);
+
+   SCIPdebugMessage("gauge function computed successfully\n");
+   consdata->isgaugeavailable = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** evaluates gauge function of the set S - s_0
+ * where \f$ S = \{ x : f(x) \le c \}\f$ and \f$ s_0 \in \mathring S\f.
+ * \f$ S = \{ x : f(x) \le c \}\f$ at sol - s_0.
+ * see computeGauge for more details
+ */
+/* TODO: think about if user should tell that function is convex or... */
+static
+SCIP_RETCODE evaluateGauge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             refsol,             /**< reference point where to generate cut, or NULL if sol should be used */
+   SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
+   SCIP_Real*            gaugeval,           /**< buffer to store the value of the gauge function */
+   SCIP_Bool*            success             /**< buffer to store if evaluation was successful */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Real side;
+   SCIP_Real aterm;
+   SCIP_Real bterm;
+   SCIP_Real cterm;
+   SCIP_Bool convex;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *success = FALSE;
+
+   /* if we do not separate using the gauge function, nothing to do */
+   if( !conshdlrdata->gaugecuts )
+      return SCIP_OKAY;
+
+   /* if there is no gauge function, nothing to do */
+   if( !consdata->isgaugeavailable )
+      return SCIP_OKAY;
+
+   /* function has to be convex with finite rhs or concave with finite lhs */
+   SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
+   convex = consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs);
+   assert(convex || (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
+
+   SCIPdebugMessage("cons %s: is %s\n", SCIPconsGetName(cons), convex ? "convex" : "concave");
+
+
+#ifdef SCIP_DEBUG_INT
+   printf("***********Computing gauge value at refsol********\n");
+#endif
+
+   /* evaluate gauge function at x0 = (refsol - interior point) */
+   /* compute aterm = side - function(interior point) */
+   if( convex )
+   {
+      side = consdata->rhs;
+      for( i = 0; i < consdata->nlinvars; i++ )
+         side -= SCIPgetSolVal(scip, refsol, consdata->linvars[i]) * consdata->lincoefs[i];
+
+      aterm = side - consdata->interiorpointval;
+      /* if the interior point is not interior (this can happen
+       * since we are not so strict at the moment of computing
+       * the interior point, which makes sense in the case that
+       * the constaraint is quadratic <= t. Since we compute
+       * a point in quadratic <= min t, it might be that for a
+       * single t, interior point is not actually interior)
+       * we use isFeasZero because aterm is negative, it should
+       * still aterm >= 0, according to SCIP's definition of >=
+       */
+      if( SCIPisFeasZero(scip, aterm) )
+      {
+         printf("For current level, there is no interior point, set gaugeval <- 1. ");
+         printf("side: %15.20g interiorpointval: %15.20g\n", side, consdata->interiorpointval);
+         if( consdata->nlinvars == 1 )
+         {
+            SCIP_VAR* var;
+
+            var = consdata->linvars[0];
+            printf("var <%s> [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         }
+         *gaugeval = 1;
+         return SCIP_OKAY;
+      }
+      assert(SCIPisPositive(scip, aterm));
+   }
+   else
+   {
+      side = consdata->lhs;
+      for( i = 0; i < consdata->nlinvars; i++ )
+         side -= SCIPgetSolVal(scip, refsol, consdata->linvars[i]) * consdata->lincoefs[i];
+
+      aterm = side - consdata->interiorpointval;
+      assert(SCIPisNegative(scip, aterm));
+   }
+
+   /* compute bterm = b_gauge^T * refsol - f(interiorpoint) - c_gauge */
+   bterm = -consdata->interiorpointval - consdata->gaugeconst;
+   for( i = 0; i < consdata->nquadvars; i++ )
+      bterm += consdata->gaugecoefs[i] * SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var);
+
+   /* compute cterm = f(refsol) - b_gauge^T * refsol + c_gauge */
+   cterm = consdata->gaugeconst;
+
+   for( i = 0; i < consdata->nquadvars; i++ )
+      cterm -= consdata->gaugecoefs[i] * SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var);
+
+   for( i = 0; i < consdata->nquadvars; i++ )
+   {
+      SCIP_Real val;
+
+      val = SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var);
+      cterm += consdata->quadvarterms[i].sqrcoef * val * val;
    }
 
    for( i = 0; i < consdata->nbilinterms; i++ )
    {
-      SCIP_Real val1;
-      SCIP_Real val2;
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
 
-      val1 = interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var1)];
-      val2 = interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var2)];
-      consdata->interiorpointval += consdata->bilinterms[i].coef * val1 * val2;
+      var1 = consdata->bilinterms[i].var1;
+      var2 = consdata->bilinterms[i].var2;
+      cterm += consdata->bilinterms[i].coef * SCIPgetSolVal(scip, refsol, var1) * SCIPgetSolVal(scip, refsol, var2);
    }
 
-   consdata->interiorcomputed = TRUE;
+   /* now compute gauge */
+   assert(bterm*bterm + 4*aterm*cterm >= 0);
 
-TERMINATE:
-   /* free memory */
-   SCIPfreeBufferArrayNull(scip, &quadelems);
-   SCIPfreeBufferArrayNull(scip, &lbs);
-   SCIPfreeBufferArrayNull(scip, &ubs);
-   SCIPfreeBufferArrayNull(scip, &lininds);
-   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
-   SCIP_CALL( SCIPnlpiFree(&nlpi) );
+   if( convex )
+   {
+      *gaugeval = bterm + sqrt(bterm*bterm + 4 * aterm * cterm);
+      *gaugeval = *gaugeval / (2 * aterm);
+   }
+   else
+   {
+      *gaugeval = bterm - sqrt(bterm*bterm + 4 * aterm * cterm);
+      *gaugeval = *gaugeval / (2 * aterm);
+   }
+   assert(*gaugeval >= 0);
+   *success = TRUE;
+
+#ifdef SCIP_DEBUG_INT
+   printf("gauge's value at refsol: %g\n", *gaugeval);
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** compute reference point suggested by gauge function
+ * @todo: should we modify a point in the interior? currently we do not
+ */
+static
+SCIP_RETCODE computeReferencePointGauge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             refsol,             /**< reference point where to compute gauge, or NULL if LP solution should be used */
+   SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
+   SCIP_Real**           ref,                /**< pointer to store reference point */
+   SCIP_Bool*            success             /**< buffer to store whether we succeeded computing reference point */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Real gaugeval;
+   SCIP_Real intpoint;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_VAR* var;
+   int j;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if we do not separate strongly, nothing to do */
+   if( !conshdlrdata->gaugecuts )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("compute reference point using gauge function\n");
+
+   /* if there is no gauge function, nothing to do */
+   if( !consdata->isgaugeavailable )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("evaluating gauge\n");
+   SCIP_CALL( evaluateGauge(scip, conshdlr, cons, refsol, checkcurvmultivar, &gaugeval, success) );
+
+   if( !(*success) )
+   {
+      SCIPdebugMessage("Couldn't evaluate gauge\n");
+      return SCIP_OKAY;
+   }
+
+#ifdef SCIP_DEBUG_INT
+   printf("Given point:\n");
+   SCIPprintSol(scip, refsol, NULL, TRUE);
+   printf("gauge function value at refsol - interiorpoint: % 20.15g\n", gaugeval);
+#endif
+
+   /* when a new solution is found, this method is called from addLinearizationCuts.
+    * since the solution is feasible, gaugeval <= 1
+    * is it a good idea to modify the point if it is interior?
+    */
+   if( gaugeval < 1.0 )
+      gaugeval = 1.0;
+
+   /* set reference as (refsol - interior point)/gaugeval + interior point */
+   for( j = 0; j < consdata->nquadvars; ++j )
+   {
+      var = consdata->quadvarterms[j].var;
+      lb  = SCIPvarGetLbLocal(var);
+      ub  = SCIPvarGetUbLocal(var);
+      /* do not like variables at infinity */
+      assert(!SCIPisInfinity(scip,  lb));
+      assert(!SCIPisInfinity(scip, -ub));
+
+      intpoint = consdata->interiorpoint[j];
+      (*ref)[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gaugeval + intpoint;
+   }
+
+#ifdef SCIP_DEBUG_INT
+   printf("reference point:\n");
+   for( j = 0; j < consdata->nquadvars; ++j )
+      printf("%s = % 20.15g\n", SCIPvarGetName(consdata->quadvarterms[j].var), (*ref)[j]);
+#endif
 
    return SCIP_OKAY;
 }
@@ -7378,15 +7782,11 @@ SCIP_RETCODE generateCutSol(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* varmap;
    SCIP_VAR*  var;
    SCIP_Real  lb;
    SCIP_Real  ub;
    SCIP_Real* ref;
-   SCIP_Real gaugeval;
-   SCIP_Real aterm;
-   SCIP_Real bterm;
-   SCIP_Real cterm;
+   SCIP_Bool success;
    int j;
 
    assert(scip != NULL);
@@ -7404,175 +7804,16 @@ SCIP_RETCODE generateCutSol(
 
    /* get reference point */
    SCIP_CALL( SCIPallocBufferArray(scip, &ref, consdata->nquadvars) );
+   success = FALSE;
 
-   /* 1. check convexity
-    * 2. check for interior point & compute if necessary
-    * 3. get the linear part that defines the (translated) gauge function
-    * 4. modify (shifted) solution by gauge function (and reshift)
-    * */
-   SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
-
-   if( conshdlrdata->strongcuts && consdata->nlinvars == 0
+   if( conshdlrdata->gaugecuts &&
          ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
           (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
    {
-      SCIPdebugMessage("cons %s: is convex\n", SCIPconsGetName(cons));
-
-      /* in a restart (other cases?) the rhs of the constraint can change,
-       * in this case, we have to recompute the interior point if it is no
-       * longer valid (maybe compute everything from scratch in case of a restart)
-       * */
-      if( consdata->recomputeinterior )
-      {
-         /* compute interior */
-         SCIPdebugMessage("cons %s: is convex, computing interior point...\n", SCIPconsGetName(cons));
-         SCIP_CALL( computeInteriorPoint(scip, cons) );
-
-#ifdef SCIP_DEBUG_INT
-         if( consdata->interiorcomputed )
-         {
-            printf("interior point compution done:\n");
-            for( j = 0; j < consdata->nlinvars; j++ )
-               printf("%s = %g\n", SCIPvarGetName(consdata->linvars[j]), consdata->interiorpoint[j]);
-            for( j = 0; j < consdata->nquadvars; j++ )
-               printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->interiorpoint[j + consdata->nlinvars]);
-            printf("function value: %g\n", consdata->interiorpointval);
-            if( consdata->isconvex )
-               printf("rhs: %g\n", consdata->rhs);
-            else
-               printf("lhs: %g\n", consdata->lhs);
-
-            printf("gauge's linear coef of quadratic vars:\n");
-            for( j = 0; j < consdata->nquadvars; j++ )
-               printf("%s * %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugelincoefs[j]);
-         }
-         else
-         {
-            printf("#### failed to compute interior, ran with SCIP_DEBUG for more info\n");
-            /* instance camshape100 says that there is no interior point (interior empty)
-             * is there something intelligent that can be said?
-             * */
-         }
-
-#endif
-      }
+      SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, checkcurvmultivar, &ref, &success) );
    }
 
-   /* if function is not convex, interior will not be computed
-    * FIXME: this is a lousy fix, if interiorpoint is no longer interior, the it should
-    * be recomputed. also the if is horrible */
-   if( consdata->interiorcomputed
-         && (consdata->isconvex ? SCIPisNegative(scip, consdata->interiorpointval - consdata->rhs) :
-            SCIPisPositive(scip, consdata->interiorpointval - consdata->lhs))
-         && ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT)
-            || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
-   {
-      int i;
-
-#ifdef SCIP_DEBUG_INT
-      printf("***********Computing gauge value at refsol********\n");
-#endif
-
-      /* evaluate gauge function at x0 = (refsol - interior point) */
-      /* compute aterm = function(interior point) - rhs */
-      if( consdata->isconvex )
-      {
-         aterm = consdata->interiorpointval - consdata->rhs;
-         assert(SCIPisNegative(scip, aterm));
-      }
-      else
-      {
-         assert(consdata->isconcave);
-
-         aterm = consdata->interiorpointval - consdata->lhs;
-         assert(SCIPisPositive(scip, aterm));
-      }
-
-      /* compute bterm = gauge's b * x0 */
-      bterm = 0;
-      for( i = 0; i < consdata->nlinvars; i++ )
-      {
-         bterm += (SCIPgetSolVal(scip, refsol, consdata->linvars[i]) - consdata->interiorpoint[i]) * consdata->lincoefs[i];
-      }
-      for( i = 0; i < consdata->nquadvars; i++ )
-      {
-         j = i + consdata->nlinvars;
-         bterm += (SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var) - consdata->interiorpoint[j]) * consdata->gaugelincoefs[i];
-      }
-
-      /* compute cterm = x0^t A x0 */
-      cterm = 0;
-      for( i = 0; i < consdata->nquadvars; i++ )
-      {
-         SCIP_Real val;
-
-         val = SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var) - consdata->interiorpoint[i + consdata->nlinvars];
-         cterm += consdata->quadvarterms[i].sqrcoef * val * val;
-      }
-
-      varmap = consdata->varmap;
-      for( i = 0; i < consdata->nbilinterms; i++ )
-      {
-         SCIP_VAR* var1;
-         SCIP_VAR* var2;
-         SCIP_Real val1;
-         SCIP_Real val2;
-
-         var1 = consdata->bilinterms[i].var1;
-         var2 = consdata->bilinterms[i].var2;
-         val1 = SCIPgetSolVal(scip, refsol, var1) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var1)];
-         val2 = SCIPgetSolVal(scip, refsol, var2) - consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var2)];
-         cterm += consdata->bilinterms[i].coef * val1 * val2;
-      }
-      assert(bterm*bterm - 4*aterm*cterm >= 0);
-
-      if( consdata->isconvex )
-      {
-         gaugeval = -bterm - sqrt(bterm*bterm - 4 * aterm * cterm);
-         gaugeval = gaugeval / (2 * aterm);
-      }
-      else
-      {
-         gaugeval = -bterm + sqrt(bterm*bterm - 4 * aterm * cterm);
-         gaugeval = gaugeval / (2 * aterm);
-      }
-
-      /* when it is called from addLinearizationCuts when a new solution is found
-       * the gaugeval is going to be <= 1, since the solution is feasible
-       * */
-#ifdef SCIP_DEBUG_INT
-      printf("gauge's value at refsol: %g\n", gaugeval);
-#endif
-      if( gaugeval < 1.0 )
-         gaugeval = 1.0;
-
-      /* set reference as (refsol - interior point)/gaugeval + interior point */
-      for( j = 0; j < consdata->nquadvars; ++j )
-      {
-         SCIP_Real intpoint;
-
-         var = consdata->quadvarterms[j].var;
-         lb  = SCIPvarGetLbLocal(var);
-         ub  = SCIPvarGetUbLocal(var);
-         intpoint = consdata->interiorpoint[j + consdata->nlinvars];
-         /* do not like variables at infinity */
-         assert(!SCIPisInfinity(scip,  lb));
-         assert(!SCIPisInfinity(scip, -ub));
-
-         ref[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gaugeval + intpoint;
-      }
-
-#ifdef SCIP_DEBUG_INT
-      printf("trying to separate:\n");
-      SCIPprintSol(scip, refsol, NULL, TRUE);
-
-      printf("gauge function at refsol - interiorpoint: %g\n", gaugeval);
-      printf("reference point:\n");
-      for( j = 0; j < consdata->nquadvars; ++j )
-         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), ref[j]);
-#endif
-   }
-   else
+   if( !success )
    {
       for( j = 0; j < consdata->nquadvars; ++j )
       {
@@ -10276,6 +10517,18 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          /* check if constraint function is factorable, i.e., can be written as product of two linear functions */
          SCIP_CALL( checkFactorable(scip, conss[c]) );
       }
+
+      /* compute gauge function */
+      if( conshdlrdata->gaugecuts )
+      {
+         SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
+         if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
+               (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+         {
+            SCIP_CALL( computeGauge(scip, conshdlr, conss[c]) );
+         }
+
+      }
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
@@ -12206,9 +12459,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/strongcuts",
-         "should convex quadratics generated strong cuts?",
-         &conshdlrdata->strongcuts, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/gaugecuts",
+         "should convex quadratics generated strong cuts via gauge function?",
+         &conshdlrdata->gaugecuts, FALSE, TRUE, NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
