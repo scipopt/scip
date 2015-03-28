@@ -7595,12 +7595,17 @@ SCIP_RETCODE evaluateGauge(
        * the constaraint is quadratic <= t. Since we compute
        * a point in quadratic <= min t, it might be that for a
        * single t, interior point is not actually interior)
-       * we use isFeasZero because aterm is negative, it should
+       * Also if min t = -infinity, we might have computed an
+       * interior point for a fix t. then, it can happen that
+       * aterm is negative.
+       * However, if there is only one linear variable we
+       * should use isFeasZero because if aterm is negative, it should
        * still aterm >= 0, according to SCIP's definition of >=
        */
-      if( SCIPisFeasZero(scip, aterm) )
+      if( SCIPisLE(scip, aterm, 0.0) )
       {
-         printf("For current level, there is no interior point, set gaugeval <- 1. ");
+         assert(consdata->nlinvars > 0);
+         printf("For current level, there is no interior point");
          printf("side: %15.20g interiorpointval: %15.20g\n", side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
@@ -7608,6 +7613,7 @@ SCIP_RETCODE evaluateGauge(
 
             var = consdata->linvars[0];
             printf("var <%s> [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            assert(SCIPisFeasZero(scip, aterm));
          }
          *gaugeval = 1;
          return SCIP_OKAY;
