@@ -550,7 +550,7 @@ SCIP_RETCODE createNlRow(
          sqrterm.coef = consdata->coefs[i] * consdata->coefs[i];
          SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, sqrterm) );
 
-         if( consdata->offsets[i] != 0.0 )
+         if( ! SCIPisZero(scip, consdata->offsets[i]) )
          {
             rhs -= consdata->offsets[i] * consdata->offsets[i];
             SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, consdata->vars[i], 2.0 * consdata->coefs[i] * consdata->offsets[i]) );
