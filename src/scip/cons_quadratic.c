@@ -7646,7 +7646,7 @@ SCIP_RETCODE evaluateGauge(
       SCIP_Real val;
 
       val = SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var);
-      cterm += consdata->quadvarterms[i].sqrcoef * val * val;
+      cterm += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val) * val;
    }
 
    for( i = 0; i < consdata->nbilinterms; i++ )
