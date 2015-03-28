@@ -28,6 +28,7 @@ features:
   them to 0 will use a default value
 - the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
 - we can now upgrade quadratic constraints with one bilinear term to SOC constraints
+- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output in the orignal space
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -60,7 +61,7 @@ parameters:
   for ranged rows and equations
 - new advanced parameter "constraints/linear/multaggrremove" to perform multi-aggregations in linear constraint handler
   only if the constraint can be removed afterwards
-
+- at the end of a command line run the best solution can now be output in the orignal space
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,

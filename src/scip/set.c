@@ -253,6 +253,7 @@
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+#define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
 
 
 /* Node Selection */
@@ -1525,6 +1526,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/finitesolutionstore",
             "should SCIP try to remove infinite fixings from solutions copied to the solution store?",
             &(*set)->misc_finitesolstore, FALSE, SCIP_DEFAULT_MISC_FINITESOLSTORE,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/outputorigsol",
+            "should the best solution be transformed to the orignal space and be output in command line run?",
+            &(*set)->misc_outputorigsol, FALSE, SCIP_DEFAULT_MISC_OUTPUTORIGSOL,
             NULL, NULL) );
 
    /* node selection */
