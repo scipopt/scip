@@ -3036,14 +3036,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       {
          term = &quadterms[i];
 
+         /* skip terms with 0 coefficients */
          if ( SCIPisZero(scip, term->sqrcoef) )
             continue;
-
-#if 0
-         /* if there is a linear variable that is still considered as quadratic (constraint probably not presolved yet), then give up */
-         if( term->sqrcoef == 0.0 )
-            goto cleanup;
-#endif
 
          if( term->sqrcoef > 0.0 )
          {
