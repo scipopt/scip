@@ -1,5 +1,3 @@
-#define SCIP_DEBUG_INT
-#define SCIP_DEBUG_GAUGE
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -7605,6 +7603,7 @@ SCIP_RETCODE evaluateGauge(
       if( SCIPisLE(scip, aterm, 0.0) )
       {
          assert(consdata->nlinvars > 0);
+#ifdef SCIP_DEBUG_GAUGE
          printf("For current level, there is no interior point");
          printf("side: %15.20g interiorpointval: %15.20g\n", side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
@@ -7615,7 +7614,8 @@ SCIP_RETCODE evaluateGauge(
             printf("var <%s> [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
             assert(SCIPisFeasZero(scip, aterm));
          }
-         *gaugeval = 1;
+#endif
+         *gaugeval = -1.0;
          return SCIP_OKAY;
       }
       assert(SCIPisPositive(scip, aterm));
@@ -7627,6 +7627,24 @@ SCIP_RETCODE evaluateGauge(
          side -= SCIPgetSolVal(scip, refsol, consdata->linvars[i]) * consdata->lincoefs[i];
 
       aterm = side - consdata->interiorpointval;
+      if( SCIPisGE(scip, aterm, 0.0) )
+      {
+         assert(consdata->nlinvars > 0);
+#ifdef SCIP_DEBUG_GAUGE
+         printf("For current level, there is no interior point");
+         printf("side: %15.20g interiorpointval: %15.20g\n", side, consdata->interiorpointval);
+         if( consdata->nlinvars == 1 )
+         {
+            SCIP_VAR* var;
+
+            var = consdata->linvars[0];
+            printf("var <%s> [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            assert(SCIPisFeasZero(scip, aterm));
+         }
+#endif
+         *gaugeval = -1.0;
+         return SCIP_OKAY;
+      }
       assert(SCIPisNegative(scip, aterm));
    }
 
@@ -7675,6 +7693,9 @@ SCIP_RETCODE evaluateGauge(
    assert(*gaugeval >= 0);
    *success = TRUE;
 
+#ifdef SCIP_DEBUG_GAUGE
+   printf("Gauge's aterm = %g, bterm = %g, cterm = %g\n", aterm, bterm, cterm);
+#endif
    return SCIP_OKAY;
 }
 
@@ -7733,7 +7754,18 @@ SCIP_RETCODE computeReferencePointGauge(
    }
 
 #ifdef SCIP_DEBUG_GAUGE
-      printf("Gauge evaluated at (refsol - intpoint) is %g. refsol - intpoint:\n", gaugeval);
+   {
+      SCIP_Real level;
+
+      level = 0;
+      for( j = 0; j < consdata->nlinvars; j++ )
+         level -= SCIPgetSolVal(scip, refsol, consdata->linvars[j]) * consdata->lincoefs[j];
+
+      printf("Summary:\n");
+      printf("For cons <%s>: gauge at level %g evaluated at (refsol - intpoint) is %g\n",
+            SCIPconsGetName(cons), level, gaugeval);
+      printf("refsol - intpoint:\n");
+
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          SCIP_VAR* vvar;
@@ -7743,6 +7775,7 @@ SCIP_RETCODE computeReferencePointGauge(
       }
       if( gaugeval <= 1.0 )
          printf("refsol is in the closure of the region (gaugeval <= 1), don't modify reference point\n");
+   }
 #endif
 
    /* when a new solution is found, this method is called from addLinearizationCuts.
