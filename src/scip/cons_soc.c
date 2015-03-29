@@ -3123,10 +3123,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soc#%s_cs", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateConsLinear(scip, &couplingcons, name, 3, consvars, consvals, 0.0, 0.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-               SCIPconsIsStickingAtNode(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, couplingcons) );
       SCIP_CALL( SCIPreleaseCons(scip, &couplingcons) );
 
@@ -3140,10 +3140,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soc#%s_cd", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateConsLinear(scip, &couplingcons, name, 3, consvars, consvals, 0.0, 0.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-               SCIPconsIsStickingAtNode(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, couplingcons) );
       SCIP_CALL( SCIPreleaseCons(scip, &couplingcons) );
 
