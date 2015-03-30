@@ -7168,8 +7168,15 @@ SCIP_RETCODE computeInteriorPoint(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+
    if( !SCIPisIpoptAvailableIpopt() )
       return SCIP_OKAY;
+
+#ifdef SCIP_DEBUG_INT
+   SCIPinfoMessage(scip, NULL, "Computing interior point for\n");
+   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+   SCIPinfoMessage(scip, NULL, ";\n");
+#endif
 
    /* definition of interior point:
     * in the convex case, we try to find an interior point of
@@ -10567,7 +10574,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* compute gauge function */
-      if( conshdlrdata->gaugecuts )
+      if( conshdlrdata->gaugecuts && consdata->nquadvars > 0 )
       {
          SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
