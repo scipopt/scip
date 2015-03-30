@@ -727,10 +727,11 @@ SCIP_RETCODE do_tmX(
       if( SCIPisLT(scip, cost[e], 1e+9) )
          cost[e] = g->cost[e];
    }
-   if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_GRID || g->stp_type == STP_OBSTACLES_GRID || g->stp_type == STP_HOP_CONS )
-      SCIP_CALL( do_prune(scip, g, cost, 0, result, connected) );
-   else
+   if( g->stp_type == STP_MAX_NODE_WEIGHT || g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
       SCIP_CALL( do_pcprune(scip, g, cost, result, artroot, connected) );
+   else
+      SCIP_CALL( do_prune(scip, g, cost, 0, result, connected) );
+
    for( e = 0; e < g->edges; e++ )
       cost[e] = costrev[flipedge(e)];
 
@@ -2262,19 +2263,18 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 	    if( (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) && SCIPgetRandomInt(0, 3, &(heurdata->randseed)) != 1 )
                || SCIPgetRandomInt(0, 10, &(heurdata->randseed)) == 5 )
                partrand = TRUE;
-            /*
-              if( partrand )
-              printf("(partly randomized) ");
-            */
+
 	    if( !partrand && (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) || SCIPgetRandomInt(0, 25, &(heurdata->randseed)) == 10) )
                totalrand = TRUE;
-            /*
-              if( totalrand )
-              printf("(totally randomized )");
-            */
+#if 0
+            if( partrand )
+               printf("(partly randomized) ");
+
+            if( totalrand )
+               printf("(totally randomized )");
+#endif
             if( graph->stp_type == STP_HOP_CONS )
             {
-
                for( e = 0; e < nedges; e++)
                {
                   if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
@@ -2399,7 +2399,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          if( results[e] == CONNECT )
             pobj += graph->cost[e];
 
-      //    printf("tm: %f (%d)\n ", pobj, (int) SCIPgetNLPIterations(scip));
+      //printf("tm: %f (%d)\n ", pobj, (int) SCIPgetNLPIterations(scip));
       if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
       {
          heurdata->beststartnode = best_start;
