@@ -7796,7 +7796,9 @@ SCIP_RETCODE computeReferencePointGauge(
       return SCIP_OKAY;
    }
 
-   /* set reference as (refsol - interior point)/gaugeval + interior point */
+   /* set reference to (refsol - interior point)/gaugeval + interior point and project into bounds
+    * this is important for some cut generation methods such as generateCutLTI
+    */
    for( j = 0; j < consdata->nquadvars; ++j )
    {
       var = consdata->quadvarterms[j].var;
@@ -7808,6 +7810,7 @@ SCIP_RETCODE computeReferencePointGauge(
 
       intpoint = consdata->interiorpoint[j];
       (*ref)[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gaugeval + intpoint;
+      (*ref)[j] = MIN(ub, MAX(lb, (*ref)[j])); /* project value into bounds */
    }
 
 #ifdef SCIP_DEBUG_GAUGE
@@ -10573,8 +10576,8 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          SCIP_CALL( checkFactorable(scip, conss[c]) );
       }
 
-      /* compute gauge function */
-      if( conshdlrdata->gaugecuts && consdata->nquadvars > 0 )
+      /* compute gauge function only when there are quadratic variables */
+      if( conshdlrdata->gaugecuts && consdata->nquadvars >0 )
       {
          SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
