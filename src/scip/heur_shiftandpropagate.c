@@ -1752,8 +1752,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
       }
 
-      //printf("nbinwithoutlocks: %d\n", nbinwithoutlocks);
-
       if( nbinwithoutlocks > 0 )
       {
          SCIP_VAR* binvar;
