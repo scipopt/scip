@@ -55,6 +55,7 @@ LOCK		=	false
 VALGRIND	=	false
 CLIENTTMPDIR    =       /tmp
 OPTCOMMAND	=	optimize
+MAXJOBS  =  1
 
 #compiling and linking parameters
 VERBOSE		=	false
