@@ -300,8 +300,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
-
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** returns the current number of conflict sets in the conflict set storage */
@@ -431,6 +431,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -550,6 +551,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible downwards branch, or NULL */
@@ -630,6 +632,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 

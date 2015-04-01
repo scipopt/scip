@@ -68,7 +68,6 @@ struct SCIP_Clique
    int                   nvars;              /**< number of variables in the clique */
    int                   size;               /**< size of vars and values arrays */
    int                   startcleanup;       /**< clean up position to start with */
-   SCIP_CLIQUETABLE*     cliquetable;        /**< pointer to the clique table */
    int                   index;              /**< the index of the clique in the cliquetable cliques array */
    unsigned int          id:30;              /**< unique identifier of clique */
    unsigned int          eventsissued:1;     /**< were the IMPLADDED events on the variables already issued? */

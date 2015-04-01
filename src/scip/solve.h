@@ -69,6 +69,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
@@ -89,6 +90,7 @@ SCIP_RETCODE SCIPinitConssLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< is this the initial root LP? */
    SCIP_Bool             firstsubtreeinit,   /**< is this the first call in the current subtree after jumping through the tree? */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -109,6 +111,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
@@ -167,6 +170,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
@@ -200,6 +204,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            restart             /**< should solving process be started again with presolving? */
    );
 
