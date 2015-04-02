@@ -1400,6 +1400,7 @@ SCIP_RETCODE nv_reduction_optimal(
    int*    terms;
    int     termcount;
    int     i;
+   int     j;
    int     e;
    double  min1;
    double  min2;
@@ -1534,6 +1535,9 @@ SCIP_RETCODE nv_reduction_optimal(
 
          if (LT(min1, FARAWAY) && LE(pathfromsource[shortarctail].dist + min1, min2))
          {
+            assert(shortarc >= 0);
+            assert(shortarctail >= 0);
+
             if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && shortarctail == g->source[0] )
                continue;
 
@@ -1544,8 +1548,10 @@ SCIP_RETCODE nv_reduction_optimal(
             {
                if( LT(min2, FARAWAY) )
                {
-                  for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
+                  for(e = g->inpbeg[i]; e != EAT_LAST; e = j)
                   {
+                     j = g->ieat[e];
+
                      if( e != shortarc )
                      {
                         if( LT(g->cost[Edge_anti(e)], FARAWAY) )

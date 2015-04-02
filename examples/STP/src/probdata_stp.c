@@ -49,7 +49,7 @@
 #define MODE_FLOW   1
 #define MODE_PRICE  2
 
-/*#define PRINT_PRESOL */
+#define PRINT_PRESOL
 
 
 /** @brief Problem data which is accessible in all places
