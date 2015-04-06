@@ -395,7 +395,7 @@ SCIP_RETCODE selectdiffsols(
             }
          }
 
-         if( diffnedges > 3 && eqnedges > 0 )
+         if( diffnedges > 3 && eqnedges > 0  ) //&& strcmp(SCIPheurGetName(SCIPsolGetHeur(sols[perm[i]])), "trivial") != 0
 	 {
 	    selection[nselectedsols++] = k;
             solselected[k] = TRUE;
@@ -410,7 +410,11 @@ SCIP_RETCODE selectdiffsols(
 	 }
       }
    }
-
+   /*
+     printf("newsols \n");
+     for( i = 0; i < nselectedsols; i++ )
+     printf("newsol: found by: %s %d\n", SCIPheurGetName(SCIPsolGetHeur(sols[selection[i]])), SCIPsolGetIndex(sols[selection[i]]));
+   */
    assert(nselectedsols <= nusedsols);
    heurdata->nselectedsols = nselectedsols;
    SCIPfreeBufferArray(scip, &soltimes);
@@ -1077,7 +1081,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       if( success )
       {
          assert(newsol != NULL);
-         assert(graph_valid(solgraph));
 
          /* get TM heuristic data */
          heurs = SCIPgetHeurs(scip);
@@ -1099,6 +1102,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 4, 2) );
 
          solgraph = graph_pack(scip, solgraph, FALSE);
+	 assert(graph_valid(solgraph));
          ancestors = solgraph->ancestors;
          nsoledges = solgraph->edges;
          /* if graph reduction solved the whole problem, solgraph has only one node */
@@ -1232,6 +1236,10 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                results[e] = UNKNOWN;
             /* run TM heuristic */
             SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns, solgraph->source[0], cost, costrev, maxcost) );
+
+	    assert(graph_valid(solgraph));
+	    assert(graph_sol_valid(solgraph, results));
+
             /* run local heuristic */
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT )
                SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
@@ -1268,6 +1276,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                      tail = graph->tail[i];
                      stnodes[tail] = TRUE;
                      stnodes[head] = TRUE;
+#if 0
                      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
                      {
                         if( head == graph->source[0] && !Is_term(graph->term[tail]) )
@@ -1279,6 +1288,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                            artroot = head;
                         }
                      }
+#endif
                      curr = curr->parent;
                   }
                }
@@ -1294,6 +1304,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             tail = graph->tail[i];
             stnodes[tail] = TRUE;
             stnodes[head] = TRUE;
+#if 0
             if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
             {
                if( head == graph->source[0] && !Is_term(graph->term[tail]) )
@@ -1305,6 +1316,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   artroot = head;
                }
             }
+#endif
             curr = curr->parent;
          }
          /* prune solution (in the original graph) */
@@ -1315,7 +1327,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          SCIPfreeBufferArray(scip, &stnodes);
          pobj = 0.0;
-         //newsolval = 0.0;
+
          for( e = 0; e < graph->edges; e++ )
          {
             if( orgresults[e] == CONNECT )
@@ -1391,7 +1403,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    heurdata->lastsolindex = lastsolindex;
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
    heurdata->nlastsols = SCIPgetNSolsFound(scip);
-   //SCIPfreeBufferArray(scip, &newsoledge);
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &orgresults);

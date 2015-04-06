@@ -48,7 +48,8 @@
 #define MODE_CUT    0
 #define MODE_FLOW   1
 #define MODE_PRICE  2
-
+#define PRIZEA      0
+#define PRIZEB      1
 /*#define PRINT_PRESOL */
 
 
@@ -65,6 +66,8 @@ struct SCIP_ProbData
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
+   SCIP_CONS**           prizeimplpcons;     /**< prize collecting, improving LP constraints */
+   SCIP_CONS**           prizesymcons;       /**< prize collecting, improving LP constraints */
    SCIP_CONS*            hopcons;            /**< hop constraint */
    SCIP_CONS*            prizecons;          /**< prize constraint */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
@@ -304,6 +307,31 @@ SCIP_RETCODE probdataFree(
       SCIPfreeMemoryArrayNull(scip, &((*probdata)->degcons));
    }
 
+   /* PC variant STP? */
+   if( (*probdata)->stp_type == STP_PRIZE_COLLECTING || (*probdata)->stp_type == STP_ROOTED_PRIZE_COLLECTING || (*probdata)->stp_type == STP_MAX_NODE_WEIGHT )
+   {
+      assert((*probdata)->mode == MODE_CUT);
+#if PRIZEA
+      /* release degree constraints */
+      for( t = 0; t < (*probdata)->realnterms; ++t)
+         SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizeimplpcons[t])) );
+
+      SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizeimplpcons));
+#endif
+#if PRIZEB
+      if( (*probdata)->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+      {
+         e = (((*probdata)->realnterms - 1) * (*probdata)->realnterms) / 2;
+         /* release degree constraints */
+         for( t = 0; t < e; ++t)
+            SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizesymcons[t])) );
+
+         SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizesymcons));
+      }
+#endif
+   }
+
+
    /* release path constraints */
    if( (*probdata)->mode == MODE_PRICE )
    {
@@ -495,24 +523,60 @@ SCIP_RETCODE createPrizeConstraints(
    )
 
 {
+   GRAPH* graph;
+   int r;
+   int ro2;
+   int realnterms;
    char consname[SCIP_MAXSTRLEN];
-
 
    assert(scip != NULL);
    assert(probdata != NULL);
-
+   graph = probdata->graph;
+   realnterms = probdata->realnterms;
    SCIPdebugPrintf("createPrizeConstraints \n");
-
-#if 0
-   SCIP_CALL( SCIPallocMemory(scip, &(probdata->prizecons)) );
+#if PRIZEB
+   if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+   {
+      ro2 = (realnterms * (realnterms - 1)) / 2;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizesymcons), ro2) );
+      for( r = 0; r < ro2; r++ )
+      {
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeSymConstraint%d", r);
+         SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizesymcons[r]), consname, 0, NULL, NULL,
+               -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, probdata->prizesymcons[r]) );
+      }
+   }
 #endif
 
-   (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeConstraint");
-   SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
-         -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   // TODO SET TO 1 DISABLE WARNING OUTPUT FOR
-   SCIP_CALL( SCIPaddCons(scip, probdata->prizecons) );
 
+#if  0
+   TODO!
+      SCIP_CALL( SCIPallocMemory(scip, &(probdata->prizecons)) );
+#endif
+
+   if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeConstraint");
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
+            -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      // TODO SET TO 1 DISABLE WARNING OUTPUT FOR
+      SCIP_CALL( SCIPaddCons(scip, probdata->prizecons) );
+   }
+
+#if PRIZEA
+   r = 0;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizeimplpcons), realnterms) );
+   for( r = 0; r < realnterms; r++ )
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeLPConstraint%d", r);
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizeimplpcons[r]), consname, 0, NULL, NULL,
+            -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, probdata->prizeimplpcons[r]) );
+   }
+   printf("r: %d, terms: %d \n", r, realnterms);
+   assert(r == realnterms);
+#endif
 
    return SCIP_OKAY;
 }
@@ -716,7 +780,7 @@ SCIP_RETCODE createVariables(
             objint = objint && SCIPisIntegral(scip, graph->cost[e]);
          }
 
-#if 0
+#if  0
          for( e = 0; e < nedges; e=e+2 )
          {
             SCIP_CONS* cons;
@@ -757,17 +821,69 @@ SCIP_RETCODE createVariables(
 	 /* PRIZECOLLECTING STP */
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
 	 {
+#if PRIZEA
+	    int r = 0;
+#endif
+	    int a;
+	    int head;
+#if PRIZEB
+	    int* pseudoterms;
+	    SCIP_CALL( SCIPallocBufferArray(scip, &pseudoterms, probdata->realnterms) );
+	    t = 0;
+	    k2 = 0;
+#endif
 	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
             {
-               if( !Is_term(graph->term[graph->head[e]]) )
+	       head = graph->head[e];
+               if( !Is_term(graph->term[head]) )
                {
                   if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
                      SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
 
 		  /* variables are preferred to be branched on */
-		  SCIP_CALL( SCIPchgVarBranchPriority( scip, probdata->edgevars[e], 10) );
+		  SCIP_CALL( SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10) );
+#if PRIZEB
+		  if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+		  {
+                     pseudoterms[t] = head;
+                     for( k = 0; k < t; k++ )
+                     {
+                        for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
+                        {
+                           SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[a], 1.0) );
+                        }
+                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[e], 1.0) );
+                        k2++;
+                     }
+                     //printf("constraint for edge: %d %d \n", graph->tail[e], graph->head[e] );
+                     t++;
+		  }
+#endif
+#if PRIZEA
+		  if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+		  {
+		     for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
+                        if( Is_term(graph->term[graph->tail[a]]) && root != graph->tail[a] )
+                           break;
+		     if( a == EAT_LAST )
+		        continue;
+		  }
+
+		  for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
+		  {
+		     tail = graph->tail[a];
+		     if( !Is_term(graph->term[tail]) || root == tail )
+                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[r], probdata->edgevars[a], 1.0) );
+		     else
+                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[r], probdata->edgevars[flipedge(a)], -1.0) );
+		  }
+		  r++;
+#endif
                }
             }
+#if PRIZEB
+            SCIPfreeBufferArray(scip, &pseudoterms);
+#endif
 	 }
       }
       /* Price or Flow mode */
@@ -995,7 +1111,6 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 	 if( sourcedata->stp_type == STP_DEG_CONS )
 	 {
             SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
-
             for( c = sourcedata->nnodes - 1; c >= 0; --c )
             {
                SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->degcons[c], &((*targetdata)->degcons[c]),
@@ -1017,6 +1132,61 @@ SCIP_DECL_PROBCOPY(probcopyStp)
                SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->degcons[c]) );
             }
 	 }
+
+	 if( sourcedata->stp_type == STP_PRIZE_COLLECTING || sourcedata->stp_type == STP_ROOTED_PRIZE_COLLECTING || sourcedata->stp_type == STP_MAX_NODE_WEIGHT )
+	 {
+#if PRIZEA
+	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->realnterms) );
+            for( c = sourcedata->realnterms - 1; c >= 0; --c )
+            {
+               SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->prizeimplpcons[c], &((*targetdata)->prizeimplpcons[c]),
+                     SCIPconsGetHdlr(sourcedata->prizeimplpcons[c]), varmap, consmap,
+                     SCIPconsGetName(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsInitial(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsSeparated(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsEnforced(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsChecked(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsPropagated(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsLocal(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsModifiable(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsDynamic(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsRemovable(sourcedata->prizeimplpcons[c]),
+                     SCIPconsIsStickingAtNode(sourcedata->prizeimplpcons[c]),
+                     global, &success) );
+               assert(success);
+
+               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->prizeimplpcons[c]) );
+            }
+#endif
+#if PRIZEB
+            if( sourcedata->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+            {
+               v = ((sourcedata->realnterms - 1) * sourcedata->realnterms ) / 2;
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, v) );
+               for( c = v - 1; c >= 0; --c )
+               {
+                  SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->prizesymcons[c], &((*targetdata)->prizesymcons[c]),
+                        SCIPconsGetHdlr(sourcedata->prizesymcons[c]), varmap, consmap,
+                        SCIPconsGetName(sourcedata->prizesymcons[c]),
+                        SCIPconsIsInitial(sourcedata->prizesymcons[c]),
+                        SCIPconsIsSeparated(sourcedata->prizesymcons[c]),
+                        SCIPconsIsEnforced(sourcedata->prizesymcons[c]),
+                        SCIPconsIsChecked(sourcedata->prizesymcons[c]),
+                        SCIPconsIsPropagated(sourcedata->prizesymcons[c]),
+                        SCIPconsIsLocal(sourcedata->prizesymcons[c]),
+                        SCIPconsIsModifiable(sourcedata->prizesymcons[c]),
+                        SCIPconsIsDynamic(sourcedata->prizesymcons[c]),
+                        SCIPconsIsRemovable(sourcedata->prizesymcons[c]),
+                        SCIPconsIsStickingAtNode(sourcedata->prizesymcons[c]),
+                        global, &success) );
+                  assert(success);
+
+                  SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->prizesymcons[c]) );
+               }
+            }
+#endif
+	 }
+
       }
       /* Price or Flow mode */
       else
@@ -1276,6 +1446,23 @@ SCIP_DECL_PROBTRANS(probtransStp)
 	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
             SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnodes, sourcedata->degcons, (*targetdata)->degcons) );
 	 }
+
+	 if( sourcedata->stp_type == STP_PRIZE_COLLECTING || sourcedata->stp_type == STP_ROOTED_PRIZE_COLLECTING || sourcedata->stp_type == STP_MAX_NODE_WEIGHT )
+	 {
+#if PRIZEA
+	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->realnterms) );
+            SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->prizeimplpcons, (*targetdata)->prizeimplpcons) );
+#endif
+#if PRIZEB
+	    if( sourcedata->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+	    {
+               i = ((sourcedata->realnterms - 1) * (sourcedata->realnterms)) / 2;
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, i) );
+               SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
+	    }
+#endif
+	 }
+
       }
       /* Price or Flow mode */
       else
@@ -1349,7 +1536,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 
    assert(scip != NULL);
    probd = SCIPgetProbData(scip);
-#if 0
+#if  0
    GRAPH* graph;
    graph = probd->graph;
    assert(graph != NULL);
@@ -1738,8 +1925,10 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->nlayers = graph->layers;
       probdata->nvars = probdata->nlayers * nedges;
 
+      assert(Is_term(graph->term[graph->source[0]]));
+
       /* compute the real number of terminals (nterm-1 iff root is a terminal) */
-      realnterms = graph->terms - 1 - graph->term[graph->source[0]];
+      realnterms = graph->terms - 1;
       probdata->realnterms = realnterms;
 
       /* set up array of terminals (except for the root) */
@@ -1770,7 +1959,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 	 if( graph->stp_type == STP_DEG_CONS )
 	    SCIP_CALL( createDegreeConstraints(scip, probdata) );
 
-         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT)
+	 /* if the problem is a Prize-Collecting-STP or a Maximum Weight Connectd Subgraph Problem, additional constraints are required */
+         if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
             SCIP_CALL( createPrizeConstraints(scip, probdata) );
       }
       else
@@ -2645,7 +2835,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       int nvars = probdata->nvars;
       int fails = 0;
       /* check whether the new solution is valid with respect to the original bounds */
-#if 1
+#if  1
       // if( SCIPgetDepth(scip) != -1 )
 
       for( e = 0; e < nvars; e++ )
@@ -2709,7 +2899,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          }
       }
 
-#if 0
+#if  0
       if( fails > 0 )
       {
          int v;

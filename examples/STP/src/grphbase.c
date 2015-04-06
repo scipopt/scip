@@ -1,4 +1,4 @@
-// /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*   Type....: Functions                                                     */
 /*   File....: grphbase.c                                                    */
@@ -2320,7 +2320,7 @@ SCIP_RETCODE graph_pack2(
                && ((p->inpbeg[k] != EAT_LAST) || (p->outbeg[k] != EAT_LAST)))
                return((void)fprintf(stderr, fehler6, k), FALSE);
 
-            if (!p->mark[k] && (p->grad[k] > 0) && p->stp_type != STP_PRIZE_COLLECTING && p->stp_type != STP_MAX_NODE_WEIGHT) /*TODO: && Is_term(p->term[k]) ?*/
+            if (!p->mark[k] && (p->grad[k] > 0) && p->stp_type != STP_PRIZE_COLLECTING && p->stp_type != STP_MAX_NODE_WEIGHT) /*TODO: && Is_term(p->term[k]) ?  */
                return((void)fprintf(stderr, fehler7, k), FALSE);
          }
          return(TRUE);

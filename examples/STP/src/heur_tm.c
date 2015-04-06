@@ -207,7 +207,6 @@ SCIP_RETCODE do_pcprune(
    int count;
    int nnodes;
    nnodes = g->knots;
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
 
    /* compute the MST, exclude all terminals */
    for( i = 0; i < nnodes; i++ )
@@ -225,12 +224,39 @@ SCIP_RETCODE do_pcprune(
    }
    else
    {
-      assert(!Is_term(g->term[root]));
+#if 1
+      int a;
+      for( a = g->outbeg[g->source[0]]; a != EAT_LAST; a = g->oeat[a] )
+      {
+	i = g->head[a];
+	if( !Is_term(g->term[i]) && connected[i] )
+	  break;
+      }
+      /*printf("edge: %d %d \n", g->tail[a],g->head[a]);*/
+      /* trivial solution? TODO delete??? */
+      if( a == EAT_LAST )
+      {
+	 for( a = g->outbeg[g->source[0]]; a != EAT_LAST; a = g->oeat[a] )
+         {
+	    i = g->head[a];
+	    if( Is_term(g->term[i]) )
+	    {
+	       assert(connected[i]);
+	       result[a] = CONNECT;
+	    }
+	 }
+	return SCIP_OKAY;
+      }
+
+      assert(g->mark[i]);
+      root = i;
+#endif
    }
    //printf("root: %d, \n", root);
    assert(root >= 0);
    assert(root < nnodes);
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
    graph_path_exec(g, MST_MODE, root, cost, mst);
 
    for( i = 0; i < nnodes; i++ )

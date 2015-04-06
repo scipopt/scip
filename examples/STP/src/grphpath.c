@@ -1023,7 +1023,7 @@ void voronoi(
       else
       {
          vbase[i] = UNKNOWN;
-         path[i].dist = FARAWAY;
+         path[i].dist = FARAWAY + 1;
          path[i].edge = UNKNOWN;
          state[i]     = UNKNOWN;
       }
@@ -1050,6 +1050,7 @@ void voronoi(
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
             m = g->head[i];
+
             /* check whether the path (to m) including k is shorter than the so far best known */
             if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
             {

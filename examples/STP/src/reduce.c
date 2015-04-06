@@ -1455,6 +1455,37 @@ static int hops_test(
 }
 #endif
 
+static
+void level0(
+   SCIP* scip,
+   GRAPH* g)
+{
+   int e;
+   int k;
+   assert(scip != NULL);
+   assert(g != NULL);
+   for(k = 0; k < g->knots; k++)
+      g->mark[k] = FALSE;
+
+   graph_trail(g, g->source[0]);
+
+   for( k = 0; k < g->knots; k++ )
+   {
+      if( !g->mark[k] && (g->grad[k] > 0) )
+      {
+         assert(!Is_term(g->term[k]));
+         e = g->inpbeg[k];
+         while( e != EAT_LAST )
+         {
+            graph_edge_del(g, e);
+            SCIPindexListNodeFree(scip, &(g->ancestors[e]));
+            SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(e)]));
+            e = g->inpbeg[k];
+         }
+      }
+   }
+}
+
 static double level1(
    SCIP* scip,
    GRAPH* g)
@@ -2252,9 +2283,9 @@ SCIP_RETCODE level5(
    /* define minimal number of edge/node eliminations for a reduction test to be continued */
    reductbound = 0;
    //printf("BOUND: %d \n", reductbound);
-SCIP_CALL( ledge_reduction(scip, g, vnoi, heap, state, vbase, &lenelims) );
+   SCIP_CALL( ledge_reduction(scip, g, vnoi, heap, state, vbase, &lenelims) );
 
-assert(0);
+   assert(0);
    degree_test(scip, g, fixed);
 
    if( bred )
@@ -2403,67 +2434,69 @@ assert(0);
    return SCIP_OKAY;
 }
 
-   SCIP_RETCODE reduce(
-      SCIP*  scip,
-      GRAPH** graph,
-      SCIP_Real* offset,
-      int    level,
-      int    minelims
-      )
+SCIP_RETCODE reduce(
+   SCIP*  scip,
+   GRAPH** graph,
+   SCIP_Real* offset,
+   int    level,
+   int    minelims
+   )
+{
+   assert((*graph)      != NULL);
+   assert((*graph)->fixedges == NULL);
+   assert(level  >= 0 || level == -4);
+   assert(minelims >= 0);
+
+   *offset = 0.0;
+
+   assert((*graph)->layers == 1);
+
+   graph_init_history(scip, (*graph), &((*graph)->orgtail), &((*graph)->orghead), &((*graph)->ancestors));
+#if 0
+   for( i = 0; i < (*graph)->edges; i++ )
    {
-      assert((*graph)      != NULL);
-      assert((*graph)->fixedges == NULL);
-      assert(level  >= 0 || level == -4);
-      assert(minelims >= 0);
-
-      *offset = 0.0;
-
-      assert((*graph)->layers == 1);
-
-      graph_init_history(scip, (*graph), &((*graph)->orgtail), &((*graph)->orghead), &((*graph)->ancestors));
-#if 0
-      for( i = 0; i < (*graph)->edges; i++ )
-      {
-         printf("%d->%d ancestor: %d->%d \n", (*graph)->tail[i], (*graph)->head[i], (*graph)->tail[((*graph)->ancestors[i])->index], (*graph)->head[((*graph)->ancestors[i])->index] );
-         assert(((*graph)->ancestors[i])->parent == NULL );
-      }
-      printf("level: %d \n", level);
-       if( 0 && (*graph)->stp_type != STP_UNDIRECTED )
-         return SCIP_OKAY;
-#endif
-
-      if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID )
-         return SCIP_OKAY;
-
-      /* initialise shortest path algorithms */
-      graph_path_init((*graph));
-
-      if( (*graph)->stp_type != STP_UNDIRECTED && (*graph)->stp_type != STP_GRID && (*graph)->stp_type != STP_OBSTACLES_GRID )
-         level = level * (-1);
-
-      if( level == 1 )
-         *offset = level1(scip, (*graph));
-#if 0
-      if (level == 2)
-         fixed = level1(scip, (*graph)) + level2(scip, (*graph));
-
-      if (level == 3)
-         fixed = level3((*graph));
-
-#endif
-      if( level == -1 )
-         *offset = levelm1(scip, (*graph));
-
-      if( level == 4 )
-         SCIP_CALL( level4(scip, (graph), offset, minelims) );
-
-      if( level == 5 )
-         SCIP_CALL( level5(scip, (graph), offset) );
-
-      if( level == -4 )
-         *offset = levelm4(scip, (*graph));
-
-      graph_path_exit((*graph));
-
-      return SCIP_OKAY;
+      printf("%d->%d ancestor: %d->%d \n", (*graph)->tail[i], (*graph)->head[i], (*graph)->tail[((*graph)->ancestors[i])->index], (*graph)->head[((*graph)->ancestors[i])->index] );
+      assert(((*graph)->ancestors[i])->parent == NULL );
    }
+   printf("level: %d \n", level);
+   if( 0 && (*graph)->stp_type != STP_UNDIRECTED )
+      return SCIP_OKAY;
+#endif
+
+   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID )
+      return SCIP_OKAY;
+
+   /* initialise shortest path algorithms */
+   graph_path_init((*graph));
+
+   if( (*graph)->stp_type != STP_UNDIRECTED && (*graph)->stp_type != STP_GRID && (*graph)->stp_type != STP_OBSTACLES_GRID )
+      level = level * (-1);
+
+   if( level == 0 )
+      level0(scip, (*graph));
+   if( level == 1 )
+      *offset = level1(scip, (*graph));
+#if 0
+   if (level == 2)
+      fixed = level1(scip, (*graph)) + level2(scip, (*graph));
+
+   if (level == 3)
+      fixed = level3((*graph));
+
+#endif
+   if( level == -1 )
+      *offset = levelm1(scip, (*graph));
+
+   if( level == 4 )
+      SCIP_CALL( level4(scip, (graph), offset, minelims) );
+
+   if( level == 5 )
+      SCIP_CALL( level5(scip, (graph), offset) );
+
+   if( level == -4 )
+      *offset = levelm4(scip, (*graph));
+
+   graph_path_exit((*graph));
+
+   return SCIP_OKAY;
+}
