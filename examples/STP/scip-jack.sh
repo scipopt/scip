@@ -17,4 +17,4 @@ then
 fi
 
 
-bash -c  "ulimit -f 2000000; ulimit -s unlimited; $BINARY -c 'set load $SETTINGS set stp logfile $OUTPUTFILE set limit time $TIME read $FILENAME o write stpsol disp stat q'"
+bash -c  "ulimit -f 2000000; ulimit -s unlimited; taskset -c 0 $BINARY -c 'set load $SETTINGS set stp logfile $OUTPUTFILE set limit time $TIME read $FILENAME o write stpsol disp stat q'"

@@ -10,7 +10,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 
 #define REDUCE_C
-/*#define PRINT_TMP_PRESOL */
+#define PRINT_TMP_PRESOL
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1894,7 +1894,7 @@ static double levelm4(
    int     degnelims;
    char    sd = TRUE;
    char    nsv = TRUE;
-   char    bd3 = TRUE;
+   char    bd3 = FALSE;
    char    timebreak = FALSE;
 
 

@@ -48,6 +48,7 @@
 #define MODE_CUT    0
 #define MODE_FLOW   1
 #define MODE_PRICE  2
+
 #define PRIZEA      0
 #define PRIZEB      1
 /*#define PRINT_PRESOL */
