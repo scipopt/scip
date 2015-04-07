@@ -969,9 +969,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
       || graph->stp_type == STP_HOP_CONS )
    {
-      i = MAX(heurdata->nwaitingsols, 2 * heurdata->nfailures);
+      if( heurdata->ncalls == 0 )
+	 i = 0;
+      else if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_HOP_CONS )
+         i = MAX(heurdata->nwaitingsols, 2 * heurdata->nfailures);
+      else
+	 i = MAX(heurdata->nwaitingsols, heurdata->nfailures);
+
       if( SCIPisLE(scip, nsols, heurdata->nlastsols + i) )
-         // || heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          return SCIP_OKAY;
    }
    else

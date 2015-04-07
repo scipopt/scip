@@ -416,14 +416,14 @@ SCIP_RETCODE do_local(
          {
             /* if vertex i is not in the current ST and has at least two adjacent nodes, it might be added */
             if( !steinertree[i] && graph->grad[i] > 1
-               && ( (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?
+               && ( (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?
                   !Is_term(graph->term[i]) : TRUE ) )
             {
                insertcount = 0;
 
                /* if an outgoing edge of vertex i points to the current ST, SCIPlinkcuttreeLink the edge to a list */
                for( oedge = graph->outbeg[i]; oedge != EAT_LAST; oedge = graph->oeat[oedge] )
-                  if( steinertree[graph->head[oedge]] && ( (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?
+                  if( steinertree[graph->head[oedge]] && ( (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)?
                         !Is_term(graph->term[graph->head[oedge]]) : TRUE ) )
                      insert[insertcount++] = oedge;
 
@@ -546,6 +546,7 @@ SCIP_RETCODE do_local(
 	    */
          }
          artroot = root;
+#if 0
          if( graph->stp_type == STP_PRIZE_COLLECTING && newnverts > 0  )
          {
 	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -553,13 +554,13 @@ SCIP_RETCODE do_local(
                   artroot = graph->head[e];
 	    assert(artroot != root);
 	 }
-
+#endif
          for( e = 0; e < nedges; e++ )
             best_result[e] = -1;
 
          if( newnverts > 0  )
          {
-	    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+	    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
 	    {
 	       do_pcprune(scip, graph, graph->cost, best_result, artroot, steinertree);
 	    }
@@ -760,7 +761,7 @@ SCIP_RETCODE do_local(
                blists_start[vbase[k]] = blists_curr;
             }
 
-            if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+            if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
 	    {
                for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
                {
@@ -2486,6 +2487,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       printf("heur: %s \n", SCIPheurGetName(SCIPsolGetHeur(bestsol)));
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, graph->knots) );
       artroot = root;
+#if 0
       if( graph->stp_type == STP_PRIZE_COLLECTING  )
       {
          for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -2493,6 +2495,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
                artroot = graph->head[e];
          assert(artroot != root);
       }
+#endif
       for( e = 0; e < nedges; e++ )
       {
          if( results[e] == CONNECT )
@@ -2503,7 +2506,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          results[e] = UNKNOWN;
       }
 
-      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
          do_pcprune(scip, graph, graph->cost, results, artroot, steinertree);
       else
          do_prune(scip, graph, graph->cost, 0, results, steinertree);

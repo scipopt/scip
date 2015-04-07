@@ -10,7 +10,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 
 #define REDUCE_C
-#define PRINT_TMP_PRESOL
+//#define PRINT_TMP_PRESOL
 
 #include <stdio.h>
 #include <stdlib.h>
