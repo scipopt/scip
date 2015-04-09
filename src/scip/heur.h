@@ -60,19 +60,6 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    );
 
-/** get the target depth fraction of the diving settings  */
-extern
-SCIP_Real SCIPdivesetGetTargetdepthfrac(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
-/** set the target depth fraction of the diving settings  */
-extern
-void SCIPdivesetSetTargetdepthfrac(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Real             newval              /**< new value for target depth frac */
-   );
-
 /** resets diving settings counters */
 extern
 void SCIPdivesetReset(

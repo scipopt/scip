@@ -182,6 +182,19 @@ int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** get the target depth fraction of the diving settings  */
+EXTERN
+SCIP_Real SCIPdivesetGetTargetdepthfrac(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** set the target depth fraction of the diving settings  */
+EXTERN
+void SCIPdivesetSetTargetdepthfrac(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_Real             newval              /**< new value for target depth frac */
+   );
+
 /** get the maximum LP iterations quotient of the diving settings */
 EXTERN
 SCIP_Real SCIPdivesetGetMaxLPIterQuot(
