@@ -2293,6 +2293,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolLocal)
 {
    SCIP_HEURDATA* heurdata;
 
+
+   assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* create heuristic data */
@@ -2480,7 +2482,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    {
       int artroot;
       char* steinertree;
-      printf("heur: %s \n", SCIPheurGetName(SCIPsolGetHeur(bestsol)));
+      printf("heur: %s \n", SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) : "LP");
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, graph->knots) );
       artroot = root;
 #if 0
