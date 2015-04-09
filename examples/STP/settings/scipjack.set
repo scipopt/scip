@@ -4,6 +4,10 @@
 # [type: int, range: [-1,2147483647], default: 100]
 display/freq = 1
 
+# maximal number of solutions to store in the solution storage
+# [type: int, range: [1,2147483647], default: 100]
+limits/maxsol = 400
+
 # maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)
 # [type: int, range: [-1,2147483647], default: 10]
 lp/rowagelimit = 30
@@ -28,6 +32,22 @@ separating/maxstallrounds = -1
 # [type: int, range: [1,2], default: 1]
 timing/clocktype = 2
 
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linear/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/setppc/maxprerounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/components/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/domcol/maxrounds = 0
+
 # maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 5]
 branching/relpscost/maxreliable = 1
@@ -39,6 +59,10 @@ branching/relpscost/maxproprounds = 0
 # frequency for calling primal heuristic <coefdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/coefdiving/freq = -1
+
+# frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 30]
+heuristics/crossover/freq = -1
 
 # frequency for calling primal heuristic <feaspump> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 20]
@@ -115,4 +139,8 @@ propagating/probing/maxprerounds = 0
 # timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
 # [type: int, range: [1,15], default: 7]
 propagating/pseudoobj/timingmask = 5
+
+# number of runs in TM
+# [type: int, range: [1,2147483647], default: 50]
+heuristics/rec/ntmruns = 100
 

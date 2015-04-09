@@ -252,7 +252,7 @@ SCIP_RETCODE do_pcprune(
       root = i;
 #endif
    }
-   //printf("root: %d, \n", root);
+   /*printf("root: %d, \n", root);*/
    assert(root >= 0);
    assert(root < nnodes);
 
@@ -356,7 +356,7 @@ SCIP_RETCODE do_pcprune(
                {
                   result[j]    = -1;
                   g->mark[i]   = FALSE;
-		  //printf("disconned %d (term %d)\n", i, g->term[i] );
+		  /*printf("disconned %d (term %d)\n", i, g->term[i] );*/
                   connected[i] = FALSE;
                   count++;
                   break;
@@ -730,14 +730,14 @@ SCIP_RETCODE do_tmX(
       /* Gegen den Strom schwimmend alles markieren
        */
       k = old;
-      //printf("connect from %d\n", old);
+      /*printf("connect from %d\n", old);*/
       while(k != newval)
       {
          e = pathedge[newval][k];
          k = g->tail[e];
          if (!connected[k])
          {
-            //printf("connected (%d->)%d  cost: %f (rev) %f\n", g->head[e], k, cost[k], costrev[k] );
+            /*printf("connected (%d->)%d  cost: %f (rev) %f\n", g->head[e], k, cost[k], costrev[k] );*/
             connected[k] = TRUE;
             cluster[csize++] = k;
          }
@@ -831,7 +831,7 @@ SCIP_RETCODE do_tm_degcons(
       result[e] = -1;
    connected[start] = TRUE;
 
-   //printf("root %d ,start: %d \n", g->source[0], start);
+   /*printf("root %d ,start: %d \n", g->source[0], start);*/
    /* CONSTCOND */
    for( ;; )
    {
@@ -893,7 +893,7 @@ SCIP_RETCODE do_tm_degcons(
        */
       if( newval == -1 )
          break;
-      //printf("LONGCONNECT: %d %d \n", old, newval);
+      /*printf("LONGCONNECT: %d %d \n", old, newval);*/
       /* Weg setzten
        */
       assert(old > -1);
@@ -919,7 +919,7 @@ SCIP_RETCODE do_tm_degcons(
 	 u = k;
          k = g->tail[e];
 
-         //    printf("connect: %d->%d \n", g->tail[e], g->head[e]);
+         /*printf("connect: %d->%d \n", g->tail[e], g->head[e]);*/
          if( !connected[k])
          {
 	    result[flipedge(e)] = CONNECT;
@@ -947,7 +947,7 @@ SCIP_RETCODE do_tm_degcons(
          i = g->source[0];
       if( !connected[i] )
       {
-         //printf("fail! \n");
+         /*printf("fail! \n");*/
          *solfound = FALSE;
          break;
 
@@ -975,7 +975,7 @@ SCIP_RETCODE do_tm_degcons(
          {
             if( result[e] == CONNECT && !(connected[g->head[e]]) )
             {
-               //printf("%d->%d \n", g->tail[e], g->head[e]);
+               /*printf("%d->%d \n", g->tail[e], g->head[e]);*/
                i = g->head[e];
                result[flipedge(e)] = -1;
                connected[i] = TRUE;
@@ -989,12 +989,11 @@ SCIP_RETCODE do_tm_degcons(
       }
 
       SCIPqueueFree(&queue);
-      // assert(graph_sol_valid(g, result));
-      //assert(0);
+      /*assert(graph_sol_valid(g, result));*/
       for( t = 0; t < nnodes; t++ )
          if( degs[t] > maxdegs[t] )
 	 {
-	    //printf("deg fail: %d (%d, %d)\n ", t, degs[t], maxdegs[t] );
+	    /*printf("deg fail: %d (%d, %d)\n ", t, degs[t], maxdegs[t] );*/
             *solfound = FALSE;
 	 }
    }
