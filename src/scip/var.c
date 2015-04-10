@@ -14934,13 +14934,15 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetAvgBranchdepthCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.aggregate.var,
+            dir == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
 
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetAvgBranchdepthCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetAvgBranchdepthCurrentRun(var->negatedvar,
+         dir == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
 
    default:
       SCIPerrorMessage("unknown variable status\n");
