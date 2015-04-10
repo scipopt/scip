@@ -629,6 +629,40 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* apply domain propagation */
             SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
 
+            /* resolve the diving LP */
+            if( !cutoff && divedepth == targetdepth )
+            {
+               int lpiterationlimit;
+               SCIP_RETCODE retstat;
+
+               nlpiterations = SCIPgetNLPIterations(scip);
+
+               /* allow at least MINLPITER more iterations */
+               lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset));
+               lpiterationlimit = MAX(lpiterationlimit, MINLPITER);
+
+               retstat = SCIPsolveProbingLP(scip, lpiterationlimit, &lperror, &cutoff);
+               /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+                * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+                */
+#ifdef NDEBUG
+               if( retstat != SCIP_OKAY )
+               {
+                  SCIPwarningMessage(scip, "Error while solving LP in %s heuristic; LP solve terminated with code <%d>\n", SCIPheurGetName(heur), retstat);
+               }
+#else
+               SCIP_CALL( retstat );
+#endif
+
+               /* lp errors lead to early termination */
+               if( lperror )
+                  break;
+
+               /* update iteration count */
+               SCIPupdateDivesetLPStats(scip, diveset, SCIPgetNLPIterations(scip) - nlpiterations);
+
+            }
+
             /* perform backtracking if a cutoff was detected */
             if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) )
             {
@@ -646,7 +680,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
          while( backtrack );
 
-         if( !cutoff && targetdepth > divedepth )
+         if( !cutoff && !lperror && targetdepth > divedepth )
          {
             assert(nextcand >= 0 && nextcand < ndivecands);
             assert(divecands != NULL);
@@ -677,57 +711,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       assert(cutoff || nextcand == ndivecands || targetdepth == divedepth);
 
-      /* resolve the diving LP */
-      if( !cutoff )
-      {
-         int lpiterationlimit;
-         SCIP_RETCODE retstat;
-
-         nlpiterations = SCIPgetNLPIterations(scip);
-
-         /* allow at least MINLPITER more iterations */
-         lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset));
-         lpiterationlimit = MAX(lpiterationlimit, MINLPITER);
-
-         retstat = SCIPsolveProbingLP(scip, lpiterationlimit, &lperror, &cutoff);
-         /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-          * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-          */
-#ifdef NDEBUG
-         if( retstat != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while solving LP in %s heuristic; LP solve terminated with code <%d>\n", SCIPheurGetName(heur), retstat);
-         }
-#else
-         SCIP_CALL( retstat );
-#endif
-
-         if( lperror )
-         {
-            /* free stored buffer arrays */
-            if( ncandstofix > 1 )
-            {
-               SCIPfreeBufferArray(scip, &candsroundup);
-               SCIPfreeBufferArray(scip, &divecandsfrac);
-               SCIPfreeBufferArray(scip, &divecandssol);
-               SCIPfreeBufferArray(scip, &divecands);
-            }
-
-            break;
-         }
-
-         /* update iteration count */
-         SCIPupdateDivesetLPStats(scip, diveset, SCIPgetNLPIterations(scip) - nlpiterations);
-
-         /* get LP solution status, objective value, and fractional variables, that should be integral */
-         objval = SCIPgetLPObjval(scip);
-         lpsolstat = SCIPgetLPSolstat(scip);
-         assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
-               (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, objval, SCIPgetCutoffbound(scip)))));
-      }
-
-      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, ndivecands);
-
+#if 0
       /* reward the diving setting by increasing the dive depth quotient for future purpose */
       if( !cutoff && (divedepth == targetdepth || nextcand == ndivecands ) )
       {
@@ -747,7 +731,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
          }
       }
-
+#endif
       /* free stored buffer arrays */
       if( ncandstofix > 1 )
       {
@@ -756,6 +740,16 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIPfreeBufferArray(scip, &divecandssol);
          SCIPfreeBufferArray(scip, &divecands);
       }
+      if( lperror )
+         break;
+
+      /* get LP solution status, objective value, and fractional variables, that should be integral */
+      objval = SCIPgetLPObjval(scip);
+      lpsolstat = SCIPgetLPSolstat(scip);
+      assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
+            (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, objval, SCIPgetCutoffbound(scip)))));
+
+      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, ndivecands);
 
       /* todo if only one candidate was fixed since last LP, use the LP Objective gain to update pseudo cost information */
       if( !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
