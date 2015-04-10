@@ -7267,12 +7267,14 @@ SCIP_RETCODE SCIPsetHeurPriority(
 }
 
 /** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
- *  before this method can be called
+ *  before this method can be called. The diveset is installed in the array of divesets of the heuristic
+ *  and can be retrieved later by accessing SCIPheurGetDivesets()
  */
 SCIP_RETCODE SCIPcreateDiveset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET**        diveset,            /**< common diving heuristic settings */
-   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs*/
+   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth,        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot,      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -7287,12 +7289,18 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
+   SCIP_DIVESET* divesetptr;
    SCIP_CALL( checkStage(scip, "SCIPcreateDiveset", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   divesetptr = NULL;
    /* create the diveset (this will add diving specific parameters for this heuristic) */
-   SCIP_CALL( SCIPdivesetCreate(diveset, heur, scip->set, scip->messagehdlr, scip->mem->setmem,
+   SCIP_CALL( SCIPdivesetCreate(&divesetptr, heur, name, scip->set, scip->messagehdlr, scip->mem->setmem,
          minreldepth, maxreldepth, maxlpiterquot, maxdiveubquot, maxdiveavgquot, maxdiveubquotnosol,
          maxdiveavgquotnosol, maxlpiterofs, backtrack, divesetgetscore) );
+
+   assert(divesetptr != NULL);
+   if( diveset != NULL )
+      *diveset = divesetptr;
 
    return SCIP_OKAY;
 }

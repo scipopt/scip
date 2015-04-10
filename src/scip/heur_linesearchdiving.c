@@ -61,7 +61,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
 
@@ -100,7 +99,6 @@ SCIP_DECL_HEURFREE(heurFreeLinesearchdiving)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -122,9 +120,6 @@ SCIP_DECL_HEURINIT(heurInitLinesearchdiving)
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   /* initialize data */
-   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }
@@ -157,7 +152,9 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    SCIP_DIVESET* diveset;
 
    heurdata = SCIPheurGetData(heur);
-   diveset = heurdata->diveset;
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
@@ -239,9 +236,8 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLinesearchdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitLinesearchdiving) );
 
-   heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
-   SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
          DEFAULT_BACKTRACK, divesetGetScoreLinesearchdiving) );
    return SCIP_OKAY;

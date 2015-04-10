@@ -158,10 +158,27 @@ SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/** returns array of divesets of this primal heuristic, or NULL if it has no divesets */
+EXTERN
+SCIP_DIVESET** SCIPheurGetDivesets(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** returns the number of divesets of this primal heuristic */
+EXTERN
+int SCIPheurGetNDivesets(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
 /** get the heuristic to which this diving setting belongs */
 EXTERN
 SCIP_HEUR* SCIPdivesetGetHeur(
    SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the name of the dive set */
+const char* SCIPdivesetGetName(
+   SCIP_DIVESET*         diveset             /** diving settings */
    );
 
 /** get the minimum relative depth of the diving settings */

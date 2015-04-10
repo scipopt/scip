@@ -804,7 +804,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPfreeBufferArray(scip, &indcandsfrac);
    }
 
-   SCIPupdateDivesetStats(scip, diveset, SCIPgetProbingDepth(scip), 10 * (SCIPgetNBestSolsFound(scip) - oldnbestsolsfound) + SCIPgetNSolsFound(scip) - oldnsolsfound);
+   SCIPupdateDivesetStats(scip, diveset, SCIPgetDepth(scip), 10 * (SCIPgetNBestSolsFound(scip) - oldnbestsolsfound) + SCIPgetNSolsFound(scip) - oldnsolsfound);
 
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );

@@ -55,7 +55,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
 /*
@@ -93,9 +92,6 @@ SCIP_DECL_HEURFREE(heurFreeGuideddiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   assert(heurdata->diveset != NULL);
-
-   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -119,9 +115,6 @@ SCIP_DECL_HEURINIT(heurInitGuideddiving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   /* initialize data by resetting the diving settings */
-   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }
@@ -176,7 +169,10 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   diveset = heurdata->diveset;
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
+   assert(diveset != NULL);
 
    /* call generic diving algorithm */
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
@@ -274,9 +270,8 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitGuideddiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitGuideddiving) );
 
-   heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
-   SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
          DEFAULT_BACKTRACK, divesetGetScoreGuideddiving) );
 

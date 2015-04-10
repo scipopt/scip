@@ -43,6 +43,7 @@ extern
 SCIP_RETCODE SCIPdivesetCreate(
    SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */

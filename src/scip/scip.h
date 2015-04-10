@@ -3458,13 +3458,15 @@ SCIP_RETCODE SCIPsetHeurPriority(
    );
 
 /** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
- *  before this method can be called
+ *  before this method can be called. The diveset is installed in the array of divesets of the heuristic
+ *  and can be retrieved later by accessing SCIPheurGetDivesets()
  */
 EXTERN
 SCIP_RETCODE SCIPcreateDiveset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET**        diveset,            /**< common diving heuristic settings */
-   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs*/
+   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth,        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot,      /**< maximal fraction of diving LP iterations compared to node LP iterations */

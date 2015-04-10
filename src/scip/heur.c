@@ -115,10 +115,42 @@ void SCIPdivesetUpdateStats(
    stat->divesetsolsuccess += updatesuccess;
 }
 
+/** append diveset to heuristic array of divesets */
+static
+SCIP_RETCODE heurAddDiveset(
+   SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
+   SCIP_DIVESET*         diveset             /**< pointer to the freshly created diveset */
+   )
+{
+   assert(heur != NULL);
+   assert(diveset != NULL);
+   assert(diveset->heur == NULL);
+
+   diveset->heur = heur;
+
+   if( heur->divesets == NULL )
+   {
+      assert(heur->ndivesets == 0);
+      SCIP_ALLOC( BMSallocMemoryArray(&heur->divesets, 1) );
+   }
+   else
+   {
+      assert(heur->ndivesets > 0);
+      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) );
+   }
+
+   /* append diveset to the end of the array */
+   heur->divesets[heur->ndivesets] = diveset;
+   heur->ndivesets++;
+
+   return SCIP_OKAY;
+}
+
 /** create a set of diving heuristic settings */
 SCIP_RETCODE SCIPdivesetCreate(
    SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
@@ -137,62 +169,67 @@ SCIP_RETCODE SCIPdivesetCreate(
    )
 {
    char paramname[SCIP_MAXSTRLEN];
-   const char* name;
+   const char* divesetname;
    assert(diveset != NULL);
    assert(set != NULL);
    assert(divesetgetscore != NULL);
    assert(heur != NULL);
 
-   name = SCIPheurGetName(heur);
    SCIP_ALLOC( BMSallocMemory(diveset) );
 
+   /* as a convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
+   divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*diveset)->name, divesetname, strlen(divesetname)+1) );
+   (*diveset)->heur = NULL;
 
    /* copy callbacks */
    (*diveset)->divesetgetscore = divesetgetscore;
-   (*diveset)->heur = heur;
+
+   SCIP_CALL( heurAddDiveset(heur, *diveset) );
+
 
    /* add collection of diving heuristic specific parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname, "minimal relative depth to start diving",
          &(*diveset)->minreldepth, TRUE, minreldepth, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal relative depth to start diving",
          &(*diveset)->maxreldepth, TRUE, maxreldepth, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &(*diveset)->maxlpiterquot, FALSE, maxlpiterquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", (*diveset)->name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
          paramname,
          "additional number of allowed LP iterations",
          &(*diveset)->maxlpiterofs, FALSE, maxlpiterofs, 0, INT_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
          &(*diveset)->maxdiveubquot, TRUE, maxdiveubquot, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
          &(*diveset)->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
          &(*diveset)->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &(*diveset)->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", (*diveset)->name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
          paramname,
          "use one level of backtracking if infeasibility is encountered?",
@@ -209,6 +246,16 @@ SCIP_HEUR* SCIPdivesetGetHeur(
    )
 {
    return diveset->heur;
+}
+
+/** get the name of the dive set */
+const char* SCIPdivesetGetName(
+   SCIP_DIVESET*         diveset             /** diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->name;
 }
 
 /** get the minimum relative depth of the diving settings */
@@ -337,7 +384,9 @@ SCIP_RETCODE SCIPdivesetFree(
    )
 {
    assert(*diveset != NULL);
+   assert((*diveset)->name != NULL);
 
+   BMSfreeMemoryArray(&(*diveset)->name);
    BMSfreeMemory(diveset);
 
    return SCIP_OKAY;
@@ -363,6 +412,7 @@ SCIP_RETCODE SCIPdivesetGetScore(
 
    return SCIP_OKAY;
 }
+
 
 
 /** copies the given primal heuristic to a new scip */
@@ -444,6 +494,8 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->nsolsfound = 0;
    (*heur)->nbestsolsfound = 0;
    (*heur)->initialized = FALSE;
+   (*heur)->divesets = NULL;
+   (*heur)->ndivesets = 0;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/priority", name);
@@ -473,10 +525,12 @@ SCIP_RETCODE SCIPheurFree(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int d;
    assert(heur != NULL);
    assert(*heur != NULL);
    assert(!(*heur)->initialized);
    assert(set != NULL);
+   assert((*heur)->divesets != NULL || (*heur)->ndivesets == 0);
 
    /* call destructor of primal heuristic */
    if( (*heur)->heurfree != NULL )
@@ -484,6 +538,12 @@ SCIP_RETCODE SCIPheurFree(
       SCIP_CALL( (*heur)->heurfree(set->scip, *heur) );
    }
 
+   for( d = 0; d < (*heur)->ndivesets; ++d )
+   {
+      assert((*heur)->divesets[d] != NULL);
+      SCIPdivesetFree(&((*heur)->divesets[d]));
+   }
+   BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);
    SCIPclockFree(&(*heur)->setuptime);
    BMSfreeMemoryArray(&(*heur)->name);
@@ -499,6 +559,7 @@ SCIP_RETCODE SCIPheurInit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int d;
    assert(heur != NULL);
    assert(set != NULL);
 
@@ -529,6 +590,14 @@ SCIP_RETCODE SCIPheurInit(
       /* stop timing */
       SCIPclockStop(heur->setuptime, set);
    }
+
+   /* reset dive sets */
+   for( d = 0; d < heur->ndivesets; ++d )
+   {
+      assert(heur->divesets[d] != NULL);
+      SCIPdivesetReset(heur->divesets[d], set);
+   }
+
    heur->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -1065,4 +1134,24 @@ SCIP_Real SCIPheurGetTime(
    assert(heur != NULL);
 
    return SCIPclockGetTime(heur->heurclock);
+}
+
+/** returns array of divesets of this primal heuristic, or NULL if it has no divesets */
+SCIP_DIVESET** SCIPheurGetDivesets(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->divesets;
+}
+
+/** returns the number of divesets of this primal heuristic */
+int SCIPheurGetNDivesets(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->ndivesets;
 }
