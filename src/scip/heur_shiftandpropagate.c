@@ -837,8 +837,6 @@ void checkViolations(
    SCIP_Bool             updateweights       /**< should row weight be increased every time the row is violated? */
    )
 {
-   SCIP_Real* rhs;
-   SCIP_Real* lhs;
    int nrows;
    int* rowindices;
    int i;
@@ -848,10 +846,6 @@ void checkViolations(
    assert(violatedrowpos != NULL);
    assert(nviolatedrows != NULL);
    assert(-1 <= colidx && colidx < matrix->ncols);
-
-   /* get RHS, LHS and number of the problem rows */
-   rhs = matrix->rhs;
-   lhs = matrix->lhs;
 
    /* check if we requested an update for a single variable, or if we want to (re)-initialize the whole violation info */
    if( colidx >= 0 )
@@ -877,8 +871,8 @@ void checkViolations(
       /* check, if zero solution violates this row */
       checkRowViolation(scip, matrix, rowpos, violatedrows, violatedrowpos, nviolatedrows, rowweights, updateweights);
 
-      assert((violatedrowpos[rowpos] == -1 && SCIPisFeasGE(scip, rhs[rowpos], 0.0) && SCIPisFeasGE(scip, -lhs[rowpos], 0.0))
-         || (violatedrowpos[rowpos] >= 0 &&(SCIPisFeasLT(scip, rhs[rowpos], 0.0) || SCIPisFeasLT(scip, -lhs[rowpos], 0.0))));
+      assert((violatedrowpos[rowpos] == -1 && SCIPisFeasGE(scip, matrix->rhs[rowpos], 0.0) && SCIPisFeasLE(scip, matrix->lhs[rowpos], 0.0))
+         || (violatedrowpos[rowpos] >= 0 &&(SCIPisFeasLT(scip, matrix->rhs[rowpos], 0.0) || SCIPisFeasGT(scip, matrix->lhs[rowpos], 0.0))));
    }
 }
 
