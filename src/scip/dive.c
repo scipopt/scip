@@ -197,6 +197,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int divedepth;
    int nextcand;
    int targetdepth;
+   int totalnbacktracks;
+   int totalnprobingnodes;
+   SCIP_Bool success;
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
@@ -206,8 +209,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
-   int oldnsolsfound;
-   int oldnbestsolsfound;
 
    SCIP_VAR** indcands = NULL;
    SCIP_Real* indcandssol = NULL;
@@ -336,9 +337,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    *result = SCIP_DIDNOTFIND;
 
-   oldnsolsfound = SCIPgetNSolsFound(scip);
-   oldnbestsolsfound = SCIPgetNBestSolsFound(scip);
-
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -357,7 +355,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    cutoff = FALSE;
    divedepth = 0;
    startndivecands = ndivecands;
-
+   totalnbacktracks = 0;
+   totalnprobingnodes = 0;
    /* LP loop; every time a new LP was solved, conditions are checked
     * dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
     * - if possible, we dive at least with the depth 10
@@ -375,10 +374,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIP_Bool* candsroundup;  /* stores for every candidate if it should be rounded up or down */
       SCIP_Bool nextcandroundup;
       SCIP_VAR* nextcandvar;
-      int nbacktracks;
       int startdepth;
       int ncandstofix;
-      int maxnbacktracks;
       SCIP_Bool allroundable;
       int c;
 
@@ -414,7 +411,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* if all candidates are roundable, try to round the solution */
       if( allroundable )
       {
-         SCIP_Bool success = FALSE;
+         success = FALSE;
 
          /* create solution from diving LP and try to round it */
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
@@ -542,10 +539,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
       }
 
-      /* limit the number of allowed backtracks */
-      nbacktracks = 0;
-      maxnbacktracks = (1 + (ncandstofix / 2));
-
       /* start propagating candidate variables
        *   - until the desired targetdepth is reached,
        *   - or there is no further candidate variable left because of intermediate bound changes,
@@ -567,6 +560,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
          /* dive deeper into the tree */
          SCIP_CALL( SCIPnewProbingNode(scip) );
+         ++totalnprobingnodes;
          divedepth++;
 
          backtracked = FALSE;
@@ -636,15 +630,16 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
 
             /* perform backtracking if a cutoff was detected */
-            if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) && nbacktracks < maxnbacktracks )
+            if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) )
             {
                SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
                SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
                SCIP_CALL( SCIPnewProbingNode(scip) );
+               ++totalnprobingnodes;
                backtracked = TRUE;
                backtrack = TRUE;
                cutoff = FALSE;
-               ++nbacktracks;
+               ++totalnbacktracks;
             }
             else
                backtrack = FALSE;
@@ -776,11 +771,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          ndivecands = 0;
    }
 
+   success = FALSE;
    /* check if a solution has been found */
    if( ndivecands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIP_Bool success;
-
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
       SCIPdebugMessage("%s found primal solution: obj=%g\n", SCIPheurGetName(heur), SCIPgetSolOrigObj(scip, worksol));
@@ -804,7 +798,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPfreeBufferArray(scip, &indcandsfrac);
    }
 
-   SCIPupdateDivesetStats(scip, diveset, SCIPgetDepth(scip), 10 * (SCIPgetNBestSolsFound(scip) - oldnbestsolsfound) + SCIPgetNSolsFound(scip) - oldnsolsfound);
+   SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, success);
 
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );

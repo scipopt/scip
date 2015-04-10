@@ -281,7 +281,6 @@ void SCIPstatReset(
    stat->ndivesetcalls = 0;
    stat->ndivesetlps = 0;
    stat->totaldivesetdepth = 0;
-   stat->divesetsolsuccess = 0;
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);

@@ -69,12 +69,13 @@ void SCIPdivesetReset(
    );
 
 /** update diveset statistics and global diveset statistics */
-extern
 void SCIPdivesetUpdateStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
-   int                   depth,              /**< the probing depth reached this time */
-   int                   updatesuccess       /**< an update of the success */
+   int                   depth,              /**< the depth reached this time */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */

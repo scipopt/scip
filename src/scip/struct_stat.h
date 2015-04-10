@@ -160,7 +160,6 @@ struct SCIP_Stat
    SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
    SCIP_Longint          totaldivesetdepth;  /**< the total probing depth over all diveset calls */
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
-   int                   divesetsolsuccess;  /**< total success of divesets */
    int                   ndivesetcalls;      /**< total number of diveset diving calls */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */

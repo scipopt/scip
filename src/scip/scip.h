@@ -14580,8 +14580,9 @@ EXTERN
 void SCIPupdateDivesetStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
-   int                   depth,              /**< the probing depth reached this time */
-   int                   updatesuccess       /**< an update of the success */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
    );
 
 /** returns the LP solve frequency for diving LPs (-1: never) */

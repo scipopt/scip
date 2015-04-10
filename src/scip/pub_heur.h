@@ -212,6 +212,72 @@ void SCIPdivesetSetTargetdepthfrac(
    SCIP_Real             newval              /**< new value for target depth frac */
    );
 
+/** get the number of calls to this dive set */
+EXTERN
+int SCIPdivesetGetNCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the number of calls successfully terminated at a feasible leaf node */
+EXTERN
+int SCIPdivesetGetNSolutionCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum depth reached by this dive set */
+EXTERN
+int SCIPdivesetGetMinDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum depth reached by this dive set */
+EXTERN
+int SCIPdivesetGetMaxDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average depth this dive set reached during execution */
+EXTERN
+SCIP_Real SCIPdivesetGetAvgDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum depth at which this dive set found a solution */
+EXTERN
+int SCIPdivesetGetMinSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum depth at which this dive set found a solution */
+EXTERN
+int SCIPdivesetGetMaxSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average depth at which this dive set found a solution */
+EXTERN
+SCIP_Real SCIPdivesetGetAvgSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of LP iterations used by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNLPIterations(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of probing nodes used by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNProbingNodes(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of backtracks performed by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNBacktracks(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /** get the maximum LP iterations quotient of the diving settings */
 EXTERN
 SCIP_Real SCIPdivesetGetMaxLPIterQuot(
@@ -221,12 +287,6 @@ SCIP_Real SCIPdivesetGetMaxLPIterQuot(
 /** get the maximum LP iterations offset of the diving settings */
 EXTERN
 int SCIPdivesetGetMaxLPIterOffset(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
-/** get the number of LP iterations of the diving settings */
-EXTERN
-SCIP_Longint SCIPdivesetGetNLPIterations(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 

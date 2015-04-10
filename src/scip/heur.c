@@ -93,8 +93,17 @@ void SCIPdivesetReset(
    assert(diveset != NULL);
 
    diveset->nlpiterations = 0L;
-   diveset->totaldepth = 0;
+   diveset->totaldepth = 0L;
+   diveset->totalsoldepth = 0L;
+   diveset->totalnnodes = 0L;
+   diveset->totalnbacktracks = 0L;
+   diveset->minsoldepth = INT_MAX;
+   diveset->maxsoldepth = -1;
+   diveset->mindepth = INT_MAX;
+   diveset->maxdepth = -1;
    diveset->nlps = 0;
+   diveset->nsolcalls = 0;
+   diveset->ncalls = 0;
    diveset->targetdepthfrac = set->heur_divestartfrac;
 }
 
@@ -102,17 +111,32 @@ void SCIPdivesetReset(
 void SCIPdivesetUpdateStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
-   int                   depth,              /**< the probing depth reached this time */
-   int                   updatesuccess       /**< an update of the success */
+   int                   depth,              /**< the depth reached this time */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
    )
 {
    assert(diveset != NULL);
 
    diveset->totaldepth += depth;
+   diveset->mindepth = MIN(diveset->mindepth, depth);
+   diveset->maxdepth = MAX(diveset->maxdepth, depth);
+   diveset->totalnnodes += nprobingnodes;
+   diveset->totalnbacktracks += nbacktracks;
+   diveset->ncalls++;
+
+   /* update solution statistics only if a solution was found */
+   if( solfound )
+   {
+      diveset->totalsoldepth += depth;
+      diveset->minsoldepth = MIN(diveset->minsoldepth, depth);
+      diveset->maxsoldepth = MAX(diveset->maxsoldepth, depth);
+      diveset->nsolcalls++;
+   }
+
    stat->totaldivesetdepth += depth;
    stat->ndivesetcalls++;
-
-   stat->divesetsolsuccess += updatesuccess;
 }
 
 /** append diveset to heuristic array of divesets */
@@ -279,7 +303,117 @@ int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
-   return 10 * SCIPheurGetNBestSolsFound(diveset->heur) + SCIPheurGetNSolsFound(diveset->heur);
+   return 10 * diveset->nsolcalls;
+}
+
+/** get the number of calls to this dive set */
+int SCIPdivesetGetNCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->ncalls;
+}
+
+/** get the number of calls successfully terminated at a feasible leaf node */
+int SCIPdivesetGetNSolutionCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nsolcalls;
+}
+
+/** get the minimum depth reached by this dive set */
+int SCIPdivesetGetMinDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->mindepth;
+}
+
+/** get the maximum depth reached by this dive set */
+int SCIPdivesetGetMaxDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->maxdepth;
+}
+
+/** get the average depth this dive set reached during execution */
+SCIP_Real SCIPdivesetGetAvgDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->ncalls == 0 ? 0.0 : diveset->totaldepth / (SCIP_Real)diveset->ncalls);
+}
+
+/** get the minimum depth at which this dive set found a solution */
+int SCIPdivesetGetMinSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->minsoldepth;
+}
+
+/** get the maximum depth at which this dive set found a solution */
+int SCIPdivesetGetMaxSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->maxsoldepth;
+}
+
+/** get the average depth at which this dive set found a solution */
+SCIP_Real SCIPdivesetGetAvgSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->nsolcalls == 0 ? 0.0 : diveset->totalsoldepth / (SCIP_Real)diveset->nsolcalls);
+}
+
+/** get the total number of LP iterations used by this dive set */
+SCIP_Longint SCIPdivesetGetNLPIterations(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nlpiterations;
+}
+
+/** get the total number of probing nodes used by this dive set */
+SCIP_Longint SCIPdivesetGetNProbingNodes(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->totalnnodes;
+}
+
+/** get the total number of backtracks performed by this dive set */
+SCIP_Longint SCIPdivesetGetNBacktracks(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->totalnbacktracks;
 }
 
 /** get the maximum LP iterations quotient of the diving settings */
@@ -296,14 +430,6 @@ int SCIPdivesetGetMaxLPIterOffset(
    )
 {
    return diveset->maxlpiterofs;
-}
-
-/** get the number of LP iterations of the diving settings */
-SCIP_Longint SCIPdivesetGetNLPIterations(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   )
-{
-   return diveset->nlpiterations;
 }
 
 /** get the maximum upper bound quotient parameter of the diving settings if no solution is available */
