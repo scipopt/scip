@@ -1402,6 +1402,47 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the transform command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      break;
+
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPtransformProb(scip) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMED:
+      SCIPdialogMessage(scip, NULL, "problem is already transformed\n");
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the optimize command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 {  /*lint --e{715}*/
@@ -3364,6 +3405,19 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
+
+#ifndef NDEBUG
+   /* transform problem (for debugging) */
+   if( !SCIPdialogHasEntry(root, "transform") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecTransform, NULL, NULL,
+            "transform", "transforms problem from original state", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+#endif
 
    /* optimize */
    if( !SCIPdialogHasEntry(root, "optimize") )
