@@ -135,7 +135,7 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
-#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
    SCIP_Real* score, SCIP_Bool* roundup)
 
 #ifdef __cplusplus
