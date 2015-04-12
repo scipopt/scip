@@ -29,11 +29,11 @@ static void show(
       if (xval[i] > 1e-6)
       {
 	 fprintf(stderr, "%d-%d, xval[%d]=%g (%d)\n",
-		g->tail[i % g->edges] + 1,
-		g->head[i % g->edges] + 1,
-		i,
-		xval[i],
-		state[i]);
+            g->tail[i % g->edges] + 1,
+            g->head[i % g->edges] + 1,
+            i,
+            xval[i],
+            state[i]);
       }
    }
 }
@@ -221,21 +221,21 @@ int validate(
 #endif
       for(i = 0; i < g->knots; i++)
       {
-	if( g->stp_type == STP_DEG_CONS )
-	{
-	   deg = 0;
-	   for( e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )
-                  if( EQ(xval[e], 1.0) || EQ(xval[flipedge(e)], 1.0) )
-                     deg++;
+         if( g->stp_type == STP_DEG_CONS )
+         {
+            deg = 0;
+            for( e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )
+               if( EQ(xval[e], 1.0) || EQ(xval[flipedge(e)], 1.0) )
+                  deg++;
 
-               if( deg > g->maxdeg[i] )
-	       {
-		  ret = FALSE;
-		  printf("deg condition violated \n");
-                   break;
-	       }
+            if( deg > g->maxdeg[i] )
+            {
+               ret = FALSE;
+               printf("deg condition violated \n");
+               break;
+            }
 
-	}
+         }
          /* Etwa ein Kreis ?
           */
          if (connected[i] >= 2)
@@ -258,9 +258,9 @@ int validate(
    if (ret)
       ret = nail(g, xval);
 
-/* SCIP-Heuristiken können (z.B. durch Runden) Lösungen konstruieren, die einen Kreis aus Steiner-Knoten enthalten, der
- * nicht zum Baum gehört
- */
+   /* SCIP-Heuristiken können (z.B. durch Runden) Lösungen konstruieren, die einen Kreis aus Steiner-Knoten enthalten, der
+    * nicht zum Baum gehört
+    */
 #if 0
 #ifndef NDEBUG
    /* Test ob alle Kanten nur in eine Richtung benutzt werden.

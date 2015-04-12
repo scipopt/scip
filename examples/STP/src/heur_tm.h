@@ -83,6 +83,13 @@ extern "C" {
       char*                 connected           /**< ST nodes */
       );
 
+   extern
+   SCIP_RETCODE do_degprune(
+      SCIP*                 scip,               /**< SCIP data structure */
+      const GRAPH*          g,                  /**< graph structure */
+      int*                  result,             /**< ST edges */
+      char*                 connected           /**< ST nodes */
+      );
 #ifdef __cplusplus
 }
 #endif

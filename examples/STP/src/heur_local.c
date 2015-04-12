@@ -701,7 +701,6 @@ SCIP_RETCODE do_local(
 
          if(0)
          {
-
             const char base[] = "X/graphbeflocal";
             char filename [ FILENAME_MAX ];
             for( k = 0; k < nedges; k+=2 )

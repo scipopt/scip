@@ -2472,7 +2472,7 @@ SCIP_RETCODE reduce(
    if( (*graph)->stp_type != STP_UNDIRECTED && (*graph)->stp_type != STP_GRID && (*graph)->stp_type != STP_OBSTACLES_GRID )
       level = level * (-1);
 
-   if( level == 0 )
+   //if( level == 0 )
       level0(scip, (*graph));
    if( level == 1 )
       *offset = level1(scip, (*graph));
