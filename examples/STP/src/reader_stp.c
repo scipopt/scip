@@ -45,8 +45,10 @@
 
 #define   DEFAULT_COMPCENTRAL  1
 #define   DEFAULT_EMITGRAPH    FALSE
+#define   DEFAULT_COUNTPRESOLTIME  TRUE
 #define   DEFAULT_REDUCTION    4
 #define   DEFAULT_MINELIMS     5
+#define   DEFAULT_PRETIMELIMIT -1
 
 #define STP_MODES "cfp" /* valid values for user parameter 'stp/mode' */
 
@@ -170,6 +172,16 @@ SCIP_RETCODE SCIPincludeReaderStp(
          "stp/minelims",
          "minimal number of eliminations per reduction method",
          NULL, FALSE, DEFAULT_MINELIMS, 0, 10000, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "stp/pretimelimit",
+         "presolving time limit",
+         NULL, FALSE, DEFAULT_PRETIMELIMIT, -1.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "stp/countpresoltime",
+         "count presolving time to solving time?",
+         NULL, FALSE, DEFAULT_COUNTPRESOLTIME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "stp/emitgraph",

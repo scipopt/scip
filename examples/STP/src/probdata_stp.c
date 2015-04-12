@@ -1393,14 +1393,20 @@ static
 SCIP_DECL_PROBTRANS(probtransStp)
 {
    SCIP_Real timelimit;
+   SCIP_Bool update;
 
    SCIPdebugPrintf("probtransStp \n");
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "stp/countpresoltime", &update) );
+
    /* adjust time limit to take into account reading time */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   timelimit -= SCIPgetReadingTime(scip);
-   timelimit = MAX(0.0,timelimit);
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
+   if( update )
+   {
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      timelimit -= SCIPgetReadingTime(scip);
+      timelimit = MAX(0.0,timelimit);
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
+   }
 
    /* create transform probdata */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->graph) );
@@ -1724,6 +1730,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_PROBDATA* probdata;
    SCIP_CONS* cons;
    SCIP_Real offset;
+   SCIP_Real oldtimelimit;
+   SCIP_Real presoltimelimit;
    PRESOL presolinfo;
    GRAPH* graph;
    SCIP_Bool print;
@@ -1896,10 +1904,20 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* setting the offest to the fixed value given in the input file */
    probdata->offset = presolinfo.fixed;
 
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
+   SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
+
+   if( presoltimelimit > -0.5 )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", presoltimelimit) );
+   }
+
    /* presolving */
    SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims) );
 
    graph = graph_pack(scip, graph, TRUE);
+
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
    probdata->graph = graph;
 
