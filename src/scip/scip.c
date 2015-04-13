@@ -5704,6 +5704,28 @@ SCIP_RETCODE SCIPsetConshdlrGetNVars(
    return SCIP_OKAY;
 }
 
+/** sets diving enforcement method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetConshdlrEnfoDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRENFODIVE((*conshdlrenfodive)) /**< constraint handler diving solution enforcement method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrEnfoDive", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetEnfoDive(conshdlr, conshdlrenfodive);
+
+   return SCIP_OKAY;
+}
 /** returns the constraint handler of the given name, or NULL if not existing */
 SCIP_CONSHDLR* SCIPfindConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30537,6 +30559,47 @@ int SCIPgetDiveLPSolveFreq(
    assert(scip->set != NULL);
 
    return scip->set->heur_divelpsolvefreq;
+}
+
+/** enforces a probing/diving solution by suggesting bound changes that minimize the score w.r.t. the current diving settings
+ *
+ *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
+ *  the diving settings.
+ *  the suggested bound changes are stored in an array and need to be applied manually afterwards. The constraint handlers
+ *  are called in decreasing priority of their enforcement priority
+ */
+SCIP_RETCODE SCIPenforceDiveSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_SOL*             sol,                /**< current solution of diving mode */
+   SCIP_VAR**            varptr,             /**< variable pointer to store variable for diving */
+   SCIP_Real*            vals,               /**< buffer array to store exactly two values for proceeding with diving */
+   SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(diveset != NULL);
+   assert(SCIPinProbing(scip));
+   assert(infeasible != NULL);
+   assert(success != NULL);
+   assert(varptr != NULL);
+   assert(vals != NULL);
+
+   *success = FALSE;
+   *infeasible = FALSE;
+
+   /* loop over constraint handlers until a constraint handler successfully found a variable/value assignment for proceeding
+    * or a constraint handler detected the infeasibility of the local node
+    */
+   for( i = 0; i < scip->set->nconshdlrs && !(*success || *infeasible); ++i )
+   {
+      SCIP_CALL( SCIPconshdlrEnforceDiveSol(scip->set->conshdlrs[i], scip->set, diveset, sol, varptr, vals, success, infeasible) );
+   }
+
+   return SCIP_OKAY;
 }
 
 

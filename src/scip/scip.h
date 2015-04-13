@@ -2653,6 +2653,22 @@ SCIP_RETCODE SCIPsetConshdlrGetNVars(
    SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
    );
 
+/** sets diving enforcement method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetConshdlrEnfoDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRENFODIVE((*conshdlrenfodive)) /**< constraint handler diving solution enforcement method */
+   );
+
 /** returns the constraint handler of the given name, or NULL if not existing */
 EXTERN
 SCIP_CONSHDLR* SCIPfindConshdlr(
@@ -14586,8 +14602,27 @@ void SCIPupdateDivesetStats(
    );
 
 /** returns the LP solve frequency for diving LPs (-1: never) */
+EXTERN
 int SCIPgetDiveLPSolveFreq(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** enforces a probing/diving solution by suggesting bound changes that minimize the score w.r.t. the current diving settings
+ *
+ *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
+ *  the diving settings.
+ *  the suggested bound changes are stored in an array and need to be applied manually afterwards. The constraint handlers
+ *  are called in decreasing priority of their enforcement priority
+ */
+EXTERN
+SCIP_RETCODE SCIPenforceDiveSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_SOL*             sol,                /**< current solution of diving mode */
+   SCIP_VAR**            varptr,             /**< variable pointer to store variable for diving */
+   SCIP_Real*            vals,               /**< buffer array to store exactly two values for proceeding with diving */
+   SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
    );
 
 /**@} */
