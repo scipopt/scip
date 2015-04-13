@@ -234,6 +234,19 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** calls diving solution enforcement callback of constraint handler, if it exists */
+extern
+SCIP_RETCODE SCIPconshdlrEnforceDiveSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_SOL*             sol,                /**< current solution of diving mode */
+   SCIP_VAR**            varptr,             /**< variable pointer to store variable for diving */
+   SCIP_Real*            vals,               /**< buffer array to store exactly two values for proceeding with diving */
+   SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
+   );
+
 /** calls enforcing method of constraint handler for pseudo solution for all constraints added after last
  *  conshdlrReset() call
  */
@@ -491,6 +504,13 @@ extern
 void SCIPconshdlrSetGetNVars(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
+   );
+
+/** sets diving enforcement method of constraint handler */
+extern
+void SCIPconshdlrSetEnfoDive(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRENFODIVE((*conshdlrenfodive)) /**< constraint handler diving solution enforcement method */
    );
 
 /*

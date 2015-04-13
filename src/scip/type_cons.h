@@ -38,6 +38,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_scip.h"
 #include "scip/type_timing.h"
+#include "scip/type_heur.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -788,6 +789,35 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSGETNVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
       int* nvars, SCIP_Bool* success)
+
+/** constraint handler method to enforce a solution obtained during diving by assigning a variable and two values for branching
+ *
+ *  The constraint handler can provide this callback to enforce the current solution in probing/diving mode. The solution is
+ *  enforced by deciding for a variable and two values (one with higher priority and one alternative) that
+ *  the user of the diveset argument (mostly a diving heuristic) should proceed with. The success pointer is used to indicate
+ *  whether the constraint handler succeeded in selecting a variable. The infeasible pointer should be set to TRUE if
+ *  the constraint handler found a local infeasibility.  If the constraint handler needs to select between several
+ *  candidates, it may use the scoring mechanism of the diveset argument to control its choice.
+ *
+ *  This callback is optional
+ *
+ *  @note: @p sol is usually the LP relaxation solution unless the caller of the method, usually a diving heuristic,
+ *         does not solve LP relaxations at every depth
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - diveset         : diving settings for scoring
+ *  - sol             : current diving solution, usually the LP relaxation solution
+ *
+ *  output:
+ *  - varptr          : a pointer to store the candidate with the highest score
+ *  - vals            : buffer array to store exactly two values for proceeding with diving
+ *  - success         : pointer to store whether the constraint handler succeeded selecting a variable
+ *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
+ */
+#define SCIP_DECL_CONSHDLRENFODIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
+      SCIP_SOL* sol, SCIP_VAR** varptr, SCIP_Real* vals, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus
 }
