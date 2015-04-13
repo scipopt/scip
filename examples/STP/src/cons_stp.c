@@ -499,7 +499,6 @@ int sep_2cut(
    const int flowsep      = conshdlrdata->flowsep;
 
    GRAPH*  g;
-   SCIP_Real timelimit;
    double* xval;
    PATH*   path;
    int*    term;
@@ -535,8 +534,6 @@ int sep_2cut(
    assert(w    != NULL);
    assert(term != NULL);
    assert(path != NULL);
-
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    for(layer = 0; layer < g->layers; layer++)
    {
@@ -576,7 +573,7 @@ int sep_2cut(
 
       while(terms > 0)
       {
-         if( terms % 100 == 0 && SCIPgetTotalTime(scip) > timelimit )
+         if( terms % 100 == 0 && SCIPisStopped(scip) )
             break;
 
          /* Wir suchen ein Terminal zu dem wir gehen koennen

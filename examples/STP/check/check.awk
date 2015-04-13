@@ -316,8 +316,12 @@ BEGIN {
       cons = $3;
 }
 
-/^Packing Graph:/ {
+/^Packing graph:/ {
    beforepresol = 0;
+
+   prenodes = $4;
+   preedges = $6;
+   preterms = $8;
 }
 /^Knots:/ {
    if( beforepresol )
@@ -326,12 +330,12 @@ BEGIN {
       origedges = $4;
       origterms = $6;
    }
-   else
-   {
-      prenodes = $2;
-      preedges = $4;
-      preterms = $6;
-   }
+   #else
+   #{
+   #   prenodes = $2;
+   #   preedges = $4;
+   #   preterms = $6;
+   #}
 }
 
 #
@@ -416,14 +420,7 @@ BEGIN {
    fname = filename
    gsub(/\//, "\\/",fname);
 
-   #grep between filename and next @01 for an error
-   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
-   command | getline grepresult;
-
-   # set aborted flag correctly
-   if( grepresult == "" ) {
-      aborted = 0;
-   }
+   aborted = 0;
 }
 
 /solving was interrupted/ { timeout = 1; }

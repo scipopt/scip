@@ -706,7 +706,6 @@ static
 SCIP_RETCODE do_tmX(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_Real             timelimit,
    SCIP_Real*            cost,
    SCIP_Real*            costrev,
    SCIP_Real**           pathdist,
@@ -768,7 +767,7 @@ SCIP_RETCODE do_tmX(
       newval = -1;
 
       /* time limit exceeded?*/
-      if( SCIPgetTotalTime(scip) > timelimit )
+      if( SCIPisStopped(scip) )
          return SCIP_OKAY;
 
       for( l = 0; l < nnodes; l++ )
@@ -1154,7 +1153,6 @@ SCIP_RETCODE do_tm_polzin(
    const GRAPH*          g,                  /**< graph structure */
    SCIP_PQUEUE*          pqueue,
    GNODE**               gnodearr,
-   SCIP_Real             timelimit,
    SCIP_Real*            cost,
    SCIP_Real*            costrev,
    int                   layer,
@@ -1370,7 +1368,7 @@ SCIP_RETCODE do_tm_polzin(
       }
 
       /* for each node v: sort the terminal arrays according to their distance to v */
-      for( i = 0; i < nnodes && SCIPgetTotalTime(scip) < timelimit; i++ )
+      for( i = 0; i < nnodes && !SCIPisStopped(scip); i++ )
 	 SCIPsortRealIntInt(node_dist[i], node_base[i], node_edge[i], nodenterms[i]);
 
       /* free memory */
@@ -1597,7 +1595,6 @@ SCIP_RETCODE do_layer(
    SCIP_Real obj;
    SCIP_Real objt;
    SCIP_Real min = FARAWAY;
-   SCIP_Real timelimit;
    SCIP_Real** pathdist;
    SCIP_Real** node_dist;
    int best;
@@ -1648,9 +1645,6 @@ SCIP_RETCODE do_layer(
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &start, MIN(runs, nnodes)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-
-   /* get timelimit parameter*/
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    /* get user parameter */
    SCIP_CALL( SCIPgetIntParam(scip, "heuristics/"HEUR_NAME"/type", &mode) );
@@ -1931,7 +1925,7 @@ SCIP_RETCODE do_layer(
 
          }
 #if TMX
-         SCIP_CALL( do_tmX(scip, graph, timelimit, cost, costrev, pathdist, root, graph->tail[rootedge], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
+         SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, root, graph->tail[rootedge], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
 #else
          SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, root, result, connected) );
 #endif
@@ -1944,7 +1938,7 @@ SCIP_RETCODE do_layer(
          for( e = 0; e < nedges; e++)
             obj += (result[e] > -1) ? graph->cost[e] : 0.0;
 
-         if( SCIPisLT(scip, obj, min) && SCIPgetTotalTime(scip) < timelimit )
+         if( SCIPisLT(scip, obj, min) && !SCIPisStopped(scip) )
          {
             min = obj;
             if( printfs )
@@ -2011,7 +2005,7 @@ SCIP_RETCODE do_layer(
          assert(start[r] >= 0);
          assert(start[r] < nnodes);
          /* time limit exceeded?*/
-         if( SCIPgetTotalTime(scip) > timelimit )
+         if( SCIPisStopped(scip) )
 	 {
             r = runs;
 	 }
@@ -2030,14 +2024,14 @@ SCIP_RETCODE do_layer(
          else if( mode == TM )
 	 {
 #if TMX
-            SCIP_CALL( do_tmX(scip, graph, timelimit, cost, costrev, pathdist, start[r], -1, perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
+            SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], -1, perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
 #else
          SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, start[r], result, connected) );
 #endif
 	 }
          else
 	 {
-            SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, timelimit, cost, costrev, 0, node_dist, start[r], result, vcount,
+            SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, 0, node_dist, start[r], result, vcount,
                   nodenterms, node_base, node_edge, (r == 0), connected) );
 	 }
          obj = 0.0;
@@ -2054,7 +2048,7 @@ SCIP_RETCODE do_layer(
          }
          SCIPdebugMessage(" Obj=%.12e\n", obj);
 
-         if( SCIPisLT(scip, obj, min) && (graph->stp_type != STP_DEG_CONS || solfound) && SCIPgetTotalTime(scip) < timelimit )
+         if( SCIPisLT(scip, obj, min) && (graph->stp_type != STP_DEG_CONS || solfound) && !SCIPisStopped(scip) )
          {
             if( graph->stp_type != STP_HOP_CONS || edgecount <= graph->hoplimit )
             {
