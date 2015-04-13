@@ -968,6 +968,10 @@ GRAPH* graph_load(
                   format = (char*)"nn";
 	    }
 
+	    if( stp_type == STP_DIRECTED && p->sw_code == KEY_GRAPH_A )
+	    {
+	       format = (char*)"nnnn";
+	    }
             if ((p->format == NULL)
                || !get_arguments(&curf, (const char*) format, s, para))
             {
@@ -1037,7 +1041,7 @@ GRAPH* graph_load(
                      stp_type = STP_MAX_NODE_WEIGHT;
                   else if( strcmp(para[0].s, "HCDST") == 0 )
                      stp_type = STP_HOP_CONS;
-                  else if( strcmp(para[0].s, "DIRECT") == 0 )
+                  else if( strcmp(para[0].s, "SAP") == 0 )
                      stp_type = STP_DIRECTED;
                   break;
                case KEY_COMMENT_REMARK :
@@ -1120,6 +1124,12 @@ GRAPH* graph_load(
 		  {
 		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
 		  }
+                  else if( stp_type == STP_DIRECTED )
+                  {
+
+                     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
+                     //printf("cost: %f revcost: %f\n", (double)para[2].n, (double)para[3].n);
+                  }
                   else
                   {
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1,
@@ -1128,6 +1138,8 @@ GRAPH* graph_load(
                         ? (double)para[2].n
                         : (double)para[3].n);
                   }
+
+
                   break;
 	       case KEY_MAXDEGS_MD :
                   //printf("MAX DEGS number  %d : ", degcount);
@@ -1214,29 +1226,29 @@ GRAPH* graph_load(
                      free(obstacle_coords[i]);
 		  free(obstacle_coords);
 		  break;
-          case KEY_TERMINALS_END :
-        if( transformed == 0 )
-        {
-           if( stp_type == STP_MAX_NODE_WEIGHT )
-           {
-              assert(nodes == termcount);
-              graph_maxweight_transform(g, maxnodeweights);
-              free(maxnodeweights);
-           }
-           else if( stp_type == STP_PRIZE_COLLECTING )
-           {
-              assert(prize != NULL);
-              graph_prize_transform(g, prize);
-              free(prize);
-           }
-           else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
-           {
-              assert(prize != NULL);
-              graph_rootprize_transform(g, prize);
-              free(prize);
-           }
-        }
-           curf.section = &section_table[0];
+               case KEY_TERMINALS_END :
+                  if( transformed == 0 )
+                  {
+                     if( stp_type == STP_MAX_NODE_WEIGHT )
+                     {
+                        assert(nodes == termcount);
+                        graph_maxweight_transform(g, maxnodeweights);
+                        free(maxnodeweights);
+                     }
+                     else if( stp_type == STP_PRIZE_COLLECTING )
+                     {
+                        assert(prize != NULL);
+                        graph_prize_transform(g, prize);
+                        free(prize);
+                     }
+                     else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
+                     {
+                        assert(prize != NULL);
+                        graph_rootprize_transform(g, prize);
+                        free(prize);
+                     }
+                  }
+                  curf.section = &section_table[0];
                   break;
                case KEY_TERMINALS_TERMINALS :
 		  terms = (int)para[0].n;

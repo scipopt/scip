@@ -178,7 +178,7 @@ SCIP_RETCODE degree_test_dir(
       }
    }
    SCIPdebugMessage(" %d Knots deleted\n", *count);
-   printf("dirdeg %d Knots deleted\n", *count);
+   //printf("dirdeg %d Knots deleted\n", *count);
    assert(graph_valid(g));
 
    return SCIP_OKAY;

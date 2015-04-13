@@ -1668,7 +1668,7 @@ SCIP_RETCODE do_layer(
    }
 
    if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT
-      || graph->stp_type == STP_DEG_CONS )
+      || graph->stp_type == STP_DEG_CONS )//|| graph->stp_type == STP_DIRECTED )
       mode = TM;
 #if TMX
    if( mode == TM )

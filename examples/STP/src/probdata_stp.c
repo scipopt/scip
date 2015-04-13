@@ -1825,6 +1825,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    case STP_UNDIRECTED:
       strcpy(probtype, "SPG");
       break;
+   case STP_DIRECTED:
+      strcpy(probtype, "SAP");
+      break;
 
    case STP_PRIZE_COLLECTING:
       strcpy(probtype, "PCSPG");
@@ -2391,7 +2394,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    for( e = 0; e < norgnodes; e++ )
       orgnodes[e] = FALSE;
    ancestors = graph->ancestors;
-   if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DEG_CONS
+   if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DIRECTED ||graph->stp_type == STP_DEG_CONS
       || graph->stp_type == STP_NODE_WEIGHTS || graph->stp_type == STP_HOP_CONS )
    {
       //printf("in: %d \n", norgnodes);

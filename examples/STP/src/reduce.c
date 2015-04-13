@@ -1918,7 +1918,7 @@ static double levelm4(
    redbound = MAX(g->knots / 500, 8);
    /* redbound = 0;
     */
-   printf("redbound: %d \n", redbound );
+   //printf("redbound: %d \n", redbound );
    heap        = malloc((size_t)g->knots * sizeof(int));
    state       = malloc((size_t)g->knots * sizeof(int));
    knotexamined = malloc((size_t)g->knots * sizeof(int));
@@ -2016,7 +2016,7 @@ static double levelm4(
                SCIP_CALL( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, knotexamined, &nelims, runnum) );
             runnum++;
             sdnelims += nelims;
-            printf("SD Reduction %d: %d\n", i, nelims);
+            //printf("SD Reduction %d: %d\n", i, nelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
             {
@@ -2065,7 +2065,7 @@ static double levelm4(
                SCIP_CALL( nv_reduction_optimal(scip, g, &fixed, &nelims, runnum) );
                runnum++;
 	       nvnelims += nelims;
-               printf("NV Reduction %d: %d\n", i, nvnelims);
+               //printf("NV Reduction %d: %d\n", i, nvnelims);
 
                if( SCIPgetTotalTime(scip) > timelimit )
                {
@@ -2098,7 +2098,7 @@ static double levelm4(
          if( bd3nelims <= redbound )
             bd3 = FALSE;
 
-         printf("BD3 Reduction: %d\n", bd3nelims);
+         //printf("BD3 Reduction: %d\n", bd3nelims);
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
@@ -2462,8 +2462,8 @@ SCIP_RETCODE reduce(
    if( 0 && (*graph)->stp_type != STP_UNDIRECTED )
       return SCIP_OKAY;
 #endif
-
-   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID )
+//printf("type: %d \n", (*graph)->stp_type);
+   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID || (*graph)->stp_type == STP_DIRECTED )
       return SCIP_OKAY;
 
    /* initialise shortest path algorithms */

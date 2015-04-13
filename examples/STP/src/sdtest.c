@@ -727,7 +727,7 @@ SCIP_RETCODE sd_reduction_dir(
          {
             if( Is_term(g->term[i]) && LT(g->cost[e], FARAWAY) )
             {
-               printf("Outgoing edge for terminal %d: %d\n", i, e);
+               //printf("Outgoing edge for terminal %d: %d\n", i, e);
                outterms[outtermcount] = i;
                outtermcount++;
 
