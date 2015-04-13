@@ -1503,6 +1503,10 @@ SCIP_RETCODE nv_reduction_optimal(
       if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
          continue;
 
+      if( g->stp_type == STP_DIRECTED && i != g->source[0] )
+         continue;
+
+
       if( g->knots > KNOTLIMIT && i % KNOTFREQ != knotoffset )
          continue;
 
@@ -1517,6 +1521,17 @@ SCIP_RETCODE nv_reduction_optimal(
          antiedgeexists = FALSE;
          for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
          {
+            if( g->stp_type == STP_DIRECTED && i == g->source[0] )
+            {
+               if( LT(g->cost[e], FARAWAY) )
+               {
+                  g->cost[e] = FARAWAY;
+                  (*elimins)++;
+               }
+
+               continue;
+            }
+
             if (g->cost[e] < min1)
             {
                shortarc = e;
@@ -1531,14 +1546,19 @@ SCIP_RETCODE nv_reduction_optimal(
 
             if( LT(g->cost[Edge_anti(e)], FARAWAY) )
                antiedgeexists = TRUE;
+
          }
+
+         if( g->stp_type == STP_DIRECTED )
+            continue;
 
          if (LT(min1, FARAWAY) && LE(pathfromsource[shortarctail].dist + min1, min2))
          {
             assert(shortarc >= 0);
             assert(shortarctail >= 0);
 
-            if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT) && shortarctail == g->source[0] )
+            if ((g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT
+                  || g->stp_type == STP_DIRECTED) && shortarctail == g->source[0] )
                continue;
 
             if( g->stp_type == STP_HOP_CONS && GT(pathfromsource[shortarctail].hops, pathhops[i].dist - 1) )
