@@ -176,6 +176,75 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
    return SCIP_OKAY;
 }
 
+/** constraint handler method to enforce a solution obtained during diving by assigning a variable and two values for branching */
+static
+SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
+{
+   SCIP_VAR** vars;
+   SCIP_Real solval;
+   SCIP_Real score;
+   SCIP_Real bestscore;
+   SCIP_Bool roundup;
+   int ninteger;
+   int nbin;
+   int nint;
+   int nimpl;
+   int v;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(diveset != NULL);
+   assert(varptr != NULL);
+   assert(vals != NULL);
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   SCIPdebugMessage("Integral Constraint handler Diving Solution Enforcement\n");
+
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
+
+   ninteger = nbin + nint + nimpl;
+   bestscore = SCIP_REAL_MAX;
+
+   /* loop over solution values and get score of fractional variables */
+   for( v = 0; v < ninteger; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      /* skip variable if solution value disagrees with the local bounds */
+      if( !SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
+      {
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
+
+         /* currently, score is minimized */
+         if( score < bestscore )
+         {
+            score = bestscore;
+            *varptr = vars[v];
+
+            /* prioritize the direction suggested by the diving settings */
+            if( roundup )
+            {
+               vals[0] = SCIPceil(scip, solval);
+               vals[1] = SCIPfloor(scip, solval);
+            }
+            else
+            {
+               vals[1] = SCIPceil(scip, solval);
+               vals[0] = SCIPfloor(scip, solval);
+            }
+
+            *success = TRUE;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+
+}
+
 /*
  * constraint specific interface methods
  */
@@ -201,6 +270,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
+   SCIP_CALL( SCIPsetConshdlrEnfoDive(scip, conshdlr, conshdlrEnfoDiveIntegral) );
 
    return SCIP_OKAY;
 }
