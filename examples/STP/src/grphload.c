@@ -89,6 +89,8 @@ struct key
 #define KEY_TERMINALS_TP         3004
 #define KEY_TERMINALS_ROOT       3005
 #define KEY_TERMINALS_ROOTP      3006
+#define KEY_TERMINALS_TG         3007
+#define KEY_TERMINALS_GROUPS     3008
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -201,10 +203,12 @@ static const struct key keyword_table[] =
       {  "solution.value",           KEY_SOLUTION_VALUE,         "n"         },
 
       {  "terminals.end",            KEY_TERMINALS_END,          NULL        },
+      {  "terminals.groups",         KEY_TERMINALS_GROUPS,       "n"         },
       {  "terminals.root",           KEY_TERMINALS_ROOT,         "n"         },
       {  "terminals.rootp",          KEY_TERMINALS_ROOTP,        "n"         },
       {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
+      {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
    };
 
@@ -809,6 +813,7 @@ GRAPH* graph_load(
    int          i;
    int          head;
    int          tail;
+   int          tgroups = 0;
    int          grid_dim = -1;
    int          terms = 0;
    int          nodes = 0;
@@ -1043,6 +1048,8 @@ GRAPH* graph_load(
                      stp_type = STP_HOP_CONS;
                   else if( strcmp(para[0].s, "SAP") == 0 )
                      stp_type = STP_DIRECTED;
+		  else if( strcmp(para[0].s, "GSTP") == 0 )
+                     stp_type = GSTP;
                   break;
                case KEY_COMMENT_REMARK :
                   (void)printf("Comment: [%s]\n", para[0].s);
@@ -1078,7 +1085,10 @@ GRAPH* graph_load(
 
                   if( g == NULL )
                   {
-                     g = graph_init(nodes, edges * 2, 1, 0);
+		     if( stp_type == GSTP )
+		      g = graph_init(nodes * 2, edges * 2 + nodes * nodes, 1, 0);
+		      else
+                      g = graph_init(nodes, edges * 2, 1, 0);
                      assert(g != NULL);
                      assert(g->source[0] == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
@@ -1261,6 +1271,17 @@ GRAPH* graph_load(
                      maxnodeweights = malloc((size_t)terms * sizeof(double));
 		  }
                   break;
+	       case KEY_TERMINALS_GROUPS :
+		   assert(stp_type == GSTP);
+		   tgroups = (int)para[0].n;
+		   printf("ngroups: %d \n", tgroups);
+		   presol->fixed -= tgroups * 1e+8;
+		   for( i = 0; i < tgroups; i++ )
+		   {
+		    graph_knot_add(g, 0);
+
+		   }
+		   break;
                case KEY_TERMINALS_ROOT :
                   assert(g != NULL);
 
@@ -1302,6 +1323,11 @@ GRAPH* graph_load(
 		  else
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
+	       case KEY_TERMINALS_TG :
+		  assert(tgroups > 0);
+		  graph_edge_add(g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
+		  assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
+		  break;
 	       case KEY_TERMINALS_TP :
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
 		  if( stp_type != STP_PRIZE_COLLECTING && stp_type != STP_ROOTED_PRIZE_COLLECTING )

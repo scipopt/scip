@@ -386,7 +386,7 @@ SCIP_RETCODE do_local(
 
    /** VERTEX  INSERTION */
    newnverts = 0;
-   if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID )  /* TODO adapt function to directed graph */
+   if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID || graph->stp_type == GSTP )  /* TODO adapt function to directed graph */
    {
       int newnode = 0;
       int oedge;
@@ -2367,7 +2367,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    /* the local heuristics may not work correctly for problems other than undirected STPs */
    if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID &&
-      graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
+      graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != GSTP )
       return SCIP_OKAY;
 
    /* don't run local in a Subscip */

@@ -670,6 +670,24 @@ SCIP_RETCODE buildsolgraph(
          }
       }
 
+      if( graph->stp_type == GSTP )
+      {
+	 for( k = 0; k < nnodes; k++ )
+	 {
+	    if( Is_term(graph->term[k]) )
+            {
+               assert(solnode[k]);
+               for( i = graph->outbeg[k]; i != EAT_LAST; i = graph->oeat[i] )
+               {
+                  if( solnode[graph->head[i]] && !soledge[i / 2] )
+                  {
+                     soledge[i / 2] = TRUE;
+                     nsoledges++;
+                  }
+               }
+	    }
+	 }
+      }
       /* initialize new graph */
       newgraph = graph_init(nsolnodes, 2 * nsoledges, 1, 0);
       if( graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID )
@@ -966,10 +984,10 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    nedges = graph->edges;
    nnodes = graph->knots;
    nsols = SCIPgetNSolsFound(scip);
-/*
-    if( graph->stp_type == STP_DEG_CONS )
-      return SCIP_OKAY;
-  */
+   /*
+     if( graph->stp_type == STP_DEG_CONS )
+     return SCIP_OKAY;
+   */
    /* only call heuristic, if sufficiently many solutions are available */
    if( SCIPgetNSols(scip) < heurdata->nusedsols + 1 )
       return SCIP_OKAY;

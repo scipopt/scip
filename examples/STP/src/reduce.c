@@ -2469,7 +2469,7 @@ SCIP_RETCODE reduce(
    /* initialise shortest path algorithms */
    graph_path_init((*graph));
 
-   if( (*graph)->stp_type != STP_UNDIRECTED && (*graph)->stp_type != STP_GRID && (*graph)->stp_type != STP_OBSTACLES_GRID )
+   if( (*graph)->stp_type != STP_UNDIRECTED && (*graph)->stp_type != STP_GRID && (*graph)->stp_type != STP_OBSTACLES_GRID && (*graph)->stp_type != GSTP )
       level = level * (-1);
 
    //if( level == 0 )
