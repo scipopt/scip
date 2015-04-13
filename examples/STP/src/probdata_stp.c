@@ -2471,9 +2471,9 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       if( graph->stp_type == GSTP )
       {
-	norgnodes -= graph->terms;
-	nsolnodes -= graph->terms;
-	nsoledges -= graph->terms;
+         norgnodes -= graph->terms;
+         nsolnodes -= graph->terms;
+         nsoledges -= graph->terms;
          assert(nsolnodes >= 0);
          assert(nsoledges >= 1);
       }
@@ -2498,7 +2498,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          for( e = 0; e < norgedges; e += 2 )
          {
 	    if( graph->stp_type == GSTP && (Is_term(graph->term[graph->orgtail[e]]) || Is_term(graph->term[graph->orghead[e]])) )
-	      continue;
+               continue;
             if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
                SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
          }

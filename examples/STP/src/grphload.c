@@ -1086,9 +1086,9 @@ GRAPH* graph_load(
                   if( g == NULL )
                   {
 		     if( stp_type == GSTP )
-		      g = graph_init(nodes * 2, edges * 2 + nodes * nodes, 1, 0);
-		      else
-                      g = graph_init(nodes, edges * 2, 1, 0);
+                        g = graph_init(nodes * 2, edges * 2 + nodes * nodes, 1, 0);
+                     else
+                        g = graph_init(nodes, edges * 2, 1, 0);
                      assert(g != NULL);
                      assert(g->source[0] == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
@@ -1272,16 +1272,16 @@ GRAPH* graph_load(
 		  }
                   break;
 	       case KEY_TERMINALS_GROUPS :
-		   assert(stp_type == GSTP);
-		   tgroups = (int)para[0].n;
-		   printf("ngroups: %d \n", tgroups);
-		   presol->fixed -= tgroups * 1e+8;
-		   for( i = 0; i < tgroups; i++ )
-		   {
-		    graph_knot_add(g, 0);
+                  assert(stp_type == GSTP);
+                  tgroups = (int)para[0].n;
+                  printf("ngroups: %d \n", tgroups);
+                  presol->fixed -= tgroups * 1e+8;
+                  for( i = 0; i < tgroups; i++ )
+                  {
+                     graph_knot_add(g, 0);
 
-		   }
-		   break;
+                  }
+                  break;
                case KEY_TERMINALS_ROOT :
                   assert(g != NULL);
 
