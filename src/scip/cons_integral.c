@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+/*#define SCIP_DEBUG*/
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
@@ -221,7 +221,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
          /* currently, score is minimized */
          if( score < bestscore )
          {
-            score = bestscore;
+            bestscore = score;
             *varptr = vars[v];
 
             /* prioritize the direction suggested by the diving settings */
