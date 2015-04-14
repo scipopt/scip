@@ -7203,6 +7203,10 @@ SCIP_RETCODE computeInteriorPoint(
             return SCIP_OKAY;
          }
       }
+
+      if( consdata->nlinvars == 0 )
+         nlpiside = INTERIOR_EPS;
+
       nlpiside = consdata->rhs - nlpiside;
    }
    else
@@ -7224,6 +7228,10 @@ SCIP_RETCODE computeInteriorPoint(
             return SCIP_OKAY;
          }
       }
+
+      if( consdata->nlinvars == 0 )
+         nlpiside = INTERIOR_EPS;
+
       nlpiside = consdata->lhs - nlpiside;
    }
 
@@ -7293,7 +7301,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       SCIPdebugMessage("cons %s: IPOPT termination status not okay: %d (continue anyway)\n",
             SCIPconsGetName(cons), SCIPnlpiGetTermstat(nlpi, prob));
-      assert(0);
+      goto TERMINATE;
    }
 
    /* check solution status */
@@ -7368,7 +7376,6 @@ TERMINATE:
       printf("run with SCIP_DEBUG for more info\n");
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
       SCIPinfoMessage(scip, NULL, ";\n");
-      assert(0);
       /* FIXME: instance camshape100 says that there is no interior point (interior empty)
        * is there something intelligent that can be said?
        */
