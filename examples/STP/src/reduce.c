@@ -580,9 +580,7 @@ SCIP_RETCODE bound_reduce(
    for( e = 0; e < nedges; e++ )
    {
       blocked[e] = FALSE;
-      blocked[flipedge(e)] = FALSE;
       result[e] = UNKNOWN;
-      result[flipedge(e)] = UNKNOWN;
       if( graph->ieat[e] == EAT_FREE )
       {
          assert(graph->oeat[e] == EAT_FREE);

@@ -1779,12 +1779,13 @@ SCIP_RETCODE do_layer(
          {
             SCIP_CALL( SCIPallocBufferArray(scip, &(pathdist[k]), nnodes) );
             SCIP_CALL( SCIPallocBufferArray(scip, &(pathedge[k]), nnodes) );
-            assert(pathedge[k] != NULL);
-            assert(pathdist[k] != NULL);
-            if( graph->source[0] == k )
-               graph_path_execX(scip, graph, k, cost,  pathdist[k], pathedge[k]);
-            else
-               graph_path_execX(scip, graph, k, costrev, pathdist[k], pathedge[k]);
+	    if( graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_MAX_NODE_WEIGHT )
+	    {
+               if( graph->source[0] == k )
+                  graph_path_execX(scip, graph, k, cost,  pathdist[k], pathedge[k]);
+               else
+                  graph_path_execX(scip, graph, k, costrev, pathdist[k], pathedge[k]);
+	    }
          }
       }
 #else
@@ -1946,6 +1947,21 @@ SCIP_RETCODE do_layer(
 
          }
 #if TMX
+         if( firstrun )
+	 {
+	    for( k = 0; k < nnodes; k++ )
+            {
+               if( Is_term(graph->term[k]) )
+               {
+                  assert(pathdist[k] != NULL);
+                  assert(pathedge[k] != NULL);
+                  if( graph->source[0] == k )
+                     graph_path_execX(scip, graph, k, cost,  pathdist[k], pathedge[k]);
+                  else
+                     graph_path_execX(scip, graph, k, costrev, pathdist[k], pathedge[k]);
+               }
+	    }
+	 }
          SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, root, graph->tail[rootedge], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
 #else
          SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, root, result, connected) );
@@ -1977,15 +1993,18 @@ SCIP_RETCODE do_layer(
          z++;
       }
 
-      for( r = 0; r < nterms - 1; r++ )
+      if( !SCIPisStopped(scip) )
       {
-
-         rootedge = rootedges_z[r];
-         if( rootedge != UNKNOWN )
+         for( r = 0; r < nterms - 1; r++ )
          {
-            assert(costrev[rootedge] == FARAWAY);
-            costrev[rootedge] = 0.0;
-            cost[flipedge(rootedge)] = 0.0;
+
+            rootedge = rootedges_z[r];
+            if( rootedge != UNKNOWN )
+            {
+               assert(costrev[rootedge] == FARAWAY);
+               costrev[rootedge] = 0.0;
+               cost[flipedge(rootedge)] = 0.0;
+            }
          }
       }
       SCIPfreeBufferArray(scip, &terminalperm);
@@ -2038,12 +2057,12 @@ SCIP_RETCODE do_layer(
          {
 #if TMX
             SCIP_CALL( do_tm_degcons(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, &(heurdata->randseed), connected, &solfound) );
-/*
-            if( solfound )
-            printf("success in run: %d  ", r);
-            else
-             printf("  FAIL in run: %d ", r);
-*/
+            /*
+              if( solfound )
+              printf("success in run: %d  ", r);
+              else
+              printf("  FAIL in run: %d ", r);
+            */
 #endif
          }
          else if( mode == TM )
@@ -2051,7 +2070,7 @@ SCIP_RETCODE do_layer(
 #if TMX
             SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], -1, perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
 #else
-         SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, start[r], result, connected) );
+            SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, start[r], result, connected) );
 #endif
 	 }
          else
