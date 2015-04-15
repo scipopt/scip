@@ -417,10 +417,10 @@ SCIP_RETCODE selectdiffsols(
    */
    assert(nselectedsols <= nusedsols);
    heurdata->nselectedsols = nselectedsols;
+   SCIPfreeBufferArray(scip, &soledges);
+   SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &soltimes);
    SCIPfreeBufferArray(scip, &solselected);
-   SCIPfreeBufferArray(scip, &perm);
-   SCIPfreeBufferArray(scip, &soledges);
 
    return SCIP_OKAY;
 }
@@ -549,9 +549,9 @@ SCIP_RETCODE selectsols(
    }
    assert(nselectedsols <= nusedsols);
    heurdata->nselectedsols = nselectedsols;
+   SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &soltimes);
    SCIPfreeBufferArray(scip, &solselected);
-   SCIPfreeBufferArray(scip, &perm);
 
    return SCIP_OKAY;
 }
@@ -757,9 +757,9 @@ SCIP_RETCODE buildsolgraph(
    }
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &solnode);
    SCIPfreeBufferArray(scip, &soledge);
    SCIPfreeBufferArray(scip, &dnodemap);
+   SCIPfreeBufferArray(scip, &solnode);
    SCIPfreeBufferArray(scip, &solselection);
    *solgraph = newgraph;
    return SCIP_OKAY;
@@ -1273,11 +1273,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             if( !success )
             {
                   graph_path_exit(solgraph);
+                  SCIPfreeBufferArrayNull(scip, &costrev);
+                  SCIPfreeBufferArrayNull(scip, &cost);
                   SCIPfreeBufferArrayNull(scip, &results);
                   SCIPfreeMemoryArray(scip, &edgeancestor);
                   SCIPfreeMemoryArray(scip, &edgeweight);
-                  SCIPfreeBufferArrayNull(scip, &cost);
-                  SCIPfreeBufferArrayNull(scip, &costrev);
                   graph_free(scip, solgraph, TRUE);
                   continue;
 	    }
@@ -1430,12 +1430,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          //assert(graph_sol_valid(graph, orgresults));
          /* free memory */
+         SCIPfreeBufferArrayNull(scip, &costrev);
+         SCIPfreeBufferArrayNull(scip, &cost);
          SCIPfreeBufferArrayNull(scip, &results);
+
          SCIPfreeMemoryArray(scip, &edgeancestor);
          SCIPfreeMemoryArray(scip, &edgeweight);
-
-         SCIPfreeBufferArrayNull(scip, &cost);
-         SCIPfreeBufferArrayNull(scip, &costrev);
          graph_free(scip, solgraph, TRUE);
 
       }
@@ -1454,9 +1454,10 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    heurdata->lastsolindex = lastsolindex;
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
    heurdata->nlastsols = SCIPgetNSolsFound(scip);
+   SCIPfreeBufferArray(scip, &orgresults);
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &perm);
-   SCIPfreeBufferArray(scip, &orgresults);
+
    return SCIP_OKAY;
 }
 
