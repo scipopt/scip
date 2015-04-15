@@ -158,7 +158,7 @@ SCIP_RETCODE solveLP(
 #ifdef NDEBUG
    if( retstat != SCIP_OKAY )
    {
-      SCIPwarningMessage(scip, "Error while solving LP in %s heuristic; LP solve terminated with code <%d>\n", SCIPheurGetName(heur), retstat);
+      SCIPwarningMessage(scip, "Error while solving LP in %s diving heuristic; LP solve terminated with code <%d>\n", SCIPdivesetGetName(diveset), retstat);
    }
 #else
    SCIP_CALL( retstat );
@@ -235,6 +235,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Longint oldsolsuccess;
    SCIP_Longint nlpiterations;
    SCIP_Longint maxnlpiterations;
+   SCIP_Longint domreds;
    int startndivecands;
    int depth;
    int maxdepth;
@@ -388,9 +389,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* determine the target depth (depth where the next LP should be solved) */
       assert(startdepth < SCIPgetProbingDepth(scip));
       startdepth = SCIPgetProbingDepth(scip);
+      domreds = 0;
 #if 0
       ncandstofix = MIN(nlpcands, maxdivedepth - divedepth);
-      ncandstofix = (int)SCIPceil(scip, ncandstofix * SCIPdivesetGetTargetdepthfrac(diveset));
+      ncandstofix = (int)SCIPceil(scip, ncandstofix * SCIPdivesetGetLpresolvefixquot(diveset));
       ncandstofix = MAX(ncandstofix, 1);
 #endif
 
@@ -475,6 +477,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
        */
       do
       {
+         SCIP_Longint localdomreds;
          /* ensure that a new candidate was successfully determined (usually at the end of the previous loop iteration) */
          assert(enfosuccess);
          assert(nextcandvar != NULL);
@@ -549,11 +552,15 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
             }
 
+            localdomreds = 0;
             /* apply domain propagation */
-            SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+            SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, &localdomreds) );
 
-            /* resolve the diving LP */
-            if( !cutoff && SCIPgetDiveLPSolveFreq(scip) > 0 && (SCIPgetProbingDepth(scip) - startdepth) % SCIPgetDiveLPSolveFreq(scip) == 0 )
+            /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
+             * was reached
+             */
+            if( !cutoff && ((SCIPgetDiveLPSolveFreq(scip) > 0 && ((SCIPgetProbingDepth(scip) - startdepth) % SCIPgetDiveLPSolveFreq(scip)) == 0)
+                  || ((domreds + localdomreds) > SCIPdivesetGetLpresolvefixquot(diveset) * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 
@@ -580,6 +587,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
          while( backtrack );
 
+         /* we add the domain reductions from the last evaluated node */
+         domreds += localdomreds;
+
          /* if no cutoff was found, choose next candidate variable and resolve the LP if none is found. */
          if( !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
          {
@@ -599,34 +609,15 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                /* check for an LP error and terminate in this case, cutoffs lead to termination anyway */
                if( lperror )
                   cutoff = TRUE;
+
+               /* enfosuccess must be set to TRUE for entering the main LP loop again */
+               enfosuccess = TRUE;
             }
          }
       }
       while( !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED );
 
       assert(cutoff || lperror || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_NOTSOLVED);
-
-#if 0
-      /* reward the diving setting by increasing the dive depth quotient for future purpose */
-      if( !cutoff && (divedepth == targetdepth || nextcand == nlpcands ) )
-      {
-         SCIPdivesetSetTargetdepthfrac(diveset, 1.1 * SCIPdivesetGetTargetdepthfrac(diveset));
-      }
-      else if( cutoff )
-      {
-         /* if the last node was cut off, we terminate the heuristic */
-         int reacheddepth = divedepth - startdepth - 1;
-         assert(reacheddepth >= 0);
-
-         /* evaluate how deep we went this time and be more conservative in the future, if possible
-          * if not even half the targeted depth was reached, decrease the depth quotient
-          */
-         if( reacheddepth < (targetdepth - startdepth) / 2 )
-         {
-            SCIPdivesetSetTargetdepthfrac(diveset, 0.5 * SCIPdivesetGetTargetdepthfrac(diveset));
-         }
-      }
-#endif
 
       assert(cutoff || (SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_INFEASIBLE &&
             (SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));

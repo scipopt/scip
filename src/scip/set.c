@@ -144,7 +144,7 @@
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 /* Heuristics */
 
-#define SCIP_DEFAULT_HEUR_DIVESTARTFRAC         0.15 /**< start percentage of diving candidates that should be fixed before LP resolve */
+#define SCIP_DEFAULT_HEUR_DIVELPRESOLVEFIXQUOT      0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ       1    /**< LP solve frequency for diving heuristics */
 /* Limits */
 
@@ -1142,9 +1142,9 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* heuristic parameters */
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divestartfrac",
-         "start percentage of diving candidates that should be fixed before LP resolve",
-         &(*set)->heur_divestartfrac, FALSE, SCIP_DEFAULT_HEUR_DIVESTARTFRAC,  0.01, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divelpresolvefixquot",
+         "percentage of immediate domain changes during probing to trigger LP resolve",
+         &(*set)->heur_divelpresolvefixquot, FALSE, SCIP_DEFAULT_HEUR_DIVELPRESOLVEFIXQUOT,  0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "heuristics/divelpsolvefreq",
          "LP solve frequency for diving heuristics (0: no LP is solved)",

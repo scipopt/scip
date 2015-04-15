@@ -36,8 +36,8 @@
 
 #include "scip/struct_heur.h"
 
-#define MINTARGETDEPTHFRAC 0.001
-#define MAXTARGETDEPTHFRAC 1.0
+#define MINLPRESOLVEFIXQUOT 0.001
+#define MAXLPRESOLVEFIXQUOT 1.0
 
 /** compares two heuristics w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
@@ -104,7 +104,7 @@ void SCIPdivesetReset(
    diveset->nlps = 0;
    diveset->nsolcalls = 0;
    diveset->ncalls = 0;
-   diveset->targetdepthfrac = set->heur_divestartfrac;
+   diveset->lpresolvefixquot = set->heur_divelpresolvefixquot;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -485,23 +485,23 @@ void SCIPdivesetUpdateLPStats(
 }
 
 /** get the target depth fraction of the diving settings  */
-SCIP_Real SCIPdivesetGetTargetdepthfrac(
+SCIP_Real SCIPdivesetGetLpresolvefixquot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
-   return diveset->targetdepthfrac;
+   return diveset->lpresolvefixquot;
 }
 
 /** set the target depth fraction of the diving settings  */
-void SCIPdivesetSetTargetdepthfrac(
+void SCIPdivesetSetLpresolvefixquot(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_Real             newval              /**< new value for target depth frac */
    )
 {
-   newval = MAX(newval, MINTARGETDEPTHFRAC);
-   newval = MIN(newval, MAXTARGETDEPTHFRAC);
+   newval = MAX(newval, MINLPRESOLVEFIXQUOT);
+   newval = MIN(newval, MAXLPRESOLVEFIXQUOT);
 
-   diveset->targetdepthfrac = newval;
+   diveset->lpresolvefixquot = newval;
 }
 
 /** frees memory of a diveset */

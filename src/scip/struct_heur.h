@@ -46,7 +46,7 @@ struct SCIP_Diveset
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-   SCIP_Real             targetdepthfrac;    /**< fraction of lpcands to be reached before next LP solve */
+   SCIP_Real             lpresolvefixquot;   /**< percentage of immediate domain changes during probing to trigger LP resolve */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
    SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
    SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */
