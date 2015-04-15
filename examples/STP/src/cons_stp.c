@@ -43,7 +43,7 @@
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  9999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_PROPFREQ             0 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ            1 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
@@ -149,7 +149,7 @@ static int cut_add(
    for(i = 0; i < g->edges; i++)
    {
       if ((g->mark[g->source[layer]] == g->mark[g->tail[i]])
-       && (g->mark[g->tail[i]] != g->mark[g->head[i]]))
+         && (g->mark[g->tail[i]] != g->mark[g->head[i]]))
       {
          ind = layer * g->edges + i;
 
@@ -894,6 +894,47 @@ SCIP_DECL_CONSCHECK(consCheckStp)
 static
 SCIP_DECL_CONSPROP(consPropStp)
 {  /*lint --e{715}*/
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   if( graph->stp_type == STP_DEG_CONS )
+   {
+      int k;
+      int nnodes;
+      int degsum;
+      int* maxdegs;
+
+      nnodes = graph->knots;
+      maxdegs = graph->maxdeg;
+
+      assert(maxdegs != NULL);
+
+      degsum = 0;
+      for( k = 0; k < nnodes; k++ )
+      {
+         if( Is_term(graph->term[k]) )
+         {
+            assert(maxdegs[k] > 0);
+            degsum += maxdegs[k] - 1;
+         }
+         else
+         {
+            assert(maxdegs[k] >= 0);
+            degsum += MAX(maxdegs[k] - 2, 0);
+         }
+      }
+
+      if( degsum < graph->terms - 2 )
+         *result = SCIP_CUTOFF;
+      else
+	 *result = SCIP_DIDNOTFIND;
+   }
    return SCIP_OKAY;
 }
 
