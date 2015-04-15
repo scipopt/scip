@@ -587,10 +587,10 @@ SCIP_RETCODE do_local(
                best_result[flipedge(nodes[i].edge)] = 0;
          }
       }
-      SCIPfreeBufferArray(scip, &insert);
+
       SCIPfreeBufferArray(scip, &cuts);
       SCIPfreeBufferArray(scip, &adds);
-
+      SCIPfreeBufferArray(scip, &insert);
 
       obj = 0.0;
       if( printfs )
@@ -915,9 +915,10 @@ SCIP_RETCODE do_local(
                               }
 
                               SCIPunionfindFree(scip, &uf);
-                              SCIPfreeBufferArray(scip, &supernodes);
                               SCIPfreeBufferArray(scip, &kpedges);
                               SCIPfreeBufferArray(scip, &kpnodes);
+                              SCIPfreeBufferArray(scip, &supernodes);
+
                               SCIPfreeBufferArray(scip, &vnoi);
                               SCIPfreeBufferArray(scip, &dfstree);
                               SCIPfreeBufferArray(scip, &supernodesid);
@@ -2093,9 +2094,9 @@ SCIP_RETCODE do_local(
 
          /* free data structures */
          SCIPunionfindFree(scip, &uf);
-         SCIPfreeBufferArray(scip, &supernodes);
          SCIPfreeBufferArray(scip, &kpedges);
          SCIPfreeBufferArray(scip, &kpnodes);
+         SCIPfreeBufferArray(scip, &supernodes);
 
          for( k = 0; k < nnodes; k++ )
          {
@@ -2150,25 +2151,22 @@ SCIP_RETCODE do_local(
       }
 
       /* free data structures */
-      SCIPfreeBufferArray(scip, &vnoi);
-      SCIPfreeBufferArray(scip, &dfstree);
-      SCIPfreeBufferArray(scip, &supernodesid);
-      SCIPfreeBufferArray(scip, &scanned);
-      SCIPfreeBufferArray(scip, &heapsize);
-      SCIPfreeBufferArray(scip, &boundedges);
-      SCIPfreeBufferArray(scip, &newedges);
-
-      SCIPfreeBufferArray(scip, &vbase);
-      SCIPfreeBufferArray(scip, &memvbase);
-      SCIPfreeBufferArray(scip, &memdist);
-      SCIPfreeBufferArray(scip, &meminedges);
       SCIPfreeBufferArray(scip, &nodesmark);
+      SCIPfreeBufferArray(scip, &dfstree);
+      SCIPfreeBufferArray(scip, &vnoi);
       SCIPfreeBufferArray(scip, &pinned);
-
-      SCIPfreeBufferArray(scip, &lvledges_start);
       SCIPfreeBufferArray(scip, &boundpaths);
+      SCIPfreeBufferArray(scip, &meminedges);
+      SCIPfreeBufferArray(scip, &memdist);
+      SCIPfreeBufferArray(scip, &memvbase);
+      SCIPfreeBufferArray(scip, &vbase);
       SCIPfreeBufferArray(scip, &blists_start);
-
+      SCIPfreeBufferArray(scip, &heapsize);
+      SCIPfreeBufferArray(scip, &scanned);
+      SCIPfreeBufferArray(scip, &supernodesid);
+      SCIPfreeBufferArray(scip, &boundedges);
+      SCIPfreeBufferArray(scip, &lvledges_start);
+      SCIPfreeBufferArray(scip, &newedges);
       /******/
    }
 
@@ -2240,8 +2238,8 @@ SCIP_RETCODE do_local(
    if( 0 && graph->stp_type == STP_UNDIRECTED )
       assert(graph_sol_valid(graph, best_result));
 
-   SCIPfreeBufferArray(scip, &nodes);
    SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeBufferArray(scip, &nodes);
 
    return SCIP_OKAY;
 }
@@ -2542,8 +2540,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
-   SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }

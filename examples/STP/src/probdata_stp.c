@@ -1808,9 +1808,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
-   SCIPfreeBufferArray(scip, &tmpfilename);
-
-
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
@@ -1818,6 +1815,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolStp) );
    SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
+
+   SCIPfreeBufferArray(scip, &tmpfilename);
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );

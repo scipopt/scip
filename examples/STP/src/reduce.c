@@ -1836,16 +1836,16 @@ SCIP_RETCODE level4(
    /*printf("Total Fixed: %f\n", fixed);*/
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &sddist);
-   SCIPfreeBufferArray(scip, &sdtrans);
-   SCIPfreeBufferArray(scip, &sdrand);
-   SCIPfreeBufferArray(scip, &knotexamined);
-   SCIPfreeBufferArray(scip, &heap);
-   SCIPfreeBufferArray(scip, &state);
-   SCIPfreeBufferArray(scip, &cost);
-   SCIPfreeBufferArray(scip, &random);
-   SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &random);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &sdrand);
+   SCIPfreeBufferArray(scip, &sdtrans);
+   SCIPfreeBufferArray(scip, &sddist);
+   SCIPfreeBufferArray(scip, &knotexamined);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &heap);
 
    return SCIP_OKAY;
 }
@@ -2424,16 +2424,16 @@ SCIP_RETCODE level5(
    /*printf("Total Fixed: %f\n", fixed);*/
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &sddist);
-   SCIPfreeBufferArray(scip, &sdtrans);
-   SCIPfreeBufferArray(scip, &sdrand);
-   SCIPfreeBufferArray(scip, &knotexamined);
-   SCIPfreeBufferArray(scip, &heap);
-   SCIPfreeBufferArray(scip, &state);
-   SCIPfreeBufferArray(scip, &cost);
-   SCIPfreeBufferArray(scip, &random);
-   SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &random);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &sdrand);
+   SCIPfreeBufferArray(scip, &sdtrans);
+   SCIPfreeBufferArray(scip, &sddist);
+   SCIPfreeBufferArray(scip, &knotexamined);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &heap);
 
    return SCIP_OKAY;
 }

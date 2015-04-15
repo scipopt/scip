@@ -1137,11 +1137,12 @@ SCIP_RETCODE bd3_reduction(
       assert(ancestors[k] == NULL);
       assert(revancestors[k] == NULL);
    }
-   SCIPfreeBufferArray(scip, &ancestors);
-   SCIPfreeBufferArray(scip, &revancestors);
-   SCIPfreeBufferArray(scip, &pathdist2);
-   SCIPfreeBufferArray(scip, &pathtran2);
+
    SCIPfreeBufferArray(scip, &pathrand);
+   SCIPfreeBufferArray(scip, &pathtran2);
+   SCIPfreeBufferArray(scip, &pathdist2);
+   SCIPfreeBufferArray(scip, &revancestors);
+   SCIPfreeBufferArray(scip, &ancestors);
 
    assert(graph_valid(g));
    /*
@@ -1812,10 +1813,10 @@ SCIP_RETCODE sl_reduction(
       }
    }
 
-   SCIPfreeBufferArray(scip, &minedge1);
-   SCIPfreeBufferArray(scip, &mincost2);
-   SCIPfreeBufferArray(scip, &minedgehead);
    SCIPfreeBufferArray(scip, &minedgetail);
+   SCIPfreeBufferArray(scip, &minedgehead);
+   SCIPfreeBufferArray(scip, &mincost2);
+   SCIPfreeBufferArray(scip, &minedge1);
    //printf("sl: nelims: %d \n", nelims);
    return SCIP_OKAY;
 }
@@ -1971,11 +1972,11 @@ int nv_reduction(
       }
    }
 
-   SCIPfreeBufferArray(scip, &min1head);
-   SCIPfreeBufferArray(scip, &min1tail);
-   SCIPfreeBufferArray(scip, &minedge1);
-   SCIPfreeBufferArray(scip, &mincost2);
    SCIPfreeBufferArray(scip, &distance);
+   SCIPfreeBufferArray(scip, &min1tail);
+   SCIPfreeBufferArray(scip, &min1head);
+   SCIPfreeBufferArray(scip, &mincost2);
+   SCIPfreeBufferArray(scip, &minedge1);
 
    assert(graph_valid(g));
    return SCIP_OKAY;

@@ -326,35 +326,40 @@ int sep_flow(
           */
          if (g->term[i] == layer)
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0,
-                  1.0, FALSE, FALSE, TRUE) );
-
-            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
             sum = 0.0;
 
             for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
             {
                ind  = layer * g->edges + k;
                sum += (xval != NULL) ? xval[ind] : 0.0;
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
             }
+
             if (fabs(sum - 1.0) > EPSILON)
             {
                SCIP_Bool infeasible;
+
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0,
+                     1.0, FALSE, FALSE, TRUE) );
+
+               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+               for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+               {
+                  ind  = layer * g->edges + k;
+
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
+               }
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
                count++;
 
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
                if( *ncuts + count >= maxcuts )
                   goto TERMINATE;
             }
-
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
          }
          /* Etwa keine Fluesse ?
           */
@@ -366,36 +371,44 @@ int sep_flow(
           */
          for(j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j])
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
-                  FALSE, FALSE, TRUE) );
-
-            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
             ind = layer * g->edges + j;
             sum = (xval != NULL) ? -xval[ind] : -1.0;
-
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
 
             for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
             {
                ind  = layer * g->edges + k;
                sum += (xval != NULL) ? xval[ind] : 0.0;
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
             }
             if (sum + EPSILON < 0.0)
             {
                SCIP_Bool infeasible;
+
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
+                     FALSE, FALSE, TRUE) );
+
+               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+               ind = layer * g->edges + j;
+
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
+
+               for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+               {
+                  ind  = layer * g->edges + k;
+
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
+               }
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
                count++;
 
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
                if( *ncuts + count >= maxcuts )
                   goto TERMINATE;
             }
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
 
          /* Ab hier nur noch nicht Terminals
@@ -405,71 +418,86 @@ int sep_flow(
 
          /* Der Input eines Knotens kann nicht groesser als 1.0 sein
           */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
-               1.0, FALSE, FALSE, TRUE) );
-
-         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
          sum   = 0.0;
 
          for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
          {
             ind  = layer * g->edges + k;
             sum += (xval != NULL) ? xval[ind] : 1.0;
-
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
          }
          if (sum - EPSILON > 1.0)
          {
             SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
+                  1.0, FALSE, FALSE, TRUE) );
+
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+            for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+            {
+               ind  = layer * g->edges + k;
+               sum += (xval != NULL) ? xval[ind] : 1.0;
+            }
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
             count++;
 
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
             if( *ncuts + count >= maxcuts )
                goto TERMINATE;
          }
 
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
          /* Was reingeht, muss mindestens auch rausgehen,
           * bei 2-termialen Netzen muss es gleich sein.
           */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "bala", 0.0,
-               (g->locals[layer] == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-
-         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
          sum   = 0.0;
 
          for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
          {
             ind  = layer * g->edges + k;
             sum -= (xval != NULL) ? xval[ind] : 1.0;
-
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
          }
          for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
          {
             ind  = layer * g->edges + k;
             sum += (xval != NULL) ? xval[ind] : 0.0;
-
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
          }
          if (sum + EPSILON < 0.0)
          {
             SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "bala", 0.0,
+                  (g->locals[layer] == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+            for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+            {
+               ind  = layer * g->edges + k;
+
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
+            }
+            for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
+            {
+               ind  = layer * g->edges + k;
+
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
+            }
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
             count++;
 
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
             if( *ncuts + count >= maxcuts )
                goto TERMINATE;
          }
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
    }
 
