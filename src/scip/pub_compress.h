@@ -115,16 +115,37 @@ SCIP_Real SCIPcomprGetRate(
    SCIP_COMPR*           compr
    );
 
+/* set the rate of the compression */
+EXTERN
+void SCIPcomprUpdateRate(
+   SCIP_COMPR*           compr,
+   SCIP_Real             rate
+   );
+
 /* return the number of nodes of the last compression */
 EXTERN
 int SCIPcomprGetNNodes(
    SCIP_COMPR*           compr
    );
 
+/* update the number of nodes of the last compression */
+EXTERN
+void SCIPcomprUpdateNNodes(
+   SCIP_COMPR*           compr,
+   int                   nnodes
+   );
+
 /* returns the loss of information of the last compression */
 EXTERN
 SCIP_Real SCIPcomprGetLOI(
    SCIP_COMPR*           compr
+   );
+
+/* update the loss of information of the last compression */
+EXTERN
+void SCIPcomprUpdateLOI(
+   SCIP_COMPR*           compr,
+   SCIP_Real             loi
    );
 
 /** is tree compression initialized? */

@@ -3397,7 +3397,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    if( tree->focuslpistate != NULL )
    {
       SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->focuslpistate, FALSE, TRUE) );
-//            tree->focuslpstatefork->data.fork->lpwasprimfeas, tree->focuslpstatefork->data.fork->lpwasdualfeas) );
+          /*  tree->focuslpstatefork->data.fork->lpwasprimfeas, tree->focuslpstatefork->data.fork->lpwasdualfeas) ); */
 
       return SCIP_OKAY;
    }
@@ -4182,7 +4182,6 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
    assert(lpfork == NULL || fork != NULL);
-   //assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 
    /* remember the depth of the common fork node for LP updates */

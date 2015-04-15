@@ -130,6 +130,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
    SCIP_CLOCK*           strongpropclock;    /**< time needed for propagation during strong branching */
+   SCIP_CLOCK*           reoptupdatetime;    /**< time needed for reoptimizing nodes and solutions for reoptimization */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */

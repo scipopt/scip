@@ -156,8 +156,8 @@ SCIP_RETCODE SCIPcomprCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "minimal depth for calling tree compression <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*compr)->mindepth, FALSE, mindepth, 0, INT_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "compression/%s/minnnodes", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "minimal number of nodes for calling tree compression <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "compression/%s/minnleaves", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "minimal number of leave nodes for calling tree compression <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*compr)->minnnodes, FALSE, minnnodes, 1, INT_MAX, NULL, NULL) );
 

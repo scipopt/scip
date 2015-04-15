@@ -301,6 +301,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
+			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
 			scip/cons_abspower.o \
 			scip/cons_and.o \

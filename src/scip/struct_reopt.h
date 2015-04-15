@@ -121,6 +121,8 @@ struct SCIP_ReoptTree
    int                   nbranchednodes;
    int                   nprunednodesround;
    int                   nprunednodes;
+   int                   nrediednodesround;
+   int                   nrediednodes;
 };
 
 /** reoptimization data and solution storage */

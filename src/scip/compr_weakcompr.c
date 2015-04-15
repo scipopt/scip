@@ -48,15 +48,15 @@ struct SCIP_ComprData
    int                   nrepresentatives;        /**< number of representatives */
    int                   allocmemrepr;            /**< allocated memory for representatives */
 
-   /* statictics */
-   SCIP_Real             rate;
-   SCIP_Real             loi;
-   int                   nnodes;
+   /* statistics */
+   SCIP_Real             rate;                    /**< compression rate */
+   SCIP_Real             loi;                     /**< loss of information */
+   int                   nnodes;                  /**< number of nodes after compression */
 
    /* parameter */
    SCIP_Bool             convertconss;            /**< convert added logic-or constraints of size k into k nodes */
-   int                   min_nodes;               /**< minimal number of nodes to compress */
-   int                   size;                    /**< size of the compression, -1: log(#variables) */
+   int                   min_leaves;              /**< minimal number of nodes to compress */
+   int                   numstartnodes;           /**< size of the compression, -1: log(#variables) */
 };
 
 
@@ -64,12 +64,15 @@ struct SCIP_ComprData
  * Local methods
  */
 
+/**
+ * subroutine for quicksort.
+ */
 static
 int partition(
-   SCIP*                 scip,
-   int*                  childids,
-   int                   left,
-   int                   right
+   SCIP*                 scip,                    /**< SCIP data structure */
+   int*                  childids,                /**< array of child ids */
+   int                   left,                    /**< first position */
+   int                   right                    /**< last position */
    )
 {
    int pivot;
@@ -108,12 +111,16 @@ int partition(
    return j;
 }
 
+/**
+ * quicksprt implementation.
+ * sort the ids of child nodes by there dual bound of the last iteration
+ */
 static
 void sortIDs(
-   SCIP*                 scip,
-   int*                  childids,
-   int                   left,
-   int                   right
+   SCIP*                 scip,                    /**< SCIP data structure */
+   int*                  childids,                /**< array of child ids */
+   int                   left,                    /**< first position */
+   int                   right                    /**< last position */
    )
 {
    int j;
@@ -126,11 +133,14 @@ void sortIDs(
    }
 }
 
+/**
+ * check of enough memory is allocated and reallocate of necessary.
+ */
 static
 SCIP_RETCODE checkMemSize(
-   SCIP*                 scip,
-   SCIP_COMPRDATA*       comprdata,
-   int                   nrepresentatives
+   SCIP*                 scip,                    /**< SCIP data structure */
+   SCIP_COMPRDATA*       comprdata,               /**< compression data */
+   int                   nrepresentatives         /**< number of representatives */
    )
 {
    assert(scip != NULL);
@@ -145,12 +155,15 @@ SCIP_RETCODE checkMemSize(
    return SCIP_OKAY;
 }
 
+/**
+ * try to find a good representation
+ */
 static
 SCIP_RETCODE constructCompression(
-   SCIP*                 scip,
-   SCIP_COMPR*            compr,
-   SCIP_COMPRDATA*       comprdata,
-   SCIP_RESULT*          result
+   SCIP*                 scip,                    /**< SCIP data structure */
+   SCIP_COMPR*           compr,                   /**< compression method */
+   SCIP_COMPRDATA*       comprdata,               /**< compression data */
+   SCIP_RESULT*          result                   /**< result pointer */
    )
 {
    SCIP_NODE* currentnode;
@@ -177,7 +190,7 @@ SCIP_RETCODE constructCompression(
    depth = 0;
 
    /* calculate the size of the representation */
-   size = comprdata->size == -1 ? log10(SCIPgetNBinVars(scip))/log10(2.0) : comprdata->size;
+   size = comprdata->numstartnodes == -1 ? log10(SCIPgetNBinVars(scip))/log10(2.0) : comprdata->numstartnodes;
    size = 1; /* @ todo: fix this */
 
    currentnode = SCIPgetStage(scip) <= SCIP_STAGE_PRESOLVED ? NULL : SCIPgetCurrentNode(scip);
@@ -210,13 +223,13 @@ SCIP_RETCODE constructCompression(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("-> try to reduce to %d nodes\n", comprdata->size);
-
    if( size > nleaveids )
    {
       SCIPdebugMessage("-> skip compression (k = %d, nleaves = %d)\n", size, nleaveids);
       return SCIP_OKAY;
    }
+
+   SCIPdebugMessage("-> try compression with %d node(s)\n", comprdata->numstartnodes);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -252,9 +265,8 @@ SCIP_RETCODE constructCompression(
       int mem_conss;
       int nvars2;
       int nafterdualvars;
-      int c;
 
-      mem_vars = ceil(SCIPgetNBinVars(scip)/3);
+      mem_vars = SCIPgetNBinVars(scip);
 
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars[k], mem_vars) );
@@ -323,7 +335,7 @@ SCIP_RETCODE constructCompression(
          SCIP_CALL( SCIPallocMemory(scip, &comprdata->representatives[r]) );
       }
 
-      SCIPinitilizeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives);
+      SCIPinitilizeRepresentation(comprdata->representatives, comprdata->nrepresentatives);
 
       /* create 2 candidates for the fixed variables */
       if( nvars[0] >= 1 )
@@ -415,12 +427,15 @@ SCIP_RETCODE constructCompression(
    return SCIP_OKAY;
 }
 
+/**
+ * apply the stored representation to the reopttree
+ */
 static
 SCIP_RETCODE applyCompression(
-   SCIP*                 scip,
-   SCIP_COMPR*           compr,
-   SCIP_COMPRDATA*       comprdata,
-   SCIP_RESULT*          result
+   SCIP*                 scip,                    /**< SCIP data structure */
+   SCIP_COMPR*           compr,                   /**< compression method */
+   SCIP_COMPRDATA*       comprdata,               /**< compression data */
+   SCIP_RESULT*          result                   /**< result pointer */
    )
 {
    SCIP_Bool success;
@@ -462,18 +477,7 @@ SCIP_RETCODE applyCompression(
  */
 
 /** copy method for tree compression plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_COMPRCOPY(comprCopyWeakcompr)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of weakcompr tree compression not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define comprCopyWeakcompr NULL
-#endif
 
 /** destructor of tree compression to free user data (called when SCIP is exiting) */
 static
@@ -520,48 +524,13 @@ SCIP_DECL_COMPRINIT(comprInitWeakcompr)
 
 
 /** deinitialization method of tree compression (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_COMPREXIT(comprExitWeakcompr)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of weakcompr tree compression not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define comprExitWeakcompr NULL
-#endif
-
 
 /** solving process initialization method of tree compression (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_COMPRINITSOL(comprInitsolWeakcompr)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of weakcompr tree compression not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define comprInitsolWeakcompr NULL
-#endif
-
 
 /** solving process deinitialization method of tree compression (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_COMPREXITSOL(comprExitsolWeakcompr)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of weakcompr tree compression not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define comprExitsolWeakcompr NULL
-#endif
 
 
 /** execution method of tree compression */
@@ -622,8 +591,7 @@ SCIP_RETCODE SCIPincludeComprWeakcompr(
 
    /* add weakcompr tree compression parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "compression/"COMPR_NAME"/convertconss", "convert constraints into nodes", &comprdata->convertconss, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/nnodes", "minimal size of current frontier", &comprdata->min_nodes, FALSE, 30, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/size", "size of the compression (-1: k = log(#variables))", &comprdata->size, FALSE, 5, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/numstartnodes", "size of the compression (-1: k = log(#variables))", &comprdata->numstartnodes, FALSE, 5, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
