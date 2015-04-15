@@ -4060,7 +4060,11 @@ SCIP_RETCODE solveNode(
       assert(SCIPsetIsFeasEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set, transprob), SCIPlpGetPseudoObjval(lp, set, transprob)));
 
       SCIPprobStoreRootSol(transprob, set, lp, SCIPtreeHasFocusNodeLP(tree));
+   }
 
+   /* remember the last root LP solution */
+   if( actdepth == 0 )
+   {
       printf("### root cutrounds %d\n", stat->nseparounds);
    }
 
