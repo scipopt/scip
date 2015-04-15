@@ -330,6 +330,7 @@ SCIP_RETCODE probdataFree(
          SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizesymcons));
       }
 #endif
+      SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizecons));
    }
 
 
