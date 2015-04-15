@@ -28,104 +28,6 @@
 /* the indicator constraint handler is included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
 
-/** get candidates for diving from indicator constraints */
-static
-SCIP_RETCODE getIndCandVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           indconss,           /**< indicator constraints */
-   int                   nindconss,          /**< number of indicator constraints */
-   SCIP_VAR**            indcands,           /**< indicator candidate variables */
-   SCIP_Real*            indcandssol,        /**< solution values of candidates */
-   SCIP_Real*            indcandfrac,        /**< fractionalities of candidates */
-   int*                  nindcands           /**< number of candidates */
-   )
-{
-   SCIP_VAR* binvar;
-   SCIP_Real val;
-   int c;
-
-   assert(scip != NULL);
-   assert(indconss != NULL);
-   assert(indcands != NULL);
-   assert(nindcands != NULL);
-   assert(indcandssol != NULL);
-   assert(indcandfrac != NULL);
-
-   *nindcands = 0;
-   for( c = 0; c < nindconss; ++c )
-   {
-      /* check whether constraint is violated */
-      if( SCIPisViolatedIndicator(scip, indconss[c], NULL) )
-      {
-         binvar = SCIPgetBinaryVarIndicator(indconss[c]);
-         val = SCIPgetSolVal(scip, NULL, binvar);
-
-         /* fractional indicator variables are treated by lpcands */
-         if( SCIPisFeasIntegral(scip, val) )
-         {
-            indcands[*nindcands] = binvar;
-            indcandssol[*nindcands] = val;
-            indcandfrac[*nindcands] = SCIPfrac(scip, val);
-            ++(*nindcands);
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-/** assign the current candidates for diving, together with their LP solution values and fractionalities */
-static
-SCIP_RETCODE getDivingCandidates(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DIVESET*         diveset,            /**< settings for diving */
-   SCIP_CONSHDLR*        indconshdlr,        /**< indicator constraint handler */
-   SCIP_VAR***           lpcands,            /**< pointer to store the array of LP candidates */
-   SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP solution values */
-   SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP fractionalities*/
-   int*                  nlpcands,           /**< pointer to store the number of LP branching candidates */
-   SCIP_VAR**            indcands,           /**< pointer to store the indicator candidate variables, or NULL */
-   SCIP_Real*            indcandssol,        /**< pointer to store the indicator LP solution values, or NULL */
-   SCIP_Real*            indcandsfrac,       /**< pointer to store the indicator candidate fractionalities, or NULL */
-   int*                  nindcands           /**< pointer to store the number of indicator candidate variables, or NULL */
-   )
-{
-
-   int nindconss;
-   assert(diveset != NULL);
-   assert(nlpcands != NULL);
-   assert(lpcands != NULL);
-   assert(lpcandssol != NULL);
-   assert(lpcandsfrac != NULL);
-
-   assert(lpcands != NULL);
-   assert(lpcandssol != NULL);
-   assert(lpcandsfrac != NULL);
-
-   assert((indcands == NULL) == (indcandssol == NULL));
-   assert((indcandssol == NULL) == (indcandsfrac == NULL));
-
-   /* store the LP candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, NULL, NULL) );
-
-   nindconss = 0;
-   if( indconshdlr != NULL )
-      nindconss = SCIPconshdlrGetNConss(indconshdlr);
-
-   /* get indicator candidates */
-   if( nindconss > 0 )
-   {
-      SCIP_CONS** indconss;
-
-      indconss = SCIPconshdlrGetConss(indconshdlr);
-
-      SCIP_CALL( getIndCandVars(scip, indconss, nindconss, indcands, indcandssol, indcandsfrac, nindcands) );
-   }
-   else if( nindcands != NULL )
-      *nindcands = 0;
-
-   return SCIP_OKAY;
-}
-
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
 static
@@ -484,7 +386,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          assert(vals[1] != SCIP_INVALID);
          assert(vals[0] != SCIP_INVALID);
          nextcandsol = SCIPgetSolVal(scip, worksol, nextcandvar);
-         nextcandroundup = SCIPisFeasGE(scip, vals[0], nextcandsol);
+
+         /* treat indicator variables specially, they might have integral solution values */
+         nextcandroundup = (SCIPvarIsBinary(nextcandvar) && vals[0] > 0.5) || SCIPisFeasGT(scip, vals[0], nextcandsol);
 
          backtracked = FALSE;
          do
@@ -560,7 +464,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
              * was reached
              */
             if( !cutoff && ((SCIPgetDiveLPSolveFreq(scip) > 0 && ((SCIPgetProbingDepth(scip) - startdepth) % SCIPgetDiveLPSolveFreq(scip)) == 0)
-                  || ((domreds + localdomreds) > SCIPdivesetGetLpresolvefixquot(diveset) * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) )
+                  || (domreds + localdomreds > SCIPdivesetGetLpresolvefixquot(diveset) * SCIPgetNVars(scip))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 

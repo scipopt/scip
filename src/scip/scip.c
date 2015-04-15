@@ -30596,7 +30596,7 @@ SCIP_RETCODE SCIPenforceDiveSolution(
     */
    for( i = 0; i < scip->set->nconshdlrs && !(*success || *infeasible); ++i )
    {
-      SCIP_CALL( SCIPconshdlrEnforceDiveSol(scip->set->conshdlrs[i], scip->set, diveset, sol, varptr, vals, success, infeasible) );
+      SCIP_CALL( SCIPconshdlrEnforceDiveSol(scip->set->conshdlrs_enfo[i], scip->set, diveset, sol, varptr, vals, success, infeasible) );
    }
 
    return SCIP_OKAY;
