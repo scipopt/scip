@@ -388,7 +388,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          nextcandsol = SCIPgetSolVal(scip, worksol, nextcandvar);
 
          /* treat indicator variables specially, they might have integral solution values */
-         nextcandroundup = (SCIPvarIsBinary(nextcandvar) && vals[0] > 0.5) || SCIPisFeasGT(scip, vals[0], nextcandsol);
+         nextcandroundup = ((SCIPvarIsBinary(nextcandvar) && vals[0] > 0.5) || vals[0] > nextcandsol);
 
          backtracked = FALSE;
          do
