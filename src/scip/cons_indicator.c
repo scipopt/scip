@@ -6409,6 +6409,65 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
+{
+   SCIP_CONS** indconss;
+   int nindconss;
+   int c;
+   SCIP_Real bestscore;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(diveset != NULL);
+   assert(vals != NULL);
+   assert(success != NULL);
+
+   indconss = SCIPconshdlrGetConss(conshdlr);
+   nindconss = SCIPconshdlrGetNConss(conshdlr);
+
+   bestscore = SCIP_REAL_MAX;
+
+   /* loop over indicator constraints and score indicator variables with already integral solution value  */
+   for( c = 0; c < nindconss; ++c )
+   {
+      /* check whether constraint is violated */
+      if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
+      {
+         SCIP_VAR* binvar;
+         SCIP_Real solval;
+
+         binvar = SCIPgetBinaryVarIndicator(indconss[c]);
+         solval = SCIPgetSolVal(scip, sol, binvar);
+
+         /* we only treat indicator variables with integral solution values that are not yet fixed */
+         if( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+         {
+            SCIP_Real score;
+            SCIP_Bool roundup;
+
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, binvar, solval, 0.0, &score, &roundup) );
+
+            /* best candidate minimizes the score */
+            if( score < bestscore )
+            {
+               bestscore = score;
+               *varptr = binvar;
+
+               /* assign vals depending on whether we want to round down or up first */
+               vals[roundup ? 0 : 1] = 1.0;
+               vals[roundup ? 1 : 0] = 0.0;
+
+               *success = TRUE;
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for indicator constraints and includes it in SCIP */
@@ -6465,6 +6524,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrEnfoDive(scip, conshdlr, conshdlrEnfoDiveIndicator) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
