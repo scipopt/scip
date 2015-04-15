@@ -1028,7 +1028,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, runs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orgresults, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgresults, nedges) );
 
    for( v = 0; v < runs; v++ )
       perm[v] = v;
@@ -1068,7 +1068,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       modcost = TRUE;
 
    solfound = FALSE;
-   for( v = 0; v < 8 * runs; v++ )
+   for( v = 0; v < 8 * runs && !SCIPisStopped(scip); v++ )
    {
       if( count >= runs )
       {
@@ -1267,15 +1267,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             for( e = 0; e < nsoledges; e++ )
                results[e] = UNKNOWN;
             /* run TM heuristic */
-            SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns, solgraph->source[0], cost, costrev, maxcost) );
+            SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns,
+                  solgraph->source[0], cost, costrev, maxcost, &success) );
 
-	    if( solgraph->stp_type == STP_DEG_CONS )
-	    {
-	       for( e = 0; e < nsoledges; e++ )
-                  if( results[e] != UNKNOWN )
-                     break;
-               if( e == nsoledges )
-               {
+            if( !success )
+            {
                   graph_path_exit(solgraph);
                   SCIPfreeBufferArrayNull(scip, &results);
                   SCIPfreeMemoryArray(scip, &edgeancestor);
@@ -1284,7 +1280,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   SCIPfreeBufferArrayNull(scip, &costrev);
                   graph_free(scip, solgraph, TRUE);
                   continue;
-               }
 	    }
 	    assert(graph_valid(solgraph));
 	    assert(graph_sol_valid(solgraph, results));

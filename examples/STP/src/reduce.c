@@ -513,6 +513,7 @@ SCIP_RETCODE bound_reduce(
    int best_start = 0;
    unsigned int seed = 0;
    char* blocked;
+   SCIP_Bool success;
    *nelims = 0;
    nedges = graph->edges;
    nnodes = graph->knots;
@@ -579,9 +580,9 @@ SCIP_RETCODE bound_reduce(
    for( e = 0; e < nedges; e++ )
    {
       blocked[e] = FALSE;
-      blocked[e + 1] = FALSE;
+      blocked[flipedge(e)] = FALSE;
       result[e] = UNKNOWN;
-      result[e + 1] = UNKNOWN;
+      result[flipedge(e)] = UNKNOWN;
       if( graph->ieat[e] == EAT_FREE )
       {
          assert(graph->oeat[e] == EAT_FREE);
@@ -635,7 +636,11 @@ SCIP_RETCODE bound_reduce(
    assert(k < nheurs);
    tmheurdata = SCIPheurGetData(heurs[k]);
 
-   SCIP_CALL( do_layer(scip, tmheurdata, graph, starts, &best_start, result, runs, graph->source[0], cost, costrev, 0.0) );
+   SCIP_CALL( do_layer(scip, tmheurdata, graph, starts, &best_start, result, runs, graph->source[0], cost, costrev, 0.0, &success) );
+
+   if( !success )
+      goto TERMINATE;
+
    obj = fixed;
    for( e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
@@ -712,11 +717,12 @@ SCIP_RETCODE bound_reduce(
       }
    }
 
+ TERMINATE:
    printf("nelims in bound reduce: %d, nskips: %d \n", *nelims, nskips);
-   SCIPfreeBufferArray(scip, &radedges);
-   SCIPfreeBufferArray(scip, &result);
    SCIPfreeBufferArray(scip, &starts);
    SCIPfreeBufferArray(scip, &blocked);
+   SCIPfreeBufferArray(scip, &radedges);
+   SCIPfreeBufferArray(scip, &result);
 
    assert(graph_valid(graph));
    return SCIP_OKAY;

@@ -61,7 +61,9 @@ extern "C" {
       int           bestincstart,
       SCIP_Real*    cost,
       SCIP_Real*    costrev,
-      SCIP_Real      maxcost);
+      SCIP_Real     maxcost,
+      SCIP_Bool*    success
+      );
 
    extern
    SCIP_RETCODE do_prune(

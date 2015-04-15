@@ -44,7 +44,7 @@ BEGIN {
    onlyinsolufile = 0;          # should only instances be reported that are included in the .solu file?
    onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
-   useshortnames = 1;           # should problem name be truncated to fit into column?
+   useshortnames = 0;           # should problem name be truncated to fit into column?
    writesolufile = 0;           # should a solution file be created from the results
    printsoltimes = 0;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
