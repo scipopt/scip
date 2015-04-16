@@ -2467,7 +2467,7 @@ SCIP_RETCODE reduce(
       return SCIP_OKAY;
 #endif
    //printf("type: %d \n", (*graph)->stp_type);
-   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type != STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID  )
+   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID  )
       return SCIP_OKAY;
 
    /* initialise shortest path algorithms */
