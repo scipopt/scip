@@ -1585,7 +1585,7 @@ SCIP_RETCODE do_layer(
    SCIP_Real obj;
    SCIP_Real objt;
    SCIP_Real min = FARAWAY;
-   SCIP_Real** pathdist;
+   SCIP_Real** pathdist = NULL;
    SCIP_Real** node_dist;
    int best;
    int k;
@@ -1604,7 +1604,7 @@ SCIP_RETCODE do_layer(
    int** node_base;
 
    int** node_edge;
-   int** pathedge;
+   int** pathedge = NULL;
 
    char printfs = FALSE;
    char* connected;

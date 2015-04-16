@@ -330,7 +330,7 @@ SCIP_RETCODE probdataFree(
          SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizesymcons));
       }
 #endif
-      SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizecons));
+      SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizecons)) );
    }
 
 
@@ -549,12 +549,6 @@ SCIP_RETCODE createPrizeConstraints(
          SCIP_CALL( SCIPaddCons(scip, probdata->prizesymcons[r]) );
       }
    }
-#endif
-
-
-#if  0
-   TODO!
-      SCIP_CALL( SCIPallocMemory(scip, &(probdata->prizecons)) );
 #endif
 
    if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
@@ -1187,6 +1181,23 @@ SCIP_DECL_PROBCOPY(probcopyStp)
                }
             }
 #endif
+            SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->prizecons, &((*targetdata)->prizecons),
+                  SCIPconsGetHdlr(sourcedata->prizecons), varmap, consmap,
+                  SCIPconsGetName(sourcedata->prizecons),
+                  SCIPconsIsInitial(sourcedata->prizecons),
+                  SCIPconsIsSeparated(sourcedata->prizecons),
+                  SCIPconsIsEnforced(sourcedata->prizecons),
+                  SCIPconsIsChecked(sourcedata->prizecons),
+                  SCIPconsIsPropagated(sourcedata->prizecons),
+                  SCIPconsIsLocal(sourcedata->prizecons),
+                  SCIPconsIsModifiable(sourcedata->prizecons),
+                  SCIPconsIsDynamic(sourcedata->prizecons),
+                  SCIPconsIsRemovable(sourcedata->prizecons),
+                  SCIPconsIsStickingAtNode(sourcedata->prizecons),
+                  global, &success) );
+            assert(success);
+
+            SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->prizecons) );
 	 }
 
       }
@@ -1469,6 +1480,8 @@ SCIP_DECL_PROBTRANS(probtransStp)
                SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
 	    }
 #endif
+            SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
+
 	 }
 
       }
@@ -1746,7 +1759,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    char printfs = FALSE;
    char* intlogfilename;
    char* logfilename;
-   char* tmpfilename;
+   char tmpfilename[SCIP_MAXSTRLEN];
    char* probname;
 #ifdef PRINT_PRESOL
    char presolvefilename[SCIP_MAXSTRLEN];
@@ -1805,7 +1818,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    /* copy filename */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
+   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
 
    SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
@@ -1816,8 +1829,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolStp) );
    SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
-
-   SCIPfreeBufferArray(scip, &tmpfilename);
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
