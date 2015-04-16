@@ -65,6 +65,7 @@
 #include "scip/pub_misc.h"
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
+#include "tclique/tclique.h"
 #include <string.h>
 #include <ctype.h>
 
@@ -72,22 +73,26 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "SOS1"
 #define CONSHDLR_DESC          "SOS1 constraint handler"
-#define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY   -900000 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       100 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY      -10 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAFREQ            10 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+#define CONSHDLR_DELAYPRESOL       TRUE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 /* separation */
-#define DEFAULT_SEPAFROMSOS1       TRUE /**< if TRUE separate bound inequalities from initial SOS1 constraints */
-#define DEFAULT_SEPAFROMGRAPH     FALSE /**< if TRUE separate bound inequalities from the conflict graph */
+#define DEFAULT_SEPAFROMSOS1      FALSE /**< if TRUE separate bound inequalities from initial SOS1 constraints */
+#define DEFAULT_SEPAFROMGRAPH      TRUE /**< if TRUE separate bound inequalities from the conflict graph */
+#define DEFAULT_BOUNDCUTSDEPTH       40 /**< node depth of separating bound cuts (-1: no limit) */
+#define DEFAULT_MAXBOUNDCUTS         50 /**< maximal number of bound cuts separated per branching node */
+#define DEFAULT_MAXBOUNDCUTSROOT    150 /**< maximal number of bound cuts separated per iteration in the root node */
+#define DEFAULT_STRTHENBOUNDCUTS   TRUE /**< if TRUE then bound cuts are strengthened in case bound variables are available */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
@@ -126,19 +131,45 @@ struct SCIP_NodeData
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
 
+/** tclique data for bound cut generation */
+struct TCLIQUE_Data
+{
+   SCIP*                 scip;               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr;           /**< SOS1 constraint handler */
+   SCIP_DIGRAPH*         conflictgraph;      /**< conflict graph */
+   SCIP_SOL*             sol;                /**< LP solution to be separated (or NULL) */
+   SCIP_Real             scaleval;           /**< factor for scaling weights */
+   int                   ncuts;              /**< number of bound cuts found in this iteration */
+   int                   nboundcuts;         /**< number of bound cuts found so far */
+   int                   maxboundcuts;       /**< maximal number of clique cuts separated per separation round (-1: no limit) */
+   SCIP_Bool             strthenboundcuts;   /**< if TRUE then bound cuts are strengthened in case bound variables are available */
+};
+
+
 /** SOS1 constraint handler data */
 struct SCIP_ConshdlrData
 {
+   /* conflict graph */
    SCIP_DIGRAPH*         conflictgraph;      /**< conflict graph */
    SCIP_DIGRAPH*         localconflicts;     /**< local conflicts */
    SCIP_Bool             isconflocal;        /**< if TRUE then local conflicts are present and conflict graph has to be updated for each node */
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
    int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
+   /* branching */
    SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
+   /* separation */
    SCIP_Bool             sepafromsos1;       /**< if TRUE separate bound inequalities from initial SOS1 constraints */
    SCIP_Bool             sepafromgraph;      /**< if TRUE separate bound inequalities from the conflict graph */
+   TCLIQUE_GRAPH*        tcliquegraph;       /**< tclique graph data structure */
+   TCLIQUE_DATA*         tcliquedata;        /**< tclique data */
+   int                   boundcutsdepth;     /**< node depth of separating bound cuts (-1: no limit) */
+   int                   maxboundcuts;       /**< maximal number of bound cuts separated per branching node */
+   int                   maxboundcutsroot;   /**< maximal number of bound cuts separated per iteration in the root node */
+   int                   nboundcuts;         /**< number of bound cuts found so far */
+   SCIP_Bool             strthenboundcuts;   /**< if TRUE then bound cuts are strengthened in case bound variables are available */
+   /* event handler */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
 
@@ -816,6 +847,7 @@ SCIP_RETCODE propSOS1(
    return SCIP_OKAY;
 }
 
+/* ----------------------------- branching -------------------------------------*/
 
 /** enforcement method
  *
@@ -1076,6 +1108,192 @@ SCIP_RETCODE enforceSOS1(
 }
 
 
+/* ----------------------------- separation ------------------------------------*/
+
+/* initialitze tclique graph and create clique data */
+static
+SCIP_RETCODE initTCliquegraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   SCIP_SOL*             sol,                /**< LP solution to be separated (or NULL) */
+   SCIP_Real             scaleval            /**< factor for scaling weights */
+   )
+{
+   TCLIQUE_DATA* tcliquedata;
+   int j;
+
+   /* try to generate bound cuts */
+   if ( ! tcliqueCreate(&conshdlrdata->tcliquegraph) )
+      return SCIP_NOMEMORY;
+
+   /* add nodes */
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      if ( ! tcliqueAddNode(conshdlrdata->tcliquegraph, j, 0 ) )
+         return SCIP_NOMEMORY;
+   }
+
+   /* add edges */
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      int* succ;
+      int nsucc;
+      int succnode;
+      int i;
+
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
+      succ = SCIPdigraphGetSuccessors(conflictgraph, j);
+
+      for (i = 0; i < nsucc; ++i)
+      {
+         succnode = succ[i];
+
+         if ( succnode > j && SCIPvarIsActive(nodeGetVarSOS1(conflictgraph, succnode)) )
+         {
+            if ( ! tcliqueAddEdge(conshdlrdata->tcliquegraph, j, succnode) )
+               return SCIP_NOMEMORY;
+         }
+      }
+   }
+   if ( ! tcliqueFlush(conshdlrdata->tcliquegraph) )
+      return SCIP_NOMEMORY;
+
+
+   /* allocate clique data */
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata->tcliquedata) );
+   tcliquedata = conshdlrdata->tcliquedata;
+
+   /* initialize clique data */
+   tcliquedata->scip = scip;
+   tcliquedata->sol = sol;
+   tcliquedata->conshdlr = conshdlr;
+   tcliquedata->conflictgraph = conflictgraph;
+   tcliquedata->scaleval = scaleval;
+   tcliquedata->ncuts = 0;
+   tcliquedata->nboundcuts = conshdlrdata->nboundcuts;
+   tcliquedata->strthenboundcuts = conshdlrdata->strthenboundcuts;
+   tcliquedata->maxboundcuts = conshdlrdata->maxboundcutsroot;
+
+   return SCIP_OKAY;
+}
+
+
+/* update weights of tclique graph */
+static
+SCIP_RETCODE updateWeightsTCliquegraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   TCLIQUE_DATA*         tcliquedata,        /**< tclique data */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< LP solution to be separated (or NULL) */
+   int                   nsos1vars           /**< number of SOS1 variables */
+   )
+{
+   SCIP_Real scaleval;
+   int j;
+
+   scaleval = tcliquedata->scaleval;
+
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      SCIP_Real solval;
+      SCIP_Real bound;
+      SCIP_VAR* var;
+
+      var = nodeGetVarSOS1(conflictgraph, j);
+      solval = SCIPgetSolVal(scip, sol, var);
+
+      if ( SCIPisFeasPositive(scip, solval) )
+      {
+         if ( conshdlrdata->strthenboundcuts )
+            bound = REALABS( SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, j) );
+         else
+            bound = REALABS( SCIPvarGetUbLocal(var) );
+      }
+      else if ( SCIPisFeasNegative(scip, solval) )
+      {
+         if ( conshdlrdata->strthenboundcuts )
+            bound = REALABS( SCIPnodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, j) );
+         else
+            bound = REALABS( SCIPvarGetLbLocal(var) );
+      }
+      else
+         bound = 0.0;
+
+      solval = REALABS( solval );
+
+      if ( ! SCIPisFeasZero(scip, bound) && ! SCIPisInfinity(scip, bound) )
+      {
+         SCIP_Real nodeweight = REALABS( solval/bound ) * scaleval;
+         tcliqueChangeWeight(conshdlrdata->tcliquegraph, j, (int)nodeweight);
+      }
+      else
+      {
+         tcliqueChangeWeight(conshdlrdata->tcliquegraph, j, 0);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* adds bound cut(s) to separation storage */
+static
+SCIP_RETCODE addBoundCutSepa(
+   SCIP*                 scip,               /**< SCIP pointer */
+   TCLIQUE_DATA*         tcliquedata,        /**< clique data */
+   SCIP_ROW*             rowlb,              /**< row for lower bounds (or NULL) */
+   SCIP_ROW*             rowub,              /**< row for upper bounds (or NULL) */
+   SCIP_Bool*            success             /**< pointer to store if bound cut was added */
+   )
+{
+   assert( scip != NULL );
+   assert( tcliquedata != NULL );
+   assert( success != NULL);
+
+   *success = FALSE;
+
+   /* add cut for lower bounds */
+   if ( rowlb != NULL )
+   {
+      if ( ! SCIProwIsInLP(rowlb) && SCIPisCutEfficacious(scip, NULL, rowlb) )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, &infeasible) );
+         assert( ! infeasible );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
+         ++tcliquedata->nboundcuts;
+         ++tcliquedata->ncuts;
+         *success = TRUE;
+      }
+      SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
+   }
+
+   /* add cut for upper bounds */
+   if ( rowub != NULL )
+   {
+      if ( ! SCIProwIsInLP(rowub) && SCIPisCutEfficacious(scip, NULL, rowub) )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, &infeasible) );
+         assert( ! infeasible );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
+         ++tcliquedata->nboundcuts;
+         ++tcliquedata->ncuts;
+         *success = TRUE;
+      }
+      SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** Generate bound constraint
  *
  *  We generate the row corresponding to the following simple valid inequalities:
@@ -1097,8 +1315,7 @@ SCIP_RETCODE enforceSOS1(
 static
 SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_SEPA*            sepa,               /**< separator (or NULL) */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler (or NULL) */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    int*                  nodes,              /**< conflict graph nodes for bound constraint */
    int                   nnodes,             /**< number of conflict graph nodes for bound constraint */
@@ -1121,7 +1338,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
    SCIP_Real* vals;
 
    assert( scip != NULL );
-   assert( sepa != NULL || conshdlr != NULL );
+   assert( conshdlr != NULL );
    assert( conflictgraph != NULL );
    assert( ! local || ! global );
    assert( nodes != NULL );
@@ -1226,10 +1443,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            if ( conshdlr == NULL )
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowub, sepa, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
-            else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -1237,10 +1451,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            if ( conshdlr == NULL )
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowub, sepa, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
-            else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -1344,10 +1555,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            if ( conshdlr == NULL )
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowlb, sepa, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
-            else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -1355,10 +1563,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            if ( conshdlr == NULL )
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowlb, sepa, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
-            else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -1368,6 +1573,200 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
+/** generates bound cuts using a clique found by algorithm for maximum weight clique
+ *  and decides whether to stop generating cliques with the algorithm for maximum weight clique
+ */
+static
+TCLIQUE_NEWSOL(tcliqueNewsolClique)
+{
+   TCLIQUE_WEIGHT minweightinc;
+
+   assert( acceptsol != NULL );
+   assert( stopsolving != NULL );
+   assert( tcliquedata != NULL );
+
+   /* we don't accept the solution as new incumbent, because we want to find many violated clique inequalities */
+   *acceptsol = FALSE;
+   *stopsolving = FALSE;
+
+   /* slightly increase the minimal weight for additional cliques */
+   minweightinc = (cliqueweight - *minweight)/10;
+   minweightinc = MAX(minweightinc, 1);
+   *minweight += minweightinc;
+
+   /* adds cut if weight of the clique is greater than 1 */
+   if( cliqueweight > tcliquedata->scaleval )
+   {
+      SCIP* scip;
+      SCIP_SOL* sol;
+      SCIP_Real unscaledweight;
+      SCIP_Real solval;
+      SCIP_Real bound;
+      SCIP_VAR* var;
+      int node;
+      int i;
+
+      scip = tcliquedata->scip;
+      sol = tcliquedata->sol;
+      assert( scip != NULL );
+
+      /* calculate the weight of the clique in unscaled fractional variable space */
+      unscaledweight = 0.0;
+      for( i = 0; i < ncliquenodes; i++ )
+      {
+         node = cliquenodes[i];
+         var = nodeGetVarSOS1(tcliquedata->conflictgraph, node);
+         solval = SCIPgetSolVal(scip, sol, var);
+
+         if ( SCIPisFeasPositive(scip, solval) )
+         {
+            if ( tcliquedata->strthenboundcuts )
+               bound = REALABS( SCIPnodeGetSolvalVarboundUbSOS1(scip, tcliquedata->conflictgraph, sol, node) );
+            else
+               bound = REALABS( SCIPvarGetUbLocal(var) );
+         }
+         else if ( SCIPisFeasNegative(scip, solval) )
+         {
+            if ( tcliquedata->strthenboundcuts )
+               bound = REALABS( SCIPnodeGetSolvalVarboundLbSOS1(scip, tcliquedata->conflictgraph, sol, node) );
+            else
+               bound = REALABS( SCIPvarGetLbLocal(var) );
+         }
+         else
+            bound = 0.0;
+
+         solval = REALABS( solval );
+
+         if ( ! SCIPisFeasZero(scip, bound) && ! SCIPisInfinity(scip, bound) )
+            unscaledweight += REALABS( solval/bound );
+      }
+
+      if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
+      {
+         char nameext[SCIP_MAXSTRLEN];
+         SCIP_ROW* rowlb = NULL;
+         SCIP_ROW* rowub = NULL;
+         SCIP_Bool success;
+
+         /* generate bound inequalities for lower and upper bound case
+          * NOTE: tests have shown that non-removable rows give the best results */
+         (void) SCIPsnprintf(nameext, SCIP_MAXSTRLEN, "%d", tcliquedata->nboundcuts);
+         if( SCIPgenerateBoundInequalityFromSOS1Nodes(scip, tcliquedata->conshdlr, tcliquedata->conflictgraph,
+               cliquenodes, ncliquenodes, 1.0, FALSE, FALSE, tcliquedata->strthenboundcuts, FALSE, nameext, &rowlb, &rowub) != SCIP_OKAY )
+         {
+            SCIPerrorMessage("unexpected error in bound cut creation.\n");
+            SCIPABORT();
+         }
+
+         /* add bound cut(s) to separation storage if existent */
+         if ( addBoundCutSepa(scip, tcliquedata, rowlb, rowub, &success) != SCIP_OKAY )
+         {
+            SCIPerrorMessage("unexpected error in bound cut creation.\n");
+            SCIPABORT();
+         }
+
+         /* if at least one cut has been added */
+         if ( success )
+         {
+            SCIPdebugMessage(" -> found bound cut corresponding to clique (act=%g)\n", unscaledweight);
+
+            /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
+             * such that only more violated cuts are generated afterwards
+             */
+            if( tcliquedata->maxboundcuts >= 0 )
+            {
+               if( tcliquedata->ncuts > tcliquedata->maxboundcuts/2 )
+                  *acceptsol = TRUE;
+               if( tcliquedata->ncuts >= tcliquedata->maxboundcuts )
+                  *stopsolving = TRUE;
+            }
+         }
+         else
+            *stopsolving = TRUE;
+      }
+   }
+}
+
+
+/** separate bound inequalities from conflict graph */
+static
+SCIP_RETCODE sepaBoundInequalitiesFromGraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_SOL*             sol,                /**< LP solution to be separated (or NULL) */
+   int                   maxboundcuts,       /**< maximal number of bound cuts separated per separation round (-1: no limit) */
+   int*                  ngen,               /**< pointer to store number of cuts generated */
+   SCIP_RESULT*          result              /**< pointer to store result of separation */
+   )
+{
+   SCIP_DIGRAPH* conflictgraph;
+   TCLIQUE_DATA* tcliquedata;
+   TCLIQUE_WEIGHT cliqueweight;
+   TCLIQUE_STATUS tcliquestatus;
+   int nsos1vars;
+
+   SCIP_Real scaleval = 1000.0;                  /* factor for scaling weights */
+   int maxtreenodes = 10000;                     /* maximal number of nodes of b&b tree */
+   int maxzeroextensions = 1000;                 /* maximal number of zero-valued variables extending the clique (-1: no limit) */
+   int backtrackfreq = 1000;                     /* frequency for premature backtracking up to tree level 1 (0: no backtracking) */
+   int ntreenodes;
+   int* cliquenodes;
+   int ncliquenodes;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conshdlrdata != NULL );
+   assert( ngen != NULL );
+   assert( result != NULL );
+
+   /* get conflict graph */
+   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+   assert( conflictgraph != NULL );
+
+   /* get number of SOS1 variables */
+   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
+
+   /* initialize tclique graph if not done already */
+   if ( conshdlrdata->tcliquegraph == NULL )
+   {
+      SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conflictgraph, nsos1vars, sol, scaleval) );
+   }
+   tcliquedata = conshdlrdata->tcliquedata;
+   tcliquedata->maxboundcuts = maxboundcuts;
+   tcliquedata->ncuts = 0;
+
+   /* update the weights of the tclique graph */
+   SCIP_CALL( updateWeightsTCliquegraph(scip, conshdlrdata, tcliquedata, conflictgraph, sol, nsos1vars) );
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nsos1vars) );
+
+   /* start algorithm to find maximum weight cliques and use them to generate bound cuts */
+   tcliqueMaxClique(tcliqueGetNNodes, tcliqueGetWeights, tcliqueIsEdge, tcliqueSelectAdjnodes,
+      conshdlrdata->tcliquegraph, tcliqueNewsolClique, tcliquedata,
+      cliquenodes, &ncliquenodes, &cliqueweight, (int)scaleval-1, (int)scaleval+1,
+      maxtreenodes, backtrackfreq, maxzeroextensions, -1, &ntreenodes, &tcliquestatus);
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &cliquenodes);
+
+   /* get number of cuts of current separation round */
+   *ngen = tcliquedata->ncuts;
+
+   /* update number of bound cuts in separator data */
+   conshdlrdata->nboundcuts = tcliquedata->nboundcuts;
+
+   /* evaluate the result of the separation */
+   if ( *ngen > 0 )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -1419,7 +1818,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Cons(
    }
 
    /* generate bound constraint from conflict graph nodes */
-   SCIP_CALL( SCIPgenerateBoundInequalityFromSOS1Nodes(scip, NULL, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global, strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+   SCIP_CALL( SCIPgenerateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global, strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &nodes);
@@ -1430,7 +1829,7 @@ SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Cons(
 
 /** initialize or separate bound inequalities from SOS1 constraints */
 static
-SCIP_RETCODE initsepaBoundInequalitiesFromSOS1Cons(
+SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
@@ -1438,6 +1837,7 @@ SCIP_RETCODE initsepaBoundInequalitiesFromSOS1Cons(
    int                   nconss,             /**< number of SOS1 constraints */
    SCIP_SOL*             sol,                /**< LP solution to be separated (or NULL) */
    SCIP_Bool             solvedinitlp,       /**< TRUE if initial LP relaxation at a node is solved */
+   int                   maxboundcuts,       /**< maximal number of bound cuts separated per separation round (-1: no limit) */
    int*                  ngen,               /**< pointer to store number of cuts generated (or NULL) */
    SCIP_RESULT*          result              /**< pointer to store result of separation (or NULL) */
    )
@@ -1449,6 +1849,9 @@ SCIP_RETCODE initsepaBoundInequalitiesFromSOS1Cons(
    assert( conshdlrdata != NULL );
    assert( conss != NULL );
 
+   if ( result != NULL )
+      *result = SCIP_DIDNOTFIND;
+
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
@@ -1458,9 +1861,6 @@ SCIP_RETCODE initsepaBoundInequalitiesFromSOS1Cons(
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-
-      if ( result != NULL )
-         *result = SCIP_DIDNOTFIND;
 
       if ( solvedinitlp )
          SCIPdebugMessage("Separating inequalities for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
@@ -1523,6 +1923,9 @@ SCIP_RETCODE initsepaBoundInequalitiesFromSOS1Cons(
             ++(*ngen);
          }
       }
+
+      if ( ngen != NULL && maxboundcuts >= 0 && *ngen >= maxboundcuts )
+         break;
    }
 
    if ( cutoff )
@@ -2455,7 +2858,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
 
    /* checking for initial rows for SOS1 constraints */
    if( conshdlrdata->sepafromsos1 )
-      SCIP_CALL( initsepaBoundInequalitiesFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, NULL, NULL) );
+      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, -1, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2466,7 +2869,9 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int maxboundcuts;
    int ngen = 0;
+   int depth;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2476,13 +2881,40 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* separate inequalities for SOS1 constraints */
+   /* check for boundcutsdepth < depth, maxboundcutsroot = 0 and maxboundcuts = 0 */
+   depth = SCIPgetDepth(scip);
+   if ( conshdlrdata->boundcutsdepth >= 0 && conshdlrdata->boundcutsdepth < depth )
+      return SCIP_OKAY;
+
+   /* only generate bound cuts if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* determine maximal number of cuts*/
+   if ( depth == 0 )
+      maxboundcuts = conshdlrdata->maxboundcutsroot;
+   else
+      maxboundcuts = conshdlrdata->maxboundcuts;
+   if ( maxboundcuts < 1 )
+      return SCIP_OKAY;
+
+   /* separate inequalities from SOS1 constraints */
    if( conshdlrdata->sepafromsos1 )
    {
-      SCIP_CALL( initsepaBoundInequalitiesFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, TRUE, &ngen, result) );
+      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, TRUE, maxboundcuts, &ngen, result) );
+   }
+
+   /* separate inequalities from the conflict graph */
+   if( conshdlrdata->sepafromgraph )
+   {
+      SCIP_CALL( sepaBoundInequalitiesFromGraph(scip, conshdlr, conshdlrdata, NULL, maxboundcuts, &ngen, result) );
    }
 
    SCIPdebugMessage("Separated %d SOS1 constraints.\n", ngen);
@@ -2496,7 +2928,9 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int maxboundcuts;
    int ngen = 0;
+   int depth;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2509,9 +2943,39 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* check each constraint */
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* check for boundcutsdepth < depth, maxboundcutsroot = 0 and maxboundcuts = 0 */
+   depth = SCIPgetDepth(scip);
+   if ( conshdlrdata->boundcutsdepth >= 0 && conshdlrdata->boundcutsdepth < depth )
+      return SCIP_OKAY;
+
+   /* only generate bound cuts if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* determine maximal number of cuts*/
+   if ( depth == 0 )
+      maxboundcuts = conshdlrdata->maxboundcutsroot;
+   else
+      maxboundcuts = conshdlrdata->maxboundcuts;
+   if ( maxboundcuts < 1 )
+      return SCIP_OKAY;
+
+   /* separate inequalities from sos1 constraints */
    if( conshdlrdata->sepafromsos1 )
-      SCIP_CALL( initsepaBoundInequalitiesFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, &ngen, result) );
+      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, maxboundcuts, &ngen, result) );
+
+   /* separate inequalities from the conflict graph */
+   if( conshdlrdata->sepafromgraph )
+   {
+      SCIP_CALL( sepaBoundInequalitiesFromGraph(scip, conshdlr, conshdlrdata, sol, maxboundcuts, &ngen, result) );
+   }
 
    SCIPdebugMessage("Separated %d SOS1 constraints.\n", ngen);
 
@@ -3039,6 +3503,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    conshdlrdata->conflictgraph = NULL;
    conshdlrdata->localconflicts = NULL;
    conshdlrdata->isconflocal = FALSE;
+   conshdlrdata->nboundcuts = 0;
+   conshdlrdata->tcliquegraph = NULL;
+   conshdlrdata->tcliquedata = NULL;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSOS1, NULL) );
@@ -3072,6 +3539,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS1) );
 
    /* add SOS1 constraint handler parameters */
+
+   /* branching parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchsos",
          "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
          &conshdlrdata->branchsos, FALSE, TRUE, NULL, NULL) );
@@ -3084,6 +3553,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          "Branch on SOS cons. with highest nonzero-variable weight for branching (needs branchnonzeros = false)?",
          &conshdlrdata->branchweight, FALSE, FALSE, NULL, NULL) );
 
+   /* separation parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sepafromsos1",
          "if TRUE separate bound inequalities from initial SOS1 constraints",
          &conshdlrdata->sepafromsos1, TRUE, DEFAULT_SEPAFROMSOS1, NULL, NULL) );
@@ -3091,6 +3561,22 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sepafromgraph",
          "if TRUE separate bound inequalities from the conflict graph",
          &conshdlrdata->sepafromgraph, TRUE, DEFAULT_SEPAFROMGRAPH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsdepth",
+         "node depth of separating bound cuts (-1: no limit)",
+         &conshdlrdata->boundcutsdepth, TRUE, DEFAULT_BOUNDCUTSDEPTH, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxboundcuts",
+         "maximal number of bound cuts separated per branching node",
+         &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXBOUNDCUTS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxboundcutsroot",
+         "maximal number of bound cuts separated per iteration in the root node",
+         &conshdlrdata->maxboundcutsroot, TRUE, DEFAULT_MAXBOUNDCUTSROOT, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/strthenboundcuts",
+         "if TRUE then bound cuts are strengthened in case bound variables are available",
+         &conshdlrdata->strthenboundcuts, TRUE, DEFAULT_STRTHENBOUNDCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3476,4 +3962,56 @@ SCIP_VAR* nodeGetVarSOS1(
    }
 
    return nodedata->var;
+}
+
+
+/** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
+SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   /* get node data */
+   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
+   assert( nodedata != NULL );
+
+   /* if variable is not involved in a variable upper bound constraint */
+   if ( nodedata->lbboundvar == NULL || ! nodedata->lbboundcomp )
+      return SCIPvarGetLbLocal(nodedata->var);
+
+   return nodedata->lbboundcoef * SCIPgetSolVal(scip, sol, nodedata->lbboundvar);
+}
+
+
+/** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
+SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   /* get node data */
+   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
+   assert( nodedata != NULL );
+
+   /* if variable is not involved in a variable upper bound constraint */
+   if ( nodedata->ubboundvar == NULL || ! nodedata->ubboundcomp )
+      return SCIPvarGetUbLocal(nodedata->var);
+
+   return nodedata->ubboundcoef * SCIPgetSolVal(scip, sol, nodedata->ubboundvar);
 }
