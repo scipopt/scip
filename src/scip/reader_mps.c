@@ -1659,7 +1659,7 @@ SCIP_RETCODE readSOS(
 
    /* standard settings for SOS constraints: */
    initial = mpsi->initialconss;
-   separate = FALSE;
+   separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
