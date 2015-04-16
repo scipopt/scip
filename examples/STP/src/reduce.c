@@ -845,13 +845,13 @@ int bound_test(
 
    /* resetting the stp type */
    graph->stp_type = temptype;
-#endif
 
    obj = 0.0;
 
    for( e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
          obj += edgecost[e];
+#endif
 
    termcount = 0;
    for(i = 0; i < nnodes; i++)

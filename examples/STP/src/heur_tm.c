@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
+
 /**@file   heur_tm.c
  * @brief  TM primal heuristic
  * @author Gerald Gamrath
@@ -1586,7 +1586,7 @@ SCIP_RETCODE do_layer(
    SCIP_Real obj;
    SCIP_Real objt;
    SCIP_Real min = FARAWAY;
-   SCIP_Real** pathdist;
+   SCIP_Real** pathdist = NULL;
    SCIP_Real** node_dist;
    int best;
    int k;
@@ -1605,7 +1605,7 @@ SCIP_RETCODE do_layer(
    int** node_base;
 
    int** node_edge;
-   int** pathedge;
+   int** pathedge = NULL;
 
    char printfs = FALSE;
    char* connected;
@@ -2324,6 +2324,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real maxcost = 0.0;
    int* results;
    SCIP_Real pobj;
+   SCIP_Real oldtimelimit;
    int best_start = -1;
    int nedges;
    int edgecount = 0;
@@ -2384,6 +2385,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    heurdata->nexecs++;
 
    SCIPdebugMessage("Heuristic Start\n");
+
+   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
+   {
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 0.95 * oldtimelimit) );
+   }
 
    /* get all variables (corresponding to the edges) */
    nvars = SCIPprobdataGetNVars(scip);
@@ -2673,6 +2680,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIPfreeBufferArray(scip, &results);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
+
+   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+   }
+
    return SCIP_OKAY;
 }
 

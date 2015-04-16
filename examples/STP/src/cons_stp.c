@@ -437,7 +437,8 @@ int sep_flow(
             for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
             {
                ind  = layer * g->edges + k;
-               sum += (xval != NULL) ? xval[ind] : 1.0;
+
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
             }
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
