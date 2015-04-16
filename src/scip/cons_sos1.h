@@ -16,6 +16,7 @@
 /**@file   cons_sos1.h
  * @ingroup CONSHDLRS
  * @brief  constraint handler for SOS type 1 constraints
+ * @author Tobias Fischer
  * @author Marc Pfetsch
  *
  * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
@@ -137,6 +138,42 @@ EXTERN
 SCIP_Real* SCIPgetWeightsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets conflict graph of SOS1 constraints (or NULL if not existent)
+ *
+ *  Note: The conflict graph is globally valid; local changes are not taken into account.
+ */
+EXTERN
+SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
+   SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
+   );
+
+/** gets number of problem variables that are involved in at least one SOS1 constraint */
+EXTERN
+int SCIPgetNSOS1Vars(
+   SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
+   );
+
+/** returns whether variable is involved in an SOS1 constraint */
+EXTERN
+SCIP_Bool varIsSOS1(
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** returns node of variable in the conflict graph or -1 if variable is not involved in an SOS1 constraint */
+EXTERN
+int varGetNodeSOS1(
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** returns variable that belongs to a given node from the conflictgraph */
+EXTERN
+SCIP_VAR* nodeGetVarSOS1(
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   node                /**< node from the conflict graph */
    );
 
 #ifdef __cplusplus
