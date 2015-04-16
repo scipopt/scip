@@ -176,6 +176,22 @@ SCIP_VAR* nodeGetVarSOS1(
    int                   node                /**< node from the conflict graph */
    );
 
+/** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
+SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   );
+
+/** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
+SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   );
+
 #ifdef __cplusplus
 }
 #endif
