@@ -110,8 +110,8 @@ struct SCIP_NodeData
    SCIP_VAR*             var;                /**< variable belonging to node */
    SCIP_VAR*             lbboundvar;         /**< bound variable @p z from constraint \f$x \geq \mu \cdot z\f$ (or NULL if not existent) */
    SCIP_VAR*             ubboundvar;         /**< bound variable @p z from constraint \f$x \leq \mu \cdot z\f$ (or NULL if not existent) */
-   SCIP_Real             lbboundcoef;        /**< value \f$\mu\f$ from constraint \f$x \geq \mu z \f$ (0 if not existent) */
-   SCIP_Real             ubboundcoef;        /**< value \f$\mu\f$ from constraint \f$x \leq \mu z \f$ (0 if not existent) */
+   SCIP_Real             lbboundcoef;        /**< value \f$\mu\f$ from constraint \f$x \geq \mu z \f$ (0.0 if not existent) */
+   SCIP_Real             ubboundcoef;        /**< value \f$\mu\f$ from constraint \f$x \leq \mu z \f$ (0.0 if not existent) */
    SCIP_Bool             lbboundcomp;        /**< TRUE if the nodes from the connected component of the conflict graph the given node belongs to
                                               *   all have the same lower bound variable */
    SCIP_Bool             ubboundcomp;        /**< TRUE if the nodes from the connected component of the conflict graph the given node belongs to
@@ -332,6 +332,9 @@ SCIP_RETCODE handleNewVariableSOS1(
 
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockVariableSOS1(scip, cons, var) );
+
+   /* branching on multiaggregated variables does not seem to work well, so avoid it */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
 
    /* add the new coefficient to the upper bound LP row, if necessary */
    if ( consdata->rowub != NULL && ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) && ! SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
@@ -2932,6 +2935,10 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    {
       assert( weights == NULL );
    }
+
+   /* branching on multiaggregated variables does not seem to work well, so avoid it */
+   for (v = 0; v < nvars; ++v)
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[v]) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
