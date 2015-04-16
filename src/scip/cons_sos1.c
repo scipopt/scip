@@ -41,13 +41,18 @@
  * - All other calls ignore the weights, i.e., if a nonempty constraint is created or variables are
  *   added with SCIPappendVarSOS1().
  *
- * The validity of the constraint is enforced by the classical SOS branching. Depending on the
- * parameters there are two ways to choose the branching constraint. Either the constraint with the
- * most number of nonzeros is chosen or the constraint with the largest nonzero-variable
- * weight. The later version allows the user to specify an order for the branching importance of the
- * constraints. Constraint branching can also be turned off.
+ * The validity of the SOS1 constraint can be enforced by different branching rules:
  *
- * @todo Possibly allow to generate local cuts via strengthened local cuts (would need to modified coefficients of rows).
+ * - If classical SOS branching is used, branching is performed on only one SOS1 constraint. Depending on the parameters,
+ *   there are two ways to choose this branching constraint. Either the constraint with the most number of nonzeros
+ *   or the one with the largest nonzero-variable weight. The later version allows the user to specify
+ *   an order for the branching importance of the constraints. Constraint branching can also be turned off.
+ *
+ * - Another way is to branch on the neighborhood of a single variable @p i, i.e., in one branch \f$x_i\f$ is fixed to zero
+ *   and in the other its neighbors.
+ *
+ * - If bipartite branching is used, then we branch using complete bipartite subgraphs.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,6 +63,8 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
+#include "scip/struct_misc.h"
 #include <string.h>
 #include <ctype.h>
 
@@ -97,9 +104,28 @@ struct SCIP_ConsData
    SCIP_Real*            weights;            /**< weights determining the order (ascending), or NULL if not used */
 };
 
+/** node data of a given node in the conflict graph */
+struct SCIP_NodeData
+{
+   SCIP_VAR*             var;                /**< variable belonging to node */
+   SCIP_VAR*             lbboundvar;         /**< bound variable @p z from constraint \f$x \geq \mu \cdot z\f$ (or NULL if not existent) */
+   SCIP_VAR*             ubboundvar;         /**< bound variable @p z from constraint \f$x \leq \mu \cdot z\f$ (or NULL if not existent) */
+   SCIP_Real             lbboundcoef;        /**< value \f$\mu\f$ from constraint \f$x \geq \mu z \f$ (0 if not existent) */
+   SCIP_Real             ubboundcoef;        /**< value \f$\mu\f$ from constraint \f$x \leq \mu z \f$ (0 if not existent) */
+   SCIP_Bool             lbboundcomp;        /**< TRUE if the nodes from the connected component of the conflict graph the given node belongs to
+                                              *   all have the same lower bound variable */
+   SCIP_Bool             ubboundcomp;        /**< TRUE if the nodes from the connected component of the conflict graph the given node belongs to
+                                              *   all have the same lower bound variable */
+};
+typedef struct SCIP_NodeData SCIP_NODEDATA;
+
 /** SOS1 constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_DIGRAPH*         conflictgraph;      /**< conflict graph */
+   SCIP_DIGRAPH*         localconflicts;     /**< local conflicts */
+   SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
+   int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
    SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
@@ -1159,6 +1185,591 @@ SCIP_RETCODE generateRowSOS1(
    return SCIP_OKAY;
 }
 
+
+/** check whether var1 is a bound variable of var0; i.e., var0 >= c * var1 or var0 <= d * var1.
+ *  If true, then add this information to the node data of the conflict graph.
+ */
+static
+SCIP_RETCODE detectVarboundSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
+   SCIP_VAR*             var0,               /**< first variable */
+   SCIP_VAR*             var1,               /**< second variable */
+   SCIP_Real             val0,               /**< first coefficient */
+   SCIP_Real             val1                /**< second coefficient */
+   )
+{
+   int node0;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conshdlrdata != NULL );
+   assert( var0 != NULL && var1 != NULL );
+
+   /* get nodes of variable in the conflict graph (node = -1 if no SOS1 variable) */
+   node0 = varGetNodeSOS1(conshdlr, var0);
+
+   /* if var0 is an SOS1 variable */
+   if ( node0 >= 0 )
+   {
+      SCIP_Real val;
+
+      assert( ! SCIPisFeasZero(scip, val0) );
+      val = -val1/val0;
+
+      /* check variable bound relation of variables */
+
+      /* handle lower bound case */
+      if ( SCIPisFeasNegative(scip, val0) && SCIPisFeasNegative(scip, val) )
+      {
+         SCIP_NODEDATA* nodedata;
+
+         /* get node data of the conflict graph */
+         nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->conflictgraph, node0);
+
+         /* @todo: maybe save multiple variable bounds for each SOS1 variable */
+         if ( nodedata->lbboundvar == NULL )
+         {
+            /* add variable bound information to node data */
+            nodedata->lbboundvar = var1;
+            nodedata->lbboundcoef = val;
+
+            SCIPdebugMessage("detected variable bound constraint %s >= %f %s.\n", SCIPvarGetName(var0), val, SCIPvarGetName(var1));
+         }
+      }
+      /* handle upper bound case */
+      else if ( SCIPisFeasPositive(scip, val0) && SCIPisFeasPositive(scip, val) )
+      {
+         SCIP_NODEDATA* nodedata;
+         assert( SCIPisFeasPositive(scip, val0) );
+
+         /* get node data of the conflict graph */
+         nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->conflictgraph, node0);
+
+         if ( nodedata->ubboundvar == NULL )
+         {
+            /* add variable bound information to node data */
+            nodedata->ubboundvar = var1;
+            nodedata->ubboundcoef = val;
+
+            SCIPdebugMessage("detected variable bound constraint %s <= %f %s.\n", SCIPvarGetName(var0), val, SCIPvarGetName(var1));
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* pass connected component @p C of the conflict graph and check whether all the variables correspond to a unique variable upper bound variable @p z,
+ *  i.e., \f$x_i \leq u_i z\f$ for every \f$i\in C\f$.
+ *
+ *  Note: if the upper bound variable is not unique, then bound inequalities usually cannot be strengthened.
+ */
+static
+SCIP_RETCODE passConComponentVarbound(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   node,               /**< current node of connected component */
+   SCIP_VAR*             boundvar,           /**< bound variable of connected component */
+   SCIP_Bool             checklb,            /**< whether to check lower bound variable (else upper bound variable) */
+   SCIP_Bool*            processed,          /**< states for each variable whether it has been processed */
+   int*                  concomp,            /**< current connected component */
+   int*                  nconcomp,           /**< pointer to store number of elements of connected component */
+   SCIP_Bool*            unique              /**< pointer to store whether bound variable is unique */
+   )
+{
+   int* succ;
+   int nsucc;
+   int s;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( processed != NULL );
+   assert( concomp != NULL );
+   assert( nconcomp != NULL );
+   assert( unique != NULL );
+
+   processed[node] = TRUE;
+   concomp[(*nconcomp)++] = node;
+
+   /* if bound variable of connected component without new node is unique */
+   if ( unique )
+   {
+      SCIP_NODEDATA* nodedata;
+      SCIP_VAR* comparevar;
+      nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
+      assert( nodedata != NULL );
+
+      if ( checklb )
+         comparevar = nodedata->lbboundvar;
+      else
+         comparevar = nodedata->ubboundvar;
+
+      /* check whether bound variable is unique for connected component without new node */
+      if ( boundvar == NULL )
+      {
+         if ( comparevar != NULL )
+            unique = FALSE;
+      }
+      else
+      {
+         if ( comparevar == NULL )
+            unique = FALSE;
+         else if ( SCIPvarCompare(boundvar, comparevar) != 0 )
+            unique = FALSE;
+      }
+   }
+
+   /* pass through successor variables */
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
+   succ = SCIPdigraphGetSuccessors(conflictgraph, node);
+   for (s = 0; s < nsucc; ++s)
+   {
+      if ( ! processed[succ[s]] )
+         SCIP_CALL( passConComponentVarbound(scip, conflictgraph, succ[s], boundvar, checklb, processed, concomp, nconcomp, unique) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** for each connected component @p C of the conflict graph check whether all the variables correspond to a unique variable upper bound variable @p z
+ *  (e.g., for the upper bound case this means that \f$x_i \leq u_i z\f$ for every \f$i\in C\f$).
+ *
+ *  Note: if the bound variable is not unique, then bound inequalities usually cannot be strengthened.
+ */
+static
+SCIP_RETCODE checkConComponentsVarbound(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   SCIP_Bool             checklb             /**< whether to check lower bound variable (else check upper bound variable) */
+   )
+{
+   SCIP_Bool* processed;  /* states for each variable whether it has been processed */
+   int* concomp;          /* current connected component */
+   int nconcomp;
+   int j;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+
+   /* allocate buffer arrays and initialize 'processed' array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &processed, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &concomp, nsos1vars) );
+   for (j = 0; j < nsos1vars; ++j)
+      processed[j] = FALSE;
+
+   /* run through all SOS1 variables */
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      /* if variable belongs to a connected component that has not been processed so far */
+      if ( ! processed[j] )
+      {
+         SCIP_NODEDATA* nodedata;
+         SCIP_VAR* boundvar;
+         SCIP_Bool unique;
+         int* succ;
+         int nsucc;
+         int s;
+
+         nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, j);
+         assert( nodedata != NULL );
+
+         if ( checklb )
+            boundvar = nodedata->lbboundvar;
+         else
+            boundvar = nodedata->ubboundvar;
+         unique = TRUE;
+
+         processed[j] = TRUE;
+         concomp[0] = j;
+         nconcomp = 1;
+
+         /* pass through successor variables */
+         nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
+         succ = SCIPdigraphGetSuccessors(conflictgraph, j);
+         for (s = 0; s < nsucc; ++s)
+         {
+            if ( ! processed[succ[s]] )
+               SCIP_CALL( passConComponentVarbound(scip, conflictgraph, succ[s], boundvar, checklb, processed, concomp, &nconcomp, &unique) );
+         }
+
+         /* if the connected component has a unique bound variable */
+         if ( unique && boundvar != NULL )
+         {
+            for (s = 0; s < nconcomp; ++s)
+            {
+               nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, concomp[s]);
+               assert( processed[concomp[s]] == TRUE );
+               assert( nodedata != NULL );
+
+               if ( checklb )
+                  nodedata->lbboundcomp = TRUE;
+               else
+                  nodedata->ubboundcomp = TRUE;
+            }
+            SCIPdebugMessage("Found a connected component of size <%i> with unique bound variable.\n", nconcomp);
+         }
+      }
+   }
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &concomp);
+   SCIPfreeBufferArray(scip, &processed);
+
+   return SCIP_OKAY;
+}
+
+
+/** check all linear constraints for variable bound constraints of the form c*z <= x <= d*z, where @p x is some SOS1
+ *  variable and @p z some arbitrary variable (not necessarily binary)
+ */
+static
+SCIP_RETCODE checkLinearConssVarboundSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
+   SCIP_CONS**           linconss,           /**< linear constraints */
+   int                   nlinconss           /**< number of linear constraints */
+   )
+{
+   int c;
+
+   /* loop through linear constraints */
+   for (c = 0; c < nlinconss; ++c)
+   {
+      SCIP_CONS* lincons;
+      int nvars;
+
+      lincons = linconss[c];
+
+      /* variable bound constraints only contain two variables */
+      nvars = SCIPgetNVarsLinear(scip, lincons);
+      if ( nvars == 2 )
+      {
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         SCIP_VAR* var0;
+         SCIP_VAR* var1;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+
+         /* get constraint data */
+         vars = SCIPgetVarsLinear(scip, lincons);
+         vals = SCIPgetValsLinear(scip, lincons);
+         lhs = SCIPgetLhsLinear(scip, lincons);
+         rhs = SCIPgetRhsLinear(scip, lincons);
+
+         var0 = vars[0];
+         var1 = vars[1];
+         assert( var0 != NULL && var1 != NULL );
+
+         /* at least one variable should be an SOS1 variable */
+         if ( varIsSOS1(conshdlr, var0) || varIsSOS1(conshdlr, var1) )
+         {
+            SCIP_Real val0;
+            SCIP_Real val1;
+
+            /* check whether right hand side or left hand side of constraint is zero */
+            if ( SCIPisFeasZero(scip, lhs) )
+            {
+               val0 = -vals[0];
+               val1 = -vals[1];
+
+               /* check whether the two variables are in a variable bound relation */
+               SCIP_CALL( detectVarboundSOS1(scip, conshdlr, conshdlrdata, var0, var1, val0, val1) );
+               SCIP_CALL( detectVarboundSOS1(scip, conshdlr, conshdlrdata, var1, var0, val1, val0) );
+            }
+            else if( SCIPisFeasZero(scip, rhs) )
+            {
+               val0 = vals[0];
+               val1 = vals[1];
+
+               /* check whether the two variables are in a variable bound relation */
+               SCIP_CALL( detectVarboundSOS1(scip, conshdlr, conshdlrdata, var0, var1, val0, val1) );
+               SCIP_CALL( detectVarboundSOS1(scip, conshdlr, conshdlrdata, var1, var0, val1, val0) );
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** set node data of conflict graph nodes */
+static
+SCIP_RETCODE setNodeDataSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
+   int                   nsos1conss,         /**< number of SOS1 constraints */
+   int                   nsos1vars           /**< number of SOS1 variables */
+   )
+{
+   SCIP_CONSHDLR* linconshdlr;
+   SCIP_CONS** linconss;
+   int nlinconss;
+
+   /* if no SOS1 variables exist -> exit */
+   if ( nsos1vars == 0 )
+      return SCIP_OKAY;
+
+   /* get constraint handler data of linear constraints */
+   linconshdlr = SCIPfindConshdlr(scip, "linear");
+   if ( linconshdlr == NULL )
+      return SCIP_OKAY;
+
+   /* get linear constraints and number of linear constraints */
+   nlinconss = SCIPconshdlrGetNConss(linconshdlr);
+   linconss = SCIPconshdlrGetConss(linconshdlr);
+
+   /* check linear constraints for variable bound constraints */
+   SCIP_CALL( checkLinearConssVarboundSOS1(scip, conshdlr, conshdlrdata, linconss, nlinconss) );
+
+   /* for each connected component of the conflict graph check whether all the variables correspond to a unique variable
+    * upper bound variable */
+   SCIP_CALL( checkConComponentsVarbound(scip, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars, TRUE) );
+   SCIP_CALL( checkConComponentsVarbound(scip, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+
+/* initialize conflictgraph and create hashmap for SOS1 variables */
+static
+SCIP_RETCODE initConflictgraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONS**           conss,              /**< SOS1 constraints */
+   int                   nconss              /**< number of SOS1 constraints */
+   )
+{
+   SCIP_Bool* nodecreated; /* nodecreated[i] = TRUE if a node in the conflictgraph is already created for index i
+                            * (with i index of the original variables) */
+   int* nodeorig;          /* nodeorig[i] = node of original variable x_i in the conflictgraph */
+   int ntotalvars;
+   int cntsos;
+   int i;
+   int j;
+   int c;
+
+   assert( conshdlrdata != NULL );
+   assert( nconss == 0 || conss != NULL );
+
+   /* get the number of original problem variables */
+   ntotalvars = SCIPgetNTotalVars(scip);
+
+   /* initialize vector 'nodecreated' */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeorig, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodecreated, ntotalvars) );
+   for (i = 0; i < ntotalvars; ++i)
+      nodecreated[i] = FALSE;
+
+   /* compute number of SOS1 variables */
+   cntsos = 0;
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_VAR** vars;
+      int nvars;
+
+      assert( conss[c] != NULL );
+
+      /* get constraint data field of the constraint */
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* get variables and number of variables of constraint */
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+
+      /* update number of SOS1 variables */
+      for (i = 0; i < nvars; ++i)
+      {
+         SCIP_VAR* var;
+
+         var = vars[i];
+
+         if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         {
+            int ind;
+
+            ind = SCIPvarGetIndex(var);
+            assert( ind >= 0 && ind < ntotalvars );
+            if ( ! nodecreated[ind] )
+            {
+               nodecreated[ind] = TRUE; /* mark node as counted */
+               nodeorig[ind] = cntsos;
+               ++cntsos;
+            }
+         }
+      }
+   }
+   if ( cntsos <= 0 )
+   {
+      /* free buffer arrays */
+      SCIPfreeBufferArray(scip, &nodecreated);
+      SCIPfreeBufferArray(scip, &nodeorig);
+      conshdlrdata->nsos1vars = 0;
+      return SCIP_OKAY;
+   }
+
+   /* reinitialize vector 'nodecreated' */
+   for (i = 0; i < ntotalvars; ++i)
+      nodecreated[i] = FALSE;
+
+   /* create conflict graph */
+   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, cntsos) );
+
+   /* set up hash map */
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
+
+   /* for every SOS1 constraint */
+   cntsos = 0;
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_VAR** vars;
+      int nvars;
+
+      assert( conss[c] != NULL );
+
+      /* get constraint data field of the constraint */
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* get variables and number of variables of constraint */
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+
+      /* add edges to the conflict graph and create node data for each of its nodes */
+      for (i = 0; i < nvars; ++i)
+      {
+         SCIP_VAR* var;
+
+         var = vars[i];
+
+         if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         {
+            int indi;
+
+            indi = SCIPvarGetIndex(var);
+
+            if ( ! nodecreated[indi] )
+            {
+               SCIP_NODEDATA* nodedata = NULL;
+
+               /* insert node number to hash map */
+               assert( ! SCIPhashmapExists(conshdlrdata->varhash, var) );
+               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) cntsos) );/*lint !e571*/
+               assert( cntsos == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+               assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
+
+               /* create node data */
+               SCIP_CALL( SCIPallocMemory(scip, &nodedata) );
+               nodedata->var = var;
+               nodedata->lbboundvar = NULL;
+               nodedata->ubboundvar = NULL;
+               nodedata->lbboundcoef = 0.0;
+               nodedata->ubboundcoef = 0.0;
+               nodedata->lbboundcomp = FALSE;
+               nodedata->ubboundcomp = FALSE;
+
+               /* set node data */
+               SCIPdigraphSetNodeData(conshdlrdata->conflictgraph, (void*)nodedata, cntsos);
+
+               /* mark node and var data of node as created and update SOS1 counter */
+               nodecreated[indi] = TRUE;
+               ++cntsos;
+            }
+
+            /* add edges to the conflict graph */
+            for (j = i+1; j < nvars; ++j)
+            {
+               var = vars[j];
+
+               if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+               {
+                  int indj;
+
+                  indj = SCIPvarGetIndex(var);
+
+                  /* in case indi = indj the variable will be deleted in the presolving step */
+                  if ( indi != indj )
+                  {
+                     /* arcs have to be added 'safe' */
+                     SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->conflictgraph, nodeorig[indi], nodeorig[indj], NULL) );
+                     SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->conflictgraph, nodeorig[indj], nodeorig[indi], NULL) );
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   /* set number of problem variables that are contained in at least one SOS1 constraint */
+   conshdlrdata->nsos1vars = cntsos;
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &nodecreated);
+   SCIPfreeBufferArray(scip, &nodeorig);
+
+   /* sort successors in ascending order */
+   for (j = 0; j < conshdlrdata->nsos1vars; ++j)
+   {
+      int nsucc;
+
+      nsucc = SCIPdigraphGetNSuccessors(conshdlrdata->conflictgraph, j);
+      SCIPsortInt(SCIPdigraphGetSuccessors(conshdlrdata->conflictgraph, j), nsucc);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** free conflict graph, nodedata and hashmap */
+static
+SCIP_RETCODE freeConflictgraph(
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   int j;
+
+   /* for every SOS1 variable */
+   for (j = 0; j < conshdlrdata->nsos1vars; ++j)
+   {
+      SCIP_NODEDATA* nodedata;
+
+      /* get node data */
+      nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->conflictgraph, j);
+      assert( nodedata != NULL );
+
+      /* free node data */
+      SCIPfreeMemory(scip, &nodedata);
+      SCIPdigraphSetNodeData(conshdlrdata->conflictgraph, NULL, j);
+   }
+
+   /* free conflict graph and hash map */
+   if ( conshdlrdata->conflictgraph != NULL )
+   {
+      assert( conshdlrdata->nsos1vars > 0 );
+      assert( conshdlrdata->varhash != NULL );
+      SCIPhashmapFree(&conshdlrdata->varhash);
+      SCIPdigraphFree(&conshdlrdata->conflictgraph);
+   }
+
+   /* free graph for storing store local conflicts */
+   if ( conshdlrdata->localconflicts != NULL )
+      SCIPdigraphFree(&conshdlrdata->localconflicts);
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------------------- constraint handler callback methods ----------------------*/
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -1197,15 +1808,46 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
 }
 
 
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolSOS1)
+{  /*lint --e{715}*/
+    SCIP_CONSHDLRDATA* conshdlrdata;
+
+    assert( scip != NULL );
+    assert( conshdlr != NULL );
+    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+    assert( conshdlrdata != NULL );
+
+    conshdlrdata->nsos1vars = 0;
+    conshdlrdata->varhash = NULL;
+
+    if ( nconss > 0 )
+    {
+       /* initialize conflict graph and hashmap for SOS1 variables */
+       SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss) );
+
+       /* add data to conflict graph nodes */
+       SCIP_CALL( setNodeDataSOS1(scip, conshdlr, conshdlrdata, nconss, conshdlrdata->nsos1vars) );
+    }
+    return SCIP_OKAY;
+}
+
+
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -1221,14 +1863,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
       /* free rows */
       if ( consdata->rowub != NULL )
-      {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowub) );
-      }
+
       if ( consdata->rowlb != NULL )
-      {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlb) );
-      }
    }
+
+   /* free conflict graph */
+   if ( nconss > 0 && conshdlrdata->nsos1vars > 0 )
+   {
+      SCIP_CALL( freeConflictgraph(conshdlrdata));
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2172,6 +2818,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS1, consCopySOS1) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS1) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS1) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS1) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOS1) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOS1) );
@@ -2455,4 +3102,125 @@ SCIP_Real* SCIPgetWeightsSOS1(
    assert( consdata != NULL );
 
    return consdata->weights;
+}
+
+
+/** gets conflict graph of SOS1 constraints (or NULL if not existent)
+ *
+ *  Note: The conflict graph is globally valid; local changes are not taken into account.
+ */
+SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
+   SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( conshdlr != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("not an SOS1 constraint handler.\n");
+      SCIPABORT();
+   }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   return conshdlrdata->conflictgraph;
+}
+
+
+/** gets number of problem variables that are involved in at least one SOS1 constraint */
+int SCIPgetNSOS1Vars(
+   SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( conshdlr != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("not an SOS1 constraint handler.\n");
+      SCIPABORT();
+   }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   return conshdlrdata->nsos1vars;
+}
+
+
+/** returns whether variable is involved in an SOS1 constraint */
+SCIP_Bool varIsSOS1(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( var != NULL );
+   assert( conshdlr != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("not an SOS1 constraint handler.\n");
+      SCIPABORT();
+   }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->varhash == NULL || ! SCIPhashmapExists(conshdlrdata->varhash, var) )
+      return FALSE;
+
+   return TRUE;
+}
+
+
+/** returns SOS1 index of variable or -1 if variable is not involved in an SOS1 constraint */
+int varGetNodeSOS1(
+   SCIP_CONSHDLR*        conshdlr,            /**< SOS1 constraint handler */
+   SCIP_VAR*             var                  /**< variable */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( conshdlr != NULL );
+   assert( var != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("not an SOS1 constraint handler.\n");
+      SCIPABORT();
+   }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( ! SCIPhashmapExists(conshdlrdata->varhash, var) )
+      return -1;
+
+   return (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+}
+
+
+/** returns variable that belongs to a given node from the conflictgraph */
+SCIP_VAR* nodeGetVarSOS1(
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   node                /**< node from the conflict graph */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   /* get node data */
+   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
+
+   if ( nodedata == NULL )
+   {
+      SCIPerrorMessage("variable is not assigned to an index.\n");
+      SCIPABORT();
+   }
+
+   return nodedata->var;
 }
