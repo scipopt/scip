@@ -85,6 +85,10 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+/* separation */
+#define DEFAULT_SEPAFROMSOS1       TRUE /**< if TRUE separate bound inequalities from initial SOS1 constraints */
+#define DEFAULT_SEPAFROMGRAPH     FALSE /**< if TRUE separate bound inequalities from the conflict graph */
+
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 /* event handler properties */
@@ -105,6 +109,7 @@ struct SCIP_ConsData
    SCIP_Real*            weights;            /**< weights determining the order (ascending), or NULL if not used */
 };
 
+
 /** node data of a given node in the conflict graph */
 struct SCIP_NodeData
 {
@@ -120,16 +125,20 @@ struct SCIP_NodeData
 };
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
+
 /** SOS1 constraint handler data */
 struct SCIP_ConshdlrData
 {
    SCIP_DIGRAPH*         conflictgraph;      /**< conflict graph */
    SCIP_DIGRAPH*         localconflicts;     /**< local conflicts */
+   SCIP_Bool             isconflocal;        /**< if TRUE then local conflicts are present and conflict graph has to be updated for each node */
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
    int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
    SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
+   SCIP_Bool             sepafromsos1;       /**< if TRUE separate bound inequalities from initial SOS1 constraints */
+   SCIP_Bool             sepafromgraph;      /**< if TRUE separate bound inequalities from the conflict graph */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
 
@@ -1067,7 +1076,7 @@ SCIP_RETCODE enforceSOS1(
 }
 
 
-/** Generate row
+/** Generate bound constraint
  *
  *  We generate the row corresponding to the following simple valid inequalities:
  *  \f[
@@ -1078,113 +1087,448 @@ SCIP_RETCODE enforceSOS1(
  *  the variables \f$x_1, \ldots, x_n\f$. If an upper bound < 0 or a lower bound > 0, the constraint itself is
  *  redundant, so the cut is not applied (lower bounds > 0 and upper bounds < 0 are usually detected in presolving or
  *  propagation). Infinite bounds and zero are skipped. Thus \f$\ell_1, \ldots, \ell_n\f$ are all negative, which
- *  results in the \f$\leq\f$ inequality.
+ *  results in the \f$\leq\f$ inequality. In case of the presence of variable upper bounds, the bound inequality can
+ *  be further strengthened.
  *
  *  Note that in fact, any mixture of nonzero finite lower and upper bounds would lead to a valid inequality as
  *  above. However, usually either the lower or upper bound is nonzero. Thus, the above inequalities are the most
  *  interesting.
  */
 static
-SCIP_RETCODE generateRowSOS1(
+SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Nodes(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             local               /**< produce local cut? */
+   SCIP_SEPA*            sepa,               /**< separator (or NULL) */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler (or NULL) */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int*                  nodes,              /**< conflict graph nodes for bound constraint */
+   int                   nnodes,             /**< number of conflict graph nodes for bound constraint */
+   SCIP_Real             rhs,                /**< right hand side of bound constraint */
+   SCIP_Bool             local,              /**< in any case produce a local cut (even if local bounds of variables are valid globally) */
+   SCIP_Bool             global,             /**< in any case produce a global cut */
+   SCIP_Bool             strengthen,         /**< whether trying to strengthen bound constraint */
+   SCIP_Bool             removable,          /**< should the inequality be removed from the LP due to aging or cleanup? */
+   const char *          nameext,            /**< part of name of bound constraints */
+   SCIP_ROW**            rowlb,              /**< output: row for lower bounds (or NULL if not needed) */
+   SCIP_ROW**            rowub               /**< output: row for upper bounds (or NULL if not needed) */
    )
 {
    char name[SCIP_MAXSTRLEN];
-   SCIP_CONSDATA* consdata;
+   SCIP_VAR* lbboundvar = NULL;
+   SCIP_VAR* ubboundvar = NULL;
+   SCIP_Bool locallbs;
+   SCIP_Bool localubs;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real val;
-   SCIP_ROW* row;
+
+   assert( scip != NULL );
+   assert( sepa != NULL || conshdlr != NULL );
+   assert( conflictgraph != NULL );
+   assert( ! local || ! global );
+   assert( nodes != NULL );
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nnodes+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nnodes+1) );
+
+   /* take care of upper bounds */
+   if ( rowub != NULL )
+   {
+      SCIP_Bool useboundvar;
+      int cnt;
+      int j;
+
+      /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
+       * case then the bound constraint can be strengthened */
+      cnt = 0;
+      localubs = local;
+      useboundvar = strengthen;
+      for (j = 0; j < nnodes; ++j)
+      {
+         SCIP_NODEDATA* nodedata;
+         SCIP_VAR* var;
+         SCIP_Real val;
+
+         nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, nodes[j]);
+         assert( nodedata != NULL );
+         var = nodedata->var;
+         assert( var != NULL );
+
+         /* if variable is not involved in a variable bound constraint */
+         if ( ! useboundvar || nodedata->ubboundvar == NULL )
+         {
+            useboundvar = FALSE;
+            if ( localubs )
+            {
+               assert( ! global );
+               val = SCIPvarGetUbLocal(var);
+            }
+            else
+            {
+               val = SCIPvarGetUbGlobal(var);
+               if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetUbLocal(var)) )
+               {
+                  localubs = TRUE;
+
+                  /* restart 'for'-loop, since we need the local bounds of the variables */
+                  j = -1;
+                  cnt = 0;
+                  continue;
+               }
+            }
+         }
+         else
+         {
+            /* in this case the cut is always valid globally */
+
+            /* if we have a bound variable for the first time */
+            if ( ubboundvar == NULL )
+            {
+               ubboundvar = nodedata->ubboundvar;
+               val = nodedata->ubboundcoef;
+            }
+            /* else if the bound variable equals the stored bound variable */
+            else if ( SCIPvarCompare(ubboundvar, nodedata->ubboundvar) == 0 )
+            {
+               val = nodedata->ubboundcoef;
+            }
+            else /* else use bounds on the variables */
+            {
+               useboundvar = FALSE;
+
+               /* restart 'for'-loop */
+               j = -1;
+               cnt = 0;
+               continue;
+            }
+         }
+
+         /* should not apply the cut if a variable is fixed to be negative -> constraint is redundant */
+         if ( SCIPisNegative(scip, val) )
+            break;
+
+         /* store variable if relevant for bound inequality */
+         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
+         {
+            vars[cnt] = var;
+            vals[cnt++] = 1.0/val;
+         }
+      }
+
+      /* if cut is meaningful */
+      if ( j == nnodes && cnt >= 2 )
+      {
+         if ( useboundvar )
+         {
+            /* add bound variable to array */
+            vars[cnt] = ubboundvar;
+            vals[cnt++] = -rhs;
+            assert(ubboundvar != NULL );
+
+            /* create upper bound inequality if at least two of the bounds are finite and nonzero */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
+            if ( conshdlr == NULL )
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowub, sepa, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            else
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
+         }
+         else
+         {
+            /* create upper bound inequality if at least two of the bounds are finite and nonzero */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
+            if ( conshdlr == NULL )
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowub, sepa, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            else
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
+         }
+      }
+   }
+
+
+   /* take care of lower bounds */
+   if ( rowlb != NULL )
+   {
+      SCIP_Bool useboundvar;
+      int cnt;
+      int j;
+
+      /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
+       * case then the bound constraint can be strengthened */
+      cnt = 0;
+      locallbs = local;
+      useboundvar = strengthen;
+      for (j = 0; j < nnodes; ++j)
+      {
+         SCIP_NODEDATA* nodedata;
+         SCIP_VAR* var;
+         SCIP_Real val;
+
+         nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, nodes[j]);
+         assert( nodedata != NULL );
+         var = nodedata->var;
+         assert( var != NULL );
+
+         /* if variable is not involved in a variable bound constraint */
+         if ( ! useboundvar || nodedata->lbboundvar == NULL )
+         {
+            useboundvar = FALSE;
+            if ( locallbs )
+            {
+               assert( ! global );
+               val = SCIPvarGetLbLocal(var);
+            }
+            else
+            {
+               val = SCIPvarGetLbGlobal(var);
+               if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetLbLocal(var)) )
+               {
+                  locallbs = TRUE;
+
+                  /* restart 'for'-loop, since we need the local bounds of the variables */
+                  j = -1;
+                  cnt = 0;
+                  continue;
+               }
+            }
+         }
+         else
+         {
+            /* in this case the cut is always valid globally */
+
+            /* if we have a bound variable for the first time */
+            if ( lbboundvar == NULL )
+            {
+               lbboundvar = nodedata->lbboundvar;
+               val = nodedata->lbboundcoef;
+            }
+            /* else if the bound variable equals the stored bound variable */
+            else if ( SCIPvarCompare(lbboundvar, nodedata->lbboundvar) == 0 )
+            {
+               val = nodedata->lbboundcoef;
+            }
+            else /* else use bounds on the variables */
+            {
+               useboundvar = FALSE;
+
+               /* restart 'for'-loop */
+               j = -1;
+               cnt = 0;
+               continue;
+            }
+         }
+
+         /* should not apply the cut if a variable is fixed to be positive -> constraint is redundant */
+         if ( SCIPisPositive(scip, val) )
+            break;
+
+         /* store variable if relevant for bound inequality */
+         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
+         {
+            vars[cnt] = var;
+            vals[cnt++] = 1.0/val;
+         }
+      }
+
+      /* if cut is meaningful */
+      if ( j == nnodes && cnt >= 2 )
+      {
+         if ( useboundvar )
+         {
+            /* add bound variable to array */
+            vars[cnt] = lbboundvar;
+            vals[cnt++] = -rhs;
+            assert(lbboundvar != NULL );
+
+            /* create upper bound inequality if at least two of the bounds are finite and nonzero */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
+            if ( conshdlr == NULL )
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowlb, sepa, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            else
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
+         }
+         else
+         {
+            /* create upper bound inequality if at least two of the bounds are finite and nonzero */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
+            if ( conshdlr == NULL )
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, rowlb, sepa, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            else
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
+         }
+      }
+   }
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
+/** Generate a bound constraint from the variables of an SOS1 constraint (see SCIPgenerateBoundInequalityFromSOS1Nodes() for more information) */
+static
+SCIP_RETCODE SCIPgenerateBoundInequalityFromSOS1Cons(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< SOS1 constraint */
+   SCIP_Bool             local,              /**< in any case produce a local cut (even if local bounds of variables are valid globally) */
+   SCIP_Bool             global,             /**< in any case produce a global cut */
+   SCIP_Bool             strengthen,         /**< whether trying to strengthen bound constraint */
+   SCIP_Bool             removable,          /**< should the inequality be removed from the LP due to aging or cleanup? */
+   SCIP_ROW**            rowlb,              /**< output: row for lower bounds (or NULL if not needed) */
+   SCIP_ROW**            rowub               /**< output: row for upper bounds (or NULL if not needed) */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int* nodes;
    int nvars;
-   int cnt;
    int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
+   /* get constraint data */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->vars != NULL );
-   assert( consdata->rowlb == NULL || consdata->rowub == NULL );
-
    nvars = consdata->nvars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-   /* take care of upper bounds */
-   if ( consdata->rowub == NULL )
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nvars) );
+
+   /* get nodes in the conflict graph */
+   for (j = 0; j < nvars; ++j)
    {
-      cnt = 0;
-      for (j = 0; j < nvars; ++j)
+      nodes[j] = varGetNodeSOS1(conshdlr, consdata->vars[j]);
+      assert( nodes[j] >= 0 );
+   }
+
+   /* generate bound constraint from conflict graph nodes */
+   SCIP_CALL( SCIPgenerateBoundInequalityFromSOS1Nodes(scip, NULL, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global, strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &nodes);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialize or separate bound inequalities from SOS1 constraints */
+static
+SCIP_RETCODE initsepaBoundInequalitiesFromSOS1Cons(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONS**           conss,              /**< SOS1 constraints */
+   int                   nconss,             /**< number of SOS1 constraints */
+   SCIP_SOL*             sol,                /**< LP solution to be separated (or NULL) */
+   SCIP_Bool             solvedinitlp,       /**< TRUE if initial LP relaxation at a node is solved */
+   int*                  ngen,               /**< pointer to store number of cuts generated (or NULL) */
+   SCIP_RESULT*          result              /**< pointer to store result of separation (or NULL) */
+   )
+{
+   SCIP_Bool cutoff = FALSE;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlrdata != NULL );
+   assert( conss != NULL );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_ROW* row;
+
+      assert( conss != NULL );
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      if ( result != NULL )
+         *result = SCIP_DIDNOTFIND;
+
+      if ( solvedinitlp )
+         SCIPdebugMessage("Separating inequalities for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      else
+         SCIPdebugMessage("Checking for initial rows for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+
+      /* possibly generate rows if not yet done */
+      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
       {
-         if ( local )
-            val = SCIPvarGetUbLocal(consdata->vars[j]);
-         else
-            val = SCIPvarGetUbGlobal(consdata->vars[j]);
+         SCIP_ROW* rowlb = NULL;
+         SCIP_ROW* rowub = NULL;
 
-         /* should not apply the cut if a variable is fixed to be negative -> constraint is redundant */
-         if ( SCIPisNegative(scip, val) )
-            break;
+         SCIP_CALL( SCIPgenerateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &rowlb, &rowub) );
 
-         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
+         /* if row(s) should be globally stored in constraint data */
+         if ( rowlb != NULL )
          {
-            vars[cnt] = consdata->vars[j];
-            vals[cnt++] = 1.0/val;
+            consdata->rowlb = rowlb;
+         }
+         if ( rowub != NULL )
+         {
+            consdata->rowub = rowub;
          }
       }
 
-      /* if cut is meaningful */
-      if ( cnt >= 2 )
+      /* put corresponding rows into LP */
+      row = consdata->rowub;
+      if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
       {
-         /* create upper bound inequality if at least two of the bounds are finite and nonzero */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), 1.0, local, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, vars, vals) );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-         consdata->rowub = row;
-      }
-   }
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && ( SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) || SCIPisEQ(scip, SCIProwGetRhs(row), 0.0) ) );
 
-   /* take care of lower bounds */
-   if ( consdata->rowlb == NULL )
-   {
-      cnt = 0;
-      for (j = 0; j < nvars; ++j)
-      {
-         if ( local )
-            val = SCIPvarGetLbLocal(consdata->vars[j]);
-         else
-            val = SCIPvarGetLbGlobal(consdata->vars[j]);
-
-         /* should not apply the cut if a variable is fixed to be positive -> constraint is redundant */
-         if ( SCIPisPositive(scip, val) )
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
+         if ( cutoff && result != NULL )
             break;
+         assert( ! cutoff );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-         if ( ! SCIPisInfinity(scip, -val) && ! SCIPisZero(scip, val) )
+         if ( solvedinitlp )
          {
-            vars[cnt] = consdata->vars[j];
-            vals[cnt++] = 1.0/val;
+            assert( ngen != NULL );
+            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+            ++(*ngen);
          }
       }
-
-      /* if cut is meaningful */
-      if ( cnt >= 2 )
+      row = consdata->rowlb;
+      if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
       {
-         /* create lower bound inequality if at least two of the bounds are finite and nonzero */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), 1.0, local, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, vars, vals) );
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && ( SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) || SCIPisEQ(scip, SCIProwGetRhs(row), 0.0) ) );
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
+         if ( cutoff && result != NULL )
+            break;
+         assert( ! cutoff );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-         consdata->rowlb = row;
+
+         if ( solvedinitlp )
+         {
+            assert( ngen != NULL );
+            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+            ++(*ngen);
+         }
       }
    }
 
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &vars);
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ngen != NULL && *ngen > 0 )
+      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -1766,7 +2110,7 @@ SCIP_RETCODE freeConflictgraph(
       SCIPdigraphFree(&conshdlrdata->conflictgraph);
    }
 
-   /* free graph for storing store local conflicts */
+   /* free graph for storing local conflicts */
    if ( conshdlrdata->localconflicts != NULL )
       SCIPdigraphFree(&conshdlrdata->localconflicts);
 
@@ -2100,52 +2444,18 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 static
 SCIP_DECL_CONSINITLP(consInitlpSOS1)
 {
-   int c;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-      SCIP_Bool infeasible;
-      SCIP_ROW* row;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
-      assert( conss != NULL );
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
-      SCIPdebugMessage("Checking for initial rows for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      /* possibly generate rows if not yet done */
-      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
-      {
-         SCIP_CALL( generateRowSOS1(scip, conshdlr, conss[c], FALSE) );
-      }
-
-      /* put corresponding rows into LP */
-      row = consdata->rowub;
-      if ( row != NULL && ! SCIProwIsInLP(row) )
-      {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-         assert( ! infeasible );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-      }
-      row = consdata->rowlb;
-      if ( row != NULL && ! SCIProwIsInLP(row) )
-      {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-         assert( ! infeasible );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-      }
-   }
+   /* checking for initial rows for SOS1 constraints */
+   if( conshdlrdata->sepafromsos1 )
+      SCIP_CALL( initsepaBoundInequalitiesFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2155,9 +2465,8 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int ngen = 0;
-   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2167,53 +2476,16 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* check each constraint */
-   for (c = 0; c < nconss && ! cutoff; ++c)
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* separate inequalities for SOS1 constraints */
+   if( conshdlrdata->sepafromsos1 )
    {
-      SCIP_CONSDATA* consdata;
-      SCIP_ROW* row;
-
-      *result = SCIP_DIDNOTFIND;
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Separating inequalities for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      /* put corresponding rows into LP if they are useful */
-
-      /* possibly generate row if not yet done */
-      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
-      {
-         SCIP_CALL( generateRowSOS1(scip, conshdlr, conss[c], FALSE) );
-      }
-
-      /* possibly add row to LP if it is useful */
-      row = consdata->rowub;
-      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
-      {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++ngen;
-      }
-      row = consdata->rowlb;
-      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
-      {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++ngen;
-      }
+      SCIP_CALL( initsepaBoundInequalitiesFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, TRUE, &ngen, result) );
    }
+
    SCIPdebugMessage("Separated %d SOS1 constraints.\n", ngen);
-   if ( cutoff )
-      *result = SCIP_CUTOFF;
-   else if ( ngen > 0 )
-      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -2223,9 +2495,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int ngen = 0;
-   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2233,55 +2504,16 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    *result = SCIP_DIDNOTRUN;
 
    /* check each constraint */
-   for (c = 0; c < nconss && ! cutoff; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-      SCIP_ROW* row;
+   if( conshdlrdata->sepafromsos1 )
+      SCIP_CALL( initsepaBoundInequalitiesFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, &ngen, result) );
 
-      *result = SCIP_DIDNOTFIND;
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Separating solution for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      /* put corresponding row into LP if it is useful */
-
-      /* possibly generate row if not yet done */
-      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
-      {
-         SCIP_CALL( generateRowSOS1(scip, conshdlr, conss[c], FALSE) );
-      }
-
-      /* possibly add row to LP if it is useful */
-      row = consdata->rowub;
-      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
-      {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++ngen;
-      }
-      row = consdata->rowlb;
-      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
-      {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-         ++ngen;
-      }
-   }
    SCIPdebugMessage("Separated %d SOS1 constraints.\n", ngen);
-   if ( cutoff )
-      *result = SCIP_CUTOFF;
-   else if ( ngen > 0 )
-      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -2804,6 +3036,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
    conshdlrdata->eventhdlr = NULL;
+   conshdlrdata->conflictgraph = NULL;
+   conshdlrdata->localconflicts = NULL;
+   conshdlrdata->isconflocal = FALSE;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSOS1, NULL) );
@@ -2837,17 +3072,25 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS1) );
 
    /* add SOS1 constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchsos",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchsos",
          "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
          &conshdlrdata->branchsos, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchnonzeros",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchnonzeros",
          "Branch on SOS constraint with most number of nonzeros?",
          &conshdlrdata->branchnonzeros, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchweight",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchweight",
          "Branch on SOS cons. with highest nonzero-variable weight for branching (needs branchnonzeros = false)?",
          &conshdlrdata->branchweight, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sepafromsos1",
+         "if TRUE separate bound inequalities from initial SOS1 constraints",
+         &conshdlrdata->sepafromsos1, TRUE, DEFAULT_SEPAFROMSOS1, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sepafromgraph",
+         "if TRUE separate bound inequalities from the conflict graph",
+         &conshdlrdata->sepafromgraph, TRUE, DEFAULT_SEPAFROMGRAPH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
