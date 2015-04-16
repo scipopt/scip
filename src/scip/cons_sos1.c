@@ -98,6 +98,7 @@ struct SCIP_ConsData
    int                   nvars;              /**< number of variables in the constraint */
    int                   maxvars;            /**< maximal number of variables (= size of storage) */
    int                   nfixednonzeros;     /**< number of variables fixed to be nonzero */
+   SCIP_Bool             local;              /**< TRUE if constraint is only valid locally */
    SCIP_VAR**            vars;               /**< variables in constraint */
    SCIP_ROW*             rowlb;              /**< row corresponding to lower bounds, or NULL if not yet created */
    SCIP_ROW*             rowub;              /**< row corresponding to upper bounds, or NULL if not yet created */
@@ -1973,6 +1974,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    consdata->rowub = NULL;
    consdata->rowlb = NULL;
    consdata->nfixednonzeros = 0;
+   consdata->local = sourcedata->local;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, consdata->nvars) );
    /* if weights were used */
    if ( sourcedata->weights != NULL )
@@ -2916,6 +2918,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    consdata->rowlb = NULL;
    consdata->nfixednonzeros = transformed ? 0 : -1;
    consdata->weights = NULL;
+   consdata->local = local;
 
    if ( nvars > 0 )
    {
