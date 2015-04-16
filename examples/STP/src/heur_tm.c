@@ -1573,6 +1573,7 @@ SCIP_RETCODE do_layer(
    SCIP_Real*    cost,
    SCIP_Real*    costrev,
    SCIP_Real     maxcost,
+   SCIP_Real     hopfactor,
    SCIP_Bool*    success
    )
 {
@@ -1770,24 +1771,15 @@ SCIP_RETCODE do_layer(
 
       for( k = 0; k < nnodes; k++ )
       {
-         graph->mark[k]   = (graph->grad[k] > 0);
-      }
+         graph->mark[k] = (graph->grad[k] > 0);
 
-      for( k = 0; k < nnodes; ++k )
-      {
          if( Is_term(graph->term[k]) )
          {
             SCIP_CALL( SCIPallocBufferArray(scip, &(pathdist[k]), nnodes) );
             SCIP_CALL( SCIPallocBufferArray(scip, &(pathedge[k]), nnodes) );
-	    if( graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_MAX_NODE_WEIGHT )
-	    {
-               if( graph->source[0] == k )
-                  graph_path_execX(scip, graph, k, cost,  pathdist[k], pathedge[k]);
-               else
-                  graph_path_execX(scip, graph, k, costrev, pathdist[k], pathedge[k]);
-	    }
          }
       }
+
 #else
       SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
       BMSclearMemoryArray(path, nnodes);
@@ -2014,7 +2006,6 @@ SCIP_RETCODE do_layer(
    }
    else
    {
-      SCIP_Real hopfactor = heurdata->hopfactor;
       double* orgcost = NULL;
       int edgecount;
       char solfound = FALSE;
@@ -2032,9 +2023,8 @@ SCIP_RETCODE do_layer(
          for( e = 0; e < nedges; e++ )
             result[e] = UNKNOWN;
 
-         if( graph->stp_type == STP_HOP_CONS && (hopfactor != heurdata->hopfactor || r == 0)  )
+         if( graph->stp_type == STP_HOP_CONS && r == 0 )
          {
-            heurdata->hopfactor = hopfactor;
             for( e = 0; e < nedges; e++ )
             {
                if( Is_term(graph->term[graph->tail[e]]) && graph->tail[e] != graph->source[0] && (SCIPisLT(scip, graph->cost[e], 1e+9 )) )
@@ -2067,6 +2057,19 @@ SCIP_RETCODE do_layer(
          }
          else if( mode == TM )
 	 {
+	    if( r == 0 )
+            {
+               for( k = 0; k < nnodes; ++k )
+               {
+                  if( Is_term(graph->term[k]) )
+                  {
+                     if( graph->source[0] == k )
+                        graph_path_execX(scip, graph, k, cost,  pathdist[k], pathedge[k]);
+                     else
+                        graph_path_execX(scip, graph, k, costrev, pathdist[k], pathedge[k]);
+                  }
+               }
+            }
 #if TMX
             SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], -1, perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
 #else
@@ -2109,21 +2112,18 @@ SCIP_RETCODE do_layer(
                (*success) = TRUE;
             }
          }
-         if( graph->stp_type == STP_HOP_CONS && (edgecount > graph->hoplimit || SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.2)) )
-         {
-            // printf("old hopfactor: %f fac: %f hoplimit: %d ", hopfactor, fabs((double) (edgecount - graph->hoplimit)), graph->hoplimit);
-            hopfactor = hopfactor * (1.0 + fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit);
-            //|| SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.05))
-            //    printf("new hopfactor: %f  ", hopfactor);
-            if( SCIPisLE(scip, hopfactor, 0.0) )
-               hopfactor = 1.0;
-            //  printf(" aft hopfactor: %f count: %d  limit: %d  \n", hopfactor, edgecount, graph->hoplimit);
-            //	  printf("new1 hopfactor: %f  ", hopfactor);
-         }
+
       }
-      //printf(" \n");
+
       if( graph->stp_type == STP_HOP_CONS )
+      {
+	 for( e = 0; e < nedges; e++ )
+	    cost[e] = orgcost[e];
+	 for( e = 0; e < nedges; e++ )
+	    costrev[e] = orgcost[flipedge(e)];
+
          SCIPfreeBufferArray(scip, &orgcost);
+      }
       //	 printf(" hopfactor: %f obj: %.12e\n", hopfactor, obj);
    }
 
@@ -2326,7 +2326,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real pobj;
    int best_start = -1;
    int nedges;
-   int edgecount;
+   int edgecount = 0;
    int nvars;
    int layer;
    int runs;
@@ -2617,33 +2617,18 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
          /* can we connect the network */
          SCIP_CALL( do_layer(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
-               cost, costrev, maxcost, &success) );
+               cost, costrev, maxcost, heurdata->hopfactor, &success) );
       }
    }
    if( success )
    {
-      edgecount = 0;
       for( v = 0; v < nvars; v++ )
       {
          nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
          if( SCIPisEQ(scip, nval[v], 1.0) )
             edgecount++;
       }
-      //  if( nvars != nedges )
-      //   printf("\n FAILS\n");
-      if( graph->stp_type == STP_HOP_CONS )
-      {
-         //printf("edgecount: %d root: %d \n ", edgecount, graph->source[0]);
-         for( v = graph->inpbeg[ graph->source[0]]; v != EAT_LAST; v = graph->ieat[v] )
-            assert( SCIPisEQ(scip, nval[v], 0.0) );
-         /*
-           if( edgecount < graph->hoplimit )
-           {
-           heurdata->hopfactor = heurdata->hopfactor * (1.0 - MIN(0.5, (double)(graph->hoplimit - edgecount) / 10.0) );
-           assert(heurdata->hopfactor > 0);
-           printf("reduced hopfactor: %f \n ", heurdata->hopfactor );
-           }*/
-      }
+
       if( validate(graph, nval) )
       {
          pobj = SCIPprobdataGetOffset(scip);
@@ -2665,6 +2650,24 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       }
    }
 
+   if( graph->stp_type == STP_HOP_CONS )
+   {
+      if( !success || SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.2) )
+      {
+         SCIP_Real hopfactor = heurdata->hopfactor;
+         // printf("old hopfactor: %f fac: %f hoplimit: %d ", hopfactor, fabs((double) (edgecount - graph->hoplimit)), graph->hoplimit);
+         if( !success )
+            hopfactor = hopfactor * (1.0 + fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit);
+         else
+            hopfactor = hopfactor / (1.0 + fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit);
+         //|| SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.05))
+         //    printf("new hopfactor: %f  ", hopfactor);
+         if( SCIPisLE(scip, hopfactor, 0.0) )
+            hopfactor = 1.0;
+         //  printf(" aft hopfactor: %f count: %d  limit: %d  \n", hopfactor, edgecount, graph->hoplimit);
+         heurdata->hopfactor = hopfactor;
+      }
+   }
    heurdata->nlpiterations = SCIPgetNLPIterations(scip);
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);

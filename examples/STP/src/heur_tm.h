@@ -62,6 +62,7 @@ extern "C" {
       SCIP_Real*    cost,
       SCIP_Real*    costrev,
       SCIP_Real     maxcost,
+      SCIP_Real     hopfactor,
       SCIP_Bool*    success
       );
 

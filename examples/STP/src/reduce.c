@@ -634,7 +634,7 @@ SCIP_RETCODE bound_reduce(
    assert(k < nheurs);
    tmheurdata = SCIPheurGetData(heurs[k]);
 
-   SCIP_CALL( do_layer(scip, tmheurdata, graph, starts, &best_start, result, runs, graph->source[0], cost, costrev, 0.0, &success) );
+   SCIP_CALL( do_layer(scip, tmheurdata, graph, starts, &best_start, result, runs, graph->source[0], cost, costrev, 0.0, 0.0, &success) );
 
    if( !success )
       goto TERMINATE;
@@ -1702,7 +1702,7 @@ SCIP_RETCODE level4(
    reductbound = MAX(g->knots / 500, minelims);
    //printf("BOUND: %d \n", reductbound);
 
-   degree_test(scip, g, fixed);
+   //degree_test(scip, g, fixed);
 
    if( bred )
    {
@@ -1770,7 +1770,7 @@ SCIP_RETCODE level4(
             sd = FALSE;
       }
 
-      degtnelims += degree_test(scip, g, fixed);
+      //degtnelims += degree_test(scip, g, fixed);
 
 #ifdef PRINT_TMP_PRESOL
       SCIPprobdataSetGraph(probdata, g);
@@ -1816,7 +1816,7 @@ SCIP_RETCODE level4(
 #endif
       }
 
-      degtnelims += degree_test(scip, g, fixed);
+      //degtnelims += degree_test(scip, g, fixed);
 
       if( (sdnelims + bd3nelims + nsvnelims + nvslnelims + degtnelims + lenelims) <= reductbound )
          rerun = FALSE;
@@ -2466,8 +2466,8 @@ SCIP_RETCODE reduce(
    if( 0 && (*graph)->stp_type != STP_UNDIRECTED )
       return SCIP_OKAY;
 #endif
-//printf("type: %d \n", (*graph)->stp_type);
-   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID  )
+   //printf("type: %d \n", (*graph)->stp_type);
+   if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type != STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID  )
       return SCIP_OKAY;
 
    /* initialise shortest path algorithms */
@@ -2477,7 +2477,7 @@ SCIP_RETCODE reduce(
       level = level * (-1);
 
    //if( level == 0 )
-      level0(scip, (*graph));
+   level0(scip, (*graph));
    if( level == 1 )
       *offset = level1(scip, (*graph));
 #if 0

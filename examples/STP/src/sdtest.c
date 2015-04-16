@@ -642,6 +642,7 @@ SCIP_RETCODE sd_reduction(
 	    SCIPindexListNodeFree(scip, &((g->ancestors)[e]));
 	    SCIPindexListNodeFree(scip, &((g->ancestors)[flipedge(e)]));
 	    assert(g->ancestors[e] == NULL);
+	   /*     printf("delete edge: %d->%d (%f)\n", g->tail[e], g->head[e], g->cost[e] );*/
             graph_edge_del(g, e);
             (*elimins)++;
          }

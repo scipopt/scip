@@ -930,6 +930,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_Real pobj;
    SCIP_Real avg;
    SCIP_Real maxcost = 0.0;
+   SCIP_Real hopfactor = 0.1;
    SCIP_Bool success;
    SCIP_Bool fixed;
    SCIP_Bool random = TRUE;
@@ -1268,10 +1269,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                results[e] = UNKNOWN;
             /* run TM heuristic */
             SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns,
-                  solgraph->source[0], cost, costrev, maxcost, &success) );
+                  solgraph->source[0], cost, costrev, maxcost, hopfactor, &success) );
 
             if( !success )
             {
+	          if( solgraph->stp_type == STP_HOP_CONS )
+		  {
+		     hopfactor = hopfactor * 2;
+		  }
                   graph_path_exit(solgraph);
                   SCIPfreeBufferArrayNull(scip, &costrev);
                   SCIPfreeBufferArrayNull(scip, &cost);
@@ -1281,6 +1286,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   graph_free(scip, solgraph, TRUE);
                   continue;
 	    }
+	    if( solgraph->stp_type == STP_HOP_CONS )
+	       hopfactor = hopfactor / 2;
 	    assert(graph_valid(solgraph));
 	    assert(graph_sol_valid(solgraph, results));
 
