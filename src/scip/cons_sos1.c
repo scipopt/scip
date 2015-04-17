@@ -1057,104 +1057,6 @@ SCIP_RETCODE SCIPgetSOS1Implications(
 }
 
 
-/* adds further edges to the conflict graph based on the information of an implication graph */
-static
-SCIP_RETCODE SCIPupdateConflictGraphSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
-   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@j is successor of @p i if and only if \f$ x_i\not = 0 \Leftarrow x_j\not = 0\f$) */
-   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
-   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to a given node i in the implication graph is implied to be nonzero */
-   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflictgraph (only lower half filled) */
-   int                   givennode,          /**< node of the conflict graph */
-   int                   nonznode,           /**< node of the conflict graph that is implied to be nonzero if given node is nonzero */
-   int*                  naddconss           /**< number of added SOS1 constraints */
-   )
-{
-   SCIP_SUCCDATA** succdatas;
-   int succnode;
-   int* succ;
-   int nsucc;
-   int s;
-
-   assert( nonznode >= 0 && nonznode < SCIPdigraphGetNNodes(conflictgraph) );
-
-   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, nonznode);
-   succ = SCIPdigraphGetSuccessors(conflictgraph, nonznode);
-
-   /* update conflict graph */
-   for (s = 0; s < nsucc; ++s)
-   {
-      succnode = succ[s];
-
-      if ( givennode != succnode )
-      {
-         if ( ! isConnectedSOS1(adjacencymatrix, NULL, givennode, succnode) )
-         {
-            char namesos[SCIP_MAXSTRLEN];
-            SCIP_CONS* soscons = NULL;
-            SCIP_VAR* var1;
-            SCIP_VAR* var2;
-
-            /* add arcs to the conflictgraph */
-            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, givennode, succnode, NULL) );
-            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, succnode, givennode, NULL) );
-
-            /* update adjacencymatrix */
-            if ( givennode > succnode )
-               adjacencymatrix[givennode][succnode] = 1;
-            else
-               adjacencymatrix[succnode][givennode] = 1;
-
-            var1 = nodeGetVarSOS1(conflictgraph, givennode);
-            var2 = nodeGetVarSOS1(conflictgraph, succnode);
-
-            /* create SOS1 constraint */
-            (void) SCIPsnprintf(namesos, SCIP_MAXSTRLEN, "presolved_sos1_%s_%s", SCIPvarGetName(var1), SCIPvarGetName(var2) );
-            SCIP_CALL( SCIPcreateConsSOS1(scip, &soscons, namesos, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
-                  TRUE, FALSE, FALSE, FALSE) );
-
-            /* add variables to SOS1 constraint */
-            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var1, 1.0) );
-            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var2, 2.0) );
-
-            /* add constraint */
-            SCIP_CALL( SCIPaddCons(scip, soscons) );
-
-            /* release constraint */
-            SCIP_CALL( SCIPreleaseCons(scip, &soscons) );
-
-            ++(*naddconss);
-         }
-      }
-   }
-
-   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, nodeGetVarSOS1(conflictgraph, nonznode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
-   succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
-   nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
-   succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
-
-   /* go further in implication graph */
-   for (s = 0; s < nsucc; ++s)
-   {
-      SCIP_SUCCDATA* data;
-      succnode = succ[s];
-      data = succdatas[s];
-
-      /* if node is SOS1 and not already known to be an implication node */
-      if ( varGetNodeSOS1(conshdlr, totalvars[succnode]) >= 0 && ! implnodes[succnode] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
-      {
-         assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, nodeGetVarSOS1(conflictgraph, succnode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
-         implnodes[succnode] = TRUE; /* in order to avoid cycling */
-         SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, givennode, succnode, naddconss) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** perform one presolving round for a single SOS1 constraint
  *
  *  We perform the following presolving steps.
@@ -1632,6 +1534,105 @@ SCIP_RETCODE presolRoundConssSOS1(
    SCIPfreeBufferArrayNull(scip, &consweights);
    SCIPfreeBufferArrayNull(scip, &consvars);
    SCIPdigraphFree(&vertexcliquegraph);
+
+   return SCIP_OKAY;
+}
+
+
+/* adds further edges to the conflict graph based on the information of an implication graph */
+static
+SCIP_RETCODE SCIPupdateConflictGraphSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@j is successor of @p i if and only if \f$ x_i\not = 0 \Leftarrow x_j\not = 0\f$) */
+   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
+   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to a given node i in the implication graph is implied to be nonzero */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflictgraph (only lower half filled) */
+   int                   givennode,          /**< node of the conflict graph */
+   int                   nonznode,           /**< node of the conflict graph that is implied to be nonzero if given node is nonzero */
+   int*                  naddconss           /**< number of added SOS1 constraints */
+   )
+{
+   SCIP_SUCCDATA** succdatas;
+   int succnode;
+   int* succ;
+   int nsucc;
+   int s;
+
+   assert( nonznode >= 0 && nonznode < SCIPdigraphGetNNodes(conflictgraph) );
+
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, nonznode);
+   succ = SCIPdigraphGetSuccessors(conflictgraph, nonznode);
+
+   /* update conflict graph */
+   for (s = 0; s < nsucc; ++s)
+   {
+      succnode = succ[s];
+
+      if ( givennode != succnode )
+      {
+         if ( ! isConnectedSOS1(adjacencymatrix, NULL, givennode, succnode) )
+         {
+            char namesos[SCIP_MAXSTRLEN];
+            SCIP_CONS* soscons = NULL;
+            SCIP_VAR* var1;
+            SCIP_VAR* var2;
+
+            /* add arcs to the conflictgraph */
+            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, givennode, succnode, NULL) );
+            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, succnode, givennode, NULL) );
+
+            /* update adjacencymatrix */
+            if ( givennode > succnode )
+               adjacencymatrix[givennode][succnode] = 1;
+            else
+               adjacencymatrix[succnode][givennode] = 1;
+
+            var1 = nodeGetVarSOS1(conflictgraph, givennode);
+            var2 = nodeGetVarSOS1(conflictgraph, succnode);
+
+            /* create SOS1 constraint */
+            (void) SCIPsnprintf(namesos, SCIP_MAXSTRLEN, "presolved_sos1_%s_%s", SCIPvarGetName(var1), SCIPvarGetName(var2) );
+            SCIP_CALL( SCIPcreateConsSOS1(scip, &soscons, namesos, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
+                  TRUE, FALSE, FALSE, FALSE) );
+
+            /* add variables to SOS1 constraint */
+            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var1, 1.0) );
+            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var2, 2.0) );
+
+            /* add constraint */
+            SCIP_CALL( SCIPaddCons(scip, soscons) );
+
+            /* release constraint */
+            SCIP_CALL( SCIPreleaseCons(scip, &soscons) );
+
+            ++(*naddconss);
+         }
+      }
+   }
+
+   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, nodeGetVarSOS1(conflictgraph, nonznode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+   succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
+   nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
+   succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
+
+   /* go further in implication graph */
+   for (s = 0; s < nsucc; ++s)
+   {
+      SCIP_SUCCDATA* data;
+      succnode = succ[s];
+      data = succdatas[s];
+
+      /* if node is SOS1 and not already known to be an implication node */
+      if ( varGetNodeSOS1(conshdlr, totalvars[succnode]) >= 0 && ! implnodes[succnode] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
+      {
+         assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, nodeGetVarSOS1(conflictgraph, succnode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+         implnodes[succnode] = TRUE; /* in order to avoid cycling */
+         SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, givennode, succnode, naddconss) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2734,6 +2735,143 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
    SCIPfreeBufferArrayNull(scip, &coveredvars);
    SCIPfreeBufferArrayNull(scip, &varindincons);
    SCIPfreeBufferArrayNull(scip, &implnodes);
+
+   return SCIP_OKAY;
+}
+
+
+/** perform one presolving round for SOS1 variables
+ *
+ *  We perform the following presolving steps.
+ *
+ *  - Tighten the bounds of the variables
+ *  - Update conflict graph based on bound implications of the variables
+ */
+static
+SCIP_RETCODE presolRoundVarsSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of conflict graph */
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   int*                  nchgbds,            /**< pointer to store number of changed bounds */
+   int*                  naddconss,          /**< pointer to store number of addded constraints */
+   SCIP_RESULT*          result              /**< result */
+   )
+{
+   SCIP_DIGRAPH* implgraph;
+   SCIP_HASHMAP* implhash;
+   SCIP_Bool* implnodes;
+
+   SCIP_Bool cutoff = FALSE;
+   SCIP_Bool updateconfl;
+
+   SCIP_VAR** totalvars;
+   SCIP_VAR** probvars;
+   int ntotalvars = 0;
+   int nprobvars;
+   int i;
+   int j;
+
+   /* determine totalvars (union of SOS1 and problem variables) */
+   probvars = SCIPgetVars(scip);
+   nprobvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &totalvars, nsos1vars + nprobvars) );
+   for (i = 0; i < nsos1vars; ++i)
+   {
+      SCIP_VAR* var;
+      var = nodeGetVarSOS1(conflictgraph, i);
+
+      /* insert node number to hash map */
+      assert( ! SCIPhashmapExists(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
+      assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      totalvars[ntotalvars++] = var;
+   }
+   for (i = 0; i < nprobvars; ++i)
+   {
+      SCIP_VAR* var;
+      var = probvars[i];
+
+      /* insert node number to hash map if not existent */
+      if ( ! SCIPhashmapExists(implhash, var) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
+         assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         totalvars[ntotalvars++] = var;
+      }
+   }
+
+   /* create implication graph */
+   SCIP_CALL( SCIPdigraphCreate(&implgraph, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
+
+   /* try to tighten the lower and upper bounds of the variables */
+   updateconfl = FALSE;
+   for (j = 0; (j < conshdlrdata->maxtightenbds || conshdlrdata->maxtightenbds == -1 ) && ! cutoff; ++j)
+   {
+      SCIP_Bool implupdate;
+      int nchgbdssave;
+
+      nchgbdssave = *nchgbds;
+
+      assert( ntotalvars > 0 );
+      SCIP_CALL( tightenVarsBoundsSOS1(scip, conshdlr, conflictgraph, implgraph, implhash, adjacencymatrix, totalvars, ntotalvars, nsos1vars, nchgbds, &implupdate, &cutoff) );
+      if ( *nchgbds > nchgbdssave )
+      {
+         *result = SCIP_SUCCESS;
+         if ( implupdate )
+            updateconfl = TRUE;
+      }
+      else if ( implupdate )
+         updateconfl = TRUE;
+      else
+         break;
+   }
+
+   /* if an infeasibility has been detected */
+   if ( cutoff )
+   {
+      SCIPdebugMessage("cutoff \n");
+      *result = SCIP_CUTOFF;
+   }
+
+   /* try to update the conflict graph based on the information of the implication graph */
+   if ( updateconfl && conshdlrdata->updateconflpresol && ! cutoff )
+   {
+      int naddconsssave;
+
+      naddconsssave = *naddconss;
+      for (i = 0; i < nsos1vars; ++i)
+      {
+         for (j = 0; j < nsos1vars; ++j)
+            implnodes[j] = FALSE;
+         SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, i, i, naddconss) );
+      }
+
+      if ( *naddconss > naddconsssave )
+         *result = SCIP_SUCCESS;
+   }
+
+   /* free memory */;
+   for (j = ntotalvars-1; j >= 0; --j)
+   {
+      SCIP_SUCCDATA** succdatas;
+      int nsucc;
+      int s;
+
+      succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, j);
+      nsucc = SCIPdigraphGetNSuccessors(implgraph, j);
+
+      for (s = nsucc-1; s >= 0; --s)
+         SCIPfreeMemory(scip, &succdatas[s]);
+   }
+   SCIPfreeBufferArrayNull(scip, &implnodes);
+   SCIPdigraphFree(&implgraph);
+   SCIPfreeBufferArrayNull(scip, &totalvars);
+   SCIPhashmapFree(&implhash);
 
    return SCIP_OKAY;
 }
@@ -4781,28 +4919,10 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
-   SCIP_DIGRAPH* conflictgraph;
-   SCIP_DIGRAPH* implgraph;
-   SCIP_HASHMAP* implhash;
-   SCIP_Bool* implnodes;
-   SCIP_Bool** adjacencymatrix = NULL;
-   SCIP_VAR** totalvars;
-   int ntotalvars = 0;
-   int nsos1vars;
-
    int oldnfixedvars;
    int oldndelconss;
    int oldnupgdconss;
    int nremovedvars;
-
-   SCIP_Bool updateconfl;
-   SCIP_Bool cutoff = FALSE;
-
-   int* succ;
-   int nsucc;
-   int i;
-   int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -4824,6 +4944,13 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    /* only run if success if possible */
    if( nconss > 0 && ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0 ) )
    {
+      SCIP_Bool** adjacencymatrix = NULL;
+      SCIP_DIGRAPH* conflictgraph;
+      SCIP_EVENTHDLR* eventhdlr;
+      int nsos1vars;
+      int i;
+      int j;
+
       *result = SCIP_DIDNOTFIND;
 
       /* get constraint handler data */
@@ -4834,12 +4961,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       /* initialize conflict graph */
       SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss));
 
-      /* get conflict graph */
+      /* get conflict graph and number of SOS1 variables */
       conflictgraph = conshdlrdata->conflictgraph;
-
-      /* get number of SOS1 variables */
       nsos1vars = conshdlrdata->nsos1vars;
-
       if ( nsos1vars < 2 )
          return SCIP_OKAY;
 
@@ -4856,6 +4980,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       }
       for (i = 0; i < nsos1vars; ++i)
       {
+         int* succ;
+         int nsucc;
+
          succ = SCIPdigraphGetSuccessors(conflictgraph, i);
          nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
 
@@ -4869,121 +4996,16 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       /* perform one presolving round for SOS1 constraints */
       SCIP_CALL( presolRoundConssSOS1(scip, eventhdlr, conshdlr, conshdlrdata, conflictgraph, adjacencymatrix, conss, nconss, nsos1vars, naddconss, ndelconss, nupgdconss, nfixedvars, &nremovedvars, result) );
 
-      /* if a cutoff has been detected */
-      if ( *result == SCIP_CUTOFF )
+      /* perform one presolving round for SOS1 variables */
+      if ( conshdlrdata->maxtightenbds != 0 && *result != SCIP_CUTOFF )
       {
-         /* free memory */
-         for (j = nsos1vars-1; j >= 0; --j)
-            SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
-         SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
-         SCIP_CALL( freeConflictgraph(conshdlrdata));
-
-         return SCIP_OKAY;
-      }
-
-      /* execute some pre-handling for bound tightening */
-      if ( conshdlrdata->maxtightenbds != 0)
-      {
-         SCIP_VAR** probvars;
-         int nprobvars;
-
-         assert( ntotalvars == 0 );
-
-         /* determine totalvars (union of SOS1 and problem variables) */
-         probvars = SCIPgetVars(scip);
-         nprobvars = SCIPgetNVars(scip);
-         SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &totalvars, nsos1vars + nprobvars) );
-         for (i = 0; i < nsos1vars; ++i)
-         {
-            SCIP_VAR* var;
-            var = nodeGetVarSOS1(conflictgraph, i);
-
-            /* insert node number to hash map */
-            assert( ! SCIPhashmapExists(implhash, var) );
-            SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-            assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
-            totalvars[ntotalvars++] = var;
-         }
-         for (i = 0; i < nprobvars; ++i)
-         {
-            SCIP_VAR* var;
-            var = probvars[i];
-
-            /* insert node number to hash map if not existent */
-            if ( ! SCIPhashmapExists(implhash, var) )
-            {
-               SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-               assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
-               totalvars[ntotalvars++] = var;
-            }
-         }
-
-         /* create implication graph */
-         SCIP_CALL( SCIPdigraphCreate(&implgraph, ntotalvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
-      }
-
-      /* try to tighten the upper and lower bounds of the variables */
-      updateconfl = FALSE;
-      for (j = 0; (j < conshdlrdata->maxtightenbds || conshdlrdata->maxtightenbds == -1 ) && ! cutoff; ++j)
-      {
-         SCIP_Bool implupdate;
-         int nchgbdssave;
-
-         nchgbdssave = *nchgbds;
-
-         assert( ntotalvars > 0 );
-         SCIP_CALL( tightenVarsBoundsSOS1(scip, conshdlr, conflictgraph, implgraph, implhash, adjacencymatrix, totalvars, ntotalvars, nsos1vars, nchgbds, &implupdate, &cutoff) );
-         if ( implupdate )
-            updateconfl = TRUE;
-         else if ( ! (*nchgbds > nchgbdssave ) )
-            break;
-      }
-
-      if ( conshdlrdata->maxtightenbds != 0 )
-      {
-         /* try to update conflict graph based on the information of the implication graph */
-         if ( updateconfl && conshdlrdata->updateconflpresol )
-         {
-            for (i = 0; i < nsos1vars; ++i)
-            {
-               for (j = 0; j < nsos1vars; ++j)
-                  implnodes[j] = FALSE;
-               SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, i, i, naddconss) );
-            }
-         }
-
-         /* free memory needed for bound tightening */;
-         SCIPhashmapFree(&implhash);
-         SCIPfreeBufferArrayNull(scip, &totalvars);
-
-         for (j = 0; j < ntotalvars; ++j)
-         {
-            SCIP_SUCCDATA** succdatas;
-            int s;
-            succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, j);
-            nsucc = SCIPdigraphGetNSuccessors(implgraph, j);
-            succ = SCIPdigraphGetSuccessors(implgraph, j);
-
-            for (s = 0; s < nsucc; ++s)
-               SCIPfreeMemory(scip, &succdatas[s]);
-         }
-         SCIPfreeBufferArrayNull(scip, &implnodes);
-         SCIPdigraphFree(&implgraph);
+         SCIP_CALL( presolRoundVarsSOS1(scip, conshdlr, conshdlrdata, conflictgraph, adjacencymatrix, nsos1vars, nchgbds, naddconss, result) );
       }
 
       /* free adjacency matrix */
       for (j = nsos1vars-1; j >= 0; --j)
          SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
       SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
-
-      /* if an infeasibility has been detected by bound tightening */
-      if( cutoff )
-      {
-         SCIPdebugMessage("cutoff \n");
-         *result = SCIP_CUTOFF;
-      }
 
       /* free memory allocated in function initConflictgraph() */
       SCIP_CALL( freeConflictgraph(conshdlrdata));
