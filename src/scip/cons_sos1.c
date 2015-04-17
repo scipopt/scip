@@ -628,216 +628,6 @@ SCIP_RETCODE deleteVarSOS1(
 
 /* ----------------------------- presolving --------------------------------------*/
 
-/** perform one presolving round
- *
- *  We perform the following presolving steps.
- *
- *  - If the bounds of some variable force it to be nonzero, we can
- *    fix all other variables to zero and remove the SOS1 constraints
- *    that contain it.
- *  - If a variable is fixed to zero, we can remove the variable.
- *  - If a variable appears twice, it can be fixed to 0.
- *  - We substitute appregated variables.
- */
-static
-SCIP_RETCODE presolRoundSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
-   SCIP_Bool*            success,            /**< whether we performed a successful reduction */
-   int*                  ndelconss,          /**< number of deleted constraints */
-   int*                  nupgdconss,         /**< number of upgraded constraints */
-   int*                  nfixedvars,         /**< number of fixed variables */
-   int*                  nremovedvars        /**< number of variables removed */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_Bool allvarsbinary;
-   SCIP_Bool infeasible;
-   SCIP_Bool fixed;
-   int nfixednonzeros;
-   int lastFixedNonzero;
-   int j;
-
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
-   assert( eventhdlr != NULL );
-   assert( cutoff != NULL );
-   assert( success != NULL );
-   assert( ndelconss != NULL );
-   assert( nfixedvars != NULL );
-   assert( nremovedvars != NULL );
-
-   *cutoff = FALSE;
-   *success = FALSE;
-
-   SCIPdebugMessage("Presolving SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
-
-   j = 0;
-   nfixednonzeros = 0;
-   lastFixedNonzero = -1;
-   allvarsbinary = TRUE;
-   vars = consdata->vars;
-
-   /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
-   while ( j < consdata->nvars )
-   {
-      int l;
-      SCIP_VAR* var;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real scalar;
-      SCIP_Real constant;
-
-      scalar = 1.0;
-      constant = 0.0;
-
-      /* check for aggregation: if the constant is zero the variable is zero iff the aggregated
-       * variable is 0 */
-      var = vars[j];
-      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
-
-      /* if constant is zero and we get a different variable, substitute variable */
-      if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
-      {
-         SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
-
-         /* change the rounding locks */
-         SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[j]) );
-         SCIP_CALL( lockVariableSOS1(scip, cons, var) );
-
-         vars[j] = var;
-      }
-
-      /* check whether the variable appears again later */
-      for (l = j+1; l < consdata->nvars; ++l)
-      {
-         /* if variable appeared before, we can fix it to 0 and remove it */
-         if ( vars[j] == vars[l] )
-         {
-            SCIPdebugMessage("variable <%s> appears twice in constraint, fixing it to 0.\n", SCIPvarGetName(vars[j]));
-            SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
-
-            if ( infeasible )
-            {
-               *cutoff = TRUE;
-               return SCIP_OKAY;
-            }
-            if ( fixed )
-               ++(*nfixedvars);
-         }
-      }
-
-      /* get bounds */
-      lb = SCIPvarGetLbLocal(vars[j]);
-      ub = SCIPvarGetUbLocal(vars[j]);
-
-      /* if the variable if fixed to nonzero */
-      if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
-      {
-         ++nfixednonzeros;
-         lastFixedNonzero = j;
-      }
-
-      /* if the variable is fixed to 0 */
-      if ( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
-      {
-         SCIPdebugMessage("deleting variable <%s> fixed to 0.\n", SCIPvarGetName(vars[j]));
-         SCIP_CALL( deleteVarSOS1(scip, cons, consdata, eventhdlr, j) );
-         ++(*nremovedvars);
-      }
-      else
-      {
-         /* check whether all variables are binary */
-         if ( ! SCIPvarIsBinary(vars[j]) )
-            allvarsbinary = FALSE;
-
-         ++j;
-      }
-   }
-
-   /* if the number of variables is less than 2 */
-   if ( consdata->nvars < 2 )
-   {
-      SCIPdebugMessage("Deleting SOS1 constraint <%s> with < 2 variables.\n", SCIPconsGetName(cons));
-
-      /* delete constraint */
-      assert( ! SCIPconsIsModifiable(cons) );
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      ++(*ndelconss);
-      *success = TRUE;
-      return SCIP_OKAY;
-   }
-
-   /* if more than one variable are fixed to be nonzero, we are infeasible */
-   if ( nfixednonzeros > 1 )
-   {
-      SCIPdebugMessage("The problem is infeasible: more than one variable has bounds that keep it from being 0.\n");
-      assert( lastFixedNonzero >= 0 );
-      *cutoff = TRUE;
-      return SCIP_OKAY;
-   }
-
-   /* if there is exactly one fixed nonzero variable */
-   if ( nfixednonzeros == 1 )
-   {
-      assert( lastFixedNonzero >= 0 );
-
-      /* fix all other variables to zero */
-      for (j = 0; j < consdata->nvars; ++j)
-      {
-         if ( j != lastFixedNonzero )
-         {
-            SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
-            assert( ! infeasible );
-            if ( fixed )
-               ++(*nfixedvars);
-         }
-      }
-
-      SCIPdebugMessage("Deleting redundant SOS1 constraint <%s> with one variable.\n", SCIPconsGetName(cons));
-
-      /* delete original constraint */
-      assert( ! SCIPconsIsModifiable(cons) );
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      ++(*ndelconss);
-      *success = TRUE;
-   }
-   /* note: there is no need to update consdata->nfixednonzeros, since the constraint is deleted as soon nfixednonzeros > 0. */
-   else
-   {
-      /* if all variables are binary create a set packing constraint */
-      if ( allvarsbinary )
-      {
-         SCIP_CONS* setpackcons;
-
-         /* create, add, and release the logicor constraint */
-         SCIP_CALL( SCIPcreateConsSetpack(scip, &setpackcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
-               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         SCIP_CALL( SCIPaddCons(scip, setpackcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
-
-         SCIPdebugMessage("Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
-
-         /* remove the SOS1 constraint globally */
-         assert( ! SCIPconsIsModifiable(cons) );
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-         ++(*nupgdconss);
-         *success = TRUE;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** extend a given clique in the conflict graph
  *
  *  Implementation of the Bron-Kerbosch Algorithm from the paper:
@@ -1361,6 +1151,487 @@ SCIP_RETCODE SCIPupdateConflictGraphSOS1(
          SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, givennode, succnode, naddconss) );
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** perform one presolving round for a single SOS1 constraint
+ *
+ *  We perform the following presolving steps.
+ *
+ *  - If the bounds of some variable force it to be nonzero, we can
+ *    fix all other variables to zero and remove the SOS1 constraints
+ *    that contain it.
+ *  - If a variable is fixed to zero, we can remove the variable.
+ *  - If a variable appears twice, it can be fixed to 0.
+ *  - We substitute appregated variables.
+ */
+static
+SCIP_RETCODE presolRoundConsSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
+   SCIP_Bool*            success,            /**< whether we performed a successful reduction */
+   int*                  ndelconss,          /**< number of deleted constraints */
+   int*                  nupgdconss,         /**< number of upgraded constraints */
+   int*                  nfixedvars,         /**< number of fixed variables */
+   int*                  nremovedvars        /**< number of variables removed */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Bool allvarsbinary;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+   int nfixednonzeros;
+   int lastFixedNonzero;
+   int j;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( consdata != NULL );
+   assert( eventhdlr != NULL );
+   assert( cutoff != NULL );
+   assert( success != NULL );
+   assert( ndelconss != NULL );
+   assert( nfixedvars != NULL );
+   assert( nremovedvars != NULL );
+
+   *cutoff = FALSE;
+   *success = FALSE;
+
+   SCIPdebugMessage("Presolving SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
+
+   j = 0;
+   nfixednonzeros = 0;
+   lastFixedNonzero = -1;
+   allvarsbinary = TRUE;
+   vars = consdata->vars;
+
+   /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
+   while ( j < consdata->nvars )
+   {
+      int l;
+      SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real scalar;
+      SCIP_Real constant;
+
+      scalar = 1.0;
+      constant = 0.0;
+
+      /* check for aggregation: if the constant is zero the variable is zero iff the aggregated
+       * variable is 0 */
+      var = vars[j];
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
+
+      /* if constant is zero and we get a different variable, substitute variable */
+      if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
+      {
+         SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+
+         /* change the rounding locks */
+         SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[j]) );
+         SCIP_CALL( lockVariableSOS1(scip, cons, var) );
+
+         vars[j] = var;
+      }
+
+      /* check whether the variable appears again later */
+      for (l = j+1; l < consdata->nvars; ++l)
+      {
+         /* if variable appeared before, we can fix it to 0 and remove it */
+         if ( vars[j] == vars[l] )
+         {
+            SCIPdebugMessage("variable <%s> appears twice in constraint, fixing it to 0.\n", SCIPvarGetName(vars[j]));
+            SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
+
+            if ( infeasible )
+            {
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+            if ( fixed )
+               ++(*nfixedvars);
+         }
+      }
+
+      /* get bounds */
+      lb = SCIPvarGetLbLocal(vars[j]);
+      ub = SCIPvarGetUbLocal(vars[j]);
+
+      /* if the variable if fixed to nonzero */
+      if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
+      {
+         ++nfixednonzeros;
+         lastFixedNonzero = j;
+      }
+
+      /* if the variable is fixed to 0 */
+      if ( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
+      {
+         SCIPdebugMessage("deleting variable <%s> fixed to 0.\n", SCIPvarGetName(vars[j]));
+         SCIP_CALL( deleteVarSOS1(scip, cons, consdata, eventhdlr, j) );
+         ++(*nremovedvars);
+      }
+      else
+      {
+         /* check whether all variables are binary */
+         if ( ! SCIPvarIsBinary(vars[j]) )
+            allvarsbinary = FALSE;
+
+         ++j;
+      }
+   }
+
+   /* if the number of variables is less than 2 */
+   if ( consdata->nvars < 2 )
+   {
+      SCIPdebugMessage("Deleting SOS1 constraint <%s> with < 2 variables.\n", SCIPconsGetName(cons));
+
+      /* delete constraint */
+      assert( ! SCIPconsIsModifiable(cons) );
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* if more than one variable are fixed to be nonzero, we are infeasible */
+   if ( nfixednonzeros > 1 )
+   {
+      SCIPdebugMessage("The problem is infeasible: more than one variable has bounds that keep it from being 0.\n");
+      assert( lastFixedNonzero >= 0 );
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* if there is exactly one fixed nonzero variable */
+   if ( nfixednonzeros == 1 )
+   {
+      assert( lastFixedNonzero >= 0 );
+
+      /* fix all other variables to zero */
+      for (j = 0; j < consdata->nvars; ++j)
+      {
+         if ( j != lastFixedNonzero )
+         {
+            SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
+            assert( ! infeasible );
+            if ( fixed )
+               ++(*nfixedvars);
+         }
+      }
+
+      SCIPdebugMessage("Deleting redundant SOS1 constraint <%s> with one variable.\n", SCIPconsGetName(cons));
+
+      /* delete original constraint */
+      assert( ! SCIPconsIsModifiable(cons) );
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+      *success = TRUE;
+   }
+   /* note: there is no need to update consdata->nfixednonzeros, since the constraint is deleted as soon nfixednonzeros > 0. */
+   else
+   {
+      /* if all variables are binary create a set packing constraint */
+      if ( allvarsbinary )
+      {
+         SCIP_CONS* setpackcons;
+
+         /* create, add, and release the logicor constraint */
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &setpackcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPaddCons(scip, setpackcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
+
+         SCIPdebugMessage("Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
+
+         /* remove the SOS1 constraint globally */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*nupgdconss);
+         *success = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+/** perform one presolving round for all SOS1 constraints
+ *
+ *  We perform the following presolving steps.
+ *
+ *  - If the bounds of some variable force it to be nonzero, we can
+ *    fix all other variables to zero and remove the SOS1 constraints
+ *    that contain it.
+ *  - If a variable is fixed to zero, we can remove the variable.
+ *  - If a variable appears twice, it can be fixed to 0.
+ *  - We substitute appregated variables.
+ *  - Search for larger SOS1 constraints in the conflict graph
+ *  - Remove redundant SOS1 constraints
+ */
+static
+SCIP_RETCODE presolRoundConssSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph */
+   SCIP_CONS**           conss,              /**< SOS1 constraints */
+   int                   nconss,             /**< number of SOS1 constraints */
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   int*                  naddconss,          /**< number of added constraints */
+   int*                  ndelconss,          /**< number of deleted constraints */
+   int*                  nupgdconss,         /**< number of upgraded constraints */
+   int*                  nfixedvars,         /**< number of fixed variables */
+   int*                  nremovedvars,       /**< number of variables removed */
+   SCIP_RESULT*          result              /**< result */
+   )
+{
+   SCIP_DIGRAPH* vertexcliquegraph;
+   SCIP_VAR** consvars;
+   SCIP_Real* consweights;
+   int** cliques = NULL;
+   int ncliques = 0;
+   int* cliquesizes = NULL;
+   int* newclique = NULL;
+   int* indconss = NULL;
+   int* lengthconss = NULL;
+   int* comsucc = NULL;
+   int csize;
+   int iter;
+   int c;
+   int i;
+
+   /* create digraph whose nodes represent variables and cliques in the conflict graph */
+   csize = MAX(1, conshdlrdata->maxextensions) * nconss;
+   SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, nsos1vars + csize) );
+
+   /* allocate buffer arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consweights, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, csize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newclique, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indconss, csize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lengthconss, csize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comsucc, MAX(nsos1vars, csize)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliques, csize) );
+
+   /* get constraint indices and sort them in descending order of their lengths */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      indconss[c] = c;
+      lengthconss[c] = consdata->nvars;
+   }
+   SCIPsortDownIntInt(lengthconss, indconss, nconss);
+
+   /* check each constraint */
+   for (iter = 0; iter < nconss; ++iter)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONS* cons;
+      SCIP_Bool success;
+      SCIP_Bool cutoff;
+      int savendelconss;
+
+      SCIP_VAR** vars;
+      int nvars;
+
+      c = indconss[iter];
+
+      assert( conss != NULL );
+      assert( conss[c] != NULL );
+      cons = conss[c];
+      consdata = SCIPconsGetData(cons);
+
+      assert( consdata != NULL );
+      assert( consdata->nvars >= 0 );
+      assert( consdata->nvars <= consdata->maxvars );
+      assert( ! SCIPconsIsModifiable(cons) );
+
+      savendelconss = *ndelconss;
+
+      /* perform one presolving round for SOS1 constraint */
+      SCIP_CALL( presolRoundConsSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, nremovedvars) );
+
+      if ( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         break;
+      }
+
+      if ( *ndelconss > savendelconss )
+      {
+         *result = SCIP_SUCCESS;
+         continue;
+      }
+
+      if ( success )
+         *result = SCIP_SUCCESS;
+
+      /* get number of variables of constraint */
+      nvars = consdata->nvars;
+
+      /* get variables of constraint */
+      vars = consdata->vars;
+
+      if ( nvars > 1 && conshdlrdata->maxextensions != 0 && ( nconss <= conshdlrdata->maxconsdelayext || conshdlrdata->maxconsdelayext == -1 ) )
+      {
+         SCIP_Bool extended = FALSE;
+         int cliquesize = 0;
+         int ncomsucc = 0;
+         int varprobind;
+         int k;
+         int j;
+
+         /* get clique and size of clique */
+         for (j = 0; j < nvars; ++j)
+         {
+            varprobind = varGetNodeSOS1(conshdlr, vars[j]);
+
+            if ( varprobind >= 0 )
+               newclique[cliquesize++] = varprobind;
+         }
+
+         if ( cliquesize > 1 )
+         {
+            cliquesizes[ncliques] = cliquesize;
+
+            /* sort clique vertices */
+            SCIPsortInt(newclique, cliquesizes[ncliques]);
+
+            /* check if clique is contained in an already known clique */
+            if ( ncliques > 0 )
+            {
+               int* succ;
+               int nsucc;
+               int v;
+
+               varprobind = newclique[0];
+               ncomsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
+               succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
+
+               for (j = 0; j < ncomsucc; ++j)
+               {
+                  /* successors should have been sorted in a former step of the algorithm */
+                  assert( j == 0 || succ[j] > succ[j-1] );
+                  comsucc[j] = succ[j];
+               }
+
+               for (v = 1; v < cliquesize; ++v)
+               {
+                  int ncomsuccsave = 0;
+                  k = 0;
+
+                  varprobind = newclique[v];
+                  nsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
+                  succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
+
+                  /* determine successors that are in comsucc */
+                  for (j = 0; j < ncomsucc; ++j)
+                  {
+                     for (i = k; i < nsucc; ++i)
+                     {
+                        assert( i == 0 || succ[i] > succ[i-1] );
+
+                        if ( succ[i] > comsucc[j] )
+                        {
+                           k = i;
+                           break;
+                        }
+                        else if ( succ[i] == comsucc[j] )
+                        {
+                           comsucc[ncomsuccsave++] = succ[i];
+                           k = i + 1;
+                           break;
+                        }
+                     }
+                  }
+                  ncomsucc = ncomsuccsave;
+               }
+            }
+
+            /* if constraint is redundand then delete it */
+            if ( ncomsucc > 0 )
+            {
+               assert( ! SCIPconsIsModifiable(cons) );
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               ++(*ndelconss);
+               *result = SCIP_SUCCESS;
+               continue;
+            }
+
+            if ( conshdlrdata->maxextensions != 0 )
+            {
+               int maxextensions;
+               ncomsucc = 0;
+
+               /* determine the common successors of the vertices from the considered clique */
+               SCIP_CALL( CliqueGetCommonSuccessorsSOS1(conshdlr, conflictgraph, newclique, vars, nvars, comsucc, &ncomsucc) );
+
+               /* find extensions for the clique */
+               maxextensions = conshdlrdata->maxextensions;
+
+               SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, consvars, consweights,
+                     cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions, naddconss, &extended) );
+            }
+
+            /* if an extension was found for the current clique then free the old SOS1 constraint */
+            if ( extended )
+            {
+               assert( ! SCIPconsIsModifiable(cons) );
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               ++(*ndelconss);
+               *result = SCIP_SUCCESS;
+            }
+            else /* if we keep the constraint */
+            {
+               int cliqueind;
+
+               cliqueind = nsos1vars + ncliques; /* index of clique in vertex-clique graph */
+
+               /* add directed edges to the vertex-clique graph */
+               SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );
+               for (j = 0; j < cliquesize; ++j)
+               {
+                  cliques[ncliques][j] = newclique[j];
+                  SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[ncliques][j], cliqueind, NULL) );
+               }
+
+               /* update number of maximal cliques */
+               ++ncliques;
+            }
+         }
+      }
+   }
+
+   /* free buffer arrays */
+   for (c = ncliques-1; c >= 0; --c)
+      SCIPfreeBufferArrayNull(scip, &cliques[c]);
+   SCIPfreeBufferArrayNull(scip, &cliques);
+   SCIPfreeBufferArrayNull(scip, &comsucc);
+   SCIPfreeBufferArrayNull(scip, &lengthconss);
+   SCIPfreeBufferArrayNull(scip, &indconss);
+   SCIPfreeBufferArrayNull(scip, &newclique);
+   SCIPfreeBufferArrayNull(scip, &cliquesizes);
+   SCIPfreeBufferArrayNull(scip, &consweights);
+   SCIPfreeBufferArrayNull(scip, &consvars);
+   SCIPdigraphFree(&vertexcliquegraph);
 
    return SCIP_OKAY;
 }
@@ -4512,18 +4783,13 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_DIGRAPH* conflictgraph;
-   SCIP_DIGRAPH* vertexcliquegraph;
    SCIP_DIGRAPH* implgraph;
    SCIP_HASHMAP* implhash;
    SCIP_Bool* implnodes;
    SCIP_Bool** adjacencymatrix = NULL;
-   SCIP_VAR** consvars;
-   SCIP_Real* consweights;
    SCIP_VAR** totalvars;
-   SCIP_VAR** vars;
    int ntotalvars = 0;
    int nsos1vars;
-   int nvars;
 
    int oldnfixedvars;
    int oldndelconss;
@@ -4533,19 +4799,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    SCIP_Bool updateconfl;
    SCIP_Bool cutoff = FALSE;
 
-   int** cliques = NULL;
-   int ncliques = 0;
-   int* cliquesizes = NULL;
-   int* newclique = NULL;
-   int* indconss = NULL;
-   int* lengthconss = NULL;
    int* succ;
    int nsucc;
-   int* comsucc = NULL;
-   int iter;
    int i;
    int j;
-   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -4567,8 +4824,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    /* only run if success if possible */
    if( nconss > 0 && ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0 ) )
    {
-      int csize;
-
       *result = SCIP_DIDNOTFIND;
 
       /* get constraint handler data */
@@ -4588,22 +4843,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       if ( nsos1vars < 2 )
          return SCIP_OKAY;
 
-      /* create digraph whose nodes represent variables or cliques in the conflict graph */
-      csize = MAX(1, conshdlrdata->maxextensions) * nconss;
-      SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, nsos1vars + csize) );
-
       /* allocate buffer arrays */
       SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
       for (i = 0; i < nsos1vars; ++i)
          SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consweights, nsos1vars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &cliques, csize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, csize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &newclique, nsos1vars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &indconss, csize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lengthconss, csize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &comsucc, MAX(nsos1vars, csize)) );
 
       /* create adjacency matrix */
       for (i = 0; i < nsos1vars; ++i)
@@ -4623,224 +4866,20 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          }
       }
 
-      /* get constraint indices and sort them in descending order of their lengths */
-      for (c = 0; c < nconss; ++c)
+      /* perform one presolving round for SOS1 constraints */
+      SCIP_CALL( presolRoundConssSOS1(scip, eventhdlr, conshdlr, conshdlrdata, conflictgraph, adjacencymatrix, conss, nconss, nsos1vars, naddconss, ndelconss, nupgdconss, nfixedvars, &nremovedvars, result) );
+
+      /* if a cutoff has been detected */
+      if ( *result == SCIP_CUTOFF )
       {
-         SCIP_CONSDATA* consdata;
+         /* free memory */
+         for (j = nsos1vars-1; j >= 0; --j)
+            SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
+         SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
+         SCIP_CALL( freeConflictgraph(conshdlrdata));
 
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != NULL );
-
-         indconss[c] = c;
-         lengthconss[c] = consdata->nvars;
+         return SCIP_OKAY;
       }
-      SCIPsortDownIntInt(lengthconss, indconss, nconss);
-
-      /* check each constraint */
-      for (iter = 0; iter < nconss; ++iter)
-      {
-         SCIP_CONSDATA* consdata;
-         SCIP_CONS* cons;
-         SCIP_Bool success;
-         int savendelconss;
-
-         c = indconss[iter];
-
-         assert( conss != NULL );
-         assert( conss[c] != NULL );
-         cons = conss[c];
-         consdata = SCIPconsGetData(cons);
-
-         assert( consdata != NULL );
-         assert( consdata->nvars >= 0 );
-         assert( consdata->nvars <= consdata->maxvars );
-         assert( ! SCIPconsIsModifiable(cons) );
-
-         savendelconss = *ndelconss;
-
-         /* perform one presolving round */
-         SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, &nremovedvars) );
-
-         if ( cutoff )
-         {
-            /* free buffer arrays */
-            SCIPfreeBufferArrayNull(scip, &comsucc);
-            SCIPfreeBufferArrayNull(scip, &lengthconss);
-            SCIPfreeBufferArrayNull(scip, &indconss);
-            SCIPfreeBufferArrayNull(scip, &newclique);
-            SCIPfreeBufferArrayNull(scip, &cliquesizes);
-            for (j = ncliques-1; j >= 0; --j)
-               SCIPfreeBufferArrayNull(scip, &cliques[j]);
-            SCIPfreeBufferArrayNull(scip, &cliques);
-            SCIPfreeBufferArrayNull(scip, &consweights);
-            SCIPfreeBufferArrayNull(scip, &consvars);
-            SCIPdigraphFree(&vertexcliquegraph);
-            for (j = nsos1vars-1; j >= 0; --j)
-               SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
-            SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
-
-            /* free memory allocated in function initConflictgraph() */
-            SCIP_CALL( freeConflictgraph(conshdlrdata));
-
-            *result = SCIP_CUTOFF;
-
-            return SCIP_OKAY;
-         }
-
-         if ( *ndelconss > savendelconss )
-         {
-            *result = SCIP_SUCCESS;
-            continue;
-         }
-
-         if ( success )
-            *result = SCIP_SUCCESS;
-
-         /* get number of variables of constraint */
-         nvars = consdata->nvars;
-
-         /* get variables of constraint */
-         vars = consdata->vars;
-
-         if ( nvars > 1 && conshdlrdata->maxextensions != 0 && ( nconss <= conshdlrdata->maxconsdelayext || conshdlrdata->maxconsdelayext == -1 ) )
-         {
-            SCIP_Bool extended = FALSE;
-            int cliquesize = 0;
-            int ncomsucc = 0;
-            int varprobind;
-            int k;
-
-            /* get clique and size of clique */
-            for (j = 0; j < nvars; ++j)
-            {
-               varprobind = varGetNodeSOS1(conshdlr, vars[j]);
-
-               if ( varprobind >= 0 )
-                  newclique[cliquesize++] = varprobind;
-            }
-
-            if ( cliquesize > 1 )
-            {
-               cliquesizes[ncliques] = cliquesize;
-
-               /* sort clique vertices */
-               SCIPsortInt(newclique, cliquesizes[ncliques]);
-
-               /* check if clique is contained in an already known clique */
-               if ( ncliques > 0 )
-               {
-                  int v;
-
-                  varprobind = newclique[0];
-                  ncomsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
-                  succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
-
-                  for (j = 0; j < ncomsucc; ++j)
-                  {
-                     /* successors should have been sorted in a former step of the algorithm */
-                     assert( j == 0 || succ[j] > succ[j-1] );
-                     comsucc[j] = succ[j];
-                  }
-
-                  for (v = 1; v < cliquesize; ++v)
-                  {
-                     int ncomsuccsave = 0;
-                     k = 0;
-
-                     varprobind = newclique[v];
-                     nsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
-                     succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
-
-                     /* determine successors that are in comsucc */
-                     for (j = 0; j < ncomsucc; ++j)
-                     {
-                        for (i = k; i < nsucc; ++i)
-                        {
-                           assert( i == 0 || succ[i] > succ[i-1] );
-
-                           if ( succ[i] > comsucc[j] )
-                           {
-                              k = i;
-                              break;
-                           }
-                           else if ( succ[i] == comsucc[j] )
-                           {
-                              comsucc[ncomsuccsave++] = succ[i];
-                              k = i + 1;
-                              break;
-                           }
-                        }
-                     }
-                     ncomsucc = ncomsuccsave;
-                  }
-               }
-
-               /* if constraint is redundand then delete it */
-               if ( ncomsucc > 0 )
-               {
-                  assert( ! SCIPconsIsModifiable(cons) );
-                  SCIP_CALL( SCIPdelCons(scip, cons) );
-                  ++(*ndelconss);
-                  *result = SCIP_SUCCESS;
-                  continue;
-               }
-
-               if ( conshdlrdata->maxextensions != 0 )
-               {
-                  int maxextensions;
-                  ncomsucc = 0;
-
-                  /* determine the common successors of the vertices from the considered clique */
-                  SCIP_CALL( CliqueGetCommonSuccessorsSOS1(conshdlr, conflictgraph, newclique, vars, nvars, comsucc, &ncomsucc) );
-
-                  /* find extensions for the clique */
-                  maxextensions = conshdlrdata->maxextensions;
-
-                  SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, consvars, consweights,
-                        cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions, naddconss, &extended) );
-               }
-
-               /* if an extension was found for the current clique then free the old SOS1 constraint */
-               if ( extended )
-               {
-                  assert( ! SCIPconsIsModifiable(cons) );
-                  SCIP_CALL( SCIPdelCons(scip, cons) );
-                  ++(*ndelconss);
-                  *result = SCIP_SUCCESS;
-               }
-               else /* if we keep the constraint */
-               {
-                  int cliqueind;
-
-                  cliqueind = nsos1vars + ncliques; /* index of clique in vertex-clique graph */
-
-                  /* add directed edges to the vertex-clique graph */
-                  SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );
-                  for (j = 0; j < cliquesize; ++j)
-                  {
-                     cliques[ncliques][j] = newclique[j];
-                     SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[ncliques][j], cliqueind, NULL) );
-                  }
-
-                  /* update number of maximal cliques */
-                  ++ncliques;
-               }
-            }
-         }
-      }
-
-      /* free buffer arrays */
-      SCIPfreeBufferArrayNull(scip, &comsucc);
-      SCIPfreeBufferArrayNull(scip, &lengthconss);
-      SCIPfreeBufferArrayNull(scip, &indconss);
-      SCIPfreeBufferArrayNull(scip, &newclique);
-      SCIPfreeBufferArrayNull(scip, &cliquesizes);
-      for (c = ncliques-1; c >= 0; --c)
-         SCIPfreeBufferArrayNull(scip, &cliques[c]);
-      SCIPfreeBufferArrayNull(scip, &cliques);
-      SCIPfreeBufferArrayNull(scip, &consweights);
-      SCIPfreeBufferArrayNull(scip, &consvars);
-      SCIPdigraphFree(&vertexcliquegraph);
 
       /* execute some pre-handling for bound tightening */
       if ( conshdlrdata->maxtightenbds != 0)
