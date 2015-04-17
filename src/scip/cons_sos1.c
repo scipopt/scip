@@ -2513,10 +2513,6 @@ SCIP_RETCODE freeConflictgraph(
       SCIPdigraphFree(&conshdlrdata->conflictgraph);
    }
 
-   /* free graph for storing local conflicts */
-   if ( conshdlrdata->localconflicts != NULL )
-      SCIPdigraphFree(&conshdlrdata->localconflicts);
-
    return SCIP_OKAY;
 }
 
@@ -2600,6 +2596,28 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   /* free graph for storing local conflicts */
+   if ( conshdlrdata->localconflicts != NULL )
+      SCIPdigraphFree(&conshdlrdata->localconflicts);
+   assert( conshdlrdata->localconflicts == NULL );
+
+   /* free tclique graph and tclique data */
+   if( conshdlrdata->tcliquegraph != NULL )
+   {
+      assert( conshdlrdata->tcliquedata != NULL );
+      SCIPfreeMemory(scip, &conshdlrdata->tcliquedata);
+      tcliqueFree(&conshdlrdata->tcliquegraph);
+   }
+   assert(conshdlrdata->tcliquegraph == NULL);
+   assert(conshdlrdata->tcliquedata == NULL);
+
+   /* free conflict graph */
+   if ( nconss > 0 && conshdlrdata->nsos1vars > 0 )
+   {
+      SCIP_CALL( freeConflictgraph(conshdlrdata) );
+   }
+   assert( conshdlrdata->conflictgraph == NULL );
+
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
@@ -2618,12 +2636,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
       if ( consdata->rowlb != NULL )
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlb) );
-   }
-
-   /* free conflict graph */
-   if ( nconss > 0 && conshdlrdata->nsos1vars > 0 )
-   {
-      SCIP_CALL( freeConflictgraph(conshdlrdata));
    }
 
    return SCIP_OKAY;
