@@ -319,18 +319,19 @@ SCIP_RETCODE probdataFree(
 
       SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizeimplpcons));
 #endif
-#if PRIZEB
+
       if( (*probdata)->stp_type != STP_ROOTED_PRIZE_COLLECTING )
       {
+#if PRIZEB
          e = (((*probdata)->realnterms - 1) * (*probdata)->realnterms) / 2;
          /* release degree constraints */
          for( t = 0; t < e; ++t)
             SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizesymcons[t])) );
 
          SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizesymcons));
-      }
 #endif
-      SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizecons)) );
+         SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizecons)) );
+      }
    }
 
 
@@ -1472,15 +1473,15 @@ SCIP_DECL_PROBTRANS(probtransStp)
 	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->realnterms) );
             SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->prizeimplpcons, (*targetdata)->prizeimplpcons) );
 #endif
-#if PRIZEB
 	    if( sourcedata->stp_type != STP_ROOTED_PRIZE_COLLECTING )
 	    {
+#if PRIZEB
                i = ((sourcedata->realnterms - 1) * (sourcedata->realnterms)) / 2;
                SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, i) );
                SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
-	    }
 #endif
-            SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
+               SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
+	    }
 
 	 }
 

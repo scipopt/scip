@@ -2046,6 +2046,20 @@ SCIP_RETCODE do_layer(
          else if( graph->stp_type == STP_DEG_CONS )
          {
 #if TMX
+	    if( r == 0 )
+            {
+               for( k = 0; k < nnodes; ++k )
+               {
+                  if( Is_term(graph->term[k]) )
+                  {
+                     if( graph->source[0] == k )
+                        graph_path_execX(scip, graph, k, cost,  pathdist[k], pathedge[k]);
+                     else
+                        graph_path_execX(scip, graph, k, costrev, pathdist[k], pathedge[k]);
+                  }
+               }
+            }
+
             SCIP_CALL( do_tm_degcons(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, &(heurdata->randseed), connected, &solfound) );
             /*
               if( solfound )
