@@ -1004,10 +1004,6 @@ SCIP_RETCODE extensionOperatorSOS1(
 
          consdata = SCIPconsGetData(newcons);
 
-         /* handle variables of new constraint */
-         for (j = 0; j < consdata->nvars; ++j)
-            SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, consdata->vars[j], TRUE) );
-
          /* add directed edges to the vertex-clique graph */
          for (j = 0; j < consdata->nvars; ++j)
             SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[*ncliques][j], cliqueind, NULL) );
