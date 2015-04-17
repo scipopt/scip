@@ -86,6 +86,10 @@
 #define CONSHDLR_DELAYPRESOL       TRUE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+/* propagation */
+#define DEFAULT_CONFLICTPROP      TRUE /**< whether to use conflict graph propagation */
+#define DEFAULT_SOSCONSPROP      FALSE /**< whether to use SOS1 constraint propagation */
+
 /* separation */
 #define DEFAULT_SEPAFROMSOS1      FALSE /**< if TRUE separate bound inequalities from initial SOS1 constraints */
 #define DEFAULT_SEPAFROMGRAPH      TRUE /**< if TRUE separate bound inequalities from the conflict graph */
@@ -155,6 +159,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             isconflocal;        /**< if TRUE then local conflicts are present and conflict graph has to be updated for each node */
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
    int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
+   /* propagation */
+   SCIP_Bool             conflictprop;       /**< whether to use conflict graph propagation */
+   SCIP_Bool             sosconsprop;        /**< whether to use SOS1 constraint propagation */
    /* branching */
    SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
@@ -3102,8 +3109,9 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
 static
 SCIP_DECL_CONSPROP(consPropSOS1)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_DIGRAPH* conflictgraph;
    int ngen = 0;
-   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -3114,27 +3122,109 @@ SCIP_DECL_CONSPROP(consPropSOS1)
 
    assert( SCIPisTransformed(scip) );
 
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* get conflict graph */
+   conflictgraph = conshdlrdata->conflictgraph;
+
+   /* if conflict graph propagation shall be used */
+   if ( conshdlrdata->conflictprop && conflictgraph != NULL )
    {
-      SCIP_CONS* cons;
-      SCIP_CONSDATA* consdata;
-      SCIP_Bool cutoff;
+      int nsos1vars;
+      int j;
 
-      assert( conss[c] != NULL );
-      cons = conss[c];
-      consdata = SCIPconsGetData(cons);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Propagating SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
+      /* get number of SOS1 variables */
+      nsos1vars = conshdlrdata->nsos1vars;
 
-      *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &ngen) );
-      if ( cutoff )
+      /* check each SOS1 variable */
+      for (j = 0; j < nsos1vars; ++j)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
+         SCIP_VAR* var;
+
+         var = nodeGetVarSOS1(conflictgraph, j);
+         SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
+
+         /* if zero is outside the domain of variable */
+         if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_VAR* succvar;
+            SCIP_Real lb;
+            SCIP_Real ub;
+            int* succ;
+            int nsucc;
+            int s;
+
+            /* fix all neighbors in the conflict graph to zero */
+            succ = SCIPdigraphGetSuccessors(conflictgraph, j);
+            nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
+            for (s = 0; s < nsucc; ++s)
+            {
+               succvar = nodeGetVarSOS1(conflictgraph, succ[s]);
+               lb = SCIPvarGetLbLocal(succvar);
+               ub = SCIPvarGetUbLocal(succvar);
+
+               if ( ! SCIPisFeasZero(scip, lb) || ! SCIPisFeasZero(scip, ub) )
+               {
+                  /* if variable cannot be nonzero */
+                  if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
+                  {
+                     *result = SCIP_CUTOFF;
+                     return SCIP_OKAY;
+                  }
+
+                  /* directly fix variable if it is not multi-aggregated */
+                  if ( SCIPvarGetStatus(succvar) != SCIP_VARSTATUS_MULTAGGR )
+                  {
+                     SCIP_Bool infeasible;
+                     SCIP_Bool tightened;
+
+                     SCIP_CALL( SCIPtightenVarLb(scip, succvar, 0.0, FALSE, &infeasible, &tightened) );
+                     assert( ! infeasible );
+                     if ( tightened )
+                        ++ngen;
+
+                     SCIP_CALL( SCIPtightenVarUb(scip, succvar, 0.0, FALSE, &infeasible, &tightened) );
+                     assert( ! infeasible );
+                     if ( tightened )
+                        ++ngen;
+                  }
+               }
+            }
+         }
       }
    }
+
+   /* if SOS1 constraint propagation shall be used */
+   if ( conshdlrdata->sosconsprop || conflictgraph == NULL )
+   {
+      int c;
+
+      /* check each constraint */
+      for (c = 0; c < nconss; ++c)
+      {
+         SCIP_CONS* cons;
+         SCIP_CONSDATA* consdata;
+         SCIP_Bool cutoff;
+
+         *result = SCIP_DIDNOTFIND;
+         assert( conss[c] != NULL );
+         cons = conss[c];
+         consdata = SCIPconsGetData(cons);
+         assert( consdata != NULL );
+         SCIPdebugMessage("Propagating SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
+
+         *result = SCIP_DIDNOTFIND;
+         SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &ngen) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+      }
+   }
+
    SCIPdebugMessage("Propagated %d domains.\n", ngen);
    if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
@@ -3551,6 +3641,15 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS1) );
 
    /* add SOS1 constraint handler parameters */
+
+   /* propagation parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/conflictprop",
+         "whether to use conflict graph propagation",
+         &conshdlrdata->conflictprop, TRUE, DEFAULT_CONFLICTPROP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sosconsprop",
+         "whether to use SOS1 constraint propagation",
+         &conshdlrdata->sosconsprop, TRUE, DEFAULT_SOSCONSPROP, NULL, NULL) );
 
    /* branching parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchsos",
