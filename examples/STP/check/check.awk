@@ -188,6 +188,7 @@ BEGIN {
    valgrinderror = 0;
    valgrindleaks = 0;
    bestsolfeas = 1;
+   rootcutrounds = -1;
 }
 
 /@03/ { starttime = $2; }
@@ -241,7 +242,11 @@ BEGIN {
 
 # check for primalbound before statitic printing
 /^Primal Bound       :/{
-   pb = $4
+   pb = $4;
+}
+
+/^### root cutrounds/{
+   rootcutrounds = $4;
 }
 
 #
@@ -549,9 +554,9 @@ BEGIN {
       tablehead3 = hyphenstr;
 
       # append rest of header
-      tablehead1 = tablehead1"+------+------- Original ------+---------- Presolved ----------+----------------+----------------+------+---------+--------+-------+-------+";
-      tablehead2 = tablehead2"| Type | Nodes | Edges | Terms | Nodes | Edges | Terms |  Time |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time | TTime |";
-      tablehead3 = tablehead3"+------+-------+-------+-------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------+";
+      tablehead1 = tablehead1"+------+------- Original ------+---------- Presolved ----------+----------------+----------------+------+---------+--------+--------+-------+-------+";
+      tablehead2 = tablehead2"| Type | Nodes | Edges | Terms | Nodes | Edges | Terms |  Time |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  | Rounds |  Nodes |  Time | TTime |";
+      tablehead3 = tablehead3"+------+-------+-------+-------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+--------+-------+-------+";
 
       if( printsoltimes == 1 ) 
       {
@@ -943,9 +948,14 @@ BEGIN {
             printf("\\\\\n") > TEXFILE;
          }
 
+	 if( rootcutrounds == -1 )
+	 {
+	    rootcutrounds = 0;
+	 }
+
          # note: probtype has length 5, but field width is 6
-         printf("%-*s  %-5s %7d %7d %7d %7d %7d %7d %7.1f %16.9g %16.9g %6s %9d %8d %7.1f %7.1f ",
-                namelength, shortprob, probtype, orignodes, origedges, origterms, prenodes, preedges, preterms, pretime, db, pb, gapstr, simpiters, bbnodes, soltime, tottime);
+         printf("%-*s  %-5s %7d %7d %7d %7d %7d %7d %7.1f %16.9g %16.9g %6s %9d %8d %8d %7.1f %7.1f ",
+                namelength, shortprob, probtype, orignodes, origedges, origterms, prenodes, preedges, preterms, pretime, db, pb, gapstr, simpiters, rootcutrounds, bbnodes, soltime, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
 
