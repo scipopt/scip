@@ -192,6 +192,14 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
    int                   node                /**< node of the conflict graph */
    );
 
+/** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
+SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   );
+
 #ifdef __cplusplus
 }
 #endif

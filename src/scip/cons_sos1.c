@@ -86,6 +86,12 @@
 #define CONSHDLR_DELAYPRESOL       TRUE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+/* presolving */
+#define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
+#define DEFAULT_MAXCONSDELAYEXT      -1 /**< delay clique extension if number of SOS1 constraints is larger than predefined value (-1: no limit) */
+#define DEFAULT_MAXTIGHTENBDS        -1 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
+#define DEFAULT_UPDATECONFLPRESOL FALSE /**< if TRUE then update conflict graph during presolving procedure */
+
 /* propagation */
 #define DEFAULT_CONFLICTPROP      TRUE /**< whether to use conflict graph propagation */
 #define DEFAULT_SOSCONSPROP      FALSE /**< whether to use SOS1 constraint propagation */
@@ -135,6 +141,15 @@ struct SCIP_NodeData
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
 
+/** successor data of a given nodes successor in the implication graph */
+struct SCIP_SuccData
+{
+   SCIP_Real             lbimpl;             /**< lower bound implication */
+   SCIP_Real             ubimpl;             /**< upper bound implication */
+};
+typedef struct SCIP_SuccData SCIP_SUCCDATA;
+
+
 /** tclique data for bound cut generation */
 struct TCLIQUE_Data
 {
@@ -159,6 +174,12 @@ struct SCIP_ConshdlrData
    SCIP_Bool             isconflocal;        /**< if TRUE then local conflicts are present and conflict graph has to be updated for each node */
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
    int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
+   /* presolving */
+   int                   cntextsos1;         /**< counts number of extended SOS1 constraints */
+   int                   maxextensions;      /**< maximal number of extensions that will be computed for each SOS1 constraint */
+   int                   maxconsdelayext;    /**< delay clique extension if number of sos1 constraints is larger than predefined value (-1: no limit) */
+   int                   maxtightenbds;      /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
+   SCIP_Bool             updateconflpresol;  /**< if TRUE then update conflict graph during presolving procedure */
    /* propagation */
    SCIP_Bool             conflictprop;       /**< whether to use conflict graph propagation */
    SCIP_Bool             sosconsprop;        /**< whether to use SOS1 constraint propagation */
@@ -179,6 +200,66 @@ struct SCIP_ConshdlrData
    /* event handler */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
+
+
+/** returns whether two vertices are adjacent (connected) */
+static
+SCIP_Bool isConnectedSOS1(
+   SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph (lower half) (or NULL if an adjacencymatrix is not at hand) */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph (or NULL if an adjacencymatrix is at hand) */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2             /**< second vertex */
+   )
+{
+   assert( adjacencymatrix != NULL || conflictgraph != NULL );
+
+   /* we do not allow self-loops */
+   if ( vertex1 == vertex2 )
+      return FALSE;
+
+   /* for debugging */
+   if ( adjacencymatrix == NULL )
+   {
+      int succvertex;
+      int* succ;
+      int nsucc1;
+      int nsucc2;
+      int j;
+
+      nsucc1 = SCIPdigraphGetNSuccessors(conflictgraph, vertex1);
+      nsucc2 = SCIPdigraphGetNSuccessors(conflictgraph, vertex2);
+
+      if ( nsucc1 < 1 || nsucc2 < 1 )
+         return FALSE;
+
+      if ( nsucc1 > nsucc2 )
+      {
+         SCIPswapInts(&vertex1, &vertex2);
+         SCIPswapInts(&nsucc1, &nsucc2);
+      }
+
+      succ = SCIPdigraphGetSuccessors(conflictgraph, vertex1);
+      SCIPsortInt(succ, nsucc1);
+
+      for (j = 0; j < nsucc1; ++j)
+      {
+         succvertex = succ[j];
+         if ( succvertex == vertex2 )
+            return TRUE;
+         else if ( succvertex > vertex2 )
+            return FALSE;
+      }
+   }
+   else
+   {
+      if ( vertex1 < vertex2 )
+         return adjacencymatrix[vertex2][vertex1];
+      else
+         return adjacencymatrix[vertex1][vertex2];
+   }
+
+   return FALSE;
+}
 
 
 /** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
@@ -545,6 +626,8 @@ SCIP_RETCODE deleteVarSOS1(
 }
 
 
+/* ----------------------------- presolving --------------------------------------*/
+
 /** perform one presolving round
  *
  *  We perform the following presolving steps.
@@ -754,6 +837,1642 @@ SCIP_RETCODE presolRoundSOS1(
    return SCIP_OKAY;
 }
 
+
+/** extend a given clique in the conflict graph
+ *
+ *  Implementation of the Bron-Kerbosch Algorithm from the paper:
+ *  Algorithm 457: Finding all Cliques of an Undirected Graph, Bron & Kerbosch, Commun. ACM, 1973
+ */
+static
+SCIP_RETCODE extensionOperatorSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflictgraph (only lower half filled) */
+   SCIP_DIGRAPH*         vertexcliquegraph,  /**< graph that contains the information which cliques contain a given vertex
+                                              *   vertices of variables = 0, ..., nsos1vars-1; vertices of cliques = nsos1vars, ..., nsos1vars+ncliques-1*/
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   SCIP_CONS*            cons,               /**< constraint to be extended */
+   SCIP_VAR**            vars,               /**< variables of extended clique */
+   SCIP_Real*            weights,            /**< weights of extended clique */
+   int**                 cliques,            /**< all cliques found so far */
+   int*                  ncliques,           /**< number of clique found so far */
+   int*                  cliquesizes,        /**< number of variables of current clique */
+   int*                  newclique,          /**< clique we want to extended*/
+   int*                  workingset,         /**< set of vertices that already served as extension and set of candidates that probably will lead to an extension */
+   int                   nworkingset,        /**< length of array workingset */
+   int                   nexts,              /**< number of vertices that already served as extension */
+   int*                  maxextensions,      /**< maximal number of extensions */
+   int*                  naddconss,          /**< number of added constraints */
+   SCIP_Bool*            success             /**< pointer to store if at least one new clique was found */
+   )
+{
+   int* workingsetnew;
+   int nextsnew;
+   int nworkingsetnew;
+   int mincands;
+   int btriter = 0; /* backtrack iterator */
+   int selvertex;
+   int selpos = -1;
+   int fixvertex = -1;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( conshdlrdata != NULL );
+   assert( adjacencymatrix != NULL );
+   assert( vertexcliquegraph != NULL );
+   assert( cons != NULL );
+   assert( cliques != NULL );
+   assert( cliquesizes != NULL );
+   assert( newclique != NULL );
+   assert( workingset != NULL );
+   assert( maxextensions != NULL );
+   assert( naddconss != NULL );
+   assert( success != NULL );
+
+   *success = FALSE;
+
+   mincands = nworkingset;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &workingsetnew, nworkingset) );
+
+#ifdef SCIP_DEBUG
+   for (i = 0; i < nexts; ++i)
+   {
+      int vertex = workingset[i];
+      for (j = nexts; j < nworkingset; ++j)
+      {
+         assert( isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) );
+      }
+   }
+#endif
+
+   /* determine candidate with minimum number of disconnections */
+   for (i = nexts; i < nworkingset && mincands != 0; ++i)
+   {
+      int pos = -1;
+      int vertex = workingset[i];
+      int cnt = 0;
+
+      /* count disconnections */
+      for (j = nexts; j < nworkingset && cnt < mincands; ++j)
+      {
+         if ( vertex != workingset[j] && ! isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) )
+         {
+            cnt++;
+            pos = j;
+         }
+      }
+
+      /* check whether a new minimum was found */
+      if ( cnt < mincands )
+      {
+         fixvertex = vertex;
+         mincands = cnt;
+         if ( i < nexts )
+         {
+            assert( pos >= 0 );
+            selpos = pos;
+         }
+         else
+         {
+            selpos = i;
+            btriter = 1;
+         }
+      }
+   }
+
+   /* If fixed point is initially chosen from candidates then number of disconnections will be preincreased by one. */
+
+   /* Backtrackcycle */
+   for (btriter = mincands + btriter; btriter >= 1; --btriter)
+   {
+      assert( selpos >= 0);
+      assert( fixvertex >= 0);
+
+      /* interchange */
+      selvertex = workingset[selpos];
+      workingset[selpos] = workingset[nexts];
+      workingset[nexts] = selvertex;
+
+      /* create new workingset */
+      nextsnew = 0;
+      for (j = 0 ; j < nexts; ++j)
+      {
+         if ( isConnectedSOS1(adjacencymatrix, NULL, selvertex, workingset[j]) )
+            workingsetnew[nextsnew++] = workingset[j];
+      }
+      nworkingsetnew = nextsnew;
+      for (j = nexts + 1; j < nworkingset; ++j)
+      {
+         if ( isConnectedSOS1(adjacencymatrix, NULL, selvertex, workingset[j]) )
+            workingsetnew[nworkingsetnew++] = workingset[j];
+      }
+
+      newclique[cliquesizes[*ncliques]++] = selvertex;
+
+      /* if we found a new clique */
+      if ( nworkingsetnew == 0 )
+      {
+         char consname[SCIP_MAXSTRLEN];
+         SCIP_CONSDATA* consdata;
+         SCIP_CONS* newcons;
+         int cliqueind;
+
+         cliqueind = nsos1vars + *ncliques; /* index of clique in the vertex-clique graph */
+
+         /* save new clique */
+         SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );
+         for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
+         {
+            vars[j] = nodeGetVarSOS1(conshdlrdata->conflictgraph, newclique[j]);
+            weights[j] = j+1;
+            cliques[*ncliques][j] = newclique[j];
+         }
+
+         SCIPsortInt(cliques[*ncliques], cliquesizes[*ncliques]);
+
+         /* create new constraint */
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%"SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
+
+         SCIP_CALL( SCIPcreateConsSOS1(scip, &newcons, consname, cliquesizes[*ncliques], vars, weights,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
+               SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsDynamic(cons),
+               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+         consdata = SCIPconsGetData(newcons);
+
+         /* handle variables of new constraint */
+         for (j = 0; j < consdata->nvars; ++j)
+            SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, consdata->vars[j], TRUE) );
+
+         /* add directed edges to the vertex-clique graph */
+         for (j = 0; j < consdata->nvars; ++j)
+            SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[*ncliques][j], cliqueind, NULL) );
+
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+         ++(*naddconss);
+         ++(conshdlrdata->cntextsos1);
+         ++(*ncliques);
+         cliquesizes[*ncliques] = cliquesizes[*ncliques-1]; /* cliquesizes[*ncliques] = size of newclique */
+
+         *success = TRUE;
+
+         --(*maxextensions);
+
+         if ( *maxextensions <= 0 )
+         {
+            SCIPfreeBufferArray(scip, &workingsetnew);
+            return SCIP_OKAY;
+         }
+      }
+      else if ( nextsnew < nworkingsetnew ) /* else if the number of of candidates equals zero */
+      {
+         SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights,
+               cliques, ncliques, cliquesizes, newclique, workingsetnew, nworkingsetnew, nextsnew, maxextensions, naddconss, success) );
+
+         if ( *maxextensions <= 0 )
+         {
+            SCIPfreeBufferArray(scip, &workingsetnew);
+            return SCIP_OKAY;
+         }
+      }
+
+      /* remove selvertex from clique */
+      --cliquesizes[*ncliques];
+
+      /* add selvertex to the set of vertices that already served as extension */
+      ++nexts;
+
+      if ( btriter > 1 )
+      {
+         /* select a candidate that is not connected to the fixed vertex */
+         for (j = nexts; j < nworkingset; ++j)
+         {
+            if ( ! isConnectedSOS1(adjacencymatrix, NULL, fixvertex, workingset[j]) )
+            {
+               selpos = j;
+               break;
+            }
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &workingsetnew);
+
+   return SCIP_OKAY;
+}
+
+
+/** generates conflict graph that is induced by the variables of a linear constraint */
+static
+SCIP_RETCODE SCIPgenConflictgraphLinearCons(
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIGRAPH*         conflictgraphlin,   /**< conflict graph of linear constraint (nodes: 1, ..., nlinvars) */
+   SCIP_DIGRAPH*         conflictgraphorig,  /**< original conflict graph (nodes: 1, ..., nsos1vars) */
+   SCIP_VAR**            linvars,            /**< linear variables in linear constraint */
+   int                   nlinvars,           /**< number of linear variables in linear constraint */
+   int*                  posinlinvars        /**< posinlinvars[i] = position (index) of SOS1 variable i in linear constraint,
+                                              *   posinlinvars[i]= -1 if @p i is not a SOS1 variable or not a variable of the linear constraint */
+   )
+{
+   int indexinsosvars;
+   int indexinlinvars;
+   int* succ;
+   int nsucc;
+   int v;
+   int s;
+
+   assert( conflictgraphlin != NULL );
+   assert( conflictgraphorig != NULL );
+   assert( linvars != NULL );
+   assert( posinlinvars != NULL );
+
+   for (v = 1; v < nlinvars; ++v) /* we start with v = 1, since "indexinlinvars < v" (see below) is never fulfilled for v = 0 */
+   {
+      indexinsosvars = varGetNodeSOS1(conshdlr, linvars[v]);
+
+      /* if linvars[v] is contained in at least one SOS1 constraint */
+      if ( indexinsosvars >= 0 )
+      {
+         succ = SCIPdigraphGetSuccessors(conflictgraphorig, indexinsosvars);
+         nsucc = SCIPdigraphGetNSuccessors(conflictgraphorig, indexinsosvars);
+
+         for (s = 0; s < nsucc; ++s)
+         {
+            assert( succ[s] >= 0 );
+            indexinlinvars = posinlinvars[succ[s]];
+            assert( indexinlinvars < nlinvars );
+
+            if ( indexinlinvars >= 0 && indexinlinvars < v )
+            {
+               SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraphlin, v, indexinlinvars, NULL) );
+               SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraphlin, indexinlinvars, v, NULL) );
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** determine the common successors of the vertices from the considered clique */
+static
+SCIP_RETCODE CliqueGetCommonSuccessorsSOS1(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int*                  clique,             /**< current clique */
+   SCIP_VAR**            vars,               /**< clique variables */
+   int                   nvars,              /**< number of clique variables */
+   int*                  comsucc,            /**< pointer to store common successors of clique vertices (size = nvars) */
+   int*                  ncomsucc            /**< pointer to store number common successors of clique vertices */
+   )
+{
+   int nsucc;
+   int* succ;
+   int ind;
+   int k = 0;
+   int v;
+   int i;
+   int j;
+
+   assert( conflictgraph != NULL );
+   assert( clique != NULL );
+   assert( vars != NULL );
+   assert( comsucc != NULL );
+   assert( ncomsucc != NULL );
+
+   *ncomsucc = 0;
+
+   /* determine the common successors of the vertices from the considered clique */
+
+   /* determine successors of variable var[0] that are not in the clique */
+   ind =  varGetNodeSOS1(conshdlr, vars[0]);
+   assert( ind != -1 );
+
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
+   succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
+
+   for (j = 0; j < nvars; ++j)
+   {
+      for (i = k; i < nsucc; ++i)
+      {
+         if ( succ[i] > clique[j] )
+         {
+            k = i;
+            break;
+         }
+         else if ( succ[i] == clique[j] )
+         {
+            k = i + 1;
+            break;
+         }
+         else
+            comsucc[(*ncomsucc)++] = succ[i];
+      }
+   }
+
+   /* for all variables except the first one */
+   for (v = 1; v < nvars; ++v)
+   {
+      int ncomsuccsave = 0;
+      k = 0;
+
+      ind =  varGetNodeSOS1(conshdlr, vars[v]);
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
+      succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
+
+      /* determine successors that are in comsucc */
+      for (j = 0; j < *ncomsucc; ++j)
+      {
+         for (i = k; i < nsucc; ++i)
+         {
+            if ( succ[i] > comsucc[j] )
+            {
+               k = i;
+               break;
+            }
+            else if ( succ[i] == comsucc[j] )
+            {
+               comsucc[ncomsuccsave++] = succ[i];
+               k = i + 1;
+               break;
+            }
+         }
+      }
+      *ncomsucc = ncomsuccsave;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* get nodes whose corresponding SOS1 variables are nonzero if an SOS1 variable of a given node is nonzero */
+static
+SCIP_RETCODE SCIPgetSOS1Implications(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR**            vars,               /**< problem and SOS1 variables */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@j is successor of @p i if and only if \f$ x_i\not = 0 \Leftarrow x_j\not = 0\f$) */
+   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
+   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to node i in the implication graph is implied to be nonzero */
+   int                   node                /**< node of the implication graph */
+   )
+{
+   int sos1node;
+
+   assert( scip != NULL );
+   assert( implgraph != NULL );
+   assert( implnodes != NULL );
+   assert( node >= 0 );
+   assert( vars[node] != NULL );
+   assert( (int) (size_t) SCIPhashmapGetImage(implhash, vars[node]) == node );
+
+   /* get node of variable in the conflict graph (-1 if variable is no SOS1 variable) */
+   sos1node = varGetNodeSOS1(conshdlr, vars[node]);
+   if ( sos1node < 0 )
+      return SCIP_OKAY;
+   else
+   {
+      SCIP_SUCCDATA** succdatas;
+      int* succ;
+      int nsucc;
+      int s;
+
+      succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, node);
+      nsucc = SCIPdigraphGetNSuccessors(implgraph, node);
+      succ = SCIPdigraphGetSuccessors(implgraph, node);
+
+      for (s = 0; s < nsucc; ++s)
+      {
+         SCIP_SUCCDATA* data;
+         int succnode;
+         succnode = succ[s];
+         data = succdatas[s];
+         sos1node = varGetNodeSOS1(conshdlr, vars[succnode]);
+
+         /* if node is SOS1 and the corresponding variable is implied to be nonzero */
+         assert( succdatas[s] != NULL );
+         if ( sos1node >= 0 && ! implnodes[sos1node] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
+         {
+            assert( sos1node == succnode );
+            implnodes[sos1node] = TRUE;
+            SCIP_CALL( SCIPgetSOS1Implications(scip, conshdlr, vars, implgraph, implhash, implnodes, succnode) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* adds further edges to the conflict graph based on the information of an implication graph */
+static
+SCIP_RETCODE SCIPupdateConflictGraphSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@j is successor of @p i if and only if \f$ x_i\not = 0 \Leftarrow x_j\not = 0\f$) */
+   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
+   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to a given node i in the implication graph is implied to be nonzero */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflictgraph (only lower half filled) */
+   int                   givennode,          /**< node of the conflict graph */
+   int                   nonznode,           /**< node of the conflict graph that is implied to be nonzero if given node is nonzero */
+   int*                  naddconss           /**< number of added SOS1 constraints */
+   )
+{
+   SCIP_SUCCDATA** succdatas;
+   int succnode;
+   int* succ;
+   int nsucc;
+   int s;
+
+   assert( nonznode >= 0 && nonznode < SCIPdigraphGetNNodes(conflictgraph) );
+
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, nonznode);
+   succ = SCIPdigraphGetSuccessors(conflictgraph, nonznode);
+
+   /* update conflict graph */
+   for (s = 0; s < nsucc; ++s)
+   {
+      succnode = succ[s];
+
+      if ( givennode != succnode )
+      {
+         if ( ! isConnectedSOS1(adjacencymatrix, NULL, givennode, succnode) )
+         {
+            char namesos[SCIP_MAXSTRLEN];
+            SCIP_CONS* soscons = NULL;
+            SCIP_VAR* var1;
+            SCIP_VAR* var2;
+
+            /* add arcs to the conflictgraph */
+            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, givennode, succnode, NULL) );
+            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, succnode, givennode, NULL) );
+
+            /* update adjacencymatrix */
+            if ( givennode > succnode )
+               adjacencymatrix[givennode][succnode] = 1;
+            else
+               adjacencymatrix[succnode][givennode] = 1;
+
+            var1 = nodeGetVarSOS1(conflictgraph, givennode);
+            var2 = nodeGetVarSOS1(conflictgraph, succnode);
+
+            /* create SOS1 constraint */
+            (void) SCIPsnprintf(namesos, SCIP_MAXSTRLEN, "presolved_sos1_%s_%s", SCIPvarGetName(var1), SCIPvarGetName(var2) );
+            SCIP_CALL( SCIPcreateConsSOS1(scip, &soscons, namesos, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
+                  TRUE, FALSE, FALSE, FALSE) );
+
+            /* add variables to SOS1 constraint */
+            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var1, 1.0) );
+            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var2, 2.0) );
+
+            /* add constraint */
+            SCIP_CALL( SCIPaddCons(scip, soscons) );
+
+            /* release constraint */
+            SCIP_CALL( SCIPreleaseCons(scip, &soscons) );
+
+            ++(*naddconss);
+         }
+      }
+   }
+
+   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, nodeGetVarSOS1(conflictgraph, nonznode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+   succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
+   nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
+   succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
+
+   /* go further in implication graph */
+   for (s = 0; s < nsucc; ++s)
+   {
+      SCIP_SUCCDATA* data;
+      succnode = succ[s];
+      data = succdatas[s];
+
+      /* if node is SOS1 and not already known to be an implication node */
+      if ( varGetNodeSOS1(conshdlr, totalvars[succnode]) >= 0 && ! implnodes[succnode] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
+      {
+         assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, nodeGetVarSOS1(conflictgraph, succnode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+         implnodes[succnode] = TRUE; /* in order to avoid cycling */
+         SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, givennode, succnode, naddconss) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* returns whether node is implied to be zero; this information is taken from the input array 'implnodes' */
+static
+SCIP_Bool isImpliedZero(
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to node i in the implication graph is implied to be nonzero */
+   int                   node                /**< node of the conflict graph (or -1) */
+   )
+{
+   int* succ;
+   int nsucc;
+   int s;
+
+   if ( node >= 0 )
+   {
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
+      succ = SCIPdigraphGetSuccessors(conflictgraph, node);
+
+      /* check whether any successor is implied to be nonzero */
+      for (s = 0; s < nsucc; ++s)
+      {
+         if ( implnodes[succ[s]] )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/* updates arc data of implication graph */
+static
+SCIP_Bool updateArcData(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph */
+   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
+   SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
+   SCIP_VAR*             varv,               /**< variable that is assumed to be nonzero */
+   SCIP_VAR*             varw,               /**< implication variable */
+   SCIP_Real             lb,                 /**< old lower bound of \f$x_w\f$ */
+   SCIP_Real             ub,                 /**< old upper bound of \f$x_w\f$ */
+   SCIP_Real             newbound,           /**< new bound of \f$x_w\f$ */
+   SCIP_Bool             lower,              /**< whether to consider lower bound implication (otherwise upper bound) */
+   int*                  nchgbds,            /**< pointer to store number of changed bounds */
+   SCIP_Bool*            update              /**< pointer to store whether implication graph has been updated */
+   )
+{
+   SCIP_SUCCDATA** succdatas;
+   SCIP_SUCCDATA* data = NULL;
+   int nsucc;
+   int* succ;
+   int indv;
+   int indw;
+   int s;
+
+   assert( scip != NULL );
+   assert( implgraph != NULL );
+   assert( implhash != NULL );
+   assert( totalvars != NULL );
+   assert( varv != NULL );
+   assert( varw != NULL );
+
+   /* if x_v != 0 turns out to be infeasible then fix x_v = 0 */
+   if ( ( lower && SCIPisFeasLT(scip, ub, newbound) ) || ( ! lower && SCIPisFeasGT(scip, lb, newbound) ) )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened1;
+      SCIP_Bool tightened2;
+
+      SCIP_CALL( SCIPtightenVarLb(scip, varv, 0.0, FALSE, &infeasible, &tightened1) );
+      assert( !infeasible );
+      SCIP_CALL( SCIPtightenVarUb(scip, varv, 0.0, FALSE, &infeasible, &tightened2) );
+      assert( !infeasible );
+
+      if ( tightened1 || tightened2 )
+      {
+         SCIPdebugMessage("fixed variable %s from lb = %f and ub = %f to 0.0 \n", SCIPvarGetName(varv), lb, ub);
+         ++(*nchgbds);
+      }
+   }
+
+   /* get successor information */
+   indv = (int) (size_t) SCIPhashmapGetImage(implhash, varv); /* get index of x_v in implication graph */
+   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indv]) == indv );
+   succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, indv);
+   nsucc = SCIPdigraphGetNSuccessors(implgraph, indv);
+   succ = SCIPdigraphGetSuccessors(implgraph, indv);
+
+   /* search for nodew in existing successors. If this is the case then check whether the lower implication bound may be updated ... */
+   indw = (int) (size_t) SCIPhashmapGetImage(implhash, varw);
+   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indw]) == indw );
+   for (s = 0; s < nsucc; ++s)
+   {
+      if ( succ[s] == indw )
+      {
+         data = succdatas[s];
+         assert( data != NULL );
+         if ( lower && SCIPisFeasLT(scip, data->lbimpl, newbound) )
+         {
+            data->lbimpl = newbound;
+            *update = TRUE;
+            SCIPdebugMessage("updated to implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
+         }
+         else if ( ! lower && SCIPisFeasGT(scip, data->ubimpl, newbound) )
+         {
+            data->ubimpl = newbound;
+            *update = TRUE;
+            SCIPdebugMessage("updated to implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
+         }
+         break;
+      }
+   }
+
+   /* ..., otherwise if there does not exist an arc between indv and indw already, then create one and add implication */
+   if ( s == nsucc )
+   {
+      assert( data == NULL );
+      SCIP_CALL( SCIPallocMemory(scip, &data) );
+      if ( lower )
+      {
+         data->lbimpl = newbound;
+         data->ubimpl = ub;
+         SCIPdebugMessage("add implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
+      }
+      else
+      {
+         data->lbimpl = lb;
+         data->ubimpl = newbound;
+         SCIPdebugMessage("add implication %s != 0 -> %s <= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
+      }
+      SCIP_CALL( SCIPdigraphAddArc(implgraph, indv, indw, (void*) data) );
+      *update = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* assume some variable is nonzero. If this implies that some other variable is also nonzero, then store this information in an implication graph */
+static
+SCIP_RETCODE updateImplicationGraphSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph (lower half) */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Leftarrow x_j\not = 0\f$) */
+   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
+   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to node i in the implication graph is implied to be nonzero */
+   SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
+   int**                 cliquecovers,       /**< clique covers of linear constraint */
+   int*                  cliquecoversizes,   /**< size of clique covers */
+   int*                  varincover,         /**< array with varincover[i] = cover of SOS1 index @p i */
+   SCIP_VAR**            vars,               /**< variables to be checked */
+   SCIP_Real*            coefs,              /**< coefficients of variables in linear constraint */
+   int                   nvars,              /**< number of variables to be checked */
+   SCIP_Real*            bounds,             /**< bounds of variables */
+   SCIP_VAR*             var,                /**< variable that is assumed to be nonzero */
+   SCIP_Real             bound,              /**< bound of variable */
+   SCIP_Real             boundnonzero,       /**< bound of variable if it is known to be nonzero if infinity values are not summarized */
+   int                   ninftynonzero,      /**< number of times infinity/-infinity has to be summarized to boundnonzero */
+   SCIP_Bool             lower,              /**< TRUE if lower bounds are consideres; FALSE for upper bounds */
+   int*                  nchgbds,            /**< pointer to store number of changed bounds */
+   SCIP_Bool*            update              /**< pointer to store whether implication graph has been updated */
+   )
+{
+   int nodev;
+   int w;
+
+   *update = FALSE;
+   nodev = varGetNodeSOS1(conshdlr, var); /* possibly -1 if var is not involved in an SOS1 constraint */
+
+   /* update implication graph if possible */
+
+   /* if nodev is an index of an SOS1 variable and at least one lower bound of a variable that is not x_v is infinity */
+   if ( nodev >= 0 && ! SCIPisInfinity(scip, REALABS(bound) ) && ninftynonzero <= 1 )
+   {
+      /* for every variable x_w: compute upper bound of a_w * x_w if x_v is known to be nonzero */
+      for (w = 0; w < nvars; ++w)
+      {
+         int newninftynonzero;
+         SCIP_Bool implinfty = FALSE;
+         int nodew;
+
+         /* get node of x_w in conflict graph: nodew = -1 if it is no SOS1 variable */
+         nodew = varGetNodeSOS1(conshdlr, vars[w]);
+
+         newninftynonzero = ninftynonzero;
+
+         /* variable should not be fixed to be already zero (note x_v is fixed to be nonzero by assumption) */
+         if ( nodew < 0 || ( nodev != nodew && ! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodew) && ! isImpliedZero(conflictgraph, implnodes, nodew) ) )
+         {
+            SCIP_Real implbound;
+            SCIP_Bool implcoverw;
+            int nodecliq;
+            int indcliq;
+            int ind;
+            int j;
+
+            /* boundnonzero is the bound of x_v if x_v is nonzero
+               we use this information to get a bound of x_w if x_v is nonzero;
+               therefore, we have to perform some recomputations */
+            implbound = boundnonzero - bound;
+            ind = varincover[w];
+            assert( cliquecoversizes[ind] > 0 );
+
+            implcoverw = FALSE;
+            for (j = 0; j < cliquecoversizes[ind]; ++j)
+            {
+               indcliq = cliquecovers[ind][j];
+               assert( 0 <= indcliq && indcliq < nvars );
+
+               nodecliq = varGetNodeSOS1(conshdlr, vars[indcliq]); /* possibly -1 if variable is not involved in an SOS1 constraint */
+
+               /* if nodecliq is not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
+               if ( nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
+               {
+                  if ( indcliq == w )
+                  {
+                     if ( ! SCIPisInfinity(scip, REALABS(bounds[w])) )
+                        implbound += bounds[w];
+                     else
+                        --newninftynonzero;
+                     implcoverw = TRUE;
+                  }
+                  else if ( implcoverw )
+                  {
+                     if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] )) )
+                        implinfty = TRUE;
+                     else
+                        implbound -= bounds[indcliq];
+                     break;
+                  }
+                  else
+                  {
+                     if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] ) ) )
+                        implinfty = TRUE;
+                     break;
+                  }
+               }
+            }
+
+            /* check whether x_v != 0 implies a bound change of x_w */
+            if ( ! implinfty && newninftynonzero == 0 )
+            {
+               SCIP_Real newbound;
+               SCIP_Real coef;
+               SCIP_Real lb;
+               SCIP_Real ub;
+
+               lb = SCIPvarGetLbLocal(vars[w]);
+               ub = SCIPvarGetUbLocal(vars[w]);
+               coef = coefs[w];
+               assert( ! SCIPisFeasZero(scip, coef) );
+               newbound = implbound / coef;
+
+               /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
+               if ( lower )
+               {
+                  if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
+                  {
+                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+                  }
+                  else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
+                  {
+                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+                  }
+               }
+               else
+               {
+                  if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
+                  {
+                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+                  }
+                  else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
+                  {
+                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** for a given index @p v search for a clique in the conflict graph restricted to the variables of a linear constraint that covers @p v
+ *  and has an an empty intersection with already computed clique covers
+ */
+static
+SCIP_RETCODE SCIPcomputeVarsCoverSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraphroot,  /**< conflict graph of the root node (nodes: 1, ..., @p nsos1vars) */
+   SCIP_DIGRAPH*         conflictgraphlin,   /**< conflict graph of linear constraint (nodes: 1, ..., @p nlinvars) */
+   SCIP_VAR**            linvars,            /**< variables in linear constraint */
+   SCIP_Bool*            coveredvars,        /**< states which variables of the linear constraint are currently covered by a clique */
+   int*                  clique,             /**< array to store new clique in cover */
+   int*                  cliquesize,         /**< pointer to store the size of @p clique */
+   int                   v,                  /**< position of variable in linear constraint that should be covered */
+   SCIP_Bool             considersolvals     /**< TRUE if largest auxiliary bigM values of variables should be prefered */
+   )
+{
+   int nsucc;
+   int s;
+
+   assert( conflictgraphlin != NULL );
+   assert( linvars != NULL );
+   assert( coveredvars != NULL );
+   assert( clique != NULL );
+   assert( cliquesize != NULL );
+
+   assert( ! coveredvars[v] );  /* we should produce a new clique */
+
+   /* add index 'v' to the clique cover */
+   clique[0] = v;
+   *cliquesize = 1;
+
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraphlin, v);
+   if ( nsucc > 0 )
+   {
+      int* extensions;
+      int nextensions = 0;
+      int nextensionsnew;
+      int succnode;
+      int* succ;
+
+      /* allocate buffer array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &extensions, nsucc) );
+
+      succ = SCIPdigraphGetSuccessors(conflictgraphlin, v);
+
+      /* compute possible extensions for the clique cover */
+      for (s = 0; s < nsucc; ++s)
+      {
+         succnode = succ[s];
+         if ( ! coveredvars[succnode] )
+            extensions[nextensions++] = succ[s];
+      }
+
+      /* while there exist possible extensions for the clique cover */
+      while ( nextensions > 0 )
+      {
+         int bestindex = -1;
+
+         if ( considersolvals )
+         {
+            SCIP_Real bestbigMval;
+            SCIP_Real bigMval;
+
+            bestbigMval = -SCIPinfinity(scip);
+
+            /* search for the extension with the largest absolute value of its LP relaxation solution value */
+            for (s = 0; s < nextensions; ++s)
+            {
+               bigMval = SCIPnodeGetSolvalBinaryBigMSOS1(scip, conflictgraphroot, NULL, extensions[s]);
+               if ( SCIPisFeasLT(scip, bestbigMval, bigMval) )
+               {
+                  bestbigMval = bigMval;
+                  bestindex = extensions[s];
+               }
+            }
+         }
+         else
+            bestindex = extensions[0];
+
+         assert( bestindex != -1 );
+
+         /* add bestindex to the clique cover */
+         clique[(*cliquesize)++] = bestindex;
+
+         /* compute new 'extensions' array */
+         nextensionsnew = 0;
+         for (s = 0; s < nextensions; ++s)
+         {
+            if ( s != bestindex && isConnectedSOS1(NULL, conflictgraphlin, bestindex, extensions[s]) )
+               extensions[nextensionsnew++] = extensions[s];
+         }
+         nextensions = nextensionsnew;
+      }
+
+      /* free buffer array */
+      SCIPfreeBufferArray(scip, &extensions);
+   }
+
+   /* mark covered indices */
+   for (s = 0; s < *cliquesize; ++s)
+   {
+      int ind = clique[s];
+
+      assert( ! coveredvars[ind] );
+      coveredvars[ind] = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* try to tighten upper and lower bounds for variables */
+static
+SCIP_RETCODE tightenVarsBoundsSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@j is successor of @p i if and only if \f$ x_i\not = 0 \f$ implies a new lower/upper bound for \f$ x_j\f$) */
+   SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of conflict graph */
+   SCIP_VAR**            totalvars,          /**< problem and SOS1 vars */
+   int                   ntotalvars,         /**< number of problem and SOS1 variables*/
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   int*                  nchgbds,            /**< pointer to store number of changed bounds */
+   SCIP_Bool*            implupdate,         /**< pointer to store whether the implication graph has been updated in this function call */
+   SCIP_Bool*            cutoff              /**< pointer to store if current nodes LP is infeasible  */
+   )
+{
+   SCIP_CONSHDLR* conshdlrlinear;
+   SCIP_CONS** linearconss;
+   int nlinearconss;
+
+   SCIP_Bool* implnodes = NULL;     /* implnodes[i] = TRUE if the SOS1 variable corresponding to node i in the implication graph is implied to be nonzero */
+   SCIP_Bool* coveredvars = NULL;   /* coveredvars[i] = TRUE if variable with index i is covered by the clique cover */
+   int* varindincons = NULL;        /* varindincons[i] = position of SOS1 index i in linear constraint (-1 if x_i is not involved in linear constraint) */
+
+   SCIP_VAR** trafolinvars = NULL;  /* variables of transformed linear constraints without (multi)aggregated variables */
+   int ntrafolinvars = 0;
+   SCIP_Real* trafolinvals = NULL;
+   SCIP_Real* trafoubs = NULL;
+   SCIP_Real* trafolbs = NULL;
+   SCIP_Real traforhs;
+   SCIP_Real trafolhs;
+
+   SCIP_VAR** sos1linvars = NULL;  /* variables that are not contained in linear constraint, but are in conflict with a variable from the linear constraint */
+   int nsos1linvars;
+   int c;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( adjacencymatrix != NULL );
+   assert( nchgbds != NULL );
+   assert( cutoff != NULL );
+
+   *cutoff = FALSE;
+   *implupdate = FALSE;
+
+   /* get constraint handler data of linear constraints */
+   conshdlrlinear = SCIPfindConshdlr(scip, "linear");
+   if ( conshdlrlinear == NULL )
+      return SCIP_OKAY;
+
+   /* get linear constraints and number of linear constraints */
+   nlinearconss = SCIPconshdlrGetNConss(conshdlrlinear);
+   linearconss = SCIPconshdlrGetConss(conshdlrlinear);
+
+   /* allocate buffer arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sos1linvars, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varindincons, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coveredvars, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &trafoubs, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &trafolbs, ntotalvars) );
+
+   /* for every linear constraint and every SOS1 variable */
+   for (c = 0; c < nlinearconss + nsos1vars && ! (*cutoff); ++c)
+   {
+      SCIP_DIGRAPH* conflictgraphlin;
+      int** cliquecovers = NULL;           /* clique covers of indices of variables in linear constraint */
+      int* cliquecoversizes = NULL;        /* size of each cover */
+      int ncliquecovers;
+      SCIP_Real* cliquecovervals = NULL;
+      int* varincover = NULL;              /* varincover[i] = cover of SOS1 index i */
+
+      int v;
+      int i;
+      int j;
+
+      /* get transformed linear constraints (without aggregated variables) */
+      if ( c < nlinearconss )
+      {
+         SCIP_VAR** origlinvars;
+         int noriglinvars;
+         SCIP_Real* origlinvals;
+         SCIP_Real origrhs;
+         SCIP_Real origlhs;
+         SCIP_Real constant;
+         int requiredsize;
+
+         /* get data of linear constraint */
+         noriglinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         origlinvars = SCIPgetVarsLinear(scip, linearconss[c]);
+         origlinvals = SCIPgetValsLinear(scip, linearconss[c]);
+         origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
+         origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
+
+         /* allocate buffer arrays */
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, noriglinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, noriglinvars) );
+
+         /* copy variables and coefficients of linear constraint */
+         for (v = 0; v < noriglinvars; ++v)
+         {
+            trafolinvars[v] = origlinvars[v];
+            trafolinvals[v] = origlinvals[v];
+         }
+         ntrafolinvars = noriglinvars;
+
+         /* transform linear constraint */
+         constant = 0.0;
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, noriglinvars, &constant, &requiredsize, TRUE) );
+         if( requiredsize > ntrafolinvars )
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize) );
+
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
+            assert( requiredsize <= ntrafolinvars );
+         }
+         trafolhs = origlhs - constant;
+         traforhs = origrhs - constant;
+      }
+      else
+      {
+         SCIP_VAR* var;
+
+         var = nodeGetVarSOS1(conflictgraph, c-nlinearconss);
+
+         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_Real constant;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
+
+            constant = SCIPvarGetAggrConstant(var);
+            trafolinvars[0] = SCIPvarGetAggrVar(var);
+            trafolinvals[0] = SCIPvarGetAggrScalar(var);
+            trafolinvars[1] = var;
+            trafolinvals[1] = -1.0;
+            trafolhs = -constant;
+            traforhs = -constant;
+            ntrafolinvars = 2;
+         }
+         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            SCIP_Real* scalars;
+            SCIP_VAR** agrvars;
+            SCIP_Real constant;
+            int nagrvars;
+
+            nagrvars = SCIPvarGetMultaggrNVars(var);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, nagrvars+1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, nagrvars+1) );
+
+            agrvars = SCIPvarGetMultaggrVars(var);
+            scalars = SCIPvarGetMultaggrScalars(var);
+            constant = SCIPvarGetMultaggrConstant(var);
+
+            for (v = 0; v < nagrvars; ++v)
+            {
+               trafolinvars[v] = agrvars[v];
+               trafolinvals[v] = scalars[v];
+            }
+            trafolinvars[nagrvars] = var;
+            trafolinvals[nagrvars] = -1.0;
+            trafolhs = -constant;
+            traforhs = -constant;
+            ntrafolinvars = nagrvars + 1;
+         }
+         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+         {
+            SCIP_VAR* negvar;
+            SCIP_Real negcons;
+
+            /* get negation variable and negation offset */
+            negvar = SCIPvarGetNegationVar(var);
+            negcons = SCIPvarGetNegationConstant(var);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
+
+            trafolinvars[0] = negvar;
+            trafolinvars[1] = var;
+            trafolinvals[0] = 1.0;
+            trafolinvals[1] = 1.0;
+            trafolhs = -negcons;
+            traforhs = -negcons;
+         }
+         else
+            continue;
+      }
+
+      if ( ntrafolinvars == 0 )
+      {
+         SCIPfreeBufferArray(scip, &trafolinvars);
+         SCIPfreeBufferArray(scip, &trafolinvals);
+         continue;
+      }
+
+      /* compute lower and upper bounds of each term a_i * x_i of transformed constraint */
+      for (v = 0; v < ntrafolinvars; ++v)
+      {
+         SCIP_Real lb = SCIPvarGetLbLocal(trafolinvars[v]);
+         SCIP_Real ub = SCIPvarGetUbLocal(trafolinvars[v]);
+
+         if ( trafolinvals[v] < 0.0 )
+         {
+            SCIP_Real tmp;
+            tmp = lb;
+            lb = ub;
+            ub = tmp;
+         }
+
+         if ( SCIPisInfinity(scip, REALABS(lb)) )
+            trafolbs[v] = -SCIPinfinity(scip);
+         else
+            trafolbs[v] = lb * trafolinvals[v];
+
+         if ( SCIPisInfinity(scip, REALABS(ub)) )
+            trafoubs[v] = SCIPinfinity(scip);
+         else
+            trafoubs[v] = ub * trafolinvals[v];
+      }
+
+      /* initialization: mark all the SOS1 variables as 'not a member of the linear constraint' */
+      for (v = 0; v < nsos1vars; ++v)
+         varindincons[v] = -1;
+
+      /* save position of SOS1 variables in linear constraint */
+      for (v = 0; v < ntrafolinvars; ++v)
+      {
+         int node;
+
+         node = varGetNodeSOS1(conshdlr, trafolinvars[v]);
+
+         if ( node >= 0 )
+            varindincons[node] = v;
+      }
+
+      /* create conflict graph of linear constraint */
+      SCIP_CALL( SCIPdigraphCreate(&conflictgraphlin, ntrafolinvars) );
+      SCIP_CALL( SCIPgenConflictgraphLinearCons(conshdlr, conflictgraphlin, conflictgraph, trafolinvars, ntrafolinvars, varindincons) );
+
+      /* mark all the variables as 'not covered by some clique cover' */
+      for (i = 0; i < ntrafolinvars; ++i)
+         coveredvars[i] = FALSE;
+
+      /* allocate buffer array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &cliquecovervals, ntrafolinvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &cliquecoversizes, ntrafolinvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &cliquecovers, ntrafolinvars) );
+
+      /* compute distinct cliques that cover all the variables of the linear constraint */
+      ncliquecovers = 0;
+      for (v = 0; v < ntrafolinvars; ++v)
+      {
+         /* if variable is not already covered by an already known clique cover */
+         if ( ! coveredvars[v] )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &(cliquecovers[ncliquecovers]), ntrafolinvars) );
+            SCIP_CALL( SCIPcomputeVarsCoverSOS1(scip, conflictgraph, conflictgraphlin, trafolinvars, coveredvars, cliquecovers[ncliquecovers], &(cliquecoversizes[ncliquecovers]), v, FALSE) );
+            ++ncliquecovers;
+         }
+      }
+
+      /* free conflictgraph */
+      SCIPdigraphFree(&conflictgraphlin);
+
+      /* compute variables that are not contained in transformed linear constraint, but are in conflict with a variable from the transformed linear constraint */
+      nsos1linvars = 0;
+      for (v = 0; v < ntrafolinvars; ++v)
+      {
+         int nodev;
+
+         nodev = varGetNodeSOS1(conshdlr, trafolinvars[v]);
+
+         /* if variable is an SOS1 variable */
+         if ( nodev >= 0 )
+         {
+            int succnode;
+            int nsucc;
+            int* succ;
+            int s;
+
+            succ = SCIPdigraphGetSuccessors(conflictgraph, nodev);
+            nsucc = SCIPdigraphGetNSuccessors(conflictgraph, nodev);
+
+            for (s = 0; s < nsucc; ++s)
+            {
+               succnode = succ[s];
+
+               /* if variable is not a member of linear constraint and not already listed in the array sos1linvars */
+               if ( varindincons[succnode] == -1 )
+               {
+                  sos1linvars[nsos1linvars] = nodeGetVarSOS1(conflictgraph, succnode);
+                  varindincons[succnode] = -2; /* mark variable as listed in array sos1linvars */
+                  ++nsos1linvars;
+               }
+            }
+         }
+      }
+
+
+      /* try to tighten lower bounds */
+
+      /* sort each cliquecover array in ascending order of the lower bounds of a_i * x_i; fill vector varincover */
+      SCIP_CALL( SCIPallocBufferArray(scip, &varincover, ntrafolinvars) );
+      for (i = 0; i < ncliquecovers; ++i)
+      {
+         for (j = 0; j < cliquecoversizes[i]; ++j)
+         {
+            int ind = cliquecovers[i][j];
+
+            varincover[ind] = i;
+            cliquecovervals[j] = trafoubs[ind];
+         }
+         SCIPsortDownRealInt(cliquecovervals, cliquecovers[i], cliquecoversizes[i]);
+      }
+
+      /* for every variable in transformed constraint: try lower bound tightening */
+      for (v = 0; v < ntrafolinvars + nsos1linvars; ++v)
+      {
+         SCIP_Real newboundnonzero; /* new bound of a_v*x_v if we assume that x_v != 0 */
+         SCIP_Real newboundnores;   /* new bound of a_v*x_v if we assume that x_v = 0 is possible */
+         SCIP_Real newbound;        /* resulting new bound of x_v */
+         SCIP_VAR* var;
+         SCIP_Real trafoubv;
+         SCIP_Real linval;
+         SCIP_Real ub;
+         SCIP_Real lb;
+         SCIP_Bool tightened;
+         SCIP_Bool infeasible;
+         SCIP_Bool inftynores = FALSE;
+         SCIP_Bool update;
+         int ninftynonzero = 0;
+         int nodev;
+         int w;
+
+         if ( v < ntrafolinvars )
+         {
+            var = trafolinvars[v];
+            trafoubv = trafoubs[v];
+         }
+         else
+         {
+            assert( v-ntrafolinvars >= 0 );
+            var = sos1linvars[v-ntrafolinvars];/*lint !e679*/
+            trafoubv = 0.0;
+         }
+
+         ub = SCIPvarGetUbLocal(var);
+         lb = SCIPvarGetLbLocal(var);
+
+         if ( SCIPisInfinity(scip, -trafolhs) || SCIPisZero(scip, ub - lb) )
+            continue;
+
+         newboundnonzero = trafolhs;
+         newboundnores = trafolhs;
+         nodev = varGetNodeSOS1(conshdlr, var); /* possibly -1 if var is not involved in an SOS1 constraint */
+         assert( nodev < nsos1vars );
+
+         /* determine incidence vector of implication variables */
+         for (w = 0; w < nsos1vars; ++w)
+            implnodes[w] = FALSE;
+         SCIP_CALL( SCIPgetSOS1Implications(scip, conshdlr, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+
+         /* compute new bound */
+         for (i = 0; i < ncliquecovers; ++i)
+         {
+            int indcliq;
+            int nodecliq;
+
+            assert( cliquecoversizes[i] > 0 );
+
+            indcliq = cliquecovers[i][0];
+            assert( 0 <= indcliq && indcliq < ntrafolinvars );
+
+            /* determine maximum without index v (note that trafoub is sorted non-increasingly) */
+            if ( v != indcliq )
+            {
+               if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
+                  inftynores = TRUE;
+               else
+                  newboundnores -= trafoubs[indcliq];
+            }
+            else if ( cliquecoversizes[i] > 1 )
+            {
+               assert( 0 <= cliquecovers[i][1] && cliquecovers[i][1] < ntrafolinvars );
+               if ( SCIPisInfinity(scip, trafoubs[cliquecovers[i][1]]) )
+                  inftynores = TRUE;
+               else
+                  newboundnores -= trafoubs[cliquecovers[i][1]];/*lint --e{679}*/
+            }
+
+            for (j = 0; j < cliquecoversizes[i]; ++j)
+            {
+               indcliq = cliquecovers[i][j];
+               assert( 0 <= indcliq && indcliq < ntrafolinvars );
+
+               nodecliq = varGetNodeSOS1(conshdlr, trafolinvars[indcliq]); /* possibly -1 if variable is not involved in an SOS1 constraint */
+               assert( nodecliq < nsos1vars );
+
+               if ( v != indcliq )
+               {
+                  /* if nodev or nodecliq are not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
+                  if ( nodev < 0 || nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
+                  {
+                     if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
+                        ++ninftynonzero;
+                     else
+                        newboundnonzero -= trafoubs[indcliq];
+                     break;
+                  }
+               }
+            }
+         }
+         assert( ninftynonzero == 0 || inftynores );
+
+         /* if computed upper bound is not infinity and variable is contained in linear constraint */
+         if ( ninftynonzero == 0 && v < ntrafolinvars )
+         {
+            linval = trafolinvals[v];
+            /* compute new bound */
+            assert( ! SCIPisFeasZero(scip, linval) );
+            if ( SCIPisFeasPositive(scip, newboundnores) && ! inftynores )
+               newbound = newboundnonzero;
+            else
+               newbound = MIN(0, newboundnonzero);
+            newbound /= linval;
+
+            /* check if new bound is tighter than the old one or problem is infeasible */
+            if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasLT(scip, lb, newbound) )
+            {
+               if ( SCIPisFeasLT(scip, ub, newbound) )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
+
+               if ( SCIPvarIsIntegral(var) )
+                  newbound = SCIPceil(scip, newbound);
+
+               SCIP_CALL( SCIPtightenVarLb(scip, var, newbound, FALSE, &infeasible, &tightened) );
+               assert( ! infeasible );
+
+               if ( tightened )
+               {
+                  SCIPdebugMessage("changed lower bound of variable %s from %f to %f \n", SCIPvarGetName(var), lb, newbound);
+                  ++(*nchgbds);
+               }
+            }
+            else if ( SCIPisFeasNegative(scip, linval) && SCIPisFeasGT(scip, ub, newbound) )
+            {
+               /* if assumption a_i * x_i != 0 was not correct */
+               if ( SCIPisFeasGT(scip, SCIPvarGetLbLocal(var), newbound) )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
+
+               if ( SCIPvarIsIntegral(var) )
+                  newbound = SCIPfloor(scip, newbound);
+
+               SCIP_CALL( SCIPtightenVarUb(scip, var, newbound, FALSE, &infeasible, &tightened) );
+               assert( ! infeasible );
+
+               if ( tightened )
+               {
+                  SCIPdebugMessage("changed upper bound of variable %s from %f to %f \n", SCIPvarGetName(var), ub, newbound);
+                  ++(*nchgbds);
+               }
+            }
+         }
+
+         /* update implication graph if possible */
+         SCIP_CALL( updateImplicationGraphSOS1(scip, conshdlr, conflictgraph, adjacencymatrix, implgraph, implhash, implnodes, totalvars, cliquecovers, cliquecoversizes, varincover,
+               trafolinvars, trafolinvals, ntrafolinvars, trafoubs, var, trafoubv, newboundnonzero, ninftynonzero, TRUE, nchgbds, &update) );
+         if ( update )
+            *implupdate = TRUE;
+      }
+
+      if ( *cutoff == TRUE )
+      {
+         /* free memory */
+         SCIPfreeBufferArrayNull(scip, &varincover);
+         for (j = ncliquecovers-1; j >= 0; --j)
+            SCIPfreeBufferArrayNull(scip, &cliquecovers[j]);
+         SCIPfreeBufferArrayNull(scip, &cliquecovers);
+         SCIPfreeBufferArrayNull(scip, &cliquecoversizes);
+         SCIPfreeBufferArrayNull(scip, &cliquecovervals);
+         SCIPfreeBufferArrayNull(scip, &trafolinvals);
+         SCIPfreeBufferArrayNull(scip, &trafolinvars);
+         break;
+      }
+
+
+      /* try to tighten upper bounds */
+
+      /* sort each cliquecover array in ascending order of the lower bounds of a_i * x_i; fill vector varincover */
+      for (i = 0; i < ncliquecovers; ++i)
+      {
+         for (j = 0; j < cliquecoversizes[i]; ++j)
+         {
+            int ind = cliquecovers[i][j];
+
+            varincover[ind] = i;
+            cliquecovervals[j] = trafolbs[ind];
+         }
+         SCIPsortRealInt(cliquecovervals, cliquecovers[i], cliquecoversizes[i]);
+      }
+
+      /* for every variable that is in transformed constraint or every variable that is in conflict with some variable from trans. cons.:
+         try upper bound tightening */
+      for (v = 0; v < ntrafolinvars + nsos1linvars; ++v)
+      {
+         SCIP_Real newboundnonzero; /* new bound of a_v*x_v if we assume that x_v != 0 */
+         SCIP_Real newboundnores;   /* new bound of a_v*x_v if there are no restrictions */
+         SCIP_Real newbound;        /* resulting new bound of x_v */
+         SCIP_VAR* var;
+         SCIP_Real linval;
+         SCIP_Real trafolbv;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Bool tightened;
+         SCIP_Bool infeasible;
+         SCIP_Bool inftynores = FALSE;
+         SCIP_Bool update;
+         int ninftynonzero = 0;
+         int nodev;
+         int w;
+
+         if ( v < ntrafolinvars )
+         {
+            var = trafolinvars[v];
+            trafolbv = trafolbs[v];
+         }
+         else
+         {
+            assert( v-ntrafolinvars >= 0 );
+            var = sos1linvars[v-ntrafolinvars];/*lint !e679*/
+            trafolbv = 0.0; /* since variable is not a member of linear constraint */
+         }
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         if ( SCIPisInfinity(scip, traforhs) || SCIPisEQ(scip, lb, ub) )
+            continue;
+
+         newboundnonzero = traforhs;
+         newboundnores = traforhs;
+         nodev = varGetNodeSOS1(conshdlr, var); /* possibly -1 if var is not involved in an SOS1 constraint */
+         assert( nodev < nsos1vars );
+
+         /* determine incidence vector of implication variables (i.e., which SOS1 variables are nonzero if x_v is nonzero) */
+         for (w = 0; w < nsos1vars; ++w)
+            implnodes[w] = FALSE;
+         SCIP_CALL( SCIPgetSOS1Implications(scip, conshdlr, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+
+         /* compute new bound */
+         for (i = 0; i < ncliquecovers; ++i)
+         {
+            int indcliq;
+            int nodecliq;
+
+            assert( cliquecoversizes[i] > 0 );
+
+            indcliq = cliquecovers[i][0];
+            assert( 0 <= indcliq && indcliq < ntrafolinvars );
+
+            /* determine maximum without index v (note that trafolbs is sorted non-increasingly) */
+            if ( v != indcliq )
+            {
+               /* if bound would be infinity */
+               if ( SCIPisInfinity(scip, -trafolbs[indcliq]) )
+                  inftynores = TRUE;
+               else
+                  newboundnores -= trafolbs[indcliq];
+            }
+            else if ( cliquecoversizes[i] > 1 )
+            {
+               assert( 0 <= cliquecovers[i][1] && cliquecovers[i][1] < ntrafolinvars );
+               if ( SCIPisInfinity(scip, -trafolbs[cliquecovers[i][1]]) )
+                  inftynores = TRUE;
+               else
+                  newboundnores -= trafolbs[cliquecovers[i][1]]; /*lint --e{679}*/
+            }
+
+            /* determine maximum without index v and if x_v is nonzero (note that trafolbs is sorted non-increasingly) */
+            for (j = 0; j < cliquecoversizes[i]; ++j)
+            {
+               indcliq = cliquecovers[i][j];
+               assert( 0 <= indcliq && indcliq < ntrafolinvars );
+
+               nodecliq = varGetNodeSOS1(conshdlr, trafolinvars[indcliq]); /* possibly -1 if variable is not involved in an SOS1 constraint */
+               assert( nodecliq < nsos1vars );
+
+               if ( v != indcliq )
+               {
+                  /* if nodev or nodecliq are not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
+                  if ( nodev < 0 || nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
+                  {
+                     /* if bound would be infinity */
+                     if ( SCIPisInfinity(scip, -trafolbs[indcliq]) )
+                        ++ninftynonzero;
+                     else
+                        newboundnonzero -= trafolbs[indcliq];
+                     break;
+                  }
+               }
+            }
+         }
+         assert( ninftynonzero == 0 || inftynores );
+
+
+         /* if computed upper bound is not infinity and variable is contained in linear constraint */
+         if ( ninftynonzero == 0 && v < ntrafolinvars )
+         {
+            linval = trafolinvals[v];
+
+            /* compute new bound */
+            assert( ! SCIPisFeasZero(scip, linval) );
+            if ( SCIPisFeasNegative(scip, newboundnores) && ! inftynores )
+               newbound = newboundnonzero;
+            else
+               newbound = MAX(0, newboundnonzero);
+            newbound /= linval;
+
+            /* check if new bound is tighter than the old one or problem is infeasible */
+            if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasGT(scip, ub, newbound) )
+            {
+               /* if new upper bound is smaller than the lower bound, we are infeasible */
+               if ( SCIPisFeasGT(scip, lb, newbound) )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
+
+               if ( SCIPvarIsIntegral(var) )
+                  newbound = SCIPfloor(scip, newbound);
+
+               SCIP_CALL( SCIPtightenVarUb(scip, var, newbound, FALSE, &infeasible, &tightened) );
+               assert( ! infeasible );
+
+               if ( tightened )
+               {
+                  SCIPdebugMessage("changed upper bound of variable %s from %f to %f \n", SCIPvarGetName(var), ub, newbound);
+                  ++(*nchgbds);
+               }
+            }
+            else if ( SCIPisFeasNegative(scip, linval) && SCIPisFeasLT(scip, lb, newbound) )
+            {
+               /* if assumption a_i * x_i != 0 was not correct */
+               if ( SCIPisFeasLT(scip, ub, newbound) )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
+
+               if ( SCIPvarIsIntegral(var) )
+                  newbound = SCIPceil(scip, newbound);
+
+               SCIP_CALL( SCIPtightenVarLb(scip, var, newbound, FALSE, &infeasible, &tightened) );
+               assert( ! infeasible );
+
+               if ( tightened )
+               {
+                  SCIPdebugMessage("changed lower bound of variable %s from %f to %f \n", SCIPvarGetName(var), lb, newbound);
+                  ++(*nchgbds);
+               }
+            }
+         }
+
+         /* update implication graph if possible */
+         SCIP_CALL( updateImplicationGraphSOS1(scip, conshdlr, conflictgraph, adjacencymatrix, implgraph, implhash, implnodes, totalvars, cliquecovers, cliquecoversizes, varincover,
+               trafolinvars, trafolinvals, ntrafolinvars, trafolbs, var, trafolbv, newboundnonzero, ninftynonzero, FALSE, nchgbds, &update) );
+         if ( update )
+            *implupdate = TRUE;
+      }
+
+      /* free memory */
+      SCIPfreeBufferArrayNull(scip, &varincover);
+      for (j = ncliquecovers-1; j >= 0; --j)
+         SCIPfreeBufferArrayNull(scip, &cliquecovers[j]);
+      SCIPfreeBufferArrayNull(scip, &cliquecovers);
+      SCIPfreeBufferArrayNull(scip, &cliquecoversizes);
+      SCIPfreeBufferArrayNull(scip, &cliquecovervals);
+      SCIPfreeBufferArrayNull(scip, &trafolinvals);
+      SCIPfreeBufferArrayNull(scip, &trafolinvars);
+
+      if ( *cutoff == TRUE )
+         break;
+   } /* end for every linear constraint */
+
+   /* free buffer arrays */
+   SCIPfreeBufferArrayNull(scip, &sos1linvars);
+   SCIPfreeBufferArrayNull(scip, &trafolbs);
+   SCIPfreeBufferArrayNull(scip, &trafoubs);
+   SCIPfreeBufferArrayNull(scip, &coveredvars);
+   SCIPfreeBufferArrayNull(scip, &varindincons);
+   SCIPfreeBufferArrayNull(scip, &implnodes);
+
+   return SCIP_OKAY;
+}
+
+
+/* ----------------------------- propagation -------------------------------------*/
 
 /** propagate variables */
 static
@@ -1944,6 +3663,8 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 }
 
 
+/* --------------------initialization/deinitialization ------------------------*/
+
 /** check whether var1 is a bound variable of var0; i.e., var0 >= c * var1 or var0 <= d * var1.
  *  If true, then add this information to the node data of the conflict graph.
  */
@@ -2792,11 +4513,42 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_DIGRAPH* conflictgraph;
+   SCIP_DIGRAPH* vertexcliquegraph;
+   SCIP_DIGRAPH* implgraph;
+   SCIP_HASHMAP* implhash;
+   SCIP_Bool* implnodes;
+   SCIP_Bool** adjacencymatrix = NULL;
+   SCIP_VAR** consvars;
+   SCIP_Real* consweights;
+   SCIP_VAR** totalvars;
+   SCIP_VAR** vars;
+   int ntotalvars = 0;
+   int nsos1vars;
+   int nvars;
+
    int oldnfixedvars;
    int oldndelconss;
    int oldnupgdconss;
    int nremovedvars;
-   SCIP_EVENTHDLR* eventhdlr;
+
+   SCIP_Bool updateconfl;
+   SCIP_Bool cutoff = FALSE;
+
+   int** cliques = NULL;
+   int ncliques = 0;
+   int* cliquesizes = NULL;
+   int* newclique = NULL;
+   int* indconss = NULL;
+   int* lengthconss = NULL;
+   int* succ;
+   int nsucc;
+   int* comsucc = NULL;
+   int iter;
+   int i;
+   int j;
    int c;
 
    assert( scip != NULL );
@@ -2804,31 +4556,99 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    SCIPdebugMessage("Presolving SOS1 constraints.\n");
 
    *result = SCIP_DIDNOTRUN;
+
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
    oldnupgdconss = *nupgdconss;
    nremovedvars = 0;
 
    /* only run if success if possible */
-   if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 )
+   if( nconss > 0 && ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0 ) )
    {
+      int csize;
+
+      *result = SCIP_DIDNOTFIND;
+
       /* get constraint handler data */
       assert( SCIPconshdlrGetData(conshdlr) != NULL );
       eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
       assert( eventhdlr != NULL );
 
-      *result = SCIP_DIDNOTFIND;
+      /* initialize conflict graph */
+      SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss));
 
-      /* check each constraint */
+      /* get conflict graph */
+      conflictgraph = conshdlrdata->conflictgraph;
+
+      /* get number of SOS1 variables */
+      nsos1vars = conshdlrdata->nsos1vars;
+
+      if ( nsos1vars < 2 )
+         return SCIP_OKAY;
+
+      /* create digraph whose nodes represent variables or cliques in the conflict graph */
+      csize = MAX(1, conshdlrdata->maxextensions) * nconss;
+      SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, nsos1vars + csize) );
+
+      /* allocate buffer arrays */
+      SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
+      for (i = 0; i < nsos1vars; ++i)
+         SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consweights, nsos1vars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &cliques, csize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, csize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newclique, nsos1vars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &indconss, csize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lengthconss, csize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &comsucc, MAX(nsos1vars, csize)) );
+
+      /* create adjacency matrix */
+      for (i = 0; i < nsos1vars; ++i)
+      {
+         for (j = 0; j < i+1; ++j)
+            adjacencymatrix[i][j] = 0;
+      }
+      for (i = 0; i < nsos1vars; ++i)
+      {
+         succ = SCIPdigraphGetSuccessors(conflictgraph, i);
+         nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
+
+         for (j = 0; j < nsucc; ++j)
+         {
+            if ( i > succ[j] )
+               adjacencymatrix[i][succ[j]] = 1;
+         }
+      }
+
+      /* get constraint indices and sort them in descending order of their lengths */
       for (c = 0; c < nconss; ++c)
       {
          SCIP_CONSDATA* consdata;
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         indconss[c] = c;
+         lengthconss[c] = consdata->nvars;
+      }
+      SCIPsortDownIntInt(lengthconss, indconss, nconss);
+
+      /* check each constraint */
+      for (iter = 0; iter < nconss; ++iter)
+      {
+         SCIP_CONSDATA* consdata;
          SCIP_CONS* cons;
-         SCIP_Bool cutoff;
          SCIP_Bool success;
+         int savendelconss;
+
+         c = indconss[iter];
 
          assert( conss != NULL );
          assert( conss[c] != NULL );
@@ -2840,18 +4660,298 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          assert( consdata->nvars <= consdata->maxvars );
          assert( ! SCIPconsIsModifiable(cons) );
 
+         savendelconss = *ndelconss;
+
          /* perform one presolving round */
          SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, &nremovedvars) );
 
          if ( cutoff )
          {
+            /* free buffer arrays */
+            SCIPfreeBufferArrayNull(scip, &comsucc);
+            SCIPfreeBufferArrayNull(scip, &lengthconss);
+            SCIPfreeBufferArrayNull(scip, &indconss);
+            SCIPfreeBufferArrayNull(scip, &newclique);
+            SCIPfreeBufferArrayNull(scip, &cliquesizes);
+            for (j = ncliques-1; j >= 0; --j)
+               SCIPfreeBufferArrayNull(scip, &cliques[j]);
+            SCIPfreeBufferArrayNull(scip, &cliques);
+            SCIPfreeBufferArrayNull(scip, &consweights);
+            SCIPfreeBufferArrayNull(scip, &consvars);
+            SCIPdigraphFree(&vertexcliquegraph);
+            for (j = nsos1vars-1; j >= 0; --j)
+               SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
+            SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
+
+            /* free memory allocated in function initConflictgraph() */
+            SCIP_CALL( freeConflictgraph(conshdlrdata));
+
             *result = SCIP_CUTOFF;
+
             return SCIP_OKAY;
+         }
+
+         if ( *ndelconss > savendelconss )
+         {
+            *result = SCIP_SUCCESS;
+            continue;
          }
 
          if ( success )
             *result = SCIP_SUCCESS;
+
+         /* get number of variables of constraint */
+         nvars = consdata->nvars;
+
+         /* get variables of constraint */
+         vars = consdata->vars;
+
+         if ( nvars > 1 && conshdlrdata->maxextensions != 0 && ( nconss <= conshdlrdata->maxconsdelayext || conshdlrdata->maxconsdelayext == -1 ) )
+         {
+            SCIP_Bool extended = FALSE;
+            int cliquesize = 0;
+            int ncomsucc = 0;
+            int varprobind;
+            int k;
+
+            /* get clique and size of clique */
+            for (j = 0; j < nvars; ++j)
+            {
+               varprobind = varGetNodeSOS1(conshdlr, vars[j]);
+
+               if ( varprobind >= 0 )
+                  newclique[cliquesize++] = varprobind;
+            }
+
+            if ( cliquesize > 1 )
+            {
+               cliquesizes[ncliques] = cliquesize;
+
+               /* sort clique vertices */
+               SCIPsortInt(newclique, cliquesizes[ncliques]);
+
+               /* check if clique is contained in an already known clique */
+               if ( ncliques > 0 )
+               {
+                  int v;
+
+                  varprobind = newclique[0];
+                  ncomsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
+                  succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
+
+                  for (j = 0; j < ncomsucc; ++j)
+                  {
+                     /* successors should have been sorted in a former step of the algorithm */
+                     assert( j == 0 || succ[j] > succ[j-1] );
+                     comsucc[j] = succ[j];
+                  }
+
+                  for (v = 1; v < cliquesize; ++v)
+                  {
+                     int ncomsuccsave = 0;
+                     k = 0;
+
+                     varprobind = newclique[v];
+                     nsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
+                     succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
+
+                     /* determine successors that are in comsucc */
+                     for (j = 0; j < ncomsucc; ++j)
+                     {
+                        for (i = k; i < nsucc; ++i)
+                        {
+                           assert( i == 0 || succ[i] > succ[i-1] );
+
+                           if ( succ[i] > comsucc[j] )
+                           {
+                              k = i;
+                              break;
+                           }
+                           else if ( succ[i] == comsucc[j] )
+                           {
+                              comsucc[ncomsuccsave++] = succ[i];
+                              k = i + 1;
+                              break;
+                           }
+                        }
+                     }
+                     ncomsucc = ncomsuccsave;
+                  }
+               }
+
+               /* if constraint is redundand then delete it */
+               if ( ncomsucc > 0 )
+               {
+                  assert( ! SCIPconsIsModifiable(cons) );
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  ++(*ndelconss);
+                  *result = SCIP_SUCCESS;
+                  continue;
+               }
+
+               if ( conshdlrdata->maxextensions != 0 )
+               {
+                  int maxextensions;
+                  ncomsucc = 0;
+
+                  /* determine the common successors of the vertices from the considered clique */
+                  SCIP_CALL( CliqueGetCommonSuccessorsSOS1(conshdlr, conflictgraph, newclique, vars, nvars, comsucc, &ncomsucc) );
+
+                  /* find extensions for the clique */
+                  maxextensions = conshdlrdata->maxextensions;
+
+                  SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, consvars, consweights,
+                        cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions, naddconss, &extended) );
+               }
+
+               /* if an extension was found for the current clique then free the old SOS1 constraint */
+               if ( extended )
+               {
+                  assert( ! SCIPconsIsModifiable(cons) );
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  ++(*ndelconss);
+                  *result = SCIP_SUCCESS;
+               }
+               else /* if we keep the constraint */
+               {
+                  int cliqueind;
+
+                  cliqueind = nsos1vars + ncliques; /* index of clique in vertex-clique graph */
+
+                  /* add directed edges to the vertex-clique graph */
+                  SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );
+                  for (j = 0; j < cliquesize; ++j)
+                  {
+                     cliques[ncliques][j] = newclique[j];
+                     SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[ncliques][j], cliqueind, NULL) );
+                  }
+
+                  /* update number of maximal cliques */
+                  ++ncliques;
+               }
+            }
+         }
       }
+
+      /* free buffer arrays */
+      SCIPfreeBufferArrayNull(scip, &comsucc);
+      SCIPfreeBufferArrayNull(scip, &lengthconss);
+      SCIPfreeBufferArrayNull(scip, &indconss);
+      SCIPfreeBufferArrayNull(scip, &newclique);
+      SCIPfreeBufferArrayNull(scip, &cliquesizes);
+      for (c = ncliques-1; c >= 0; --c)
+         SCIPfreeBufferArrayNull(scip, &cliques[c]);
+      SCIPfreeBufferArrayNull(scip, &cliques);
+      SCIPfreeBufferArrayNull(scip, &consweights);
+      SCIPfreeBufferArrayNull(scip, &consvars);
+      SCIPdigraphFree(&vertexcliquegraph);
+
+      /* execute some pre-handling for bound tightening */
+      if ( conshdlrdata->maxtightenbds != 0)
+      {
+         SCIP_VAR** probvars;
+         int nprobvars;
+
+         assert( ntotalvars == 0 );
+
+         /* determine totalvars (union of SOS1 and problem variables) */
+         probvars = SCIPgetVars(scip);
+         nprobvars = SCIPgetNVars(scip);
+         SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &totalvars, nsos1vars + nprobvars) );
+         for (i = 0; i < nsos1vars; ++i)
+         {
+            SCIP_VAR* var;
+            var = nodeGetVarSOS1(conflictgraph, i);
+
+            /* insert node number to hash map */
+            assert( ! SCIPhashmapExists(implhash, var) );
+            SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
+            assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+            totalvars[ntotalvars++] = var;
+         }
+         for (i = 0; i < nprobvars; ++i)
+         {
+            SCIP_VAR* var;
+            var = probvars[i];
+
+            /* insert node number to hash map if not existent */
+            if ( ! SCIPhashmapExists(implhash, var) )
+            {
+               SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
+               assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+               totalvars[ntotalvars++] = var;
+            }
+         }
+
+         /* create implication graph */
+         SCIP_CALL( SCIPdigraphCreate(&implgraph, ntotalvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
+      }
+
+      /* try to tighten the upper and lower bounds of the variables */
+      updateconfl = FALSE;
+      for (j = 0; (j < conshdlrdata->maxtightenbds || conshdlrdata->maxtightenbds == -1 ) && ! cutoff; ++j)
+      {
+         SCIP_Bool implupdate;
+         int nchgbdssave;
+
+         nchgbdssave = *nchgbds;
+
+         assert( ntotalvars > 0 );
+         SCIP_CALL( tightenVarsBoundsSOS1(scip, conshdlr, conflictgraph, implgraph, implhash, adjacencymatrix, totalvars, ntotalvars, nsos1vars, nchgbds, &implupdate, &cutoff) );
+         if ( implupdate )
+            updateconfl = TRUE;
+         else if ( ! (*nchgbds > nchgbdssave ) )
+            break;
+      }
+
+      if ( conshdlrdata->maxtightenbds != 0 )
+      {
+         /* try to update conflict graph based on the information of the implication graph */
+         if ( updateconfl && conshdlrdata->updateconflpresol )
+         {
+            for (i = 0; i < nsos1vars; ++i)
+            {
+               for (j = 0; j < nsos1vars; ++j)
+                  implnodes[j] = FALSE;
+               SCIP_CALL( SCIPupdateConflictGraphSOS1(scip, conshdlr, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, i, i, naddconss) );
+            }
+         }
+
+         /* free memory needed for bound tightening */;
+         SCIPhashmapFree(&implhash);
+         SCIPfreeBufferArrayNull(scip, &totalvars);
+
+         for (j = 0; j < ntotalvars; ++j)
+         {
+            SCIP_SUCCDATA** succdatas;
+            int s;
+            succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, j);
+            nsucc = SCIPdigraphGetNSuccessors(implgraph, j);
+            succ = SCIPdigraphGetSuccessors(implgraph, j);
+
+            for (s = 0; s < nsucc; ++s)
+               SCIPfreeMemory(scip, &succdatas[s]);
+         }
+         SCIPfreeBufferArrayNull(scip, &implnodes);
+         SCIPdigraphFree(&implgraph);
+      }
+
+      /* free adjacency matrix */
+      for (j = nsos1vars-1; j >= 0; --j)
+         SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
+      SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
+
+      /* if an infeasibility has been detected by bound tightening */
+      if( cutoff )
+      {
+         SCIPdebugMessage("cutoff \n");
+         *result = SCIP_CUTOFF;
+      }
+
+      /* free memory allocated in function initConflictgraph() */
+      SCIP_CALL( freeConflictgraph(conshdlrdata));
    }
    (*nchgcoefs) += nremovedvars;
 
@@ -3642,6 +5742,23 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* add SOS1 constraint handler parameters */
 
+   /* presolving parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxconsdelayext",
+         "delay clique extension if number of sos1 constraints is larger than predefined value (-1: no limit)",
+         &conshdlrdata->maxconsdelayext, TRUE, DEFAULT_MAXCONSDELAYEXT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxextensions",
+         "maximal number of extensions that will be computed for each SOS1 constraint  (-1: no limit)",
+         &conshdlrdata->maxextensions, TRUE, DEFAULT_MAXEXTENSIONS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxtightenbds",
+         "maximal number of bound tightening rounds per presolving round (-1: no limit)",
+         &conshdlrdata->maxtightenbds, TRUE, DEFAULT_MAXTIGHTENBDS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/updateconflpresol",
+         "if TRUE then update conflict graph during presolving procedure",
+         &conshdlrdata->updateconflpresol, TRUE, DEFAULT_UPDATECONFLPRESOL, NULL, NULL) );
+
    /* propagation parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/conflictprop",
          "whether to use conflict graph propagation",
@@ -4073,6 +6190,55 @@ SCIP_VAR* nodeGetVarSOS1(
    }
 
    return nodedata->var;
+}
+
+
+/** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
+SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   )
+{
+   SCIP_Real bound;
+   SCIP_VAR* var;
+   SCIP_Real val;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   var = nodeGetVarSOS1(conflictgraph, node);
+   val = SCIPgetSolVal(scip, sol, var);
+
+   if ( SCIPisFeasNegative(scip, val) )
+   {
+      bound = SCIPvarGetLbLocal(var);
+      assert( SCIPisFeasNegative(scip, bound) );
+
+      if ( SCIPisInfinity(scip, -val) )
+         return 1.0;
+      else if ( SCIPisInfinity(scip, -bound) )
+         return 0.0;
+      else
+         return (val/bound);
+   }
+   else if ( SCIPisFeasPositive(scip, val) )
+   {
+      bound = SCIPvarGetUbLocal(var);
+      assert( SCIPisFeasPositive(scip, bound) );
+      assert( SCIPisFeasPositive(scip, val) );
+
+      if ( SCIPisInfinity(scip, val) )
+         return 1.0;
+      else if ( SCIPisInfinity(scip, bound) )
+         return 0.0;
+      else
+         return (val/bound);
+   }
+   else
+      return 0.0;
 }
 
 
