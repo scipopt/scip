@@ -732,7 +732,7 @@ SCIP_RETCODE filterExistingLP(
             assert(propdata->ndiveiterations >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
-            if( optimal )
+            if( optimal && SCIPgetDepth(scip) == 0 )
             {
                SCIP_Bool found;
 
@@ -876,7 +876,7 @@ SCIP_RETCODE filterRound(
             assert(propdata->nfilterlpiters >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
-            if( optimal )
+            if( optimal && SCIPgetDepth(scip) == 0 )
             {
                SCIP_Bool found;
 
@@ -1539,11 +1539,17 @@ SCIP_RETCODE applyObbt(
    /* reset bound data structure flags; fixed variables are marked as filtered */
    for( i = 0; i < propdata->nbounds; i++ )
    {
-      propdata->bounds[i]->filtered |= varIsFixedLocal(scip, propdata->bounds[i]->var);
       propdata->bounds[i]->found = FALSE;
 
-      /* reset done flag if we apply OBBT for a new node */
-      propdata->bounds[i]->done = continuenode ? propdata->bounds[i]->done : FALSE;
+      /* reset 'done' and 'filtered' flag in a new B&B node */
+      if( !continuenode )
+      {
+         propdata->bounds[i]->done = FALSE;
+         propdata->bounds[i]->filtered = FALSE;
+      }
+
+      /* mark fixed variables as filtered */
+      propdata->bounds[i]->filtered |= varIsFixedLocal(scip, propdata->bounds[i]->var);
    }
 
    /* filter variables via inspecting present LP solution */
