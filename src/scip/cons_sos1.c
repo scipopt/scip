@@ -3605,9 +3605,7 @@ SCIP_RETCODE initTCliquegraph(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   int                   nsos1vars,          /**< number of SOS1 variables */
-   SCIP_SOL*             sol,                /**< LP solution to be separated (or NULL) */
-   SCIP_Real             scaleval            /**< factor for scaling weights */
+   int                   nsos1vars           /**< number of SOS1 variables */
    )
 {
    TCLIQUE_DATA* tcliquedata;
@@ -3656,10 +3654,10 @@ SCIP_RETCODE initTCliquegraph(
 
    /* initialize clique data */
    tcliquedata->scip = scip;
-   tcliquedata->sol = sol;
+   tcliquedata->sol = NULL;
    tcliquedata->conshdlr = conshdlr;
    tcliquedata->conflictgraph = conflictgraph;
-   tcliquedata->scaleval = scaleval;
+   tcliquedata->scaleval = 1000.0;
    tcliquedata->ncuts = 0;
    tcliquedata->nboundcuts = conshdlrdata->nboundcuts;
    tcliquedata->strthenboundcuts = conshdlrdata->strthenboundcuts;
@@ -4220,13 +4218,11 @@ SCIP_RETCODE sepaBoundInequalitiesFromGraph(
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
-   /* initialize tclique graph if not done already */
-   if ( conshdlrdata->tcliquegraph == NULL )
-   {
-      SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conflictgraph, nsos1vars, sol, scaleval) );
-   }
+   /* initialize data of tclique graph*/
    tcliquedata = conshdlrdata->tcliquedata;
+   tcliquedata->scaleval = scaleval;
    tcliquedata->maxboundcuts = maxboundcuts;
+   tcliquedata->sol = sol;
    tcliquedata->ncuts = 0;
 
    /* update the weights of the tclique graph */
@@ -5068,6 +5064,9 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
 
        /* add data to conflict graph nodes */
        SCIP_CALL( setNodeDataSOS1(scip, conshdlr, conshdlrdata, nconss, conshdlrdata->nsos1vars) );
+
+       /* initialize tclique graph */
+       SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars) );
     }
     return SCIP_OKAY;
 }
@@ -5091,6 +5090,10 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
       SCIPdigraphFree(&conshdlrdata->localconflicts);
    assert( conshdlrdata->localconflicts == NULL );
 
+   /* free implication graph */
+   if ( conshdlrdata->implgraph != NULL )
+      SCIP_CALL( freeImplGraphSOS1(scip, conshdlrdata) );
+
    /* free tclique graph and tclique data */
    if( conshdlrdata->tcliquegraph != NULL )
    {
@@ -5101,10 +5104,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    assert(conshdlrdata->tcliquegraph == NULL);
    assert(conshdlrdata->tcliquedata == NULL);
 
-   /* free conflict graph and implication graph */
+   /* free conflict graph  */
    if ( nconss > 0 && conshdlrdata->nsos1vars > 0 )
    {
-      SCIP_CALL( freeImplGraphSOS1(scip, conshdlrdata) );
       SCIP_CALL( freeConflictgraph(conshdlrdata) );
    }
    assert( conshdlrdata->conflictgraph == NULL );
