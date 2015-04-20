@@ -89,6 +89,7 @@
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
+#include "scip/heur_ofins.h"
 #include "scip/heur_oneopt.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_proximity.h"
