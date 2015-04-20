@@ -732,7 +732,7 @@ SCIP_RETCODE filterExistingLP(
             assert(propdata->ndiveiterations >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
-            if( optimal && SCIPgetDepth(scip) == 0 )
+            if( optimal && SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
             {
                SCIP_Bool found;
 
@@ -876,7 +876,7 @@ SCIP_RETCODE filterRound(
             assert(propdata->nfilterlpiters >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
-            if( optimal && SCIPgetDepth(scip) == 0 )
+            if( optimal && SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
             {
                SCIP_Bool found;
 
