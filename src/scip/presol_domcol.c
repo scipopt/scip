@@ -1990,7 +1990,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
       return SCIP_OKAY;
 
-   if( SCIPgetNContVars(scip) == 0 || SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
+   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -2047,8 +2047,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       SCIP_CALL( SCIPallocBufferArray(scip, &intsearchcols, ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &binsearchcols, ncols) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, nrows) );
       for( r = 0; r < nrows; ++r )
       {
          rowidxsorted[r] = r;
