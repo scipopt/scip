@@ -6179,12 +6179,27 @@ SCIP_RETCODE SCIPcheckNodeCutoff(
    );
 
 /* save bound changes based on dual information */
+EXTERN
 SCIP_RETCODE SCIPaddDualBndchg(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_NODE*            node,                    /**< node of the search tree */
    SCIP_VAR*             var,                     /**< variable to add */
    SCIP_Real             newbound,                /**< new bound of the variable */
    SCIP_Real             oldbound                 /**< old bound of the variable */
+   );
+
+/* returns the optimal solution of the last iteration or NULL of none exists */
+EXTERN
+SCIP_SOL* SCIPgetReoptLastOptSol(
+   SCIP*                 scip                     /**< SCIP data structure */
+   );
+
+/* returns the objective coefficent of a given variable in a previous iteration */
+EXTERN
+SCIP_Real SCIPgetReoptObjCoef(
+   SCIP*                 scip,                    /**< SCIP data structure */
+   SCIP_VAR*             var,                     /**< variable */
+   int                   run                      /**< number of the run */
    );
 
 /** returns whether we are in the restarting phase

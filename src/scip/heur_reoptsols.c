@@ -190,7 +190,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 
       nsolsadded = 0;
 
-      for(run = SCIPgetNReoptRuns(scip)-1; run > max_run && nchecksols > 0; run--)
+      for(run = SCIPgetNReoptRuns(scip); run > max_run && nchecksols > 0; run--)
       {
          SCIP_Real sim;
          int nsols;

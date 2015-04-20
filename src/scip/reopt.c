@@ -668,8 +668,8 @@ SCIP_RETCODE soltreeAddSol(
          }
       }
 
-      /* the solution was added */
-      if( *added )
+      /* the solution was added or is an optimal solution */
+      if( *added || bestsol )
       {
          SCIP_SOL* copysol;
 
@@ -692,25 +692,10 @@ SCIP_RETCODE soltreeAddSol(
             assert(cursolnode->sol != NULL);
 
             reopt->lastbestsol[reopt->run-1] = cursolnode->sol;
-            printf(">> add best sol at pos %d\n", reopt->run-1);
          }
 
          (*solnode) = cursolnode;
       }
-      else if( bestsol )
-      {
-         SCIP_SOL* copysol;
-         SCIP_CALL( SCIPsolCopy(&copysol, blkmem, set, stat, origprimal, sol) );
-         reopt->lastbestsol[reopt->run-1] = copysol;
-         printf(">> add best sol at pos %d\n", reopt->run-1);
-      }
-   }
-   else if( bestsol )
-   {
-      SCIP_SOL* copysol;
-      SCIP_CALL( SCIPsolCopy(&copysol, blkmem, set, stat, origprimal, sol) );
-      reopt->lastbestsol[reopt->run-1] = copysol;
-      printf(">> add best sol at pos %d\n", reopt->run-1);
    }
 
    return SCIP_OKAY;
@@ -3678,25 +3663,9 @@ SCIP_RETCODE SCIPreoptAddSol(
 
    /* if the solution was found by reoptsols the solutions is already stored */
    heur = SCIPsolGetHeur(sol);
-   if( heur != NULL && strcmp(SCIPheurGetName(heur), "reoptsols") == 0 )
-   {
-      *added = FALSE;
-
-      if( bestsol )
-      {
-         SCIP_SOL* copysol;
-
-         reopt->noptsolsbyreoptsol++;
-
-         /* we add the solution to the best solutions found so far */
-         SCIP_CALL( SCIPsolCopy(&copysol, blkmem, set, stat, origprimal, sol) );
-         reopt->lastbestsol[reopt->run-1] = copysol;
-      }
-
-      return SCIP_OKAY;
-   }
-
-   if( bestsol )
+   if( heur != NULL && strcmp(SCIPheurGetName(heur), "reoptsols") == 0 && bestsol )
+      reopt->noptsolsbyreoptsol++;
+   else if( bestsol )
       reopt->noptsolsbyreoptsol = 0;
 
    /* check memory */
@@ -3743,7 +3712,6 @@ SCIP_RETCODE SCIPreoptAddOptSol(
 
    SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, origprimal, sol) );
    reopt->lastbestsol[reopt->run-1] = solcopy;
-   printf(">> add best sol at pos %d\n", reopt->run-1);
 
    return SCIP_OKAY;
 }
@@ -3753,15 +3721,15 @@ SCIP_RETCODE SCIPreoptAddRun(
    SCIP_REOPT*           reopt,                   /**< reopt data */
    SCIP_SET*             set,                     /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,                  /**< block memory */
-   SCIP_VAR**            origvars,                /**< original variables */
-   int                   norigvars,               /**< number of original variables */
+   SCIP_VAR**            vars,                    /**< trnasformed variables */
+   int                   nvars,                   /**< number of transformed variables */
    int                   size                     /**< number of expected solutions */
    )
 {
    assert(reopt != NULL);
    assert(set != NULL);
    assert(blkmem !=  NULL);
-   assert(origvars != NULL);
+   assert(vars != NULL);
 
    /* increase number of runs */
    reopt->run++;
@@ -3776,21 +3744,21 @@ SCIP_RETCODE SCIPreoptAddRun(
    if( reopt->nobjvars == 0 )
    {
       assert(reopt->run == 1);
-      reopt->nobjvars = norigvars;
+      reopt->nobjvars = nvars;
 
       /* allocate permanent memory */
-      if( norigvars > 0 )
+      if( nvars > 0 )
       {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->consvars, norigvars) );
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->consvals, norigvars) );
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->consbounds, norigvars) );
-         reopt->consallocmem = norigvars;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->consvars, nvars) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->consvals, nvars) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->consbounds, nvars) );
+         reopt->consallocmem = nvars;
       }
    }
-   assert(reopt->nobjvars == norigvars);
+   assert(reopt->nobjvars == nvars);
 
    /* save the objective function */
-   SCIP_CALL( SCIPreoptSaveNewObj(reopt, set, blkmem, origvars, norigvars) );
+   SCIP_CALL( SCIPreoptSaveNewObj(reopt, set, blkmem, vars, nvars) );
 
    resetStats(reopt);
 
@@ -3975,9 +3943,22 @@ SCIP_RETCODE SCIPreoptSaveNewObj(
    /* save coefficients */
    for(v = 0; v < reopt->nobjvars; v++)
    {
-      id = SCIPvarGetIndex(vars[v]);
-      reopt->objs[reopt->run-1][id] = SCIPvarGetObj(vars[id]);
-      norm += (SCIPvarGetObj(vars[id]) * SCIPvarGetObj(vars[id]));
+      SCIP_VAR* origvar;
+      SCIP_Real constant;
+      SCIP_Real scalar;
+
+      assert(SCIPvarIsActive(vars[v]));
+      assert(!SCIPvarIsOriginal(vars[v]));
+
+      origvar = vars[v];
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      assert(origvar != NULL);
+
+      id = SCIPvarGetIndex(origvar);
+      assert(0 <= id && id < reopt->nobjvars);
+
+      reopt->objs[reopt->run-1][id] = SCIPvarGetObj(origvar);
+      norm += (reopt->objs[reopt->run-1][id] * reopt->objs[reopt->run-1][id]);
 
       /* mark this objective as the first non empty */
       if( reopt->firstobj == -1 && reopt->objs[reopt->run-1][id] != 0 )
@@ -3987,9 +3968,8 @@ SCIP_RETCODE SCIPreoptSaveNewObj(
    norm = sqrt(norm);
 
    /* normalize the coefficients */
-   for(v = 0; v < reopt->nobjvars && norm > 0; v++)
+   for(id = 0; id < reopt->nobjvars && norm > 0; id++)
    {
-      id = SCIPvarGetIndex(vars[v]);
       reopt->objs[reopt->run-1][id] /= norm;
    }
 

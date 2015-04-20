@@ -7439,7 +7439,7 @@ void SCIPnodeGetConsProps(
        && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
       i++;
 
-   first_dual = i;
+   first_dual = (--i);
 
    /* count the number of bound changes because of constraint propagation
     */
@@ -7457,15 +7457,18 @@ void SCIPnodeGetConsProps(
    /* if the arrays have enough space store the branching decisions */
    if( conspropvarssize >= *nconspropvars )
    {
-      for(i = nskip; i < first_dual; i++)
+      int pos;
+
+      for(i = nskip, pos = 0; i < first_dual; i++)
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
          {
             if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
             {
-               vars[i-nskip] = boundchgs[i].var;
-               varboundtypes[i-nskip] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-               varbounds[i-nskip] = boundchgs[i].newbound;
+               vars[pos] = boundchgs[i].var;
+               varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+               varbounds[pos] = boundchgs[i].newbound;
+               pos++;
             }
          }
       }

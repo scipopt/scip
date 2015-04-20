@@ -34,7 +34,7 @@
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
-#define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
@@ -118,9 +118,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_SOL* allchanged;          /** solution with all entries negated */
    SCIP_SOL* feasiblechanged;     /** solution with all feasible entries negated */
    SCIP_SOL* singlenegatedsol;    /** solution with exactly one negated entry */
-   SCIP_VAR** vars;
+   SCIP_VAR** origvars;
 
-   int nvars;
+   int norigvars;
    int i;
 
    SCIP_Real solval;
@@ -135,8 +135,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
       return SCIP_OKAY;
    }
 
-   vars = SCIPgetOrigVars(scip);
-   nvars = SCIPgetNOrigVars(scip);
+   origvars = SCIPgetOrigVars(scip);
+   norigvars = SCIPgetNOrigVars(scip);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -152,12 +152,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_CALL( SCIPcreateSol(scip, &singlenegatedsol, heur) );
 
    /* copy the solutions */
-   for(i = 0; i < nvars; i++)
+   for(i = 0; i < norigvars; i++)
    {
-      solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
-      SCIP_CALL( SCIPsetSolVal(scip, allchanged, vars[i], solval) );
-      SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, vars[i], solval) );
-      SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, vars[i], solval) );
+      solval = SCIPgetSolVal(scip, lastbestsol, origvars[i]);
+      SCIP_CALL( SCIPsetSolVal(scip, allchanged, origvars[i], solval) );
+      SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, origvars[i], solval) );
+      SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, origvars[i], solval) );
    }
 
    assert(SCIPsolGetHeur(allchanged) == heur);
@@ -165,29 +165,34 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    assert(SCIPsolGetHeur(singlenegatedsol) == heur);
 
    /* change the entries */
-   for(i = 0; i < nvars; i++)
+   for(i = 0; i < norigvars; i++)
    {
+      SCIP_VAR* transvar;
       SCIP_Bool entering;
       SCIP_Bool leaving;
       SCIP_Bool negated;
       SCIP_Real obj;
 
-      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY
-       && SCIPvarGetStatus(SCIPvarGetTransVar(vars[i])) != SCIP_VARSTATUS_FIXED
-       && SCIPvarGetStatus(SCIPvarGetTransVar(vars[i])) != SCIP_VARSTATUS_AGGREGATED
-       && SCIPvarGetStatus(SCIPvarGetTransVar(vars[i])) != SCIP_VARSTATUS_MULTAGGR )
+      transvar = SCIPvarGetTransVar(origvars[i]);
+      assert(transvar != NULL);
+
+      if( SCIPvarGetType(origvars[i]) == SCIP_VARTYPE_BINARY
+       && SCIPvarIsActive(transvar)
+       && SCIPvarGetStatus(transvar) != SCIP_VARSTATUS_FIXED
+       && SCIPvarGetStatus(transvar) != SCIP_VARSTATUS_AGGREGATED
+       && SCIPvarGetStatus(transvar) != SCIP_VARSTATUS_MULTAGGR )
       {
          /* check the changes of the variable */
-         SCIPgetVarCoefChg(scip, SCIPvarGetIndex(vars[i]), &negated, &entering, &leaving);
+         SCIPgetVarCoefChg(scip, SCIPvarGetIndex(origvars[i]), &negated, &entering, &leaving);
 
          if( negated || entering || leaving )
          {
-            solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
+            solval = SCIPgetSolVal(scip, lastbestsol, origvars[i]);
 
             /* change solution value */
-            SCIP_CALL( SCIPsetSolVal(scip, allchanged, vars[i], 1 - solval) );
-            SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, vars[i], 1 - solval) );
-            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, vars[i], 1 - solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, allchanged, origvars[i], 1 - solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, origvars[i], 1 - solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, origvars[i], 1 - solval) );
 
             /* try solution with all changes */
             success = FALSE;
@@ -226,7 +231,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( !success )
             {
                /* reset solution with feasible changes */
-               SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, vars[i], solval) );
+               SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, origvars[i], solval) );
             }
 
             /* try solution with exactly one changed value */
@@ -247,7 +252,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             }
 
             /* reset solution with exactly one changed value */
-            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, vars[i], solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, origvars[i], solval) );
          }
       }
    }

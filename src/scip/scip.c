@@ -14093,16 +14093,6 @@ SCIP_RETCODE SCIPsolve(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   if( scip->set->reopt_enable )
-   {
-      /* decrease number of reopt_runs */
-      scip->stat->reopt_nruns++;
-
-      /* inform the reoptimization plugin that a new iteration starts */
-      SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->origprob->vars,
-            scip->origprob->nvars, scip->set->limit_maxsol) );
-   }
-
    /* initialize presolving flag (may be modified in SCIPpresolve()) */
    scip->stat->performpresol = FALSE;
 
@@ -14162,6 +14152,16 @@ SCIP_RETCODE SCIPsolve(
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
+         if( scip->set->reopt_enable )
+         {
+            /* decrease number of reopt_runs */
+            scip->stat->reopt_nruns++;
+
+            /* inform the reoptimization plugin that a new iteration starts */
+            SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->transprob->vars,
+                  scip->transprob->nvars, scip->set->limit_maxsol) );
+         }
+
          /* check if reoptimization is enabled and global constraints saved */
          if( scip->stat->reopt_nruns > 1 && scip->set->reopt_enable )
          {
@@ -14284,7 +14284,7 @@ SCIP_RETCODE SCIPsolve(
             SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
          }
 
-         if( TRUE || SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL || (s == 0 && scip->set->reopt_sepabestsol) )
+         if( SCIPsolGetNodenum(sol) > 0 || SCIPsolGetHeur(sol) != NULL || (s == 0 && scip->set->reopt_sepabestsol) )
          {
             if( s != 0 || !scip->set->reopt_sepabestsol )
             {
@@ -14382,7 +14382,7 @@ SCIP_RETCODE SCIPaddDualBndchg(
    SCIP_VAR*             var,                     /**< variable to add */
    SCIP_Real             newbound,                /**< new bound of the variable */
    SCIP_Real             oldbound                 /**< old bound of the variable */
-)
+   )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddDualBndchg", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -14391,6 +14391,53 @@ SCIP_RETCODE SCIPaddDualBndchg(
    SCIP_CALL( SCIPreoptAddDualBndchg(scip->reopt, scip->set, scip->mem->probmem, node, var, newbound, oldbound) );
 
    return SCIP_OKAY;
+}
+
+/* returns the optimal solution of the last iteration or NULL of none exists */
+SCIP_SOL* SCIPgetReoptLastOptSol(
+   SCIP*                 scip                     /**< SCIP data structure */
+   )
+{
+   SCIP_SOL* sol;
+
+   assert(scip != NULL);
+
+   sol = NULL;
+
+   if( scip->set->reopt_enable && scip->stat->reopt_nruns > 1 )
+   {
+      sol = SCIPreoptGetLastBestSol(scip->reopt);
+   }
+
+   return sol;
+}
+
+/* returns the objective coefficent of a given variable in a previous iteration */
+SCIP_Real SCIPgetReoptObjCoef(
+   SCIP*                 scip,                    /**< SCIP data structure */
+   SCIP_VAR*             var,                     /**< variable */
+   int                   run                      /**< number of the run */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(0 < run && run <= scip->stat->reopt_nruns);
+
+   if( SCIPvarIsOriginal(var) )
+   {
+      return SCIPreoptGetObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
+   }
+   else
+   {
+      SCIP_VAR* origvar;
+      SCIP_Real constant;
+      SCIP_Real scalar;
+
+      origvar = var;
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
+      return SCIPreoptGetObjCoef(scip->reopt, run, SCIPvarGetIndex(origvar));
+   }
 }
 
 /*
@@ -14402,7 +14449,7 @@ SCIP_RETCODE SCIPgetReoptChildrenIDs(
    int*                  ids,                     /**< array of ids */
    int                   mem,                     /**< allocated memory */
    int*                  nids                     /**< number of child nodes */
-)
+   )
 {
    assert(scip != NULL);
 
@@ -38158,7 +38205,7 @@ void printSolutionStatistics(
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
-         if( scip->primal->nsols == 0 )
+         if( scip->primal->nlimsolsfound == 0 )
          {
             if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
             {
