@@ -5792,6 +5792,20 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    return SCIP_OKAY;
 }
 
+/** sets the number of successors to a given value */
+void SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nsuccessors[node] = nsuccessors;
+}
+
 /** returns the number of nodes of the given digraph */
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
