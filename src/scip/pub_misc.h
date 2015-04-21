@@ -928,6 +928,14 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    void*                 data                /**< data that should be stored for the arc; or NULL */
    );
 
+/** sets the number of successors to a given value */
+EXTERN
+void SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   );
+
 /** returns the number of nodes of the given digraph */
 EXTERN
 int SCIPdigraphGetNNodes(
