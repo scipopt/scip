@@ -191,6 +191,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
+   char                  interiorcomputation;/**< how the interior point should be computed */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
                                               * SCIP might declare sub-optimal solutions optimal or feasible instances
@@ -7134,12 +7135,16 @@ SCIP_RETCODE generateCut(
 
 
 /** computes an interior point for the quadratic part of the convex constraint
- * TODO: maybe this should be called on INITSOL? the activities might change during the tree
+ * there are different methods for computing the interior point
+ * 'a'ny: solves min 0, f(x) <= rhs, x in bounds
+ * 'm'ost interior: solves min f(x), x in bounds
+ * TODO: others?
  */
 static
 SCIP_RETCODE computeInteriorPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   char                  method,             /**< method for computing interior point ('a' any point, 'm'ost interior) */
    SCIP_Bool*            success             /**< buffer to store if an interior point was found */
 )
 {
@@ -7178,8 +7183,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIPinfoMessage(scip, NULL, ";\n");
 #endif
 
-   /* definition of interior point:
-    * in the convex case, we try to find an interior point of
+   /* in the convex case, we try to find an interior point of
     * x^T A x + b^T x <= rhs - maximum activity linear part
     * in the concave case; lhs - minimum activity linear part <= x^T A x + b^T x
     * we compute activities ourselves, since consdata->max(min)linactivity
@@ -7279,18 +7283,53 @@ SCIP_RETCODE computeInteriorPoint(
 
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(cons));
 
-   /* add constraint */
-   if( consdata->isconvex )
+   switch( method )
    {
-      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, NULL, &nlpiside, &nquadvars, &lininds, &lincoefs,
-               &nlrownquadelems, &nlrowquadelems, NULL, NULL, NULL) );
-   }
-   else
-   {
-      assert(consdata->isconcave);
+      case 'a':
+         /* add constraint */
+         if( consdata->isconvex )
+         {
+            SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, NULL, &nlpiside, &nquadvars, &lininds, &lincoefs,
+                     &nlrownquadelems, &nlrowquadelems, NULL, NULL, NULL) );
+         }
+         else
+         {
+            assert(consdata->isconcave);
 
-      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, &nlpiside, NULL, &nquadvars, &lininds, &lincoefs,
-               &nlrownquadelems, &nlrowquadelems, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPnlpiAddConstraints(nlpi, prob, 1, &nlpiside, NULL, &nquadvars, &lininds, &lincoefs,
+                     &nlrownquadelems, &nlrowquadelems, NULL, NULL, NULL) );
+         }
+         break;
+      case 'm':
+         /* add objective */
+         if( consdata->isconvex )
+         {
+            SCIP_CALL( SCIPnlpiSetObjective(nlpi, prob, nquadvars, lininds, lincoefs,
+                     nlrownquadelems, nlrowquadelems, NULL, NULL, 0.0) );
+         }
+         else
+         {
+            assert(consdata->isconcave);
+
+            /* IPOPT assumes minimization: change signs */
+            for( i = 0; i < nquadvars; i++ )
+               lincoefs[i] *= -1;
+
+            /* WARNING: this pointer is not ours, information should be restore! */
+            for( i = 0; i < nlrownquadelems; i++ )
+               nlrowquadelems->coef *= -1;
+
+            SCIP_CALL( SCIPnlpiSetObjective(nlpi, prob, nquadvars, lininds, lincoefs,
+                     nlrownquadelems, nlrowquadelems, NULL, NULL, 0.0) );
+
+            /* WARNING: restore information! */
+            for( i = 0; i < nlrownquadelems; i++ )
+               nlrowquadelems->coef *= -1;
+         }
+         break;
+      default:
+         SCIPerrorMessage("undefinied method for computing interior point: %c\n", method);
+         return SCIP_INVALIDDATA;
    }
 
    /* solve NLP problem */
@@ -7299,8 +7338,9 @@ SCIP_RETCODE computeInteriorPoint(
    /* check termination status */
    if( SCIPnlpiGetTermstat(nlpi, prob) != SCIP_NLPTERMSTAT_OKAY )
    {
-      SCIPdebugMessage("cons %s: IPOPT termination status not okay: %d (continue anyway)\n",
+      SCIPdebugMessage("cons %s: IPOPT termination status not okay: %d\n",
             SCIPconsGetName(cons), SCIPnlpiGetTermstat(nlpi, prob));
+      *success = FALSE;
       goto TERMINATE;
    }
 
@@ -7402,6 +7442,9 @@ TERMINATE:
  * The constant \f$c\f$ is rhs - minimum activity of the purely linear part of the constraint
  * if \f$A \succcurlyeq 0\f$ and minimum activity - lhs if \f$A \precurlyeq 0\f$.
  * this is computed only at INITSOL
+ * The method does:
+ * 1. compute interior point
+ * 2. compute gauge function
  */
 static
 SCIP_RETCODE computeGauge(
@@ -7431,21 +7474,14 @@ SCIP_RETCODE computeGauge(
    if( !conshdlrdata->gaugecuts )
       return SCIP_OKAY;
 
-   /* 1. check convexity
-    * 2. compute interior point
-    * 3. compute gauge function
-    */
-   /* 1. */
-   SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkcurvature) );
-
    /* function has to be convex with finite rhs or concave with finite lhs */
    convex = consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs);
    assert(convex || (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
 
    SCIPdebugMessage("cons %s: is %s\n", SCIPconsGetName(cons), convex ? "convex" : "concave");
 
-   /* 2. */
-   SCIP_CALL( computeInteriorPoint(scip, cons, &success) );
+   /* 1. */
+   SCIP_CALL( computeInteriorPoint(scip, cons, conshdlrdata->interiorcomputation, &success) );
 
    /* if success, compute gaugecoefs (b_gauge) and gaugeconst (c_gauge) */
    if( !success )
@@ -7455,7 +7491,7 @@ SCIP_RETCODE computeGauge(
       return SCIP_OKAY;
    }
 
-   /* 3. */
+   /* 2. */
    /* we are going to evaluate the function at interiorpoint. for this, we need
     * to evaluate interiorpoint^T A interiorpoint.
     * therefore, we need a mechanism that given a variable, can give us its interior point value
@@ -10583,8 +10619,8 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          SCIP_CALL( checkFactorable(scip, conss[c]) );
       }
 
-      /* compute gauge function only when there are quadratic variables */
-      if( conshdlrdata->gaugecuts && consdata->nquadvars >0 )
+      /* compute gauge function using interior points per constraint, only when there are quadratic variables */
+      if( conshdlrdata->gaugecuts && conshdlrdata->interiorcomputation != 'g' && consdata->nquadvars >0 )
       {
          SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
@@ -12527,6 +12563,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/gaugecuts",
          "should convex quadratics generated strong cuts via gauge function?",
          &conshdlrdata->gaugecuts, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/interiorcomputation",
+         "how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint, 'g'lobal interior",
+         &conshdlrdata->interiorcomputation, TRUE, 'a', "amg", NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
