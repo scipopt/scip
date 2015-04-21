@@ -41,7 +41,7 @@
  * - All other calls ignore the weights, i.e., if a nonempty constraint is created or variables are
  *   added with SCIPappendVarSOS1().
  *
- * The validity of the SOS1 constraint can be enforced by different branching rules:
+ * The validity of the SOS1 constraints can be enforced by different branching rules:
  *
  * - If classical SOS branching is used, branching is performed on only one SOS1 constraint. Depending on the parameters,
  *   there are two ways to choose this branching constraint. Either the constraint with the most number of nonzeros
@@ -53,6 +53,8 @@
  *
  * - If bipartite branching is used, then we branch using complete bipartite subgraphs of the conflict graph.
  *
+ *
+ * @todo Possibly allow to generate local cuts via strengthened local cuts (would need to modified coefficients of rows).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -73,7 +75,7 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "SOS1"
 #define CONSHDLR_DESC          "SOS1 constraint handler"
-#define CONSHDLR_SEPAPRIORITY   -900000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY       100 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       100 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY      -10 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ            10 /**< frequency for separating cuts; zero means to separate only in the root node */
@@ -219,7 +221,7 @@ struct SCIP_ConshdlrData
 };
 
 
-/** returns whether two vertices are adjacent (connected) */
+/** returns whether two vertices are adjacent in the conflict graph */
 static
 SCIP_Bool isConnectedSOS1(
    SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph (lower half) (or NULL if an adjacencymatrix is not at hand) */
@@ -392,7 +394,7 @@ SCIP_RETCODE lockVariableSOS1(
 }
 
 
-/* remove lock on variable */
+/** remove lock on variable */
 static
 SCIP_RETCODE unlockVariableSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -645,7 +647,7 @@ SCIP_RETCODE deleteVarSOS1(
 
 /* ----------------------------- presolving --------------------------------------*/
 
-/** extend a given clique in the conflict graph
+/** extends a given clique of the conflict graph
  *
  *  Implementation of the Bron-Kerbosch Algorithm from the paper:
  *  Algorithm 457: Finding all Cliques of an Undirected Graph, Bron & Kerbosch, Commun. ACM, 1973
@@ -1015,7 +1017,7 @@ SCIP_RETCODE CliqueGetCommonSuccessorsSOS1(
 }
 
 
-/* get nodes whose corresponding SOS1 variables are nonzero if an SOS1 variable of a given node is nonzero */
+/** get nodes whose corresponding SOS1 variables are nonzero if an SOS1 variable of a given node is nonzero */
 static
 SCIP_RETCODE SCIPgetSOS1Implications(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1556,7 +1558,7 @@ SCIP_RETCODE presolRoundConssSOS1(
 }
 
 
-/* adds further edges to the conflict graph based on the information of an implication graph */
+/** updates conflict graph based on the information of an implication graph */
 static
 SCIP_RETCODE SCIPupdateConflictGraphSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1792,7 +1794,9 @@ SCIP_Bool updateArcData(
 }
 
 
-/* assume some variable is nonzero. If this implies that some other variable is also nonzero, then store this information in an implication graph */
+/** updates implication graph: Assume the variable from the input is nonzero. If this implies that some other variable is also nonzero, then
+ *  store this information in an implication graph
+ */
 static
 SCIP_RETCODE updateImplicationGraphSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -2052,7 +2056,7 @@ SCIP_RETCODE SCIPcomputeVarsCoverSOS1(
 }
 
 
-/* try to tighten upper and lower bounds for variables */
+/** try to tighten upper and lower bounds for variables */
 static
 SCIP_RETCODE tightenVarsBoundsSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -3292,7 +3296,7 @@ SCIP_RETCODE initImplGraphSOS1(
 }
 
 
-/* deinitialize implication graph */
+/** deinitialize implication graph */
 static
 SCIP_RETCODE freeImplGraphSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -3605,7 +3609,7 @@ SCIP_RETCODE enforceSOS1(
 
 /* ----------------------------- separation ------------------------------------*/
 
-/* initialitze tclique graph and create clique data */
+/** initialitze tclique graph and create clique data */
 static
 SCIP_RETCODE initTCliquegraph(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -3674,7 +3678,7 @@ SCIP_RETCODE initTCliquegraph(
 }
 
 
-/* update weights of tclique graph */
+/** update weights of tclique graph */
 static
 SCIP_RETCODE updateWeightsTCliquegraph(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -3733,7 +3737,7 @@ SCIP_RETCODE updateWeightsTCliquegraph(
 }
 
 
-/* adds bound cut(s) to separation storage */
+/** adds bound cut(s) to separation storage */
 static
 SCIP_RETCODE addBoundCutSepa(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -4632,7 +4636,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
 
 /* --------------------initialization/deinitialization ------------------------*/
 
-/** check whether var1 is a bound variable of var0; i.e., var0 >= c * var1 or var0 <= d * var1.
+/** check whether \f$x_1\f$ is a bound variable of \f$x_0\f$; i.e., \f$x_0 \geq c\cdot x_1\f$ or \f$x_0 \leq d\cdot x_1\f$
  *  If true, then add this information to the node data of the conflict graph.
  */
 static
@@ -4708,10 +4712,10 @@ SCIP_RETCODE detectVarboundSOS1(
 }
 
 
-/* pass connected component @p C of the conflict graph and check whether all the variables correspond to a unique variable upper bound variable @p z,
+/** pass connected component @p C of the conflict graph and check whether all the variables correspond to a unique variable upper bound variable @p z,
  *  i.e., \f$x_i \leq u_i z\f$ for every \f$i\in C\f$.
  *
- *  Note: if the upper bound variable is not unique, then bound inequalities usually cannot be strengthened.
+ *  Note: if the bound variable is unique, then bound inequalities can be strengthened.
  */
 static
 SCIP_RETCODE passConComponentVarbound(
@@ -4784,7 +4788,7 @@ SCIP_RETCODE passConComponentVarbound(
 /** for each connected component @p C of the conflict graph check whether all the variables correspond to a unique variable upper bound variable @p z
  *  (e.g., for the upper bound case this means that \f$x_i \leq u_i z\f$ for every \f$i\in C\f$).
  *
- *  Note: if the bound variable is not unique, then bound inequalities usually cannot be strengthened.
+ *  Note: if the bound variable is unique, then bound inequalities can be strengthened.
  */
 static
 SCIP_RETCODE checkConComponentsVarbound(
@@ -4870,8 +4874,8 @@ SCIP_RETCODE checkConComponentsVarbound(
 }
 
 
-/** check all linear constraints for variable bound constraints of the form c*z <= x <= d*z, where @p x is some SOS1
- *  variable and @p z some arbitrary variable (not necessarily binary)
+/** check all linear constraints for variable bound constraints of the form \f$c\cdot z \leq x \leq d\cdot z\f$, where @p x is some SOS1
+ *  variable and @p z is some arbitrary variable (not necessarily binary)
  */
 static
 SCIP_RETCODE checkLinearConssVarboundSOS1(
@@ -4985,7 +4989,7 @@ SCIP_RETCODE setNodeDataSOS1(
 }
 
 
-/* initialize conflictgraph and create hashmap for SOS1 variables */
+/** initialize conflictgraph and create hashmap for SOS1 variables */
 static
 SCIP_RETCODE initConflictgraph(
    SCIP*                 scip,               /**< SCIP pointer */
