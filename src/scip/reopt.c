@@ -1616,7 +1616,7 @@ SCIP_RETCODE saveLocalConssData(
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopttree->reoptnodes[nodeID]->conss[nconss]->vals, reopttree->reoptnodes[nodeID]->conss[nconss]->nvars) );
 
          success = FALSE;
-         SCIPconsGetVars(addedcons[consnr], set, reopttree->reoptnodes[nodeID]->conss[nconss]->vars, reopttree->reoptnodes[nodeID]->conss[nconss]->nvars, &success);
+         SCIP_CALL( SCIPconsGetVars(addedcons[consnr], set, reopttree->reoptnodes[nodeID]->conss[nconss]->vars, reopttree->reoptnodes[nodeID]->conss[nconss]->nvars, &success) );
          assert(success);
 
          if( strcmp("sepasol", SCIPconsGetName(addedcons[consnr])) == 0 )
@@ -1750,6 +1750,8 @@ SCIP_RETCODE collectDualInformation(
          assert(SCIPvarIsOriginal(reopt->dualcons->vars[v]));
       }
    }
+
+   assert(nbndchgs > 0);
 
    /* due to the strong branching initialization it can be possible that two
     * constraints handling dual information are stored at the same time.
@@ -1893,16 +1895,20 @@ SCIP_RETCODE addNode(
                reopt->reopttree->reoptnodes[nodeID]->nconss,
                reopt->reopttree->reoptnodes[nodeID]->parentID, reopttype);
          SCIPdebugMessage(" -> saved variables:\n");
-
+#ifdef SCIP_MORE_DEBUG
          for (varnr = 0; varnr < reopt->reopttree->reoptnodes[nodeID]->nvars; varnr++)
-            SCIPdebugMessage("  <%s> %s %f\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->vars[varnr]),
+         {
+            SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->vars[varnr]),
                   reopt->reopttree->reoptnodes[nodeID]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                   "=>" : "<=", reopt->reopttree->reoptnodes[nodeID]->varbounds[varnr]);
-
+         }
          for (varnr = 0; varnr < reopt->reopttree->reoptnodes[nodeID]->nafterdualvars; varnr++)
-            SCIPdebugMessage("  <%s> %s %f (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->afterdualvars[varnr]),
+         {
+            SCIPdebugMessage("  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->afterdualvars[varnr]),
                   reopt->reopttree->reoptnodes[nodeID]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                   "=>" : "<=", reopt->reopttree->reoptnodes[nodeID]->afterdualvarbounds[varnr]);
+         }
+#endif
 #endif
 
       /** update LPI state if node is pseudobranched or feasible */
@@ -2205,18 +2211,20 @@ SCIP_RETCODE addNode(
             nodeID, reopt->reopttree->reoptnodes[nodeID]->nvars + reopt->reopttree->reoptnodes[nodeID]->nafterdualvars,
             reopt->reopttree->reoptnodes[nodeID]->nconss,
             reopttype);
+#ifdef SCIP_MORE_DEBUG
       for (varnr = 0; varnr < reopt->reopttree->reoptnodes[nodeID]->nvars; varnr++)
       {
-         SCIPdebugMessage("  <%s> %s %f\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->vars[varnr]),
+         SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->vars[varnr]),
                reopt->reopttree->reoptnodes[nodeID]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                      "=>" : "<=", reopt->reopttree->reoptnodes[nodeID]->varbounds[varnr]);
       }
       for (varnr = 0; varnr < reopt->reopttree->reoptnodes[nodeID]->nafterdualvars; varnr++)
       {
-         SCIPdebugMessage("  <%s> %s %f (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->afterdualvars[varnr]),
+         SCIPdebugMessage("  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[nodeID]->afterdualvars[varnr]),
                reopt->reopttree->reoptnodes[nodeID]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                      "=>" : "<=", reopt->reopttree->reoptnodes[nodeID]->afterdualvarbounds[varnr]);
       }
+#endif
 #endif
    }
 
@@ -2509,7 +2517,7 @@ SCIP_RETCODE changeAncestorBranchings(
       return SCIP_OKAY;
 
    /* change the bounds along the branching path */
-   SCIPdebugMessage(" -> change bound along the branching path:\n");
+   SCIPdebugMessage(" -> change bound along the branching path\n");
 
    for(v = 0; v < reoptnode->nvars; v++)
    {
@@ -2571,8 +2579,9 @@ SCIP_RETCODE changeAncestorBranchings(
                   tree, lp, branchcand, eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
       }
-
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("    <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? "=>" : "<=", newbound);
+#endif
    }
 
    /* fix bound affected by dual information at node_fix only */
@@ -2582,7 +2591,7 @@ SCIP_RETCODE changeAncestorBranchings(
       SCIP_CALL( reoptnodeCheckMemory(reopttree->reoptnodes[id], blkmem, reoptnode->nvars + reoptnode->nafterdualvars, 0, 0) );
 
       /* change the bounds */
-      SCIPdebugMessage(" -> change bounds affected by dual information:\n");
+      SCIPdebugMessage(" -> change bounds affected by dual information\n");
 
       for(v = 0; v < reoptnode->nafterdualvars; v++)
       {
@@ -2632,8 +2641,9 @@ SCIP_RETCODE changeAncestorBranchings(
 
          assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
 
+#ifdef SCIP_MORE_DEBUG
          SCIPdebugMessage("    <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? "=>" : "<=", newbound);
-
+#endif
          if( bndchgd )
          {
             int nvars;
@@ -2832,7 +2842,7 @@ SCIP_RETCODE fixBounds(
    /* ensure that the arrays to store the bound changes are large enough */
    SCIP_CALL( reoptnodeCheckMemory(reopttree->reoptnodes[id], blkmem, reopttree->reoptnodes[id]->nvars + reopttree->reoptnodes[id]->dualconscur->nvars, 0, 0) );
 
-   SCIPdebugMessage(" -> reconstruct bound changes at node #%lld (save at ID %d):\n", SCIPnodeGetNumber(node_fix), id);
+   SCIPdebugMessage(" -> reconstruct bound changes at node #%lld (save at ID %d)\n", SCIPnodeGetNumber(node_fix), id);
 
    for(v = 0; v < reopttree->reoptnodes[id]->dualconscur->nvars; v++)
    {
@@ -2875,9 +2885,9 @@ SCIP_RETCODE fixBounds(
          printf("** Unknown boundtype: %d **\n", boundtype);
          assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
       }
-
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", val);
-
+#endif
       /** add variable and bound to branching path information, because we don't want to delete this data */
       if( bndchgd )
       {
@@ -3063,7 +3073,7 @@ SCIP_RETCODE dryBranch(
    ncutoffchilds = 0;
    nredchilds = 0;
 
-   SCIPdebugMessage("start dry branching of node at ID %d:\n", id);
+   SCIPdebugMessage("start dry branching of node at ID %d\n", id);
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cutoffchilds, reoptnode->nchilds) );
@@ -3088,9 +3098,9 @@ SCIP_RETCODE dryBranch(
       childid = reoptnode->childids[c];
       child = reopt->reopttree->reoptnodes[childid];
       assert(child != NULL);
-
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("-> check child at ID %d (%d vars, %d conss):\n", childid, child->nvars, child->nconss);
-
+#endif
       if( child->nvars > 0 )
       {
          /* allocate buffer memory to store the redundant variables */
@@ -4409,7 +4419,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
       return SCIP_OKAY;
    }
 
-   CHECK:
+  CHECK:
 
    if( effectiverootdepth == SCIPnodeGetDepth(node) )
    {
@@ -4421,10 +4431,10 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    }
 
    SCIPdebugMessage("check the reason of cutoff for node %lld:\n", SCIPnodeGetNumber(node));
-   SCIPdebugMessage(" -> focusnode: %s\n", isfocusnode ? "yes" : "no");
-   SCIPdebugMessage(" -> depth: %d, eff. root depth: %d\n", SCIPnodeGetDepth(node), effectiverootdepth);
-   SCIPdebugMessage(" -> strong branched: %s\n", strongbranched ? "yes" : "no");
-   SCIPdebugMessage(" -> LP lpsolstat     : %d\n", lpsolstat);
+   SCIPdebugMessage(" -> focusnode       : %s\n", isfocusnode ? "yes" : "no");
+   SCIPdebugMessage(" -> depth           : %d (eff. %d)\n", SCIPnodeGetDepth(node), effectiverootdepth);
+   SCIPdebugMessage(" -> strong branched : %s\n", strongbranched ? "yes" : "no");
+   SCIPdebugMessage(" -> LP lpsolstat    : %d\n", lpsolstat);
 
    switch( SCIPeventGetType(event) ) {
       case SCIP_EVENTTYPE_NODEFEASIBLE:
@@ -4479,7 +4489,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
                      SCIP_CALL( SCIPreoptAddDualBndchg(reopt, set, blkmem, node, NULL, 0, 1) );
                   }
 
-                  SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_INFSUBTREE);
+                  SCIPdebugMessage(" -> new reopttype         : %d\n", SCIP_REOPTTYPE_INFSUBTREE);
                   SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_INFSUBTREE);
 
                   /* save the node as a strong branched node */
@@ -4489,7 +4499,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
                {
                   assert(SCIP_LPSOLSTAT_OBJLIMIT || SCIP_LPSOLSTAT_OPTIMAL || SCIP_LPSOLSTAT_NOTSOLVED);
 
-                  SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
+                  SCIPdebugMessage(" -> new reopttype         : %d\n", SCIP_REOPTTYPE_PRUNED);
 
                   /* delete strong branching information of some exists */
                   deleteLastDualBndchgs(reopt);
@@ -4508,12 +4518,12 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
                if( lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
                {
                   /* save the information of an infeasible node */
-                  SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_INFEASIBLE);
+                  SCIPdebugMessage(" -> new reopttype         : %d\n", SCIP_REOPTTYPE_INFEASIBLE);
                   SCIP_CALL( SCIPreoptAddInfNode(reopt, set, blkmem, node) );
                }
                else
                {
-                  SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
+                  SCIPdebugMessage(" -> new reopttype         : %d\n", SCIP_REOPTTYPE_PRUNED);
 
                   /* store the node */
                   SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
@@ -4522,7 +4532,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          }
          else
          {
-            SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_PRUNED);
+            SCIPdebugMessage(" -> new reopttype         : %d\n", SCIP_REOPTTYPE_PRUNED);
 
             /* if the node was created by branch_nodereopt, nothing happens */
             SCIP_CALL(addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
@@ -4549,18 +4559,18 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
              */
             if( strongbranched )
             {
-               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
-               SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+               SCIPdebugMessage(" -> new reopttype          : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+               SCIPdebugMessage(" -> new constraint of type : %d\n", REOPT_CONSTYPE_STRBRANCHED);
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
             }
             else if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
             {
-               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
+               SCIPdebugMessage(" -> new reopttype          : %d\n", SCIP_REOPTTYPE_LOGICORNODE);
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_LOGICORNODE, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
             }
             else
             {
-               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
+               SCIPdebugMessage(" -> new reopttype          : %d\n", SCIP_REOPTTYPE_TRANSIT);
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_TRANSIT, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
             }
          }
@@ -4576,19 +4586,19 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
              */
             if( strongbranched )
             {
-               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_STRBRANCHED);
-               SCIPdebugMessage(" -> new constraint of type: %d\n", REOPT_CONSTYPE_STRBRANCHED);
+               SCIPdebugMessage(" -> new reopttype          : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
+               SCIPdebugMessage(" -> new constraint of type : %d\n", REOPT_CONSTYPE_STRBRANCHED);
                SCIP_CALL( SCIPreoptAddDualBndchg(reopt, set, blkmem, node, NULL, 0, 1) );
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
             }
             else if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
             {
-               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_LOGICORNODE);
+               SCIPdebugMessage(" -> new reopttype          : %d\n", SCIP_REOPTTYPE_LOGICORNODE);
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_LOGICORNODE, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
             }
             else
             {
-               SCIPdebugMessage(" -> new reopttype: %d\n", SCIP_REOPTTYPE_TRANSIT);
+               SCIPdebugMessage(" -> new reopttype          : %d\n", SCIP_REOPTTYPE_TRANSIT);
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_TRANSIT, TRUE, isrootnode, isfocusnode, lpsolstat, lowerbound) );
             }
          }
@@ -5552,6 +5562,25 @@ SCIP_RETCODE SCIPreoptApply(
    if( node_fix != NULL && reopt->reopttree->reoptnodes[id]->dualconscur != NULL )
    {
       SCIP_CALL( fixBounds(reopt->reopttree, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, node_fix, id, blkmem) );
+   }
+   else if( node_fix == NULL )
+   {
+      assert(node_cons != NULL);
+      assert(reopt->reopttree->reoptnodes[id]->dualconscur != NULL);
+      assert(reopt->reopttree->reoptnodes[id]->dualconscur->nvars > 0);
+      assert(reopt->reopttree->reoptnodes[id]->dualconscur->allocmem > 0);
+
+      /* delete dualconscur and move dualconsnex -> dualconscur */
+      BMSfreeBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualconscur->vals, reopt->reopttree->reoptnodes[id]->dualconscur->allocmem);
+      BMSfreeBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualconscur->vars, reopt->reopttree->reoptnodes[id]->dualconscur->allocmem);
+      SCIPfreeMemory(scip, &reopt->reopttree->reoptnodes[id]->dualconscur);
+      reopt->reopttree->reoptnodes[id]->dualconscur = NULL;
+
+      if( reopt->reopttree->reoptnodes[id]->dualconsnex != NULL )
+      {
+         reopt->reopttree->reoptnodes[id]->dualconscur = reopt->reopttree->reoptnodes[id]->dualconsnex;
+         reopt->reopttree->reoptnodes[id]->dualconsnex = NULL;
+      }
    }
 
    /* add all local constraints to both nodes */

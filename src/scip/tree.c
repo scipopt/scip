@@ -6979,6 +6979,9 @@ int SCIPnodeGetNDomchg(
    return ndomchgs;
 }
 
+/* return the number of bound changes based on dual information.
+ *
+ * @ remark: we only count bound changes of binary variables ! ! ! */
 int SCIPnodeGetNDualBndchgs(
    SCIP_NODE*            node
 )
@@ -7006,10 +7009,11 @@ int SCIPnodeGetNDualBndchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
+       && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
-       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-             && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
+        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+            && boundchgs[i].data.inferencedata.reason.prop == NULL)) ) /*lint !e641*/
          npseudobranchvars++;
       else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
