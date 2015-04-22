@@ -930,7 +930,7 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 
 /** sets the number of successors to a given value */
 EXTERN
-void SCIPdigraphSetNSuccessors(
+SCIP_RETCODE SCIPdigraphSetNSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node,               /**< node for which the number of successors has to be changed */
    int                   nsuccessors         /**< new number of successors */

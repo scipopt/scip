@@ -339,7 +339,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
-			scip/heur_fracdivingsos1.o \
 			scip/heur_guideddiving.o \
 			scip/heur_indicator.o \
 			scip/heur_intdiving.o \

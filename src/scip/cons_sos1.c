@@ -530,7 +530,7 @@ SCIP_RETCODE handleNewVariableSOS1(
 
       /* catch bound change events of variable */
       SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) );
+            (SCIP_EVENTDATA*)consdata, NULL) ); /*lint !e740*/
 
       /* if the variable if fixed to nonzero */
       assert( consdata->nfixednonzeros >= 0 );
@@ -690,7 +690,7 @@ SCIP_RETCODE deleteVarSOS1(
    SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[pos]) );
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) ); /*lint !e740*/
 
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
@@ -1212,8 +1212,8 @@ SCIP_RETCODE presolRoundConsSOS1(
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) ); /*lint !e740*/
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) ); /*lint !e740*/
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[j]) );
@@ -1364,7 +1364,6 @@ static
 SCIP_RETCODE presolRoundConssSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph */
@@ -1749,7 +1748,7 @@ SCIP_Bool isImpliedZero(
 
 /** updates arc data of implication graph */
 static
-SCIP_Bool updateArcData(
+SCIP_RETCODE updateArcData(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         implgraph,          /**< implication graph */
    SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
@@ -1847,7 +1846,7 @@ SCIP_Bool updateArcData(
          data->ubimpl = newbound;
          SCIPdebugMessage("add implication %s != 0 -> %s <= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
       }
-      SCIP_CALL( SCIPdigraphAddArc(implgraph, indv, indw, (void*) data) );
+      SCIP_CALL( SCIPdigraphAddArc(implgraph, indv, indw, (void*)data) );
       *update = TRUE;
    }
 
@@ -3292,7 +3291,7 @@ SCIP_RETCODE initImplGraphSOS1(
       nodedata->var = implvars[i];
 
       /* set node data */
-      SCIPdigraphSetNodeData(conshdlrdata->implgraph, (void*)nodedata, i);
+      SCIPdigraphSetNodeData(conshdlrdata->implgraph, (void*) nodedata, i);
    }
 
    /* allocate buffer arrays */
@@ -4757,8 +4756,8 @@ SCIP_RETCODE resetConflictgraphSOS1(
 
          /* reset number of successors */
          SCIP_CALL( getSetminusArray(succ, nsucc, succloc, nsuccloc, succ, &k) );
-         SCIPdigraphSetNSuccessors(conflictgraph, j, k);
-         SCIPdigraphSetNSuccessors(localconflicts, j, 0);
+         SCIP_CALL( SCIPdigraphSetNSuccessors(conflictgraph, j, k) );
+         SCIP_CALL( SCIPdigraphSetNSuccessors(localconflicts, j, 0) );
       }
    }
 
@@ -5394,7 +5393,7 @@ SCIP_RETCODE enforceConssSOS1(
          objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
       /* take the average of the individual estimates */
-      objest = objest/((SCIP_Real) ind + 1.0);
+      objest = objest/(SCIP_Real)(ind + 1.0);
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5547,7 +5546,8 @@ SCIP_RETCODE updateWeightsTCliquegraph(
 
       if ( ! SCIPisFeasZero(scip, bound) && ! SCIPisInfinity(scip, bound) )
       {
-         SCIP_Real nodeweight = REALABS( solval/bound ) * scaleval;
+         SCIP_Real nodeweight;
+         nodeweight = REALABS( solval/bound ) * scaleval;/*lint !e414*/
          tcliqueChangeWeight(conshdlrdata->tcliquegraph, j, (int)nodeweight);
       }
       else
@@ -5756,7 +5756,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
       }
 
       /* if cut is meaningful */
-      if ( j == nnodes && cnt >= 2 )
+      if ( j == nnodes && cnt >= 2 )/*lint !e850*/
       {
          if ( useboundvar )
          {
@@ -5868,7 +5868,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
       }
 
       /* if cut is meaningful */
-      if ( j == nnodes && cnt >= 2 )
+      if ( j == nnodes && cnt >= 2 )/*lint !e850*/
       {
          if ( useboundvar )
          {
@@ -5967,7 +5967,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          solval = REALABS( solval );
 
          if ( ! SCIPisFeasZero(scip, bound) && ! SCIPisInfinity(scip, bound) )
-            unscaledweight += REALABS( solval/bound );
+            unscaledweight += REALABS( solval/bound );/*lint !e414*/
       }
 
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
@@ -6562,11 +6562,11 @@ SCIP_RETCODE passConComponentVarbound(
    assert( nconcomp != NULL );
    assert( unique != NULL );
 
-   processed[node] = TRUE;
+   processed[node] = TRUE;/*lint !e737*/
    concomp[(*nconcomp)++] = node;
 
    /* if bound variable of connected component without new node is unique */
-   if ( unique )
+   if ( *unique )
    {
       SCIP_NODEDATA* nodedata;
       SCIP_VAR* comparevar;
@@ -6582,14 +6582,14 @@ SCIP_RETCODE passConComponentVarbound(
       if ( boundvar == NULL )
       {
          if ( comparevar != NULL )
-            unique = FALSE;
+            *unique = FALSE;
       }
       else
       {
          if ( comparevar == NULL )
-            unique = FALSE;
+            *unique = FALSE;
          else if ( SCIPvarCompare(boundvar, comparevar) != 0 )
-            unique = FALSE;
+            *unique = FALSE;
       }
    }
 
@@ -6777,7 +6777,6 @@ SCIP_RETCODE setNodeDataSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
-   int                   nsos1conss,         /**< number of SOS1 constraints */
    int                   nsos1vars           /**< number of SOS1 variables */
    )
 {
@@ -7097,7 +7096,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss) );
 
        /* add data to conflict graph nodes */
-       SCIP_CALL( setNodeDataSOS1(scip, conshdlr, conshdlrdata, nconss, conshdlrdata->nsos1vars) );
+       SCIP_CALL( setNodeDataSOS1(scip, conshdlr, conshdlrdata, conshdlrdata->nsos1vars) );
 
        /* initialize tclique graph */
        SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars) );
@@ -7199,7 +7198,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
          SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-               (SCIP_EVENTDATA*)*consdata, -1) );
+               (SCIP_EVENTDATA*)*consdata, -1) ); /*lint !e740*/
       }
    }
 
@@ -7297,7 +7296,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    for (j = 0; j < consdata->nvars; ++j)
    {
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) );
+            (SCIP_EVENTDATA*)consdata, NULL) ); /*lint !e740*/
    }
 
 #ifdef SCIP_DEBUG
@@ -7392,7 +7391,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       }
 
       /* perform one presolving round for SOS1 constraints */
-      SCIP_CALL( presolRoundConssSOS1(scip, eventhdlr, conshdlr, conshdlrdata, conflictgraph, adjacencymatrix, conss, nconss, nsos1vars, naddconss, ndelconss, nupgdconss, nfixedvars, &nremovedvars, result) );
+      SCIP_CALL( presolRoundConssSOS1(scip, eventhdlr, conshdlrdata, conflictgraph, adjacencymatrix, conss, nconss, nsos1vars, naddconss, ndelconss, nupgdconss, nfixedvars, &nremovedvars, result) );
 
       /* perform one presolving round for SOS1 variables */
       if ( conshdlrdata->maxtightenbds != 0 && *result != SCIP_CUTOFF )
@@ -7886,8 +7885,8 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          SCIP_CALL( initImplGraphSOS1(scip, conshdlrdata, conflictgraph, conshdlrdata->nsos1vars, conshdlrdata->maxtightenbds, &nchbds, &cutoff) );
          if ( cutoff )
          {
-            return SCIP_OKAY;
             *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
          }
          else if ( nchbds > 0 )
             *result = SCIP_REDUCEDDOM;
@@ -8503,7 +8502,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maximplcuts",
          "maximal number of implied bound cuts separated per branching node",
-         &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXBOUNDCUTS, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXIMPLCUTS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maximplcutsroot",
          "maximal number of implied bound cuts separated per iteration in the root node",
