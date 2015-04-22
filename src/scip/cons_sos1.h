@@ -157,21 +157,21 @@ int SCIPgetNSOS1Vars(
 
 /** returns whether variable is involved in an SOS1 constraint */
 EXTERN
-SCIP_Bool varIsSOS1(
+SCIP_Bool SCIPvarIsSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */
    );
 
 /** returns node of variable in the conflict graph or -1 if variable is not involved in an SOS1 constraint */
 EXTERN
-int varGetNodeSOS1(
+int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */
    );
 
 /** returns variable that belongs to a given node from the conflictgraph */
 EXTERN
-SCIP_VAR* nodeGetVarSOS1(
+SCIP_VAR* SCIPnodeGetVarSOS1(
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    int                   node                /**< node from the conflict graph */
    );

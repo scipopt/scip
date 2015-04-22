@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include "scip/sepa_disjunctive.h"
 #include "scip/cons_sos1.h"
 
 
@@ -542,7 +543,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    {
       SCIP_VAR* var;
 
-      var = nodeGetVarSOS1(conflictgraph, j);
+      var = SCIPnodeGetVarSOS1(conflictgraph, j);
 
       if ( SCIPvarIsActive(var) && ! SCIPisFeasZero(scip, SCIPcolGetPrimsol(SCIPvarGetCol(var))) && SCIPcolGetBasisStatus(SCIPvarGetCol(var)) == SCIP_BASESTAT_BASIC )
       {
@@ -559,7 +560,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
             int succind;
 
             succind = succ[i];
-            varsucc = nodeGetVarSOS1(conflictgraph, succind);
+            varsucc = SCIPnodeGetVarSOS1(conflictgraph, succind);
             if ( SCIPvarIsActive(varsucc) && succind < j && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, varsucc) ) && SCIPcolGetBasisStatus(SCIPvarGetCol(varsucc)) == SCIP_BASESTAT_BASIC )
             {
                fixings1[nrelevantedges] = j;
@@ -667,7 +668,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       edgenumber = edgearray[i];
 
       /* determine first simplex row */
-      var = nodeGetVarSOS1(conflictgraph, fixings1[edgenumber]);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixings1[edgenumber]);
       col = SCIPvarGetCol(var);
       ind = SCIPcolGetLPPos(col);
       assert( ind >= 0 );
@@ -693,7 +694,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
 
       /* determine second simplex row */
-      var = nodeGetVarSOS1(conflictgraph, fixings2[edgenumber]);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixings2[edgenumber]);
       col = SCIPvarGetCol(var);
       ind = SCIPcolGetLPPos(col);
       assert( ind >= 0 );
