@@ -177,6 +177,7 @@ SCIP_VAR* SCIPnodeGetVarSOS1(
    );
 
 /** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
+EXTERN
 SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
@@ -185,6 +186,7 @@ SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
    );
 
 /** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
+EXTERN
 SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
@@ -193,6 +195,7 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
    );
 
 /** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
+EXTERN
 SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
