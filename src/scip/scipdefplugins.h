@@ -77,6 +77,7 @@
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
+#include "scip/heur_fracdivingsos1.h"
 #include "scip/heur_guideddiving.h"
 #include "scip/heur_zeroobj.h"
 #include "scip/heur_indicator.h"
