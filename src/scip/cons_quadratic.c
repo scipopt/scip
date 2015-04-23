@@ -7151,7 +7151,6 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CONSDATA* consdata;
    SCIP_QUADELEM* nlrowquadelems;
    SCIP_NLPIPROBLEM* prob;
-   SCIP_VAR** nlrowquadvars;
    SCIP_NLPI* nlpi;
    SCIP_Real* interiorpoint;
    SCIP_Real* lbs;
@@ -7203,7 +7202,7 @@ SCIP_RETCODE computeInteriorPoint(
 
          if( SCIPisInfinity(scip,  nlpiside) )
          {
-            SCIPdebugMessage("maximum activity is infinity: there is no interior point for rhs - maxlinactivity!\n");
+            SCIPdebugMessage("maximum activity is infinity: there is no interior point for fun <= rhs - maxlinactivity!\n");
             return SCIP_OKAY;
          }
       }
@@ -7228,7 +7227,7 @@ SCIP_RETCODE computeInteriorPoint(
 
          if( SCIPisInfinity(scip,  -nlpiside) )
          {
-            SCIPdebugMessage("maximum activity is infinity: there is no interior point for rhs - maxlinactivity!\n");
+            SCIPdebugMessage("minimum activity is -infinity: there is no interior point for fun >= lhs - minlinactivity!\n");
             return SCIP_OKAY;
          }
       }
@@ -7269,15 +7268,19 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CALL( SCIPnlpiAddVars(nlpi, prob, nquadvars, lbs, ubs, NULL) );
 
    /* get nlrow info */
-   nlrowquadvars = SCIPnlrowGetQuadVars(consdata->nlrow);
    nlrownquadelems = SCIPnlrowGetNQuadElems(consdata->nlrow);
    nlrowquadelems = SCIPnlrowGetQuadElems(consdata->nlrow);
 
 #ifndef NDEBUG
-   for( i = 0; i < nlrownquadelems; i++ )
    {
-      assert(nlrowquadvars[nlrowquadelems[i].idx1] == consdata->quadvarterms[nlrowquadelems[i].idx1].var);
-      assert(nlrowquadvars[nlrowquadelems[i].idx2] == consdata->quadvarterms[nlrowquadelems[i].idx2].var);
+      SCIP_VAR** nlrowquadvars;
+
+      nlrowquadvars = SCIPnlrowGetQuadVars(consdata->nlrow);
+      for( i = 0; i < nlrownquadelems; i++ )
+      {
+         assert(nlrowquadvars[nlrowquadelems[i].idx1] == consdata->quadvarterms[nlrowquadelems[i].idx1].var);
+         assert(nlrowquadvars[nlrowquadelems[i].idx2] == consdata->quadvarterms[nlrowquadelems[i].idx2].var);
+      }
    }
 #endif
 
@@ -7286,6 +7289,19 @@ SCIP_RETCODE computeInteriorPoint(
    switch( method )
    {
       case 'a':
+         /* check if 0 is an interior point */
+         if( (consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
+            || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0)) )
+         {
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+
+            for( i = 0; i < nquadvars; i++ )
+               consdata->interiorpoint[i] = 0.0;
+
+            *success = TRUE;
+            goto TERMINATE;
+         }
+
          /* add constraint */
          if( consdata->isconvex )
          {
@@ -7382,7 +7398,10 @@ SCIP_RETCODE computeInteriorPoint(
 
    for( i = 0; i < nquadvars; i++ )
    {
-      consdata->interiorpoint[i] = interiorpoint[i];
+      if( SCIPisFeasZero(scip, interiorpoint[i]) )
+         consdata->interiorpoint[i] = 0.0;
+      else
+         consdata->interiorpoint[i] = interiorpoint[i];
    }
 
    *success = TRUE;
@@ -7556,10 +7575,6 @@ SCIP_RETCODE computeGauge(
 
 #ifdef SCIP_DEBUG_INT
    printf("quadratic part at interior point: %g\n", consdata->interiorpointval);
-   if( convex )
-      printf("rhs: %g\n", consdata->rhs - consdata->maxlinactivity);
-   else
-      printf("lhs: %g\n", consdata->lhs - consdata->minlinactivity);
 
    for( j = 0; j < consdata->nquadvars; j++ )
       printf("b_gauge[%s] = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugecoefs[j]);
