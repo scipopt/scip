@@ -1119,7 +1119,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
 
    if( nlpcands == 0 )
       return SCIP_OKAY;
