@@ -63,6 +63,9 @@
 #define DEFAULT_CONFIDENCELEVEL 2       /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
 #define DEFAULT_SKIPBADINITCANDS FALSE  /**< should branching rule skip candidates that have a low probability to be
                                           *  better than the best strong-branching or pseudo-candidate? */
+#define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
+#define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -97,6 +100,9 @@ struct SCIP_BranchruleData
    int*                  nlcount;            /**< array to store nonlinear count values */
    int                   nlcountsize;        /**< length of nlcount array */
    int                   nlcountmax;         /**< maximum entry in nlcount array or 1 if NULL */
+   SCIP_Bool             randinitorder;      /**< should init candidates be processed in a random order? */
+   unsigned int          randseed;           /**< random seed for random number generation */
+   int                   startrandseed;      /**< start random seed for random number generation */
 };
 
 /*
@@ -827,6 +833,10 @@ SCIP_RETCODE execRelpscost(
          {
             int j;
 
+            /* assign a random score to this uninitialized candidate */
+            if( branchruledata->randinitorder )
+               score = SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed);
+
             /* pseudo cost of variable is not reliable: insert candidate in initcands buffer */
             for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
             {
@@ -1432,6 +1442,8 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    branchruledata->nlcountsize = 0;
    branchruledata->nlcountmax = 1;
 
+   branchruledata->randseed = (unsigned int)branchruledata->startrandseed;
+
    return SCIP_OKAY;
 }
 
@@ -1593,7 +1605,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->lowerrortol, TRUE, DEFAULT_LOWERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/higherrortol", "high relative error tolerance for reliability",
-            &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
@@ -1615,14 +1627,21 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->usedynamicconfidence, TRUE, DEFAULT_USEDYNAMICCONFIDENCE,
          NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/skipbadinitcands",
-            "should branching rule skip candidates that have a low probability to "
-            "be better than the best strong-branching or pseudo-candidate?",
-            &branchruledata->skipbadinitcands, TRUE, DEFAULT_SKIPBADINITCANDS,
-            NULL, NULL) );
+         "should branching rule skip candidates that have a low probability to "
+         "be better than the best strong-branching or pseudo-candidate?",
+         &branchruledata->skipbadinitcands, TRUE, DEFAULT_SKIPBADINITCANDS,
+         NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-            "branching/relpscost/confidencelevel",
-            "the confidence level for statistical methods, between 0 (Min) and 4 (Max).",
-            &branchruledata->confidencelevel, TRUE, DEFAULT_CONFIDENCELEVEL, 0, 4, NULL, NULL) );
+         "branching/relpscost/confidencelevel",
+         "the confidence level for statistical methods, between 0 (Min) and 4 (Max).",
+         &branchruledata->confidencelevel, TRUE, DEFAULT_CONFIDENCELEVEL, 0, 4, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/randinitorder",
+         "should candidates be initialized in randomized order?",
+         &branchruledata->randinitorder, TRUE, DEFAULT_RANDINITORDER,
+         NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
+         &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
