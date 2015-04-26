@@ -2273,7 +2273,7 @@ void* BMSallocBufferMemory_call(
       int i;
 
       /* create additional buffers */
-      newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, buffer->firstfree + 1);
+      newsize = calcMemoryGrowSize((unsigned) buffer->arraygrowinit, buffer->arraygrowfac, (unsigned) (buffer->firstfree + 1));
       BMSreallocMemoryArray(&buffer->data, newsize);
       if ( buffer->data == NULL )
       {
@@ -2315,7 +2315,7 @@ void* BMSallocBufferMemory_call(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize((unsigned) buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
       buffer->size[bufnum] = (int) newsize;
       if ( buffer->data[bufnum] == NULL )
