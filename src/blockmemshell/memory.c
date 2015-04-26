@@ -2145,6 +2145,7 @@ void BMSsetBufferMemoryArraygrowinit(
    buffer->arraygrowinit = arraygrowinit;
 }
 
+#ifndef SCIP_NOBUFFERMEM
 /** calculate memory size for dynamically allocated arrays
  *
  *  This function is a copy of the function in set.c in order to be able to use memory.? separately.
@@ -2190,6 +2191,7 @@ int calcMemoryGrowSize(
 
    return size;
 }
+#endif
 
 /** allocates the next unused buffer */
 void* BMSallocBufferMemory_call(
