@@ -2383,10 +2383,9 @@ void* BMSreallocBufferMemory_call(
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
 
 #else
-   assert( ptr != NULL );
    assert( size >= 0 );
    newptr = ptr;
-   BMSreallocMemorySize(newptr, size);
+   BMSreallocMemorySize(&newptr, size);
 #endif
 
    return newptr;
@@ -2462,7 +2461,7 @@ void BMSfreeBufferMemory_call(
    }
 
 #else
-   BMSfreeMemory(ptr);
+   BMSfreeMemory(&ptr);
 #endif
 }
 
