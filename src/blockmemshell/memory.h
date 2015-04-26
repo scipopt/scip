@@ -16,6 +16,7 @@
 /**@file   memory.h
  * @brief  memory allocation routines
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -560,6 +561,128 @@ EXTERN
 void BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
+
+
+
+
+
+/***********************************************************
+ * Buffer Memory Management
+ *
+ * Efficient memory management for temporary objects
+ ***********************************************************/
+
+typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary objects */
+
+
+#define BMSallocBufferMemory(mem,ptr)        ASSIGN((ptr), BMSallocBufferMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocBufferMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
+#define BMSreallocBufferMemorySize(mem,ptr,size) \
+                                             ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (int)(size), __FILE__, __LINE__))
+#define BMSallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSreallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (int)(num)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSduplicateBufferMemory(mem,ptr,source,size) \
+                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (int)(size), __FILE__, __LINE__))
+#define BMSduplicateBufferMemoryArray(mem,ptr,source,num) \
+                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (int)(num)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSfreeBufferMemory(mem,ptr)         { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
+#define BMSfreeBufferMemoryNull(mem,ptr)     { if ( *(ptr) != NULL ) BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); (*ptr) = NULL; }
+#define BMSfreeBufferMemoryArray(mem,ptr)    { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
+#define BMSfreeBufferMemoryArrayNull(mem,ptr){ if ( *(ptr) != NULL ) BMSfreeBufferMemoryArray((mem), (ptr)); }
+#define BMSfreeBufferMemorySize(mem,ptr)     { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
+#define BMSfreeBufferMemorySizeNull(mem,ptr) { if ( *(ptr) != NULL ) BMSfreeBufferMemorySize((mem), (ptr), __FILE__, __LINE__); }
+
+#define BMScreateBufferMemory(mem,fac,init)  ASSIGN((mem), BMScreateBufferMemroy_call((fac), (init), __FILE__, __LINE__))
+#define BMSdestroyBufferMemory(mem)          BMSdestroyBufferMemory_call((mem), __FILE__, __LINE__)
+
+
+/** creates memory buffer storage */
+EXTERN
+BMS_BUFMEM* BMScreateBufferMemroy_call(
+   double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
+   int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** frees memory buffer storage */
+EXTERN
+void BMSdestroyBufferMemory_call(
+   BMS_BUFMEM**          buffer,             /**< pointer to memory buffer storage */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** set arraygrowfac */
+EXTERN
+void BMSsetBufferMemoryArraygrowfac(
+   BMS_BUFMEM*           buffer,             /**< pointer to memory buffer storage */
+   double                arraygrowfac        /**< memory growing factor for dynamically allocated arrays */
+   );
+
+/** set arraygrowinit */
+EXTERN
+void BMSsetBufferMemoryArraygrowinit(
+   BMS_BUFMEM*           buffer,             /**< pointer to memory buffer storage */
+   int                   arraygrowinit       /**< initial size of dynamically allocated arrays */
+   );
+
+/** allocates the next unused buffer */
+EXTERN
+void* BMSallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   int                   size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** reallocates the buffer to at least the given size */
+EXTERN
+void* BMSreallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   int                   size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** allocates the next unused buffer and copies the given memory into the buffer */
+EXTERN
+void* BMSduplicateBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   const void*           source,             /**< memory block to copy into the buffer */
+   int                   size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** frees a buffer */
+EXTERN
+void BMSfreeBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** gets number of used buffers */
+EXTERN
+int BMSgetNUsedBufferMemory(
+   BMS_BUFMEM*           buffer              /**< memory buffer storage */
+   );
+
+/** returns the number of allocated bytes in the buffer memory */
+EXTERN
+long long BMSgetBufferMemoryUsed(
+   const BMS_BUFMEM*     bufmem              /**< buffer memory */
+   );
+
+/** outputs statistics about currently allocated buffers to the screen */
+EXTERN
+void BMSprintBufferMemory(
+   BMS_BUFMEM*           buffer              /**< memory buffer storage */
+   );
+
 
 #ifdef __cplusplus
 }

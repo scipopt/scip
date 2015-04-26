@@ -790,7 +790,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->scip = scip;
 
    SCIP_CALL( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
-   SCIP_CALL( SCIPbufferCreate(&(*set)->buffer) );
+   SCIP_CALL( SCIPcreateBufferMemory(&(*set)->buffer, SCIP_DEFAULT_MEM_ARRAYGROWFAC, SCIP_DEFAULT_MEM_ARRAYGROWINIT) );
 
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
@@ -1920,7 +1920,7 @@ SCIP_RETCODE SCIPsetFree(
    SCIPparamsetFree(&(*set)->paramset, blkmem);
 
    /* free memory buffers */
-   SCIPbufferFree(&(*set)->buffer);
+   SCIPdestroyBufferMemory(&(*set)->buffer);
 
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )

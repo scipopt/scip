@@ -19522,15 +19522,27 @@ void SCIPprintReal(
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
                                                      BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
 
-#define SCIPallocBuffer(scip,ptr)               SCIPallocBufferSize(scip, (void**)(ptr), (int)sizeof(**(ptr)))
-#define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBufferArraySafe(scip, (void**)(ptr), (num), sizeof(**(ptr)))
-#define SCIPreallocBufferArray(scip,ptr,num)    SCIPreallocBufferArraySafe(scip, (void**)(ptr), (num), sizeof(**(ptr)))
-#define SCIPduplicateBuffer(scip,ptr,source)    SCIPduplicateBufferSize(scip, (void**)(ptr), source, (int)sizeof(**(ptr)))
-#define SCIPduplicateBufferArray(scip,ptr,source,num) SCIPduplicateBufferArraySafe(scip, (void**)(ptr), source, (num), sizeof(**(ptr)))
-#define SCIPfreeBuffer(scip,ptr)                SCIPfreeBufferSize(scip, (void**)(ptr), 0)
-#define SCIPfreeBufferNull(scip,ptr)            { if( *(ptr) != NULL ) SCIPfreeBuffer(scip, ptr); }
-#define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0)
-#define SCIPfreeBufferArrayNull(scip,ptr)       { if( *(ptr) != NULL ) SCIPfreeBufferArray(scip, ptr); }
+#define SCIPcreateBuffer(ptr)                   ( (BMScreateBufferMemroy_call((ptr), __FILE__, __LINE__) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocBuffer(scip,ptr)               ( (BMSallocBufferMemory(SCIPbuffermem(scip), (ptr)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocBufferArray(scip,ptr,num)      ( (BMSallocBufferMemoryArray(SCIPbuffermem(scip), (ptr), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPreallocBufferArray(scip,ptr,num)    ( (BMSreallocBufferMemoryArray(SCIPbuffermem(scip), (ptr), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBuffer(scip,ptr,source)    ( (BMSduplicateBufferMemory(SCIPbuffermem(scip), (ptr), (source), (int)sizeof(**(ptr))) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBufferArray(scip,ptr,source,num) ( (BMSduplicateBufferMemoryArray(SCIPbuffermem(scip), (ptr), (source), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPfreeBuffer(scip,ptr)                BMSfreeBufferMemorySize(SCIPbuffermem(scip), (ptr))
+#define SCIPfreeBufferNull(scip,ptr)            BMSfreeBufferMemoryNull(SCIPbuffermem(scip), (ptr))
+#define SCIPfreeBufferArray(scip,ptr)           BMSfreeBufferMemoryArray(SCIPbuffermem(scip), (ptr))
+#define SCIPfreeBufferArrayNull(scip,ptr)       BMSfreeBufferMemoryArrayNull(SCIPbuffermem(scip), (ptr))
+
+#define SCIPbufferGetNUsed(bufmem)              BMSgetNUsedBufferMemory(bufmem)
+#define SCIPcreateBufferMemory(bufmem,fac,init) ( (BMScreateBufferMemory((bufmem), (fac), (init)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPdestroyBufferMemory(bufmem)         BMSdestroyBufferMemory(bufmem)
+#define SCIPbufferPrint(bufmem)                 BMSprintBufferMemory(bufmem)
 
 
 /** returns block memory to use at the current time
@@ -19539,6 +19551,15 @@ void SCIPprintReal(
  */
 EXTERN
 BMS_BLKMEM* SCIPblkmem(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns buffer memory to use at the current time
+ *
+ *  @return the buffer memory to use at the current time.
+ */
+EXTERN
+BMS_BUFMEM* SCIPbuffermem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -19583,98 +19604,6 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    size_t                elemsize,           /**< size in bytes of each element in array */
    int*                  arraysize,          /**< pointer to current array size */
    int                   minsize             /**< required minimal array size */
-   );
-
-/** gets a memory buffer with at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPallocBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   );
-
-/** allocates a memory buffer with at least the given size and copies the given memory into the buffer
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPduplicateBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   const void*           source,             /**< memory block to copy into the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   );
-
-/** reallocates a memory buffer to at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPreallocBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   );
-
-/** gets a memory buffer with at least size for num elements of size elemsize
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPallocBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   int                   num,                /**< number of entries to allocate */
-   size_t                elemsize            /**< size of one element in the array */
-   );
-
-/** reallocates a memory buffer to have size for at least num elements of size elemsize
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPreallocBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   num,                /**< number of entries to reallocate */
-   size_t                elemsize            /**< size of one element in the array */
-   );
-
-/** allocates a memory buffer with at least size for num elements of size elemsize and copies
- *  the given memory into the buffer
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPduplicateBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   const void*           source,             /**< memory block to copy into the buffer */
-   int                   num,                /**< number of entries to duplicate */
-   size_t                elemsize            /**< size of one element in the array */
-   );
-
-/** frees a memory buffer */
-EXTERN
-void SCIPfreeBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
    );
 
 /** prints output about used memory */

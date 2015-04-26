@@ -16,6 +16,7 @@
 /**@file   memory.c
  * @brief  memory allocation routines
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2040,4 +2041,471 @@ void BMScheckEmptyBlockMemory_call(
 
    if( allocedmem != freemem )
       printInfo("%"LONGINT_FORMAT" bytes not freed in total.\n", allocedmem - freemem);
+}
+
+
+
+
+
+
+/***********************************************************
+ * Buffer Memory Management
+ *
+ * Efficient memory management for temporary objects
+ ***********************************************************/
+
+/** memory buffer storage for temporary objects */
+struct BMS_BufMem
+{
+   void**                data;               /**< allocated memory chunks for arbitrary data */
+   int*                  size;               /**< sizes of buffers in bytes */
+   SCIP_Bool*            used;               /**< TRUE iff corresponding buffer is in use */
+   int                   ndata;              /**< number of memory chunks */
+   int                   firstfree;          /**< first unused memory chunk */
+   double                arraygrowfac;       /**< memory growing factor for dynamically allocated arrays */
+   int                   arraygrowinit;      /**< initial size of dynamically allocated arrays */
+};
+
+
+/** creates memory buffer storage */
+BMS_BUFMEM* BMScreateBufferMemroy_call(
+   double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
+   int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   BMS_BUFMEM* buffer;
+
+   BMSallocMemory(&buffer);
+   if ( buffer != NULL )
+   {
+      buffer->data = NULL;
+      buffer->size = NULL;
+      buffer->used = NULL;
+      buffer->ndata = 0;
+      buffer->firstfree = 0;
+      buffer->arraygrowinit = arraygrowinit;
+      buffer->arraygrowfac = arraygrowfac;
+   }
+   else
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for buffer memory header.\n");
+   }
+
+   return buffer;
+}
+
+/** frees buffer memory */
+void BMSdestroyBufferMemory_call(
+   BMS_BUFMEM**          buffer,             /**< pointer to memory buffer storage */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   int i;
+
+   if ( *buffer != NULL )
+   {
+      for (i = 0; i < (*buffer)->ndata; ++i)
+      {
+         assert( ! (*buffer)->used[i] );
+         BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+      }
+      BMSfreeMemoryArrayNull(&(*buffer)->data);
+      BMSfreeMemoryArrayNull(&(*buffer)->size);
+      BMSfreeMemoryArrayNull(&(*buffer)->used);
+      BMSfreeMemory(buffer);
+   }
+   else
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free null buffer memory.\n");
+   }
+}
+
+/** set arraygrowfac */
+void BMSsetBufferMemoryArraygrowfac(
+   BMS_BUFMEM*           buffer,             /**< pointer to memory buffer storage */
+   double                arraygrowfac        /**< memory growing factor for dynamically allocated arrays */
+   )
+{
+   assert( buffer != NULL );
+   buffer->arraygrowfac = arraygrowfac;
+}
+
+/** set arraygrowinit */
+void BMSsetBufferMemoryArraygrowinit(
+   BMS_BUFMEM*           buffer,             /**< pointer to memory buffer storage */
+   int                   arraygrowinit       /**< initial size of dynamically allocated arrays */
+   )
+{
+   assert( buffer != NULL );
+   buffer->arraygrowinit = arraygrowinit;
+}
+
+/** calculate memory size for dynamically allocated arrays
+ *
+ *  This function is a copy of the function in set.c in order to be able to use memory.? separately.
+ */
+static
+int calcMemoryGrowSize(
+   int                   initsize,           /**< initial size of array */
+   SCIP_Real             growfac,            /**< growing factor of array */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   int size;
+
+   assert( initsize >= 0 );
+   assert( growfac >= 1.0 );
+   assert( num >= 0 );
+
+   if ( growfac == 1.0 )
+      size = MAX(initsize, num);
+   else
+   {
+      int oldsize;
+
+      /* calculate the size with this loop, such that the resulting numbers are always the same */
+      initsize = MAX(initsize, 4);
+      size = initsize;
+      oldsize = size - 1;
+
+      /* second condition checks against overflow */
+      while ( size < num && size > oldsize )
+      {
+         oldsize = size;
+         size = (int)(growfac * size + initsize);
+      }
+
+      /* if an overflow happened, set the correct value */
+      if ( size <= oldsize )
+         size = num;
+   }
+
+   assert( size >= initsize );
+   assert( size >= num );
+
+   return size;
+}
+
+/** allocates the next unused buffer */
+void* BMSallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   int                   size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr = NULL;
+#ifndef SCIP_NOBUFFERMEM
+   int bufnum;
+#endif
+
+#ifndef NDEBUG
+   if ( size < 0 )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate negative buffer size.\n");
+      return NULL;
+   }
+   if ( size > (int)(INT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
+#endif
+
+#ifndef SCIP_NOBUFFERMEM
+   assert( size >= 0 );
+   assert( buffer != NULL );
+   assert( buffer->firstfree <= buffer->ndata );
+
+   /* allocate a minimum of 1 byte */
+   if ( size == 0 )
+      size = 1;
+
+   /* check, if we need additional buffers */
+   if ( buffer->firstfree == buffer->ndata )
+   {
+      int newsize;
+      int i;
+
+      /* create additional buffers */
+      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, buffer->firstfree + 1);
+      BMSreallocMemoryArray(&buffer->data, newsize);
+      if ( buffer->data == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer data storage.\n");
+         return NULL;
+      }
+      BMSreallocMemoryArray(&buffer->size, newsize);
+      if ( buffer->size == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer size storage.\n");
+         return NULL;
+      }
+      BMSreallocMemoryArray(&buffer->used, newsize);
+      if ( buffer->used == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer used storage.\n");
+         return NULL;
+      }
+
+      /* init data */
+      for (i = buffer->ndata; i < newsize; ++i)
+      {
+         buffer->data[i] = NULL;
+         buffer->size[i] = 0;
+         buffer->used[i] = FALSE;
+      }
+      buffer->ndata = newsize;
+   }
+   assert(buffer->firstfree < buffer->ndata);
+
+   /* check, if the current buffer is large enough */
+   bufnum = buffer->firstfree;
+   assert( ! buffer->used[bufnum] );
+   if ( buffer->size[bufnum] < size )
+   {
+      int newsize;
+
+      /* enlarge buffer */
+      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
+      BMSreallocMemorySize(&buffer->data[bufnum], newsize);
+      buffer->size[bufnum] = newsize;
+      if ( buffer->data[bufnum] == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer storage.\n");
+         return NULL;
+      }
+   }
+   assert( buffer->size[bufnum] >= size );
+
+   ptr = buffer->data[bufnum];
+   buffer->used[bufnum] = TRUE;
+   buffer->firstfree++;
+
+   SCIPdebugMessage("Allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p.\n",
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+
+#else
+   BMSallocMemorySize(&ptr, size);
+#endif
+
+   return ptr;
+}
+
+/** reallocates the buffer to at least the given size */
+void* BMSreallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   int                   size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* newptr;
+#ifndef SCIP_NOBUFFERMEM
+   int bufnum;
+#endif
+
+#ifndef NDEBUG
+   if ( size < 0 )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate negative buffer size.\n");
+      return NULL;
+   }
+   if ( size > (int)(INT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
+#endif
+
+#ifndef SCIP_NOBUFFERMEM
+   assert( size >= 0 );
+   assert( buffer != NULL );
+   assert( buffer->firstfree <= buffer->ndata );
+
+   /* if the pointer doesn't exist yet, allocate it */
+   if ( ptr == NULL )
+      return BMSallocBufferMemory_call(buffer, size, filename, line);
+
+   assert( buffer->firstfree >= 1 );
+
+   /* Search the pointer in the buffer list:
+    * Usually, buffers are allocated and freed like a stack, such that the currently used pointer is
+    * most likely at the end of the buffer list.
+    */
+   bufnum = buffer->firstfree - 1;
+   while ( bufnum >= 0 && buffer->data[bufnum] != ptr )
+      --bufnum;
+
+   newptr = ptr;
+   assert( bufnum >= 0 );
+   assert( buffer->data[bufnum] == newptr );
+   assert( buffer->used[bufnum] );
+   assert( buffer->size[bufnum] >= 1 );
+
+   /* check if the buffer has to be enlarged */
+   if ( size > buffer->size[bufnum] )
+   {
+      int newsize;
+
+      /* enlarge buffer */
+      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
+      BMSreallocMemorySize(&buffer->data[bufnum], newsize);
+      buffer->size[bufnum] = newsize;
+      if ( buffer->data[bufnum] == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer storage.\n");
+         return NULL;
+      }
+      newptr = buffer->data[bufnum];
+   }
+   assert( buffer->size[bufnum] >= size );
+   assert( newptr == buffer->data[bufnum] );
+
+   SCIPdebugMessage("Reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p.\n",
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
+
+#else
+   assert( ptr != NULL );
+   assert( size >= 0 );
+   newptr = ptr;
+   BMSreallocMemorySize(newptr, size);
+#endif
+
+   return newptr;
+}
+
+/** allocates the next unused buffer and copies the given memory into the buffer */
+void* BMSduplicateBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   const void*           source,             /**< memory block to copy into the buffer */
+   int                   size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert( source != NULL );
+
+   /* allocate a buffer of the given size */
+   ptr = BMSallocBufferMemory_call(buffer, size, filename, line);
+
+   /* copy the source memory into the buffer */
+   if ( ptr != NULL )
+   {
+      assert( size >= 0 );
+      BMScopyMemorySize(ptr, source, size);
+   }
+
+   return ptr;
+}
+
+/** frees a buffer */
+void BMSfreeBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{  /*lint --e{715}*/
+#ifndef SCIP_NOBUFFERMEM
+   int bufnum;
+
+   assert( buffer != NULL );
+   assert( buffer->firstfree <= buffer->ndata );
+   assert( buffer->firstfree >= 1 );
+
+   if ( ptr != NULL )
+   {
+      /* Search the pointer in the buffer list:
+       * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
+       * most likely at the end of the buffer list.
+       */
+      bufnum = buffer->firstfree-1;
+      while ( bufnum >= 0 && buffer->data[bufnum] != ptr )
+         --bufnum;
+
+      assert( bufnum >= 0 );
+      assert( buffer->data[bufnum] == ptr );
+      assert( buffer->used[bufnum] );
+
+      buffer->used[bufnum] = FALSE;
+
+      while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
+         --buffer->firstfree;
+
+      SCIPdebugMessage("Freed buffer %d/%d at %p of size %d for pointer %p, first free is %d.\n",
+         bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
+   }
+   else
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free null buffer pointer.\n");
+   }
+
+#else
+   BMSfreeMemory(ptr);
+#endif
+}
+
+/** gets number of used buffers */
+int BMSgetNUsedBufferMemory(
+   BMS_BUFMEM*           buffer              /**< memory buffer storage */
+   )
+{
+   assert( buffer != NULL );
+
+   return buffer->firstfree;
+}
+
+
+/** returns the number of allocated bytes in the buffer memory */
+EXTERN
+long long BMSgetBufferMemoryUsed(
+   const BMS_BUFMEM*     buffer              /**< buffer memory */
+   )
+{
+   long long totalmem = 0LL;
+   int i;
+
+   assert( buffer != NULL );
+   for (i = 0; i < buffer->ndata; ++i)
+      totalmem += buffer->size[i];
+
+   return totalmem;
+}
+
+/** outputs statistics about currently allocated buffers to the screen */
+void BMSprintBufferMemory(
+   BMS_BUFMEM*           buffer              /**< memory buffer storage */
+   )
+{
+   int totalmem;
+   int i;
+
+   assert( buffer != NULL );
+
+   totalmem = 0;
+   for (i = 0; i < buffer->ndata; ++i)
+   {
+      printf("[%c] %8d bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
+      totalmem += buffer->size[i];
+   }
+   printf("    %8d bytes total in %d buffers\n", totalmem, buffer->ndata);
 }
