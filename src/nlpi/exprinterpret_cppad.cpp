@@ -1599,6 +1599,7 @@ void evalUser(
    SCIP_EXPR*            expr                /**< expression that holds the user expression */
    )
 {
+   assert( args != 0 );
    vector<Type> in(args, args + SCIPexprGetNChildren(expr));
    vector<Type> out(1);
 

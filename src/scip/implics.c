@@ -1859,7 +1859,7 @@ SCIP_RETCODE mergeClique(
 
    assert(nclqvars != NULL);
 
-   SCIPdebugMessage("starting merging %d variables in clique %d\n", *nclqvars, clique == NULL ? -1 : clique->id);
+   SCIPdebugMessage("starting merging %d variables in clique %d\n", *nclqvars, (clique == NULL) ? -1 : (int) clique->id);
 
    if( *nclqvars <= 1 )
       return SCIP_OKAY;
@@ -2062,7 +2062,7 @@ SCIP_RETCODE mergeClique(
             {
                *infeasible = TRUE;
 
-               SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique != NULL ? clique->id : -1,
+               SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", (clique != NULL) ? (int) clique->id : -1,
                      onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clqvalues[startidx] ? "" : "~",
                            SCIPvarGetName(clqvars[startidx]));
                return SCIP_OKAY;
@@ -2101,7 +2101,7 @@ SCIP_RETCODE mergeClique(
       if( onefixedvar != NULL )
       {
          SCIPdebugMessage("variable %s%s in clique %d fixed to one, fixing all other variables to zero\n",
-               onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique != NULL ? clique->id : -1);
+            onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), (clique != NULL) ? (int) clique->id : -1);
 
          /* handle all active variables by fixing them */
          for( startidx = *nclqvars; startidx >= 0; --startidx )
@@ -2117,7 +2117,7 @@ SCIP_RETCODE mergeClique(
                   SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[startidx], blkmem, clqvalues[startidx], clique) );
                }
 
-               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[startidx]), clique != NULL ? clique->id : -1,
+               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[startidx]), (clique != NULL) ? (int) clique->id : -1,
                      clqvalues[startidx] ? 0 : 1);
 
                /* note that the variable status will remain unchanged */
@@ -2358,7 +2358,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
       if( sameclique == NULL )
       {
-         SCIPdebugMessage("adding clique %d with %d vars to clique table\n", clique->id, nvars);
+         SCIPdebugMessage("adding clique %u with %d vars to clique table\n", clique->id, nvars);
 
          cliquetable->ncreatedcliques++;
 
@@ -2484,7 +2484,7 @@ SCIP_RETCODE cliqueCleanup(
             {
                *infeasible = TRUE;
 
-               SCIPdebugMessage("two variables in clique %d fixed to one %s%s and %s%s\n", clique->id,
+               SCIPdebugMessage("two variables in clique %u fixed to one %s%s and %s%s\n", clique->id,
                      onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->values[v] ? "" : "~",
                            SCIPvarGetName(clique->vars[v])); /*lint !e530*/
                return SCIP_OKAY;
@@ -2518,7 +2518,7 @@ SCIP_RETCODE cliqueCleanup(
 
       if( onefixedvar != NULL )
       {
-         SCIPdebugMessage("variable %s%s in clique %d fixed to one, fixing all other variables to zero\n",
+         SCIPdebugMessage("variable %s%s in clique %u fixed to one, fixing all other variables to zero\n",
             onefixedvalue ? "" : "~", SCIPvarGetName(onefixedvar), clique->id);
 
          for( v = 0; v < clique->nvars ; ++v )
@@ -2536,7 +2536,7 @@ SCIP_RETCODE cliqueCleanup(
 
                SCIP_CALL( SCIPvarDelCliqueFromList(clqvar, blkmem, clique->values[v], clique) );
 
-               SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvar), clique->id,
+               SCIPdebugMessage("fixing variable %s in clique %u to %d\n", SCIPvarGetName(clqvar), clique->id,
                   clique->values[v] ? 0 : 1);
 
                SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
@@ -2576,7 +2576,7 @@ SCIP_RETCODE cliqueCleanup(
             /* clearing data and removing variable from its clique list */
             SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[0], blkmem, clique->values[0], clique) );
 
-            SCIPdebugMessage("fixing last variable %s in clique %d to %d\n", SCIPvarGetName(clique->vars[0]), clique->id,
+            SCIPdebugMessage("fixing last variable %s in clique %u to %d\n", SCIPvarGetName(clique->vars[0]), clique->id,
                clique->values[0] ? 1 : 0);
 
             SCIP_CALL( SCIPvarFixBinary(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,

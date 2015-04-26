@@ -1326,7 +1326,7 @@ SCIP_Bool takeCut(
       default:
          SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
          SCIPABORT();
-         takecut = FALSE;
+         takecut = FALSE;  /*lint !e527*/
       break;
    }
 
@@ -1361,6 +1361,7 @@ SCIP_RETCODE copyCuts(
       SCIP_ROW* row;
       SCIP_Bool takecut;
 
+      assert( cuts[c] != NULL );
       row = SCIPcutGetRow(cuts[c]); /*lint !e613*/
       assert(!SCIProwIsLocal(row));
       assert(!SCIProwIsModifiable(row));
@@ -18815,7 +18816,7 @@ SCIP_RETCODE SCIPinferVarFixCons(
 
       SCIP_CALL( SCIPinferVarLbCons(scip, var, fixedval, infercons, inferinfo, force, infeasible, &lbtightened) );
 
-      if( !infeasible )
+      if( ! (*infeasible) )
       {
 	 SCIP_CALL( SCIPinferVarUbCons(scip, var, fixedval, infercons, inferinfo, force, infeasible, tightened) );
 
@@ -19185,7 +19186,7 @@ SCIP_RETCODE SCIPinferVarFixProp(
 
       SCIP_CALL( SCIPinferVarLbProp(scip, var, fixedval, inferprop, inferinfo, force, infeasible, &lbtightened) );
 
-      if( !infeasible )
+      if( ! (*infeasible) )
       {
 	 SCIP_CALL( SCIPinferVarUbProp(scip, var, fixedval, inferprop, inferinfo, force, infeasible, tightened) );
 

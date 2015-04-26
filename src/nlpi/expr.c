@@ -3063,7 +3063,7 @@ SCIP_DECL_EXPRFREEDATA( exprFreeDataPolynomial )
 /** point evaluation for user expression */
 static
 SCIP_DECL_EXPREVAL( exprevalUser )
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA_USER* exprdata;
 
    exprdata = (SCIP_EXPRDATA_USER*) opdata.data;
@@ -3076,7 +3076,7 @@ SCIP_DECL_EXPREVAL( exprevalUser )
 /** interval evaluation for user expression */
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntUser )
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA_USER* exprdata;
 
    exprdata = (SCIP_EXPRDATA_USER*) opdata.data;
@@ -13042,7 +13042,7 @@ SCIP_RETCODE SCIPexprgraphCreateNode(
 
    case SCIP_EXPR_LAST:
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    SCIP_CALL( exprgraphCreateNode(blkmem, node, op, opdata) );

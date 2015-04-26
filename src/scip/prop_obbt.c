@@ -63,7 +63,7 @@
 #define DEFAULT_GENVBDSDURINGFILTER      TRUE      /**< try to genrate genvbounds during trivial and aggressive filtering? */
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
-#define DEFAULT_CONDITIONLIMIT             -1      /**< maximum condition limit used in LP solver (-1.0: no limit) */
+#define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
 #define DEFAULT_BOUNDSTREPS              0.01      /**< minimal relative improve for strengthening bounds */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
@@ -342,9 +342,9 @@ SCIP_Bool includeVarGenVBound(
       return FALSE;
 
    redcost = SCIPgetVarRedcost(scip, var);
-   assert(redcost != SCIP_INVALID);
+   assert(redcost != SCIP_INVALID); /*lint !e777*/
 
-   if( redcost == SCIP_INVALID )
+   if( redcost == SCIP_INVALID ) /*lint !e777*/
       return FALSE;
 
    if( redcost < SCIPdualfeastol(scip) && redcost > -SCIPdualfeastol(scip) )
@@ -570,7 +570,7 @@ SCIP_RETCODE createGenVBound(
 
                redcost = SCIPgetVarRedcost(scip, xk);
 
-               assert(redcost != SCIP_INVALID);
+               assert(redcost != SCIP_INVALID); /*lint !e777*/
                assert(xk != xi);
 
                /* in this case dont add a genvbound */
@@ -726,9 +726,9 @@ SCIP_RETCODE filterExistingLP(
 #endif
 
             /* solve the OBBT LP */
-            propdata->ndiveiterations -= SCIPgetNLPIterations(scip);
+            propdata->ndiveiterations -= (int) SCIPgetNLPIterations(scip);
             SCIP_CALL( solveLP(scip, -1, &error, &optimal) );
-            propdata->ndiveiterations += SCIPgetNLPIterations(scip);
+            propdata->ndiveiterations += (int) SCIPgetNLPIterations(scip);
             assert(propdata->ndiveiterations >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
@@ -798,9 +798,9 @@ SCIP_RETCODE filterRound(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* solve LP */
-   propdata->nfilterlpiters -= SCIPgetNLPIterations(scip);
+   propdata->nfilterlpiters -= (int) SCIPgetNLPIterations(scip);
    SCIP_CALL( solveLP(scip, itlimit, &error, &optimal) );
-   propdata->nfilterlpiters += SCIPgetNLPIterations(scip);
+   propdata->nfilterlpiters += (int) SCIPgetNLPIterations(scip);
    assert(propdata->nfilterlpiters >= 0);
 
    if( !optimal )
@@ -870,9 +870,9 @@ SCIP_RETCODE filterRound(
             SCIP_CALL( setObjDive(scip, propdata, bound, 1.0) );
 
             /* solve the OBBT LP */
-            propdata->nfilterlpiters -= SCIPgetNLPIterations(scip);
+            propdata->nfilterlpiters -= (int) SCIPgetNLPIterations(scip);
             SCIP_CALL( solveLP(scip, -1, &error, &optimal) );
-            propdata->nfilterlpiters += SCIPgetNLPIterations(scip);
+            propdata->nfilterlpiters += (int) SCIPgetNLPIterations(scip);
             assert(propdata->nfilterlpiters >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
@@ -1404,13 +1404,13 @@ SCIP_RETCODE findNewBounds(
       /* now solve the LP */
       SCIPdebugMessage("dive iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
 
-      propdata->ndiveiterations -= SCIPgetNLPIterations(scip);
+      propdata->ndiveiterations -= (int) SCIPgetNLPIterations(scip);
       SCIP_CALL( solveLP(scip, *nleftiterations, &error, &optimal) );
-      propdata->ndiveiterations += SCIPgetNLPIterations(scip);
+      propdata->ndiveiterations += (int) SCIPgetNLPIterations(scip);
       propdata->nsolvedbounds++;
 
       SCIPdebugMessage("dive iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage("OPT: %d ERROR:%d\n" , optimal, error);
+      SCIPdebugMessage("OPT: %u ERROR:%u\n", optimal, error);
       SCIPdebugMessage("after solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
          SCIPvarGetUbLocal(currbound->var) );
@@ -1587,7 +1587,7 @@ SCIP_RETCODE applyObbt(
 
    /* tighten relative bound improvement limit */
    SCIP_CALL( SCIPgetRealParam(scip, "numerics/boundstreps", &oldboundstreps) );
-   if( oldboundstreps != propdata->boundstreps )
+   if( oldboundstreps != propdata->boundstreps ) /*lint !e777*/
    {
      SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", propdata->boundstreps) );
    }

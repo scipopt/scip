@@ -785,8 +785,6 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          int direction;
 
          rowidx = -1;
-         rowpos = -1;
-         row = NULL;
 
          /* violated rows containing fractional variables are preferred; if such a row exists, choose the last one from the list
           * (at position nviolfracrows - 1) because removing this row will cause one swapping operation less than other rows

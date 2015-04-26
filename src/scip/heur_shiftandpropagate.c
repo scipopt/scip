@@ -867,7 +867,9 @@ void checkViolations(
    /* loop over rows and check if it is violated */
    for( i = 0; i < nrows; ++i )
    {
-      int rowpos = (colidx >= 0 ? rowindices[i] : i);
+      int rowpos;
+      assert( colidx < 0 || rowindices != NULL );
+      rowpos = (colidx >= 0 ? rowindices[i] : i);
       /* check, if zero solution violates this row */
       checkRowViolation(scip, matrix, rowpos, violatedrows, violatedrowpos, nviolatedrows, rowweights, updateweights);
 
@@ -1168,10 +1170,11 @@ SCIP_RETCODE updateTransformation(
       }
       break;
 
+   case TRANSFORMSTATUS_NONE:
    default:
       SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n");
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;   /*lint !e527*/
    }
    /* if the bound, by which the variable was shifted, has changed, deltashift is different from zero, which requires
     * an update of all affected rows
