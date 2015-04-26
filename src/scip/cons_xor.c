@@ -2422,7 +2422,8 @@ SCIP_RETCODE checkSystemGF2(
       if( !xoractive[i] )
          continue;
 
-      SCIPfreeBufferArray(scip, &(A[j--]));
+      SCIPfreeBufferArray(scip, &(A[j]));
+      --j;
    }
    SCIPfreeBufferArray(scip, &A);
    SCIPfreeBufferArray(scip, &b);
