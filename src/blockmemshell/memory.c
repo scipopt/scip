@@ -2113,7 +2113,7 @@ struct BMS_BufMem
 
 
 /** creates memory buffer storage */
-BMS_BUFMEM* BMScreateBufferMemroy_call(
+BMS_BUFMEM* BMScreateBufferMemory_call(
    double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
    int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
    const char*           filename,           /**< source file of the function call */

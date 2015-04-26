@@ -535,13 +535,13 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
 #define BMSfreeBufferMemorySize(mem,ptr)     { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
 #define BMSfreeBufferMemorySizeNull(mem,ptr) { if ( *(ptr) != NULL ) BMSfreeBufferMemorySize((mem), (ptr), __FILE__, __LINE__); }
 
-#define BMScreateBufferMemory(mem,fac,init)  ASSIGN((mem), BMScreateBufferMemroy_call((fac), (init), __FILE__, __LINE__))
+#define BMScreateBufferMemory(mem,fac,init)  ASSIGN((mem), BMScreateBufferMemory_call((fac), (init), __FILE__, __LINE__))
 #define BMSdestroyBufferMemory(mem)          BMSdestroyBufferMemory_call((mem), __FILE__, __LINE__)
 
 
 /** creates memory buffer storage */
 EXTERN
-BMS_BUFMEM* BMScreateBufferMemroy_call(
+BMS_BUFMEM* BMScreateBufferMemory_call(
    double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
    int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
    const char*           filename,           /**< source file of the function call */
