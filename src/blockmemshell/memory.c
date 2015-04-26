@@ -263,7 +263,7 @@ void BMSdisplayMemory_call(
    )
 {
 #ifdef NPARASCIP
-   printInfo("optimized version of memory shell linked - no memory diagnostics available\n");
+   printInfo("Optimized version of memory shell linked - no memory diagnostics available.\n");
 #endif
 }
 
@@ -273,7 +273,7 @@ void BMScheckEmptyMemory_call(
    )
 {
 #ifdef NPARASCIP
-   printInfo("optimized version of memory shell linked - no memory leakage check available\n");
+   printInfo("Optimized version of memory shell linked - no memory leakage check available.\n");
 #endif
 }
 
@@ -306,7 +306,7 @@ void* BMSallocClearMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes\n", ((long long) num) * ((long long) size));
+      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes.\n", ((long long) num) * ((long long) size));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -333,7 +333,7 @@ void* BMSallocMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes\n", (long long) size);
+      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes.\n", (long long) size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -364,7 +364,7 @@ void* BMSreallocMemory_call(
    if( newptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for reallocation of %"LONGINT_FORMAT" bytes\n", (long long) size);
+      printError("Insufficient memory for reallocation of %"LONGINT_FORMAT" bytes.\n", (long long) size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -457,7 +457,7 @@ void BMSfreeMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to free null pointer\n");
+      printError("Tried to free null pointer.\n");
    }
 }
 
@@ -1572,7 +1572,7 @@ BMS_BLKMEM* BMScreateBlockMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for block memory header\n");
+      printError("Insufficient memory for block memory header.\n");
    }
 
    return blkmem;
@@ -1607,7 +1607,7 @@ void BMSclearBlockMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to clear null block memory\n");
+      printError("Tried to clear null block memory.\n");
    }
 }
 
@@ -1629,7 +1629,7 @@ void BMSdestroyBlockMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to destroy null block memory\n");
+      printError("Tried to destroy null block memory.\n");
    }
 }
 
@@ -1663,7 +1663,7 @@ void* BMSallocBlockMemory_call(
       if( *chkmemptr == NULL )
       {
 	 printErrorHeader(filename, line);
-         printError("Insufficient memory for chunk block\n");
+         printError("Insufficient memory for chunk block.\n");
 	 return NULL;
       }
 #ifndef NDEBUG
@@ -1677,7 +1677,7 @@ void* BMSallocBlockMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for new chunk\n");
+      printError("Insufficient memory for new chunk.\n");
    }
    debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
@@ -1769,7 +1769,7 @@ void BMSfreeBlockMemory_call(
       if( chkmem == NULL )
       {
 	 printErrorHeader(filename, line);
-         printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"LONGINT_FORMAT"\n",
+         printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"LONGINT_FORMAT".\n",
             ptr, (void*)blkmem, (long long) size);
 	 return;
       }
@@ -1784,7 +1784,7 @@ void BMSfreeBlockMemory_call(
    else if( size != 0 )
    {
       printErrorHeader(filename, line);
-      printError("Tried to free null block pointer\n");
+      printError("Tried to free null block pointer.\n");
    }
 
    checkBlkmem(blkmem);
@@ -1828,7 +1828,7 @@ long long BMSgetBlockMemoryUsed_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    )
 {
-   assert(blkmem != NULL);
+   assert( blkmem != NULL );
 
    return blkmem->memused;
 }
