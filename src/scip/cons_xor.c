@@ -3262,14 +3262,14 @@ SCIP_RETCODE cliquePresolve(
          SCIPdebugMessage("also fix the integer variable <%s> to 0\n", SCIPvarGetName(consdata->intvar));
          SCIP_CALL( SCIPfixVar(scip, consdata->intvar, 0.0, &infeasible, &fixed) );
 
-         assert(infeasible || fixed);
+         assert(infeasible || fixed || SCIPvarGetStatus(consdata->intvar) == SCIP_VARSTATUS_FIXED);
 
          if( infeasible )
          {
             *cutoff = infeasible;
             return SCIP_OKAY;
          }
-         else
+         else if( fixed )
             ++(*nfixedvars);
       }
 
