@@ -93,7 +93,7 @@ extern "C" {
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
 #define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
-#define BMSreallocMemorySize(ptr,size)        ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (size_t)(size), \
+#define BMSreallocMemorySize(ptr,size)        ASSIGN((ptr), BMSreallocMemory_call((void*)(*(ptr)), (size_t)(size), \
                                                 __FILE__, __LINE__ ))
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
 #define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
