@@ -299,6 +299,15 @@ void* BMSallocClearMemory_call(
 
    debugMessage("calloc %"LONGINT_FORMAT" elements of %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
 
+#ifndef NDEBUG
+   if ( num*size > (size_t)(UINT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
+#endif
+
    num = MAX(num, 1);
    size = MAX(size, 1);
    ptr = calloc(num, size);
@@ -326,6 +335,15 @@ void* BMSallocMemory_call(
    void* ptr;
 
    debugMessage("malloc %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long)size, filename, line);
+
+#ifndef NDEBUG
+   if ( size > (size_t)(UINT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
+#endif
 
    size = MAX(size, 1);
    ptr = malloc(size);
@@ -356,6 +374,15 @@ void* BMSreallocMemory_call(
 #if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
+#endif
+
+#ifndef NDEBUG
+   if ( size > (size_t)(UINT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
 #endif
 
    size = MAX(size, 1);
@@ -1647,6 +1674,15 @@ void* BMSallocBlockMemory_call(
 
    assert( blkmem != NULL );
 
+#ifndef NDEBUG
+   if ( size > (size_t)(UINT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
+#endif
+
    /* calculate hash number of given size */
    alignSize(&size);
    hashnumber = getHashNumber((int)size);
@@ -1705,6 +1741,15 @@ void* BMSreallocBlockMemory_call(
       assert(oldsize == 0);
       return BMSallocBlockMemory_call(blkmem, newsize, filename, line);
    }
+
+#ifndef NDEBUG
+   if ( newsize > (size_t)(UINT_MAX / 8) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %d.\n", INT_MAX / 8);
+      return NULL;
+   }
+#endif
 
    alignSize(&oldsize);
    alignSize(&newsize);
