@@ -19465,7 +19465,7 @@ void SCIPprintReal(
  * memory management
  */
 
-/**@name Memory Management */
+/**@name Standard Memory Management Macros */
 /**@{ */
 
 #define SCIPallocMemory(scip,ptr)               ( (BMSallocMemory((ptr)) == NULL) \
@@ -19482,8 +19482,7 @@ void SCIPprintReal(
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPduplicateMemory(scip, ptr, source)  ( (BMSduplicateMemory((ptr), (source)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateMemoryArray(scip, ptr, source, num) \
-                                                     ( (BMSduplicateMemoryArray((ptr), (source), (num)) == NULL) \
+#define SCIPduplicateMemoryArray(scip, ptr, source, num) ( (BMSduplicateMemoryArray((ptr), (source), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPfreeMemory(scip,ptr)                BMSfreeMemory(ptr)
 #define SCIPfreeMemoryNull(scip,ptr)            BMSfreeMemoryNull(ptr)
@@ -19491,6 +19490,11 @@ void SCIPprintReal(
 #define SCIPfreeMemoryArrayNull(scip,ptr)       BMSfreeMemoryArrayNull(ptr)
 #define SCIPfreeMemorySize(scip,ptr)            BMSfreeMemorySize(ptr)
 #define SCIPfreeMemorySizeNull(scip,ptr)        BMSfreeMemorySizeNull(ptr)
+/**@} */
+
+
+/**@name Block Memory Management Macros */
+/**@{ */
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -19498,29 +19502,26 @@ void SCIPprintReal(
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocBlockMemorySize(scip,ptr,size) ( (BMSallocBlockMemorySize(SCIPblkmem(scip), (ptr), (size)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPreallocBlockMemoryArray(scip,ptr,oldnum,newnum) \
-                                                     ( (BMSreallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (oldnum), (newnum)) \
-                                                       == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPreallocBlockMemorySize(scip,ptr,oldsize,newsize) \
-                                                     ( (BMSreallocBlockMemorySize(SCIPblkmem(scip), (ptr), (oldsize), (newsize)) \
-                                                       == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateBlockMemory(scip, ptr, source) \
-                                                     ( (BMSduplicateBlockMemory(SCIPblkmem(scip), (ptr), (source)) == NULL) \
+#define SCIPreallocBlockMemoryArray(scip,ptr,oldnum,newnum) ( (BMSreallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (oldnum), (newnum)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateBlockMemoryArray(scip, ptr, source, num) \
-                                                     ( (BMSduplicateBlockMemoryArray(SCIPblkmem(scip), (ptr), (source), (num)) \
-                                                       == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPensureBlockMemoryArray(scip,ptr,arraysizeptr,minsize) \
-                                                     ( (SCIPensureBlockMemoryArray_call((scip), (void**)(ptr), sizeof(**(ptr)), \
-                                                        (arraysizeptr), (minsize))) )
+#define SCIPreallocBlockMemorySize(scip,ptr,oldsize,newsize) ( (BMSreallocBlockMemorySize(SCIPblkmem(scip), (ptr), (oldsize), (newsize)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBlockMemory(scip, ptr, source) ( (BMSduplicateBlockMemory(SCIPblkmem(scip), (ptr), (source)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBlockMemoryArray(scip, ptr, source, num) ( (BMSduplicateBlockMemoryArray(SCIPblkmem(scip), (ptr), (source), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPensureBlockMemoryArray(scip,ptr,arraysizeptr,minsize) ( (SCIPensureBlockMemoryArray_call((scip), (void**)(ptr), sizeof(**(ptr)), (arraysizeptr), (minsize))) )
 #define SCIPfreeBlockMemory(scip,ptr)           BMSfreeBlockMemory(SCIPblkmem(scip), (ptr))
 #define SCIPfreeBlockMemoryNull(scip,ptr)       BMSfreeBlockMemoryNull(SCIPblkmem(scip), (ptr))
 #define SCIPfreeBlockMemoryArray(scip,ptr,num)  BMSfreeBlockMemoryArray(SCIPblkmem(scip), (ptr), (num))
-#define SCIPfreeBlockMemoryArrayNull(scip,ptr,num) \
-                                                     BMSfreeBlockMemoryArrayNull(SCIPblkmem(scip), (ptr), (num))
+#define SCIPfreeBlockMemoryArrayNull(scip,ptr,num) BMSfreeBlockMemoryArrayNull(SCIPblkmem(scip), (ptr), (num))
 #define SCIPfreeBlockMemorySize(scip,ptr,size)  BMSfreeBlockMemorySize(SCIPblkmem(scip), (ptr), (size))
-#define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
-                                                     BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
+#define SCIPfreeBlockMemorySizeNull(scip,ptr,size) BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
+/**@} */
+
+
+/**@name Buffer Memory Management Macros */
+/**@{ */
 
 #define SCIPcreateBuffer(ptr)                   ( (BMScreateBufferMemroy_call((ptr), __FILE__, __LINE__) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -19543,7 +19544,11 @@ void SCIPprintReal(
 #define SCIPcreateBufferMemory(bufmem,fac,init) ( (BMScreateBufferMemory((bufmem), (fac), (init)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPdestroyBufferMemory(bufmem)         BMSdestroyBufferMemory(bufmem)
 #define SCIPbufferPrint(bufmem)                 BMSprintBufferMemory(bufmem)
+/**@} */
 
+
+/**@name Memory Management Functions */
+/**@{ */
 
 /** returns block memory to use at the current time
  *
