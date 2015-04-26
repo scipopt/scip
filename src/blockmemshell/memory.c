@@ -2442,10 +2442,22 @@ void BMSfreeBufferMemory_call(
       while ( bufnum >= 0 && buffer->data[bufnum] != ptr )
          --bufnum;
 
-      assert( bufnum >= 0 );
-      assert( buffer->data[bufnum] == ptr );
-      assert( buffer->used[bufnum] );
+#ifndef NDEBUG
+      if ( bufnum < 0 )
+      {
+         printErrorHeader(filename, line);
+         printError("Tried to free unkown buffer pointer.\n");
+         return;
+      }
+      if ( ! buffer->used[bufnum] )
+      {
+         printErrorHeader(filename, line);
+         printError("Tried to free buffer pointer already freed.\n");
+         return;
+      }
+#endif
 
+      assert( buffer->data[bufnum] == ptr );
       buffer->used[bufnum] = FALSE;
 
       while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
