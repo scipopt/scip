@@ -1424,7 +1424,7 @@ void* BMSduplicateChunkMemory_call(
 
    ptr = BMSallocChunkMemory_call(chkmem, size, filename, line);
    if( ptr != NULL )
-      BMScopyMemorySize(ptr, source, (size_t) chkmem->elemsize);
+      BMScopyMemorySize(ptr, source, chkmem->elemsize);
 
    return ptr;
 }
@@ -2244,7 +2244,7 @@ void* BMSallocBufferMemory_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   void* ptr = NULL;
+   void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    int bufnum;
 #endif
@@ -2273,7 +2273,7 @@ void* BMSallocBufferMemory_call(
       int i;
 
       /* create additional buffers */
-      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, buffer->firstfree + 1);
+      newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, buffer->firstfree + 1);
       BMSreallocMemoryArray(&buffer->data, newsize);
       if ( buffer->data == NULL )
       {
@@ -2315,9 +2315,9 @@ void* BMSallocBufferMemory_call(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
-      buffer->size[bufnum] = newsize;
+      buffer->size[bufnum] = (int) newsize;
       if ( buffer->data[bufnum] == NULL )
       {
          printErrorHeader(filename, line);
@@ -2394,7 +2394,7 @@ void* BMSreallocBufferMemory_call(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
       buffer->size[bufnum] = (int) newsize;
       if ( buffer->data[bufnum] == NULL )
@@ -2514,7 +2514,6 @@ int BMSgetNUsedBufferMemory(
 
 
 /** returns the number of allocated bytes in the buffer memory */
-EXTERN
 long long BMSgetBufferMemoryUsed(
    const BMS_BUFMEM*     buffer              /**< buffer memory */
    )
