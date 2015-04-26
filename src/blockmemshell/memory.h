@@ -521,13 +521,13 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
 #define BMSallocBufferMemory(mem,ptr)        ASSIGN((ptr), BMSallocBufferMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSallocBufferMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
 #define BMSreallocBufferMemorySize(mem,ptr,size) \
-                                             ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (int)(size), __FILE__, __LINE__))
+                                             ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (size_t)(size), __FILE__, __LINE__))
 #define BMSallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSreallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (int)(num)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSreallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBufferMemory(mem,ptr,source,size) \
-                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (int)(size), __FILE__, __LINE__))
+                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(size), __FILE__, __LINE__))
 #define BMSduplicateBufferMemoryArray(mem,ptr,source,num) \
-                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (int)(num)*sizeof(**(ptr)), __FILE__, __LINE__))
+                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSfreeBufferMemory(mem,ptr)         { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
 #define BMSfreeBufferMemoryNull(mem,ptr)     { if ( *(ptr) != NULL ) BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); (*ptr) = NULL; }
 #define BMSfreeBufferMemoryArray(mem,ptr)    { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
@@ -574,7 +574,7 @@ void BMSsetBufferMemoryArraygrowinit(
 EXTERN
 void* BMSallocBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
-   int                   size,               /**< minimal required size of the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );
@@ -584,7 +584,7 @@ EXTERN
 void* BMSreallocBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    void*                 ptr,                /**< pointer to the allocated memory buffer */
-   int                   size,               /**< minimal required size of the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );
@@ -594,7 +594,7 @@ EXTERN
 void* BMSduplicateBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    const void*           source,             /**< memory block to copy into the buffer */
-   int                   size,               /**< minimal required size of the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );

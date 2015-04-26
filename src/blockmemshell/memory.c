@@ -2196,23 +2196,21 @@ void BMSsetBufferMemoryArraygrowinit(
  *  This function is a copy of the function in set.c in order to be able to use memory.? separately.
  */
 static
-int calcMemoryGrowSize(
-   int                   initsize,           /**< initial size of array */
+size_t calcMemoryGrowSize(
+   size_t                initsize,           /**< initial size of array */
    SCIP_Real             growfac,            /**< growing factor of array */
-   int                   num                 /**< minimum number of entries to store */
+   size_t                num                 /**< minimum number of entries to store */
    )
 {
-   int size;
+   size_t size;
 
-   assert( initsize >= 0 );
    assert( growfac >= 1.0 );
-   assert( num >= 0 );
 
    if ( growfac == 1.0 )
       size = MAX(initsize, num);
    else
    {
-      int oldsize;
+      size_t oldsize;
 
       /* calculate the size with this loop, such that the resulting numbers are always the same */
       initsize = MAX(initsize, 4);
@@ -2223,7 +2221,7 @@ int calcMemoryGrowSize(
       while ( size < num && size > oldsize )
       {
          oldsize = size;
-         size = (int)(growfac * size + initsize);
+         size = (size_t)(growfac * size + initsize);
       }
 
       /* if an overflow happened, set the correct value */
@@ -2241,7 +2239,7 @@ int calcMemoryGrowSize(
 /** allocates the next unused buffer */
 void* BMSallocBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
-   int                   size,               /**< minimal required size of the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
@@ -2252,13 +2250,7 @@ void* BMSallocBufferMemory_call(
 #endif
 
 #ifndef NDEBUG
-   if ( size < 0 )
-   {
-      printErrorHeader(filename, line);
-      printError("Tried to allocate negative buffer size.\n");
-      return NULL;
-   }
-   if ( size > (int)(INT_MAX / 8) )
+   if ( size > (size_t)(UINT_MAX / 8) )
    {
       printErrorHeader(filename, line);
       printError("Tried to allocate buffer of size exceeding %d.\n", INT_MAX / 8);
@@ -2267,7 +2259,6 @@ void* BMSallocBufferMemory_call(
 #endif
 
 #ifndef SCIP_NOBUFFERMEM
-   assert( size >= 0 );
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
 
@@ -2278,7 +2269,7 @@ void* BMSallocBufferMemory_call(
    /* check, if we need additional buffers */
    if ( buffer->firstfree == buffer->ndata )
    {
-      int newsize;
+      size_t newsize;
       int i;
 
       /* create additional buffers */
@@ -2306,22 +2297,22 @@ void* BMSallocBufferMemory_call(
       }
 
       /* init data */
-      for (i = buffer->ndata; i < newsize; ++i)
+      for (i = buffer->ndata; i < (int) newsize; ++i)
       {
          buffer->data[i] = NULL;
          buffer->size[i] = 0;
          buffer->used[i] = FALSE;
       }
-      buffer->ndata = newsize;
+      buffer->ndata = (int) newsize;
    }
    assert(buffer->firstfree < buffer->ndata);
 
    /* check, if the current buffer is large enough */
    bufnum = buffer->firstfree;
    assert( ! buffer->used[bufnum] );
-   if ( buffer->size[bufnum] < size )
+   if ( buffer->size[bufnum] < (int) size )
    {
-      int newsize;
+      size_t newsize;
 
       /* enlarge buffer */
       newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
@@ -2334,13 +2325,13 @@ void* BMSallocBufferMemory_call(
          return NULL;
       }
    }
-   assert( buffer->size[bufnum] >= size );
+   assert( buffer->size[bufnum] >= (int) size );
 
    ptr = buffer->data[bufnum];
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   SCIPdebugMessage("Allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p.\n",
+   SCIPdebugMessage("Allocated buffer %d/%d at %p of size %d (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
 #else
@@ -2354,7 +2345,7 @@ void* BMSallocBufferMemory_call(
 void* BMSreallocBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    void*                 ptr,                /**< pointer to the allocated memory buffer */
-   int                   size,               /**< minimal required size of the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
@@ -2365,13 +2356,7 @@ void* BMSreallocBufferMemory_call(
 #endif
 
 #ifndef NDEBUG
-   if ( size < 0 )
-   {
-      printErrorHeader(filename, line);
-      printError("Tried to allocate negative buffer size.\n");
-      return NULL;
-   }
-   if ( size > (int)(INT_MAX / 8) )
+   if ( size > (size_t)(INT_MAX / 8) )
    {
       printErrorHeader(filename, line);
       printError("Tried to allocate buffer of size exceeding %d.\n", INT_MAX / 8);
@@ -2380,7 +2365,6 @@ void* BMSreallocBufferMemory_call(
 #endif
 
 #ifndef SCIP_NOBUFFERMEM
-   assert( size >= 0 );
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
 
@@ -2405,14 +2389,14 @@ void* BMSreallocBufferMemory_call(
    assert( buffer->size[bufnum] >= 1 );
 
    /* check if the buffer has to be enlarged */
-   if ( size > buffer->size[bufnum] )
+   if ( (int) size > buffer->size[bufnum] )
    {
-      int newsize;
+      size_t newsize;
 
       /* enlarge buffer */
       newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
-      buffer->size[bufnum] = newsize;
+      buffer->size[bufnum] = (int) newsize;
       if ( buffer->data[bufnum] == NULL )
       {
          printErrorHeader(filename, line);
@@ -2421,14 +2405,13 @@ void* BMSreallocBufferMemory_call(
       }
       newptr = buffer->data[bufnum];
    }
-   assert( buffer->size[bufnum] >= size );
+   assert( buffer->size[bufnum] >= (int) size );
    assert( newptr == buffer->data[bufnum] );
 
-   SCIPdebugMessage("Reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p.\n",
+   SCIPdebugMessage("Reallocated buffer %d/%d at %p to size %d (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
 
 #else
-   assert( size >= 0 );
    newptr = ptr;
    BMSreallocMemorySize(&newptr, size);
 #endif
@@ -2440,7 +2423,7 @@ void* BMSreallocBufferMemory_call(
 void* BMSduplicateBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    const void*           source,             /**< memory block to copy into the buffer */
-   int                   size,               /**< minimal required size of the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
@@ -2454,10 +2437,7 @@ void* BMSduplicateBufferMemory_call(
 
    /* copy the source memory into the buffer */
    if ( ptr != NULL )
-   {
-      assert( size >= 0 );
       BMScopyMemorySize(ptr, source, size);
-   }
 
    return ptr;
 }
