@@ -4076,8 +4076,8 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
-         SCIP_Real binvarval = 0.0;
-         SCIP_VAR* binvarneg = NULL;
+         SCIP_Real binvarval;
+         SCIP_VAR* binvarneg;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
@@ -4102,7 +4102,7 @@ SCIP_RETCODE separateIISRounding(
          assert( conshdlrdata->binvarhash != NULL );
          if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
          {
-            SCIP_Real binvarnegval = 0.0;
+            SCIP_Real binvarnegval;
             binvarnegval = SCIPgetVarSol(scip, binvarneg);
 
             /* take larger one */
@@ -6842,7 +6842,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    assert( SCIPconsGetNUpgradeLocks(lincons) > 0 );
 
    /* add slack variable */
-   if ( conshdlrdata->scaleslackvar )
+   if ( conshdlrdata->scaleslackvar && nvars > 0 )
    {
       absvalsum = absvalsum/((SCIP_Real) nvars);
       if ( slackvartype == SCIP_VARTYPE_IMPLINT )
