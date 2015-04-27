@@ -950,14 +950,18 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay )
+   else
    {
-      /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
-      propdata->lastnode = -2;
+      if( delay )
+      {
+         /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
+         propdata->lastnode = -2;
+      }
+
+      if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
+         || propdata->nimplications > oldnimplications )
+         *result = SCIP_SUCCESS;
    }
-   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-      || propdata->nimplications > oldnimplications )
-      *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
