@@ -2012,10 +2012,11 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 }
 
 
-/** for a given vertex @p v search for a clique of the conflict graph induced by the variables of a linear constraint that
+/** search new disjoint clique that covers given node
  *
- *  (i) covers @p v and
- *  (ii) has an an empty intersection with already computed clique covers.
+ *  For a given vertex @p v search for a clique of the conflict graph induced by the variables of a linear constraint that
+ *  - covers @p v and
+ *  - has an an empty intersection with already computed clique cover.
  */
 static
 SCIP_RETCODE computeVarsCoverSOS1(
