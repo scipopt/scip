@@ -333,6 +333,7 @@ int varGetNodeSOS1(
 {
    assert( conshdlrdata != NULL );
    assert( var != NULL );
+   assert( conshdlrdata->varhash != NULL );
 
    if ( ! SCIPhashmapExists(conshdlrdata->varhash, var) )
       return -1;
@@ -8343,6 +8344,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    conshdlrdata->tcliquegraph = NULL;
    conshdlrdata->tcliquedata = NULL;
    conshdlrdata->cntextsos1 = -1;
+   conshdlrdata->varhash = NULL;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSOS1, NULL) );
