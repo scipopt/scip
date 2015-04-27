@@ -164,7 +164,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 
 /* diving setting callbacks */
 
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
+/** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
 {
@@ -203,7 +203,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
       distquot = SCIPinfinity(scip);
    }
 
-   *score = distquot;
+   *score = -distquot;
 
    return SCIP_OKAY;
 }

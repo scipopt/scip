@@ -122,7 +122,7 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
 
 /* callbacks for diving heuristic specific settings */
 
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  *
  *  input:

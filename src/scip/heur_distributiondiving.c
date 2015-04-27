@@ -862,6 +862,7 @@ SCIP_DECL_HEUREXIT(heurExitDistributiondiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+/** scoring callback for distribution diving. best candidate maximizes the distribution score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 {  /*lint --e{715}*/
@@ -918,9 +919,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
       *score = SCIPgetBranchScore(scip, cand, downscore, upscore);
    else
       *score = MAX(upscore, downscore);
-
-   /* multiply by -1 because the best candidate minimizes the score */
-   *score *= -1;
 
    return SCIP_OKAY;
 }

@@ -206,7 +206,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
 
    ninteger = nbin + nint + nimpl;
-   bestscore = SCIP_REAL_MAX;
+   bestscore = SCIP_REAL_MIN;
 
    /* loop over solution values and get score of fractional variables */
    for( v = 0; v < ninteger; ++v )
@@ -218,8 +218,8 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
       {
          SCIP_CALL( SCIPgetDivesetScore(scip, diveset, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
 
-         /* currently, score is minimized */
-         if( score < bestscore )
+         /* we search for candidates with maximum score */
+         if( score > bestscore )
          {
             bestscore = score;
             *varptr = vars[v];

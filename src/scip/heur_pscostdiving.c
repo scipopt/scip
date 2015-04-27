@@ -160,12 +160,8 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
- *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
- *  last the direction of smaller pseudo costs
- */
 
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
+/** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 {
@@ -187,6 +183,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    pscostdown = SCIPgetVarPseudocostVal(scip, cand, 0.0 - candsfrac);
    pscostup = SCIPgetVarPseudocostVal(scip, cand, 1.0 - candsfrac);
 
+   /*  determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
+    *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
+    *  last the direction of smaller pseudo costs
+    */
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
@@ -211,8 +211,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
       pscostquot *= 1000.0;
 
    assert(pscostquot >= 0);
-   /* return negative cost quotient because diving algorithm minimizes the score */
-   *score = -pscostquot;
+   *score = pscostquot;
 
    return SCIP_OKAY;
 }
