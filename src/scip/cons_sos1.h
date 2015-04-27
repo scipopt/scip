@@ -142,7 +142,7 @@ SCIP_Real* SCIPgetWeightsSOS1(
 
 /** gets conflict graph of SOS1 constraints (or NULL if not existent)
  *
- *  Note: The conflict graph is globally valid; local changes are not taken into account.
+ *  @note The conflict graph is globally valid; local changes are not taken into account.
  */
 EXTERN
 SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
