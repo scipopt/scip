@@ -12574,6 +12574,9 @@ SCIP_RETCODE presolveRound(
    SCIP_EVENT event;
    SCIP_Bool aborted;
    SCIP_Bool lastranpresol;
+   int oldpresolstart = 0;
+   int oldpropstart = 0;
+   int oldconsstart = 0;
    int priopresol;
    int prioprop;
    int i;
@@ -12606,9 +12609,15 @@ SCIP_RETCODE presolveRound(
       j = *propstart;
       k = *consstart;
 
+      oldpresolstart = *presolstart;
+      oldpropstart = *propstart;
+      oldconsstart = *consstart;
+
+      if( i >= presolend && j >= propend && k >= consend )
+         return SCIP_OKAY;
+
       if( i == 0 && j == 0 && k == 0 )
          ++(scip->stat->npresolroundsext);
-
    }
    else
    {
@@ -12715,12 +12724,20 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("presolving callback returned result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
-      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && (result == SCIP_SUCCESS) && !lastround && !SCIPisPresolveFinished(scip) )
+      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
       {
          assert(*consstart == 0);
 
-         *presolstart = i;
-         *propstart = j;
+         if( lastranpresol )
+         {
+            *presolstart = i + 1;
+            *propstart = j;
+         }
+         else
+         {
+            *presolstart = i;
+            *propstart = j + 1;
+         }
          aborted = TRUE;
 
          break;
@@ -12763,11 +12780,11 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("presolving callback returned with result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
-      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && (result == SCIP_SUCCESS) && !lastround && !SCIPisPresolveFinished(scip) )
+      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
       {
          *presolstart = i;
          *propstart = j;
-         *consstart = k;
+         *consstart = k + 1;
          aborted = TRUE;
 
          break;
@@ -12849,16 +12866,64 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("presolving callback return with result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
-      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && (result == SCIP_SUCCESS) && !lastround && !SCIPisPresolveFinished(scip) )
+      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
       {
          assert(k == consend);
 
-         *presolstart = i;
-         *propstart = j;
+         if( lastranpresol )
+         {
+            *presolstart = i + 1;
+            *propstart = j;
+         }
+         else
+         {
+            *presolstart = i;
+            *propstart = j + 1;
+         }
          *consstart = k;
          aborted = TRUE;
 
          break;
+      }
+   }
+
+   /* remove empty and single variable cliques from the clique table */
+   if( !(*unbounded) && !(*infeasible) )
+   {
+      int nlocalbdchgs = 0;
+
+      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs, infeasible) );
+
+      if( nlocalbdchgs > 0 || *infeasible )
+         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "clique table cleanup detected %d bound changes%s\n", nlocalbdchgs, *infeasible ? " and infeasibility" : "");
+
+      if( !*infeasible && scip->set->nheurs > 0 )
+      {
+         /* call primal heuristics that are applicable during presolving */
+         SCIP_Bool foundsol;
+
+         SCIPdebugMessage("calling primal heuristics during presolving\n");
+
+         /* call primal heuristics */
+         SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
+               SCIP_HEURTIMING_DURINGPRESOLLOOP, FALSE, &foundsol) );
+
+         /* output a message, if a solution was found */
+         if( foundsol )
+         {
+            SCIP_SOL* sol;
+
+            assert(SCIPgetNSols(scip) > 0);
+            sol = SCIPgetBestSol(scip);
+            assert(sol != NULL);
+            assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
+
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "feasible solution found by %s heuristic after %.1f seconds, objective value %.6e\n",
+               SCIPgetSolvingTime(scip), SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
+         }
       }
    }
 
@@ -12877,6 +12942,11 @@ SCIP_RETCODE presolveRound(
 
             /* increase timing */
             timing = ((timing == SCIP_PRESOLTIMING_FAST) ? SCIP_PRESOLTIMING_MEDIUM : SCIP_PRESOLTIMING_EXHAUSTIVE);
+#if 0
+            *presolstart = 0;
+            *propstart = 0;
+            *consstart = 0;
+#endif
 
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, presolstart, presolend,
                   propstart, propend, consstart, consend) );
@@ -12891,52 +12961,11 @@ SCIP_RETCODE presolveRound(
             SCIPdebugMessage("reached end of exhaustive presolving loop, starting from the beginning...\n");
 
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, &newpresolstart,
-                  *presolstart, &newpropstart, *propstart, &newconsstart, *consstart) );
+                  oldpresolstart, &newpropstart, oldpropstart, &newconsstart, oldconsstart) );
 
             *presolstart = newpresolstart;
             *propstart = newpropstart;
             *consstart = newconsstart;
-         }
-      }
-
-      /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
-       * into implications
-       */
-      if( !(*unbounded) && !(*infeasible) )
-      {
-         int nlocalbdchgs = 0;
-
-         SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs, infeasible) );
-
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "clique table cleanup detected %d bound changes%s\n", nlocalbdchgs, *infeasible ? " and infeasibility" : "");
-
-         if( !*infeasible && scip->set->nheurs > 0 )
-         {
-            /* call primal heuristics that are applicable during presolving */
-            SCIP_Bool foundsol;
-
-            SCIPdebugMessage("calling primal heuristics during presolving\n");
-
-            /* call primal heuristics */
-            SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
-                  SCIP_HEURTIMING_DURINGPRESOLLOOP, FALSE, &foundsol) );
-
-            /* output a message, if a solution was found */
-            if( foundsol )
-            {
-               SCIP_SOL* sol;
-
-               assert(SCIPgetNSols(scip) > 0);
-               sol = SCIPgetBestSol(scip);
-               assert(sol != NULL);
-               assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
-
-               SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                  "feasible solution found by %s heuristic after %.1f seconds, objective value %.6e\n",
-                  SCIPgetSolvingTime(scip), SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
-            }
          }
       }
    }
