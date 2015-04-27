@@ -876,7 +876,9 @@ SCIP_RETCODE extensionOperatorSOS1(
 
          /* add directed edges to the vertex-clique graph */
          for (j = 0; j < consdata->nvars; ++j)
+         {
             SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[*ncliques][j], cliqueind, NULL) );
+         }
 
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1692,7 +1694,8 @@ SCIP_RETCODE updateConflictGraphSOS1(
       }
    }
 
-   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) ); /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+   /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
    succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
@@ -1701,6 +1704,7 @@ SCIP_RETCODE updateConflictGraphSOS1(
    for (s = 0; s < nsucc; ++s)
    {
       SCIP_SUCCDATA* data;
+
       succnode = succ[s];
       data = succdatas[s];
 
@@ -1730,17 +1734,17 @@ SCIP_Bool isImpliedZero(
    int nsucc;
    int s;
 
-   if ( node >= 0 )
-   {
-      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
-      succ = SCIPdigraphGetSuccessors(conflictgraph, node);
+   if ( node < 0 )
+      return FALSE;
 
-      /* check whether any successor is implied to be nonzero */
-      for (s = 0; s < nsucc; ++s)
-      {
-         if ( implnodes[succ[s]] )
-            return TRUE;
-      }
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
+   succ = SCIPdigraphGetSuccessors(conflictgraph, node);
+
+   /* check whether any successor is implied to be nonzero */
+   for (s = 0; s < nsucc; ++s)
+   {
+      if ( implnodes[succ[s]] )
+         return TRUE;
    }
 
    return FALSE;
