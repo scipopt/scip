@@ -2116,8 +2116,10 @@ SCIP_RETCODE computeVarsCoverSOS1(
    /* mark covered indices */
    for (s = 0; s < *cliquesize; ++s)
    {
-      int ind = clique[s];
+      int ind;
 
+      ind = clique[s];
+      assert( 0 <= ind );
       assert( ! coveredvars[ind] );
       coveredvars[ind] = TRUE;
    }
@@ -2833,8 +2835,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
 /** perform one presolving round for variables
  *
- *  We perform the following presolving steps.
- *
+ *  We perform the following presolving steps:
  *  - Tighten the bounds of the variables
  *  - Update conflict graph based on bound implications of the variables
  */
@@ -2869,6 +2870,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
    nprobvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &totalvars, nsos1vars + nprobvars) );
+
    for (i = 0; i < nsos1vars; ++i)
    {
       SCIP_VAR* var;
@@ -2880,6 +2882,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
       assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
       totalvars[ntotalvars++] = var;
    }
+
    for (i = 0; i < nprobvars; ++i)
    {
       SCIP_VAR* var;
@@ -3208,7 +3211,8 @@ SCIP_RETCODE propVariableNonzero(
 }
 
 
-/** initialize implication;
+/** initialize implication
+ *
  *  @p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$
  *
  *  @note By construction the implication graph is globally valid.
@@ -3272,6 +3276,7 @@ SCIP_RETCODE initImplGraphSOS1(
       assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
       implvars[nimplnodes++] = var;
    }
+
    for (i = 0; i < nprobvars; ++i)
    {
       SCIP_VAR* var;
@@ -3303,6 +3308,7 @@ SCIP_RETCODE initImplGraphSOS1(
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
+
    for (i = 0; i < nsos1vars; ++i)
       SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
 
@@ -3312,6 +3318,7 @@ SCIP_RETCODE initImplGraphSOS1(
       for (j = 0; j < i+1; ++j)
          adjacencymatrix[i][j] = 0;
    }
+
    for (i = 0; i < nsos1vars; ++i)
    {
       int* succ;
@@ -3375,7 +3382,6 @@ SCIP_RETCODE freeImplGraphSOS1(
    /* free whole memory of implication graph */
    if ( conshdlrdata->implgraph != NULL )
    {
-      SCIP_NODEDATA* nodedata;
       int j;
 
       /* free arc data */
@@ -3398,6 +3404,7 @@ SCIP_RETCODE freeImplGraphSOS1(
       /* free node data */
       for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
       {
+         SCIP_NODEDATA* nodedata;
          nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->implgraph, j);
          assert( nodedata != NULL );
          SCIPfreeMemory(scip, &nodedata);
@@ -3553,9 +3560,9 @@ SCIP_RETCODE getSetminusArray(
    cnt = 0;
    for (v = 0; v < narray1; ++v)
    {
+      entry1 = array1[v];
       for (j = k; j < narray2; ++j)
       {
-         entry1 = array1[v];
          entry2 = array2[j];
          if ( entry2 > entry1 )
          {
@@ -3889,12 +3896,16 @@ SCIP_RETCODE performStrongbranchSOS1(
       if ( SCIPisFeasGT(scip, SCIPvarGetLbLocal(var), 0.0) || SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), 0.0) )
          infeasible = TRUE;
       else
+      {
          SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+      }
    }
 
    /* apply domain propagation */
    if ( ! infeasible )
+   {
       SCIP_CALL( SCIPpropagateProbing(scip, 0, &infeasible, NULL) );
+   }
 
    if ( infeasible )
       solstat = SCIP_LPSOLSTAT_INFEASIBLE;
