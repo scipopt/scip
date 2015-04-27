@@ -21083,10 +21083,15 @@ SCIP_RETCODE SCIPchgVarType(
       SCIPdebugMessage("upgrading type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
       var = SCIPvarGetNegationVar(var);
    }
+#ifndef NDEBUG
    else
    {
-      SCIPdebugMessage("upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+      if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      {
+         SCIPdebugMessage("upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+      }
    }
+#endif
 
    /* change variable type */
    switch( scip->set->stage )
