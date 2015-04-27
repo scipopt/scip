@@ -5984,15 +5984,17 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          if( generateBoundInequalityFromSOS1Nodes(scip, tcliquedata->conshdlr, tcliquedata->conflictgraph,
                cliquenodes, ncliquenodes, 1.0, FALSE, FALSE, tcliquedata->strthenboundcuts, FALSE, nameext, &rowlb, &rowub) != SCIP_OKAY )
          {
-            SCIPerrorMessage("unexpected error in bound cut creation.\n");
+            SCIPerrorMessage("Unexpected error in bound cut creation.\n");
             SCIPABORT();
+            return;   /*lint --e{527}*/
          }
 
          /* add bound cut(s) to separation storage if existent */
          if ( addBoundCutSepa(scip, tcliquedata, rowlb, rowub, &success, &cutoff) != SCIP_OKAY )
          {
-            SCIPerrorMessage("unexpected error in bound cut creation.\n");
+            SCIPerrorMessage("Unexpected error in bound cut creation.\n");
             SCIPABORT();
+            return;   /*lint --e{527}*/
          }
 
          /* if at least one cut has been added */
@@ -8858,11 +8860,19 @@ int SCIPvarGetNodeSOS1(
 
    if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("not an SOS1 constraint handler.\n");
+      SCIPerrorMessage("Not an SOS1 constraint handler.\n");
       SCIPABORT();
+      return -1;  /*lint --e{527}*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->varhash == NULL )
+   {
+      SCIPerrorMessage("Hashmap not yet initialized.\n");
+      SCIPABORT();
+      return -1;  /*lint --e{527}*/
+   }
 
    return varGetNodeSOS1(conshdlrdata, var);
 }
@@ -8886,6 +8896,7 @@ SCIP_VAR* SCIPnodeGetVarSOS1(
    {
       SCIPerrorMessage("variable is not assigned to an index.\n");
       SCIPABORT();
+      return NULL;  /*lint --e{527}*/
    }
 
    return nodedata->var;
