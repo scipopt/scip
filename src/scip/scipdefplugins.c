@@ -79,6 +79,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
    SCIP_CALL( SCIPincludePresolImplfree(scip) );
+   SCIP_CALL( SCIPincludePresolDualagg(scip) );
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
