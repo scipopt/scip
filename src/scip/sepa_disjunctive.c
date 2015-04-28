@@ -527,7 +527,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
-   /* get conflict graph */
+   /* get conflict graph and number of conflict graph edges */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
    nedges = SCIPdigraphGetNArcs(conflictgraph);
 
@@ -607,8 +607,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
-   /* create vector "basisrow" with basisrow[column of non-slack basis variable] = corresponding row of B^-1
-      compute maximum absolute value of nonbasic row coefficients */
+   /* create vector "basisrow" with basisrow[column of non-slack basis variable] = corresponding row of B^-1;
+    * compute maximum absolute value of nonbasic row coefficients
+    */
    for (j = 0; j < nrows; ++j)
    {
       SCIP_COL** rowcols;
@@ -638,6 +639,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
                max = REALABS(val);
          }
       }
+
       /* handle slack variable coefficient and save maximum value */
       rowsmaxval[j] = MAX(max, 1.0);
    }

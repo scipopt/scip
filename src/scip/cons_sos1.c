@@ -717,7 +717,7 @@ static
 SCIP_RETCODE extensionOperatorSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflictgraph (only lower half filled) */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflict graph (only lower half filled) */
    SCIP_DIGRAPH*         vertexcliquegraph,  /**< graph that contains the information which cliques contain a given vertex
                                               *   vertices of variables = 0, ..., nsos1vars-1; vertices of cliques = nsos1vars, ..., nsos1vars+ncliques-1*/
    int                   nsos1vars,          /**< number of SOS1 variables */
@@ -1630,7 +1630,7 @@ SCIP_RETCODE updateConflictGraphSOS1(
    SCIP_DIGRAPH*         implgraph,          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
    SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
    SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to a given node i in the implication graph is implied to be nonzero */
-   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflictgraph (only lower half filled) */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflict graph (only lower half filled) */
    int                   givennode,          /**< node of the conflict graph */
    int                   nonznode,           /**< node of the conflict graph that is implied to be nonzero if given node is nonzero */
    int*                  naddconss           /**< number of added SOS1 constraints */
@@ -1661,7 +1661,7 @@ SCIP_RETCODE updateConflictGraphSOS1(
             SCIP_VAR* var1;
             SCIP_VAR* var2;
 
-            /* add arcs to the conflictgraph */
+            /* add arcs to the conflict graph */
             SCIP_CALL( SCIPdigraphAddArc(conflictgraph, givennode, succnode, NULL) );
             SCIP_CALL( SCIPdigraphAddArc(conflictgraph, succnode, givennode, NULL) );
 
@@ -3618,7 +3618,7 @@ SCIP_RETCODE getBranchingVerticesSOS1(
    int*                  nfixingsnode2       /**< pointer to store number of fixed variables for the second node */
    )
 {
-   SCIP_Bool takeallsucc; /* whether to set fixingsnode1 = neighbors of 'branchvertex' in the conflictgraph */
+   SCIP_Bool takeallsucc; /* whether to set fixingsnode1 = neighbors of 'branchvertex' in the conflict graph */
    int* succ;
    int nsucc;
    int j;
@@ -3822,8 +3822,8 @@ static
 SCIP_RETCODE performStrongbranchSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   int*                  fixingsex,          /**< vertices of variables to be fixed to zero for this strong branching execution */
-   int                   nfixingsex,         /**< number of vertices of variables to be fixed to zero for this strong branching execution */
+   int*                  fixingsexec,        /**< vertices of variables to be fixed to zero for this strong branching execution */
+   int                   nfixingsexec,       /**< number of vertices of variables to be fixed to zero for this strong branching execution */
    int*                  fixingsop,          /**< vertices of variables to be fixed to zero for the opposite strong branching execution */
    int                   nfixingsop,         /**< number of vertices of variables to be fixed to zero for the opposite strong branching execution */
    int                   inititer,           /**< maximal number of LP iterations to perform */
@@ -3842,7 +3842,7 @@ SCIP_RETCODE performStrongbranchSOS1(
 
    assert( scip != NULL );
    assert( conflictgraph != NULL );
-   assert( fixingsex != NULL );
+   assert( fixingsexec != NULL );
    assert( nfixingsop > 0 );
    assert( fixingsop != NULL );
    assert( nfixingsop > 0 );
@@ -3888,11 +3888,11 @@ SCIP_RETCODE performStrongbranchSOS1(
    }
 
    /* injects variable fixings into current probing node */
-   for (i = 0; i < nfixingsex && ! infeasible; ++i)
+   for (i = 0; i < nfixingsexec && ! infeasible; ++i)
    {
       SCIP_VAR* var;
 
-      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsex[i]);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsexec[i]);
       if ( SCIPisFeasGT(scip, SCIPvarGetLbLocal(var), 0.0) || SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), 0.0) )
          infeasible = TRUE;
       else
@@ -6837,9 +6837,9 @@ SCIP_RETCODE initConflictgraph(
    int                   nconss              /**< number of SOS1 constraints */
    )
 {
-   SCIP_Bool* nodecreated; /* nodecreated[i] = TRUE if a node in the conflictgraph is already created for index i
+   SCIP_Bool* nodecreated; /* nodecreated[i] = TRUE if a node in the conflict graph is already created for index i
                             * (with i index of the original variables) */
-   int* nodeorig;          /* nodeorig[i] = node of original variable x_i in the conflictgraph */
+   int* nodeorig;          /* nodeorig[i] = node of original variable x_i in the conflict graph */
    int ntotalvars;
    int cntsos;
    int i;
@@ -8810,6 +8810,7 @@ SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
+      return NULL;  /*lint !e527*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -8831,6 +8832,7 @@ int SCIPgetNSOS1Vars(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
+      return -1;
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -8854,6 +8856,7 @@ SCIP_Bool SCIPvarIsSOS1(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
+      return FALSE;
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -8896,7 +8899,7 @@ int SCIPvarGetNodeSOS1(
 }
 
 
-/** returns variable that belongs to a given node from the conflictgraph */
+/** returns variable that belongs to a given node from the conflict graph */
 SCIP_VAR* SCIPnodeGetVarSOS1(
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    int                   node                /**< node from the conflict graph */
