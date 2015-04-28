@@ -206,7 +206,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    (*diveset)->divesetgetscore = divesetgetscore;
 
    SCIP_CALL( heurAddDiveset(heur, *diveset) );
-
+   (*diveset)->sol = NULL;
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
@@ -266,6 +266,27 @@ SCIP_HEUR* SCIPdivesetGetHeur(
    )
 {
    return diveset->heur;
+}
+
+/** get the working solution of this dive set */
+SCIP_SOL* SCIPdivesetGetWorkSolution(
+   SCIP_DIVESET*         diveset             /** diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->sol;
+}
+
+/** set the working solution for this dive set */
+void SCIPdivesetSetWorkSolution(
+   SCIP_DIVESET*         diveset,            /** diving settings */
+   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   )
+{
+   assert(diveset != NULL);
+
+   diveset->sol = sol;
 }
 
 /** get the name of the dive set */
@@ -510,7 +531,7 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(roundup != NULL);
    assert(divecand != NULL);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divecand, divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divecand,  divecandsol, divecandfrac, candscore, roundup) );
 
    return SCIP_OKAY;
 }
