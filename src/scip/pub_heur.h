@@ -199,19 +199,6 @@ int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** get the target depth fraction of the diving settings  */
-EXTERN
-SCIP_Real SCIPdivesetGetLpresolvefixquot(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
-/** set the target depth fraction of the diving settings  */
-EXTERN
-void SCIPdivesetSetLpresolvefixquot(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Real             newval              /**< new value for target depth frac */
-   );
-
 /** get the number of calls to this dive set */
 EXTERN
 int SCIPdivesetGetNCalls(
