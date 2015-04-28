@@ -169,7 +169,7 @@ int SCIPvarGetNodeSOS1(
    SCIP_VAR*             var                 /**< variable */
    );
 
-/** returns variable that belongs to a given node from the conflictgraph */
+/** returns variable that belongs to a given node from the conflict graph */
 EXTERN
 SCIP_VAR* SCIPnodeGetVarSOS1(
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
