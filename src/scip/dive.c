@@ -127,6 +127,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real* lpcandssol;
 
    SCIP_Real* vals;
+   SCIP_VAR** previouscands;
+   SCIP_Real* previousvals;
    SCIP_Real searchubbound;
    SCIP_Real searchavgbound;
    SCIP_Real searchbound;
@@ -145,6 +147,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int totalnbacktracks;
    int totalnprobingnodes;
    int lastlpdepth;
+   int previouscandssize;
 
    SCIP_Bool success;
    SCIP_Bool enfosuccess;
@@ -262,12 +265,21 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPgetNNodes(scip), SCIPheurGetName(heur), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
+
+   /* allocate buffer storage for previous candidates and their branching values for pseudo cost updates */
+   previouscandssize = MAX(1, SCIPgetDiveLPSolveFreq(scip));
+   SCIP_CALL( SCIPallocBufferArray(scip, &previouscands, previouscandssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &previousvals, previouscandssize) );
+
+   /* keep some statistics */
    lperror = FALSE;
    cutoff = FALSE;
    lastlpdepth = -1;
    startndivecands = nlpcands;
    totalnbacktracks = 0;
    totalnprobingnodes = 0;
+
+   /* allocate buffer array to store enforcement decision */
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
    enfosuccess = TRUE;
 
@@ -283,6 +295,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          && !SCIPisStopped(scip) )
    {
       SCIP_VAR* nextcandvar;
+      SCIP_Real lastlpobjval;
       SCIP_Bool nextcandroundup;
       SCIP_Bool allroundable;
       int c;
@@ -353,7 +366,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       /* working solution must be linked to LP solution */
       assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+      lastlpobjval = SCIPgetLPObjval(scip);
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+
 
       nextcandvar = NULL;
       nextcandsol = SCIP_INVALID;
@@ -489,28 +504,45 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          /* we add the domain reductions from the last evaluated node */
          domreds += localdomreds;
 
-         /* if no cutoff was found, choose next candidate variable and resolve the LP if none is found. */
-         if( !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
+         /* store candidate for pseudo cost update and choose next candidate only if no cutoff was detected */
+         if( !cutoff )
          {
-            assert(SCIPgetProbingDepth(scip) > lastlpdepth);
             assert(SCIPgetProbingDepth(scip) > 0);
-            enfosuccess = FALSE;
-            nextcandvar = NULL;
-            vals[0] = vals[1] = SCIP_INVALID;
 
-            SCIP_CALL( SCIPenforceDiveSolution(scip, diveset, worksol, &nextcandvar, vals, &enfosuccess, &infeasible) );
-
-            /* in case of an unsuccesful candidate search, we solve the node LP */
-            if( !enfosuccess )
+            /* store candidate for pseudo cost update */
+            if( SCIPgetProbingDepth(scip) - lastlpdepth - 1 >= previouscandssize )
             {
-               SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
+               previouscandssize *= 2;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &previouscands, previouscandssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &previousvals, previouscandssize) );
+            }
+            assert(previouscandssize >= SCIPgetProbingDepth(scip) - lastlpdepth);
 
-               /* check for an LP error and terminate in this case, cutoffs lead to termination anyway */
-               if( lperror )
-                  cutoff = TRUE;
+            previouscands[SCIPgetProbingDepth(scip) - lastlpdepth - 1] = nextcandvar;
+            previousvals[SCIPgetProbingDepth(scip) - lastlpdepth - 1] = vals[backtracked ? 1 : 0];
 
-               /* enfosuccess must be set to TRUE for entering the main LP loop again */
-               enfosuccess = TRUE;
+            /* choose next candidate variable and resolve the LP if none is found. */
+            if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
+            {
+               assert(SCIPgetProbingDepth(scip) > lastlpdepth);
+               enfosuccess = FALSE;
+               nextcandvar = NULL;
+               vals[0] = vals[1] = SCIP_INVALID;
+
+               SCIP_CALL( SCIPenforceDiveSolution(scip, diveset, worksol, &nextcandvar, vals, &enfosuccess, &infeasible) );
+
+               /* in case of an unsuccesful candidate search, we solve the node LP */
+               if( !enfosuccess )
+               {
+                  SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
+
+                  /* check for an LP error and terminate in this case, cutoffs lead to termination anyway */
+                  if( lperror )
+                     cutoff = TRUE;
+
+                  /* enfosuccess must be set to TRUE for entering the main LP loop again */
+                  enfosuccess = TRUE;
+               }
             }
          }
       }
@@ -525,7 +557,24 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* todo if only one candidate was fixed since last LP, use the LP Objective gain to update pseudo cost information */
       if( !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
+         int v;
+         SCIP_Real gain = SCIPgetLPObjval(scip) - lastlpobjval;
+
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+
+         gain = MAX(gain, 0.0);
+         gain /= (1.0 * SCIPgetProbingDepth(scip) - lastlpdepth);
+         for( v = 0; v < (SCIPgetProbingDepth(scip) - lastlpdepth); ++v )
+         {
+            SCIP_VAR* cand = previouscands[SCIPgetProbingDepth(scip) - lastlpdepth - 1];
+            SCIP_Real val = previousvals[SCIPgetProbingDepth(scip) - lastlpdepth - 1];
+
+            if( !SCIPisZero(scip, val - SCIPgetSolVal(scip, worksol, nextcandvar) ) )
+            {
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, cand, val - SCIPgetSolVal(scip, worksol, nextcandvar), gain, 1.0) );
+            }
+         }
+         /* update pseudo costs of variable */
       }
       else
          nlpcands = 0;
@@ -560,6 +609,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 
+   SCIPfreeBufferArray(scip, &previousvals);
+   SCIPfreeBufferArray(scip, &previouscands);
    SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;

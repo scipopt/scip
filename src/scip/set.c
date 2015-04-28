@@ -1147,7 +1147,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->heur_divelpresolvedomchgquot, FALSE, SCIP_DEFAULT_HEUR_DIVELPRESOLVEDOMCHGQUOT,  0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "heuristics/divelpsolvefreq",
-         "LP solve frequency for diving heuristics (0: no LP is solved)",
+         "LP solve frequency for diving heuristics (0: only after enough domain changes have been found)",
          &(*set)->heur_divelpsolvefreq, FALSE, SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ, 0, INT_MAX,
          NULL, NULL) );
 
