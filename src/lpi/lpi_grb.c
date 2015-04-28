@@ -57,7 +57,7 @@ static unsigned char warnedbeta = 0;
       }                                                                 \
    }
 
-#if GRB_VERSION_MAJOR == 6 && GRB_VERSION_MINOR == 0
+#if GRB_VERSION_MAJOR == 6 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2
 struct _GRBsvec
 {
   int     len;
