@@ -30561,6 +30561,17 @@ int SCIPgetDiveLPSolveFreq(
    return scip->set->heur_divelpsolvefreq;
 }
 
+/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
+SCIP_Real SCIPgetDiveLPResolveDomChgQuot(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->heur_divelpresolvedomchgquot;
+}
+
 /** enforces a probing/diving solution by suggesting bound changes that minimize the score w.r.t. the current diving settings
  *
  *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by

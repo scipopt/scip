@@ -36,9 +36,6 @@
 
 #include "scip/struct_heur.h"
 
-#define MINLPRESOLVEFIXQUOT 0.001
-#define MAXLPRESOLVEFIXQUOT 1.0
-
 /** compares two heuristics w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
@@ -104,7 +101,6 @@ void SCIPdivesetReset(
    diveset->nlps = 0;
    diveset->nsolcalls = 0;
    diveset->ncalls = 0;
-   diveset->lpresolvefixquot = set->heur_divelpresolvefixquot;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -482,26 +478,6 @@ void SCIPdivesetUpdateLPStats(
    stat->ndivesetlpiterations += niterstoadd;
    diveset->nlps++;
    stat->ndivesetlps++;
-}
-
-/** get the target depth fraction of the diving settings  */
-SCIP_Real SCIPdivesetGetLpresolvefixquot(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   )
-{
-   return diveset->lpresolvefixquot;
-}
-
-/** set the target depth fraction of the diving settings  */
-void SCIPdivesetSetLpresolvefixquot(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Real             newval              /**< new value for target depth frac */
-   )
-{
-   newval = MAX(newval, MINLPRESOLVEFIXQUOT);
-   newval = MIN(newval, MAXLPRESOLVEFIXQUOT);
-
-   diveset->lpresolvefixquot = newval;
 }
 
 /** frees memory of a diveset */

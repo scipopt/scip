@@ -219,7 +219,7 @@ struct SCIP_Set
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
    /* heuristic settings */
-   SCIP_Real             heur_divelpresolvefixquot;/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   SCIP_Real             heur_divelpresolvedomchgquot;/**< percentage of immediate domain changes during probing to trigger LP resolve */
    int                   heur_divelpsolvefreq; /**< LP solve frequency for diving heuristics */
 
    /* limit settings */

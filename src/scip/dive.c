@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int maxdivedepth;
    int totalnbacktracks;
    int totalnprobingnodes;
-   int startdepth;
+   int lastlpdepth;
 
    SCIP_Bool success;
    SCIP_Bool enfosuccess;
@@ -264,7 +264,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    lperror = FALSE;
    cutoff = FALSE;
-   startdepth = -1;
+   lastlpdepth = -1;
    startndivecands = nlpcands;
    totalnbacktracks = 0;
    totalnprobingnodes = 0;
@@ -288,18 +288,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       int c;
       SCIP_Bool infeasible;
 
-      /* determine the target depth (depth where the next LP should be solved) */
-      assert(startdepth < SCIPgetProbingDepth(scip));
-      startdepth = SCIPgetProbingDepth(scip);
+      /* remember the last LP depth  */
+      assert(lastlpdepth < SCIPgetProbingDepth(scip));
+      lastlpdepth = SCIPgetProbingDepth(scip);
       domreds = 0;
-#if 0
-      ncandstofix = MIN(nlpcands, maxdivedepth - divedepth);
-      ncandstofix = (int)SCIPceil(scip, ncandstofix * SCIPdivesetGetLpresolvefixquot(diveset));
-      ncandstofix = MAX(ncandstofix, 1);
-#endif
 
       SCIPdebugMessage("%s heuristic continues diving at depth %d, %d candidates left\n",
-         SCIPdivesetGetName(diveset), startdepth, nlpcands);
+         SCIPdivesetGetName(diveset), lastlpdepth, nlpcands);
 
 
       /* loop over candidates and determine if they are roundable */
@@ -463,8 +458,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
              * was reached
              */
-            if( !cutoff && ((SCIPgetDiveLPSolveFreq(scip) > 0 && ((SCIPgetProbingDepth(scip) - startdepth) % SCIPgetDiveLPSolveFreq(scip)) == 0)
-                  || (domreds + localdomreds > SCIPdivesetGetLpresolvefixquot(diveset) * SCIPgetNVars(scip))) )
+            if( !cutoff && ((SCIPgetDiveLPSolveFreq(scip) > 0 && ((SCIPgetProbingDepth(scip) - lastlpdepth) % SCIPgetDiveLPSolveFreq(scip)) == 0)
+                  || (domreds + localdomreds > SCIPgetDiveLPResolveDomChgQuot(scip) * SCIPgetNVars(scip))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 
@@ -497,7 +492,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          /* if no cutoff was found, choose next candidate variable and resolve the LP if none is found. */
          if( !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
          {
-            assert(SCIPgetProbingDepth(scip) > startdepth);
+            assert(SCIPgetProbingDepth(scip) > lastlpdepth);
             assert(SCIPgetProbingDepth(scip) > 0);
             enfosuccess = FALSE;
             nextcandvar = NULL;
