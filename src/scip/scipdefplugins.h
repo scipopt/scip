@@ -33,6 +33,7 @@
 #include "scip/branch_cloud.h"
 #include "scip/branch_fullstrong.h"
 #include "scip/branch_inference.h"
+#include "scip/branch_interdiction.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_mostinf.h"
 #include "scip/branch_nodereopt.h"

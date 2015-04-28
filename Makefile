@@ -295,6 +295,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
+			scip/branch_interdiction.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
 			scip/branch_nodereopt.o \
