@@ -69,6 +69,7 @@ struct SCIP_HeurData
 static
 SCIP_Real getNActiveConsScore(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< working solution */
    SCIP_VAR*             var,                /**< variable to get the score value for */
    SCIP_Real*            downscore,          /**< pointer to store the score for branching downwards */
    SCIP_Real*            upscore             /**< pointer to store the score for branching upwards */
@@ -114,7 +115,12 @@ SCIP_Real getNActiveConsScore(
       /* calculate number of active constraint sides, i.e., count equations as two */
       lhs = SCIProwGetLhs(row);
       rhs = SCIProwGetRhs(row);
-      activity = SCIPgetRowLPActivity(scip, row);
+
+      /* @todo this is suboptimal because activity is calculated by looping over all nonzeros of this row, need to
+       * store LP activities instead (which cannot be retrieved if no LP was solved at this node)
+       */
+      activity = SCIPgetRowSolActivity(scip, row, sol);
+
       dualsol = SCIProwGetDualsol(row);
       if( SCIPisFeasEQ(scip, activity, lhs) )
       {
@@ -274,11 +280,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
    SCIP_Bool mayroundup;
    SCIP_Real downscore;
    SCIP_Real upscore;
+
+
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
 
    /* first, calculate the variable score */
-   *score = getNActiveConsScore(scip, cand, &downscore, &upscore);
+   assert(SCIPdivesetGetWorkSolution(diveset) != NULL);
+   *score = getNActiveConsScore(scip, SCIPdivesetGetWorkSolution(diveset), cand, &downscore, &upscore);
 
    /* get the rounding direction: prefer an unroundable direction */
    if( mayrounddown && mayroundup )
