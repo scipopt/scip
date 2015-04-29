@@ -179,12 +179,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
 
    colveclen = (SCIPvarGetStatus(cand) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(cand)) : 0.0);
 
-   /* smaller score is better */
-   *score = (objdelta + SCIPsumepsilon(scip)) / (colveclen + 1.0);
+   /* larger score is better */
+   *score = (colveclen + 1.0) / (objdelta + SCIPsumepsilon(scip));
 
    /* prefer decisions on binary variables */
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      *score *= 1000.0;
+      *score *= 0.001;
 
    return SCIP_OKAY;
 

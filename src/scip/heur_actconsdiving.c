@@ -264,7 +264,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
 static
@@ -278,7 +278,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
    mayroundup = SCIPvarMayRoundUp(cand);
 
    /* first, calculate the variable score */
-   *score = -getNActiveConsScore(scip, cand, &downscore, &upscore);
+   *score = getNActiveConsScore(scip, cand, &downscore, &upscore);
 
    /* get the rounding direction: prefer an unroundable direction */
    if( mayrounddown && mayroundup )
@@ -301,9 +301,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
 
    /* penalize variable if it may be rounded */
    if( mayrounddown || mayroundup )
-      *score += 3.0;
+      *score -= 3.0;
 
-   assert(!(mayrounddown || mayroundup) || *score >= 0.0);
+   assert(!(mayrounddown || mayroundup) || *score <= 0.0);
 
    return SCIP_OKAY;
 }

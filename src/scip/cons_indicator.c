@@ -6427,7 +6427,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   bestscore = SCIP_REAL_MAX;
+   bestscore = SCIP_REAL_MIN;
 
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
    for( c = 0; c < nindconss; ++c )
@@ -6449,8 +6449,8 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
 
             SCIP_CALL( SCIPgetDivesetScore(scip, diveset, binvar, solval, 0.0, &score, &roundup) );
 
-            /* best candidate minimizes the score */
-            if( score < bestscore )
+            /* best candidate maximizes the score */
+            if( score > bestscore )
             {
                bestscore = score;
                *varptr = binvar;

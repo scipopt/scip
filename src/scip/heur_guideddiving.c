@@ -183,7 +183,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
 /* callbacks for diving */
 
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
 static
@@ -215,7 +215,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
       obj /= objnorm;
 
    /* calculate objective gain and fractionality for the selected rounding direction */
-   if( roundup )
+   if( *roundup )
    {
       candsfrac = 1.0 - candsfrac;
       objgain = obj * candsfrac;
@@ -227,17 +227,17 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
 
    /* penalize too small fractions */
    if( candsfrac < 0.01 )
-      candsfrac += 10.0;
+      candsfrac *= 0.1;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )
-      candsfrac *= 1000.0;
+      candsfrac *= 0.1;
 
    /* prefer variables which cannot be rounded by scoring their fractionality */
    if( !(SCIPvarMayRoundDown(cand) || SCIPvarMayRoundUp(cand)) )
-      *score = candsfrac;
+      *score = -candsfrac;
    else
-      *score = 2.0 + objgain;
+      *score = -2.0 - objgain;
 
    return SCIP_OKAY;
 }

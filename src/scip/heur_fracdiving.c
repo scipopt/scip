@@ -163,7 +163,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
 static
@@ -201,8 +201,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
       candsfrac = 1.0 - candsfrac;
       objgain = obj * candsfrac;
    }
-      else
-         objgain = -obj * candsfrac;
+   else
+      objgain = -obj * candsfrac;
 
    assert(objgain >= -1.0 && objgain <= 1.0);
 
@@ -216,9 +216,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 
       /* prefer variables which cannot be rounded by scoring their fractionality */
       if( !(mayrounddown || mayroundup) )
-         *score = candsfrac;
+         *score = -candsfrac;
       else
-         *score =  2.0 + objgain;
+         *score =  -2.0 - objgain;
 
       return SCIP_OKAY;
 }

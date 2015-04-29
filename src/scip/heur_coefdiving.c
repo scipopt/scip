@@ -164,7 +164,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
+/** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
 {
@@ -198,17 +198,18 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
    else
       *score = SCIPvarGetNLocksDown(cand);
 
-   /* penalize the variable if it may be rounded. */
-   if( mayrounddown || mayroundup )
-      (*score) += SCIPgetNLPRows(scip);
 
    /* penalize too small fractions */
    if( candsfrac < 0.01 )
-      (*score) *= 100;
+      (*score) *= 0.1;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )
-      (*score) *= 100;
+      (*score) *= 0.1;
+
+   /* penalize the variable if it may be rounded. */
+   if( mayrounddown || mayroundup )
+      (*score) -= SCIPgetNLPRows(scip);
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
    assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) );
