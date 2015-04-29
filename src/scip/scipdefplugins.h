@@ -68,6 +68,7 @@
 #include "scip/cons_xor.h"
 #include "scip/disp_default.h"
 #include "scip/heur_actconsdiving.h"
+#include "scip/heur_allinonediving.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
