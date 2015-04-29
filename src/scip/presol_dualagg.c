@@ -18,10 +18,19 @@
  * @author Dieter Weninger
  *
  * This presolver looks for variables which could not be handled by
- * duality fixing because of one violated up-/downlock.
- * If this constraint which delivers the violated up-/downlock has
+ * duality fixing because of one up-/downlock.
+ * If the constraint which delivers the up-/downlock has
  * a specific structure, we can aggregate the corresponding variable.
  *
+ * In more detail (for a minimization problem and the case of only one uplock):
+ *
+ * Given a variable x_i with c_i <= 0 and only one up lock (originating from a constraint c),
+ * we are looking for a binary variable x_j such that:
+ * 1) if x_j = 0, constraint c can only be fulfilled for x_i = lb_i, and
+ * 2) if x_j = 1, constraint c becomes redundant and x_i can be dual-fixed to its upper bound ub_i
+ * (or vice versa). Then we can perform the following aggregation: x_i = lb_i + x_j (ub_i - lb_i).
+ *
+ * Similar arguments apply for the case of only one down lock and c_i >= 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,7 +46,7 @@
 
 #define PRESOL_NAME            "dualagg"
 #define PRESOL_DESC            "aggregate variables by dual arguments"
-#define PRESOL_PRIORITY            12000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY           -12000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
 
@@ -54,13 +63,13 @@ typedef enum AggrType AGGRTYPE;
  * Local methods
  */
 
-/** find row which causes the uplock */
+/** find row which leads to the uplock of the given variable */
 static
 void getUplockRowIdx(
-    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
-    int                   aggvaridx,          /**< index of variable which should be aggregated */
-    int*                  rowidx,             /**< row index of uplock */
-    SCIP_Real*            coef                /**< coefficient of variable */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   int                   aggvaridx,          /**< index of variable which should be aggregated */
+   int*                  rowidx,             /**< pointer to store row index of uplock */
+   SCIP_Real*            coef                /**< pointer to store coefficient of variable */
    )
 {
    int* colpnt;
@@ -69,30 +78,47 @@ void getUplockRowIdx(
 
    assert(SCIPmatrixGetColNUplocks(matrix, aggvaridx) == 1);
 
+   /* get nonzero entries of the variable in the matrix */
    colpnt = SCIPmatrixGetColIdxPtr(matrix, aggvaridx);
    colend = colpnt + SCIPmatrixGetColNNonzs(matrix, aggvaridx);
    valpnt = SCIPmatrixGetColValPtr(matrix, aggvaridx);
 
+   /* iterate over all non-zero coefficients of the column */
    *rowidx = -1;
    for(; (colpnt < colend); colpnt++, valpnt++)
    {
       /* currently we support only >= relation */
-      if( SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) && *valpnt < 0.0 )
+      if( !SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) )
+      {
+         break;
+      }
+
+      /* coef < 0 for >= relation: this row provides an uplock for the variable */
+      if( *valpnt < 0.0 )
       {
          *rowidx = *colpnt;
          *coef = *valpnt;
          break;
       }
    }
+#ifndef NDEBUG
+   /* in debug mode, we check that the lock number is correct */
+   assert(colpnt < colend);
+   for(colpnt++, valpnt++; (colpnt < colend); colpnt++, valpnt++)
+   {
+      assert(*valpnt > 0.0);
+   }
+#endif
+
 }
 
-/** find row which causes the downlock */
+/** find row which leads to the downlock of the given variable */
 static
 void getDownlockRowIdx(
-    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
-    int                   aggvaridx,          /**< index of variable which should be aggregated */
-    int*                  rowidx,             /**< row index of downlock */
-    SCIP_Real*            coef                /**< coefficient of variable */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   int                   aggvaridx,          /**< index of variable which should be aggregated */
+   int*                  rowidx,             /**< pointer to store row index of downlock */
+   SCIP_Real*            coef                /**< pointer to store coefficient of variable */
    )
 {
    int* colpnt;
@@ -101,31 +127,47 @@ void getDownlockRowIdx(
 
    assert(SCIPmatrixGetColNDownlocks(matrix, aggvaridx) == 1);
 
+   /* get nonzero entries of the variable in the matrix */
    colpnt = SCIPmatrixGetColIdxPtr(matrix, aggvaridx);
    colend = colpnt + SCIPmatrixGetColNNonzs(matrix, aggvaridx);
    valpnt = SCIPmatrixGetColValPtr(matrix, aggvaridx);
 
+   /* iterate over all non-zero coefficients of the column */
    *rowidx = -1;
    for(; (colpnt < colend); colpnt++, valpnt++)
    {
       /* currently we support only >= relation */
-      if( SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) && *valpnt > 0.0 )
+      if( !SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) )
+      {
+         break;
+      }
+
+      /* coef > 0 for >= relation: this row provides a downlock for the variable */
+      if( *valpnt > 0.0 )
       {
          *rowidx = *colpnt;
          *coef = *valpnt;
          break;
       }
    }
+#ifndef NDEBUG
+   /* in debug mode, we check that the lock number is correct */
+   assert(colpnt < colend);
+   for(colpnt++, valpnt++; (colpnt < colend); colpnt++, valpnt++)
+   {
+      assert(*valpnt < 0.0);
+   }
+#endif
 }
 
 /** find fitting binary variable aggregation for uplock case */
 static
 void getBinVarIdxInUplockRow(
-    SCIP*                 scip,               /**< SCIP main data structure */
-    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
-    int                   aggvaridx,          /**< index of variable which should be aggregated */
-    int*                  binvaridx,          /**< index of binary variable */
-    AGGRTYPE*             aggtype             /**< type of aggregation */
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   int                   aggvaridx,          /**< index of variable which should be aggregated */
+   int*                  binvaridx,          /**< pointer to store index of binary variable */
+   AGGRTYPE*             aggtype             /**< pointer to store type of aggregation */
    )
 {
    int rowidx;
@@ -137,7 +179,6 @@ void getBinVarIdxInUplockRow(
    SCIP_Real maxact;
    SCIP_Real lhs;
    SCIP_Real lb;
-   SCIP_Real ub;
 
    assert(binvaridx != NULL);
    assert(aggtype != NULL);
@@ -159,7 +200,6 @@ void getBinVarIdxInUplockRow(
 
    lhs = SCIPmatrixGetRowLhs(matrix, rowidx);
    lb = SCIPmatrixGetColLb(matrix, aggvaridx);
-   ub = SCIPmatrixGetColUb(matrix, aggvaridx);
 
    /* search for appropriate binary variables */
    rowpnt = SCIPmatrixGetRowIdxPtr(matrix, rowidx);
@@ -181,10 +221,10 @@ void getBinVarIdxInUplockRow(
 
          if( bincoef < 0 )
          {
-            /* implies binvar = 0, that the constraint is redundant */
+            /* binvar = 0 implies that the constraint is redundant */
             if( SCIPisGE(scip, minact-bincoef, lhs) )
             {
-               /* implies binvar = 1, that aggvar = lb */
+               /* binvar = 1 implies that aggvar = lb */
                SCIP_Real bnd;
                bnd = (lhs - maxact + coef*lb - bincoef) / coef;
                if( SCIPisGE(scip, lb, bnd) )
@@ -198,10 +238,10 @@ void getBinVarIdxInUplockRow(
 
          if( bincoef > 0 )
          {
-            /* implies binvar = 1, that the constraint is redundant */
+            /* binvar = 1 implies that the constraint is redundant */
             if( SCIPisGE(scip, minact+bincoef, lhs) )
             {
-               /* implies binvar = 0, that aggvar = lb */
+               /* binvar = 0 implies that aggvar = lb */
                SCIP_Real bnd;
                bnd = (lhs - maxact + coef*lb + bincoef) / coef;
                if( SCIPisGE(scip, lb, bnd) )
@@ -218,11 +258,11 @@ void getBinVarIdxInUplockRow(
 /** find fitting binary variable aggregation for downlock case */
 static
 void getBinVarIdxInDownlockRow(
-    SCIP*                 scip,               /**< SCIP main data structure */
-    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
-    int                   aggvaridx,          /**< index of variable which should be aggregated */
-    int*                  binvaridx,          /**< index of binary variable */
-    AGGRTYPE*             aggtype             /**< type of aggregation */
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   int                   aggvaridx,          /**< index of variable which should be aggregated */
+   int*                  binvaridx,          /**< pointer to store index of binary variable */
+   AGGRTYPE*             aggtype             /**< pointer to store type of aggregation */
    )
 {
    int rowidx;
@@ -233,7 +273,6 @@ void getBinVarIdxInDownlockRow(
    SCIP_Real minact;
    SCIP_Real maxact;
    SCIP_Real lhs;
-   SCIP_Real lb;
    SCIP_Real ub;
 
    assert(binvaridx != NULL);
@@ -255,7 +294,6 @@ void getBinVarIdxInDownlockRow(
       return;
 
    lhs = SCIPmatrixGetRowLhs(matrix, rowidx);
-   lb = SCIPmatrixGetColLb(matrix, aggvaridx);
    ub = SCIPmatrixGetColUb(matrix, aggvaridx);
 
    /* search for appropriate binary variables */
@@ -278,10 +316,10 @@ void getBinVarIdxInDownlockRow(
 
          if( bincoef < 0 )
          {
-            /* implies binvar = 0, that the constraint is redundant */
+            /* binvar = 0 implies that the constraint is redundant */
             if( SCIPisGE(scip, minact-bincoef, lhs) )
             {
-               /* implies binvar = 1, that aggvar = ub */
+               /* binvar = 1 implies that aggvar = ub */
                SCIP_Real bnd;
                bnd = (lhs - maxact + coef*ub - bincoef) / coef;
                if( SCIPisGE(scip, bnd, ub) )
@@ -295,10 +333,10 @@ void getBinVarIdxInDownlockRow(
 
          if( bincoef > 0 )
          {
-            /* implies binvar = 1, that the constraint is redundant */
+            /* binvar = 1 implies that the constraint is redundant */
             if( SCIPisGE(scip, minact+bincoef, lhs) )
             {
-               /* implies binvar = 0, that aggvar = ub */
+               /* binvar = 0 implies that aggvar = ub */
                SCIP_Real bnd;
                bnd = (lhs - maxact + coef*ub + bincoef) / coef;
                if( SCIPisGE(scip, bnd, ub) )
@@ -319,9 +357,8 @@ SCIP_RETCODE findUplockAggregations(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
    int*                  nvaragg,            /**< number of redundant variables */
-   AGGRTYPE*             aggtypes,           /**< type of aggregations */
-   SCIP_VAR**            aggvars,            /**< pointers to the variables which should by aggregated */
-   SCIP_VAR**            binvars             /**< pointers to the binary variables */
+   AGGRTYPE*             aggtypes,           /**< type of aggregations (in same order as variables in matrix) */
+   SCIP_VAR**            binvars             /**< pointers to the binary variables (in same order as variables in matrix) */
    )
 {
    int nvars;
@@ -331,32 +368,35 @@ SCIP_RETCODE findUplockAggregations(
    assert(matrix != NULL);
    assert(nvaragg != NULL);
    assert(aggtypes != NULL);
-   assert(aggvars != NULL);
    assert(binvars != NULL);
 
    nvars = SCIPmatrixGetNColumns(matrix);
 
    for( i = 0; i < nvars; i++ )
    {
+      /* column has only one uplock which keeps it from being fixed by duality fixing */
       if( SCIPmatrixGetColNUplocks(matrix, i) == 1 &&
-          SCIPisLE(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, i)), 0.0) )
+         SCIPisLE(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, i)), 0.0) )
       {
          SCIP_Real lb;
          SCIP_Real ub;
 
          lb = SCIPmatrixGetColLb(matrix, i);
          ub = SCIPmatrixGetColUb(matrix, i);
+         assert(lb == SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, i)));
+         assert(ub == SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, i)));
 
+         /* the variable needs to have finite bounds to allow an agregation */
          if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
          {
             int binvaridx;
             AGGRTYPE aggtype;
+
             getBinVarIdxInUplockRow(scip, matrix, i, &binvaridx, &aggtype);
 
             if( binvaridx >= 0 )
             {
                aggtypes[i] = aggtype;
-               aggvars[i] = SCIPmatrixGetVar(matrix, i);
                binvars[i] = SCIPmatrixGetVar(matrix, binvaridx);
                (*nvaragg)++;
             }
@@ -373,9 +413,8 @@ SCIP_RETCODE findDownlockAggregations(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
    int*                  nvaragg,            /**< number of redundant variables */
-   AGGRTYPE*             aggtypes,           /**< type of aggregations */
-   SCIP_VAR**            aggvars,            /**< pointers to the variables which should by aggregated */
-   SCIP_VAR**            binvars             /**< pointers to the binary variables */
+   AGGRTYPE*             aggtypes,           /**< type of aggregations (in same order as variables in matrix) */
+   SCIP_VAR**            binvars             /**< pointers to the binary variables (in same order as variables in matrix) */
    )
 {
    int nvars;
@@ -385,23 +424,28 @@ SCIP_RETCODE findDownlockAggregations(
    assert(matrix != NULL);
    assert(nvaragg != NULL);
    assert(aggtypes != NULL);
-   assert(aggvars != NULL);
    assert(binvars != NULL);
 
    nvars = SCIPmatrixGetNColumns(matrix);
 
    for( i = 0; i < nvars; i++ )
    {
+      /* column has only one downlock which keeps it from being fixed by duality fixing;
+       * only handle variable if it was not yet aggregated due to a single uplock
+       */
       if( SCIPmatrixGetColNDownlocks(matrix, i) == 1 &&
-          SCIPisGE(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, i)), 0.0) &&
-          aggtypes[i] == NOAGG )
+         SCIPisGE(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, i)), 0.0) &&
+         aggtypes[i] == NOAGG )
       {
          SCIP_Real lb;
          SCIP_Real ub;
 
          lb = SCIPmatrixGetColLb(matrix, i);
          ub = SCIPmatrixGetColUb(matrix, i);
+         assert(lb == SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, i)));
+         assert(ub == SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, i)));
 
+         /* the variable needs to have finite bounds to allow an agregation */
          if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
          {
             int binvaridx;
@@ -411,7 +455,6 @@ SCIP_RETCODE findDownlockAggregations(
             if( binvaridx >= 0 )
             {
                aggtypes[i] = aggtype;
-               aggvars[i] = SCIPmatrixGetVar(matrix, i);
                binvars[i] = SCIPmatrixGetVar(matrix, binvaridx);
                (*nvaragg)++;
             }
@@ -452,31 +495,32 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
 
+   /* we only work on pure MIPs currently */
    if( initialized && complete )
    {
-      int nvaragg;
       AGGRTYPE* aggtypes;
-      SCIP_VAR** aggvars;
       SCIP_VAR** binvars;
+      int nvaragg;
       int ncols;
-      int nrows;
 
       ncols = SCIPmatrixGetNColumns(matrix);
-      nrows = SCIPmatrixGetNRows(matrix);
       nvaragg = 0;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &aggtypes, ncols) );
       BMSclearMemoryArray(aggtypes, ncols);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &binvars, ncols) );
+      SCIPdebug( BMSclearMemoryArray(binvars, ncols) );
 
-      SCIP_CALL( findUplockAggregations(scip, matrix, &nvaragg, aggtypes, aggvars, binvars) );
-      SCIP_CALL( findDownlockAggregations(scip, matrix, &nvaragg, aggtypes, aggvars, binvars) );
+      /* search for aggregations */
+      SCIP_CALL( findUplockAggregations(scip, matrix, &nvaragg, aggtypes, binvars) );
+      SCIP_CALL( findDownlockAggregations(scip, matrix, &nvaragg, aggtypes, binvars) );
 
+      /* apply aggregations, if we found any */
       if( nvaragg > 0 )
       {
          int v;
+
          for( v = 0; v < ncols; v++ )
          {
             if( aggtypes[v] != NOAGG )
@@ -491,17 +535,20 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
                lb = SCIPmatrixGetColLb(matrix, v);
 
                /* aggregate variable */
-               assert(aggvars[v] != NULL && binvars[v] != NULL);
+               assert(binvars[v] != NULL);
                if( aggtypes[v] == BIN0UBOUND )
                {
-                  SCIP_CALL( SCIPaggregateVars(scip, aggvars[v], binvars[v], 1.0, ub-lb,
+                  SCIP_CALL( SCIPaggregateVars(scip, SCIPmatrixGetVar(matrix, v), binvars[v], 1.0, ub-lb,
                         ub, &infeasible, &redundant, &aggregated) );
                }
                else
                {
-                  SCIP_CALL( SCIPaggregateVars(scip, aggvars[v], binvars[v], 1.0, lb-ub,
+                  assert(aggtypes[v] == BIN0LBOUND);
+                  SCIP_CALL( SCIPaggregateVars(scip, SCIPmatrixGetVar(matrix, v), binvars[v], 1.0, lb-ub,
                         lb, &infeasible, &redundant, &aggregated) );
                }
+
+               /* infeasible aggregation */
                if( infeasible )
                {
                   SCIPdebugMessage(" -> infeasible aggregation\n");
@@ -510,19 +557,16 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
                }
 
                if( aggregated )
-               {
                   (*naggrvars)++;
-
-                  /* set result pointer */
-                  if( (*result) == SCIP_DIDNOTFIND )
-                     *result = SCIP_SUCCESS;
-               }
             }
          }
+
+         /* set result pointer */
+         if( (*naggrvars) > 0 )
+            *result = SCIP_SUCCESS;
       }
 
       SCIPfreeBufferArray(scip, &binvars);
-      SCIPfreeBufferArray(scip, &aggvars);
       SCIPfreeBufferArray(scip, &aggtypes);
    }
 
