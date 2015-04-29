@@ -12609,9 +12609,9 @@ SCIP_RETCODE presolveRound(
       j = *propstart;
       k = *consstart;
 
-      oldpresolstart = *presolstart;
-      oldpropstart = *propstart;
-      oldconsstart = *consstart;
+      oldpresolstart = i;
+      oldpropstart = j;
+      oldconsstart = k;
 
       if( i >= presolend && j >= propend && k >= consend )
          return SCIP_OKAY;
@@ -12942,17 +12942,22 @@ SCIP_RETCODE presolveRound(
 
             /* increase timing */
             timing = ((timing == SCIP_PRESOLTIMING_FAST) ? SCIP_PRESOLTIMING_MEDIUM : SCIP_PRESOLTIMING_EXHAUSTIVE);
-#if 0
+
+            /* computational experiments showed that always starting the loop of exhaustive presolvers from the beginning
+             * performs better than continuing from the last processed presolver. Therefore, we start from 0, but keep
+             * the mechanisms to possibly change this back later.
+             * @todo try starting from the last processed exhaustive presolver
+             */
             *presolstart = 0;
             *propstart = 0;
             *consstart = 0;
-#endif
 
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, presolstart, presolend,
                   propstart, propend, consstart, consend) );
          }
-         /* run remaining exhaustive presolvers */
-         else if( presolend == scip->set->npresols && propend == scip->set->nprops && consend == scip->set->nconshdlrs )
+         /* run remaining exhaustive presolvers (if we did not start from the beginning anyway) */
+         else if( (oldpresolstart > 0 || oldpropstart > 0 || oldconsstart > 0) && presolend == scip->set->npresols
+            && propend == scip->set->nprops && consend == scip->set->nconshdlrs )
          {
             int newpresolstart = 0;
             int newpropstart = 0;
