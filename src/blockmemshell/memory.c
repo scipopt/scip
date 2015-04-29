@@ -2104,7 +2104,8 @@ struct BMS_BufMem
 {
    void**                data;               /**< allocated memory chunks for arbitrary data */
    int*                  size;               /**< sizes of buffers in bytes */
-   SCIP_Bool*            used;               /**< TRUE iff corresponding buffer is in use */
+   unsigned int*         used;               /**< 1 iff corresponding buffer is in use */
+   unsigned int          clean;              /**< 1 iff the memory blocks in the buffer should be initialized to zero? */
    int                   ndata;              /**< number of memory chunks */
    int                   firstfree;          /**< first unused memory chunk */
    double                arraygrowfac;       /**< memory growing factor for dynamically allocated arrays */
@@ -2116,6 +2117,7 @@ struct BMS_BufMem
 BMS_BUFMEM* BMScreateBufferMemory_call(
    double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
    int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
+   unsigned int          clean,              /**< should the memory blocks in the buffer be initialized to zero? */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
@@ -2128,6 +2130,7 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
       buffer->data = NULL;
       buffer->size = NULL;
       buffer->used = NULL;
+      buffer->clean = clean;
       buffer->ndata = 0;
       buffer->firstfree = 0;
       buffer->arraygrowinit = arraygrowinit;
@@ -2317,6 +2320,16 @@ void* BMSallocBufferMemory_call(
       /* enlarge buffer */
       newsize = calcMemoryGrowSize((unsigned) buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
+
+      /* clear new memory */
+      if( buffer->clean )
+      {
+         char* tmpptr = (char*)(buffer->data[bufnum]);
+         int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+         tmpptr += inc;
+
+         BMSclearMemorySize(tmpptr, newsize - buffer->size[bufnum]);
+      }
       buffer->size[bufnum] = (int) newsize;
       if ( buffer->data[bufnum] == NULL )
       {
@@ -2327,15 +2340,35 @@ void* BMSallocBufferMemory_call(
    }
    assert( buffer->size[bufnum] >= (int) size );
 
+#ifdef SCIP_MORE_DEBUG
+   /* check that the memory is cleared */
+   if( buffer->clean )
+   {
+      char* tmpptr = (char*)(buffer->data[bufnum]);
+      int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+      tmpptr += inc;
+
+      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
+         assert(*tmpptr == '\0');
+   }
+#endif
+
    ptr = buffer->data[bufnum];
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   SCIPdebugMessage("Allocated buffer %d/%d at %p of size %d (required size: %lu) for pointer %p.\n",
+   debugMessage("Allocated buffer %d/%d at %p of size %d (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
 #else
-   BMSallocMemorySize(&ptr, size);
+   if( buffer->clear )
+   {
+      BMSallocClearMemorySize(&ptr, size);
+   }
+   else
+   {
+      BMSallocMemorySize(&ptr, size);
+   }
 #endif
 
    return ptr;
@@ -2367,6 +2400,7 @@ void* BMSreallocBufferMemory_call(
 #ifndef SCIP_NOBUFFERMEM
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
+   assert(!buffer->clean); /* reallocating clean buffer elements is not supported */
 
    /* if the pointer doesn't exist yet, allocate it */
    if ( ptr == NULL )
@@ -2408,7 +2442,7 @@ void* BMSreallocBufferMemory_call(
    assert( buffer->size[bufnum] >= (int) size );
    assert( newptr == buffer->data[bufnum] );
 
-   SCIPdebugMessage("Reallocated buffer %d/%d at %p to size %d (required size: %lu) for pointer %p.\n",
+   debugMessage("Reallocated buffer %d/%d at %p to size %d (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
 
 #else
@@ -2488,7 +2522,7 @@ void BMSfreeBufferMemory_call(
       while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
          --buffer->firstfree;
 
-      SCIPdebugMessage("Freed buffer %d/%d at %p of size %d for pointer %p, first free is %d.\n",
+      debugMessage("Freed buffer %d/%d at %p of size %d for pointer %p, first free is %d.\n",
          bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
    }
    else

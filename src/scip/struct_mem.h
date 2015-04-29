@@ -37,6 +37,8 @@ struct SCIP_Mem
 {
    BMS_BLKMEM*           setmem;             /**< memory blocks for parameter settings */
    BMS_BLKMEM*           probmem;            /**< memory blocks for original problem and solution process: preprocessing, bab-tree, ... */
+   BMS_BUFMEM*           buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           cleanbuffer;        /**< memory buffers for short living temporary objects, initialized to all zero */
 };
 
 #ifdef __cplusplus

@@ -19523,27 +19523,31 @@ void SCIPprintReal(
 /**@name Buffer Memory Management Macros */
 /**@{ */
 
-#define SCIPcreateBuffer(ptr)                   ( (BMScreateBufferMemroy_call((ptr), __FILE__, __LINE__) == NULL) \
+#define SCIPallocBuffer(scip,ptr)               ( (BMSallocBufferMemory(SCIPbuffer(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPallocBuffer(scip,ptr)               ( (BMSallocBufferMemory(SCIPbuffermem(scip), (ptr)) == NULL) \
+#define SCIPallocBufferArray(scip,ptr,num)      ( (BMSallocBufferMemoryArray(SCIPbuffer(scip), (ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPallocBufferArray(scip,ptr,num)      ( (BMSallocBufferMemoryArray(SCIPbuffermem(scip), (ptr), (num)) == NULL) \
+#define SCIPreallocBufferArray(scip,ptr,num)    ( (BMSreallocBufferMemoryArray(SCIPbuffer(scip), (ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPreallocBufferArray(scip,ptr,num)    ( (BMSreallocBufferMemoryArray(SCIPbuffermem(scip), (ptr), (num)) == NULL) \
+#define SCIPduplicateBuffer(scip,ptr,source)    ( (BMSduplicateBufferMemory(SCIPbuffer(scip), (ptr), (source), (size_t)sizeof(**(ptr))) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateBuffer(scip,ptr,source)    ( (BMSduplicateBufferMemory(SCIPbuffermem(scip), (ptr), (source), (size_t)sizeof(**(ptr))) \
+#define SCIPduplicateBufferArray(scip,ptr,source,num) ( (BMSduplicateBufferMemoryArray(SCIPbuffer(scip), (ptr), (source), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateBufferArray(scip,ptr,source,num) ( (BMSduplicateBufferMemoryArray(SCIPbuffermem(scip), (ptr), (source), (num)) == NULL) \
-                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPfreeBuffer(scip,ptr)                BMSfreeBufferMemorySize(SCIPbuffermem(scip), (ptr))
-#define SCIPfreeBufferNull(scip,ptr)            BMSfreeBufferMemoryNull(SCIPbuffermem(scip), (ptr))
-#define SCIPfreeBufferArray(scip,ptr)           BMSfreeBufferMemoryArray(SCIPbuffermem(scip), (ptr))
-#define SCIPfreeBufferArrayNull(scip,ptr)       BMSfreeBufferMemoryArrayNull(SCIPbuffermem(scip), (ptr))
+#define SCIPfreeBuffer(scip,ptr)                BMSfreeBufferMemorySize(SCIPbuffer(scip), (ptr))
+#define SCIPfreeBufferNull(scip,ptr)            BMSfreeBufferMemoryNull(SCIPbuffer(scip), (ptr))
+#define SCIPfreeBufferArray(scip,ptr)           BMSfreeBufferMemoryArray(SCIPbuffer(scip), (ptr))
+#define SCIPfreeBufferArrayNull(scip,ptr)       BMSfreeBufferMemoryArrayNull(SCIPbuffer(scip), (ptr))
 
-#define SCIPbufferGetNUsed(bufmem)              BMSgetNUsedBufferMemory(bufmem)
-#define SCIPcreateBufferMemory(bufmem,fac,init) ( (BMScreateBufferMemory((bufmem), (fac), (init)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPdestroyBufferMemory(bufmem)         BMSdestroyBufferMemory(bufmem)
-#define SCIPbufferPrint(bufmem)                 BMSprintBufferMemory(bufmem)
+
+#define SCIPallocCleanBuffer(scip,ptr)          ( (BMSallocBufferMemory(SCIPcleanbuffer(scip), (ptr)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocCleanBufferArray(scip,ptr,num) ( (BMSallocBufferMemoryArray(SCIPcleanbuffer(scip), (ptr), (num)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPfreeCleanBuffer(scip,ptr)           BMSfreeBufferMemorySize(SCIPcleanbuffer(scip), (ptr))
+#define SCIPfreeCleanBufferNull(scip,ptr)       BMSfreeBufferMemoryNull(SCIPcleanbuffer(scip), (ptr))
+#define SCIPfreeCleanBufferArray(scip,ptr)      BMSfreeBufferMemoryArray(SCIPcleanbuffer(scip), (ptr))
+#define SCIPfreeCleanBufferArrayNull(scip,ptr)  BMSfreeBufferMemoryArrayNull(SCIPcleanbuffer(scip), (ptr))
+
 /**@} */
 
 
@@ -19559,18 +19563,27 @@ BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns buffer memory to use at the current time
+/** returns buffer memory for short living temporary objects
  *
- *  @return the buffer memory to use at the current time.
+ *  @return the buffer memory for short living temporary objects
  */
 EXTERN
-BMS_BUFMEM* SCIPbuffermem(
+BMS_BUFMEM* SCIPbuffer(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the total number of bytes used in block memory
+/** returns clean buffer memory for short living temporary objects initialized to all zero
  *
- *  @return the total number of bytes used in block memory.
+ *  @return the buffer memory for short living temporary objects initialized to all zero
+ */
+EXTERN
+BMS_BUFMEM* SCIPcleanbuffer(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the total number of bytes used in block and buffer memory
+ *
+ *  @return the total number of bytes used in block and buffer memory.
  */
 EXTERN
 SCIP_Longint SCIPgetMemUsed(

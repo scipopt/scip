@@ -224,10 +224,8 @@
 /* Memory */
 
 #define SCIP_DEFAULT_MEM_SAVEFAC            0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
-#define SCIP_DEFAULT_MEM_ARRAYGROWFAC       1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWFAC        2.0 /**< memory growing factor for path array */
-#define SCIP_DEFAULT_MEM_ARRAYGROWINIT        4 /**< initial size of dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWINIT     65536 /**< initial size of tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWINIT       256 /**< initial size of path array */
 
@@ -500,7 +498,8 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowfac)
    newarraygrowfac = SCIPparamGetReal(param);
 
    /* change arraygrowfac */
-   BMSsetBufferMemoryArraygrowfac(SCIPbuffermem(scip), newarraygrowfac);
+   BMSsetBufferMemoryArraygrowfac(SCIPbuffer(scip), newarraygrowfac);
+   BMSsetBufferMemoryArraygrowfac(SCIPcleanbuffer(scip), newarraygrowfac);
 
    return SCIP_OKAY;
 }
@@ -514,7 +513,8 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
    newarraygrowinit = SCIPparamGetInt(param);
 
    /* change arraygrowinit */
-   BMSsetBufferMemoryArraygrowinit(SCIPbuffermem(scip), newarraygrowinit);
+   BMSsetBufferMemoryArraygrowinit(SCIPbuffer(scip), newarraygrowinit);
+   BMSsetBufferMemoryArraygrowinit(SCIPcleanbuffer(scip), newarraygrowinit);
 
    return SCIP_OKAY;
 }
@@ -816,9 +816,10 @@ SCIP_RETCODE SCIPsetCreate(
 
    (*set)->stage = SCIP_STAGE_INIT;
    (*set)->scip = scip;
+   (*set)->buffer = SCIPbuffer(scip);
+   (*set)->cleanbuffer = SCIPcleanbuffer(scip);
 
    SCIP_CALL( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
-   SCIP_CALL( SCIPcreateBufferMemory(&(*set)->buffer, SCIP_DEFAULT_MEM_ARRAYGROWFAC, SCIP_DEFAULT_MEM_ARRAYGROWINIT) );
 
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
@@ -1946,9 +1947,6 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free parameter set */
    SCIPparamsetFree(&(*set)->paramset, blkmem);
-
-   /* free memory buffers */
-   SCIPdestroyBufferMemory(&(*set)->buffer);
 
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )

@@ -57,6 +57,7 @@ struct SCIP_Set
    SCIP*                 scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    SCIP_PARAMSET*        paramset;           /**< set of parameters */
    BMS_BUFMEM*           buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           cleanbuffer;        /**< memory buffers for short living temporary objects init. to all zero */
    SCIP_READER**         readers;            /**< file readers */
    SCIP_PRICER**         pricers;            /**< variable pricers */
    SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers (sorted by check priority) */

@@ -68,6 +68,7 @@ extern "C" {
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
 #define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
+#define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), size, __FILE__, __LINE__ ))
 #define BMSallocMemoryArray(ptr,num)          ASSIGN((ptr), BMSallocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
 #define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
@@ -535,7 +536,7 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
 #define BMSfreeBufferMemorySize(mem,ptr)     { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
 #define BMSfreeBufferMemorySizeNull(mem,ptr) { if ( *(ptr) != NULL ) BMSfreeBufferMemorySize((mem), (ptr), __FILE__, __LINE__); }
 
-#define BMScreateBufferMemory(mem,fac,init)  ASSIGN((mem), BMScreateBufferMemory_call((fac), (init), __FILE__, __LINE__))
+#define BMScreateBufferMemory(fac,init,clean) BMScreateBufferMemory_call((fac), (init), (clean), __FILE__, __LINE__)
 #define BMSdestroyBufferMemory(mem)          BMSdestroyBufferMemory_call((mem), __FILE__, __LINE__)
 
 
@@ -544,6 +545,7 @@ EXTERN
 BMS_BUFMEM* BMScreateBufferMemory_call(
    double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
    int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
+   unsigned int          clean,              /**< should the memory blocks in the buffer be initialized to zero? */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );

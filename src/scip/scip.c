@@ -12403,7 +12403,8 @@ SCIP_RETCODE initPresolve(
 
    /* inform plugins that the presolving is abound to begin */
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
@@ -12427,6 +12428,7 @@ SCIP_RETCODE exitPresolve(
    int v;
 #ifndef NDEBUG
    int nusedbuffers;
+   int nusedcleanbuffers;
 #endif
 
    assert(scip != NULL);
@@ -12476,12 +12478,14 @@ SCIP_RETCODE exitPresolve(
     * change by calling SCIPsetExitprePlugins() or SCIPprobExitPresolve()
     */
 #ifndef NDEBUG
-   nusedbuffers = SCIPbufferGetNUsed(scip->set->buffer);
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
    /* inform plugins that the presolving is finished, and perform final modifications */
    SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
@@ -12502,7 +12506,8 @@ SCIP_RETCODE exitPresolve(
 
    /* exit presolving */
    SCIP_CALL( SCIPprobExitPresolve(scip->transprob,  scip->set) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    if( !solved )
    {
@@ -12601,7 +12606,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = FALSE;
          ++j;
@@ -12624,7 +12630,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = TRUE;
          ++i;
@@ -12682,7 +12689,8 @@ SCIP_RETCODE presolveRound(
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
             &scip->stat->npresolchgsides, &result) );
-      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -12741,7 +12749,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = FALSE;
          ++j;
@@ -12761,7 +12770,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = TRUE;
          ++i;
@@ -13055,7 +13065,8 @@ SCIP_RETCODE presolve(
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
       }
    }
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
@@ -39180,46 +39191,40 @@ BMS_BLKMEM* SCIPblkmem(
    assert(scip->set != NULL);
    assert(scip->mem != NULL);
 
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_INIT:
-   case SCIP_STAGE_PROBLEM:
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-   case SCIP_STAGE_FREE:
-      return scip->mem->probmem;
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return NULL;
-   }  /*lint !e788*/
+   return scip->mem->probmem;
 }
 
-/** returns buffer memory to use at the current time
+/** returns buffer memory for short living temporary objects
  *
- *  @return the buffer memory to use at the current time.
+ *  @return the buffer memory for short living temporary objects
  */
-EXTERN
-BMS_BUFMEM* SCIPbuffermem(
+BMS_BUFMEM* SCIPbuffer(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   assert( scip != NULL );
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
 
-   return scip->set->buffer;
+   return scip->mem->buffer;
 }
 
-/** returns the total number of bytes used in block memory
+/** returns clean buffer memory for short living temporary objects initialized to all zero
  *
- *  @return the total number of bytes used in block memory.
+ *  @return the buffer memory for short living temporary objects initialized to all zero
+ */
+BMS_BUFMEM* SCIPcleanbuffer(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   return scip->mem->cleanbuffer;
+}
+
+/** returns the total number of bytes used in block and buffer memory
+ *
+ *  @return the total number of bytes used in block and buffer memory.
  */
 SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
@@ -39306,7 +39311,10 @@ void SCIPprintMemoryDiagnostic(
    BMSdisplayBlockMemory(scip->mem->probmem);
 
    SCIPmessagePrintInfo(scip->messagehdlr, "\nMemory Buffers:\n");
-   SCIPbufferPrint(scip->set->buffer);
+   BMSprintBufferMemory(SCIPbuffer(scip));
+
+   SCIPmessagePrintInfo(scip->messagehdlr, "\nClean Memory Buffers:\n");
+   BMSprintBufferMemory(SCIPcleanbuffer(scip));
 }
 
 
