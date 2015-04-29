@@ -3771,10 +3771,10 @@ SCIP_RETCODE computeConsAndDataChanges(
 #ifndef NDEBUG
       /* check that old variables are sorted */
       for( v = nvars - 1; v > 0; --v )
-         assert(SCIPvarGetIndex(vars[v]) > SCIPvarGetIndex(vars[v - 1]));
+         assert(SCIPvarGetIndex(vars[v]) >= SCIPvarGetIndex(vars[v - 1]));
       /* check that new variables are sorted */
       for( v = nnewvars - 1; v > 0; --v )
-         assert(SCIPvarGetIndex(newvars[v]) > SCIPvarGetIndex(newvars[v - 1]));
+         assert(SCIPvarGetIndex(newvars[v]) >= SCIPvarGetIndex(newvars[v - 1]));
 #endif
 
       /* check for changings, if and-constraint did not change we do not need to copy all variables */
@@ -3959,7 +3959,7 @@ SCIP_RETCODE correctLocksAndCaptures(
       res2 = SCIPgetResultantAnd(scip, consanddatas[c - 1]->cons);
       assert(res2 != NULL);
 
-      assert(SCIPvarGetIndex(res1) > SCIPvarGetIndex(res2));
+      assert(SCIPvarGetIndex(res1) >= SCIPvarGetIndex(res2));
    }
 #endif
 

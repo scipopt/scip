@@ -746,6 +746,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_SOLLIMIT:
+   case SCIP_STATUS_RESTARTLIMIT:
    case SCIP_STATUS_UNBOUNDED:
    default:
       heurdata->callstatus = WAITFORNEWSOL;

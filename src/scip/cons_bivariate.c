@@ -6299,8 +6299,6 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type [%s]\n", nconvextypeslhs[c], nconvextypesrhs[c], typename);
       }
 #endif
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "NOTE: the constraint handler for bivariate constraints is still experimental!\n");
    }
 
    /* reset counter */
@@ -7687,6 +7685,9 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
                x, y, auxvar, coefxx, coefx, coefyy, coefy, coefxy, -1.0,
                SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? -SCIPinfinity(scip) : 0.0,
                SCIPisInfinity(scip,  SCIPgetRhsQuadratic(scip, cons)) ?  SCIPinfinity(scip) : 0.0) );
+         /* need to enforce new constraints, as relation auxvar = f(x,y) is not redundant, even if original constraint is */
+         SCIP_CALL( SCIPsetConsEnforced(scip, upgdconss[*nupgdconss], TRUE) );
+         SCIP_CALL( SCIPsetConsChecked(scip, upgdconss[*nupgdconss], TRUE) );
          ++*nupgdconss;
 
          /* compute value of auxvar in debug solution */

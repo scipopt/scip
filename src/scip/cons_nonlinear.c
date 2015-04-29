@@ -4914,8 +4914,8 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
    }
 
    SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d\n", SCIPexprGetOperator( expr ) );
-   assert( FALSE );
-   return SCIP_ERROR;
+   SCIPABORT();
+   return SCIP_ERROR; /*lint !e527*/
 }
 
 /** adds estimator from user callback of a constraints user expression tree to a row
@@ -5261,7 +5261,7 @@ SCIP_RETCODE generateCut(
    {
       if( ref == NULL )
       {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &x, SCIPexprtreeGetNVars(consdata->exprtrees[i])) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &x, SCIPexprtreeGetNVars(consdata->exprtrees[i])) );  /*lint !e644*/
          SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPexprtreeGetNVars(consdata->exprtrees[i]), SCIPexprtreeGetVars(consdata->exprtrees[i]), x) );
       }
       else

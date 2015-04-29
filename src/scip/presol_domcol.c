@@ -1511,7 +1511,6 @@ SCIP_RETCODE findFixings(
    return SCIP_OKAY;
 }
 
-
 /** find dominance relation between variable pairs */
 static
 SCIP_RETCODE findDominancePairs(
@@ -1738,6 +1737,54 @@ SCIP_RETCODE findDominancePairs(
                assert(r1 < nrows1 && r2 < nrows2);
                assert(rows1[r1] == rows2[r2]);
 
+               /* if both columns are binary variables we check if they have a common clique
+                  and do not calculate any bounds */
+               if( onlybinvars && !onlyoneone )
+               {
+                  if( vals1[r1]<0 && vals2[r2]<0 )
+                  {
+                     if( (SCIPmatrixGetRowNMaxActPosInf(matrix, rows1[r1]) + SCIPmatrixGetRowNMaxActNegInf(matrix, rows1[r1]) == 0)
+                        && SCIPisFeasLE(scip, SCIPmatrixGetRowMaxActivity(matrix, rows1[r1]) + MAX(vals1[r1], vals2[r2]), SCIPmatrixGetRowLhs(matrix, rows1[r1])) )
+                     {
+                        onlyoneone = TRUE;
+                     }
+                  }
+
+                  if( !onlyoneone && !SCIPmatrixIsRowRhsInfinity(matrix, rows1[r1]) )
+                  {
+                     if ( vals1[r1]>0 && vals2[r2]>0 )
+                     {
+                        if( (SCIPmatrixGetRowNMinActPosInf(matrix, rows1[r1]) + SCIPmatrixGetRowNMinActNegInf(matrix, rows1[r1]) == 0)
+                           && SCIPisFeasGE(scip, SCIPmatrixGetRowMinActivity(matrix, rows1[r1]) + MIN(vals1[r1], vals2[r2]), SCIPmatrixGetRowRhs(matrix, rows1[r1])) )
+                        {
+                           onlyoneone = TRUE;
+                        }
+                     }
+                  }
+
+                  if( onlyoneone )
+                  {
+                     /* reset bounds */
+                     tmpupperbounddominatingcol1 = SCIPinfinity(scip);
+                     tmpupperbounddominatingcol2 = tmpupperbounddominatingcol1;
+                     tmpwclowerbounddominatingcol1 = -SCIPinfinity(scip);
+                     tmpwclowerbounddominatingcol2 = tmpwclowerbounddominatingcol1;
+                     tmplowerbounddominatingcol1 = -SCIPinfinity(scip);
+                     tmplowerbounddominatingcol2 = tmplowerbounddominatingcol1;
+                     tmpwcupperbounddominatingcol1 = SCIPinfinity(scip);
+                     tmpwcupperbounddominatingcol2 = tmpwcupperbounddominatingcol1;
+
+                     tmpupperbounddominatedcol1 = SCIPinfinity(scip);
+                     tmpupperbounddominatedcol2 = tmpupperbounddominatedcol1;
+                     tmpwclowerbounddominatedcol1 = -SCIPinfinity(scip);
+                     tmpwclowerbounddominatedcol2 = tmpwclowerbounddominatedcol1;
+                     tmplowerbounddominatedcol1 = -SCIPinfinity(scip);
+                     tmplowerbounddominatedcol2 = tmplowerbounddominatedcol1;
+                     tmpwcupperbounddominatedcol1 = SCIPinfinity(scip);
+                     tmpwcupperbounddominatedcol2 = tmpwcupperbounddominatedcol1;
+                  }
+               }
+
                /* dominance depends on the type of inequality */
                if( !SCIPmatrixIsRowRhsInfinity(matrix, rows1[r1]) )
                {
@@ -1746,15 +1793,6 @@ SCIP_RETCODE findDominancePairs(
                   {
                      col2domcol1 = FALSE;
                      col1domcol2 = FALSE;
-                  }
-
-                  if( onlybinvars )
-                  {
-                     if( !onlyoneone && (SCIPmatrixGetRowNMinActPosInf(matrix, rows1[r1]) + SCIPmatrixGetRowNMinActNegInf(matrix, rows1[r1]) == 0)
-                        && SCIPisFeasGE(scip, SCIPmatrixGetRowMinActivity(matrix, rows1[r1]) + MIN(vals1[r1], vals2[r2]), SCIPmatrixGetRowRhs(matrix, rows1[r1])) )
-                     {
-                        onlyoneone = TRUE;
-                     }
                   }
                }
                else
@@ -1766,10 +1804,11 @@ SCIP_RETCODE findDominancePairs(
                      col1domcol2 = FALSE;
                }
 
-               /* we claim the same sign for the coefficients to achieve monotonically
-                * decreasing predictive bound functions
-                */
-               if( !onlyoneone && ((vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0)) )
+               /* we do not use bound calulations if two binary variable are in one common clique.
+                  for the other cases we claim the same sign for the coefficients to
+                  achieve monotonically decreasing predictive bound functions. */
+               if( !onlyoneone &&
+                  ((vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0)) )
                {
                   if( col1domcol2 )
                   {
@@ -1951,7 +1990,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
       return SCIP_OKAY;
 
-   if( SCIPgetNContVars(scip) == 0 || SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
+   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -2008,8 +2047,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       SCIP_CALL( SCIPallocBufferArray(scip, &intsearchcols, ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &binsearchcols, ncols) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, nrows) );
       for( r = 0; r < nrows; ++r )
       {
          rowidxsorted[r] = r;

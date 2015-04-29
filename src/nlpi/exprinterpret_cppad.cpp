@@ -1599,6 +1599,7 @@ void evalUser(
    SCIP_EXPR*            expr                /**< expression that holds the user expression */
    )
 {
+   assert( args != 0 );
    vector<Type> in(args, args + SCIPexprGetNChildren(expr));
    vector<Type> out(1);
 
@@ -1699,19 +1700,6 @@ void evalSqrt(
    )
 {
    resultant = sqrt(arg);
-}
-
-/** specialization of square-root operator for numbers
- *
- *  We perturb the function a little bit so that it's derivatives are defined in 0.0.
- */
-template<>
-void evalSqrt(
-   CppAD::AD<double>&    resultant,          /**< resultant */
-   const CppAD::AD<double>& arg              /**< operand */
-   )
-{
-   resultant = sqrt(arg + 1e-20) - 1e-10;
 }
 
 /** template for evaluation for absolute value operator */

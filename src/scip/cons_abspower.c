@@ -750,13 +750,15 @@ SCIP_RETCODE presolveFindDuplicates(
                      TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-               /* create auxiliary constraint auxvar = sign(x+offset)|x+offset|^n */
+               /* create auxiliary constraint auxvar = sign(x+offset)|x+offset|^n
+                * as we introduced a new variable, the constraint that "defines" the value for this variable need to be enforced, that is, is not redundent
+                */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxcons_abspower%s_%g_%g", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset);
                SCIP_CALL( SCIPcreateConsAbspower(scip, &auxcons, name, consdata0->x, auxvar, consdata0->exponent, consdata0->xoffset, -1.0, 0.0, 0.0,
                      SCIPconsIsInitial(cons0) || SCIPconsIsInitial(cons1),
                      SCIPconsIsSeparated(cons0) || SCIPconsIsSeparated(cons1),
-                     SCIPconsIsEnforced(cons0) || SCIPconsIsEnforced(cons1),
-                     SCIPconsIsChecked(cons0) || SCIPconsIsChecked(cons1),
+                     TRUE,
+                     TRUE,
                      SCIPconsIsPropagated(cons0) || SCIPconsIsPropagated(cons1),
                      FALSE,
                      FALSE,
@@ -3442,17 +3444,22 @@ SCIP_RETCODE generateLinearizationCut(
       return SCIP_OKAY;
    }
 
+   rhs += ((exponent-1)*refpoint-xoffset)*tmp;   /* now rhs is the rhs of the cut */
+   /* do not change the right hand side to a value > infinity (this would trigger an assertion in lp.c) */
+   if( SCIPisInfinity(scip, rhs) )
+   {
+      SCIPdebugMessage("skip linearization cut because its rhs would be > infinity\n");
+      *row = NULL;
+      return SCIP_OKAY;
+   }
+
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "signpowlinearizecut_%u", ++(conshdlrdata->ncuts));
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowname, -SCIPinfinity(scip), SCIPinfinity(scip), islocal,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowname, -SCIPinfinity(scip), rhs, islocal,
          FALSE /* modifiable */, TRUE /* removable */ ) );
 
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*exponent*tmp) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
-
-   /* do not change the right hand side to an infinite value (this would trigger an assertion in lp.c) */
-   if( !SCIPisInfinity(scip, rhs + ((exponent-1)*refpoint-xoffset)*tmp) )
-      SCIP_CALL( SCIPchgRowRhs(scip, *row, rhs + ((exponent-1)*refpoint-xoffset)*tmp) );
 
    return SCIP_OKAY;
 }
@@ -4454,8 +4461,8 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
             SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
             SCIPisInfinity(scip, -lhs) ? -SCIPinfinity(scip) : 0.0,
             SCIPisInfinity(scip,  rhs) ?  SCIPinfinity(scip) : 0.0,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            TRUE, SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCoefLinear(scip, upgdconss[*nupgdconss], auxvar, -1.0) );
@@ -4806,8 +4813,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
             SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
             SCIPisInfinity(scip, -lhs) ? -SCIPinfinity(scip) : 0.0,
             SCIPisInfinity(scip,  rhs) ?  SCIPinfinity(scip) : 0.0,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            TRUE, SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCoefLinear(scip, upgdconss[*nupgdconss], auxvar, -1.0) );

@@ -2862,7 +2862,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    assert(oracle != NULL);
    assert(x != NULL);
-   assert(lambda != NULL);
+   assert(lambda != NULL || oracle->nconss == 0);
    assert(hessian != NULL);
 
    assert(oracle->heslagoffsets != NULL);
