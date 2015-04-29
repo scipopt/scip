@@ -1456,7 +1456,7 @@ SCIP_RETCODE hashtableResize(
 
          for( l = 0; l < hashtable->nlists; ++l )
          {
-            hashtablelist = hashtable->lists[i];
+            hashtablelist = hashtable->lists[l];
             while( hashtablelist != NULL )
             {
                sumslotsize++;
