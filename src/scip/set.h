@@ -1754,6 +1754,13 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFreeBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->buffer, (ptr))
 #define SCIPsetFreeBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->buffer, (ptr))
 
+#define SCIPsetAllocCleanBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->cleanbuffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->cleanbuffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->cleanbuffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeCleanBuffer(set,ptr)              BMSfreeBufferMemory((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
+
 #ifdef __cplusplus
 }
 #endif

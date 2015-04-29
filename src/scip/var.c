@@ -12644,13 +12644,9 @@ SCIP_Real SCIPvarGetImplRedcost(
 
       nentries = SCIPprobGetNVars(prob) - SCIPprobGetNContVars(prob) + 1;
 
-      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &ids, 2*nentries) );
+      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &ids, nentries) );
       nids = 0;
-      /* @todo move this memory allocation to SCIP_SET and add a memory list there, to decrease the number of
-       *       allocations and clear ups
-       */
-      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &entries, nentries) );
-      BMSclearMemoryArray(entries, nentries);
+      SCIP_CALL_ABORT( SCIPsetAllocCleanBufferArray(set, &entries, nentries) );
 
       cliques = SCIPvarGetCliques(var, varfixing);
       assert(cliques != NULL);
@@ -12723,9 +12719,12 @@ SCIP_Real SCIPvarGetImplRedcost(
 
          if( (varfixing && SCIPsetIsDualfeasPositive(set, redcost)) || (!varfixing && SCIPsetIsDualfeasNegative(set, redcost)) )
             implredcost += redcost;
+
+         /* reset entries clear buffer array */
+         entries[id] = 0;
       }
 
-      SCIPsetFreeBufferArray(set, &entries);
+      SCIPsetFreeCleanBufferArray(set, &entries);
       SCIPsetFreeBufferArray(set, &ids);
    }
 
