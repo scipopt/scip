@@ -203,6 +203,16 @@ SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
    int                   node                /**< node of the conflict graph */
    );
 
+/** based on solution values of the variables, rounds variables to zero to turn all SOS1 constraints feasible */
+EXTERN
+SCIP_RETCODE SCIPmakeSOS1sFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
+   );
+
 #ifdef __cplusplus
 }
 #endif

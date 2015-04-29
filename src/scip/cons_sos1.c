@@ -324,6 +324,51 @@ SCIP_Bool isConnectedSOS1(
 }
 
 
+/** checks whether a variable violates an SOS1 constraint w.r.t. sol together with at least one other variable */
+static
+SCIP_Bool SCIPisViolatedSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph (or NULL if an adjacencymatrix is at hand) */
+   int                   node,               /**< node of variable in the conflict graph */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   SCIP_Real solval;
+   SCIP_VAR* var;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 );
+
+   var = SCIPnodeGetVarSOS1(conflictgraph, node);
+   assert( var != NULL );
+   solval = SCIPgetSolVal(scip, sol, var);
+
+   /* check whether variable is nonzero w.r.t. sol */
+   if ( ! SCIPisFeasZero(scip, solval) )
+   {
+      int* succ;
+      int nsucc;
+      int s;
+
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
+      succ = SCIPdigraphGetSuccessors(conflictgraph, node);
+
+      /* check whether a neighbor variable is nonzero w.r.t. sol */
+      for (s = 0; s < nsucc; ++s)
+      {
+         var = SCIPnodeGetVarSOS1(conflictgraph, succ[s]);
+         assert( var != NULL );
+         solval = SCIPgetSolVal(scip, sol, var);
+         if ( ! SCIPisFeasZero(scip, solval) )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
 /** returns SOS1 index of variable or -1 if variable is not involved in an SOS1 constraint */
 static
 int varGetNodeSOS1(
@@ -3428,7 +3473,7 @@ SCIP_RETCODE freeImplGraphSOS1(
 static
 SCIP_RETCODE getCoverVertices(
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_Bool*            verticesarefixed,   /**< array that indicates which variables are fixed to zero */
+   SCIP_Bool*            verticesarefixed,   /**< array that indicates which variables are currently fixed to zero */
    int                   vertex,             /**< vertex (-1 if not needed) */
    int*                  neightocover,       /**< neighbors of given vertex to be covered (or NULL if all neighbors shall be covered) */
    int                   nneightocover,      /**< number of entries of neightocover (or 0 if all neighbors shall be covered )*/
@@ -4394,7 +4439,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph of the current node */
    SCIP_DIGRAPH*         localconflicts,     /**< local conflicts (updates to local conflicts of child node) */
    int                   nsos1vars,          /**< number of SOS1 variables */
-   SCIP_Bool*            verticesarefixed,   /**< vector that indicates which variables are currently fixed to zero */
+   SCIP_Bool*            verticesarefixed,   /**< vector that indicates which variables are currently fixed to zerox */
    int*                  fixingsnode1,       /**< vertices of variables that will be fixed to zero for the branching node in the input of this function */
    int                   nfixingsnode1,      /**< number of entries of array nfixingsnode1 */
    int*                  fixingsnode2,       /**< vertices of variables that will be fixed to zero for the other branching node */
@@ -6476,6 +6521,315 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
 }
 
 
+/* -------------------------- heuristic methods --------------------------------*/
+
+/** gets weights determining an order of the variables in a heuristic for the maximum weighted independent set problem */
+static
+SCIP_RETCODE getVectorOfWeights(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_SOL*             sol,                /**< primal solution or NULL for current LP solution */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   SCIP_Bool*            indicatorzero,      /**< vector that indicates which variables are currently fixed to zero */
+   SCIP_Real*            weights             /**< pointer to store weights determining the order of the variables (length = nsos1vars) */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real val;
+   SCIP_Real sum;
+   int nviols;
+   int* succ;
+   int nsucc;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( indicatorzero != NULL );
+   assert( weights != NULL );
+
+   for (i = 0; i < nsos1vars; ++i)
+   {
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
+
+      if( nsucc == 0 || indicatorzero[i] )
+         weights[i] = 0.0;
+      else
+      {
+         var = SCIPnodeGetVarSOS1(conflictgraph, i);
+         val = REALABS( SCIPgetSolVal(scip, sol, var) );
+         if ( SCIPisFeasZero(scip, val) )
+            weights[i] = 0.0;
+         else
+         {
+            succ = SCIPdigraphGetSuccessors(conflictgraph, i);
+
+            nviols = 0;
+            sum = 0.0;
+            for (j = 0; j < nsucc; ++j)
+            {
+               SCIP_Real valsucc;
+
+               valsucc = REALABS( SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, succ[j])) );
+               if( ! SCIPisFeasZero(scip, valsucc) )
+               {
+                  sum += MIN(10E05, valsucc);
+                  ++nviols;
+               }
+            }
+
+            if ( nviols == 0 )
+               weights[i] = 0.0;
+            else
+            {
+               assert( SCIPisFeasPositive(scip, sum * (SCIP_Real)nviols));
+               val = MIN(10E05, val);
+               weights[i] = ( val + SCIPsumepsilon(scip) ) / ( sum * (SCIP_Real)nviols + SCIPsumepsilon(scip) );
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* marks neighbors of a given node as not a member of the maximal independent set */
+static
+SCIP_RETCODE markNeighborsMWISHeuristic(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   node,               /**< node of the conflict graph */
+   SCIP_Bool*            mark,               /**< indicator vector of processed nodes */
+   SCIP_Bool*            indset,             /**< indicator vector of current independent */
+   int*                  cnt,                /**< pointer to store number of marked nodes */
+   SCIP_Bool*            cutoff              /**< pointer to store whether operation is infeasible */
+   )
+{
+   int nsucc;
+   int* succ;
+   int j;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( mark != NULL );
+   assert( indset != NULL );
+   assert( cutoff != NULL );
+   assert( cnt != NULL );
+
+   *cutoff = FALSE;
+
+   nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
+   succ = SCIPdigraphGetSuccessors(conflictgraph, node);
+
+   /* for all successors */
+   for (j = 0; j < nsucc && !(*cutoff); ++j)
+   {
+      int succj;
+
+      succj = succ[j];
+      if( ! mark[succj] )
+      {
+         SCIP_VARSTATUS varstatus;
+         SCIP_VAR* var;
+
+         /* mark node as processed */
+         mark[succj] = TRUE;
+         ++(*cnt);
+
+         /* get variable and variable status corresponding to successor node */
+         var = SCIPnodeGetVarSOS1(conflictgraph, succj);
+         varstatus = SCIPvarGetStatus(var);
+
+         /* if variable is aggregated */
+         if ( varstatus == SCIP_VARSTATUS_AGGREGATED )
+         {
+            int aggrnode;
+
+            aggrnode = SCIPvarGetNodeSOS1(conshdlr, SCIPvarGetAggrVar(var));
+
+            /* if aggregated variable is an SOS1 variable */
+            if ( aggrnode >= 0 )
+            {
+               /* if aggregated variable is implied to be zero */
+               if ( SCIPisFeasZero(scip, SCIPvarGetAggrConstant(var)) )
+               {
+                  if ( ! mark[aggrnode] )
+                     mark[aggrnode] = TRUE;
+                  else if ( indset[aggrnode] == 1 )
+                  {
+                     *cutoff = TRUE;
+                     return SCIP_OKAY;
+                  }
+               }
+               else
+               {
+                  /* if aggregated variable is not already a member of the maximal independent set */
+                  if ( indset[aggrnode] == 0 )
+                  {
+                     /* if variable is already marked */
+                     if ( mark[aggrnode] )
+                     {
+                        *cutoff = TRUE;
+                        return SCIP_OKAY;
+                     }
+                     else
+                     {
+                        indset[aggrnode] = 1;
+                        mark[aggrnode] = TRUE;
+                        ++(*cnt);
+                     }
+
+                     /* mark neighbors of aggregated variable */
+                     SCIP_CALL( markNeighborsMWISHeuristic(scip, conshdlr, conflictgraph, aggrnode, mark, indset, cnt, cutoff) );
+                  }
+               }
+            }
+         }
+         else if ( varstatus == SCIP_VARSTATUS_NEGATED )
+         {
+            int negnode;
+
+            negnode = SCIPvarGetNodeSOS1(conshdlr, SCIPvarGetNegationVar(var));
+
+            /* if negated variable is an SOS1 variable */
+            if ( negnode >= 0 )
+            {
+               if ( SCIPisFeasZero(scip, SCIPvarGetNegationConstant(var) ) )
+               {
+                  if ( indset[negnode] == 1 )
+                  {
+                     *cutoff = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  else if ( ! mark[negnode] )
+                  {
+                     mark[negnode] = TRUE;
+                     ++(*cnt);
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** calls greedy algorithm for the maximum weighted independent set problem (MWIS)
+ *
+ * We compute a feasible solution to
+ * \f[
+ *  \begin{array}{ll}
+ *  \min\limits_{z} & {x^*}^T z \\
+ *                  & z_i + z_j \leq 1, \qquad (i,j)\in E \\
+ *                  &       z_i \in  \{0,1\}, \qquad\quad  i\in V
+ * \end{array}
+ * \f]
+ * by the algorithm GGWMIN of Shuichi Sakai, Mitsunori Togasaki and Koichi Yamazaki in "A note on greedy algorithms for the
+ * maximum weighted independent set problem", Discrete Applied Mathematics. Here \f$x^*\f$ denotes the current LP
+ * relaxation solution. Note that the solution of the MWIS is the indicator vector of an independent set.
+ */
+static
+SCIP_RETCODE maxWeightIndSetHeuristic(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_SOL*             sol,                /**< primal solution or NULL for current LP solution */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   nsos1vars,          /**< number of SOS1 variables */
+   SCIP_Bool*            indicatorzero,      /**< vector that indicates which variables are currently fixed to zero */
+   SCIP_Bool*            indset              /**< pointer to store indicator vector of an independent set */
+   )
+{
+   SCIP_Bool* mark = NULL;
+   SCIP_Real* weights = NULL;
+   int* indscipvars = NULL;
+   int ind;
+   int nsucc;
+   int i;
+   int k;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( indicatorzero != NULL );
+   assert( indset != NULL );
+
+   /* allocate buffer arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &mark, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indscipvars, nsos1vars) );
+
+   /* sort SOS1 variables in nonincreasing order of weights */
+   for (i = 0; i < nsos1vars; ++i)
+      indscipvars[i] = i;
+   SCIP_CALL( getVectorOfWeights(scip, sol, conflictgraph, nsos1vars, indicatorzero, weights) );
+   SCIPsortDownRealInt(weights, indscipvars, nsos1vars);
+
+   /* mark fixed variables and variables without any neighbors in the conflict graph */
+   k = 0;
+   for (i = 0; i < nsos1vars; ++i)
+   {
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
+
+      if ( indset[i] == 0 )
+      {
+         if( indicatorzero[i] )
+         {
+            mark[i] = TRUE;
+            ++k;
+         }
+         else if ( nsucc == 0 )
+         {
+            indset[i] = 1;
+            mark[i] = TRUE;
+            ++k;
+         }
+         else
+         {
+            mark[i] = FALSE;
+         }
+      }
+      else
+      {
+         ++k;
+         mark[i] = TRUE;
+      }
+   }
+
+   /* mark vertices in the order of their largest weight */
+   for (i = 0; k < nsos1vars; ++i) /*lint !e440*/
+   {
+      assert( i < nsos1vars );
+
+      ind = indscipvars[i];
+
+      if ( ! mark[ind] )
+      {
+         SCIP_Bool cutoff;
+
+         /* mark ind */
+         indset[ind] = 1;
+         mark[ind] = TRUE;
+         ++k;
+
+         SCIP_CALL( markNeighborsMWISHeuristic(scip, conshdlr, conflictgraph, ind, mark, indset, &k, &cutoff) );
+         if ( cutoff )
+            indset[ind] = 0;
+      }
+   }
+   assert( k == nsos1vars );
+
+   /* free buffer arrays */
+   SCIPfreeBufferArrayNull(scip, &indscipvars);
+   SCIPfreeBufferArrayNull(scip, &weights);
+   SCIPfreeBufferArrayNull(scip, &mark);
+
+   return SCIP_OKAY;
+}
+
+
 /* --------------------initialization/deinitialization ------------------------*/
 
 /** check whether \f$x_1\f$ is a bound variable of \f$x_0\f$; i.e., \f$x_0 \leq c\cdot x_1\f$ or \f$x_0 \geq d\cdot x_1\f$
@@ -8337,6 +8691,65 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 }
 
 
+static
+SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
+{
+   SCIP_DIGRAPH* conflictgraph;
+   SCIP_Real bestscore;
+   int nsos1vars;
+   int v;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(diveset != NULL);
+   assert(vals != NULL);
+   assert(success != NULL);
+
+   /* get number of SOS1 variables */
+   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
+
+   /* get conflict graph of SOS1 constraints */
+   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+
+   bestscore = SCIP_REAL_MIN;
+
+   /* loop over SOS1 variables  */
+   for( v = 0; v < nsos1vars; ++v )
+   {
+      /* check whether the variable violates an SOS1 constraint together with at least one other variable */
+      if( SCIPisViolatedSOS1(scip, conflictgraph, v, sol) )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real score;
+         SCIP_Bool roundup;
+
+         var = SCIPnodeGetVarSOS1(conflictgraph, v);
+         solval = SCIPgetSolVal(scip, sol, var);
+         solval = SCIPnodeGetSolvalBinaryBigMSOS1(scip, conflictgraph, sol, v); /* todo: only for testing */
+
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, var, solval, 0.0, &score, &roundup) );
+
+         /* best candidate maximizes the score */
+         if( score > bestscore )
+         {
+            bestscore = score;
+            *varptr = var;
+
+            /* assign vals depending on whether we want to round down or up first */
+            vals[roundup ? 0 : 1] = 1.0;
+            vals[roundup ? 1 : 0] = 0.0;
+
+            *success = TRUE;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for SOS1 constraints and includes it in SCIP */
@@ -8379,6 +8792,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS1, consCopySOS1) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS1) );
+   SCIP_CALL( SCIPsetConshdlrEnfoDive(scip, conshdlr, conshdlrEnfoDiveSOS1) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS1) );
@@ -9022,4 +9436,84 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
       return SCIPvarGetUbLocal(nodedata->var);
 
    return nodedata->ubboundcoef * SCIPgetSolVal(scip, sol, nodedata->ubboundvar);
+}
+
+
+/** based on solution values of the variables, rounds variables to zero to turn all SOS1 constraints feasible */
+SCIP_RETCODE SCIPmakeSOS1sFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
+   )
+{
+   SCIP_Bool* indicatorzero;   /* indicates which solution values are zero */
+   SCIP_Bool* indset;          /* indicator vector of feasible solution; i.e., an independent set */
+   int nsos1vars;
+   int j;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conflictgraph != NULL );
+   assert( sol != NULL );
+   assert( changed != NULL );
+
+   *changed = FALSE;
+   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
+
+   /* allocate buffer arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &indset, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indicatorzero, nsos1vars) );
+
+   /* call greedy algorithm for the maximum weighted independent set problem */
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      indset[j] = 0;
+      if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j))) )
+         indicatorzero[j] = TRUE;
+      else
+         indicatorzero[j] = FALSE;
+   }
+   SCIP_CALL( maxWeightIndSetHeuristic(scip, sol, conshdlr, conflictgraph, nsos1vars, indicatorzero, indset) );
+
+   /* make solution feasible */
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      if ( indset[j] == 0 )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j), 0.0) );
+         *changed = TRUE;
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      SCIP_Real solval;
+      int* succ;
+      int nsucc;
+
+      solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j));
+
+      if ( ! SCIPisFeasZero(scip, solval) )
+      {
+         int s;
+         nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
+         succ = SCIPdigraphGetSuccessors(conflictgraph, j);
+
+         for (s = 0; s < nsucc; ++s)
+         {
+            solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, succ[s]));
+            assert( ! SCIPisFeasZero(scip, solval) );
+         }
+      }
+   }
+#endif
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &indicatorzero);
+   SCIPfreeBufferArray(scip, &indset);
+
+   return SCIP_OKAY;
 }
