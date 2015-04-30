@@ -8755,20 +8755,21 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 }
 
 
+/** compute best diving score*/
 static
 SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
 {
    SCIP_DIGRAPH* conflictgraph;
-   SCIP_Real bestscore;
+   SCIP_Real bestscore = SCIP_REAL_MIN;
    int nsos1vars;
    int v;
 
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(diveset != NULL);
-   assert(vals != NULL);
-   assert(success != NULL);
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( diveset != NULL );
+   assert( vals != NULL );
+   assert( success != NULL );
 
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
@@ -8776,13 +8777,11 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
    /* get conflict graph of SOS1 constraints */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
 
-   bestscore = SCIP_REAL_MIN;
-
    /* loop over SOS1 variables  */
-   for( v = 0; v < nsos1vars; ++v )
+   for (v = 0; v < nsos1vars; ++v)
    {
       /* check whether the variable violates an SOS1 constraint together with at least one other variable */
-      if( SCIPisViolatedSOS1(scip, conflictgraph, v, sol) )
+      if ( SCIPisViolatedSOS1(scip, conflictgraph, v, sol) )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -8791,12 +8790,11 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
 
          var = SCIPnodeGetVarSOS1(conflictgraph, v);
          solval = SCIPgetSolVal(scip, sol, var);
-         solval = SCIPnodeGetSolvalBinaryBigMSOS1(scip, conflictgraph, sol, v); /* todo: only for testing */
 
          SCIP_CALL( SCIPgetDivesetScore(scip, diveset, var, solval, 0.0, &score, &roundup) );
 
          /* best candidate maximizes the score */
-         if( score > bestscore )
+         if ( score > bestscore )
          {
             bestscore = score;
             *varptr = var;
