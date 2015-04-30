@@ -7520,7 +7520,7 @@ SCIP_RETCODE addLinearizationCuts(
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
-      if( SCIPconsIsLocal(conss[c]) )  /*lint !e613 */
+      if( SCIPconsIsLocal(conss[c]) || !SCIPconsIsEnabled(conss[c]) )  /*lint !e613 */
          continue;
 
       SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
