@@ -214,6 +214,8 @@ struct SCIP_ConshdlrData
    TCLIQUE_DATA*         tcliquedata;        /**< tclique data */
    /* event handler */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_VAR**            fixnonzerovars;     /**< stack of variables fixed to nonzero marked by event handler */
+   int                   nfixnonzerovars;    /**< number of variables fixed to nonzero marked by event handler */
    /* presolving */
    int                   cntextsos1;         /**< counts number of extended SOS1 constraints */
    int                   maxextensions;      /**< maximal number of extensions that will be computed for each SOS1 constraint */
@@ -576,7 +578,7 @@ SCIP_RETCODE handleNewVariableSOS1(
 
       /* catch bound change events of variable */
       SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) ); /*lint !e740*/
+            (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
       /* if the variable if fixed to nonzero */
       assert( consdata->nfixednonzeros >= 0 );
@@ -7606,7 +7608,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
          SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-               (SCIP_EVENTDATA*)*consdata, -1) ); /*lint !e740*/
+               (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
       }
    }
 
@@ -7704,7 +7706,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    for (j = 0; j < consdata->nvars; ++j)
    {
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) ); /*lint !e740*/
+            (SCIP_EVENTDATA*)targetcons, NULL) ); /*lint !e740*/
    }
 
 #ifdef SCIP_DEBUG
@@ -8670,8 +8672,11 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
 static
 SCIP_DECL_EVENTEXEC(eventExecSOS1)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTTYPE eventtype;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   SCIP_CONS* cons;
    SCIP_Real oldbound;
    SCIP_Real newbound;
 
@@ -8680,8 +8685,9 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
    assert( event != NULL );
 
-   consdata = (SCIP_CONSDATA*)eventdata;
-   assert( consdata != NULL );
+   cons = (SCIP_CONS*)eventdata;
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
    assert( 0 <= consdata->nfixednonzeros && consdata->nfixednonzeros <= consdata->nvars );
 
    oldbound = SCIPeventGetOldbound(event);
@@ -8693,12 +8699,38 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
    case SCIP_EVENTTYPE_LBTIGHTENED:
       /* if variable is now fixed to be nonzero */
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+      {
+         conshdlr = SCIPconsGetHdlr(cons);
+         assert( conshdlr != NULL );
+         conshdlrdata = SCIPconshdlrGetData(conshdlr);
+         assert( conshdlrdata != NULL );
+
+         /* store variable fixed to be nonzero on stack */
+         assert( 0 <= conshdlrdata->nfixnonzerovars );
+         assert( conshdlrdata->fixnonzerovars != NULL );
+         if ( conshdlrdata->nfixnonzerovars < SCIPgetNVars(scip) )
+            conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
+
          ++(consdata->nfixednonzeros);
+      }
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if variable is now fixed to be nonzero */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+      {
+         conshdlr = SCIPconsGetHdlr(cons);
+         assert( conshdlr != NULL );
+         conshdlrdata = SCIPconshdlrGetData(conshdlr);
+         assert( conshdlrdata != NULL );
+
+         /* store variable fixed to be nonzero on stack */
+         assert( 0 <= conshdlrdata->nfixnonzerovars );
+         assert( conshdlrdata->fixnonzerovars != NULL );
+         if ( conshdlrdata->nfixnonzerovars < SCIPgetNVars(scip) )
+            conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
+
          ++(consdata->nfixednonzeros);
+      }
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
@@ -8796,6 +8828,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
    conshdlrdata->eventhdlr = NULL;
+   conshdlrdata->fixnonzerovars = NULL;
+   conshdlrdata->nfixnonzerovars = 0;
    conshdlrdata->conflictgraph = NULL;
    conshdlrdata->localconflicts = NULL;
    conshdlrdata->isconflocal = FALSE;
