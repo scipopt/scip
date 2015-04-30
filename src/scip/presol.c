@@ -17,6 +17,8 @@
  * @brief  methods for presolvers
  * @author Tobias Achterberg
  * @author Timo Berthold
+ *
+ * @todo add maxrounds parameter for single timings, count number of runs of a presolver with given timing
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -372,7 +374,7 @@ SCIP_RETCODE SCIPpresolExec(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* check number of presolving rounds ???????????????? */
+   /* check number of presolving rounds */
    if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds )
       return SCIP_OKAY;
 

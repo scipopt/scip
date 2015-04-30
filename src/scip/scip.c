@@ -12540,13 +12540,16 @@ SCIP_RETCODE exitPresolve(
  *  This method will always be called with presoltiming fast first. It iterates over all presolvers, propagators, and
  *  constraint handlers and calls their presolving callbacks with timing fast.  If enough reductions are found, it
  *  returns and the next presolving round will be started (again with timing fast).  If the fast presolving does not
- *  find enough reductions, this methods calls itself recurively with presoltiming medium.  Again, it calls the
+ *  find enough reductions, this methods calls itself recursively with presoltiming medium.  Again, it calls the
  *  presolving callbacks of all presolvers, propagators, and constraint handlers with timing medium.  If enough
  *  reductions are found, it returns and the next presolving round will be started (with timing fast).  Otherwise, it is
  *  called recursively with presoltiming exhaustive. In exhaustive presolving, presolvers, propagators, and constraint
  *  handlers are called w.r.t. their priority, but this time, we stop as soon as enough reductions were found and do not
  *  necessarily call all presolving methods. If we stop, we return and another presolving round is started with timing
- *  fast. In order to avoid calling the same expensive presolving methods again and again (which is possibly ineffective
+ *  fast.
+ *
+ *  @todo check if we want to do the following (currently disabled):
+ *  In order to avoid calling the same expensive presolving methods again and again (which is possibly ineffective
  *  for the current instance), we continue the loop for exhaustive presolving where we stopped it the last time.  The
  *  {presol/prop/cons}start pointers are used to this end: they provide the plugins to start the loop with in the
  *  current presolving round (if we reach exhaustive presolving), and are updated in this case to the next ones to be
@@ -12554,12 +12557,11 @@ SCIP_RETCODE exitPresolve(
  *  with exhaustive timing, now starting with the first presolving steps in the loop until we reach the ones we started
  *  the last call with.  This way, we won't stop until all exhaustive presolvers were called without finding enough
  *  reductions (in sum).
-
  */
 static
 SCIP_RETCODE presolveRound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
+   SCIP_PRESOLTIMING*    timing,             /**< pointer to current presolving timing */
    SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
    SCIP_Bool*            infeasible,         /**< pointer to store whether presolving detected infeasibility */
    SCIP_Bool             lastround,          /**< is this the last presolving round due to a presolving round limit? */
@@ -12578,9 +12580,11 @@ SCIP_RETCODE presolveRound(
    SCIP_EVENT event;
    SCIP_Bool aborted;
    SCIP_Bool lastranpresol;
+#if 0
    int oldpresolstart = 0;
    int oldpropstart = 0;
    int oldconsstart = 0;
+#endif
    int priopresol;
    int prioprop;
    int i;
@@ -12603,7 +12607,7 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
    lastranpresol = FALSE;
 
-   if( timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
+   if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       /* In exhaustive presolving, we continue the loop where we stopped last time to avoid calling the same
        * (possibly ineffective) presolving step again and again. If we reach the end of the arrays of presolvers,
@@ -12612,11 +12616,11 @@ SCIP_RETCODE presolveRound(
       i = *presolstart;
       j = *propstart;
       k = *consstart;
-
+#if 0
       oldpresolstart = i;
       oldpropstart = j;
       oldconsstart = k;
-
+#endif
       if( i >= presolend && j >= propend && k >= consend )
          return SCIP_OKAY;
 
@@ -12634,7 +12638,7 @@ SCIP_RETCODE presolveRound(
       j = 0;
       k = 0;
 
-      if( timing == SCIP_PRESOLTIMING_FAST )
+      if( *timing == SCIP_PRESOLTIMING_FAST )
          ++(scip->stat->npresolroundsfast);
       else
          ++(scip->stat->npresolroundsmed);
@@ -12642,11 +12646,7 @@ SCIP_RETCODE presolveRound(
 
    SCIPdebugMessage("starting presolving round %d (%d/%d/%d), timing = %u\n",
       scip->stat->npresolrounds, scip->stat->npresolroundsfast, scip->stat->npresolroundsmed,
-      scip->stat->npresolroundsext, timing);
-
-   printf("starting presolving round %d (%d/%d/%d), timing = %u\n",
-      scip->stat->npresolrounds, scip->stat->npresolroundsfast, scip->stat->npresolroundsmed,
-      scip->stat->npresolroundsext, timing);
+      scip->stat->npresolroundsext, *timing);
 
    /* call included presolvers with nonnegative priority */
    while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend) )
@@ -12669,7 +12669,7 @@ SCIP_RETCODE presolveRound(
             break;
 
          SCIPdebugMessage("executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
-         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, timing, scip->stat->npresolrounds,
+         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -12687,7 +12687,7 @@ SCIP_RETCODE presolveRound(
             break;
 
          SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
-         SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, timing, scip->stat->npresolrounds,
+         SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -12728,7 +12728,7 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("presolving callback returned result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
-      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
+      if( (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
       {
          assert(*consstart == 0);
 
@@ -12754,7 +12754,7 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("executing presolve method of constraint handler <%s>\n",
          SCIPconshdlrGetName(scip->set->conshdlrs[k]));
       SCIP_CALL( SCIPconshdlrPresolve(scip->set->conshdlrs[k], scip->mem->probmem, scip->set, scip->stat,
-            timing, scip->stat->npresolrounds,
+            *timing, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -12784,7 +12784,7 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("presolving callback returned with result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
-      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
+      if( (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
       {
          *presolstart = i;
          *propstart = j;
@@ -12814,7 +12814,7 @@ SCIP_RETCODE presolveRound(
          assert(prioprop <= 0);
 
          SCIPdebugMessage("executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
-         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, timing, scip->stat->npresolrounds,
+         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -12829,7 +12829,7 @@ SCIP_RETCODE presolveRound(
          assert(priopresol < 0);
 
          SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
-         SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, timing, scip->stat->npresolrounds,
+         SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -12870,7 +12870,7 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("presolving callback return with result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
-      if( (timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
+      if( (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
       {
          assert(k == consend);
 
@@ -12936,16 +12936,16 @@ SCIP_RETCODE presolveRound(
       /* call more expensive presolvers */
       if( (SCIPisPresolveFinished(scip) || lastround) )
       {
-         if( timing != SCIP_PRESOLTIMING_EXHAUSTIVE )
+         if( *timing != SCIP_PRESOLTIMING_EXHAUSTIVE )
          {
-            assert((timing == SCIP_PRESOLTIMING_FAST) || (timing == SCIP_PRESOLTIMING_MEDIUM));
+            assert((*timing == SCIP_PRESOLTIMING_FAST) || (*timing == SCIP_PRESOLTIMING_MEDIUM));
 
             SCIPdebugMessage("not enough reductions in %s presolving, running %s presolving now...\n",
-               timing == SCIP_PRESOLTIMING_FAST ? "fast" : "medium",
-               timing == SCIP_PRESOLTIMING_FAST ? "medium" : "exhaustive");
+               *timing == SCIP_PRESOLTIMING_FAST ? "fast" : "medium",
+               *timing == SCIP_PRESOLTIMING_FAST ? "medium" : "exhaustive");
 
             /* increase timing */
-            timing = ((timing == SCIP_PRESOLTIMING_FAST) ? SCIP_PRESOLTIMING_MEDIUM : SCIP_PRESOLTIMING_EXHAUSTIVE);
+            *timing = ((*timing == SCIP_PRESOLTIMING_FAST) ? SCIP_PRESOLTIMING_MEDIUM : SCIP_PRESOLTIMING_EXHAUSTIVE);
 
             /* computational experiments showed that always starting the loop of exhaustive presolvers from the beginning
              * performs better than continuing from the last processed presolver. Therefore, we start from 0, but keep
@@ -12959,6 +12959,7 @@ SCIP_RETCODE presolveRound(
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, presolstart, presolend,
                   propstart, propend, consstart, consend) );
          }
+#if 0
          /* run remaining exhaustive presolvers (if we did not start from the beginning anyway) */
          else if( (oldpresolstart > 0 || oldpropstart > 0 || oldconsstart > 0) && presolend == scip->set->npresols
             && propend == scip->set->nprops && consend == scip->set->nconshdlrs )
@@ -12976,6 +12977,7 @@ SCIP_RETCODE presolveRound(
             *propstart = newpropstart;
             *consstart = newconsstart;
          }
+#endif
       }
    }
 
@@ -12995,6 +12997,7 @@ SCIP_RETCODE presolve(
    SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
+   SCIP_PRESOLTIMING presoltiming;
    SCIP_Bool finished;
    SCIP_Bool stopped;
    SCIP_Bool lastround;
@@ -13091,10 +13094,12 @@ SCIP_RETCODE presolve(
       /* check if this will be the last presolving round (in that case, we want to run all presolvers) */
       lastround = (scip->set->presol_maxrounds == -1 ? FALSE : (scip->stat->npresolrounds + 1 >= scip->set->presol_maxrounds));
 
+      presoltiming = SCIP_PRESOLTIMING_FAST;
+
       /* perform the presolving round by calling the presolvers, propagators, and constraint handlers */
       assert(!(*unbounded));
       assert(!(*infeasible));
-      SCIP_CALL( presolveRound(scip, SCIP_PRESOLTIMING_FAST, unbounded, infeasible, lastround,
+      SCIP_CALL( presolveRound(scip, &presoltiming, unbounded, infeasible, lastround,
             &presolstart, scip->set->npresols, &propstart, scip->set->nprops, &consstart, scip->set->nconshdlrs) );
 
       /* check, if we should abort presolving due to not enough changes in the last round */
@@ -13112,9 +13117,11 @@ SCIP_RETCODE presolve(
       {
          /* print presolving statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(round %d) %d del vars, %d del conss, %d add conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
-            scip->stat->npresolrounds, scip->stat->npresolfixedvars + scip->stat->npresolaggrvars,
-            scip->stat->npresoldelconss, scip->stat->npresoladdconss, 
+            "(round %d, %-11s %d del vars, %d del conss, %d add conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
+            scip->stat->npresolrounds, ( presoltiming == SCIP_PRESOLTIMING_FAST ? "fast)" :
+               (presoltiming == SCIP_PRESOLTIMING_MEDIUM ? "medium)" : "exhaustive)") ),
+            scip->stat->npresolfixedvars + scip->stat->npresolaggrvars,
+            scip->stat->npresoldelconss, scip->stat->npresoladdconss,
             scip->stat->npresolchgbds, scip->stat->npresolchgsides,
             scip->stat->npresolchgcoefs, scip->stat->npresolupgdconss,
             scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
