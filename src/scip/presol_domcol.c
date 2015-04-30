@@ -2067,6 +2067,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       /* init pair comparision control */
       presoldata->numcurrentpairs = presoldata->nummaxpairs;
 
+      varcount = 0;
+
       /* 1.stage: search dominance relations of parallel columns
        *          within equalities and ranged rows
        */
@@ -2074,8 +2076,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       {
          SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq) );
          SCIPsortIntInt(pclass, colidx, ncols);
-
-         varcount = 0;
 
          pc = 0;
          while( pc < ncols )
@@ -2269,90 +2269,89 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             if( varcount >= ncols )
                break;
          }
+      }
 
+      if( nfixings > 0 )
+      {
+         int oldnfixedvars;
 
-         if( nfixings > 0 )
+         oldnfixedvars = *nfixedvars;
+
+         for( v = ncols - 1; v >= 0; --v )
          {
-            int oldnfixedvars;
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+            SCIP_VAR* var;
 
-            oldnfixedvars = *nfixedvars;
+            var = SCIPmatrixGetVar(matrix,v);
 
-            for( v = ncols - 1; v >= 0; --v )
+            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
+               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
             {
-               SCIP_Bool infeasible;
-               SCIP_Bool fixed;
-               SCIP_VAR* var;
-
-               var = SCIPmatrixGetVar(matrix,v);
-
-               if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
-                  SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
-               {
-                  /* no fixing, locks not consistent */
-                  continue;
-               }
-
-               if( varstofix[v] == FIXATLB )
-               {
-                  SCIP_Real lb;
-
-                  lb = SCIPvarGetLbGlobal(var);
-                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, lb));
-
-                  /* fix at lower bound */
-                  SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
-                  if( infeasible )
-                  {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
-                     *result = SCIP_CUTOFF;
-
-                     break;
-                  }
-                  assert(fixed);
-                  (*nfixedvars)++;
-
-#ifdef SCIP_DEBUG
-                  if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-                     nconvarsfixed++;
-                  else if( SCIPvarIsBinary(var) )
-                     nbinvarsfixed++;
-                  else
-                     nintvarsfixed++;
-#endif
-               }
-               else if( varstofix[v] == FIXATUB )
-               {
-                  SCIP_Real ub;
-
-                  ub = SCIPvarGetUbGlobal(var);
-                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, ub));
-
-                  /* fix at upper bound */
-                  SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
-                  if( infeasible )
-                  {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
-                     *result = SCIP_CUTOFF;
-
-                     break;
-                  }
-                  assert(fixed);
-                  (*nfixedvars)++;
-
-#ifdef SCIP_DEBUG
-                  if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-                     nconvarsfixed++;
-                  else if( SCIPvarIsBinary(var) )
-                     nbinvarsfixed++;
-                  else
-                     nintvarsfixed++;
-#endif
-               }
+               /* no fixing, locks not consistent */
+               continue;
             }
 
-            if( *result != SCIP_CUTOFF && *nfixedvars > oldnfixedvars )
-               *result = SCIP_SUCCESS;
+            if( varstofix[v] == FIXATLB )
+            {
+               SCIP_Real lb;
+
+               lb = SCIPvarGetLbGlobal(var);
+               assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, lb));
+
+               /* fix at lower bound */
+               SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
+               if( infeasible )
+               {
+                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  *result = SCIP_CUTOFF;
+
+                  break;
+               }
+               assert(fixed);
+               (*nfixedvars)++;
+
+#ifdef SCIP_DEBUG
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  nconvarsfixed++;
+               else if( SCIPvarIsBinary(var) )
+                  nbinvarsfixed++;
+               else
+                  nintvarsfixed++;
+#endif
+            }
+            else if( varstofix[v] == FIXATUB )
+            {
+               SCIP_Real ub;
+
+               ub = SCIPvarGetUbGlobal(var);
+               assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, ub));
+
+               /* fix at upper bound */
+               SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
+               if( infeasible )
+               {
+                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  *result = SCIP_CUTOFF;
+
+                  break;
+               }
+               assert(fixed);
+               (*nfixedvars)++;
+
+#ifdef SCIP_DEBUG
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  nconvarsfixed++;
+               else if( SCIPvarIsBinary(var) )
+                  nbinvarsfixed++;
+               else
+                  nintvarsfixed++;
+#endif
+            }
          }
+
+         if( *result != SCIP_CUTOFF && *nfixedvars > oldnfixedvars )
+            *result = SCIP_SUCCESS;
       }
 
       SCIPfreeBufferArray(scip, &varineq);
