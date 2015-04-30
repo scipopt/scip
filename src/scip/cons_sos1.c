@@ -3421,44 +3421,44 @@ SCIP_RETCODE freeImplGraphSOS1(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
+   int j;
+
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
 
    /* free whole memory of implication graph */
-   if ( conshdlrdata->implgraph != NULL )
+   if ( conshdlrdata->implgraph == NULL )
+      return SCIP_OKAY;
+
+   /* free arc data */
+   for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
    {
-      int j;
+      SCIP_SUCCDATA** succdatas;
+      int nsucc;
+      int s;
 
-      /* free arc data */
-      for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
+      succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(conshdlrdata->implgraph, j);
+      nsucc = SCIPdigraphGetNSuccessors(conshdlrdata->implgraph, j);
+
+      for (s = nsucc-1; s >= 0; --s)
       {
-         SCIP_SUCCDATA** succdatas;
-         int nsucc;
-         int s;
-
-         succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(conshdlrdata->implgraph, j);
-         nsucc = SCIPdigraphGetNSuccessors(conshdlrdata->implgraph, j);
-
-         for (s = nsucc-1; s >= 0; --s)
-         {
-            assert( succdatas[s] != NULL );
-            SCIPfreeMemory(scip, &succdatas[s])
-         }
+         assert( succdatas[s] != NULL );
+         SCIPfreeMemory(scip, &succdatas[s]);
       }
-
-      /* free node data */
-      for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
-      {
-         SCIP_NODEDATA* nodedata;
-         nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->implgraph, j);
-         assert( nodedata != NULL );
-         SCIPfreeMemory(scip, &nodedata);
-         SCIPdigraphSetNodeData(conshdlrdata->implgraph, NULL, j);
-      }
-
-      /* free implication graph */
-      SCIPdigraphFree(&conshdlrdata->implgraph);
    }
+
+   /* free node data */
+   for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
+   {
+      SCIP_NODEDATA* nodedata;
+      nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->implgraph, j);
+      assert( nodedata != NULL );
+      SCIPfreeMemory(scip, &nodedata);
+      SCIPdigraphSetNodeData(conshdlrdata->implgraph, NULL, j);
+   }
+
+   /* free implication graph */
+   SCIPdigraphFree(&conshdlrdata->implgraph);
 
    return SCIP_OKAY;
 }
@@ -4221,7 +4221,7 @@ SCIP_RETCODE getBoundConsFromVertices(
    SCIP_Bool addv2 = TRUE;
    SCIP_Real solval;
    SCIP_VAR* var;
-   SCIP_Real coef;
+   SCIP_Real coef = 0.0;
    int nsucc;
    int s;
 
@@ -4233,6 +4233,7 @@ SCIP_RETCODE getBoundConsFromVertices(
    assert( scip != NULL );
    assert( conflictgraph != NULL );
    assert( cons != NULL );
+   assert( feas != NULL );
 
    *feas = 0.0;
 
@@ -4241,7 +4242,6 @@ SCIP_RETCODE getBoundConsFromVertices(
    var = nodedata->var;
    assert( boundvar == NULL || SCIPvarCompare(boundvar, nodedata->ubboundvar) == 0 );
    solval = SCIPgetSolVal(scip, NULL, var);
-   coef = 0.0;
 
    /* if 'v1' and 'v2' have the same bound variable then the bound cut can be strengthened */
    if ( boundvar == NULL )
@@ -4264,7 +4264,7 @@ SCIP_RETCODE getBoundConsFromVertices(
             coef = 1.0/lb;
       }
    }
-   else if ( SCIPvarCompare(boundvar, nodedata->ubboundvar) == 0 )
+   else if ( boundvar == nodedata->ubboundvar )
    {
       if ( SCIPisFeasPositive(scip, solval) )
       {
@@ -4285,6 +4285,7 @@ SCIP_RETCODE getBoundConsFromVertices(
             coef = 1.0/lb;
       }
    }
+
    if ( ! SCIPisZero(scip, coef) )
    {
       *feas += coef * solval;
@@ -4367,7 +4368,7 @@ SCIP_RETCODE getBoundConsFromVertices(
                coef = 1.0/lb;
          }
       }
-      else if ( SCIPvarCompare(boundvar, nodedata->ubboundvar) == 0 )
+      else if ( boundvar == nodedata->ubboundvar )
       {
          if ( SCIPisFeasPositive(scip, solval) )
          {
@@ -4411,7 +4412,7 @@ SCIP_RETCODE getBoundConsFromVertices(
    }
 
    /* free buffer array */
-   if ( extend)
+   if ( extend )
       SCIPfreeBufferArray(scip, &extensions);
 
    /* subtract rhs of constraint from feasibility value or add bound variable if existent */
@@ -4641,6 +4642,8 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex2, vertex1, NULL) );
                         SCIP_CALL( SCIPdigraphAddArc(conflictgraph, vertex1, vertex2, NULL) );
                         SCIP_CALL( SCIPdigraphAddArc(conflictgraph, vertex2, vertex1, NULL) );
+
+                        /* can sort successors in place - do not use arcdata */
                         SCIPsortInt(SCIPdigraphGetSuccessors(localconflicts, vertex1), SCIPdigraphGetNSuccessors(localconflicts, vertex1));
                         SCIPsortInt(SCIPdigraphGetSuccessors(localconflicts, vertex2), SCIPdigraphGetNSuccessors(localconflicts, vertex2));
                         SCIPsortInt(SCIPdigraphGetSuccessors(conflictgraph, vertex1), SCIPdigraphGetNSuccessors(conflictgraph, vertex1));
@@ -4956,7 +4959,9 @@ SCIP_RETCODE enforceConflictgraph(
          int indj;
 
          if ( conshdlrdata->localconflicts == NULL )
+         {
             SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars ) );
+         }
 
          vars = consdata->vars;
          nvars = consdata->nvars;
@@ -5175,6 +5180,7 @@ SCIP_RETCODE enforceConflictgraph(
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
+
    /* take the average of the individual estimates */
    objest = objest/((SCIP_Real) nfixingsnode2);
 
@@ -5209,7 +5215,7 @@ SCIP_RETCODE enforceConflictgraph(
    }
 
    /* sets node's lower bound to the best known value */
-   if( nstrongrounds > 0 )
+   if ( nstrongrounds > 0 )
    {
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, node1, MAX(lpobjval, bestobjval1) ) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, node2, MAX(lpobjval, bestobjval2) ) );
@@ -5636,6 +5642,7 @@ SCIP_RETCODE addBoundCutSepa(
    assert( scip != NULL );
    assert( tcliquedata != NULL );
    assert( success != NULL);
+   assert( cutoff != NULL );
 
    *success = FALSE;
    *cutoff = FALSE;
@@ -6030,7 +6037,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
             unscaledweight += REALABS( solval/bound );/*lint !e414*/
       }
 
-      if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
+      if ( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
          char nameext[SCIP_MAXSTRLEN];
          SCIP_ROW* rowlb = NULL;
@@ -6041,7 +6048,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          /* generate bound inequalities for lower and upper bound case
           * NOTE: tests have shown that non-removable rows give the best results */
          (void) SCIPsnprintf(nameext, SCIP_MAXSTRLEN, "%d", tcliquedata->nboundcuts);
-         if( generateBoundInequalityFromSOS1Nodes(scip, tcliquedata->conshdlr, tcliquedata->conflictgraph,
+         if ( generateBoundInequalityFromSOS1Nodes(scip, tcliquedata->conshdlr, tcliquedata->conflictgraph,
                cliquenodes, ncliquenodes, 1.0, FALSE, FALSE, tcliquedata->strthenboundcuts, FALSE, nameext, &rowlb, &rowub) != SCIP_OKAY )
          {
             SCIPerrorMessage("Unexpected error in bound cut creation.\n");
@@ -6076,9 +6083,9 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
              */
             if( tcliquedata->maxboundcuts >= 0 )
             {
-               if( tcliquedata->ncuts > tcliquedata->maxboundcuts/2 )
+               if ( tcliquedata->ncuts > tcliquedata->maxboundcuts/2 )
                   *acceptsol = TRUE;
-               if( tcliquedata->ncuts >= tcliquedata->maxboundcuts )
+               if ( tcliquedata->ncuts >= tcliquedata->maxboundcuts )
                   *stopsolving = TRUE;
             }
          }
@@ -6266,13 +6273,10 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
          /* if row(s) should be globally stored in constraint data */
          if ( rowlb != NULL )
-         {
             consdata->rowlb = rowlb;
-         }
+
          if ( rowub != NULL )
-         {
             consdata->rowub = rowub;
-         }
       }
 
       /* put corresponding rows into LP */
@@ -6293,6 +6297,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
             ++(*ngen);
          }
       }
+
       row = consdata->rowlb;
       if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
       {
@@ -6474,14 +6479,18 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                if ( bound1lower == bound2lower )
                {
                   if ( SCIPisFeasGT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
+                  {
                      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
+                  }
                   else
                      continue;
                }
                else
                {
                   if ( SCIPisFeasLT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
+                  {
                      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+                  }
                   else
                      continue;
                }
@@ -6773,6 +6782,7 @@ SCIP_RETCODE maxWeightIndSetHeuristic(
    /* sort SOS1 variables in nonincreasing order of weights */
    for (i = 0; i < nsos1vars; ++i)
       indscipvars[i] = i;
+
    SCIP_CALL( getVectorOfWeights(scip, sol, conflictgraph, nsos1vars, indicatorzero, weights) );
    SCIPsortDownRealInt(weights, indscipvars, nsos1vars);
 
@@ -6796,9 +6806,7 @@ SCIP_RETCODE maxWeightIndSetHeuristic(
             ++k;
          }
          else
-         {
             mark[i] = FALSE;
-         }
       }
       else
       {
@@ -7047,7 +7055,9 @@ SCIP_RETCODE checkConComponentsVarbound(
          for (s = 0; s < nsucc; ++s)
          {
             if ( ! processed[succ[s]] )
+            {
                SCIP_CALL( passConComponentVarbound(scip, conflictgraph, succ[s], boundvar, checklb, processed, concomp, &nconcomp, &unique) );
+            }
          }
 
          /* if the connected component has a unique bound variable */
@@ -7391,12 +7401,17 @@ SCIP_RETCODE freeConflictgraph(
 {
    int j;
 
+   if ( conshdlrdata->conflictgraph == NULL )
+      return SCIP_OKAY;
+
    /* for every SOS1 variable */
+   assert( conshdlrdata->nsos1vars > 0 );
    for (j = 0; j < conshdlrdata->nsos1vars; ++j)
    {
       SCIP_NODEDATA* nodedata;
 
       /* get node data */
+      assert( conshdlrdata->conflictgraph != NULL );
       nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->conflictgraph, j);
       assert( nodedata != NULL );
 
@@ -7406,13 +7421,9 @@ SCIP_RETCODE freeConflictgraph(
    }
 
    /* free conflict graph and hash map */
-   if ( conshdlrdata->conflictgraph != NULL )
-   {
-      assert( conshdlrdata->nsos1vars > 0 );
-      assert( conshdlrdata->varhash != NULL );
-      SCIPhashmapFree(&conshdlrdata->varhash);
-      SCIPdigraphFree(&conshdlrdata->conflictgraph);
-   }
+   assert( conshdlrdata->varhash != NULL );
+   SCIPhashmapFree(&conshdlrdata->varhash);
+   SCIPdigraphFree(&conshdlrdata->conflictgraph);
 
    return SCIP_OKAY;
 }
@@ -7485,7 +7496,9 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
 
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
+       {
           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
+       }
     }
     return SCIP_OKAY;
 }
@@ -7518,18 +7531,24 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
       /* free rows */
       if ( consdata->rowub != NULL )
+      {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowub) );
+      }
 
       if ( consdata->rowlb != NULL )
+      {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlb) );
+      }
    }
 
    /* free implication graph */
    if ( conshdlrdata->implgraph != NULL )
+   {
       SCIP_CALL( freeImplGraphSOS1(scip, conshdlrdata) );
+   }
 
    /* free tclique graph and tclique data */
-   if( conshdlrdata->tcliquegraph != NULL )
+   if ( conshdlrdata->tcliquegraph != NULL )
    {
       assert( conshdlrdata->tcliquedata != NULL );
       SCIPfreeMemory(scip, &conshdlrdata->tcliquedata);
@@ -7544,10 +7563,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    assert( conshdlrdata->localconflicts == NULL );
 
    /* free conflict graph  */
-   if ( nconss > 0 && conshdlrdata->nsos1vars > 0 )
-   {
-      SCIP_CALL( freeConflictgraph(conshdlrdata) );
-   }
+   SCIP_CALL( freeConflictgraph(conshdlrdata) );
    assert( conshdlrdata->conflictgraph == NULL );
 
    return SCIP_OKAY;
@@ -7749,7 +7765,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       /* allocate buffer arrays */
       SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
       for (i = 0; i < nsos1vars; ++i)
+      {
          SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
+      }
 
       /* create adjacency matrix */
       for (i = 0; i < nsos1vars; ++i)
@@ -7859,7 +7877,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
    if ( conshdlrdata->boundcutsfreq >= 0 && ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
    {
       int maxboundcuts;
-      int ngen;
+      int ngen = 0;
 
       /* determine maximal number of cuts*/
       if ( depth == 0 )
@@ -7867,7 +7885,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
       else
          maxboundcuts = conshdlrdata->maxboundcuts;
 
-      ngen = 0;
       if ( maxboundcuts >= 1 )
       {
          /* separate bound inequalities from SOS1 constraints */
@@ -7906,7 +7923,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
    if ( conshdlrdata->implcutsfreq >= 0 && ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
    {
       int maximplcuts;
-      int ngen;
+      int ngen = 0;
 
       /* determine maximal number of cuts*/
       if ( depth == 0 )
@@ -7915,7 +7932,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
          maximplcuts = conshdlrdata->maximplcuts;
 
       /* call separator for implied bound cuts */
-      ngen = 0;
       if ( maximplcuts >= 1 )
       {
          SCIP_Bool cutoff;
@@ -7972,12 +7988,11 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
    /* get node depth */
    depth = SCIPgetDepth(scip);
 
-
    /* separate bound (clique) inequalities */
    if ( conshdlrdata->boundcutsfreq >= 0 && ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
    {
       int maxboundcuts;
-      int ngen;
+      int ngen = 0;
 
       /* determine maximal number of cuts*/
       if ( depth == 0 )
@@ -7985,7 +8000,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
       else
          maxboundcuts = conshdlrdata->maxboundcuts;
 
-      ngen = 0;
       if ( maxboundcuts >= 1 )
       {
          /* separate bound inequalities from SOS1 constraints */
@@ -8019,12 +8033,11 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
       SCIPdebugMessage("Separated %d bound (clique) inequalities.\n", ngen);
    }
 
-
    /* separate implied bound inequalities */
    if ( conshdlrdata->implcutsfreq >= 0 && ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
    {
       int maximplcuts;
-      int ngen;
+      int ngen = 0;
 
       /* determine maximal number of cuts*/
       if ( depth == 0 )
