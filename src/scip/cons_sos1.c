@@ -5655,7 +5655,6 @@ SCIP_RETCODE addBoundCutSepa(
          ++tcliquedata->ncuts;
          *success = TRUE;
       }
-      SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
    }
 
    /* add cut for upper bounds */
@@ -5673,7 +5672,6 @@ SCIP_RETCODE addBoundCutSepa(
          ++tcliquedata->ncuts;
          *success = TRUE;
       }
-      SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
    }
 
    return SCIP_OKAY;
@@ -6057,6 +6055,15 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
             SCIPerrorMessage("Unexpected error in bound cut creation.\n");
             SCIPABORT();
             return;   /*lint --e{527}*/
+         }
+
+         if ( rowlb != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
+         }
+         if ( rowub != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
          }
 
          /* if at least one cut has been added */
@@ -6513,6 +6520,8 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                   break;
                }
             }
+
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
          }
       }
    }
