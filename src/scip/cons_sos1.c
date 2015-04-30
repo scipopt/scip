@@ -6066,11 +6066,21 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
 
          if ( rowlb != NULL )
          {
-            SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
+            if ( SCIPreleaseRow(scip, &rowlb) != SCIP_OKAY )
+            {
+               SCIPerrorMessage("Cannot release row,\n");
+               SCIPABORT();
+               return;   /*lint --e{527}*/
+            }
          }
          if ( rowub != NULL )
          {
-            SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
+            if ( SCIPreleaseRow(scip, &rowub) != SCIP_OKAY )
+            {
+               SCIPerrorMessage("Cannot release row,\n");
+               SCIPABORT();
+               return;   /*lint --e{527}*/
+            }
          }
 
          /* if at least one cut has been added */
