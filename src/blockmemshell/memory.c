@@ -2361,7 +2361,7 @@ void* BMSallocBufferMemory_call(
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
 #else
-   if( buffer->clear )
+   if( buffer->clean )
    {
       BMSallocClearMemorySize(&ptr, size);
    }
