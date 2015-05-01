@@ -1452,7 +1452,7 @@ void* BMSduplicateChunkMemory_call(
 /** frees a memory element of the given chunk block */
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
-   void*                 ptr,                /**< memory element to free */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
    size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1460,20 +1460,46 @@ void BMSfreeChunkMemory_call(
 {
    assert(chkmem != NULL);
    assert((int)size == chkmem->elemsize);
+   assert( ptr != NULL );
 
-   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, ptr, filename, line);
+   if ( *ptr != NULL )
+   {
+      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, *ptr, filename, line);
 
-   if( ptr == NULL )
+      /* free memory in chunk block */
+      freeChkmemElement(chkmem, *ptr, filename, line);
+      checkChkmem(chkmem);
+      *ptr = NULL;
+   }
+   else
    {
       printErrorHeader(filename, line);
       printError("Tried to free null block pointer\n");
-      return;
    }
+}
 
-   /* free memory in chunk block */
-   freeChkmemElement(chkmem, ptr, filename, line);
+/** frees a memory element of the given chunk block if pointer is not NULL */
+void BMSfreeChunkMemoryNull_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   assert(chkmem != NULL);
+   assert((int)size == chkmem->elemsize);
+   assert( ptr != NULL );
 
-   checkChkmem(chkmem);
+   if ( *ptr != NULL )
+   {
+      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, *ptr, filename, line);
+
+      /* free memory in chunk block */
+      freeChkmemElement(chkmem, *ptr, filename, line);
+      checkChkmem(chkmem);
+      *ptr = NULL;
+   }
 }
 
 /** calls garbage collection of chunk block and frees chunks without allocated memory elements */

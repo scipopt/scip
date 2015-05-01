@@ -232,10 +232,8 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSduplicateChunkMemory(mem, ptr, source) \
                                                 ASSIGN((ptr), BMSduplicateChunkMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSfreeChunkMemory(mem,ptr)           { BMSfreeChunkMemory_call( (mem), (void*)(*(ptr)), sizeof(**(ptr)), \
-                                                  __FILE__, __LINE__ ); \
-                                                  *(ptr) = NULL; }
-#define BMSfreeChunkMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) BMSfreeChunkMemory( (mem), (ptr) ); }
+#define BMSfreeChunkMemory(mem,ptr)           BMSfreeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
+#define BMSfreeChunkMemoryNull(mem,ptr)       BMSfreeChunkMemoryNull_call( (mem), (void**)(ptr) )
 #define BMSgarbagecollectChunkMemory(mem)     BMSgarbagecollectChunkMemory_call(mem)
 #define BMSgetChunkMemoryUsed(mem)            BMSgetChunkMemoryUsed_call(mem)
 
@@ -320,7 +318,17 @@ void* BMSduplicateChunkMemory_call(
 EXTERN
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
-   void*                 ptr,                /**< memory element to free */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** frees a memory element of the given chunk block if pointer is not NULL */
+EXTERN
+void BMSfreeChunkMemoryNull_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
    size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
