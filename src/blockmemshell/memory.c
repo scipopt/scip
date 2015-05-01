@@ -1830,10 +1830,11 @@ void* BMSduplicateBlockMemory_call(
    return ptr;
 }
 
-/** frees memory element in the block memory pool */
-void BMSfreeBlockMemory_call(
+/** common work for freeing block memory */
+inline static
+void BMSfreeBlockMemory_work(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   void*                 ptr,                /**< memory element to free */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
    size_t                size,               /**< size of memory element */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1842,42 +1843,71 @@ void BMSfreeBlockMemory_call(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
-   assert( blkmem != NULL );
+   /* calculate hash number of given size */
+   alignSize(&size);
+   hashnumber = getHashNumber((int)size);
 
-   if( ptr != NULL )
+   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, *ptr, filename, line);
+
+   /* find correspoding chunk block */
+   assert( blkmem->chkmemhash != NULL );
+   chkmem = blkmem->chkmemhash[hashnumber];
+   while( chkmem != NULL && chkmem->elemsize != (int)size )
+      chkmem = chkmem->nextchkmem;
+   if( chkmem == NULL )
    {
-      /* calculate hash number of given size */
-      alignSize(&size);
-      hashnumber = getHashNumber((int)size);
-
-      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
-
-      /* find correspoding chunk block */
-      assert( blkmem->chkmemhash != NULL );
-      chkmem = blkmem->chkmemhash[hashnumber];
-      while( chkmem != NULL && chkmem->elemsize != (int)size )
-	 chkmem = chkmem->nextchkmem;
-      if( chkmem == NULL )
-      {
-	 printErrorHeader(filename, line);
-         printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"LONGINT_FORMAT".\n",
-            ptr, (void*)blkmem, (long long) size);
-	 return;
-      }
-      assert(chkmem->elemsize == (int)size);
-
-      /* free memory in chunk block */
-      freeChkmemElement(chkmem, ptr, filename, line);
-
-      blkmem->memused -= (long long) size;
-      assert(blkmem->memused >= 0);
+      printErrorHeader(filename, line);
+      printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"LONGINT_FORMAT".\n",
+         *ptr, (void*)blkmem, (long long) size);
+      return;
    }
+   assert(chkmem->elemsize == (int)size);
+
+   /* free memory in chunk block */
+   freeChkmemElement(chkmem, *ptr, filename, line);
+
+   blkmem->memused -= (long long) size;
+   assert(blkmem->memused >= 0);
+
+   *ptr = NULL;
+}
+
+/** frees memory element in the block memory pool and sets pointer to NULL */
+void BMSfreeBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   assert( blkmem != NULL );
+   assert( ptr != NULL );
+
+   if( *ptr != NULL )
+      BMSfreeBlockMemory_work(blkmem, ptr, size, filename, line);
    else if( size != 0 )
    {
       printErrorHeader(filename, line);
       printError("Tried to free null block pointer.\n");
    }
+   checkBlkmem(blkmem);
+}
 
+/** frees memory element in the block memory pool if pointer is not NULL and sets pointer to NULL */
+void BMSfreeBlockMemoryNull_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   assert( blkmem != NULL );
+   assert( ptr != NULL );
+
+   if( *ptr != NULL )
+      BMSfreeBlockMemory_work(blkmem, ptr, size, filename, line);
    checkBlkmem(blkmem);
 }
 

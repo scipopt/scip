@@ -375,12 +375,14 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGN((ptr), BMSduplicateBlockMemory_call( (mem), (const void*)(source), \
                                                 (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSfreeBlockMemory(mem,ptr)           { BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), sizeof(**(ptr)), __FILE__, __LINE__ ); *(ptr) = NULL; }
-#define BMSfreeBlockMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) BMSfreeBlockMemory( (mem), (ptr) ); }
-#define BMSfreeBlockMemoryArray(mem,ptr,num)  { BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), (num)*sizeof(**(ptr)), __FILE__, __LINE__ ); *(ptr) = NULL; }
-#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)  { if( *(ptr) != NULL ) BMSfreeBlockMemoryArray( (mem), (ptr), (num) ); }
-#define BMSfreeBlockMemorySize(mem,ptr,size)  { BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), (size_t)(size), __FILE__, __LINE__ ); *(ptr) = NULL; }
-#define BMSfreeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) BMSfreeBlockMemorySize( (mem), (ptr), (size) ); }
+
+#define BMSfreeBlockMemory(mem,ptr)           BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
+#define BMSfreeBlockMemoryNull(mem,ptr)       BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
+#define BMSfreeBlockMemoryArray(mem,ptr,num)  BMSfreeBlockMemory_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ )
+#define BMSfreeBlockMemoryArrayNull(mem,ptr,num) BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ )
+#define BMSfreeBlockMemorySize(mem,ptr,size)  BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), __FILE__, __LINE__ )
+#define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), __FILE__, __LINE__ )
+
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
@@ -473,11 +475,21 @@ void* BMSduplicateBlockMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** frees memory element in the block memory pool */
+/** frees memory element in the block memory pool and sets pointer to NULL */
 EXTERN
 void BMSfreeBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   void*                 ptr,                /**< memory element to free */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** frees memory element in the block memory pool if pointer is not NULL and sets pointer to NULL */
+EXTERN
+void BMSfreeBlockMemoryNull_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
    size_t                size,               /**< size of memory element */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
