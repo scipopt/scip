@@ -1805,7 +1805,7 @@ void* BMSreallocBlockMemory_call(
    newptr = BMSallocBlockMemory_call(blkmem, newsize, filename, line);
    if( newptr != NULL )
       BMScopyMemorySize(newptr, ptr, MIN(oldsize, newsize));
-   BMSfreeBlockMemory_call(blkmem, ptr, oldsize, filename, line);
+   BMSfreeBlockMemory_call(blkmem, &ptr, oldsize, filename, line);
 
    return newptr;
 }
