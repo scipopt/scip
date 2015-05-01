@@ -395,15 +395,15 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 #define BMSallocBlockMemory(mem,ptr)          ASSIGN((ptr), BMSallocBlockMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
-#define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize) ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
                                                 (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
-#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
-                                                (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) ASSIGN((ptr), BMSreallocBlockMemoryArray_call((mem), (void*)(*(ptr)), \
+                                                (size_t)(oldnum), (size_t)(newnum), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBlockMemory(mem, ptr, source) ASSIGN((ptr), BMSduplicateBlockMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGN((ptr), BMSduplicateBlockMemory_call( (mem), (const void*)(source), \
-                                                (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGN((ptr), BMSduplicateBlockMemoryArray_call( (mem), (const void*)(source), \
+                                                (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 
 #define BMSfreeBlockMemory(mem,ptr)           BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeBlockMemoryNull(mem,ptr)       BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
@@ -476,9 +476,20 @@ void BMSdestroyBlockMemory_call(
    );
 
 /** allocates memory in the block memory pool */
+EXTERN
 void* BMSallocBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** allocates array in the block memory pool */
+EXTERN
+void* BMSallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of each component */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );
@@ -494,12 +505,35 @@ void* BMSreallocBlockMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
+/** resizes array in the block memory pool, and copies the data */
+EXTERN
+void* BMSreallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 ptr,                /**< memory element to reallocated */
+   size_t                oldnum,             /**< old size of array */
+   size_t                newnum,             /**< new size of array */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
 /** duplicates memory element in the block memory pool, and copies the data */
 EXTERN
 void* BMSduplicateBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const void*           source,             /**< memory element to duplicate */
    size_t                size,               /**< size of memory elements */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** duplicates array in the block memory pool, and copies the data */
+EXTERN
+void* BMSduplicateBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const void*           source,             /**< memory element to duplicate */
+   size_t                num,                /**< size of array to be duplicated */
+   size_t                typesize,           /**< size of each component */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );

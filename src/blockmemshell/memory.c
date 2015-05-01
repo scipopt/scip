@@ -1806,8 +1806,9 @@ void BMSdestroyBlockMemory_call(
    }
 }
 
-/** allocates memory in the block memory pool */
-void* BMSallocBlockMemory_call(
+/** work for allocating memory in the block memory pool */
+inline static
+void* BMSallocBlockMemory_work(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    size_t                size,               /**< size of memory element to allocate */
    const char*           filename,           /**< source file of the function call */
@@ -1819,15 +1820,6 @@ void* BMSallocBlockMemory_call(
    void* ptr;
 
    assert( blkmem != NULL );
-
-#ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 8) )
-   {
-      printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %d.\n", INT_MAX / 8);
-      return NULL;
-   }
-#endif
 
    /* calculate hash number of given size */
    alignSize(&size);
@@ -1870,6 +1862,50 @@ void* BMSallocBlockMemory_call(
    return ptr;
 }
 
+/** allocates memory in the block memory pool */
+void* BMSallocBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( size > (size_t)(UINT_MAX / 2) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX/2);
+      return NULL;
+   }
+#endif
+
+   return BMSallocBlockMemory_work(blkmem, size, filename, line);
+}
+
+/** allocates array in the block memory pool */
+void* BMSallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   size_t size;
+#ifndef NDEBUG
+   if ( num > (size_t)(UINT_MAX / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
+   return BMSallocBlockMemory_work(blkmem, size, filename, line);
+}
+
+
 /** resizes memory element in the block memory pool, and copies the data */
 void* BMSreallocBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1889,10 +1925,10 @@ void* BMSreallocBlockMemory_call(
    }
 
 #ifndef NDEBUG
-   if ( newsize > (size_t)(UINT_MAX / 8) )
+   if ( newsize > (size_t)(UINT_MAX / 2) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %d.\n", INT_MAX / 8);
+      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX/2);
       return NULL;
    }
 #endif
@@ -1906,6 +1942,47 @@ void* BMSreallocBlockMemory_call(
    if( newptr != NULL )
       BMScopyMemorySize(newptr, ptr, MIN(oldsize, newsize));
    BMSfreeBlockMemory_call(blkmem, &ptr, oldsize, filename, line);
+
+   return newptr;
+}
+
+/** resizes array in the block memory pool, and copies the data */
+EXTERN
+void* BMSreallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 ptr,                /**< memory element to reallocated */
+   size_t                oldnum,             /**< old size of array */
+   size_t                newnum,             /**< new size of array */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* newptr;
+
+   if( ptr == NULL )
+   {
+      assert(oldnum == 0);
+      return BMSallocBlockMemoryArray_call(blkmem, newnum, typesize, filename, line);
+   }
+
+#ifndef NDEBUG
+   if ( newnum > (size_t)(UINT_MAX / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate array of size exceeding %u.\n", UINT_MAX);
+      return NULL;
+   }
+#endif
+
+   if ( oldnum == newnum )
+      return ptr;
+
+   newptr = BMSallocBlockMemoryArray_call(blkmem, newnum, typesize, filename, line);
+   /* @todo possibly have to align sizes */
+   if ( newptr != NULL )
+      BMScopyMemorySize(newptr, ptr, MIN(oldnum, newnum) * typesize);
+   BMSfreeBlockMemory_call(blkmem, &ptr, oldnum * typesize, filename, line);
 
    return newptr;
 }
@@ -1926,6 +2003,27 @@ void* BMSduplicateBlockMemory_call(
    ptr = BMSallocBlockMemory_call(blkmem, size, filename, line);
    if( ptr != NULL )
       BMScopyMemorySize(ptr, source, size);
+
+   return ptr;
+}
+
+/** duplicates array in the block memory pool, and copies the data */
+void* BMSduplicateBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const void*           source,             /**< memory element to duplicate */
+   size_t                num,                /**< size of array to be duplicated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert(source != NULL);
+
+   ptr = BMSallocBlockMemoryArray_call(blkmem, num, typesize, filename, line);
+   if( ptr != NULL )
+      BMScopyMemorySize(ptr, source, num * typesize);
 
    return ptr;
 }
