@@ -1732,7 +1732,7 @@ SCIP_RETCODE sl_reduction(
       mincost2[k] = FARAWAY;
    }
 
-   voronoi_pres(g, g->cost, vnoi, vbase, heap, state);
+   voronoi_terms(scip, g, g->cost, vnoi, vbase, heap, state);
 
    for( i = 0; i < nnodes; i++ )
    {
@@ -1866,13 +1866,7 @@ int nv_reduction(
    SCIP_CALL( SCIPallocBufferArray(scip, &min1head, nterms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &min1tail, nterms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &distance, nnodes) );
-   /*
-     minedge1 = malloc((size_t) * sizeof(int));
-     mincost2 = malloc((size_t)g->terms * sizeof(double));
-     min1head = malloc((size_t)g->terms * sizeof(int));
-     min1tail = malloc((size_t)g->terms * sizeof(int));
-     distance = malloc((size_t)nnodes * sizeof(double));
-   */
+
    for( i = 0; i < nnodes; i++ )
    {
       if( Is_term(g->term[i]) )
@@ -2034,7 +2028,7 @@ SCIP_RETCODE ledge_reduction(
    if( nterms <= 1 )
       return SCIP_OKAY;
 
-   voronoi_pres(g, g->cost, vnoi, vbase, heap, state);
+   voronoi_terms(scip, g, g->cost, vnoi, vbase, heap, state);
 
    if( SCIPisGT(scip, nedges, (nterms - 1) * nterms) )
       maxnedges = (nterms - 1) * nterms;

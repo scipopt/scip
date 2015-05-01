@@ -941,7 +941,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int i;
    int e;
    int v;
-   int artroot;
    SCIP_Longint nsols;                                /* number of all solutions found so far */
    int nedges;
    int index;
@@ -1269,14 +1268,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                results[e] = UNKNOWN;
             /* run TM heuristic */
             SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns,
-                  solgraph->source[0], cost, costrev, maxcost, hopfactor, &success) );
+                  solgraph->source[0], cost, costrev, &hopfactor, maxcost, &success) );
 
             if( !success )
             {
+#if 0
 	          if( solgraph->stp_type == STP_HOP_CONS )
-		  {
 		     hopfactor = hopfactor * 2;
-		  }
+#endif
                   graph_path_exit(solgraph);
                   SCIPfreeBufferArrayNull(scip, &costrev);
                   SCIPfreeBufferArrayNull(scip, &cost);
@@ -1286,8 +1285,10 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   graph_free(scip, solgraph, TRUE);
                   continue;
 	    }
+#if 0
 	    if( solgraph->stp_type == STP_HOP_CONS )
 	       hopfactor = hopfactor / 2;
+#endif
 	    assert(graph_valid(solgraph));
 	    assert(graph_sol_valid(solgraph, results));
 
@@ -1303,7 +1304,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          for( i = 0; i < nedges; i++ )
             orgresults[i] = UNKNOWN;
-         artroot = graph->source[0];
+
 
          /* allocate memory */
          SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nedges) );
@@ -1376,7 +1377,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          }
          /* prune solution (in the original graph) */
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
-            SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, artroot, stnodes) );
+            SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, stnodes) );
          else if( graph->stp_type == STP_DEG_CONS )
 	    SCIP_CALL( do_degprune(scip, graph, orgresults, stnodes) );
 	 else

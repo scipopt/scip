@@ -121,6 +121,7 @@ struct key
 
 
 #define KEY_NODEWEIGHTS_NW       6000
+#define KEY_NODEWEIGHTS_END      6001
 
 #define KEY_PRIZECOLL_MD         7000
 
@@ -175,7 +176,7 @@ static const struct key keyword_table[] =
       {  "maximumdegrees.end",       KEY_END,                    NULL        },
       {  "maximumdegrees.md",        KEY_MAXDEGS_MD,             "n"         },
 
-      {  "nodeweights.end",          KEY_END,                    NULL        },
+      {  "nodeweights.end",          KEY_NODEWEIGHTS_END,        NULL        },
       {  "nodeweights.nw",           KEY_NODEWEIGHTS_NW,         "n"         },
 
       {  "obstacles.end",            KEY_OBSTACLES_END,          NULL        },
@@ -797,8 +798,8 @@ GRAPH* graph_load(
    CURF         save;
    PARA         para    [MAX_ARGUMENTS];
    double       nodeweight;
-   double*      prize = NULL;                  /* needed in prize collecting  */
-   double*      maxnodeweights = NULL;
+   //SCIP_Real*   cost = NULL;                      /* needed for NWSTP */
+   //double*      maxnodeweights = NULL;
    char         buffer  [MAX_LINE_LEN];
    char         pathname[MAX_PATH_LEN];
    char         basename[MAX_PATH_LEN];
@@ -1029,9 +1030,11 @@ GRAPH* graph_load(
                   (void)printf("Problem: [%s]\n", para[0].s);
                   if( strcmp(para[0].s, "SPG") == 0 )
                      stp_type = STP_UNDIRECTED;
-                  else if( strcmp(para[0].s, "PCSPG") == 0 )
+                  else if( strcmp(para[0].s, "PCSPG") == 0
+                     || strcmp(para[0].s, "Prize-Collecting Steiner Problem in Graphs") == 0 )
                      stp_type = STP_PRIZE_COLLECTING;
-                  else if( strcmp(para[0].s, "RPCST") == 0 )
+                  else if( strcmp(para[0].s, "RPCST") == 0
+                     || strcmp(para[0].s, "Rooted Prize-Collecting Steiner Problem in Graphs") == 0 )
                      stp_type = STP_ROOTED_PRIZE_COLLECTING;
                   else if( strcmp(para[0].s, "NWSPG") == 0 )
                      stp_type = STP_NODE_WEIGHTS;
@@ -1130,16 +1133,16 @@ GRAPH* graph_load(
 		        g->cost[i] = (double)para[2].n;
 
 		  }
-                  else if( stp_type == STP_MAX_NODE_WEIGHT )
-		  {
-		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
-		  }
                   else if( stp_type == STP_DIRECTED )
                   {
 
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
                      //printf("cost: %f revcost: %f\n", (double)para[2].n, (double)para[3].n);
                   }
+                  else if( stp_type == STP_MAX_NODE_WEIGHT )
+		  {
+		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
+		  }
                   else
                   {
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1,
@@ -1186,12 +1189,15 @@ GRAPH* graph_load(
 		  if( Is_term(g->term[nwcount]) )
                      presol->fixed += nodeweight;
 		  else
-                     /* add node-weight to edge-weight of all incoming edges */
+                     /* add node-weight to edge-weights of all incoming edges */
                      for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
                         g->cost[i] += nodeweight;
 		  nwcount++;
 		  break;
-
+	       case KEY_NODEWEIGHTS_END :
+                  message(MSG_INFO, &curf, "CRC [%X]", crc);
+                  curf.section = &section_table[0];
+                  break;
 	       case KEY_OBSTACLES_RR :
 		  assert(nobstacles > 0);
 		  if( obstacle_coords == NULL )
@@ -1242,20 +1248,20 @@ GRAPH* graph_load(
                      if( stp_type == STP_MAX_NODE_WEIGHT )
                      {
                         assert(nodes == termcount);
-                        graph_maxweight_transform(g, maxnodeweights);
-                        free(maxnodeweights);
+                        graph_maxweight_transform(g, g->prize);
+                        //free(maxnodeweights);
                      }
                      else if( stp_type == STP_PRIZE_COLLECTING )
                      {
-                        assert(prize != NULL);
-                        graph_prize_transform(g, prize);
-                        free(prize);
+                        assert(g->prize != NULL);
+                        g->stp_type = STP_PRIZE_COLLECTING;
+                        graph_prize_transform(g);
                      }
                      else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
                      {
-                        assert(prize != NULL);
-                        graph_rootprize_transform(g, prize);
-                        free(prize);
+                        assert(g->prize != NULL);
+                        g->stp_type = STP_ROOTED_PRIZE_COLLECTING;
+                        graph_rootprize_transform(g);
                      }
                   }
                   curf.section = &section_table[0];
@@ -1266,9 +1272,9 @@ GRAPH* graph_load(
 
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
-                     assert(maxnodeweights == NULL);
                      assert(terms == nodes);
-                     maxnodeweights = malloc((size_t)terms * sizeof(double));
+		     if( g->prize == NULL )
+                        g->prize = malloc((size_t)terms * sizeof(SCIP_Real));
 		  }
                   break;
 	       case KEY_TERMINALS_GROUPS :
@@ -1305,17 +1311,18 @@ GRAPH* graph_load(
 		  assert(terms > 0);
 		  g->source[0] = (int)para[0].n - 1;
 		  graph_knot_chg(g, (int)para[0].n - 1, 0);
-		  assert(prize == NULL);
 		  stp_type = STP_ROOTED_PRIZE_COLLECTING;
-		  prize = malloc((size_t)nodes * sizeof(double));
-		  prize[(int)para[0].n - 1] = 0;
+                  printf("initit prize nodes: %d \n", nodes) ;
+                  if( g->prize == NULL )
+		     g->prize = malloc((size_t)nodes * sizeof(SCIP_Real));
+		  g->prize[(int)para[0].n - 1] = 0;
                   break;
                case KEY_TERMINALS_T :
 		  if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
-		     assert(maxnodeweights != NULL);
-		     maxnodeweights[(int)para[0].n - 1] = (double)para[1].n;
-		     if( GT((double)para[1].n, 0.0) )
+		     assert(g->prize != NULL);
+		     g->prize[(int)para[0].n - 1] = (double)para[1].n;
+		     if( SCIPisGT(scip, (double)para[1].n, 0.0) )
                         presol->fixed -= (double)para[1].n;
                      /*  printf("maxnodeweight: %f \n", (double)para[1].n);*/
 		     termcount++;
@@ -1330,14 +1337,14 @@ GRAPH* graph_load(
 		  break;
 	       case KEY_TERMINALS_TP :
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
-		  if( stp_type != STP_PRIZE_COLLECTING && stp_type != STP_ROOTED_PRIZE_COLLECTING )
+		  if( g->prize == NULL )
 		  {
-		     assert(prize == NULL);
+		     assert(stp_type != STP_ROOTED_PRIZE_COLLECTING);
 		     stp_type = STP_PRIZE_COLLECTING;
-		     prize = malloc((size_t)nodes * sizeof(double));
+		     g->prize = malloc((size_t)nodes * sizeof(SCIP_Real));
 		  }
-		  prize[(int)para[0].n - 1] = (double)para[1].n;
-		  //printf("prize[%d]: %f\n", (int)para[0].n , (double)para[1].n);
+		  g->prize[(int)para[0].n - 1] = (double)para[1].n;
+		  //printf("prize: x: %d , %f \n", (int)para[0].n - 1, g->prize[(int)para[0].n - 1] );
 		  termcount++;
                   break;
                case KEY_COORDINATES_DD :

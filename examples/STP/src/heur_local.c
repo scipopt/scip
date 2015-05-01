@@ -311,7 +311,6 @@ SCIP_RETCODE do_local(
    int e;
    int i;
    int k;
-   int artroot;
    int root;
    int nnodes;
    int nedges;
@@ -539,7 +538,6 @@ SCIP_RETCODE do_local(
            printf("VertInsert newrun \n");
          */
       }
-      artroot = root;
 #if 0
       if( graph->stp_type == STP_PRIZE_COLLECTING && newnverts > 0  )
       {
@@ -556,7 +554,7 @@ SCIP_RETCODE do_local(
       {
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
          {
-            do_pcprune(scip, graph, graph->cost, best_result, artroot, steinertree);
+            do_pcprune(scip, graph, graph->cost, best_result, steinertree);
          }
          else
          {
@@ -2421,6 +2419,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    xval = SCIPprobdataGetXval(scip, bestsol);
 
+   if( vars == NULL )
+     return SCIP_OKAY;
+   assert(vars != NULL);
    assert(xval != NULL);
 
    /* for PC variants test whether solution is trivial */
@@ -2477,11 +2478,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       !(strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "rec") == 0 ||
          strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "TM") == 0) )
    {
-      int artroot;
+
       char* steinertree;
       printf("heur: %s \n", SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) : "LP");
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, graph->knots) );
-      artroot = root;
 #if 0
       if( graph->stp_type == STP_PRIZE_COLLECTING  )
       {
@@ -2502,7 +2502,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
 
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
-         do_pcprune(scip, graph, graph->cost, results, artroot, steinertree);
+         do_pcprune(scip, graph, graph->cost, results, steinertree);
       else
          do_prune(scip, graph, graph->cost, 0, results, steinertree);
       SCIPfreeBufferArray(scip, &steinertree);

@@ -31,6 +31,8 @@
 #define STP_MAX_NODE_WEIGHT          9
 #define STP_HOP_CONS                 10
 #define GSTP                         11
+#define PRIZE                        11
+
 
 #include "scip/scip.h"
 #include "misc_stp.h"
@@ -73,7 +75,8 @@ typedef struct
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
    int     orgedges;
-   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs   TODO: static */
+   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs  TODO: const */
+   SCIP_Real* prize;   /* Array [0..edges-1] of positiv node costs TODO: const */
    int*    tail;   /* Array [0..edges-1] of knot-number of tail   */
                    /* of edge [i]                                 */
    int*    head;   /* Array [0..edges-1] of knot-number of head   */
@@ -160,7 +163,7 @@ typedef struct voronoi_path
 #define CONNECT      0
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
-#define FIXEDVAL     1e13
+#define BLOCKED     1e10
 
 #define MST_MODE   0
 #define FSP_MODE   1
@@ -169,6 +172,8 @@ typedef struct voronoi_path
 #define NO_CHANGE    -10
 
 #define Is_term(a)   ((a) >= 0)
+#define Is_pterm(a)  ((a) == -2)
+#define Is_gterm(a)  ((a) == -2 || (a) >= 0 )
 #define Edge_anti(a) ((((a) % 2) > 0) ? (a) - 1 : (a) + 1)
 
 #define STP_MAGIC       0x33d32945
@@ -183,9 +188,9 @@ extern GRAPH* graph_init(int, int, int, int);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*, int**,int**, IDX***);
 extern void   graph_resize(GRAPH*, int, int, int);
 extern void   graph_free(SCIP*, GRAPH*, char);
-extern void   graph_prize_transform(GRAPH*, double*);
-extern void   graph_rootprize_transform(GRAPH*, double*);
-extern void   graph_maxweight_transform(GRAPH*, double*);
+extern void   graph_prize_transform(GRAPH*);
+extern void   graph_rootprize_transform(GRAPH*);
+extern void   graph_maxweight_transform(GRAPH*, SCIP_Real*);
 extern GRAPH* graph_grid_create(int**, int, int, int);
 extern GRAPH* graph_obstgrid_create(SCIP*, int**, int**, int, int, int, int);
 extern void   graph_grid_coordinates(int**, int**, int*, int, int);
@@ -213,12 +218,12 @@ extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
 extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
-extern void   graph_path_exec2(const GRAPH*, int, int, const double*, PATH*, char*, int*, int*);
+extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, char*);
 extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
-extern void   voronoi_pres(const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
+extern void   voronoi_terms(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_dist(const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, PATH*);
-extern void   voronoi_radius(SCIP* scip, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
+extern SCIP_RETCODE   voronoi_radius(SCIP* scip, const GRAPH*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
 extern void   voronoi_hop(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int*);
@@ -254,6 +259,9 @@ extern void graph_boxcoord(GRAPH* g);
 /* reduce.c
  */
 extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int);
+extern SCIP_RETCODE bound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, double*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE hopbound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE level4X(SCIP*, GRAPH**,SCIP_Real*, double*, int);
 
 /* sdtest.c
  */

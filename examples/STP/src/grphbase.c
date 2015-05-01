@@ -72,7 +72,12 @@ GRAPH* graph_init(
    p->esize = esize;
    p->edges = 0;
 
-   p->cost  = malloc((size_t)esize * sizeof(double));
+   p->cost  = malloc((size_t)esize * sizeof(SCIP_Real));
+
+   if( p->stp_type == STP_ROOTED_PRIZE_COLLECTING || p->stp_type == STP_PRIZE_COLLECTING || p->stp_type == STP_MAX_NODE_WEIGHT )
+      p->prize = malloc((size_t)ksize * sizeof(SCIP_Real));
+   else
+      p->prize  = NULL;
 
    p->tail  = malloc((size_t)esize * sizeof(int));
 
@@ -207,11 +212,18 @@ void graph_resize(
 
       p->elimknots = realloc(p->elimknots, (size_t)ksize * sizeof(int));
 #endif
+      if( p->stp_type == STP_PRIZE_COLLECTING || p->stp_type == STP_ROOTED_PRIZE_COLLECTING
+	 || p->stp_type == STP_MAX_NODE_WEIGHT )
+      {
+         assert(p->prize != NULL);
+         //p->prize = realloc(p->prize, (size_t)ksize * sizeof(SCIP_Real));
+      }
    }
    if ((esize > 0) && (esize != p->esize))
    {
       p->esize = esize;
-      p->cost  = realloc(p->cost, (size_t)esize * sizeof(double));
+      p->cost  = realloc(p->cost, (size_t)esize * sizeof(SCIP_Real));
+
       p->tail  = realloc(p->tail, (size_t)esize * sizeof(int));
       p->head  = realloc(p->head, (size_t)esize * sizeof(int));
       /*p->orgtail  = realloc(p->tail, (size_t)esize * sizeof(int));
@@ -773,10 +785,10 @@ void graph_grid_coordinates(
  */
 void
 graph_prize_transform(
-   GRAPH* graph,
-   double* prize
+   GRAPH* graph
    )
 {
+   SCIP_Real* prize;
    int k;
    int root;
    int node;
@@ -788,26 +800,24 @@ graph_prize_transform(
    root = graph->source[0];
    nnodes = graph->knots;
    nterms = graph->terms;
+   prize = graph->prize;
    assert(prize != NULL);
    assert(nnodes == graph->ksize);
    graph->norgmodeledges = graph->edges;
    graph->norgmodelknots = nnodes;
+   graph->stp_type = STP_PRIZE_COLLECTING;
 
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    graph_resize(graph, (graph->ksize + graph->terms + 1), (graph->esize + graph->terms * 6) , -1);
 
+   /* create a new nodes */
    for( k = 0; k < nterms; ++k )
-   {
-      /* create a new node */
       graph_knot_add(graph, -1);
-   }
-
 
    /* new root */
    root = graph->knots;
    graph_knot_add(graph, 0);
    nterms = 0;
-   graph->source[0] = root;
    for( k = 0; k < nnodes; ++k )
    {
       /* is the kth node a terminal other than the root? */
@@ -816,19 +826,26 @@ graph_prize_transform(
          /* the copied node */
          node = nnodes + nterms;
          nterms++;
-         /* switch the terminal property */
-         graph->term[k] = -1;
-         graph->term[node] = 0;
+         /* switch the terminal property, mark k */
+         graph_knot_chg(graph, k, -2);
+         graph_knot_chg(graph, node, 0);
+	 //printf("prize: k: %d , %f \n", k, prize[k] );
+	 assert(GT(prize[k], 0));
          tmpsum += prize[k];
-         //printf("prize[%d] : %f \n\n", k, prize[k]);
+	 //prize[node] = 0
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
 	 graph_edge_add(graph, root, k, 0, FARAWAY);
 	 graph_edge_add(graph, root, node, prize[k], FARAWAY);
          graph_edge_add(graph, k, node, 0, FARAWAY);
       }
+      else
+      {
+         //printf("k: %d \n", k);
+	 prize[k] = 0;
+      }
    }
    graph->source[0] = root;
-   graph->stp_type = STP_PRIZE_COLLECTING;
+
    assert((nterms + 1) == graph->terms);
    //printf("total TP sum: %f \n\n", tmpsum);
 }
@@ -836,10 +853,10 @@ graph_prize_transform(
 
 void
 graph_rootprize_transform(
-   GRAPH* graph,
-   double* prize
+   GRAPH* graph
    )
 {
+   SCIP_Real* prize;
    int k;
    int root;
    int node;
@@ -851,21 +868,19 @@ graph_rootprize_transform(
    root = graph->source[0];
    nnodes = graph->knots;
    nterms = graph->terms;
+   prize = graph->prize;
    assert(prize != NULL);
    assert(nnodes == graph->ksize);
    assert(root >= 0);
    graph->norgmodeledges = graph->edges;
    graph->norgmodelknots = nnodes;
+   graph->stp_type = STP_ROOTED_PRIZE_COLLECTING;
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    graph_resize(graph, (graph->ksize + graph->terms), (graph->esize + graph->terms * 4) , -1);
 
+   /* create a new nodes */
    for( k = 0; k < nterms - 1; ++k )
-   {
-      /* create a new node */
       graph_knot_add(graph, -1);
-   }
-   /* new root */
-
 
    nterms = 0;
 
@@ -874,24 +889,28 @@ graph_rootprize_transform(
       /* is the kth node a terminal other than the root? */
       if( Is_term(graph->term[k]) && k != root )
       {
-
          /* the copied node */
          node = nnodes + nterms;
          nterms++;
-         /* switch the terminal property */
-         graph->term[k] = -1;
-         graph->term[node] = 0;
+         /* switch the terminal property, mark k as former terminal */
+         graph_knot_chg(graph, k, -2);
+         graph_knot_chg(graph, node, 0);
+	 assert(GT(prize[k], 0));
          tmpsum += prize[k];
+	 //prize[node] = 0;
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
          graph_edge_add(graph, root, node, prize[k], FARAWAY);
          graph_edge_add(graph, k, node, 0, FARAWAY);
+      }
+      else
+      {
+	 prize[k] = 0;
       }
    }
    /* one for the root */
    nterms++;
    assert((nterms) == graph->terms);
-   printf("total TPR sum: %f \n\n", tmpsum);
-   graph->stp_type = STP_ROOTED_PRIZE_COLLECTING;
+   //printf("total TPR sum: %f \n\n", tmpsum);
 }
 
 /** alters the graph in such a way that each optimal STP solution to the
@@ -900,10 +919,10 @@ graph_rootprize_transform(
 void
 graph_maxweight_transform(
    GRAPH* graph,
-   double* maxweights
+   SCIP_Real* maxweights
    )
 {
-   double* prize;
+   //double* prize;
    int e;
    int i;
    int nnodes;
@@ -911,6 +930,7 @@ graph_maxweight_transform(
 
    assert(maxweights != NULL);
    assert(graph != NULL);
+   assert(graph->cost != NULL);
    assert(graph->terms == 0);
    nnodes = graph->knots;
 
@@ -932,32 +952,27 @@ graph_maxweight_transform(
 	 nterms++;
       }
    }
-   prize = malloc((size_t)nnodes * sizeof(double));
+   //prize = malloc((size_t)nnodes * sizeof(double));
    nterms = 0;
    for( i = 0; i < nnodes; i++ )
    {
       if( Is_term(graph->term[i]) )
       {
          assert(!LT(maxweights[i], 0.0));
-         prize[i] = maxweights[i];
+         graph->prize[i] = maxweights[i];
 	 //printf("termcost/prize2:  %.12f \n", maxweights[i]);
 	 nterms++;
       }
       else
       {
 	 assert(LT(maxweights[i], 0.0));
-	 prize[i] = 0.0;
+	 graph->prize[i] = 0.0;
       }
    }
    assert(nterms == graph->terms);
-   graph_prize_transform(graph, prize);
-#if 0
-   int root = graph->source[0];
-   for( e = 0; e < graph->edges; e++ )
-      if( Is_term(graph->term[graph->head[e]]) && Is_term(graph->term[graph->tail[e]])  && (graph->head[e]!= root && graph->tail[e] != root) )
-         printf("found a new 0 edge: %d, cost: %f \n", e, graph->cost[e] );
-#endif
-   free(prize);
+
+   graph_prize_transform(graph);
+
    graph->stp_type = STP_MAX_NODE_WEIGHT;
 }
 
@@ -1108,7 +1123,8 @@ void graph_free(
    free(p->inpbeg);
    free(p->outbeg);
    free(p->cost);
-
+   if( p->prize != NULL )
+      free(p->prize);
    if( p->ancestors != NULL )
    {
       for( e = 0; e < p->edges; e++ )
@@ -1148,8 +1164,14 @@ void graph_free(
    free(p->ypos);
    free(p->elimknots);
    free(p->elimedges);
-#endif
 
+   if( p->stp_type == STP_PRIZE_COLLECTING || p->stp_type == STP_ROOTED_PRIZE_COLLECTING
+      || STP_MAX_NODE_WEIGHT )
+   {
+      free(p->prize);
+   }
+
+#endif
    if( p->stp_type == STP_DEG_CONS )
       free(p->maxdeg);
    else if(p->stp_type == STP_GRID )
@@ -1190,7 +1212,6 @@ GRAPH* graph_copy(
    assert(g->head   != NULL);
    assert(g->ieat   != NULL);
    assert(g->oeat   != NULL);
-
 
    g->norgmodeledges = p->norgmodeledges;
    g->norgmodelknots = p->norgmodelknots;
@@ -1261,7 +1282,12 @@ GRAPH* graph_copy(
    memcpy(g->elimknots,   p->elimknots,   p->ksize  * sizeof(*p->elimknots));
    memcpy(g->elimedges,   p->elimedges,   p->esize  * sizeof(*p->elimedges));
 #endif
-   if( g->stp_type == STP_DEG_CONS )
+   if( g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
+      || g->stp_type == STP_MAX_NODE_WEIGHT )
+   {
+      memcpy(g->prize,   p->prize,   p->ksize  * sizeof(*p->prize));
+   }
+   else if( g->stp_type == STP_DEG_CONS )
    {
       assert(p->maxdeg != NULL);
       g->maxdeg = malloc((size_t)(g->knots) * sizeof(int));
@@ -1375,22 +1401,19 @@ void graph_knot_chg(
    assert(knot   < p->knots);
    assert(term   < p->layers);
 
-   if (term != NO_CHANGE)
+   if (term != p->term[knot])
    {
-      if (term != p->term[knot])
+      if (Is_term(p->term[knot]))
       {
-         if (Is_term(p->term[knot]))
-         {
-            p->terms--;
-            p->locals[p->term[knot]]--;
-         }
-         p->term[knot] = term;
+         p->terms--;
+         p->locals[p->term[knot]]--;
+      }
+      p->term[knot] = term;
 
-         if (Is_term(p->term[knot]))
-         {
-            p->terms++;
-            p->locals[p->term[knot]]++;
-         }
+      if (Is_term(p->term[knot]))
+      {
+         p->terms++;
+         p->locals[p->term[knot]]++;
       }
    }
 }
@@ -1441,7 +1464,10 @@ SCIP_RETCODE graph_knot_contract(
    /* Feindliche Uebernahme des Terminals.
     */
    if (Is_term(p->term[s]))
+   {
       graph_knot_chg(p, t, p->term[s]);
+      graph_knot_chg(p, s, -1);
+   }
 
    /* TODO modify TERMINAL property of s */
 
@@ -1661,8 +1687,8 @@ void graph_edge_add(
    int    e;
 
    assert(p      != NULL);
-   assert(GE(cost1, 0));
-   assert(GE(cost2, 0));
+   assert(GE(cost1, 0) || cost1 == UNKNOWN );
+   assert(GE(cost2, 0) || cost2 == UNKNOWN );
    assert(tail   >= 0);
    assert(tail   <  p->knots);
    assert(head   >= 0);
@@ -1675,7 +1701,8 @@ void graph_edge_add(
    p->grad[head]++;
    p->grad[tail]++;
 
-   p->cost[e]           = cost1;
+   if( cost1 != UNKNOWN )
+      p->cost[e]           = cost1;
    p->tail[e]           = tail;
    p->head[e]           = head;
    p->ieat[e]           = p->inpbeg[head];
@@ -1685,7 +1712,8 @@ void graph_edge_add(
 
    e++;
 
-   p->cost[e]           = cost2;
+   if( cost2 != UNKNOWN )
+      p->cost[e]           = cost2;
    p->tail[e]           = head;
    p->head[e]           = tail;
    p->ieat[e]           = p->inpbeg[tail];

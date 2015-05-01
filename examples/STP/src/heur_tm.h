@@ -29,6 +29,7 @@
 
 #include "scip/scip.h"
 #include "grph.h"
+#define DEFAULT_HOPFACTOR 0.33
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,7 +39,7 @@ extern "C" {
    SCIP_RETCODE SCIPincludeHeurTM(
       SCIP*                 scip                /**< SCIP data structure */
       );
-
+#if 0
    extern
    SCIP_RETCODE SCIPtmHeur(
       SCIP*                 scip,                  /**< SCIP data structure */
@@ -48,7 +49,7 @@ extern "C" {
       SCIP_Real*            costrev,
       int*                  result
       );
-
+#endif
    extern
    SCIP_RETCODE do_layer(
       SCIP*                 scip,               /**< SCIP data structure */
@@ -61,8 +62,8 @@ extern "C" {
       int           bestincstart,
       SCIP_Real*    cost,
       SCIP_Real*    costrev,
+      SCIP_Real*    hopfactor,
       SCIP_Real     maxcost,
-      SCIP_Real     hopfactor,
       SCIP_Bool*    success
       );
 
@@ -82,7 +83,6 @@ extern "C" {
       const GRAPH*          g,                  /**< graph structure */
       SCIP_Real*            cost,               /**< edge costs */
       int*                  result,             /**< ST edges */
-      int                   root,
       char*                 connected           /**< ST nodes */
       );
 
