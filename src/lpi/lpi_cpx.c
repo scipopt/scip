@@ -3054,8 +3054,14 @@ SCIP_Bool SCIPlpiIsStable(
    if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
    {
       SCIP_Real kappa;
+      SCIP_RETCODE retcode;
 
-      SCIP_CALL_ABORT( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa) );
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      if ( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
 
       /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
       if( kappa != SCIP_INVALID || kappa > lpi->conditionlimit )
