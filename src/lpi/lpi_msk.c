@@ -42,22 +42,24 @@
                           _restat_ = (x);                                                                     \
                           if( (_restat_) != MSK_RES_OK && (_restat_ ) != MSK_RES_TRM_MAX_NUM_SETBACKS )       \
                           {                                                                                   \
-                             SCIPerrorMessage("LP Error: MOSEK returned %d\n", (int)_restat_);                \
+                             SCIPerrorMessage("LP Error: MOSEK returned %d.\n", (int)_restat_);               \
                              return SCIP_LPERROR;                                                             \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 
 /* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
-#define ABORT_FALSE(x) { int _restat_;                                  \
-      if( (_restat_ = (x)) != 0 )                                       \
+#define SCIP_ABORT_FALSE(x) do                                          \
+   {                                                                    \
+      int _restat_;                                                     \
+      if( (_restat_ = (x)) != SCIP_OKAY )                               \
       {                                                                 \
-         SCIPerrorMessage("LP Error: MOSEK returned %d\n", (int)_restat_); \
+         SCIPerrorMessage("LP Error: MOSEK returned %d.\n", (int)_restat_); \
          SCIPABORT();                                                   \
          return FALSE;                                                  \
       }                                                                 \
-   }
-
+   }                                                                    \
+   while( FALSE )
 
 #define IS_POSINF(x) ((x) >= SCIP_DEFAULT_INFINITY)
 #define IS_NEGINF(x) ((x) <= -SCIP_DEFAULT_INFINITY)
@@ -2716,7 +2718,7 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, &prosta, &solsta) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
    return (solsta == MSK_SOL_STA_OPTIMAL);
 }
@@ -2797,7 +2799,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    SCIPdebugMessage("Calling SCIPlpiExistsPrimalRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, &prosta, &solsta));
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
    return (   solsta == MSK_SOL_STA_DUAL_INFEAS_CER
       || prosta == MSK_PRO_STA_DUAL_INFEAS
@@ -2819,7 +2821,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 
    SCIPdebugMessage("Calling SCIPlpiHasPrimalRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, NULL, &solsta) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, NULL, &solsta) );
 
    return (solsta == MSK_SOL_STA_DUAL_INFEAS_CER);
 }
@@ -2853,7 +2855,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("Calling SCIPlpiIsPrimalFeasible (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, &prosta, NULL) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, NULL) );
 
    return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
 }
@@ -2874,7 +2876,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    SCIPdebugMessage("Calling SCIPlpiExistsDualRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, &prosta, &solsta) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
    return (   solsta == MSK_SOL_STA_PRIM_INFEAS_CER
       || prosta == MSK_PRO_STA_PRIM_INFEAS
@@ -2896,7 +2898,7 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    SCIPdebugMessage("Calling SCIPlpiHasDualRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, NULL, &solsta) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, NULL, &solsta) );
 
    return (solsta == MSK_SOL_STA_PRIM_INFEAS_CER);
 }
@@ -2930,7 +2932,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    SCIPdebugMessage("Calling SCIPlpiIsDualFeasible (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, &prosta, NULL) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, NULL) );
 
    return (prosta == MSK_PRO_STA_DUAL_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
 }
@@ -2949,7 +2951,7 @@ SCIP_Bool SCIPlpiIsOptimal(
 
    SCIPdebugMessage("Calling SCIPlpiIsOptimal (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, NULL, &solsta) );
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, NULL, &solsta) );
 
    return (solsta == MSK_SOL_STA_OPTIMAL);
 }
@@ -4127,23 +4129,23 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 
 /** constant array containing the parameter names */
 static const char* paramname[] = {
-   "SCIP_LPPAR_FROMSCRATCH",                 /**< solver should start from scratch at next call? */
-   "SCIP_LPPAR_FASTMIP",                     /**< fast mip setting of LP solver */
-   "SCIP_LPPAR_SCALING",                     /**< should LP solver use scaling? */
-   "SCIP_LPPAR_PRESOLVING",                  /**< should LP solver use presolving? */
-   "SCIP_LPPAR_PRICING",                     /**< pricing strategy */
-   "SCIP_LPPAR_LPINFO",                      /**< should LP solver output information to the screen? */
-   "SCIP_LPPAR_FEASTOL",                     /**< feasibility tolerance for primal variables and slacks */
-   "SCIP_LPPAR_DUALFEASTOL",                 /**< feasibility tolerance for dual variables and reduced costs */
-   "SCIP_LPPAR_BARRIERCONVTOL",              /**< convergence tolerance used in barrier algorithm */
-   "SCIP_LPPAR_LOBJLIM",                     /**< lower objective limit */
-   "SCIP_LPPAR_UOBJLIM",                     /**< upper objective limit */
-   "SCIP_LPPAR_LPITLIM",                     /**< LP iteration limit */
-   "SCIP_LPPAR_LPTILIM",                     /**< LP time limit */
-   "SCIP_LPPAR_MARKOWITZ",                   /**< Markowitz tolerance */
-   "SCIP_LPPAR_ROWREPSWITCH",                /**< simplex algorithm shall use row representation of the basis
-                                               *  if number of rows divided by number of columns exceeds this value */
-   "SCIP_LPPAR_THREADS"                      /**< number of threads used to solve the LP */
+   "SCIP_LPPAR_FROMSCRATCH",                 /* solver should start from scratch at next call? */
+   "SCIP_LPPAR_FASTMIP",                     /* fast mip setting of LP solver */
+   "SCIP_LPPAR_SCALING",                     /* should LP solver use scaling? */
+   "SCIP_LPPAR_PRESOLVING",                  /* should LP solver use presolving? */
+   "SCIP_LPPAR_PRICING",                     /* pricing strategy */
+   "SCIP_LPPAR_LPINFO",                      /* should LP solver output information to the screen? */
+   "SCIP_LPPAR_FEASTOL",                     /* feasibility tolerance for primal variables and slacks */
+   "SCIP_LPPAR_DUALFEASTOL",                 /* feasibility tolerance for dual variables and reduced costs */
+   "SCIP_LPPAR_BARRIERCONVTOL",              /* convergence tolerance used in barrier algorithm */
+   "SCIP_LPPAR_LOBJLIM",                     /* lower objective limit */
+   "SCIP_LPPAR_UOBJLIM",                     /* upper objective limit */
+   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit */
+   "SCIP_LPPAR_LPTILIM",                     /* LP time limit */
+   "SCIP_LPPAR_MARKOWITZ",                   /* Markowitz tolerance */
+   "SCIP_LPPAR_ROWREPSWITCH",                /* simplex algorithm shall use row representation of the basis
+                                              * if number of rows divided by number of columns exceeds this value */
+   "SCIP_LPPAR_THREADS"                      /* number of threads used to solve the LP */
 };
 
 /** method mapping parameter index to parameter name */
@@ -4153,22 +4155,22 @@ const char* paramty2str(
    )
 {  /*lint --e{641}*/
    /* check if the parameters in this order */
-   assert(SCIP_LPPAR_FROMSCRATCH == 0);      /**< solver should start from scratch at next call? */
-   assert(SCIP_LPPAR_FASTMIP == 1);          /**< fast mip setting of LP solver */
-   assert(SCIP_LPPAR_SCALING == 2);          /**< should LP solver use scaling? */
-   assert(SCIP_LPPAR_PRESOLVING == 3);       /**< should LP solver use presolving? */
-   assert(SCIP_LPPAR_PRICING == 4);          /**< pricing strategy */
-   assert(SCIP_LPPAR_LPINFO == 5);           /**< should LP solver output information to the screen? */
-   assert(SCIP_LPPAR_FEASTOL == 6);          /**< feasibility tolerance for primal variables and slacks */
-   assert(SCIP_LPPAR_DUALFEASTOL == 7);      /**< feasibility tolerance for dual variables and reduced costs */
-   assert(SCIP_LPPAR_BARRIERCONVTOL == 8);   /**< convergence tolerance used in barrier algorithm */
-   assert(SCIP_LPPAR_LOBJLIM == 9);          /**< lower objective limit */
-   assert(SCIP_LPPAR_UOBJLIM == 10);         /**< upper objective limit */
-   assert(SCIP_LPPAR_LPITLIM == 11);         /**< LP iteration limit */
-   assert(SCIP_LPPAR_LPTILIM == 12);         /**< LP time limit */
-   assert(SCIP_LPPAR_MARKOWITZ == 13);       /**< Markowitz tolerance */
-   assert(SCIP_LPPAR_ROWREPSWITCH == 14);    /**< row representation switch */
-   assert(SCIP_LPPAR_THREADS == 15);         /**< number of threads used to solve the LP */
+   assert(SCIP_LPPAR_FROMSCRATCH == 0);      /* solver should start from scratch at next call? */
+   assert(SCIP_LPPAR_FASTMIP == 1);          /* fast mip setting of LP solver */
+   assert(SCIP_LPPAR_SCALING == 2);          /* should LP solver use scaling? */
+   assert(SCIP_LPPAR_PRESOLVING == 3);       /* should LP solver use presolving? */
+   assert(SCIP_LPPAR_PRICING == 4);          /* pricing strategy */
+   assert(SCIP_LPPAR_LPINFO == 5);           /* should LP solver output information to the screen? */
+   assert(SCIP_LPPAR_FEASTOL == 6);          /* feasibility tolerance for primal variables and slacks */
+   assert(SCIP_LPPAR_DUALFEASTOL == 7);      /* feasibility tolerance for dual variables and reduced costs */
+   assert(SCIP_LPPAR_BARRIERCONVTOL == 8);   /* convergence tolerance used in barrier algorithm */
+   assert(SCIP_LPPAR_LOBJLIM == 9);          /* lower objective limit */
+   assert(SCIP_LPPAR_UOBJLIM == 10);         /* upper objective limit */
+   assert(SCIP_LPPAR_LPITLIM == 11);         /* LP iteration limit */
+   assert(SCIP_LPPAR_LPTILIM == 12);         /* LP time limit */
+   assert(SCIP_LPPAR_MARKOWITZ == 13);       /* Markowitz tolerance */
+   assert(SCIP_LPPAR_ROWREPSWITCH == 14);    /* row representation switch */
+   assert(SCIP_LPPAR_THREADS == 15);         /* number of threads used to solve the LP */
 
    return paramname[type];
 }
