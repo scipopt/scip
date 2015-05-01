@@ -290,36 +290,36 @@ long long BMSgetMemoryUsed_call(
 /** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
 void* BMSallocClearMemory_call(
    size_t                num,                /**< number of memory element to allocate */
-   size_t                size,               /**< size of one memory element to allocate */
+   size_t                typesize,           /**< size of one memory element to allocate */
    const char*           filename,           /**< source file where the allocation is performed */
    int                   line                /**< line number in source file where the allocation is performed */
    )
 {
    void* ptr;
 
-   debugMessage("calloc %"LONGINT_FORMAT" elements of %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
+   debugMessage("calloc %"LONGINT_FORMAT" elements of %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long) num, (long long)typesize, filename, line);
 
 #ifndef NDEBUG
-   if ( num*size > (size_t)(UINT_MAX / 8) )
+   if ( num > (size_t)(UINT_MAX / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 8);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
 
    num = MAX(num, 1);
-   size = MAX(size, 1);
-   ptr = calloc(num, size);
+   typesize = MAX(typesize, 1);
+   ptr = calloc(num, typesize);
 
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes.\n", ((long long) num) * ((long long) size));
+      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes.\n", ((long long) num) * ((long long) typesize));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
-      addMemlistEntry(ptr, num*size, filename, line);
+      addMemlistEntry(ptr, num*typesize, filename, line);
 #endif
 
    return ptr;
@@ -337,14 +337,53 @@ void* BMSallocMemory_call(
    debugMessage("malloc %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long)size, filename, line);
 
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 8) )
+   if ( size > (size_t)(UINT_MAX / 2) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 8);
+      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 2);
       return NULL;
    }
 #endif
 
+   size = MAX(size, 1);
+   ptr = malloc(size);
+
+   if( ptr == NULL )
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for allocation of %"LONGINT_FORMAT" bytes.\n", (long long) size);
+   }
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   else
+      addMemlistEntry(ptr, size, filename, line);
+#endif
+
+   return ptr;
+}
+
+/** allocates memory for an array; returns NULL if memory allocation failed */
+void* BMSallocMemoryArray_call(
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
+   )
+{
+   void* ptr;
+   size_t size;
+
+   debugMessage("malloc %"LONGINT_FORMAT" elements of %"LONGINT_FORMAT" bytes [%s:%d]\n", (long long) num, (long long)typesize, filename, line);
+
+#ifndef NDEBUG
+   if ( num > (size_t) (UINT_MAX / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
    size = MAX(size, 1);
    ptr = malloc(size);
 
@@ -377,10 +416,10 @@ void* BMSreallocMemory_call(
 #endif
 
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 8) )
+   if ( size > (size_t)(UINT_MAX / 2) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 8);
+      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 2);
       return NULL;
    }
 #endif
@@ -398,7 +437,48 @@ void* BMSreallocMemory_call(
       addMemlistEntry(newptr, size, filename, line);
 #endif
 
-   /*   fprintf(stderr, "mem: %p %d\n", newptr, (int)size); */
+   return newptr;
+}
+
+/** allocates memory for an array; returns NULL if memory allocation failed */
+void* BMSreallocMemoryArray_call(
+   void*                 ptr,                /**< pointer to memory to reallocate */
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the reallocation is performed */
+   int                   line                /**< line number in source file where the reallocation is performed */
+   )
+{
+   void* newptr;
+   size_t size;
+
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   if( ptr != NULL )
+      removeMemlistEntry(ptr, filename, line);
+#endif
+
+#ifndef NDEBUG
+   if ( num > (size_t)(UINT_MAX / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
+   size = MAX(size, 1);
+   newptr = realloc(ptr, size);
+
+   if( newptr == NULL )
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for reallocation of %"LONGINT_FORMAT" bytes.\n", (long long) size);
+   }
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   else
+      addMemlistEntry(newptr, size, filename, line);
+#endif
 
    return newptr;
 }
@@ -463,6 +543,26 @@ void* BMSduplicateMemory_call(
    ptr = BMSallocMemory_call(size, filename, line);
    if( ptr != NULL )
       BMScopyMemory_call(ptr, source, size);
+
+   return ptr;
+}
+
+/** allocates array and copies the contents of the given memory element into the new memory element */
+void* BMSduplicateMemoryArray_call(
+   const void*           source,             /**< pointer to source memory element */
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the duplication is performed */
+   int                   line                /**< line number in source file where the duplication is performed */
+   )
+{
+   void* ptr;
+
+   assert(source != NULL || num == 0);
+
+   ptr = BMSallocMemoryArray_call(num, typesize, filename, line);
+   if( ptr != NULL )
+      BMScopyMemory_call(ptr, source, num * typesize);
 
    return ptr;
 }

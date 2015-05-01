@@ -68,12 +68,12 @@ extern "C" {
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
 #define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
-#define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), size, __FILE__, __LINE__ ))
-#define BMSallocMemoryArray(ptr,num)          ASSIGN((ptr), BMSallocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
+#define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), (size_t)(size), __FILE__, __LINE__ ))
+#define BMSallocMemoryArray(ptr,num)          ASSIGN((ptr), BMSallocMemoryArray_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemoryArray_call( (size_t)((num), (size_t)(size), __FILE__, __LINE__ )
 #define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSreallocMemorySize(ptr,size)        ASSIGN((ptr), BMSreallocMemory_call((void*)(*(ptr)), (size_t)(size), __FILE__, __LINE__ ))
-#define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemoryArray_call( *(ptr), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
 #define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
@@ -88,8 +88,8 @@ extern "C" {
 #define BMSmoveMemorySize(ptr, source, size)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
 
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(size), __FILE__, __LINE__ ))
+#define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
 #define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
 #define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
@@ -113,7 +113,7 @@ extern "C" {
 EXTERN
 void* BMSallocClearMemory_call(
    size_t                num,                /**< number of memory element to allocate */
-   size_t                size,               /**< size of memory element to allocate */
+   size_t                typesize,           /**< size of memory element to allocate */
    const char*           filename,           /**< source file where the allocation is performed */
    int                   line                /**< line number in source file where the allocation is performed */
    );
@@ -126,11 +126,30 @@ void* BMSallocMemory_call(
    int                   line                /**< line number in source file where the allocation is performed */
    );
 
+/** allocates memory for an array; returns NULL if memory allocation failed */
+EXTERN
+void* BMSallocMemoryArray_call(
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
+   );
+
 /** allocates memory; returns NULL if memory allocation failed */
 EXTERN
 void* BMSreallocMemory_call(
    void*                 ptr,                /**< pointer to memory to reallocate */
    size_t                size,               /**< new size of memory element */
+   const char*           filename,           /**< source file where the reallocation is performed */
+   int                   line                /**< line number in source file where the reallocation is performed */
+   );
+
+/** allocates memory for an array; returns NULL if memory allocation failed */
+EXTERN
+void* BMSreallocMemoryArray_call(
+   void*                 ptr,                /**< pointer to memory to reallocate */
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
    const char*           filename,           /**< source file where the reallocation is performed */
    int                   line                /**< line number in source file where the reallocation is performed */
    );
@@ -165,6 +184,16 @@ EXTERN
 void* BMSduplicateMemory_call(
    const void*           source,             /**< pointer to source memory element */
    size_t                size,               /**< size of memory element to copy */
+   const char*           filename,           /**< source file where the duplication is performed */
+   int                   line                /**< line number in source file where the duplication is performed */
+   );
+
+/** allocates array and copies the contents of the given memory element into the new memory element */
+EXTERN
+void* BMSduplicateMemoryArray_call(
+   const void*           source,             /**< pointer to source memory element */
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
    const char*           filename,           /**< source file where the duplication is performed */
    int                   line                /**< line number in source file where the duplication is performed */
    );
