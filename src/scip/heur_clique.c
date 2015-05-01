@@ -203,33 +203,6 @@ SCIP_RETCODE stableSortBinvars(
       assert(SCIPvarGetObj(binvars[v - 1]) <= SCIPvarGetObj(binvars[v - 1]));
 #endif
 
-#if 0
-#ifndef NDEBUG
-   c = -1;
-   for( v = 0; v < nbinvars; ++v )
-   {
-      if( cliquepartition[v] > c )
-      {
-         ++c;
-#if 0
-         if( c == 1 )
-            break;
-#endif
-         assert(cliquepartition[v] == c);
-         printf("Clique %d (%d elements): ",c, cliquecount[c]);
-      }
-#if 0
-      printf("%s ", SCIPvarGetName(binvars[v]));
-#endif
-      if( v < nbinvars - 1 && cliquepartition[v + 1] > c )
-      {
-         printf("\n");
-      }
-   }
-   printf("\n");
-#endif
-#endif
-
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &varpointers);
    SCIPfreeBufferArray(scip, &vars);
