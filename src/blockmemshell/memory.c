@@ -2340,7 +2340,7 @@ void* BMSallocBufferMemory_call(
    }
    assert( buffer->size[bufnum] >= (int) size );
 
-#ifdef SCIP_MORE_DEBUG
+#ifdef CHECKMEM
    /* check that the memory is cleared */
    if( buffer->clean )
    {
@@ -2513,6 +2513,19 @@ void BMSfreeBufferMemory_call(
          printErrorHeader(filename, line);
          printError("Tried to free buffer pointer already freed.\n");
          return;
+      }
+#endif
+
+#ifdef CHECKMEM
+      /* check that the memory is cleared */
+      if( buffer->clean )
+      {
+         char* tmpptr = (char*)(buffer->data[bufnum]);
+         int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+         tmpptr += inc;
+
+         while( --tmpptr >= (char*)(buffer->data[bufnum]) )
+            assert(*tmpptr == '\0');
       }
 #endif
 
