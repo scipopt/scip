@@ -31,6 +31,7 @@ features:
 - new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output in the orignal space
 - new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
 - new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
+- new branching rule multaggr which allows to branch on general disjunctions defined by fractional multi-aggregated variables
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
