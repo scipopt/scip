@@ -2110,7 +2110,7 @@ struct BMS_BufMem
    int                   ndata;              /**< number of memory chunks */
    int                   firstfree;          /**< first unused memory chunk */
    double                arraygrowfac;       /**< memory growing factor for dynamically allocated arrays */
-   int                   arraygrowinit;      /**< initial size of dynamically allocated arrays */
+   unsigned int          arraygrowinit;      /**< initial size of dynamically allocated arrays */
 };
 
 
@@ -2125,6 +2125,9 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
 {
    BMS_BUFMEM* buffer;
 
+   assert( arraygrowinit > 0 );
+   assert( arraygrowfac > 0.0 );
+
    BMSallocMemory(&buffer);
    if ( buffer != NULL )
    {
@@ -2135,7 +2138,7 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
       buffer->clean = clean;
       buffer->ndata = 0;
       buffer->firstfree = 0;
-      buffer->arraygrowinit = arraygrowinit;
+      buffer->arraygrowinit = (unsigned) arraygrowinit;
       buffer->arraygrowfac = arraygrowfac;
    }
    else
@@ -2182,6 +2185,8 @@ void BMSsetBufferMemoryArraygrowfac(
    )
 {
    assert( buffer != NULL );
+   assert( arraygrowfac > 0.0 );
+
    buffer->arraygrowfac = arraygrowfac;
 }
 
@@ -2192,7 +2197,9 @@ void BMSsetBufferMemoryArraygrowinit(
    )
 {
    assert( buffer != NULL );
-   buffer->arraygrowinit = arraygrowinit;
+   assert( arraygrowinit > 0 );
+
+   buffer->arraygrowinit = (unsigned) arraygrowinit;
 }
 
 #ifndef SCIP_NOBUFFERMEM
@@ -2278,7 +2285,7 @@ void* BMSallocBufferMemory_call(
       int i;
 
       /* create additional buffers */
-      newsize = calcMemoryGrowSize((unsigned) buffer->arraygrowinit, buffer->arraygrowfac, (unsigned) (buffer->firstfree + 1));
+      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, (unsigned) (buffer->firstfree + 1));
       BMSreallocMemoryArray(&buffer->data, newsize);
       if ( buffer->data == NULL )
       {
@@ -2320,7 +2327,7 @@ void* BMSallocBufferMemory_call(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize((unsigned) buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
 
       /* clear new memory */
@@ -2432,7 +2439,7 @@ void* BMSreallocBufferMemory_call(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
       buffer->totalmem += ((int)newsize) - buffer->size[bufnum];
       buffer->size[bufnum] = (int) newsize;
