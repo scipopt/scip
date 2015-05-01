@@ -4185,7 +4185,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                /* compute column entries */
                SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals, nrowvars + 1, transformed, matrix, &rhss[k]) );
 
-               printf("%g, %g\n", rowvals[1], rhss[k]);
+               SCIPinfoMessage(scip, file, "%g, %g\n", rowvals[1], rhss[k]);
                ++k;
             }
 
