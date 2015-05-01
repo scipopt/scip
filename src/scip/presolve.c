@@ -33,8 +33,6 @@
  * Local methods
  */
 
-#define CLEARRATIO 0.8
-
 /** collect variable bound information for a variable set reduction and global implication; only variable which have the
  *  vartype != SCIP_VARTYPE_BINARY have variable bounds
  */
@@ -86,7 +84,6 @@ void collectNonBinaryVBoundData(
    SCIP_VAR** implvars;
    SCIP_Real* implcoefs;
    SCIP_Real* implconsts;
-   int maxcountnonzeros;
    int nimpls;
    int idx;
    int w;
@@ -108,8 +105,6 @@ void collectNonBinaryVBoundData(
    assert(nimplidx != NULL);
    assert(lastbounds != NULL);
 
-   maxcountnonzeros = (int)(2*nvars*CLEARRATIO);
-
    /* 1. case: lower bound in set */
    if( !boundtypes[pos] )
    {
@@ -122,11 +117,9 @@ void collectNonBinaryVBoundData(
 
          if( counts[varidx] == 1 )
          {
-            if( *ncountnonzeros < maxcountnonzeros )
-            {
-               countnonzeros[*ncountnonzeros] = varidx;
-               ++(*ncountnonzeros);
-            }
+            assert(*ncountnonzeros < 2*nvars);
+            countnonzeros[*ncountnonzeros] = varidx;
+            ++(*ncountnonzeros);
             newbounds[varidx] = bounds[pos];
          }
          else if( newbounds[varidx] > bounds[pos] )
@@ -187,8 +180,9 @@ void collectNonBinaryVBoundData(
                      ++counts[idx];
                      *foundbin = MIN(*foundbin, idx);
 
-                     if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros )
+                     if( counts[idx] == 1 )
                      {
+                        assert(*ncountnonzeros < 2*nvars);
                         countnonzeros[*ncountnonzeros] = idx;
                         ++(*ncountnonzeros);
                      }
@@ -224,11 +218,9 @@ void collectNonBinaryVBoundData(
 
                   if( counts[idx] == 1 )
                   {
-                     if( *ncountnonzeros < maxcountnonzeros )
-                     {
-                        countnonzeros[*ncountnonzeros] = idx;
-                        ++(*ncountnonzeros);
-                     }
+                     assert(*ncountnonzeros < 2*nvars);
+                     countnonzeros[*ncountnonzeros] = idx;
+                     ++(*ncountnonzeros);
                      newbounds[idx] = newub;
                      lastbounds[*nimplidx] = SCIP_INVALID;
                   }
@@ -280,8 +272,9 @@ void collectNonBinaryVBoundData(
                      ++counts[idx];
                      *foundbin = MIN(*foundbin, idx);
 
-                     if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros)
+                     if( counts[idx] == 1 )
                      {
+                        assert(*ncountnonzeros < 2*nvars);
                         countnonzeros[*ncountnonzeros] = idx;
                         ++(*ncountnonzeros);
                      }
@@ -317,11 +310,9 @@ void collectNonBinaryVBoundData(
 
                   if( counts[idx] == 1 )
                   {
-                     if( *ncountnonzeros < maxcountnonzeros )
-                     {
-                        countnonzeros[*ncountnonzeros] = idx;
-                        ++(*ncountnonzeros);
-                     }
+                     assert(*ncountnonzeros < 2*nvars);
+                     countnonzeros[*ncountnonzeros] = idx;
+                     ++(*ncountnonzeros);
                      lastbounds[*nimplidx] = SCIP_INVALID;
                      newbounds[idx] = newlb;
                   }
@@ -356,11 +347,9 @@ void collectNonBinaryVBoundData(
 
          if( counts[varidx] == 1 )
          {
-            if( *ncountnonzeros < maxcountnonzeros )
-            {
-               countnonzeros[*ncountnonzeros] = varidx;
-               ++(*ncountnonzeros);
-            }
+            assert(*ncountnonzeros < 2*nvars);
+            countnonzeros[*ncountnonzeros] = varidx;
+            ++(*ncountnonzeros);
             newbounds[varidx] = bounds[pos];
          }
          else if( newbounds[varidx] < bounds[pos] )
@@ -418,8 +407,9 @@ void collectNonBinaryVBoundData(
                      ++counts[idx];
                      *foundbin = MIN(*foundbin, idx);
 
-                     if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros )
+                     if( counts[idx] == 1 )
                      {
+                        assert(*ncountnonzeros < 2*nvars);
                         countnonzeros[*ncountnonzeros] = idx;
                         ++(*ncountnonzeros);
                      }
@@ -452,11 +442,9 @@ void collectNonBinaryVBoundData(
 
                   if( counts[idx] == 1 )
                   {
-                     if( *ncountnonzeros < maxcountnonzeros )
-                     {
-                        countnonzeros[*ncountnonzeros] = idx;
-                        ++(*ncountnonzeros);
-                     }
+                     assert(*ncountnonzeros < 2*nvars);
+                     countnonzeros[*ncountnonzeros] = idx;
+                     ++(*ncountnonzeros);
                      lastbounds[*nimplidx] = SCIP_INVALID;
                      newbounds[idx] = newlb;
                   }
@@ -507,8 +495,9 @@ void collectNonBinaryVBoundData(
                      ++counts[idx];
                      *foundbin = MIN(*foundbin, idx);
 
-                     if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros )
+                     if( counts[idx] == 1 )
                      {
+                        assert(*ncountnonzeros < 2*nvars);
                         countnonzeros[*ncountnonzeros] = idx;
                         ++(*ncountnonzeros);
                      }
@@ -541,11 +530,9 @@ void collectNonBinaryVBoundData(
 
                   if( counts[idx] == 1 )
                   {
-                     if( *ncountnonzeros < maxcountnonzeros )
-                     {
-                        countnonzeros[*ncountnonzeros] = idx;
-                        ++(*ncountnonzeros);
-                     }
+                     assert(*ncountnonzeros < 2*nvars);
+                     countnonzeros[*ncountnonzeros] = idx;
+                     ++(*ncountnonzeros);
                      lastbounds[*nimplidx] = SCIP_INVALID;
                      newbounds[idx] = newub;
                   }
@@ -618,8 +605,6 @@ void collectNonBinaryImplicationData(
                                               */
    )
 {
-   int maxcountnonzeros;
-
    assert(scip != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
@@ -636,8 +621,6 @@ void collectNonBinaryImplicationData(
    assert(implidx != NULL);
    assert(nimplidx != NULL);
    assert(lastbounds != NULL);
-
-   maxcountnonzeros = (int)(2*nvars*CLEARRATIO);
 
    if( issetvar[varidx] > 0 )
    {
@@ -702,8 +685,9 @@ void collectNonBinaryImplicationData(
                   assert(SCIPisFeasLE(scip, implbounds[w], 0.0));
                   *foundbin = MIN(*foundbin, idx);
 
-                  if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros )
+                  if( counts[idx] == 1 )
                   {
+                     assert(*ncountnonzeros < 2*nvars);
                      countnonzeros[*ncountnonzeros] = idx;
                      ++(*ncountnonzeros);
                   }
@@ -714,11 +698,9 @@ void collectNonBinaryImplicationData(
 
                   if( counts[idx] == 1 )
                   {
-                     if( *ncountnonzeros < maxcountnonzeros )
-                     {
-                        countnonzeros[*ncountnonzeros] = idx;
-                        ++(*ncountnonzeros);
-                     }
+                     assert(*ncountnonzeros < 2*nvars);
+                     countnonzeros[*ncountnonzeros] = idx;
+                     ++(*ncountnonzeros);
                      newbounds[idx] = implbounds[w];
                      lastbounds[*nimplidx] = SCIP_INVALID;
                   }
@@ -768,8 +750,9 @@ void collectNonBinaryImplicationData(
                   assert(SCIPisFeasGE(scip, implbounds[w], 1.0));
                   *foundbin = MIN(*foundbin, idx);
 
-                  if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros )
+                  if( counts[idx] == 1 )
                   {
+                     assert(*ncountnonzeros < 2*nvars);
                      countnonzeros[*ncountnonzeros] = idx;
                      ++(*ncountnonzeros);
                   }
@@ -780,11 +763,9 @@ void collectNonBinaryImplicationData(
 
                   if( counts[idx] == 1 )
                   {
-                     if( *ncountnonzeros < maxcountnonzeros )
-                     {
-                        countnonzeros[*ncountnonzeros] = idx;
-                        ++(*ncountnonzeros);
-                     }
+                     assert(*ncountnonzeros < 2*nvars);
+                     countnonzeros[*ncountnonzeros] = idx;
+                     ++(*ncountnonzeros);
                      newbounds[idx] = implbounds[w];
                      lastbounds[*nimplidx] = SCIP_INVALID;
                   }
@@ -843,7 +824,6 @@ void collectBinaryCliqueData(
    SCIP_CLIQUE** cliques;
    SCIP_VAR** clqvars;
    SCIP_Bool* clqvalues;
-   int maxcountnonzeros;
    int idx;
    int c;
    int w;
@@ -862,8 +842,6 @@ void collectBinaryCliqueData(
    assert(implidx != NULL);
    assert(nimplidx != NULL);
 
-   maxcountnonzeros = (int)(2*nvars*CLEARRATIO);
-
    /* implication counter cannot exceed number implication variables */
    assert(counts[varidx] <= pos - nredvars);
 
@@ -876,8 +854,9 @@ void collectBinaryCliqueData(
          ++counts[varidx];
          *foundbin = MIN(*foundbin, varidx);
 
-         if( counts[varidx] == 1 && *ncountnonzeros < maxcountnonzeros )
+         if( counts[varidx] == 1 )
          {
+            assert(*ncountnonzeros < 2*nvars);
             countnonzeros[*ncountnonzeros] = varidx;
             ++(*ncountnonzeros);
          }
@@ -928,8 +907,9 @@ void collectBinaryCliqueData(
             ++counts[idx];
             *foundbin = MIN(*foundbin, idx);
 
-            if( counts[idx] == 1 && *ncountnonzeros < maxcountnonzeros )
+            if( counts[idx] == 1 )
             {
+               assert(*ncountnonzeros < 2*nvars);
                countnonzeros[*ncountnonzeros] = idx;
                ++(*ncountnonzeros);
             }
@@ -947,6 +927,7 @@ void collectBinaryCliqueData(
  * presolving methods
  */
 
+#define CLEARRATIO 0.8
 
 /** try to reduce the necessary variable in a set of variables with corresponding bounds and boundtypes for which one
  *  must be fulfilled
@@ -1146,7 +1127,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
          assert(probvars != NULL);
 
          /* correct implication counters and bounds, if the redundant variable implies other variables we need to reduce
-          * the the counter and get the last bounds before this implication
+          * the counter and get the last bounds before this implication
           */
          for( w = nimplidx - 1; w >= 0; --w )
          {
@@ -1154,6 +1135,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             assert(counts[implidx[w]] == v - (*nredvars) + 1);
 
             --counts[implidx[w]];
+
+            if( implidx[w] == countnonzeros[ncountnonzeros-1] && counts[implidx[w]] == 0 )
+               --ncountnonzeros;
 
             /* only for non-binary variables we need to correct the bounds */
             if( implidx[w] < nprobvars )
@@ -1361,16 +1345,14 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       issetvar[varidx] = 0;
    }
 
-   if( ncountnonzeros > maxcountnonzeros )
+   if( ncountnonzeros >= maxcountnonzeros )
    {
       BMSclearMemoryArray(counts, 2*nprobvars);
    }
    else
    {
       while( --ncountnonzeros >= 0 )
-      {
          counts[countnonzeros[ncountnonzeros]] = 0;
-      }
    }
 
 
